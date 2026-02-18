@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(gh repo view:*)",
+      "mcp__language-server__diagnostics",
+      "mcp__vitest__set_project_root",
+      "mcp__ast-grep__find_code",
+      "Bash(sg:*)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
