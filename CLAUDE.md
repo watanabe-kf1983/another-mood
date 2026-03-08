@@ -171,10 +171,14 @@ my-project/
 - [x] 2-4. pagination（複数ファイル生成）
 - [x] 2-5. toc 定義の読み込み（ToC テンプレート）
 - [x] 2-6. テンプレートエンジンを LiquidJS へ移行
-- [ ] 2-7. relativeFrom フィルタ（ページ間リンク用相対パス計算）
-- [ ] 2-8. 標準テンプレート（ER図、DFD、CRUDマトリクス）
-- [ ] 2-9. Markdownパーサー（データソースとしてのMarkdown読み込み）
-- [ ] 2-10. テンプレートオーバライド
+- [ ] 2-7. toc 再設計: リンクレジストリ化（ツリー構造、フラットインデックス自動構築、ID体系 `{class}.{name}`）
+- [ ] 2-8. pages 層の新設（toc からクラスでフィルタしてページ定義、テンプレート指定）
+- [ ] 2-9. 11ty 除去 + 自前テンプレート展開（フロントマター廃止、pages ベースのルーティング）
+- [ ] 2-10. リンク解決基盤（find フィルタ、relativeFrom フィルタ、Markdown 内 `toc:id` 記法）
+- [ ] 2-11. Markdownパーサー（データソースとしてのMarkdown読み込み）
+- [ ] 2-12. 標準テンプレート（ER図、DFD、CRUDマトリクス）
+
+設計詳細: [docs/internal/toc-redesign.md](docs/internal/toc-redesign.md)
 
 #### Phase 3: Validator
 
@@ -184,6 +188,7 @@ my-project/
 
 #### 将来
 
+- Python 移行（Jinja2 + Pydantic + pytest）— 詳細は [docs/internal/toc-redesign.md](docs/internal/toc-redesign.md) の「Python 移行」節
 - MCP サーバ対応
 - 多言語スキーマ生成（Zod ↔ Pydantic）
 - FP 法計測の自動化（要件定義ユースケース向け）
