@@ -171,14 +171,30 @@ my-project/
 - [x] 2-4. pagination（複数ファイル生成）
 - [x] 2-5. toc 定義の読み込み（ToC テンプレート）
 - [x] 2-6. テンプレートエンジンを LiquidJS へ移行
-- [ ] 2-7. toc 再設計: リンクレジストリ化（ツリー構造、フラットインデックス自動構築、ID体系 `{class}.{name}`）
-- [ ] 2-8. pages 層の新設（toc からクラスでフィルタしてページ定義、テンプレート指定）
-- [ ] 2-9. 11ty 除去 + 自前テンプレート展開（フロントマター廃止、pages ベースのルーティング）
-- [ ] 2-10. リンク解決基盤（find フィルタ、relativeFrom フィルタ、Markdown 内 `toc:id` 記法）
-- [ ] 2-11. Markdownパーサー（データソースとしてのMarkdown読み込み）
-- [ ] 2-12. 標準テンプレート（ER図、DFD、CRUDマトリクス）
+- [ ] 2-7. 2-4〜2-6 のコードを削除（pagination, toc, LiquidJS 移行を revert し 2-3 の状態に戻す）
+
+### Roadmap（Python 版）
 
 設計詳細: [docs/internal/toc-redesign.md](docs/internal/toc-redesign.md)
+
+#### Phase 1: 出力確認環境
+
+- [ ] 1-1. Python プロジェクトセットアップ（uv, pytest, ruff, DevContainer）
+- [ ] 1-2. Hugo セットアップ（hugo-python-distributions）+ dev コマンド（統合起動）
+
+#### Phase 2: Generator
+
+- [ ] 2-1. GitHub Actions 導入（テスト・カバレッジ必須化、main保護）
+- [ ] 2-2. ソース YAML 読み込み + Jinja2 テンプレート展開 + generate コマンド
+- [ ] 2-3. ファイル監視（watchdog）
+- [ ] 2-4. reports テンプレート評価（Jinja2 で YAML 生成、autoescape による YAML エスケープ）
+- [ ] 2-5. フラットアンカーマップ構築（`key` 持ちオブジェクトから ID 自動生成）
+- [ ] 2-6. paging 設定（クラス → ファイルパスのマッピング、プロファイル切り替え）
+- [ ] 2-7. `{% section %}` カスタムタグ（paging に応じた分割 / インライン展開）
+- [ ] 2-8. リンク解決（`link_md` フィルタ、Markdown 内 `toc:id` 記法）
+- [ ] 2-9. エスケープ基盤（Markdown / Mermaid / YAML、パーシャル拡張子で判定）
+- [ ] 2-10. Markdownパーサー（データソースとしてのMarkdown読み込み）
+- [ ] 2-11. 標準テンプレート（ER図、DFD、CRUDマトリクス）
 
 #### Phase 3: Validator
 
@@ -188,7 +204,6 @@ my-project/
 
 #### 将来
 
-- Python 移行（Jinja2 + Pydantic + pytest）— 詳細は [docs/internal/toc-redesign.md](docs/internal/toc-redesign.md) の「Python 移行」節
 - MCP サーバ対応
-- 多言語スキーマ生成（Zod ↔ Pydantic）
+- 多言語スキーマ生成（Pydantic ↔ Zod）
 - FP 法計測の自動化（要件定義ユースケース向け）
