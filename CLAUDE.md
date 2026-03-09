@@ -177,6 +177,10 @@ my-project/
 
 設計詳細: [docs/internal/toc-redesign.md](docs/internal/toc-redesign.md)
 
+#### Phase 0: 設計検証
+
+- [ ] 0-1. JSONata PoC（example-project の toc/entities.yaml.liquid を JSONata で書き直し、簡潔さとデータ忠実性を検証）
+
 #### Phase 1: 出力確認環境
 
 - [ ] 1-1. Python プロジェクトセットアップ（uv, pytest, ruff, DevContainer）
@@ -185,25 +189,25 @@ my-project/
 #### Phase 2: Generator
 
 - [ ] 2-1. GitHub Actions 導入（テスト・カバレッジ必須化、main保護）
-- [ ] 2-2. ソース YAML 読み込み + Jinja2 テンプレート展開 + generate コマンド
+- [ ] 2-2. ソース YAML 読み込み（ruamel.yaml）+ Jinja2 テンプレート展開 + generate コマンド
 - [ ] 2-3. ファイル監視（watchdog）
-- [ ] 2-4. reports テンプレート評価（Jinja2 で YAML 生成、autoescape による YAML エスケープ）
-- [ ] 2-5. フラットアンカーマップ構築（`key` 持ちオブジェクトから ID 自動生成）
-- [ ] 2-6. paging 設定（クラス → ファイルパスのマッピング、プロファイル切り替え）
-- [ ] 2-7. `{% section %}` カスタムタグ（paging に応じた分割 / インライン展開）
-- [ ] 2-8. リンク解決（`link_md` フィルタ、Markdown 内 `toc:id` 記法）
-- [ ] 2-9. エスケープ基盤（Markdown / Mermaid / YAML、パーシャル拡張子で判定）
-- [ ] 2-10. Markdownパーサー（データソースとしてのMarkdown読み込み）
-- [ ] 2-11. 標準テンプレート（ER図、DFD、CRUDマトリクス）
+- [ ] 2-4. フラットアンカーマップ構築（`key` 持ちオブジェクトから ID 自動生成）
+- [ ] 2-5. paging 設定（クラス → ファイルパスのマッピング、プロファイル切り替え）
+- [ ] 2-6. `{% section %}` カスタムタグ（paging に応じた分割 / インライン展開）
+- [ ] 2-7. リンク解決（`link_md` フィルタ、Markdown 内 `toc:id` 記法）
+- [ ] 2-8. エスケープ基盤（Markdown / Mermaid / YAML、パーシャル拡張子で判定）
+- [ ] 2-9. Markdownパーサー（データソースとしてのMarkdown読み込み）
+- [ ] 2-10. 標準テンプレート（ER図、DFD、CRUDマトリクス）
 
 #### Phase 3: Validator
 
 - [ ] 3-1. スキーマ定義（YAML）のパースと参照整合性チェック
-- [ ] 3-2. 検証結果ファイル（.validation-result.yaml）の生成
-- [ ] 3-3. ファイル監視（schema/source → Validator、validation-result → Generator）
+- [ ] 3-2. Query Engine（JSONata による queries/ 評価 → prepared データ生成）
+- [ ] 3-3. 検証結果ファイル + prepared データの出力
+- [ ] 3-4. ファイル監視（watchdog: schema/ + source/ + queries/ → Validator、prepared + templates/ + paging/ → Generator）
 
 #### 将来
 
-- MCP サーバ対応
+- MCP サーバ対応（CRUD: JSONPath + JSON Patch、ruamel.yaml によるラウンドトリップ保持）
 - 多言語スキーマ生成（Pydantic ↔ Zod）
 - FP 法計測の自動化（要件定義ユースケース向け）
