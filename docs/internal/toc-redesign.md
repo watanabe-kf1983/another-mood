@@ -54,10 +54,10 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 ```
 model/
-  source/ + queries/  →  Validator APP  →  output/prepared/
+  source/ + queries/  →  Data Preparer        →  output/prepared/
 presentation/
-  templates/ + paging/ →  Generator APP  →  output/documents/
-                          Renderer (Hugo) →  output/rendered/
+  templates/ + paging/ →  Document Generator   →  output/documents/
+                          Document Renderer    →  output/rendered/
 ```
 
 - **source/**: ドメインの真実（正規化されたデータ）
@@ -72,16 +72,16 @@ presentation/
 ```
 my-project/
   model/
-    schema/              # スキーマ定義（Validator が読む）
-    source/              # ソースデータ（Validator のみが読み書き）
-    queries/             # Query 定義：JSONata 式（Validator が評価）
+    schema/              # スキーマ定義（Data Preparer が読む）
+    source/              # ソースデータ（Data Preparer のみが読み書き）
+    queries/             # Query 定義：JSONata 式（Data Preparer が評価）
   presentation/
-    templates/           # ドキュメントテンプレート（Generator が読む）
-    paging/              # ページ分割戦略（Generator が読む）
+    templates/           # ドキュメントテンプレート（Document Generator が読む）
+    paging/              # ページ分割戦略（Document Generator が読む）
   output/                # 全て生成物（.gitignore 対象）
-    prepared/            # Validator が生成（queries/ の評価結果 YAML）
-    documents/           # Generator が生成（Markdown）
-    rendered/            # Hugo が生成（HTML）
+    prepared/            # Data Preparer が生成（queries/ の評価結果 YAML）
+    documents/           # Document Generator が生成（Markdown）
+    rendered/            # Document Renderer (Hugo) が生成（HTML）
 ```
 
 ### queries/: データの整形・射影（JSONata）
@@ -235,7 +235,7 @@ paging に列挙できるのは `key` を持つクラスに限られる（ファ
 
 ### フラットアンカーマップ
 
-Generator が prepared データのツリーを再帰的に走査し、`key` を持つオブジェクトからフラットマップを自動構築する。
+Document Generator が prepared データのツリーを再帰的に走査し、`key` を持つオブジェクトからフラットマップを自動構築する。
 
 構築手順：
 
@@ -268,13 +268,13 @@ Generator が prepared データのツリーを再帰的に走査し、`key` を
 ## 処理フロー
 
 ```
-Validator APP:
+Data Preparer (prepare):
 1. model/source/*.yaml 読み込み → source オブジェクト構築（ruamel.yaml）
 2. model/schema/ によるバリデーション
 3. model/queries/*.jsonata 評価（source を渡す）→ prepared ツリーを得る
 4. output/prepared/*.yaml に書き出し
 
-Generator APP:
+Document Generator (generate):
 5. output/prepared/*.yaml 読み込み
 6. ツリー走査 → key 持ちオブジェクトからフラットアンカーマップ構築（ID のみ）
 7. paging 設定 × フラットマップ → 各アンカーの href を確定
@@ -284,16 +284,16 @@ Generator APP:
 9. Markdown 内の toc:id リンクをフラットマップから解決
 10. output/documents/ にファイル書き出し
 
-Renderer:
+Document Renderer (render):
 11. Hugo が output/documents/ → output/rendered/ に変換
 ```
 
-## Validator ↔ Generator インタフェース
+## Data Preparer ↔ Document Generator インタフェース
 
-Validator と Generator はファイルを介して疎結合に連携する：
+Data Preparer と Document Generator はファイルを介して疎結合に連携する：
 
 ```
-output/prepared/          # Validator が書き、Generator が読む
+output/prepared/          # Data Preparer が書き、Document Generator が読む
   erd.yaml                # queries/erd.jsonata の評価結果
   screen.yaml             # queries/screen.jsonata の評価結果
   ...
@@ -302,8 +302,8 @@ output/prepared/          # Validator が書き、Generator が読む
 ファイル方式を選択した理由：
 
 - **デバッグ容易性**: queries/ の評価結果を YAML ファイルとして目視確認できる
-- **疎結合**: Validator と Generator が別言語・別プロセスでも動く
-- **シンプル**: notify + pull 方式でも結局 Generator 側でデシリアライズが必要。ファイルの方が透明性が高い
+- **疎結合**: Data Preparer と Document Generator が別言語・別プロセスでも動く
+- **シンプル**: notify + pull 方式でも結局 Document Generator 側でデシリアライズが必要。ファイルの方が透明性が高い
 - **クリーンビルド**: `rm -rf output/` で全生成物を一括削除できる
 
 ## 技術選定
@@ -348,5 +348,5 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 ## 変更履歴
 
-- 2025-03-09: テンプレートエンジンによるデータ変換を JSONata Query Engine に変更。Query Engine を Validator APP に配置。ディレクトリ構成を model/ + presentation/ + output/ の三層に再編。Python + ruamel.yaml の採用理由を追記
+- 2025-03-09: テンプレートエンジンによるデータ変換を JSONata Query Engine に変更。Query Engine を Data Preparer に配置。ディレクトリ構成を model/ + presentation/ + output/ の三層に再編。Python + ruamel.yaml の採用理由を追記。コンポーネント名を Validator → Data Preparer、Generator → Document Generator、Renderer → Document Renderer に変更
 - 2025-03-08: 初版。toc 層を reports 層に再設計（テンプレートエンジンによるデータ変換）
