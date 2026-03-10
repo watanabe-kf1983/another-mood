@@ -199,23 +199,24 @@ my-project/
 - [ ] 2-9. Markdownパーサー（データソースとしてのMarkdown読み込み）
 - [ ] 2-10. 標準ドキュメントテンプレート（ER図、DFD、CRUDマトリクス）
 
-#### Phase 3: Validator
+#### Phase 3: Normalizer
 
-- [ ] 3-1. schema/ の JSON Schema 検証
-- [ ] 3-2. source/ の型検証 + 参照整合性チェック（FK 制約）
-- [ ] 3-3. 正規化（additionalProperties パターンの辞書→配列変換）
-- [ ] 3-4. 検証結果の出力
+- [ ] 3-1. schema/ の JSON Schema 検証（トップレベルキー = スキーマ名）
+- [ ] 3-2. data/ の型検証
+- [ ] 3-3. 参照整合性チェック（references.yaml、`--strict` で警告のみ）
+- [ ] 3-4. 正規化（additionalProperties パターンの辞書→配列変換、再帰的）
+- [ ] 3-5. output/model/normalized/ への出力
 
-#### Phase 4: Preparer
+#### Phase 4: Composer
 
-- [ ] 4-1. YAML DSL の設計と実装（from / join / where / group_by / select / sort）
-- [ ] 4-2. queries/ 評価 → output/prepared/ 生成
+- [ ] 4-1. YAML DSL の設計と実装（from / join / where / group_by / select / sort、LEFT JOIN デフォルト）
+- [ ] 4-2. queries/ 評価 → output/model/views/ 生成（パススルークエリ含む）
 - [ ] 4-3. 標準クエリ定義（ER図、DFD、CRUDマトリクス）
-- [ ] 4-4. ファイル監視（schema/ + source/ + queries/ → Validator + Preparer、prepared/ + templates/ + paging/ → Document Generator）
+- [ ] 4-4. ファイル監視（schema/ + data/ → Normalizer、normalized/ + queries/ → Composer、views/ + templates/ + paging.yaml → Document Generator）
 
 #### 将来
 
-- MCP サーバ対応（Validate + Query の提供。CUD は AI が直接ファイル編集）
+- MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認）
 - クエリ可視化テンプレート（Access Query Design View 相当）
 - 多言語スキーマ生成（Pydantic ↔ Zod）
 - FP 法計測の自動化（要件定義ユースケース向け）
