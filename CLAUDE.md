@@ -154,7 +154,9 @@ my-project/
 1. **既存ツールを最大限活用** - 車輪の再発明を避ける
 2. **スキーマ定義は言語非依存な資産** - YAML/JSON Schema として Git 管理
 3. **周辺ツールは差し替え可能に** - 出力形式、レンダリングツール等は疎結合に
-4. **クエリ構文は JSONPath に統一** - CLI、テンプレート、MCP で一貫性
+4. **クエリは YAML DSL** - クエリ自体が構造化データ、ツール自身で管理・可視化可能
+5. **CUD は AI 直接編集** - ツールは YAML を読むだけ、CRUD API は提供しない
+6. **スキーマは JSON Schema** - 独自形式を避け、additionalProperties で辞書→配列の正規化を行う
 
 ### Roadmap
 
@@ -173,41 +175,48 @@ my-project/
 - [x] 2-6. テンプレートエンジンを LiquidJS へ移行
 - [ ] 2-7. 2-4〜2-6 のコードを削除（pagination, toc, LiquidJS 移行を revert し 2-3 の状態に戻す）
 
-### Roadmap（Python 版）
+### Roadmap（次期版）
 
 設計詳細: [docs/internal/toc-redesign.md](docs/internal/toc-redesign.md)
 
-#### Phase 0: 設計検証
-
-- [ ] 0-1. JSONata PoC（example-project の toc/entities.yaml.liquid を JSONata で書き直し、簡潔さとデータ忠実性を検証）
+実装言語は未定（Python or TypeScript）。
 
 #### Phase 1: 出力確認環境
 
-- [ ] 1-1. Python プロジェクトセットアップ（uv, pytest, ruff, DevContainer）
-- [ ] 1-2. Hugo セットアップ（hugo-python-distributions）+ dev コマンド（統合起動）
+- [ ] 1-1. プロジェクトセットアップ（テストフレームワーク、リンター、DevContainer）
+- [ ] 1-2. Hugo セットアップ + dev コマンド（統合起動）
 
-#### Phase 2: Generator
+#### Phase 2: Document Generator
 
 - [ ] 2-1. GitHub Actions 導入（テスト・カバレッジ必須化、main保護）
-- [ ] 2-2. ソース YAML 読み込み（ruamel.yaml）+ Jinja2 テンプレート展開 + generate コマンド
-- [ ] 2-3. ファイル監視（watchdog）
+- [ ] 2-2. ソース YAML 読み込み + テンプレート展開 + generate コマンド
+- [ ] 2-3. ファイル監視
 - [ ] 2-4. フラットアンカーマップ構築（`key` 持ちオブジェクトから ID 自動生成）
 - [ ] 2-5. paging 設定（クラス → ファイルパスのマッピング、プロファイル切り替え）
 - [ ] 2-6. `{% section %}` カスタムタグ（paging に応じた分割 / インライン展開）
 - [ ] 2-7. リンク解決（`link_md` フィルタ、Markdown 内 `toc:id` 記法）
-- [ ] 2-8. エスケープ基盤（Markdown / Mermaid / YAML、パーシャル拡張子で判定）
+- [ ] 2-8. エスケープ基盤（Markdown / Mermaid、パーシャル拡張子で判定）
 - [ ] 2-9. Markdownパーサー（データソースとしてのMarkdown読み込み）
-- [ ] 2-10. 標準テンプレート（ER図、DFD、CRUDマトリクス）
+- [ ] 2-10. 標準ドキュメントテンプレート（ER図、DFD、CRUDマトリクス）
 
-#### Phase 3: Validator
+#### Phase 3: Normalizer
 
-- [ ] 3-1. スキーマ定義（YAML）のパースと参照整合性チェック
-- [ ] 3-2. Query Engine（JSONata による queries/ 評価 → prepared データ生成）
-- [ ] 3-3. 検証結果ファイル + prepared データの出力
-- [ ] 3-4. ファイル監視（watchdog: schema/ + source/ + queries/ → Validator、prepared + templates/ + paging/ → Generator）
+- [ ] 3-1. schema/ の JSON Schema 検証（トップレベルキー = スキーマ名）
+- [ ] 3-2. data/ の型検証
+- [ ] 3-3. 参照整合性チェック（references.yaml、`--strict` で警告のみ）
+- [ ] 3-4. 正規化（additionalProperties パターンの辞書→配列変換、再帰的）
+- [ ] 3-5. output/model/normalized/ への出力
+
+#### Phase 4: Composer
+
+- [ ] 4-1. YAML DSL の設計と実装（from / join / where / group_by / select / sort、LEFT JOIN デフォルト）
+- [ ] 4-2. queries/ 評価 → output/model/views/ 生成（パススルークエリ含む）
+- [ ] 4-3. 標準クエリ定義（ER図、DFD、CRUDマトリクス）
+- [ ] 4-4. ファイル監視（schema/ + data/ → Normalizer、normalized/ + queries/ → Composer、views/ + templates/ + paging.yaml → Document Generator）
 
 #### 将来
 
-- MCP サーバ対応（CRUD: JSONPath + JSON Patch、ruamel.yaml によるラウンドトリップ保持）
+- MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認）
+- クエリ可視化テンプレート（Access Query Design View 相当）
 - 多言語スキーマ生成（Pydantic ↔ Zod）
 - FP 法計測の自動化（要件定義ユースケース向け）
