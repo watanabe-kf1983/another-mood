@@ -1,113 +1,73 @@
 # Architecture
 
-システムアーキテクチャの詳細。
+## アーキテクチャ概要
 
-## 概念レベル
+3コンポーネント + レンダラー構成:
+
+**Normalizer**
+スキーマ定義に基づいてデータを検証し、辞書形式を配列形式に正規化する。
+`--strict` モードでは参照整合性もチェックする。
+IN: スキーマ定義 (`model/schema/`)、実データ (`model/data/`)
+OUT: 正規化済みデータ (`output/model/normalized/`)
+
+**Composer**
+正規化済みデータに対して YAML DSL のクエリを評価し、テンプレート向けのビューを生成する。
+IN: 正規化済みデータ (`output/model/normalized/`)、クエリ定義 (`model/queries/`)
+OUT: ビュー (`output/model/views/`)
+
+**Document Generator**
+ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
+IN: ビュー (`output/model/views/`)、テンプレート (`presentation/templates/`)、ページ分割設定 (`presentation/paging.yaml`)
+OUT: Markdown ドキュメント (`output/documents/`)
+
+**Document Renderer**
+生成された Markdown を HTML にレンダリングする。
+IN: Markdown ドキュメント (`output/documents/`)
+OUT: HTML (`output/rendered/`)
+
+各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。data/ を変更すると normalized/ → views/ → documents/ とカスケードで更新される。プロセス間連携の詳細は [process-coordination.md](process-coordination.md) を参照。
+
+各コンポーネントの処理フローと技術選定の詳細:
+- [normalizer.md](normalizer.md)
+- [composer.md](composer.md)
+- [generator.md](generator.md)
+- [renderer.md](renderer.md)
+
+## ユーザプロジェクト構成
 
 ```
-[スキーマ定義]     OpenAPI/JSON Schema ベース + x-ref 拡張
-       ↓
-[Source]           YAML ファイル群（Git管理）
-       ↓
-[検証]             参照整合性チェック（FK制約相当）
-       ↓
-[ToC定義]          ドキュメント単位の導出（何がドキュメントになるか）
-       ↓
-[テンプレート]     LiquidJS + JSONPath フィルタ（見た目の定義）
-       ↓
-[出力]             複数 Markdown ファイル
-       ↓
-[レンダリング]     Hugo (hugo-bin 経由)、将来 AsciiDoc 対応も検討
+my-project/
+  model/
+    schema/              # スキーマ定義（JSON Schema + references.yaml）
+      entities.yaml      # スキーマ定義（トップレベルキーがスキーマ名）
+      references.yaml    # 参照整合性定義（Snowflake 式宣言的 FK）
+    data/                # 実データ（人間が書く、AI が直接編集）
+    queries/             # Query 定義: YAML DSL（Composer が評価）
+  presentation/
+    templates/           # ドキュメントテンプレート（Document Generator が読む）
+    paging.yaml          # ページ分割戦略（Document Generator が読む）
 ```
 
-## 実行時構成
+## 背景: MS-Access アナロジー
 
-Validator と Generator を疎結合にし、検証結果ファイルを介して連携する：
+data / queries / templates の三層構造は MS-Access の Table / Query / Form・Report に対応する:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. CLI Watcher (schema/, source/ を監視)                        │
-│    chokidar -w schema/ -w source/ --debounce 500               │
-└─────────────────────┬───────────────────────────────────────────┘
-                      ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. Validator APP  ★スクラッチ開発                               │
-│    ・ハッシュ取得 (folder-hash等)                                │
-│    ・データ読み込み                                              │
-│    ・ハッシュ再取得 → 不一致ならやり直し                          │
-│    ・検証実施                                                    │
-│    ・結果 + ハッシュを .validation-result.yaml に書き込み        │
-└─────────────────────┬───────────────────────────────────────────┘
-                      ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. CLI Watcher (.validation-result.yaml, toc/, templates/ を監視)    │
-│    chokidar -w .validation-result.yaml -w toc/ -w templates/         │
-└─────────────────────┬───────────────────────────────────────────┘
-                      ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. Generator APP  ★スクラッチ開発                               │
-│    ・検証結果 + source YAML + toc定義読み込み                    │
-│    ・ハッシュ突合 → 不一致なら待機 or 警告ページ生成             │
-│    ・toc + source をテンプレートに渡してドキュメント生成          │
-└─────────────────────┬───────────────────────────────────────────┘
-                      ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. Render Server                                                 │
-│    hugo server (hugo-bin 経由で自動取得)                         │
-│    将来: AsciiDoc 対応も検討                                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+| MS-Access | このアプリ | 役割 |
+|---|---|---|
+| Table | data/ | 正規化されたデータ |
+| Query (View) | queries/ | データの整形・射影・結合の**定義** |
+| Form / Report | templates/ | 表現・レイアウト |
 
-## 検証結果ファイル
+Access の Query は SQL で書く。テンプレートエンジンで Query を書くのは、Excel のセルに SQL を文字列として組み立てるようなもの。Query にはクエリ言語を使うべき。
 
-Validator と Generator の「契約」として機能：
-
-```yaml
-# .validation-result.yaml
-status: valid  # or invalid
-content_hash: "a1b2c3..."  # schema/ + source/ のハッシュ
-timestamp: "2024-01-15T10:30:00Z"
-errors: []  # invalid時はエラー一覧
-```
-
-### ハッシュ計算方法
-
-- ファイルパス + 内容を連結してハッシュ（リネーム・削除も検出可能）
-- ライブラリ: folder-hash (Node.js) / filehash (Python)
-
-```bash
-# シェルで同等の処理
-find schema/ source/ -name '*.yaml' | sort | while read f; do echo "$f"; cat "$f"; done | sha256sum
-```
+さらに、Access の Query Design View は SQL を書かずに GUI でクエリを構築できる。queries/ を YAML DSL で定義することで、クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。
 
 ## 設計判断
 
-### Validator と Generator を分離する理由
+1. **既存ツールを最大限活用** - 車輪の再発明を避ける
+2. **スキーマ定義は言語非依存な資産** - YAML/JSON Schema として Git 管理
+3. **周辺ツールは差し替え可能に** - 出力形式、レンダリングツール等は疎結合に
+4. **クエリは YAML DSL** - クエリ自体が構造化データ、ツール自身で管理・可視化可能
+5. **CUD は AI 直接編集** - ツールは YAML を読むだけ、CRUD API は提供しない
+6. **スキーマは JSON Schema** - 独自形式を避け、additionalProperties で辞書→配列の正規化を行う
 
-- 別プロセス・別言語で実装可能
-- Generator は検証ロジックを持たない（11ty等への丸投げが容易）
-- 検証結果ファイルが「正しいデータの証明」として機能
-
-### ハッシュで整合性を担保する理由
-
-- mtime では削除・リネームを検出できない
-- ハッシュならファイル一覧 + 内容の完全な状態を捉えられる
-- debounce と組み合わせて、編集中の不整合を回避
-
-### Generator が invalid 時にエラーページを生成する理由
-
-- 壊れたリンクを含むドキュメントを出力しない
-- 読者に「データが壊れている」ことを明示できる
-
-## 開発モード起動スクリプト（例）
-
-```bash
-#!/bin/bash
-# reqs-builder dev
-
-chokidar -w schema/ -w source/ --debounce 500 -- reqs-builder validate &
-chokidar -w .validation-result.yaml -w toc/ -w templates/ --debounce 300 -- reqs-builder generate &
-hugo server &
-
-wait
-```

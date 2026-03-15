@@ -33,9 +33,12 @@ Pandoc/kramdown 互換の見出し属性記法を使用する：
 #### 自動生成ルール（設定で切り替え可能）
 
 ```yaml
-# reqs-builder.config.yaml
-markdown:
-  autoIdType: "github"  # デフォルト
+# reqs-builder.config.json
+{
+  "markdown": {
+    "autoIdType": "github"
+  }
+}
 ```
 
 | 設定値 | 動作 | 例 |
@@ -126,7 +129,7 @@ markdown-descriptions:
 
 ## 使用例
 
-### 入力ファイル（source/descriptions.md）
+### 入力ファイル（model/data/descriptions.md）
 
 ```markdown
 # エンティティ定義
@@ -149,7 +152,7 @@ markdown-descriptions:
 ### YAMLデータとの紐付け
 
 ```yaml
-# source/entities.yaml
+# model/data/entities.yaml
 entities:
   - id: user-entity
     name: ユーザー
@@ -193,5 +196,5 @@ entities:
 
 ## 未検討事項
 
-- スキーマ定義での読み書き先指定（`x-storage: markdown` など）
+- スキーマ定義での読み書き先指定
 - 書き出し先ファイルの決定方法
