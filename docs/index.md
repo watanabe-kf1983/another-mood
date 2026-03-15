@@ -8,9 +8,9 @@
 - [reqs-builder-original.md](background/reqs-builder-original.md) — 初期構想（要件定義ツール時代）
 - [roadmap.md](background/roadmap.md) — ロードマップ
 
-## [external/](external/)
+## [external/](external/index.md)
 
-ユーザ向け外部仕様。
+ユーザ向け外部仕様。詳細は [external/index.md](external/index.md) を参照。
 
 - [normalizer/](external/normalizer/) — スキーマ定義、Markdownパーサー
 - [composer/](external/composer/) — YAML DSL クエリ仕様
