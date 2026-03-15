@@ -1,54 +1,73 @@
 # Anchor Specification
 
-アンカー（リンク可能なオブジェクト）の識別・マップ構築・リンク解決の仕様。
+アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。
 
-## key 属性と ID 体系
+## ID 体系
 
-- `key`: 機械的な識別子。英数字・ハイフン・アンダースコアのみ
-- `title`: 人間向けの表示名（日本語OK）
-- `key` はクラス内でユニーク
-- `key` を持つオブジェクトは自動的にフラットアンカーマップに登録される（リンク可能になる）
+正規化後のデータモデル（配列 or オブジェクト）によって、アンカーの識別方法が決まる。
 
-グローバルにユニークな ID はエンジンが自動生成する:
+### 配列（リスト型）
 
-- class = ラッパーキーのドット区切りパス（例: `erd`, `erd.entity`）
-- ID = `{class}.{key}`（例: `erd.user-management`, `erd.entity.user`）
-- ラッパーキーは**単数形**で記述する
+Normalizer の正規化により各要素に `id` フィールドが付与される（[schema-spec: 正規化ルール](../normalizer/schema-spec.md#正規化ルール) 参照）。
 
-同じ `key` でも異なるクラスなら共存できる:
+- class = ラッパーキーのドット区切りパスに `.item` を付加
+- アンカー ID = `{class}.{id}`
 
-| id | class | key | title |
+### オブジェクト（シングルトン型）
+
+単一オブジェクトなので `id` は不要。ラッパーキー自体がアンカーとなる。
+
+- class = ラッパーキーのドット区切りパス
+- アンカー ID = `{class}`（class と同一）
+
+### 例
+
+正規化後の views データ:
+
+```yaml
+overview:                        # オブジェクト → シングルトン
+  title: システム概要
+
+erds:                            # 配列 → リスト
+  - id: user-management
+    title: ユーザー管理の ER図
+    entities:                    # 配列 → リスト（ネスト）
+      - id: user
+        title: ユーザー
+  - id: order-flow
+    title: 受注フローの ER図
+
+screens:                         # 配列 → リスト
+  - id: user
+    title: ユーザー画面
+```
+
+| アンカー ID | class | id | title |
 |---|---|---|---|
-| `erd.user-management` | erd | user-management | ユーザー管理の ER図 |
-| `erd.entity.user` | erd.entity | user | ユーザー |
-| `screen.user` | screen | user | ユーザー画面 |
+| `overview` | overview | *(なし)* | システム概要 |
+| `erds.item.user-management` | erds.item | user-management | ユーザー管理の ER図 |
+| `erds.item.entities.item.user` | erds.item.entities.item | user | ユーザー |
+| `screens.item.user` | screens.item | user | ユーザー画面 |
 
-## フラットアンカーマップ
+- `title`: 人間向けの表示名（日本語OK）
+- アンカー ID はグローバル一意とは限らない。リンク対象として使う主要オブジェクトの `id` が実質的にユニークであればよい
 
-Document Generator が views データのツリーを再帰的に走査し、`key` を持つオブジェクトからフラットマップを自動構築する。
+## リンク記法
 
-構築手順:
+テンプレート内では `link_md` フィルタを使用する:
 
-1. ツリー走査 → `key` 持ちオブジェクトの ID（`{class}.{key}`）を収集
-2. paging 設定を適用 → 各アンカーが属するページの href を確定
-   - paging に該当するクラス → そのページの href
-   - 該当しないクラス → 親を辿って最も近い「ページになるアンカー」の href + `#id`
-3. テンプレートエンジン起動前にマップ構築を完了させる
+```jinja2
+{{ "erds.item.entities.item.user" | link_md }}
+```
+
+Markdown data 内では `toc:` 記法を使用する:
+
+```markdown
+ユーザーの詳細は[ユーザー](toc:erds.item.entities.item.user)を参照。
+```
 
 ## リンク解決
 
-### テンプレート内（link_md フィルタ）
+アンカー ID から実際のリンク先 URL への解決は、paging 設定に依存する（[paging-spec](paging-spec.md) 参照）。エンジンがアンカー ID を適切な相対パスに置換する。
 
-```jinja2
-{{ "erd.entity.user" | link_md }}
-```
-
-→ `[ユーザー](../erd/user-management.md#erd.entity.user)` のような相対リンクを生成。
-
-### Markdown data 内（toc:id 記法）
-
-```markdown
-ユーザーの詳細は[ユーザー](toc:erd.entity.user)を参照。
-```
-
-エンジンが `toc:erd.entity.user` をフラットマップから解決し、適切な相対パスに置換する。
+→ 例: `[ユーザー](../erds/user-management.md#erds.item.entities.item.user)`
