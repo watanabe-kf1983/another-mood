@@ -40,6 +40,12 @@ erds:                            # 配列 → リスト
 screens:                         # 配列 → リスト
   - id: user
     title: ユーザー画面
+
+prose:                           # 配列 → リスト（Markdown データソース）
+  - id: internal/architecture.md
+    title: Architecture
+  - id: external/normalizer/schema-spec.md
+    title: Schema Specification
 ```
 
 | アンカー ID | class | id | title |
@@ -48,6 +54,8 @@ screens:                         # 配列 → リスト
 | `erds.item.user-management` | erds.item | user-management | ユーザー管理の ER図 |
 | `erds.item.entities.item.user` | erds.item.entities.item | user | ユーザー |
 | `screens.item.user` | screens.item | user | ユーザー画面 |
+| `prose.item.internal/architecture.md` | prose.item | internal/architecture.md | Architecture |
+| `prose.item.external/normalizer/schema-spec.md` | prose.item | external/normalizer/schema-spec.md | Schema Specification |
 
 - `title`: 人間向けの表示名（日本語OK）
 - アンカー ID はグローバル一意とは限らない。リンク対象として使う主要オブジェクトの `id` が実質的にユニークであればよい
@@ -64,6 +72,15 @@ Markdown data 内では `toc:` 記法を使用する:
 
 ```markdown
 ユーザーの詳細は[ユーザー](toc:erds.item.entities.item.user)を参照。
+```
+
+Markdown データソースでは、Normalizer がソース内の相対リンクを自動的に `toc:` 記法に変換する（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）:
+
+```markdown
+{# ソース: model/data/internal/normalizer.md #}
+[Composer](composer.md)
+↓ Normalizer が変換 ↓
+[Composer](toc:prose.item.internal/composer.md)
 ```
 
 ## リンク解決

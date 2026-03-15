@@ -28,6 +28,10 @@ link_md / toc:id によるリンク解決:
 
 全ノードの事前インデックスは構築しない。リンク対象は主要オブジェクトのごく一部であり、オンデマンド走査 + キャッシュで十分。
 
+### prose body 内のリンク解決
+
+Markdown データソースの body には、Normalizer がソース内の相対リンクを `toc:` 記法に変換済みのリンクが含まれる（[markdown-parser-spec.md](../external/normalizer/markdown-parser-spec.md) 参照）。Generator はこれを上記と同じ仕組みで解決する。追加のリンク解決ロジックは不要。
+
 ## パーシャルテンプレートとエスケープ
 
 パーシャル単位で出力フォーマットが決まり、拡張子でエスケープモードを判定する:
