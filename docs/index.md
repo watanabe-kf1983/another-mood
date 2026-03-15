@@ -29,11 +29,6 @@
 - [process-coordination.md](internal/process-coordination.md) — プロセス間連携仕様
 - [glossary.md](internal/glossary.md) — 用語集（JSON データモデル等）
 
-## [conventions/](conventions/)
+## 開発規約
 
-開発規約。
-
-- [design.md](conventions/design.md) — 設計工程（ドキュメント構成、ADR方針）
-- [implementation.md](conventions/implementation.md) — 実装工程（コード規約、テスト規約）
-- [workflow.md](conventions/workflow.md) — 工程共通（タスクの進め方、Git運用、言語）
-- [setup.md](conventions/setup.md) — 開発環境セットアップ
+[DEVELOPMENT.md](../DEVELOPMENT.md) に統合済み。
