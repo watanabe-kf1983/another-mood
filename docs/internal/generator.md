@@ -10,6 +10,24 @@
 4. Markdown 内の toc:id リンクを解決
 5. output/documents/{profile_name}/ にファイル書き出し
 
+## リンク解決
+
+views データのラッパーツリーを構築する。各ラッパーオブジェクトは:
+
+- `data`: 元の JSON オブジェクト
+- `parent`: 親ラッパー
+- `class_name`: クラス名
+- `get_page_url()`: 自身が paginate 対象なら自ページパス、でなければ `parent.get_page_url()`
+
+link_md / toc:id によるリンク解決:
+
+1. アンカー ID でツリーを走査し、最初にヒットしたラッパーを返す
+2. ヒットしたらキャッシュ（anchor_id → ラッパー）に登録
+3. 2回目以降は O(1) で解決
+4. ラッパーの `get_page_url()` + フラグメント（`#anchor_id`）でリンク URL を生成
+
+全ノードの事前インデックスは構築しない。リンク対象は主要オブジェクトのごく一部であり、オンデマンド走査 + キャッシュで十分。
+
 ## パーシャルテンプレートとエスケープ
 
 パーシャル単位で出力フォーマットが決まり、拡張子でエスケープモードを判定する:
@@ -31,24 +49,3 @@ TypeScript の場合は LiquidJS を採用する:
 Python の場合は Jinja2 を採用する:
 
 - **autoescape**: パーシャル単位のエスケープモード切り替えにフィット
-
-### 図表記
-
-- 基本: Mermaid（ER図、シーケンス図、フローチャート等）
-- Mermaid 非対応の図（ユースケース図等）は代替記法で対応
-- 将来: PlantUML 対応を検討（Java 依存のため優先度低）
-
-### 現行 TypeScript 実装（参照実装）
-
-- テンプレート: LiquidJS
-- YAML 処理: js-yaml
-- ファイル監視: chokidar
-
-```
-src/
-  commands/
-    generate.ts         # reqs-builder generate
-  core/
-    toc.ts              # toc定義の読み込み・展開
-    template-expander.ts # テンプレート展開
-```

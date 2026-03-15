@@ -49,9 +49,8 @@ screens:                         # 配列 → リスト
 | `erds.item.entities.item.user` | erds.item.entities.item | user | ユーザー |
 | `screens.item.user` | screens.item | user | ユーザー画面 |
 
-- `id` はクラス内でユニーク
 - `title`: 人間向けの表示名（日本語OK）
-- 同じ `id` でも異なるクラスなら共存できる（例: `erds.item.entities.item.user` と `screens.item.user`）
+- アンカー ID はグローバル一意とは限らない。リンク対象として使う主要オブジェクトの `id` が実質的にユニークであればよい
 
 ## リンク記法
 
