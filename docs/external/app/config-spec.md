@@ -14,23 +14,11 @@ reqs-builder の設定システムの振る舞いを定義する。
 
 ### 設定ファイル（未実装）
 
-- ファイル名: `stdg.json`
+- ファイル名: `reqs-builder.config.json`
 - 配置場所: プロジェクトルート
 - 対応フォーマット: JSON
 
 > **Note**: 現在はデフォルト値と環境変数のみ対応。設定ファイル読み込みは未実装。
-
-#### JSON形式の例
-
-```json
-{
-  "output": {
-    "doc": {
-      "dir": "./build"
-    }
-  }
-}
-```
 
 ### 環境変数
 
@@ -40,11 +28,13 @@ reqs-builder の設定システムの振る舞いを定義する。
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `source.dir` | string | `./source` | `STDG_SOURCE_DIR` | ソースディレクトリ |
-| `toc.dir` | string | `./toc` | `STDG_TOC_DIR` | ToC定義ディレクトリ |
-| `templates.dir` | string | `./templates` | `STDG_TEMPLATES_DIR` | テンプレートディレクトリ |
-| `output.doc.dir` | string | `./output/docs` | `STDG_OUTPUT_DOC_DIR` | Generator の出力先ディレクトリ |
-| `output.toc.dir` | string | `./output/tocs` | `STDG_OUTPUT_TOC_DIR` | レンダリング済みToC出力ディレクトリ（デバッグ用） |
-| `output.rendered.dir` | string | `./output/rendered` | `STDG_OUTPUT_RENDERED_DIR` | レンダリング結果（HTML）の出力先ディレクトリ |
-| `render.hugo.*` | object | `{}` | (なし) | hugo-bin に渡すオプション（設定ファイルのみ）（未実装） |
-| `render.customServer.command` | string | (なし) | `STDG_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は hugo-bin の代わりに使用（未実装：AsciiDoc対応時に実装予定） |
+| `model.schema.dir` | string | `./model/schema` | `RB_MODEL_SCHEMA_DIR` | スキーマ定義ディレクトリ |
+| `model.data.dir` | string | `./model/data` | `RB_MODEL_DATA_DIR` | ソースデータディレクトリ |
+| `model.queries.dir` | string | `./model/queries` | `RB_MODEL_QUERIES_DIR` | クエリ定義ディレクトリ |
+| `presentation.templates.dir` | string | `./presentation/templates` | `RB_TEMPLATES_DIR` | テンプレートディレクトリ |
+| `presentation.paging` | string | `./presentation/paging.yaml` | `RB_PAGING_FILE` | ページ分割設定ファイル |
+| `output.normalized.dir` | string | `./output/model/normalized` | `RB_OUTPUT_NORMALIZED_DIR` | Normalizer の出力先 |
+| `output.views.dir` | string | `./output/model/views` | `RB_OUTPUT_VIEWS_DIR` | Composer の出力先 |
+| `output.documents.dir` | string | `./output/documents` | `RB_OUTPUT_DOCUMENTS_DIR` | Document Generator の出力先 |
+| `output.rendered.dir` | string | `./output/rendered` | `RB_OUTPUT_RENDERED_DIR` | Document Renderer の出力先 |
+| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用（未実装） |
