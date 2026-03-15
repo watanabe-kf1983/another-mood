@@ -3,13 +3,21 @@
 ## 処理フロー
 
 1. output/model/views/*.yaml 読み込み
-2. ツリー走査 → key 持ちオブジェクトからフラットアンカーマップ構築（ID のみ）
-3. paging.yaml × フラットマップ → 各アンカーの href を確定
-4. root テンプレートからレンダリング開始
-   - {% section %} が paging を参照し、分割 or インライン判定
-   - link_md フィルタがフラットマップを参照しリンク生成
-5. Markdown 内の toc:id リンクをフラットマップから解決
-6. output/documents/ にファイル書き出し
+2. profiles.yaml の paginate 設定を読み込み
+3. index テンプレートからレンダリング開始
+   - {% section %} が paginate を参照し、分割 or インライン判定
+   - link_md フィルタがアンカー ID を解決しリンク生成
+4. Markdown 内の toc:id リンクを解決
+5. output/documents/{profile_name}/ にファイル書き出し
+
+## パーシャルテンプレートとエスケープ
+
+パーシャル単位で出力フォーマットが決まり、拡張子でエスケープモードを判定する:
+
+| 拡張子 | エスケープモード |
+|---|---|
+| `.md` | Markdown エスケープ |
+| `.mermaid` | Mermaid エスケープ |
 
 ## Technical Stack
 
