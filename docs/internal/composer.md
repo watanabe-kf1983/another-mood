@@ -8,7 +8,15 @@
    - join はデフォルト LEFT JOIN
 4. output/model/views/*.yaml に書き出し
 
-## 背景: テンプレートエンジンによるデータ変換の限界
+## 背景: YAML DSL の採用理由
+
+テンプレートエンジン（LiquidJS / Jinja2）でも JSONata でもなく、YAML DSL を選択した理由:
+
+- **クエリ自体が構造化データ**: このツール自身で管理・検証・可視化できる（dog fooding）
+- **AI が MCP 経由で編集可能**: JSONPath + JSON Patch でクエリ定義を操作できる
+- **Access の Query Design View に相当する可視化**: クエリ定義を Mermaid 等で図示できる
+
+### テンプレートエンジンによるデータ変換の限界
 
 旧設計では LiquidJS / Jinja2 テンプレートで source データを整形していた:
 

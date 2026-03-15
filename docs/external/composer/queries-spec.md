@@ -2,15 +2,6 @@
 
 クエリ定義の仕様。YAML DSL による正規化済みデータの整形・射影・結合を定義する。
 
-## 基本方針
-
-テンプレートエンジンでも JSONata でもなく、**YAML DSL** を使用する。
-
-YAML DSL を選択した理由:
-- **クエリ自体が構造化データ**: このツール自身で管理・検証・可視化できる（dog fooding）
-- **AI が MCP 経由で編集可能**: JSONPath + JSON Patch でクエリ定義を操作できる
-- **Access の Query Design View に相当する可視化**: クエリ定義を Mermaid 等で図示できる
-
 ## ファイル構成
 
 `model/queries/` 配下に YAML ファイルとして配置する。
