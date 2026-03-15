@@ -48,6 +48,20 @@ my-project/
     paging.yaml          # ページ分割戦略（Document Generator が読む）
 ```
 
+## 背景: MS-Access アナロジー
+
+data / queries / templates の三層構造は MS-Access の Table / Query / Form・Report に対応する:
+
+| MS-Access | このアプリ | 役割 |
+|---|---|---|
+| Table | data/ | 正規化されたデータ |
+| Query (View) | queries/ | データの整形・射影・結合の**定義** |
+| Form / Report | templates/ | 表現・レイアウト |
+
+Access の Query は SQL で書く。テンプレートエンジンで Query を書くのは、Excel のセルに SQL を文字列として組み立てるようなもの。Query にはクエリ言語を使うべき。
+
+さらに、Access の Query Design View は SQL を書かずに GUI でクエリを構築できる。queries/ を YAML DSL で定義することで、クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。
+
 ## 設計判断
 
 1. **既存ツールを最大限活用** - 車輪の再発明を避ける

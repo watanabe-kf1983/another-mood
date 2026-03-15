@@ -6,7 +6,6 @@
 
 - 製品ビジョン: [docs/background/product.md](docs/background/product.md)
 - アーキテクチャ: [docs/internal/architecture.md](docs/internal/architecture.md)
-- 再設計の経緯: [docs/background/toc-redesign.md](docs/background/toc-redesign.md)
 
 ## Technical Stack（現行 TypeScript 実装）
 
@@ -82,7 +81,7 @@
 
 ## Roadmap（次期版）
 
-設計詳細: [docs/background/toc-redesign.md](docs/background/toc-redesign.md)
+設計詳細: [docs/internal/architecture.md](docs/internal/architecture.md)
 
 実装言語は未定（Python or TypeScript）。
 

@@ -6,7 +6,6 @@
 
 - [product.md](background/product.md) — 製品ビジョンとコア設計判断
 - [reqs-builder-original.md](background/reqs-builder-original.md) — 初期構想（要件定義ツール時代）
-- [toc-redesign.md](background/toc-redesign.md) — 3コンポーネント再設計の検討過程
 
 ## [external/](external/)
 
@@ -27,3 +26,4 @@
 - [generator.md](internal/generator.md) — Generator 処理フロー・技術選定
 - [renderer.md](internal/renderer.md) — Renderer 処理・構成
 - [process-coordination.md](internal/process-coordination.md) — プロセス間連携仕様
+- [glossary.md](internal/glossary.md) — 用語集（JSON データモデル等）
