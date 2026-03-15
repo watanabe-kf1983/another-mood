@@ -5,7 +5,7 @@
 ## 基本方針
 
 - テンプレートのデータソースは常に `output/model/views/` のみ
-- normalized データを直接使いたい場合はパススルークエリを定義する（[queries-spec.md](../composer/queries-spec.md) 参照）
+- normalized データは自動的に view になるため、パススルークエリは不要（[queries-spec.md](../composer/queries-spec.md) 参照）
 
 ## ファイル構成
 
@@ -21,16 +21,19 @@ presentation/templates/
 
 ## index テンプレート
 
-ユーザが必ず書くエントリポイント。ドキュメント全体の構成を定義する:
+ユーザが必ず書くエントリポイント。ドキュメント全体の構成（TOC）を定義する:
 
 ```jinja2
 {# templates/index.md #}
-# システム要件定義書
+# システム仕様書
 
+{% section prose[id="internal/architecture.md"] %}
 {% section "erd" for views.erds %}
+{% section prose[id="external/normalizer/schema-spec.md"] %}
 {% section "screen" for views.screens %}
-{% section "usecase" for views.usecases %}
 ```
+
+構造化データの view と prose（Markdown データソース）を自由に混在できる。prose は `model/data/` に配置した Markdown ファイルから自動生成される view である（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）。
 
 読者や目的が異なる場合は index テンプレートを分ける（社内向け、顧客向け等）。
 

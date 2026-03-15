@@ -6,13 +6,14 @@
 
 **Normalizer**
 スキーマ定義に基づいてデータを検証し、辞書形式を配列形式に正規化する。
+Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../external/normalizer/markdown-parser-spec.md) 参照）。
 `--strict` モードでは参照整合性もチェックする。
-IN: スキーマ定義 (`model/schema/`)、実データ (`model/data/`)
+IN: スキーマ定義 (`model/schema/`)、実データ (`model/data/*.yaml`, `model/data/*.md`)
 OUT: 正規化済みデータ (`output/model/normalized/`)
 
 **Composer**
-正規化済みデータに対して YAML DSL のクエリを評価し、テンプレート向けのビューを生成する。
-IN: 正規化済みデータ (`output/model/normalized/`)、クエリ定義 (`model/queries/`)
+正規化済みデータを自動的にビューとしてパススルーし、さらに YAML DSL のクエリがあれば評価して追加のビューを生成する。
+IN: 正規化済みデータ (`output/model/normalized/`)、クエリ定義 (`model/queries/`、任意)
 OUT: ビュー (`output/model/views/`)
 
 **Document Generator**
@@ -41,7 +42,7 @@ my-project/
     schema/              # スキーマ定義（JSON Schema + references.yaml）
       entities.yaml      # スキーマ定義（トップレベルキーがスキーマ名）
       references.yaml    # 参照整合性定義（Snowflake 式宣言的 FK）
-    data/                # 実データ（人間が書く、AI が直接編集）
+    data/                # 実データ（YAML + Markdown。人間が書く、AI が直接編集）
     queries/             # Query 定義: YAML DSL（Composer が評価）
   presentation/
     templates/           # ドキュメントテンプレート（Document Generator が読む）
