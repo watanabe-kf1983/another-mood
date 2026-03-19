@@ -51,6 +51,10 @@ errors: []  # invalid時はエラー一覧
 find <input-dir> -name '*.yaml' | sort | while read f; do echo "$f"; cat "$f"; done | sha256sum
 ```
 
+## Stage Runner
+
+処理実行の共通ランナー仕様は [stage-runner.md](stage-runner.md) を参照。
+
 ## 設計判断
 
 ### ファイルを介した連携を選択した理由
