@@ -1,64 +1,46 @@
 # Roadmap
 
-## 現行版
+### Phase 1: 移行準備
 
-### Phase 1: 出力確認環境
+- [ ] 1-1. TypeScript 実装から未ドキュメントの仕様を救出・ドキュメント化
+- [ ] 1-2. example-project/output/docs を gitignore 外して commit（現行出力を期待値として保存）
+- [ ] 1-3. TypeScript コード・設定を削除
 
-- [x] 1-1. 統合起動コマンドの作成（reqs-builder dev）
-- [x] 1-2. Hugo セットアップ (hugo-bin)
+### Phase 2: Python 環境構築 + CI
 
-### Phase 2: Generator
+- [ ] 2-1. プロジェクトセットアップ（uv, pytest, ruff, mypy, DevContainer）
+- [ ] 2-2. GitHub Actions CI（lint, test, type check, coverage, main 保護）
 
-- [x] 2-1. GitHub Actions 導入（テスト・カバレッジ必須化、main保護）
-- [x] 2-2. テンプレートエンジン + データYAML読み込み + generate コマンド
-- [x] 2-3. ファイル監視機能の追加
-- [x] 2-4. pagination（複数ファイル生成）
-- [x] 2-5. toc 定義の読み込み（ToC テンプレート）
-- [x] 2-6. テンプレートエンジンを LiquidJS へ移行
-- ~~2-7. 2-4〜2-6 のコードを削除~~ → 次期版で Python に移行するため不要
+### Phase 3: パススルーパイプライン（自己ドッグフーディング開始）
 
-## 次期版
+- [ ] 3-1. build コマンド（contents/ → .reqs-builder/output/ にコピー）
+- [ ] 3-2. dev コマンド（build + ファイル監視で自動再実行）
+- [ ] 3-3. docs/ を docs/contents/ に移行、CLAUDE.md 等の参照先を .reqs-builder/output/ に変更
 
-設計詳細: [docs/internal/architecture.md](../internal/architecture.md)
+### Phase 4: Hugo 連携
 
-実装言語: **Python**
+- [ ] 4-1. Renderer として Hugo を組み込み、dev コマンドで HTML プレビュー
 
-### Phase 1: 出力確認環境
+### Phase 5: example-project 同等機能
 
-- [ ] 1-1. プロジェクトセットアップ（テストフレームワーク、リンター、DevContainer）
-- [ ] 1-2. Hugo セットアップ + dev コマンド（統合起動）
+コンポーネント境界（Normalizer / Composer / Generator）に沿って実装。Phase 1 で保存した出力を期待値として使用。具体的なタスク分割は着手時に決定。
 
-### Phase 2: Document Generator
+### Phase 6: メタドキュメンテーション前提機能
 
-- [ ] 2-1. GitHub Actions 導入（テスト・カバレッジ必須化、main保護）
-- [ ] 2-2. ソース YAML 読み込み + テンプレート展開 + generate コマンド
-- [ ] 2-3. ファイル監視
-- [ ] 2-4. フラットアンカーマップ構築（`key` 持ちオブジェクトから ID 自動生成）
-- [ ] 2-5. paging 設定（クラス → ファイルパスのマッピング、プロファイル切り替え）
-- [ ] 2-6. `{% section %}` カスタムタグ（paging に応じた分割 / インライン展開）
-- [ ] 2-7. リンク解決（`link_md` フィルタ、Markdown 内 `toc:id` 記法）
-- [ ] 2-8. エスケープ基盤（Markdown / Mermaid、パーシャル拡張子で判定）
-- [ ] 2-9. Markdownパーサー（データソースとしてのMarkdown読み込み）
-- [ ] 2-10. 標準ドキュメントテンプレート（ER図、DFD、CRUDマトリクス）
+- [ ] JSON Schema によるスキーマ検証
+- [ ] 辞書→配列の正規化（additionalProperties パターン、再帰的）
+- [ ] YAML DSL クエリ評価（from / join / where / group_by / select / sort）
 
-### Phase 3: Normalizer
+### Phase 7: メタドキュメンテーション
 
-- [ ] 3-1. schema/ の JSON Schema 検証（トップレベルキー = スキーマ名）
-- [ ] 3-2. data/ の型検証
-- [ ] 3-3. 参照整合性チェック（references.yaml、`--strict` で警告のみ）
-- [ ] 3-4. 正規化（additionalProperties パターンの辞書→配列変換、再帰的）
-- [ ] 3-5. `normalizedSchemaDir` / `normalizedContentsDir` への出力
+スキーマ・クエリの可視化（[meta-documentation.md](../external/app/meta-documentation.md)）。ツール内蔵のスキーマ・クエリ・テンプレートでユーザ定義を可視化する。
 
-### Phase 4: Composer
+### Phase 8: 追加機能（欲しい順）
 
-- [ ] 4-1. YAML DSL の設計と実装（from / join / where / group_by / select / sort、LEFT JOIN デフォルト）
-- [ ] 4-2. `queriesDir` 評価 → `viewsDir` 生成（パススルークエリ含む）
-- [ ] 4-3. 標準クエリ定義（ER図、DFD、CRUDマトリクス）
-- [ ] 4-4. ファイル監視（各入力ディレクトリ → Normalizer（3回）、`normalizedContentsDir` + `normalizedQueriesDir` → Composer、`viewsDir` + `templatesDir` + `profilesFile` → Document Generator）
+優先順位はその時点の必要性で決定。
 
-### 将来
-
-- MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認）
-- クエリ可視化テンプレート（Access Query Design View 相当）
-- 多言語スキーマ生成（Pydantic ↔ JSON Schema）
-- FP 法計測の自動化（要件定義ユースケース向け）
+- [ ] Markdown パーサー（データソースとしての Markdown 読み込み）
+- [ ] 参照整合性チェック（references.yaml、`--strict`）
+- [ ] 標準テンプレート（ER図、DFD、CRUD マトリクス）
+- [ ] MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認）
+- [ ] 計算機能プラグインのインターフェース検討（例: ファンクションポイント算出プラグイン）
