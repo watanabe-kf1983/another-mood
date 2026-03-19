@@ -77,7 +77,7 @@ mkdir ベースの cross-platform atomic lock を使用する:
 
 - mkdir は POSIX / Windows 両方で原子的に動作する
 - stale lock 対策（PID 記録 + 生存確認、またはタイムアウト）はライブラリに委ねる
-- 実装例: Node.js `proper-lockfile` / Python `filelock` or `lockfile`
+- 実装例: Python `filelock`
 
 ## InputStrategy（将来の拡張点）
 

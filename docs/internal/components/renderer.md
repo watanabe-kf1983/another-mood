@@ -15,14 +15,3 @@
 Hugo Module Mounts で 1つの Hugo server に統合できる。
 別ポートで分離することも可能。どちらを採用するかは未定。
 
-### 現行 TypeScript 実装（参照実装）
-
-```
-src/
-  commands/
-    dev.ts              # reqs-builder dev (統合起動、Hugo サーバ含む)
-resources/
-  hugo/
-    hugo.toml           # Hugo 設定
-    layouts/            # Hugo レイアウト
-```

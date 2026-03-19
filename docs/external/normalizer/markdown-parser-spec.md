@@ -197,8 +197,6 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 
 ## 実装方針
 
-言語未定（Python or TypeScript）。いずれの言語でも:
-
-- Frontmatter 解析: python-frontmatter / gray-matter
+- Frontmatter 解析: python-frontmatter
 - Markdown AST: 任意の Markdown パーサー（AST 走査でセクション分割・リンク検出）
 - 見出しレベル正規化: 自前実装

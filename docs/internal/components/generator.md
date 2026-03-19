@@ -45,11 +45,8 @@ Markdown データソースの body には、Normalizer がソース内の相対
 
 ### テンプレートエンジン
 
-TypeScript の場合は LiquidJS を採用する:
-
-- **フィルタの充実**: `map`, `uniq`, `where` 等のフィルタが標準で利用可能（Nunjucks にはない）
-- **Shopify Liquid 互換**: 広く使われている Shopify テーマの記法と互換性があり、ドキュメントやサンプルが豊富
-
-Python の場合は Jinja2 を採用する:
+Jinja2 を採用する:
 
 - **autoescape**: パーシャル単位のエスケープモード切り替えにフィット
+- **フィルタの充実**: `map`, `select`, `reject`, `groupby` 等のフィルタが標準で利用可能
+- **カスタムタグ（Extension）**: `{% section %}` の実装に使用

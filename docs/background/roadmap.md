@@ -15,13 +15,13 @@
 - [x] 2-4. pagination（複数ファイル生成）
 - [x] 2-5. toc 定義の読み込み（ToC テンプレート）
 - [x] 2-6. テンプレートエンジンを LiquidJS へ移行
-- [ ] 2-7. 2-4〜2-6 のコードを削除（pagination, toc, LiquidJS 移行を revert し 2-3 の状態に戻す）
+- ~~2-7. 2-4〜2-6 のコードを削除~~ → 次期版で Python に移行するため不要
 
 ## 次期版
 
 設計詳細: [docs/internal/architecture.md](../internal/architecture.md)
 
-実装言語は未定（Python or TypeScript）。
+実装言語: **Python**
 
 ### Phase 1: 出力確認環境
 
@@ -60,5 +60,5 @@
 
 - MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認）
 - クエリ可視化テンプレート（Access Query Design View 相当）
-- 多言語スキーマ生成（Pydantic ↔ Zod）
+- 多言語スキーマ生成（Pydantic ↔ JSON Schema）
 - FP 法計測の自動化（要件定義ユースケース向け）
