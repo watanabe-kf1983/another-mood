@@ -2,12 +2,12 @@
 
 ## 処理フロー
 
-1. model/schema/*.yaml 読み込み → JSON Schema として妥当か検証
-2. model/data/*.yaml 読み込み
-3. data/ を schema/ で型検証
+1. `schemaDir` の *.yaml 読み込み → JSON Schema として妥当か検証
+2. `contentsDir` の *.yaml 読み込み
+3. contents を schema で型検証
 4. 参照整合性チェック（--strict 時のみ、正規化前の生データに対して、警告として出力）
 5. additionalProperties パターンの正規化（辞書→配列 + id、再帰的）
-6. output/model/normalized/ に書き出し + 検証結果を出力
+6. `normalizedDir` に書き出し + 検証結果を出力
 
 ## Technical Stack
 

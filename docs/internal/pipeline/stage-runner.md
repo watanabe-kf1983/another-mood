@@ -40,21 +40,22 @@ StageRunner(inputDirs, outputDir, processFn)
 
 ## メタファイル
 
-output/ 直下の隠しディレクトリ `.stage-meta/` に集約する。
+`.reqs-builder/` 直下の隠しディレクトリ `.stage-meta/` に集約する。
 outputDir の中には置かない（ロック中に outputDir の中身を丸ごと差し替えるため）。
 
 ```
-output/
+.reqs-builder/
   .stage-meta/
     normalized.json        ← タイムスタンプ記録
     normalized.lock/       ← mkdir で作成されるロックディレクトリ
     views.json
     views.lock/
-    documents.json
-    documents.lock/
-  normalized/              ← outputDir（丸ごと差し替え対象）
-  views/
-  documents/
+    output.json
+    output.lock/
+  tmp/
+    normalized/            ← normalizedDir（丸ごと差し替え対象）
+    views/                 ← viewsDir
+  output/                  ← outDir
 ```
 
 ```json

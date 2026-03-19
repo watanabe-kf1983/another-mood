@@ -4,19 +4,18 @@
 
 ## ユーザパイプライン
 
-ユーザの model/ から最終的なドキュメントを生成するパイプライン。
+ユーザの定義・コンテンツから最終的なドキュメントを生成するパイプライン。
 各ステージは StageRunner 経由で実行される（[stage-runner.md](stage-runner.md) 参照）。
 
 ```
-model/
-  schema/
-  data/          → Normalizer → output/normalized/
-  queries/                          ↓
-                              Composer → output/views/
-                                             ↓
-presentation/                          Generator → output/documents/
-  templates/                                            ↓
-  paging.yaml                                     Hugo → output/rendered/
+schemaDir
+contentsDir    → Normalizer → normalizedDir
+queriesDir                        ↓
+                            Composer → viewsDir
+                                          ↓
+templatesDir                        Generator → outDir
+profilesFile                                       ↓
+                                              Hugo → render.outDir
 ```
 
 dev モードではステージ間のカスケードを Watcher が自動伝播する
@@ -29,12 +28,12 @@ build モードでは全段を直列実行する。
 MS-Access のデータシートビューに相当する機能を提供する。
 
 ```
-output/views/ （リードオンリー）
-  → Generator（ツール内蔵テンプレート）
-  → Hugo
+viewsDir （リードオンリー）
+  → Generator（ツール内蔵テンプレート） → meta.outDir
+  → Hugo → meta.render.outDir
 ```
 
-- ユーザの output/ には一切書き込まない
+- ユーザの出力ディレクトリには一切書き込まない
 - パススルー views によりテーブル一覧・中身を表示
 - ユーザクエリの結果も同じように表示
 - Composer は不要（views を直接参照）

@@ -34,8 +34,8 @@
 
 ```
 watcher.on([
-  'output/normalized/**',
-  'output/.stage-meta/normalized.json'
+  '{normalizedDir}/**',
+  '.reqs-builder/.stage-meta/normalized.json'
 ], { debounce: 300 }, () => compose())
 ```
 
@@ -56,7 +56,7 @@ watcher.on([
 
 - **デバッグ容易性**: 各段階の結果を YAML ファイルとして目視確認できる
 - **疎結合**: 各コンポーネントが別言語・別プロセスでも動く
-- **クリーンビルド**: `rm -rf output/` で全生成物を一括削除できる
+- **クリーンビルド**: `rm -rf .reqs-builder/` で全生成物を一括削除できる
 
 ### 下流が invalid 時にエラーページを生成する理由
 
