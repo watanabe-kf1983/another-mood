@@ -29,13 +29,13 @@
 
 ## Watcher の監視対象
 
-下流の Watcher は、上流の outputDir と `.stage-meta/{stage}.json` の両方を
+下流の Watcher は、上流の outputDir と version ファイルの両方を
 監視対象に含め、まとめて debounce する:
 
 ```
 watcher.on([
   '{normalizedDir}/**',
-  '.reqs-builder/.stage-meta/normalized.json'
+  '{normalizedDir}/../normalized.version.json'
 ], { debounce: 300 }, () => compose())
 ```
 
@@ -43,7 +43,7 @@ watcher.on([
 
 - outputDir の rename は OS のファイル監視イベント
   （inotify / FSEvents / ReadDirectoryChangesW）で正しく検知されない可能性がある
-- `.stage-meta/{stage}.json` は通常のファイル書き込みなので確実に検知される
+- `*.version.json` は通常のファイル書き込みなので確実に検知される
 - 両方をまとめて debounce することで、差し替え完了後に次段が起動される
 
 ## Stage Runner

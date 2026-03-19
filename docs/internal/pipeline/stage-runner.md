@@ -17,16 +17,16 @@ StageRunner(inputDirs, outputDir, processFn)
 1. startTime = now()
 2. tmpDir = createTmpDir()
 3. processFn(inputDirs, tmpDir)
-4. lock(.stage-meta/{stage}.lock)        ← mkdir ベースの atomic lock
-5. existingTime = .stage-meta/{stage}.json のタイムスタンプ
+4. lock({outputDir}.lock/)               ← mkdir ベースの atomic lock
+5. existingTime = {outputDir}.version.json のタイムスタンプ
 6. if startTime > existingTime:
      rename outputDir → outputDir.old
      rename tmpDir → outputDir
      rm outputDir.old
-     .stage-meta/{stage}.json に startTime を記録
+     {outputDir}.version.json に startTime を記録
    else:
      rm tmpDir                          ← 自分の結果は古い。捨てる
-7. unlock(.stage-meta/{stage}.lock)
+7. unlock({outputDir}.lock/)
 ```
 
 ## 各要素の役割
@@ -40,22 +40,21 @@ StageRunner(inputDirs, outputDir, processFn)
 
 ## メタファイル
 
-`.reqs-builder/` 直下の隠しディレクトリ `.stage-meta/` に集約する。
+各出力ディレクトリの隣に配置する。
 outputDir の中には置かない（ロック中に outputDir の中身を丸ごと差し替えるため）。
 
 ```
 .reqs-builder/
-  .stage-meta/
-    normalized.json        ← タイムスタンプ記録
-    normalized.lock/       ← mkdir で作成されるロックディレクトリ
-    views.json
-    views.lock/
-    output.json
-    output.lock/
   tmp/
     normalized/            ← normalizedDir（丸ごと差し替え対象）
+    normalized.version.json  ← タイムスタンプ記録
+    normalized.lock/         ← mkdir ベースの atomic lock
     views/                 ← viewsDir
+    views.version.json
+    views.lock/
   output/                  ← outDir
+  output.version.json
+  output.lock/
 ```
 
 ```json
