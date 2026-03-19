@@ -2,11 +2,10 @@
 
 ## 処理フロー
 
-1. `normalizedDir` の *.yaml 読み込み
-2. `queriesDir` の *.yaml 読み込み（YAML DSL）
-3. YAML DSL を評価（normalized データに対して from/join/where/group_by/select/sort を適用）
+1. `normalizedSchemaDir`、`normalizedContentsDir`、`normalizedQueriesDir` の *.yaml 読み込み
+2. normalizedQueriesDir のクエリを評価（normalized データに対して from/join/where/group_by/select/sort を適用）
    - join はデフォルト LEFT JOIN
-4. `viewsDir` に *.yaml として書き出し
+3. `viewsDir` に *.yaml として書き出し
 
 ## 背景: YAML DSL の採用理由
 

@@ -40,7 +40,9 @@ reqs-builder の設定システムの振る舞いを定義する。
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `normalizedDir` | string | `./.reqs-builder/tmp/normalized` | `RB_NORMALIZED_DIR` | Normalizer の出力先 |
+| `normalizedSchemaDir` | string | `./.reqs-builder/tmp/normalized/schema` | `RB_NORMALIZED_SCHEMA_DIR` | schema の Normalizer 出力先 |
+| `normalizedContentsDir` | string | `./.reqs-builder/tmp/normalized/contents` | `RB_NORMALIZED_CONTENTS_DIR` | contents の Normalizer 出力先 |
+| `normalizedQueriesDir` | string | `./.reqs-builder/tmp/normalized/queries` | `RB_NORMALIZED_QUERIES_DIR` | queries の Normalizer 出力先 |
 | `viewsDir` | string | `./.reqs-builder/tmp/views` | `RB_VIEWS_DIR` | Composer の出力先 |
 | `outDir` | string | `./.reqs-builder/output` | `RB_OUT_DIR` | Document Generator の出力先 |
 | `render.outDir` | string | `./.reqs-builder/render` | `RB_RENDER_OUT_DIR` | Document Renderer の出力先 |

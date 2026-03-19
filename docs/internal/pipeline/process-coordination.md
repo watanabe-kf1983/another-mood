@@ -9,7 +9,7 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Watcher                                                  │
-│   入力フォルダを監視（debounce 付き）                      │
+│   Watch 対象フォルダを監視（debounce 付き）               │
 │   StageRunner を起動                                     │
 └──────────────────────┬──────────────────────────────────┘
                        ↓
@@ -27,15 +27,19 @@
 
 この連鎖により、上流の変更が下流へカスケードで伝播する。
 
+Watch 対象と Input（processFn が実際に読むデータ）は必ずしも一致しない。
+各ステージの Watch / Input の対応は [pipeline.md](pipeline.md) を参照。
+
 ## Watcher の監視対象
 
 下流の Watcher は、上流の outputDir と version ファイルの両方を
 監視対象に含め、まとめて debounce する:
 
 ```
+// 例: Composer が normalizedContentsDir の変更を監視する場合
 watcher.on([
-  '{normalizedDir}/**',
-  '{normalizedDir}/../normalized.version.json'
+  '{normalizedContentsDir}/**',
+  '{normalizedContentsDir}/../contents.version.json'
 ], { debounce: 300 }, () => compose())
 ```
 
@@ -45,6 +49,11 @@ watcher.on([
   （inotify / FSEvents / ReadDirectoryChangesW）で正しく検知されない可能性がある
 - `*.version.json` は通常のファイル書き込みなので確実に検知される
 - 両方をまとめて debounce することで、差し替え完了後に次段が起動される
+
+## エラーの扱い
+
+エラーは生成ドキュメントとして出力される。各コンポーネントはエラー情報を
+正常な結果と区別のない形で出力し、後続のコンポーネントに通常のカスケードで連携される。
 
 ## Stage Runner
 

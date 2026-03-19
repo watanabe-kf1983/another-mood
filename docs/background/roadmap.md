@@ -47,14 +47,14 @@
 - [ ] 3-2. data/ の型検証
 - [ ] 3-3. 参照整合性チェック（references.yaml、`--strict` で警告のみ）
 - [ ] 3-4. 正規化（additionalProperties パターンの辞書→配列変換、再帰的）
-- [ ] 3-5. `normalizedDir` への出力
+- [ ] 3-5. `normalizedSchemaDir` / `normalizedContentsDir` への出力
 
 ### Phase 4: Composer
 
 - [ ] 4-1. YAML DSL の設計と実装（from / join / where / group_by / select / sort、LEFT JOIN デフォルト）
 - [ ] 4-2. `queriesDir` 評価 → `viewsDir` 生成（パススルークエリ含む）
 - [ ] 4-3. 標準クエリ定義（ER図、DFD、CRUDマトリクス）
-- [ ] 4-4. ファイル監視（`schemaDir` + `contentsDir` → Normalizer、`normalizedDir` + `queriesDir` → Composer、`viewsDir` + `templatesDir` + `profilesFile` → Document Generator）
+- [ ] 4-4. ファイル監視（各入力ディレクトリ → Normalizer（3回）、`normalizedContentsDir` + `normalizedQueriesDir` → Composer、`viewsDir` + `templatesDir` + `profilesFile` → Document Generator）
 
 ### 将来
 
