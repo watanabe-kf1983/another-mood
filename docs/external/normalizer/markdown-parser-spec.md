@@ -183,7 +183,7 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 [スキーマ仕様](toc:prose.item.external/normalizer/schema-spec.md)に従って検証する。
 ```
 
-アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。`toc:` リンクの解決は Document Generator が行う（[generator.md](../../internal/generator.md) 参照）。
+アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。`toc:` リンクの解決は Document Generator が行う（[generator.md](../../internal/components/generator.md) 参照）。
 
 ### 背景: ソースの可搬性
 

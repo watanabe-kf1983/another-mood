@@ -26,13 +26,18 @@ OUT: Markdown ドキュメント (`output/documents/`)
 IN: Markdown ドキュメント (`output/documents/`)
 OUT: HTML (`output/rendered/`)
 
-各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。data/ を変更すると normalized/ → views/ → documents/ とカスケードで更新される。プロセス間連携の詳細は [process-coordination.md](process-coordination.md) を参照。
+各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。data/ を変更すると normalized/ → views/ → documents/ とカスケードで更新される。
 
-各コンポーネントの処理フローと技術選定の詳細:
-- [normalizer.md](normalizer.md)
-- [composer.md](composer.md)
-- [generator.md](generator.md)
-- [renderer.md](renderer.md)
+パイプライン構成とプロセス連携:
+- [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成
+- [pipeline/process-coordination.md](pipeline/process-coordination.md) — プロセス間連携
+- [pipeline/stage-runner.md](pipeline/stage-runner.md) — StageRunner（出力の原子性・順序性）
+
+各コンポーネントの処理フローと技術選定:
+- [components/normalizer.md](components/normalizer.md)
+- [components/composer.md](components/composer.md)
+- [components/generator.md](components/generator.md)
+- [components/renderer.md](components/renderer.md)
 
 ## ユーザプロジェクト構成
 

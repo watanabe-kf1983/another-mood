@@ -22,12 +22,9 @@
 内部設計・実装仕様。
 
 - [architecture.md](internal/architecture.md) — アーキテクチャ概要
-- [normalizer.md](internal/normalizer.md) — Normalizer 処理フロー・技術選定
-- [composer.md](internal/composer.md) — Composer 処理フロー
-- [generator.md](internal/generator.md) — Generator 処理フロー・技術選定
-- [renderer.md](internal/renderer.md) — Renderer 処理・構成
-- [process-coordination.md](internal/process-coordination.md) — プロセス間連携仕様
 - [glossary.md](internal/glossary.md) — 用語集（JSON データモデル等）
+- [pipeline/](internal/pipeline/) — パイプライン構成、プロセス連携、StageRunner
+- [components/](internal/components/) — Normalizer、Composer、Generator、Renderer
 
 ## 開発規約
 
