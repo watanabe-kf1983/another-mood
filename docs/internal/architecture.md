@@ -5,15 +5,16 @@
 3コンポーネント + レンダラー構成:
 
 **Normalizer**
-スキーマ定義に基づいてデータを検証し、辞書形式を配列形式に正規化する。
+入力ディレクトリを検証し、辞書形式を配列形式に正規化する。
+schema / contents / queries の3種類の入力に対してそれぞれ独立したステージとして実行される。
 Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../external/normalizer/markdown-parser-spec.md) 参照）。
-`--strict` モードでは参照整合性もチェックする。
-IN: `schemaDir`、`contentsDir`
-OUT: `normalizedDir`
+contents の Normalize では `--strict` モードで参照整合性もチェックする。
+IN: `schemaDir`、`contentsDir`、`queriesDir`（各ステージで異なる）
+OUT: `normalizedSchemaDir`、`normalizedContentsDir`、`normalizedQueriesDir`
 
 **Composer**
-正規化済みデータを自動的にビューとしてパススルーし、さらに YAML DSL のクエリがあれば評価して追加のビューを生成する。
-IN: `normalizedDir`、`queriesDir`（任意）
+正規化済みデータを自動的にビューとしてパススルーし、さらに正規化済みクエリがあれば評価して追加のビューを生成する。
+IN: `normalizedSchemaDir`、`normalizedContentsDir`、`normalizedQueriesDir`
 OUT: `viewsDir`
 
 **Document Generator**
@@ -26,7 +27,7 @@ OUT: `outDir`
 IN: `outDir`
 OUT: `render.outDir`
 
-各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。data/ を変更すると normalized/ → views/ → documents/ とカスケードで更新される。
+各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。入力データを変更すると normalized → views → documents とカスケードで更新される。
 
 パイプライン構成とプロセス連携:
 - [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成

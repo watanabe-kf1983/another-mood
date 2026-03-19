@@ -18,7 +18,10 @@ my-project/
     contents/                  # contentsDir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
   .reqs-builder/               # gitignore（生成物・中間生成物）
     tmp/
-      normalized/              # normalizedDir: Normalizer 出力
+      normalized/              # Normalizer 出力（3ステージ分）
+        schema/                # normalizedSchemaDir: schema の Normalizer 出力
+        contents/              # normalizedContentsDir: contents の Normalizer 出力
+        queries/               # normalizedQueriesDir: queries の Normalizer 出力
       views/                   # viewsDir: Composer 出力
     output/                    # outDir: Document Generator 出力
     render/                    # render.outDir: Document Renderer 出力

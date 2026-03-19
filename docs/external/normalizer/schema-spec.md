@@ -51,7 +51,7 @@ tanaka:
 suzuki:
   name: 鈴木花子
 
-# {normalizedDir}/users.yaml（Normalizer が出力 — 配列形式）
+# {normalizedContentsDir}/users.yaml（Normalizer が出力 — 配列形式）
 version: "1.0"
 items:
   - id: tanaka
