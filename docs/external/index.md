@@ -19,6 +19,7 @@
 
 ## [app/](app/)
 
+- [project-structure.md](app/project-structure.md) — プロジェクト構成（ディレクトリ配置、definition/contents 分離）
 - [cli-spec.md](app/cli-spec.md) — CLI 仕様
 - [config-spec.md](app/config-spec.md) — 設定システム
 - [mcp-design.md](app/mcp-design.md) — MCP サーバ設計
