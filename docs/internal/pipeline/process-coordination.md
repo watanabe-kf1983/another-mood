@@ -29,13 +29,13 @@
 
 ## Watcher の監視対象
 
-下流の Watcher は、上流の outputDir と `.stage-meta/{stage}.json` の両方を
+下流の Watcher は、上流の outputDir と version ファイルの両方を
 監視対象に含め、まとめて debounce する:
 
 ```
 watcher.on([
-  'output/normalized/**',
-  'output/.stage-meta/normalized.json'
+  '{normalizedDir}/**',
+  '{normalizedDir}/../normalized.version.json'
 ], { debounce: 300 }, () => compose())
 ```
 
@@ -43,7 +43,7 @@ watcher.on([
 
 - outputDir の rename は OS のファイル監視イベント
   （inotify / FSEvents / ReadDirectoryChangesW）で正しく検知されない可能性がある
-- `.stage-meta/{stage}.json` は通常のファイル書き込みなので確実に検知される
+- `*.version.json` は通常のファイル書き込みなので確実に検知される
 - 両方をまとめて debounce することで、差し替え完了後に次段が起動される
 
 ## Stage Runner
@@ -56,7 +56,7 @@ watcher.on([
 
 - **デバッグ容易性**: 各段階の結果を YAML ファイルとして目視確認できる
 - **疎結合**: 各コンポーネントが別言語・別プロセスでも動く
-- **クリーンビルド**: `rm -rf output/` で全生成物を一括削除できる
+- **クリーンビルド**: `rm -rf .reqs-builder/` で全生成物を一括削除できる
 
 ### 下流が invalid 時にエラーページを生成する理由
 

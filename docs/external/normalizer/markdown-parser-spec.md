@@ -4,7 +4,7 @@ Markdown ファイルからデータを抽出するパーサーの仕様。
 
 ## 概要
 
-データのフォーマットとして YAML に加えて Markdown も選択可能とする。`model/data/` に配置された Markdown ファイルは、Normalizer が内蔵の `prose` スキーマに従って自動的に正規化する。
+データのフォーマットとして YAML に加えて Markdown も選択可能とする。`contentsDir`（デフォルト: `docs/contents/`）に配置された Markdown ファイルは、Normalizer が内蔵の `prose` スキーマに従って自動的に正規化する。
 
 Markdown は散文（説明文、背景、補足など）の記述に適している。ソース Markdown は普通の Markdown のまま保たれ、GitHub 上でもそのまま閲覧・リンク遷移できる。
 
@@ -26,12 +26,12 @@ prose:
 
 | フィールド | 説明 |
 |---|---|
-| `id` | `model/data/` からの相対パス（拡張子含む） |
+| `id` | `contentsDir` からの相対パス（拡張子含む） |
 | `title` | H1 見出しから抽出 |
 | `body` | ファイル全体（H1 含む。title との二重持ち） |
 | `relative-path` | `id` と同一。リンク解決に使用 |
 
-このスキーマはツール内蔵であり、ユーザが `model/schema/` に定義する必要はない。
+このスキーマはツール内蔵であり、ユーザが `schemaDir` に定義する必要はない。
 
 ## Frontmatter（オプション）
 
@@ -164,12 +164,12 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 ### 変換ルール
 
 1. Markdown リンク `[text](relative/path.md)` を検出
-2. 相対パスを `model/data/` 基点の正規化パスに解決
+2. 相対パスを `contentsDir` 基点の正規化パスに解決
 3. 対応する prose レコードのアンカー ID に変換
 
 ### 例
 
-`model/data/internal/normalizer.md` 内のリンク:
+`{contentsDir}/internal/normalizer.md` 内のリンク:
 
 ```markdown
 処理フローの詳細は[Composer](composer.md)を参照。

@@ -4,15 +4,15 @@
 
 ## 基本方針
 
-- テンプレートのデータソースは常に `output/model/views/` のみ
+- テンプレートのデータソースは常に `viewsDir` のみ
 - normalized データは自動的に view になるため、パススルークエリは不要（[queries-spec.md](../composer/queries-spec.md) 参照）
 
 ## ファイル構成
 
-`presentation/templates/` 配下に配置する。拡張子は `.md`（シンタックスハイライト対応）。
+`templatesDir`（デフォルト: `docs/definition/templates/`）配下に配置する。拡張子は `.md`（シンタックスハイライト対応）。
 
 ```
-presentation/templates/
+{templatesDir}/
   index.md                   # エントリポイント（必須）
   erd.md                     # パーシャル
   entity-detail.md           # パーシャル
@@ -33,7 +33,7 @@ presentation/templates/
 {% section "screen" for views.screens %}
 ```
 
-構造化データの view と prose（Markdown データソース）を自由に混在できる。prose は `model/data/` に配置した Markdown ファイルから自動生成される view である（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）。
+構造化データの view と prose（Markdown データソース）を自由に混在できる。prose は `contentsDir` に配置した Markdown ファイルから自動生成される view である（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）。
 
 読者や目的が異なる場合は index テンプレートを分ける（社内向け、顧客向け等）。
 

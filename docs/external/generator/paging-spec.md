@@ -4,10 +4,10 @@
 
 ## プロファイル設定
 
-`presentation/profiles.yaml` にプロファイルごとの設定を定義する。`paginate` にはページとして切り出す対象クラスを列挙する:
+`profilesFile`（デフォルト: `docs/definition/profiles.yaml`）にプロファイルごとの設定を定義する。`paginate` にはページとして切り出す対象クラスを列挙する:
 
 ```yaml
-# presentation/profiles.yaml
+# {profilesFile}
 web:
   paginate:
     - erds.item
@@ -20,7 +20,7 @@ pdf:
 
 ルートテンプレートの出力先は常に `index.md`（規約、設定不要）。出力ディレクトリはプロファイル名から自動導出される:
 
-- `output/documents/{profile_name}/index.md`
+- `{outDir}/{profile_name}/index.md`
 
 ## パス自動導出
 

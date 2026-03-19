@@ -2,13 +2,13 @@
 
 ## 処理フロー
 
-1. output/model/views/*.yaml 読み込み
-2. profiles.yaml の paginate 設定を読み込み
+1. `viewsDir` の *.yaml 読み込み
+2. `profilesFile` の paginate 設定を読み込み
 3. index テンプレートからレンダリング開始
    - {% section %} が paginate を参照し、分割 or インライン判定
    - link_md フィルタがアンカー ID を解決しリンク生成
 4. Markdown 内の toc:id リンクを解決
-5. output/documents/{profile_name}/ にファイル書き出し
+5. `outDir`/{profile_name}/ にファイル書き出し
 
 ## リンク解決
 

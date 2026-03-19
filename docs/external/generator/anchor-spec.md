@@ -77,7 +77,7 @@ Markdown data 内では `toc:` 記法を使用する:
 Markdown データソースでは、Normalizer がソース内の相対リンクを自動的に `toc:` 記法に変換する（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）:
 
 ```markdown
-{# ソース: model/data/internal/normalizer.md #}
+{# ソース: {contentsDir}/internal/normalizer.md #}
 [Composer](composer.md)
 ↓ Normalizer が変換 ↓
 [Composer](toc:prose.item.internal/composer.md)
