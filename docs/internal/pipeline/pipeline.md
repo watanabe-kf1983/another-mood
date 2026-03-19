@@ -30,7 +30,7 @@ MS-Access のデータシートビューに相当する機能を提供する。
 
 ```
 output/views/ （リードオンリー）
-  → Generator（ツール内蔵テンプレート） → tmpDir
+  → Generator（ツール内蔵テンプレート）
   → Hugo
 ```
 
