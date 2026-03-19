@@ -27,18 +27,6 @@ my-project/
       render/                  # meta.render.outDir
 ```
 
-## definition と contents の分離
-
-`definition/` はリーダが管理する「型」を決める定義類、`contents/` はメンバが書く実データ。MS-Access の frontend/backend 分離に相当する。
-
-| 役割 | ディレクトリ | メンテする人 |
-|---|---|---|
-| スキーマ定義 | `schemaDir` | リーダ |
-| クエリ定義 | `queriesDir` | リーダ |
-| テンプレート | `templatesDir` | リーダ |
-| プロファイル設定 | `profilesFile` | リーダ |
-| 実データ | `contentsDir` | メンバ |
-
 ## 背景: MS-Access アナロジー
 
 contents / queries / templates の三層構造は MS-Access の Table / Query / Form・Report に対応する:
