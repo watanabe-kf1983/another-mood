@@ -19,6 +19,7 @@
 
 ## [app/](app/)
 
+- [cli-spec.md](app/cli-spec.md) — CLI 仕様
 - [config-spec.md](app/config-spec.md) — 設定システム
 - [mcp-design.md](app/mcp-design.md) — MCP サーバ設計
 - [meta-documentation.md](app/meta-documentation.md) — メタドキュメンテーション（ツール自身の可視化）

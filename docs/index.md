@@ -15,7 +15,7 @@
 - [normalizer/](external/normalizer/) — スキーマ定義、Markdownパーサー
 - [composer/](external/composer/) — YAML DSL クエリ仕様
 - [generator/](external/generator/) — テンプレート、アンカー、ページ分割
-- [app/](external/app/) — 設定、MCP、メタドキュメンテーション
+- [app/](external/app/) — CLI、設定、MCP、メタドキュメンテーション
 
 ## [internal/](internal/)
 
