@@ -17,3 +17,10 @@ jobs:
       - run: uv sync
 
       - run: make ci
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: reports/
+          retention-days: 30

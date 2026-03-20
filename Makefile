@@ -12,7 +12,7 @@ typecheck:
 	uv run pyright --warnings
 
 test:
-	uv run pytest --cov --cov-fail-under=85
+	uv run pytest --cov --cov-fail-under=85 --junitxml=reports/junit.xml --cov-report=xml:reports/coverage.xml --cov-report=html:reports/htmlcov
 
 format:
 	uv run ruff format .

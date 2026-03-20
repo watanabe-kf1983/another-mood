@@ -11,11 +11,10 @@ dist/
 *.egg-info/
 
 # Unit test / coverage reports
-htmlcov/
+reports/
 .coverage
 .coverage.*
 .pytest_cache/
-coverage.xml
 
 # Virtual environments
 .venv/
