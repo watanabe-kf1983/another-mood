@@ -24,7 +24,7 @@
 - [architecture.md](internal/architecture.md) — アーキテクチャ概要
 - [glossary.md](internal/glossary.md) — 用語集（JSON データモデル等）
 - [pipeline/](internal/pipeline/) — パイプライン構成、プロセス連携、StageRunner
-- [components/](internal/components/) — Normalizer、Composer、Generator、Renderer
+- [components/](internal/components/) — 共通ロジック、Normalizer、Composer、Generator、Renderer
 
 ## 開発規約
 
