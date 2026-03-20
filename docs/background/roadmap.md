@@ -9,23 +9,7 @@
 ### Phase 2: Python 環境構築 + プロジェクト設定
 
 - [x] 2-1. Python 環境構築（DevContainer, VSCode 拡張, MCP 設定）
-  - DevContainer: ベースイメージを base:ubuntu に変更、features（uv, Node, Go, GitHub CLI）
-  - postCreateCommand: Claude Code CLI, ast-grep, mcp-language-server
-  - .vscode/extensions.json: Python, Ruff, EditorConfig, YAML, Mermaid, GitHub Actions, Claude Code
-  - ドキュメント更新（.devcontainer/README.md, docs/dev/environment.md）
-- [ ] 2-2. プロジェクト設定（uv init, CI, ツール導入・配線）
-  - .mcp.json: language-server を pyright に変更
-  - uv init → pyproject.toml 作成
-  - .gitignore に Python パターン追加（.venv, __pycache__ 等）
-  - GitHub Actions CI の骨格（uv sync + 空のステップ）
-  - ツールを1つずつ追加し、IDE on save / pre-commit hook / CI に配線:
-    - ruff format → IDE on save, pre-commit hook, CI
-    - ruff check → CI
-    - pyright → CI
-    - pytest + pytest-cov → CI（カバレッジ 85%）
-    - secretlint → pre-commit hook, CI
-  - Claude Code PostToolUse hook（ruff format）
-  - main ブランチ保護
+- [x] 2-2. プロジェクト設定（uv init, CI, ツール導入・配線）
 
 ### Phase 3: パススルーパイプライン（自己ドッグフーディング開始）
 
