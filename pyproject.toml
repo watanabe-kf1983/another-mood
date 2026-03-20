@@ -10,5 +10,10 @@ dependencies = []
 dev = [
     "pre-commit>=4.5.1",
     "pyright",
+    "pytest",
+    "pytest-cov",
     "ruff>=0.15.7",
 ]
+
+[tool.pyright]
+typeCheckingMode = "strict"

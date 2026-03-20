@@ -9,7 +9,7 @@ lint:
 	uv run ruff check .
 
 typecheck:
-	uv run pyright
+	uv run pyright --warnings
 
 format:
 	uv run ruff format .
