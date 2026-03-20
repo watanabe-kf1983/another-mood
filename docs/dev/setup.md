@@ -18,7 +18,3 @@ DevContainer には以下が含まれる:
 ## ローカルセットアップ
 
 DevContainer を使わない場合、上記「DevContainer」節に記載されたツール群をローカルにインストールする。
-
-## 自動チェック
-
-各チェックがどこで走るかは [checks.md](checks.md) を参照。
