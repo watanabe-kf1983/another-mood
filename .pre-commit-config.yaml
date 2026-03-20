@@ -3,3 +3,7 @@ repos:
     rev: v0.15.7
     hooks:
       - id: ruff-format
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks

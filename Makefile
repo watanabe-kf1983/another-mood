@@ -1,6 +1,6 @@
-.PHONY: ci format-check lint typecheck test format
+.PHONY: ci format-check lint typecheck test secrets format
 
-ci: format-check lint typecheck test
+ci: format-check lint typecheck test secrets
 
 format-check:
 	uv run ruff format --check .
@@ -13,6 +13,9 @@ typecheck:
 
 test:
 	uv run pytest --cov --cov-fail-under=85 --junitxml=reports/junit.xml --cov-report=xml:reports/coverage.xml --cov-report=html:reports/htmlcov
+
+secrets:
+	uv run pre-commit run gitleaks --all-files
 
 format:
 	uv run ruff format .
