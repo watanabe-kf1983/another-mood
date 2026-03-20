@@ -4,6 +4,7 @@
     "ms-python.python",
     "ms-python.vscode-pylance",
     "ms-python.debugpy",
+    "ms-python.python-env-manager",
     "charliermarsh.ruff",
     "editorconfig.editorconfig",
     "redhat.vscode-yaml",
