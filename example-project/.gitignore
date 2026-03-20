@@ -1,4 +1,2 @@
-# Generated output (keep output/docs/ as expected test output)
-output/rendered/
-output/tocs/
+# Generated output (tracked as expected test baseline)
 output/docs/.hugo_build.lock

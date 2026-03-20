@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Entities on reqs-builder</title>
+    <link>//localhost:1313/entities/index.html</link>
+    <description>Recent content in Entities on reqs-builder</description>
+    <generator>Hugo</generator>
+    <language>ja</language>
+    <atom:link href="//localhost:1313/entities/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title></title>
+      <link>//localhost:1313/entities/order.html</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/entities/order.html</guid>
+      <description>&lt;h1 id=&#34;注文&#34;&gt;注文&lt;/h1&gt;&#xA;&lt;p&gt;ユーザーが行った注文&lt;/p&gt;&#xA;&lt;h2 id=&#34;フィールド&#34;&gt;フィールド&lt;/h2&gt;&#xA;&lt;table&gt;&#xA;  &lt;thead&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;th&gt;フィールド&lt;/th&gt;&#xA;          &lt;th&gt;型&lt;/th&gt;&#xA;          &lt;th&gt;備考&lt;/th&gt;&#xA;      &lt;/tr&gt;&#xA;  &lt;/thead&gt;&#xA;  &lt;tbody&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;id&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;PK&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;user_id&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;FK → user&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;total_amount&lt;/td&gt;&#xA;          &lt;td&gt;number&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;status&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;ordered_at&lt;/td&gt;&#xA;          &lt;td&gt;datetime&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;  &lt;/tbody&gt;&#xA;&lt;/table&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;&lt;a href=&#34;//localhost:1313/index.html&#34;&gt;← エンティティ一覧に戻る&lt;/a&gt;&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>//localhost:1313/entities/product.html</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/entities/product.html</guid>
+      <description>&lt;h1 id=&#34;商品&#34;&gt;商品&lt;/h1&gt;&#xA;&lt;p&gt;販売する商品&lt;/p&gt;&#xA;&lt;h2 id=&#34;フィールド&#34;&gt;フィールド&lt;/h2&gt;&#xA;&lt;table&gt;&#xA;  &lt;thead&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;th&gt;フィールド&lt;/th&gt;&#xA;          &lt;th&gt;型&lt;/th&gt;&#xA;          &lt;th&gt;備考&lt;/th&gt;&#xA;      &lt;/tr&gt;&#xA;  &lt;/thead&gt;&#xA;  &lt;tbody&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;id&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;PK&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;name&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;price&lt;/td&gt;&#xA;          &lt;td&gt;number&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;stock&lt;/td&gt;&#xA;          &lt;td&gt;number&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;  &lt;/tbody&gt;&#xA;&lt;/table&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;&lt;a href=&#34;//localhost:1313/index.html&#34;&gt;← エンティティ一覧に戻る&lt;/a&gt;&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>//localhost:1313/entities/user.html</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/entities/user.html</guid>
+      <description>&lt;h1 id=&#34;ユーザー&#34;&gt;ユーザー&lt;/h1&gt;&#xA;&lt;p&gt;システムを利用するユーザー&lt;/p&gt;&#xA;&lt;h2 id=&#34;フィールド&#34;&gt;フィールド&lt;/h2&gt;&#xA;&lt;table&gt;&#xA;  &lt;thead&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;th&gt;フィールド&lt;/th&gt;&#xA;          &lt;th&gt;型&lt;/th&gt;&#xA;          &lt;th&gt;備考&lt;/th&gt;&#xA;      &lt;/tr&gt;&#xA;  &lt;/thead&gt;&#xA;  &lt;tbody&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;id&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;PK&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;email&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;name&lt;/td&gt;&#xA;          &lt;td&gt;string&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;      &lt;tr&gt;&#xA;          &lt;td&gt;created_at&lt;/td&gt;&#xA;          &lt;td&gt;datetime&lt;/td&gt;&#xA;          &lt;td&gt;&lt;/td&gt;&#xA;      &lt;/tr&gt;&#xA;  &lt;/tbody&gt;&#xA;&lt;/table&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;&lt;a href=&#34;//localhost:1313/index.html&#34;&gt;← エンティティ一覧に戻る&lt;/a&gt;&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
