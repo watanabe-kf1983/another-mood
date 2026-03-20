@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "language-server": {
+      "command": "mcp-language-server",
+      "args": ["--workspace", "/workspaces/reqs-builder"],
+      "env": {
+        "LSP_SERVER_COMMAND": "pyright-langserver --stdio"
+      }
+    },
     "ast-grep": {
       "command": "uvx",
       "args": [
