@@ -34,6 +34,9 @@ OUT: `render.outDir`
 - [pipeline/process-coordination.md](pipeline/process-coordination.md) — プロセス間連携
 - [pipeline/stage-runner.md](pipeline/stage-runner.md) — StageRunner（出力の原子性・順序性）
 
+コンポーネント共通ロジック:
+- [components/yaml-loading.md](components/yaml-loading.md) — YAML ディレクトリ読み込み・マージ
+
 各コンポーネントの処理フローと技術選定:
 - [components/normalizer.md](components/normalizer.md)
 - [components/composer.md](components/composer.md)

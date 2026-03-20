@@ -24,7 +24,15 @@
 - [architecture.md](internal/architecture.md) — アーキテクチャ概要
 - [glossary.md](internal/glossary.md) — 用語集（JSON データモデル等）
 - [pipeline/](internal/pipeline/) — パイプライン構成、プロセス連携、StageRunner
-- [components/](internal/components/) — Normalizer、Composer、Generator、Renderer
+- [components/](internal/components/) — 共通ロジック、Normalizer、Composer、Generator、Renderer
+
+## [dev/](dev/)
+
+開発環境セットアップ・ツール設定。
+
+- [setup.md](dev/setup.md) — セットアップ手順
+- [environment.md](dev/environment.md) — 開発環境定義（DevContainer・VSCode・MCP・.gitignore）
+- [checks.md](dev/checks.md) — 開発チェック（IDE・Git hook・CI）
 
 ## 開発規約
 
