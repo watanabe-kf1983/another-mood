@@ -6,10 +6,10 @@
 - [x] 1-2. example-project/output/docs を gitignore 外して commit（現行出力を期待値として保存）
 - [x] 1-3. TypeScript コード・設定を削除
 
-### Phase 2: Python 環境構築 + CI
+### Phase 2: Python 環境構築 + プロジェクト設定
 
-- [ ] 2-1. プロジェクトセットアップ（uv, pytest, ruff, mypy, DevContainer）
-- [ ] 2-2. GitHub Actions CI（lint, test, type check, coverage, main 保護）
+- [ ] 2-1. Python 環境構築（DevContainer, VSCode 拡張, MCP 設定）
+- [ ] 2-2. プロジェクト設定（uv init, CI, ツール導入・配線）
 
 ### Phase 3: パススルーパイプライン（自己ドッグフーディング開始）
 
