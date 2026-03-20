@@ -1,12 +1,9 @@
 {
   "recommendations": [
     "anthropic.claude-code",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
     "editorconfig.editorconfig",
     "redhat.vscode-yaml",
     "bierner.markdown-mermaid",
-    "ronnidc.nunjucks",
     "github.vscode-github-actions"
   ]
 }

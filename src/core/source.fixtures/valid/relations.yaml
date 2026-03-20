@@ -1,5 +1,0 @@
-relations:
-  - from: user
-    to: order
-    cardinality: '1:N'
-    label: places

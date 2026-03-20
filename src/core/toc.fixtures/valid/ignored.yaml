@@ -1,3 +1,0 @@
-# This plain .yaml file should be ignored (only .yaml.njk is processed)
-ignored_key:
-  - should_not_appear: true

@@ -1,7 +1,0 @@
-erds:
-{% assign categories = source.entities | map: "category" | uniq %}
-{% for cat in categories %}
-  - id: {{ cat }}
-    title: {{ cat }} ERD
-    permalink: erds/{{ cat }}.md
-{% endfor %}
