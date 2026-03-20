@@ -1,5 +1,0 @@
-config:
-  database:
-    name: mydb
-  cache:
-    enabled: true
