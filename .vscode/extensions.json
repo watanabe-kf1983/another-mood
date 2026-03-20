@@ -3,6 +3,7 @@
     "anthropic.claude-code",
     "ms-python.python",
     "ms-python.vscode-pylance",
+    "ms-python.debugpy",
     "charliermarsh.ruff",
     "editorconfig.editorconfig",
     "redhat.vscode-yaml",
