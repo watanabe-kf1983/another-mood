@@ -4,7 +4,7 @@
 
 - [x] 1-1. TypeScript 実装から未ドキュメントの仕様を救出・ドキュメント化
 - [x] 1-2. example-project/output/docs を gitignore 外して commit（現行出力を期待値として保存）
-- [ ] 1-3. TypeScript コード・設定を削除
+- [x] 1-3. TypeScript コード・設定を削除
 
 ### Phase 2: Python 環境構築 + CI
 
