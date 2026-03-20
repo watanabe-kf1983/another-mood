@@ -8,7 +8,7 @@
 
 ### Phase 2: Python 環境構築 + プロジェクト設定
 
-- [ ] 2-1. Python 環境構築（DevContainer, VSCode 拡張, MCP 設定）
+- [x] 2-1. Python 環境構築（DevContainer, VSCode 拡張, MCP 設定）
   - DevContainer: ベースイメージを base:ubuntu に変更、features（uv, Node, Go, GitHub CLI）
   - postCreateCommand: Claude Code CLI, ast-grep, mcp-language-server
   - .vscode/extensions.json: Python, Ruff, EditorConfig, YAML, Mermaid, GitHub Actions, Claude Code
