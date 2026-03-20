@@ -21,7 +21,7 @@
   - ツールを1つずつ追加し、IDE on save / pre-commit hook / CI に配線:
     - ruff format → IDE on save, pre-commit hook, CI
     - ruff check → CI
-    - mypy → CI
+    - pyright → CI
     - pytest + pytest-cov → CI（カバレッジ 85%）
     - secretlint → pre-commit hook, CI
   - Claude Code PostToolUse hook（ruff format）
