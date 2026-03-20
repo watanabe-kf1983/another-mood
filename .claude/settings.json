@@ -3,7 +3,12 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": []
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ruff format $CLAUDE_FILE_PATHS"
+          }
+        ]
       }
     ]
   }
