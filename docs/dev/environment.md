@@ -15,6 +15,29 @@ Python + uv が使えるイメージを選定する。
 | GitHub CLI | PR 作成等の Git 操作 |
 | Go | MCP Language Server のビルド |
 
+### 動作確認
+
+コンテナ起動後に以下を実行し、環境が正常であることを確認する。
+
+```bash
+# ユーザー・ボリューム
+whoami                  # → vscode
+ls -la ~/.claude        # マウント済み、所有者が vscode
+
+# Features
+node --version
+go version
+gh --version
+uv --version
+
+# postCreateCommand でインストールされるツール
+claude --version
+mcp-language-server --help
+ast-grep --version
+```
+
+VSCode 拡張パネルで拡張テーブルの全拡張がインストールされていること。
+
 ### Claude Code 永続化
 
 `~/.claude` を名前付きボリュームにマウントし、コンテナ再作成時に Claude Code の設定・会話履歴を保持する。ボリュームの所有権は postCreateCommand で非 root ユーザに変更する。
@@ -34,7 +57,9 @@ Python + uv が使えるイメージを選定する。
 | 拡張 | 用途 |
 |---|---|
 | Claude Code | AI アシスタント |
+| Python | IntelliSense, デバッグ, venv 検出（Pylance/debugpy 同梱） |
 | Ruff | Python フォーマッタ・リンタ |
+| EditorConfig | 非 Python ファイルのエディタ設定統一 |
 | YAML | スキーマ・データファイルの編集支援 |
 | Markdown Mermaid | Mermaid 図のプレビュー |
 | GitHub Actions | CI ワークフローの編集支援 |

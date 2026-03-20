@@ -6,10 +6,26 @@
 - [x] 1-2. example-project/output/docs を gitignore 外して commit（現行出力を期待値として保存）
 - [x] 1-3. TypeScript コード・設定を削除
 
-### Phase 2: Python 環境構築 + CI
+### Phase 2: Python 環境構築 + プロジェクト設定
 
-- [ ] 2-1. プロジェクトセットアップ（uv, pytest, ruff, mypy, DevContainer）
-- [ ] 2-2. GitHub Actions CI（lint, test, type check, coverage, main 保護）
+- [x] 2-1. Python 環境構築（DevContainer, VSCode 拡張, MCP 設定）
+  - DevContainer: ベースイメージを base:ubuntu に変更、features（uv, Node, Go, GitHub CLI）
+  - postCreateCommand: Claude Code CLI, ast-grep, mcp-language-server
+  - .vscode/extensions.json: Python, Ruff, EditorConfig, YAML, Mermaid, GitHub Actions, Claude Code
+  - ドキュメント更新（.devcontainer/README.md, docs/dev/environment.md）
+- [ ] 2-2. プロジェクト設定（uv init, CI, ツール導入・配線）
+  - .mcp.json: language-server を pyright に変更
+  - uv init → pyproject.toml 作成
+  - .gitignore に Python パターン追加（.venv, __pycache__ 等）
+  - GitHub Actions CI の骨格（uv sync + 空のステップ）
+  - ツールを1つずつ追加し、IDE on save / pre-commit hook / CI に配線:
+    - ruff format → IDE on save, pre-commit hook, CI
+    - ruff check → CI
+    - pyright → CI
+    - pytest + pytest-cov → CI（カバレッジ 85%）
+    - secretlint → pre-commit hook, CI
+  - Claude Code PostToolUse hook（ruff format）
+  - main ブランチ保護
 
 ### Phase 3: パススルーパイプライン（自己ドッグフーディング開始）
 

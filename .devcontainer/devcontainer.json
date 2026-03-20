@@ -1,10 +1,11 @@
 {
   "name": "reqs-builder",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:4-24",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers-extra/features/uv:1": {}
   },
 
@@ -12,8 +13,8 @@
     "vscode": {
       "extensions": [
         "anthropic.claude-code",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
+        "ms-python.python",
+        "charliermarsh.ruff",
         "editorconfig.editorconfig",
         "redhat.vscode-yaml",
         "bierner.markdown-mermaid",
@@ -22,15 +23,14 @@
     }
   },
 
-  "mounts": ["source=reqs-builder-claude-${devcontainerId},target=/home/node/.claude,type=volume"],
+  "mounts": ["source=reqs-builder-claude-${devcontainerId},target=/home/vscode/.claude,type=volume"],
 
   "postCreateCommand": {
-    "claude-home": "sudo chown -R node:node /home/node/.claude",
+    "claude-home": "sudo chown -R vscode:vscode /home/vscode/.claude",
     "claude-code": "npm install -g @anthropic-ai/claude-code",
-    "typescript-lsp": "npm install -g typescript typescript-language-server",
     "mcp-language-server": "go install github.com/isaacphi/mcp-language-server@latest",
     "ast-grep": "npm install -g @ast-grep/cli"
   },
 
-  "remoteUser": "node"
+  "remoteUser": "vscode"
 }
