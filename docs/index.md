@@ -26,6 +26,13 @@
 - [pipeline/](internal/pipeline/) — パイプライン構成、プロセス連携、StageRunner
 - [components/](internal/components/) — 共通ロジック、Normalizer、Composer、Generator、Renderer
 
+## [dev/](dev/)
+
+開発環境セットアップ・ツール設定。
+
+- [setup.md](dev/setup.md) — 開発環境セットアップ
+- [checks.md](dev/checks.md) — 開発チェック（IDE・Git hook・CI）
+
 ## 開発規約
 
 [DEVELOPMENT.md](../DEVELOPMENT.md) に統合済み。
