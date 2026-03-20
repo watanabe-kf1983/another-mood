@@ -10,5 +10,8 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - run: echo "CI placeholder – Python CI will be configured in Phase 2"
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - run: make ci

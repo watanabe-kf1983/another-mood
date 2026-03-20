@@ -1,0 +1,7 @@
+[project]
+name = "reqs-builder"
+version = "0.1.0"
+description = "A documentation build tool"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
