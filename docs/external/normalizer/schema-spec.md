@@ -88,6 +88,21 @@ order-001:
 
 コンポジションの関係にあるオブジェクトは FK として被参照されない。したがって references.yaml の参照先はトップレベルスキーマのみで十分。
 
+## エラー報告
+
+スキーマ検証に失敗した場合、エラーメッセージには**ファイル名と行番号**を含める。
+
+```
+docs/contents/users.yaml:12: 'email' is a required property
+docs/contents/orders.yaml:5: 'customer' expected string, got integer
+```
+
+複数ファイルをマージして検証する場合でも、エラー箇所を元ファイルの行番号まで特定できること。
+
+### 背景: なぜ行番号が必要か
+
+JSON Schema のバリデーションは JSON データモデル（パース後の dict/list）に対して行われるため、通常は行番号情報を持たない。しかし「どのファイルの何行目がおかしいか」が分からないエラーメッセージはユーザ体験として不十分であり、将来の LSP 連携（エディタ上の赤波線表示）にも行番号が必須となる。実装には位置情報を保持する YAML パーサ（例: ruamel.yaml）の採用が必要。
+
 ## 参照整合性: references.yaml
 
 参照関係は JSON Schema に埋め込まず、`{schemaDir}/references.yaml` に独立して定義する。参照関係は本質的に二者間の関係であり、片側のスキーマに埋め込むのは不自然なため。Snowflake の宣言的 FK と同じアプローチで、制約は**強制しない**。
