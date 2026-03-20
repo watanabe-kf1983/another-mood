@@ -1,20 +1,5 @@
 {
   "mcpServers": {
-    "language-server": {
-      "command": "mcp-language-server",
-      "args": [
-        "--workspace",
-        "/workspaces/reqs-builder/",
-        "--lsp",
-        "typescript-language-server",
-        "--",
-        "--stdio"
-      ]
-    },
-    "vitest": {
-      "command": "npx",
-      "args": ["-y", "@djankies/vitest-mcp"]
-    },
     "ast-grep": {
       "command": "uvx",
       "args": [
