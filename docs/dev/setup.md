@@ -14,10 +14,10 @@ VS Code + DevContainer で即座に開発可能。
 DevContainer を使わない場合、以下を手動でインストールする。
 
 1. Python 3.13 + [uv](https://docs.astral.sh/uv/)
-2. Node.js（secretlint 用）
-3. Go（MCP Language Server のビルド用）
-4. GitHub CLI
-5. make（macOS は標準搭載、Linux もほぼ標準）
+2. Go（MCP Language Server のビルド用）
+3. GitHub CLI
+4. make（macOS は標準搭載、Linux もほぼ標準）
+5. Node.js（Claude Code が使用。Python 開発自体には不要）
 
 インストール後:
 
