@@ -1,2 +1,4 @@
-# Generated output
-output/
+# Generated output (keep output/docs/ as expected test output)
+output/rendered/
+output/tocs/
+output/docs/.hugo_build.lock
