@@ -1,5 +1,30 @@
 # Claude Code local settings
 .claude/settings.local.json
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Distribution / packaging
+dist/
+*.egg-info/
+
+# Unit test / coverage reports
+reports/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# Virtual environments
+.venv/
+
+# Ruff
+.ruff_cache/
+
+# Type checkers
+.mypy_cache/
+.pytype/
+
 # OS files
 .DS_Store

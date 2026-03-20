@@ -1,0 +1,29 @@
+[project]
+name = "reqs-builder"
+version = "0.1.0"
+description = "A documentation build tool"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff>=0.15.7",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["reqs_builder"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
