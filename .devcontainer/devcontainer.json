@@ -14,6 +14,7 @@
       "extensions": [
         "anthropic.claude-code",
         "ms-python.python",
+        "ms-python.vscode-pylance",
         "charliermarsh.ruff",
         "editorconfig.editorconfig",
         "redhat.vscode-yaml",
