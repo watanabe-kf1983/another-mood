@@ -1,4 +1,12 @@
-.PHONY: ci
+.PHONY: ci format-check lint format
 
-ci:
-	uv sync
+ci: format-check lint
+
+format-check:
+	uv run ruff format --check .
+
+lint:
+	uv run ruff check .
+
+format:
+	uv run ruff format .
