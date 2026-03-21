@@ -24,10 +24,13 @@ def build_command(project_dir: str = typer.Argument(help="Project directory")) -
 
 
 @app.command("dev")
-def dev_command(project_dir: str = typer.Argument(help="Project directory")) -> None:
-    """Watch for changes and rebuild automatically."""
+def dev_command(
+    project_dir: str = typer.Argument(help="Project directory"),
+    port: int = typer.Option(1313, help="Hugo server port"),
+) -> None:
+    """Watch for changes and rebuild automatically with Hugo live preview."""
     paths = ProjectPaths(project_dir=Path(project_dir))
-    dev(paths)
+    dev(paths, port=port)
 
 
 def main() -> None:

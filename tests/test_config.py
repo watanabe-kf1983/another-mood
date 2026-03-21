@@ -12,7 +12,12 @@ class TestProjectPathsDefaults:
         paths = ProjectPaths(project_dir=Path("myproject"))
         assert paths.out_dir == Path(".reqs-builder/myproject/output")
 
+    def test_render_out_dir_defaults_to_reqs_builder_render(self) -> None:
+        paths = ProjectPaths(project_dir=Path("myproject"))
+        assert paths.render_out_dir == Path(".reqs-builder/myproject/render")
+
     def test_subdir_project_dir(self) -> None:
         paths = ProjectPaths(project_dir=Path("docs/api"))
         assert paths.contents_dir == Path("docs/api/contents")
         assert paths.out_dir == Path(".reqs-builder/docs/api/output")
+        assert paths.render_out_dir == Path(".reqs-builder/docs/api/render")
