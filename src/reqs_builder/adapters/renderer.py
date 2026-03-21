@@ -1,11 +1,28 @@
-"""Hugo renderer adapter — bridges reqs-builder pipeline to Hugo."""
+"""Hugo renderer adapter — bridges reqs-builder pipeline to Hugo.
 
+Adapts reqs-builder output to Hugo conventions:
+- Renames index.md → _index.md (Hugo branch bundle requirement)
+"""
+
+import shutil
 import subprocess
 from importlib.resources import files
+from pathlib import Path
 
 from reqs_builder.config import ProjectPaths
 
 _HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
+
+
+def prepare_hugo_content(out_dir: Path, hugo_content_dir: Path) -> None:
+    """Copy outDir to hugo_content_dir, renaming index.md → _index.md."""
+    if hugo_content_dir.exists():
+        shutil.rmtree(hugo_content_dir)
+
+    shutil.copytree(out_dir, hugo_content_dir)
+
+    for index_file in hugo_content_dir.rglob("index.md"):
+        index_file.rename(index_file.with_name("_index.md"))
 
 
 def render_build(paths: ProjectPaths) -> None:
@@ -13,13 +30,16 @@ def render_build(paths: ProjectPaths) -> None:
     assert paths.out_dir is not None
     assert paths.render_out_dir is not None
 
+    hugo_content_dir = paths.out_dir.resolve().parent / "hugo-content"
+    prepare_hugo_content(paths.out_dir, hugo_content_dir)
+
     subprocess.run(
         [
             "hugo",
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(paths.out_dir.resolve()),
+            str(hugo_content_dir.resolve()),
             "--destination",
             str(paths.render_out_dir.resolve()),
         ],
@@ -31,6 +51,9 @@ def render_dev(paths: ProjectPaths, port: int) -> subprocess.Popen[bytes]:
     """Start hugo server for live preview. Returns the Popen process."""
     assert paths.out_dir is not None
 
+    hugo_content_dir = paths.out_dir.resolve().parent / "hugo-content"
+    prepare_hugo_content(paths.out_dir, hugo_content_dir)
+
     return subprocess.Popen(
         [
             "hugo",
@@ -38,7 +61,7 @@ def render_dev(paths: ProjectPaths, port: int) -> subprocess.Popen[bytes]:
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(paths.out_dir.resolve()),
+            str(hugo_content_dir.resolve()),
             "--port",
             str(port),
         ],
