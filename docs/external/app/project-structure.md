@@ -4,9 +4,11 @@
 
 ## ディレクトリ構成
 
+CLI の第一位置パラメータ `<dir>` で処理対象ディレクトリを指定する（[cli-spec.md](cli-spec.md) 参照）。以下の例では `<dir>` = `docs/` とする。
+
 ```
-my-project/
-  docs/
+my-project/                    # CWD（プロジェクトルート）
+  docs/                        # <dir>: 処理対象ディレクトリ
     index.md                   # ビルドコマンド + 生成物へのリンク
     definition/                # リーダが管理する定義類
       schema/                  # schemaDir: スキーマ定義（JSON Schema + references.yaml）
@@ -17,17 +19,18 @@ my-project/
       profiles.yaml            # profilesFile: プロファイル設定（ページ分割戦略）
     contents/                  # contentsDir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
   .reqs-builder/               # gitignore（生成物・中間生成物）
-    tmp/
-      normalized/              # Normalizer 出力（3ステージ分）
-        schema/                # normalizedSchemaDir: schema の Normalizer 出力
-        contents/              # normalizedContentsDir: contents の Normalizer 出力
-        queries/               # normalizedQueriesDir: queries の Normalizer 出力
-      views/                   # viewsDir: Composer 出力
-    output/                    # outDir: Document Generator 出力
-    render/                    # render.outDir: Document Renderer 出力
-    meta/                      # ツールパイプライン出力
-      output/                  # meta.outDir
-      render/                  # meta.render.outDir
+    docs/                      # <dir> に対応するサブディレクトリ
+      tmp/
+        normalized/            # Normalizer 出力（3ステージ分）
+          schema/              # normalizedSchemaDir: schema の Normalizer 出力
+          contents/            # normalizedContentsDir: contents の Normalizer 出力
+          queries/             # normalizedQueriesDir: queries の Normalizer 出力
+        views/                 # viewsDir: Composer 出力
+      output/                  # outDir: Document Generator 出力
+      render/                  # render.outDir: Document Renderer 出力
+      meta/                    # ツールパイプライン出力
+        output/                # meta.outDir
+        render/                # meta.render.outDir
 ```
 
 ## 背景: MS-Access アナロジー
@@ -48,8 +51,18 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 ドキュメントはソースコードとともにリポジトリに格納されることが多い。`model/` や `presentation/` がプロジェクトルート直下にあると `src/` や `tests/` と混在する。`docs/` 配下にまとめることで、ソースコードとの境界が明確になる。
 
-## 背景: .reqs-builder/ に生成物を隔離する理由
+ディレクトリ名は `docs/` に限らない。CLI の位置パラメータで任意のディレクトリを指定できる。
 
-- `.` prefix はフレームワーク固有の作業領域を示す慣習（`.next/`, `.nuxt/` 等）に従う
-- gitignore が自然で、「消しても再生成できるもの」という意図が明確
+## 背景: .reqs-builder/ を CWD 直下に配置する理由
+
+出力ディレクトリ `.reqs-builder/` は `<dir>`（入力ディレクトリ）の中ではなく、CWD（プロジェクトルート）直下に配置する。
+
+- **入力ディレクトリはユーザのコンテンツ領域**: ツールから見れば参照先であり、生成物を書き込むべきでない
+- `.` prefix はフレームワーク固有の作業領域を示す慣習（`.next/`, `.pytest_cache/` 等）に従う
+- gitignore がシンプル（ルートに `/.reqs-builder/` の1行で済む）
+- 入力がプロジェクト外（git submodule 等）にある場合でも破綻しない
 - `contentsDir` を編集するメンバの視界に入らない
+
+## 背景: 出力を `<dir>` ごとにサブディレクトリで分離する理由
+
+`.reqs-builder/<dir>/` のように入力パスに対応するサブディレクトリを自動作成する。異なる `<dir>` を別プロセスで同時処理しても出力が衝突しない。サブディレクトリ名は CWD からの相対パスをそのまま使うため予測可能である。
