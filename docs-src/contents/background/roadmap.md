@@ -19,7 +19,7 @@
 
 ### Phase 4: Hugo 連携
 
-- [ ] 4-1. Renderer として Hugo を組み込み、dev コマンドで HTML プレビュー
+- [x] 4-1. Renderer として Hugo を組み込み、dev コマンドで HTML プレビュー
 
 ### Phase 5: example-project 同等機能
 
