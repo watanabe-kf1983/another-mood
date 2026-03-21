@@ -9,7 +9,7 @@ import subprocess
 from importlib.resources import files
 from pathlib import Path
 
-from reqs_builder.config import ProjectPaths
+from reqs_builder.config import ProjectConfig
 
 _HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
 
@@ -25,7 +25,7 @@ def prepare_hugo_content(out_dir: Path, hugo_content_dir: Path) -> None:
         index_file.rename(index_file.with_name("_index.md"))
 
 
-def render_build(paths: ProjectPaths) -> None:
+def render_build(paths: ProjectConfig) -> None:
     """Run hugo build to generate static HTML from outDir to render_out_dir."""
     assert paths.out_dir is not None
     assert paths.render_out_dir is not None
@@ -47,12 +47,12 @@ def render_build(paths: ProjectPaths) -> None:
     )
 
 
-def render_dev(paths: ProjectPaths, port: int) -> subprocess.Popen[bytes]:
+def render_dev(config: ProjectConfig) -> subprocess.Popen[bytes]:
     """Start hugo server for live preview. Returns the Popen process."""
-    assert paths.out_dir is not None
-    assert paths.hugo_content_dir is not None
+    assert config.out_dir is not None
+    assert config.hugo_content_dir is not None
 
-    prepare_hugo_content(paths.out_dir, paths.hugo_content_dir)
+    prepare_hugo_content(config.out_dir, config.hugo_content_dir)
 
     return subprocess.Popen(
         [
@@ -61,8 +61,8 @@ def render_dev(paths: ProjectPaths, port: int) -> subprocess.Popen[bytes]:
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(paths.hugo_content_dir.resolve()),
+            str(config.hugo_content_dir.resolve()),
             "--port",
-            str(port),
+            str(config.port),
         ],
     )
