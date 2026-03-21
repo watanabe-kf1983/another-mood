@@ -17,8 +17,10 @@ schema / contents / queries の3ステージは同一の処理フローに従う
 | ステージ | 検証用スキーマ | 対象ファイル |
 |---|---|---|
 | schema | 内蔵 SchemaSchema | `schemaDir/*.yaml` |
-| contents | `schemaDir`（ユーザ定義スキーマ） | `contentsDir/*.yaml` |
+| contents | `schemaDir`（ユーザ定義スキーマ） | `contentsDir/*.yaml` ※ |
 | queries | 内蔵 QuerySchema | `queriesDir/*.yaml` |
+
+※ `contentsDir` には YAML・Markdown のほかにバイナリファイル（PNG, JPG 等）も配置される想定。バイナリファイルの正規化における扱い（パス解決、Composer への受け渡し等）は未決定。
 
 ## エラー伝播
 
