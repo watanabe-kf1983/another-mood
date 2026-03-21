@@ -36,4 +36,4 @@
 
 ## 開発規約
 
-[DEVELOPMENT.md](../DEVELOPMENT.md) に統合済み。
+[DEVELOPMENT.md](../../DEVELOPMENT.md) に統合済み。
