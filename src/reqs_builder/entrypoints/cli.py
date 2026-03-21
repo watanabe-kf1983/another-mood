@@ -6,6 +6,7 @@ import typer
 
 from reqs_builder.config import ProjectPaths
 from reqs_builder.entrypoints.build import build
+from reqs_builder.entrypoints.dev import dev
 
 app = typer.Typer()
 
@@ -20,6 +21,13 @@ def build_command(project_dir: str = typer.Argument(help="Project directory")) -
     """Build the project (copy contents to output)."""
     paths = ProjectPaths(project_dir=Path(project_dir))
     build(paths)
+
+
+@app.command("dev")
+def dev_command(project_dir: str = typer.Argument(help="Project directory")) -> None:
+    """Watch for changes and rebuild automatically."""
+    paths = ProjectPaths(project_dir=Path(project_dir))
+    dev(paths)
 
 
 def main() -> None:
