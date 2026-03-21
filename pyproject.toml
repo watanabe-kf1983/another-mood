@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "A documentation build tool"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pydantic-settings>=2.13.1",
+    "typer>=0.24.1",
+]
+
+[project.scripts]
+reqs = "reqs_builder.entrypoints.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -24,6 +30,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["reqs_builder"]
+omit = ["src/reqs_builder/entrypoints/*"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
