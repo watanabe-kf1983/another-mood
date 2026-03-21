@@ -34,13 +34,9 @@ orders:
 
 ファイルの分割・統合・リネームはスキーマ名や参照関係に影響しない。
 
-### 正規化ルール
+### 正規化後のデータ形状
 
-`additionalProperties` がオブジェクトスキーマの場合、辞書パターンとして扱い、配列 + id フィールドに正規化する:
-
-- `additionalProperties` がオブジェクトスキーマ → 辞書パターン。`properties` に明示されたキーはそのまま残し、それ以外のキーを配列 + id フィールドに変換
-- `properties` のみ → 固定構造のオブジェクト、そのまま
-- 入れ子の `additionalProperties` も再帰的に正規化する
+`additionalProperties` を持つスキーマのデータは、Normalizer により辞書形式から配列形式に変換される。クエリやテンプレートは正規化後の形状を参照する。
 
 ```yaml
 # {contentsDir}/users.yaml（人間が書く形 — 辞書形式）
@@ -60,6 +56,12 @@ items:
   - id: suzuki
     name: 鈴木花子
 ```
+
+- 辞書キーが `id` フィールドになる
+- `properties` に明示されたキー（上記の `version`）はそのまま残る
+- 入れ子の `additionalProperties` も再帰的に変換される
+
+正規化ルールの詳細は [normalizer.md](../../internal/components/normalizer.md) を参照。
 
 ### コンポジション vs 集約
 
@@ -97,7 +99,7 @@ docs/contents/users.yaml:12: 'email' is a required property
 docs/contents/orders.yaml:5: 'customer' expected string, got integer
 ```
 
-複数ファイルをマージして検証する場合でも、エラー箇所を元ファイルの行番号まで特定できること。
+検証はファイル単位で行うため、エラー箇所は自然に元ファイルの行番号で特定できる。
 
 ### 背景: なぜ行番号が必要か
 
