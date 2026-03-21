@@ -26,5 +26,8 @@ reports/
 .mypy_cache/
 .pytype/
 
+# reqs-builder output
+/.reqs-builder/
+
 # OS files
 .DS_Store
