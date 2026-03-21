@@ -1,12 +1,13 @@
-"""Build command — passthrough copy of contents to output."""
+"""Build command — passthrough copy of contents to output, then render with Hugo."""
 
 import shutil
 
-from reqs_builder.config import ProjectPaths
+from reqs_builder.adapters.renderer import render_build
+from reqs_builder.config import ProjectConfig
 
 
-def build(paths: ProjectPaths) -> None:
-    """Copy contents_dir to out_dir (clean build)."""
+def build(paths: ProjectConfig) -> None:
+    """Copy contents_dir to out_dir, then render to HTML."""
     assert paths.contents_dir is not None
     assert paths.out_dir is not None
 
@@ -14,3 +15,4 @@ def build(paths: ProjectPaths) -> None:
         shutil.rmtree(paths.out_dir)
 
     shutil.copytree(paths.contents_dir, paths.out_dir)
+    render_build(paths)

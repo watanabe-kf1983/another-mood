@@ -1,26 +1,31 @@
-"""Dev command — build + watch for changes and rebuild."""
+"""Dev command — build + watch for changes and rebuild, with Hugo live preview."""
 
 from watchfiles import watch
 
-from reqs_builder.config import ProjectPaths
+from reqs_builder.adapters.renderer import render_dev
+from reqs_builder.config import ProjectConfig
 from reqs_builder.entrypoints.build import build
 
 
-def dev(paths: ProjectPaths) -> None:
-    """Run build, then watch contents_dir and rebuild on changes."""
-    assert paths.contents_dir is not None
+def dev(config: ProjectConfig) -> None:
+    """Run build, start Hugo server, then watch and rebuild on changes."""
+    assert config.contents_dir is not None
 
-    if not paths.contents_dir.exists():
-        raise FileNotFoundError(f"contents directory not found: {paths.contents_dir}")
+    if not config.contents_dir.exists():
+        raise FileNotFoundError(f"contents directory not found: {config.contents_dir}")
 
-    print(f"Watching {paths.contents_dir} for changes...", flush=True)
-
-    build(paths)
+    build(config)
     print("Build complete.", flush=True)
 
+    hugo_process = render_dev(config)
+    print(f"Hugo server started on http://localhost:{config.port}/", flush=True)
+
     try:
-        for _changes in watch(paths.contents_dir, debounce=300):
-            build(paths)
+        for _changes in watch(config.contents_dir, debounce=300):
+            build(config)
             print("Build complete.", flush=True)
     except KeyboardInterrupt:
         pass
+    finally:
+        hugo_process.terminate()
+        hugo_process.wait()

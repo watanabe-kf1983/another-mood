@@ -5,6 +5,7 @@ description = "A documentation build tool"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "hugo>=0.155.3",
     "pydantic-settings>=2.13.1",
     "typer>=0.24.1",
     "watchfiles>=1.1.1",
@@ -31,7 +32,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["reqs_builder"]
-omit = ["src/reqs_builder/entrypoints/*"]
+omit = ["src/reqs_builder/entrypoints/*", "src/reqs_builder/adapters/*"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
