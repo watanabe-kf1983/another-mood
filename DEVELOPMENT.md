@@ -15,21 +15,26 @@
 
 ### セットアップ
 
-開発環境の構築手順は [docs/dev/setup.md](docs/dev/setup.md) を参照。
+開発環境・ドキュメントの構築手順は [docs/README.md](docs/README.md) を参照。
+
+タスク開始時には `reqs build docs-src` でドキュメントをビルドし、仕様が参照できる状態にする。
 
 ### 設計工程
 
 - ドキュメント: **日本語**
+- ドキュメントソース: `docs-src/contents/` 配下の 3 カテゴリ
 
-#### docs/background/ — Why
+設計ドキュメントの変更は、必ず `docs-src/contents/` 配下のソースに対して行い、変更後は `reqs build docs-src` を実行して `.reqs-builder/docs-src/output/` の出力を確認する。
+
+#### background/ — Why
 
 製品ビジョン、経緯、ロードマップ。読者は開発チーム。
 
-#### docs/external/ — What
+#### external/ — What
 
 ユーザ向け外部仕様。将来そのままユーザドキュメントに昇格させる前提で、利用者視点の振る舞いのみを記述する。内部実装の詳細は書かない。
 
-#### docs/internal/ — How
+#### internal/ — How
 
 内部設計・実装仕様。読者は開発者。コンポーネントの処理フロー、プロセス間連携、技術選定等。
 
@@ -43,8 +48,8 @@
 
 ドキュメントを追加・削除・移動した場合、プルリクを上げる前に以下のインデックスからのリンクを確認・更新する:
 
-- [docs/index.md](docs/index.md) — 全体インデックス
-- [docs/external/index.md](docs/external/index.md) — 外部仕様インデックス
+- [index.md](.reqs-builder/docs-src/output/index.md) — 全体インデックス
+- [external/index.md](.reqs-builder/docs-src/output/external/index.md) — 外部仕様インデックス
 - [DEVELOPMENT.md](DEVELOPMENT.md) — 開発者向けポインタ
 
 ### 実装工程
@@ -79,7 +84,9 @@
 
 ## Documentation (Reference)
 
-- [docs/](docs/index.md) — 仕様・設計
-- [docs/background/product.md](docs/background/product.md) — 製品ビジョン
-- [docs/internal/architecture.md](docs/internal/architecture.md) — アーキテクチャ
-- [docs/background/roadmap.md](docs/background/roadmap.md) — ロードマップ
+ドキュメントの閲覧先は `.reqs-builder/docs-src/output/`（ビルド方法は [docs/README.md](docs/README.md) を参照）。
+
+- [index.md](.reqs-builder/docs-src/output/index.md) — 仕様・設計
+- [background/product.md](.reqs-builder/docs-src/output/background/product.md) — 製品ビジョン
+- [internal/architecture.md](.reqs-builder/docs-src/output/internal/architecture.md) — アーキテクチャ
+- [background/roadmap.md](.reqs-builder/docs-src/output/background/roadmap.md) — ロードマップ

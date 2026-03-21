@@ -22,7 +22,7 @@
 
 ## ドキュメント
 
-- [ユーザガイド](docs/user-guide/index.md)
+- [ドキュメント](docs/README.md)
 
 ## ライセンス
 
