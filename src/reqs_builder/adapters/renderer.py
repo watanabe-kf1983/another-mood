@@ -29,9 +29,9 @@ def render_build(paths: ProjectPaths) -> None:
     """Run hugo build to generate static HTML from outDir to render_out_dir."""
     assert paths.out_dir is not None
     assert paths.render_out_dir is not None
+    assert paths.hugo_content_dir is not None
 
-    hugo_content_dir = paths.out_dir.resolve().parent / "hugo-content"
-    prepare_hugo_content(paths.out_dir, hugo_content_dir)
+    prepare_hugo_content(paths.out_dir, paths.hugo_content_dir)
 
     subprocess.run(
         [
@@ -39,7 +39,7 @@ def render_build(paths: ProjectPaths) -> None:
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(hugo_content_dir.resolve()),
+            str(paths.hugo_content_dir.resolve()),
             "--destination",
             str(paths.render_out_dir.resolve()),
         ],
@@ -50,9 +50,9 @@ def render_build(paths: ProjectPaths) -> None:
 def render_dev(paths: ProjectPaths, port: int) -> subprocess.Popen[bytes]:
     """Start hugo server for live preview. Returns the Popen process."""
     assert paths.out_dir is not None
+    assert paths.hugo_content_dir is not None
 
-    hugo_content_dir = paths.out_dir.resolve().parent / "hugo-content"
-    prepare_hugo_content(paths.out_dir, hugo_content_dir)
+    prepare_hugo_content(paths.out_dir, paths.hugo_content_dir)
 
     return subprocess.Popen(
         [
@@ -61,7 +61,7 @@ def render_dev(paths: ProjectPaths, port: int) -> subprocess.Popen[bytes]:
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(hugo_content_dir.resolve()),
+            str(paths.hugo_content_dir.resolve()),
             "--port",
             str(port),
         ],
