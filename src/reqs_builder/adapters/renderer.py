@@ -15,12 +15,12 @@ from reqs_builder.pipeline.atomic_dir_writer import AtomicDirWriter
 _HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
 
 
-def prepare_hugo_content(out_dir: Path, hugo_content_dir: Path) -> None:
-    """Copy outDir to hugo_content_dir, renaming index.md → _index.md."""
+def prepare_hugo_content(src_dir: Path, hugo_content_dir: Path) -> None:
+    """Copy src_dir to hugo_content_dir, renaming index.md → _index.md."""
 
-    def write(tmp_dir: Path) -> None:
-        shutil.copytree(out_dir, tmp_dir, dirs_exist_ok=True)
-        for index_file in tmp_dir.rglob("index.md"):
+    def write(*, out_dir: Path) -> None:
+        shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
+        for index_file in out_dir.rglob("index.md"):
             index_file.rename(index_file.with_name("_index.md"))
 
     AtomicDirWriter(hugo_content_dir, write).run()

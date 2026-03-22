@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
-from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -40,7 +40,8 @@ class VersionInfo:
         return VersionInfo.from_json(path.read_text())
 
 
-DirWriterFn = Callable[[Path], None]
+class DirWriterFn(Protocol):
+    def __call__(self, *, out_dir: Path) -> None: ...
 
 
 class AtomicDirWriter:
@@ -75,7 +76,7 @@ class AtomicDirWriter:
         )
 
         try:
-            self._process_fn(tmp_dir)
+            self._process_fn(out_dir=tmp_dir)
             self._swap_if_newer(tmp_dir, start_time)
         finally:
             if tmp_dir.exists():

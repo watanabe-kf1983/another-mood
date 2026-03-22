@@ -14,7 +14,7 @@ def build(paths: ProjectConfig) -> None:
     assert paths.out_dir is not None
     contents_dir = paths.contents_dir
 
-    def copy(out_dir: Path) -> None:
+    def copy(*, out_dir: Path) -> None:
         shutil.copytree(contents_dir, out_dir, dirs_exist_ok=True)
 
     AtomicDirWriter(paths.out_dir, copy).run()
