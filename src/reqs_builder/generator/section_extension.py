@@ -3,14 +3,16 @@
 Parses the tag and delegates rendering to a SectionProcessor callable.
 """
 
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Protocol
 
 from jinja2 import Environment, nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
 
-SectionProcessor = Callable[[str, dict[str, Any]], str]
+
+class SectionProcessor(Protocol):
+    def __call__(self, template_name: str, data: dict[str, Any]) -> str: ...
+
 
 _PROCESSOR_KEY = "_section_processor"
 
