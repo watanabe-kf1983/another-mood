@@ -2,8 +2,6 @@
 
 ## エンティティ一覧
 
-
-
 ## リレーション一覧
 
 | From | To | Cardinality | Description |
@@ -15,3 +13,4 @@
 | product | order_item | 1:N | 商品は複数の注文明細に含まれる |
 | product_category | product | 1:N | カテゴリは複数の商品を持つ |
 | product_category | product_category | 1:N | カテゴリは子カテゴリを持つ（自己参照） |
+

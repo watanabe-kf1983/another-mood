@@ -9,3 +9,4 @@
 | total_amount | number |  |
 | status | string |  |
 | ordered_at | datetime |  |
+

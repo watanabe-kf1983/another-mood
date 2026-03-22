@@ -8,3 +8,4 @@
 | email | string |  |
 | name | string |  |
 | created_at | datetime |  |
+

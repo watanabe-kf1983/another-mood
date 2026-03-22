@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import FileSystemLoader
 
+from reqs_builder.generator.page_writer import PageWriter
+from reqs_builder.generator.section_extension import make_section_env
 from reqs_builder.json_data_model import deep_merge
 
 
@@ -27,10 +29,15 @@ def load_views(views_dir: Path) -> dict[str, Any]:
 def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
     """Load views, render index.md template, and write output."""
     views = load_views(views_dir)
-    env = Environment(
-        loader=FileSystemLoader(templates_dir),
-        keep_trailing_newline=True,
-    )
+
+    def render_template(template_name: str, data: dict[str, Any]) -> str:
+        template = env.get_template(f"{template_name}.md")
+        return template.render(data)
+
+    writer = PageWriter(out_dir=out_dir, render=render_template)
+    env = make_section_env(writer)
+    env.loader = FileSystemLoader(templates_dir)
+
     template = env.get_template("index.md")
     rendered = template.render(views)
 

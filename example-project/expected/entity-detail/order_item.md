@@ -9,3 +9,4 @@
 | product_id | string | FK → product |
 | quantity | number |  |
 | unit_price | number |  |
+

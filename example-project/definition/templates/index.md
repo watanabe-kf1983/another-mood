@@ -2,9 +2,9 @@
 
 ## エンティティ一覧
 
-{% for entity in entities %}
+{%- for entity in entities -%}
 {% section "entity-detail" with entity %}
-{% endfor %}
+{%- endfor %}
 
 ## リレーション一覧
 

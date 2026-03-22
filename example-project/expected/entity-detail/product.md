@@ -9,3 +9,4 @@
 | price | number |  |
 | stock | number |  |
 | category_id | string | FK → product_category |
+

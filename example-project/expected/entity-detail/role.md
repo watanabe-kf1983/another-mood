@@ -7,3 +7,4 @@
 | id | string | PK |
 | name | string |  |
 | permissions | string[] |  |
+

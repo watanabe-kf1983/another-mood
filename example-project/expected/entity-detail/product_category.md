@@ -7,3 +7,4 @@
 | id | string | PK |
 | name | string |  |
 | parent_id | string | FK → product_category |
+
