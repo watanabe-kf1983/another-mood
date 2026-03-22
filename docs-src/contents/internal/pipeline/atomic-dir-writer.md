@@ -20,12 +20,13 @@ AtomicDirWriter(outputDir, processFn)
 4. lock({outputDir}.lock)               ← filelock
 5. existingTime = {outputDir}.version.json のタイムスタンプ
 6. if startTime > existingTime:
-     rm outputDir
-     rename tmpDir → outputDir
+     outputDir の中身をクリア（ディレクトリ自体は残す）
+     tmpDir の中身を outputDir にコピー
      {outputDir}.version.json に startTime を記録
    else:
-     rm tmpDir                          ← 自分の結果は古い。捨てる
+     （自分の結果は古い。何もしない）
 7. unlock({outputDir}.lock)
+8. rm tmpDir                            ← 常に削除
 ```
 
 processFn は `out_dir` をキーワード引数で受け取る（`DirWriterFn` プロトコル）。
@@ -35,15 +36,15 @@ processFn は `out_dir` をキーワード引数で受け取る（`DirWriterFn` 
 
 | 要素 | 解決する問題 |
 |---|---|
-| tmpDir に書いてから rename | 出力の混在防止（原子性） |
+| tmpDir に書いてからコピー | processFn 失敗時に outputDir を保護 |
 | startTime の比較 | 古い結果による上書き防止（順序性） |
-| outputDir 丸ごと差し替え | 残骸ファイルの防止 |
+| outputDir の中身をクリア+コピー | 残骸ファイルの防止（ディレクトリ inode は維持） |
 | filelock による lock | read-compare-write の競合防止 |
 
 ## メタファイル
 
 各出力ディレクトリの隣に配置する。
-outputDir の中には置かない（ロック中に outputDir の中身を丸ごと差し替えるため）。
+outputDir の中には置かない（ロック中に outputDir の中身をクリア+コピーするため）。
 
 ```
 .reqs-builder/
@@ -95,8 +96,6 @@ content hash による前後比較、generation チェック等の検証は、
 同一マシン上のシステムクロックは実用上十分信頼でき、
 タイムスタンプであれば共有状態なしにプロセス間で比較できる。
 
-## 背景: rm + rename を採用した理由
+## 背景: インプレース同期を採用した理由
 
-旧設計では lock 内で `rename outputDir → old, rename tmpDir → outputDir, rm old` としていたが、
-lock 内では他の writer は来ず、version.json は swap 完了後に書くため downstream の watcher も発火しない。
-`rmtree(outputDir) → rename(tmpDir, outputDir)` で十分であり、old_dir の管理が不要になる。
+ソースコードのコメントを参照（`atomic_dir_writer.py` モジュール docstring）。
