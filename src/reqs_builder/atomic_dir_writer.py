@@ -8,6 +8,13 @@ Wraps a dir_writer_fn call with:
 The output directory is updated in-place (contents cleared + copied)
 rather than replaced via rename so that filesystem watchers keep
 tracking the same directory inode.
+
+Design notes:
+- Input consistency is not guaranteed. Since processing starts after
+  debounce, mid-read changes are extremely unlikely. Any inconsistency
+  self-heals on the next watcher trigger.
+- Timestamps over monotonic counters: system clock is reliable enough
+  on a single machine and requires no shared state between processes.
 """
 
 from __future__ import annotations
