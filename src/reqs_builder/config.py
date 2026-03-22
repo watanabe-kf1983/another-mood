@@ -1,8 +1,9 @@
 """Project configuration and path resolution."""
 
 from pathlib import Path
+from typing import Any
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,24 +20,27 @@ class ProjectConfig(BaseSettings):
     project_dir: Path
 
     # Input (user-edited)
-    contents_dir: Path | None = Field(default=None)
+    contents_dir: Path = Field(default=Path(""))
 
     # Output (generated)
-    out_dir: Path | None = Field(default=None)
-    render_out_dir: Path | None = Field(default=None)
-    hugo_content_dir: Path | None = Field(default=None)
+    out_dir: Path = Field(default=Path(""))
+    render_out_dir: Path = Field(default=Path(""))
+    hugo_content_dir: Path = Field(default=Path(""))
 
     # Server
     port: int = Field(default=1313)
 
-    def model_post_init(self, _context: object) -> None:
-        if self.contents_dir is None:
-            self.contents_dir = self.project_dir / "contents"
-        if self.out_dir is None:
-            self.out_dir = Path(".reqs-builder") / self.project_dir / "output"
-        if self.render_out_dir is None:
-            self.render_out_dir = Path(".reqs-builder") / self.project_dir / "render"
-        if self.hugo_content_dir is None:
-            self.hugo_content_dir = (
-                Path(".reqs-builder") / self.project_dir / "hugo-content"
-            )
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
+        pd = Path(values.get("project_dir", ""))
+        rb = Path(".reqs-builder") / pd
+        if not values.get("contents_dir"):
+            values["contents_dir"] = pd / "contents"
+        if not values.get("out_dir"):
+            values["out_dir"] = rb / "output"
+        if not values.get("render_out_dir"):
+            values["render_out_dir"] = rb / "render"
+        if not values.get("hugo_content_dir"):
+            values["hugo_content_dir"] = rb / "hugo-content"
+        return values

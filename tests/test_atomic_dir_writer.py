@@ -11,7 +11,7 @@ from reqs_builder.atomic_dir_writer import AtomicDirWriter, DirWriterFn, Version
 def _write(content: str) -> DirWriterFn:
     """Create a processFn that writes a single file."""
 
-    def fn(*, out_dir: Path) -> None:
+    def fn(out_dir: Path) -> None:
         (out_dir / "result.txt").write_text(content)
 
     return fn
@@ -38,7 +38,7 @@ class TestAtomicDirWriterBasic:
         AtomicDirWriter(out, _write("first")).run()
         assert (out / "result.txt").read_text() == "first"
 
-        def write_different(*, out_dir: Path) -> None:
+        def write_different(out_dir: Path) -> None:
             (out_dir / "other.txt").write_text("second")
 
         AtomicDirWriter(out, write_different).run()

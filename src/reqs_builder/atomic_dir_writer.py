@@ -1,6 +1,6 @@
 """AtomicDirWriter — execute a processing function with atomic output and ordering guarantees.
 
-Wraps a processFn call with:
+Wraps a dir_writer_fn call with:
 - Atomic output: write to tmpDir, then rename to outputDir
 - Ordering: compare startTime to prevent stale results from overwriting newer ones
 - Locking: filelock-based lock to prevent concurrent write conflicts
@@ -41,20 +41,20 @@ class VersionInfo:
 
 
 class DirWriterFn(Protocol):
-    def __call__(self, *, out_dir: Path) -> None: ...
+    def __call__(self, out_dir: Path) -> None: ...
 
 
 class AtomicDirWriter:
     """Ensure atomic directory output with ordering guarantees.
 
-    Bind output_dir and process_fn at construction time, then call run().
-    The process_fn receives a temporary directory to write into;
+    Bind output_dir and dir_writer_fn at construction time, then call run().
+    The dir_writer_fn receives a temporary directory to write into;
     AtomicDirWriter handles the atomic swap to the final output_dir.
     """
 
-    def __init__(self, output_dir: Path, process_fn: DirWriterFn) -> None:
+    def __init__(self, output_dir: Path, dir_writer_fn: DirWriterFn) -> None:
         self._output_dir = output_dir
-        self._process_fn = process_fn
+        self._dir_writer_fn = dir_writer_fn
         self._version_path = output_dir.parent / f"{output_dir.name}.version.json"
         self._lock_path = output_dir.parent / f"{output_dir.name}.lock"
 
@@ -62,7 +62,7 @@ class AtomicDirWriter:
         """Run the processing function with atomic output.
 
         1. Record startTime
-        2. Run processFn into a temporary directory
+        2. Run dir_writer_fn into a temporary directory
         3. Acquire lock, compare timestamps, swap if newer
         """
         start_time = datetime.now(timezone.utc)
@@ -76,7 +76,7 @@ class AtomicDirWriter:
         )
 
         try:
-            self._process_fn(out_dir=tmp_dir)
+            self._dir_writer_fn(tmp_dir)
             self._swap_if_newer(tmp_dir, start_time)
         finally:
             if tmp_dir.exists():
