@@ -1,0 +1,38 @@
+relations:
+  # User Management
+  - from: user
+    to: user_role
+    cardinality: 1:N
+    description: ユーザーは複数のロールを持つ
+
+  - from: role
+    to: user_role
+    cardinality: 1:N
+    description: ロールは複数のユーザーに割り当てられる
+
+  # Order Management
+  - from: user
+    to: order
+    cardinality: 1:N
+    description: ユーザーは複数の注文を持つ
+
+  - from: order
+    to: order_item
+    cardinality: 1:N
+    description: 注文は複数の明細を持つ
+
+  - from: product
+    to: order_item
+    cardinality: 1:N
+    description: 商品は複数の注文明細に含まれる
+
+  # Product Management
+  - from: product_category
+    to: product
+    cardinality: 1:N
+    description: カテゴリは複数の商品を持つ
+
+  - from: product_category
+    to: product_category
+    cardinality: 1:N
+    description: カテゴリは子カテゴリを持つ（自己参照）

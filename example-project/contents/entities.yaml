@@ -1,0 +1,114 @@
+entities:
+  # User Management
+  - id: user
+    name: ユーザー
+    category: user-management
+    description: システムを利用するユーザー
+    fields:
+      - name: id
+        type: string
+        pk: true
+      - name: email
+        type: string
+      - name: name
+        type: string
+      - name: created_at
+        type: datetime
+
+  - id: role
+    name: ロール
+    category: user-management
+    description: ユーザーに割り当てる権限ロール
+    fields:
+      - name: id
+        type: string
+        pk: true
+      - name: name
+        type: string
+      - name: permissions
+        type: string[]
+
+  - id: user_role
+    name: ユーザーロール
+    category: user-management
+    description: ユーザーとロールの関連
+    fields:
+      - name: user_id
+        type: string
+        pk: true
+        fk: user
+      - name: role_id
+        type: string
+        pk: true
+        fk: role
+
+  # Order Management
+  - id: order
+    name: 注文
+    category: order-management
+    description: ユーザーが行った注文
+    fields:
+      - name: id
+        type: string
+        pk: true
+      - name: user_id
+        type: string
+        fk: user
+      - name: total_amount
+        type: number
+      - name: status
+        type: string
+      - name: ordered_at
+        type: datetime
+
+  - id: order_item
+    name: 注文明細
+    category: order-management
+    description: 注文に含まれる商品明細
+    fields:
+      - name: id
+        type: string
+        pk: true
+      - name: order_id
+        type: string
+        fk: order
+      - name: product_id
+        type: string
+        fk: product
+      - name: quantity
+        type: number
+      - name: unit_price
+        type: number
+
+  # Product Management
+  - id: product
+    name: 商品
+    category: product-management
+    description: 販売する商品
+    fields:
+      - name: id
+        type: string
+        pk: true
+      - name: name
+        type: string
+      - name: price
+        type: number
+      - name: stock
+        type: number
+      - name: category_id
+        type: string
+        fk: product_category
+
+  - id: product_category
+    name: 商品カテゴリ
+    category: product-management
+    description: 商品の分類カテゴリ
+    fields:
+      - name: id
+        type: string
+        pk: true
+      - name: name
+        type: string
+      - name: parent_id
+        type: string
+        fk: product_category
