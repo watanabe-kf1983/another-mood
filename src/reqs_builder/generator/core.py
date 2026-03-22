@@ -3,6 +3,8 @@
 See: docs-src/contents/internal/components/generator.md
 """
 
+import shutil
+import traceback
 from functools import reduce
 from pathlib import Path
 from typing import Any
@@ -27,19 +29,35 @@ def load_views(views_dir: Path) -> dict[str, Any]:
 
 
 def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
-    """Load views, render index.md template, and write output."""
-    views = load_views(views_dir)
+    """Load views, render index.md template, and write output.
 
-    def render_template(template_name: str, data: dict[str, Any]) -> str:
-        template = env.get_template(f"{template_name}.md")
-        return template.render(data)
+    On error, clears out_dir and writes an error page so the
+    developer sees the problem in the browser instead of stale output.
+    """
+    try:
+        views = load_views(views_dir)
 
-    writer = PageWriter(out_dir=out_dir, render=render_template)
-    env = make_section_env(writer)
-    env.loader = FileSystemLoader(templates_dir)
+        def render_template(template_name: str, data: dict[str, Any]) -> str:
+            template = env.get_template(f"{template_name}.md")
+            return template.render(data)
 
-    template = env.get_template("index.md")
-    rendered = template.render(views)
+        writer = PageWriter(out_dir=out_dir, render=render_template)
+        env = make_section_env(writer)
+        env.loader = FileSystemLoader(templates_dir)
 
+        template = env.get_template("index.md")
+        rendered = template.render(views)
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "index.md").write_text(rendered)
+    except Exception:
+        _write_error_page(out_dir, traceback.format_exc())
+        raise
+
+
+def _write_error_page(out_dir: Path, tb: str) -> None:
+    """Replace output with a Markdown error page."""
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "index.md").write_text(rendered)
+    (out_dir / "index.md").write_text(f"# Build Error\n\n```\n{tb}```\n")
