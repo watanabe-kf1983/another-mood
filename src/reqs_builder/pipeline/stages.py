@@ -3,6 +3,7 @@
 import shutil
 from pathlib import Path
 
+from reqs_builder.atomic_dir_writer import AtomicDirWriter
 from reqs_builder.config import ProjectConfig
 from reqs_builder.generator import generate
 from reqs_builder.pipeline.base import NormalStage, Pipeline, Stage
@@ -15,9 +16,12 @@ def _copy(src: Path, dst: Path) -> None:
 
 def copy_stage(config: ProjectConfig) -> Stage:
     """Copy contents_dir to out_dir."""
+    writer = AtomicDirWriter(
+        config.out_dir,
+        lambda out_dir: _copy(config.contents_dir, out_dir),
+    )
     return NormalStage(
-        output_dir=config.out_dir,
-        dir_writer_fn=lambda out_dir: _copy(config.contents_dir, out_dir),
+        run_fn=writer.run,
         watch_paths=[config.contents_dir],
         name="Copy",
     )
@@ -29,11 +33,12 @@ def generator_stage(config: ProjectConfig) -> Stage:
     Temporary: reads from contents_dir instead of views_dir
     until Composer is implemented.
     """
+    writer = AtomicDirWriter(
+        config.out_dir,
+        lambda out_dir: generate(config.contents_dir, config.templates_dir, out_dir),
+    )
     return NormalStage(
-        output_dir=config.out_dir,
-        dir_writer_fn=lambda out_dir: generate(
-            config.contents_dir, config.templates_dir, out_dir
-        ),
+        run_fn=writer.run,
         watch_paths=[config.contents_dir, config.templates_dir],
         name="Generate",
     )
