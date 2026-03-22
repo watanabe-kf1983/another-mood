@@ -10,19 +10,20 @@ from importlib.resources import files
 from pathlib import Path
 
 from reqs_builder.config import ProjectConfig
+from reqs_builder.atomic_dir_writer import AtomicDirWriter
 
 _HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
 
 
-def prepare_hugo_content(out_dir: Path, hugo_content_dir: Path) -> None:
-    """Copy outDir to hugo_content_dir, renaming index.md → _index.md."""
-    if hugo_content_dir.exists():
-        shutil.rmtree(hugo_content_dir)
+def prepare_hugo_content(src_dir: Path, hugo_content_dir: Path) -> None:
+    """Copy src_dir to hugo_content_dir, renaming index.md → _index.md."""
 
-    shutil.copytree(out_dir, hugo_content_dir)
+    def write(*, out_dir: Path) -> None:
+        shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
+        for index_file in out_dir.rglob("index.md"):
+            index_file.rename(index_file.with_name("_index.md"))
 
-    for index_file in hugo_content_dir.rglob("index.md"):
-        index_file.rename(index_file.with_name("_index.md"))
+    AtomicDirWriter(hugo_content_dir, write).run()
 
 
 def render_build(paths: ProjectConfig) -> None:

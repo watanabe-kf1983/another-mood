@@ -23,7 +23,13 @@
 
 ### Phase 5: example-project 同等機能
 
-コンポーネント境界（Normalizer / Composer / Generator）に沿って実装。Phase 1 で保存した出力を期待値として使用。具体的なタスク分割は着手時に決定。
+コンポーネント境界（Generator → Normalizer → Composer）の順に実装。Phase 1 で保存した出力を期待値として使用。
+
+- [x] 5-1. AtomicDirWriter（atomic output: tmpDir 書き出し → rename、version.json、lock）+ パススルーに組み込み
+- [ ] 5-2. Watcher をパイプライン基盤に載せ替え（docs-src の既存挙動を維持）
+- [ ] 5-3. Generator コア（definition/ 有無でパイプライン分岐、views 読み込み・マージ、Jinja2 + {% section %} インライン展開）
+- [ ] 5-4. Normalizer スケルトン（パススルー、検証・正規化は Phase 6）
+- [ ] 5-5. Composer スケルトン（パススルー、YAML DSL クエリ評価は Phase 6）
 
 ### Phase 6: メタドキュメンテーション前提機能
 
