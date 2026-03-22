@@ -51,14 +51,16 @@ def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)
-    except Exception:
+    except Exception as exc:
         traceback.print_exc(file=sys.stderr)
-        _write_error_page(out_dir, traceback.format_exc())
+        _write_error_page(out_dir, exc, traceback.format_exc())
 
 
-def _write_error_page(out_dir: Path, tb: str) -> None:
+def _write_error_page(out_dir: Path, exc: Exception, tb: str) -> None:
     """Replace output with a Markdown error page."""
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "index.md").write_text(f"# Build Error\n\n```\n{tb}```\n")
+    summary = f"{type(exc).__name__}: {exc}"
+    body = f"# Build Error\n\n**{summary}**\n\n<details>\n<summary>Traceback</summary>\n\n```\n{tb}```\n\n</details>\n"
+    (out_dir / "index.md").write_text(body)
