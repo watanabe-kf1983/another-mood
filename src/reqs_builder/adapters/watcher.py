@@ -1,5 +1,7 @@
 """Watcher — observe paths and invoke callback on changes."""
 
+import sys
+import traceback
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -23,4 +25,7 @@ class Watcher:
     def run(self) -> None:
         """Block and watch. Calls on_change for each debounced change set."""
         for _changes in watch(*self._watch_paths, debounce=self._debounce):
-            self._on_change()
+            try:
+                self._on_change()
+            except Exception:
+                traceback.print_exc(file=sys.stderr)
