@@ -4,7 +4,6 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
-import pytest
 import yaml
 
 from reqs_builder.generator import generate, load_views
@@ -148,9 +147,7 @@ class TestGenerateErrorPage:
         (templates_dir / "index.md").write_text('{% section "bad" with x %}')
 
         out_dir = tmp_path / "output"
-
-        with pytest.raises(Exception):
-            generate(views_dir, templates_dir, out_dir)
+        generate(views_dir, templates_dir, out_dir)
 
         error_page = (out_dir / "index.md").read_text()
         assert error_page.startswith("# Build Error")
@@ -172,9 +169,7 @@ class TestGenerateErrorPage:
 
         # Break the template
         (templates_dir / "index.md").write_text('{% section "bad" with title %}')
-
-        with pytest.raises(Exception):
-            generate(views_dir, templates_dir, out_dir)
+        generate(views_dir, templates_dir, out_dir)
 
         # Stale output is gone, error page is shown
         error_page = (out_dir / "index.md").read_text()

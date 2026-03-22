@@ -4,6 +4,7 @@ See: docs-src/contents/internal/components/generator.md
 """
 
 import shutil
+import sys
 import traceback
 from functools import reduce
 from pathlib import Path
@@ -51,8 +52,8 @@ def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)
     except Exception:
+        traceback.print_exc(file=sys.stderr)
         _write_error_page(out_dir, traceback.format_exc())
-        raise
 
 
 def _write_error_page(out_dir: Path, tb: str) -> None:
