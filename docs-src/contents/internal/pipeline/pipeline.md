@@ -5,7 +5,7 @@
 ## ユーザパイプライン
 
 ユーザの定義・コンテンツから最終的なドキュメントを生成するパイプライン。
-各ステージは AtomicDirWriter 経由で実行される（[atomic-dir-writer.md](atomic-dir-writer.md) 参照）。
+各ステージは AtomicDirWriter 経由で実行される（`atomic_dir_writer.py` 参照）。
 
 ```
 schemaDir   → Normalizer → normalizedSchemaDir
@@ -41,7 +41,7 @@ Normalizer は入力ディレクトリの種類ごとに独立したステージ
   contents の Normalize のみ、schemaDir がユーザ定義であるため normalizedSchemaDir を
   Watch して上流エラーを検知する。schema / queries はツール内蔵スキーマで検証するため空振り
 
-エラー伝播の詳細は [process-coordination.md](process-coordination.md) を参照。
+エラー伝播: エラーは生成ドキュメントとして出力され、後続のコンポーネントに通常のカスケードで連携される。
 
 ### Composer
 
@@ -56,8 +56,7 @@ Composer が normalizedSchemaDir を Watch しない理由:
 schemaDir の変更は Normalizer(schema) → normalizedSchemaDir → Normalizer(contents) →
 normalizedContentsDir とカスケードし、normalizedContentsDir の変更で Composer が Kick される。
 
-dev モードではステージ間のカスケードを Watcher が自動伝播する
-（[process-coordination.md](process-coordination.md) 参照）。
+dev モードではステージ間のカスケードを Watcher が自動伝播する（`pipeline/base.py` 参照）。
 build モードでは依存順に直列実行する。
 
 ## ツール内部パイプライン

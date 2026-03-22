@@ -12,7 +12,8 @@ def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]
     """Merge two JSON objects following the project merge strategy.
 
     - Objects: recursive merge
-    - Arrays: concatenation
+    - Arrays: concatenation (order is not significant; Generator
+      sorts by id etc. for final output)
     - Scalars: override wins
     """
     result = dict(base)

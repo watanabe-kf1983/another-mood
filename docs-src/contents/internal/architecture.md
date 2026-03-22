@@ -29,10 +29,8 @@ OUT: `render.outDir`
 
 各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。入力データを変更すると normalized → views → documents とカスケードで更新される。
 
-パイプライン構成とプロセス連携:
+パイプライン構成:
 - [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成
-- [pipeline/process-coordination.md](pipeline/process-coordination.md) — プロセス間連携
-- [pipeline/atomic-dir-writer.md](pipeline/atomic-dir-writer.md) — AtomicDirWriter（出力の原子性・順序性）
 
 共通データモデル:
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略）
@@ -54,4 +52,5 @@ OUT: `render.outDir`
 3. **クエリは YAML DSL** - クエリ自体が構造化データ、ツール自身で管理・可視化可能
 4. **CUD は AI 直接編集** - ツールは YAML を読むだけ、CRUD API は提供しない
 5. **スキーマは JSON Schema** - 独自形式を避け、additionalProperties で辞書→配列の正規化を行う
+6. **コンポーネント間はファイルを介して連携** - 各段階の結果を YAML ファイルとして目視確認でき、コンポーネントが疎結合になり、`rm -rf .reqs-builder/` でクリーンビルドできる
 
