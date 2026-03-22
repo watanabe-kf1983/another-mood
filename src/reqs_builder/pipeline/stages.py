@@ -17,8 +17,8 @@ def _copy(src: Path, dst: Path) -> None:
 def copy_stage(config: ProjectConfig) -> Stage:
     """Copy contents_dir to out_dir."""
     writer = AtomicDirWriter(
-        config.out_dir,
         lambda out_dir: _copy(config.contents_dir, out_dir),
+        config.out_dir,
     )
     return NormalStage(
         run_fn=writer.run,
@@ -34,8 +34,8 @@ def generator_stage(config: ProjectConfig) -> Stage:
     until Composer is implemented.
     """
     writer = AtomicDirWriter(
-        config.out_dir,
         lambda out_dir: generate(config.contents_dir, config.templates_dir, out_dir),
+        config.out_dir,
     )
     return NormalStage(
         run_fn=writer.run,
