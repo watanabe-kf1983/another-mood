@@ -1,4 +1,4 @@
-"""Stage — pipeline stage base class, standard implementation, and composite."""
+"""Task — pipeline task base class, standard implementation, and composite."""
 
 import threading
 from abc import ABC, abstractmethod
@@ -10,8 +10,8 @@ from pathlib import Path
 from reqs_builder.adapters.watcher import Watcher
 
 
-class Stage(ABC):
-    """A pipeline stage with run (one-shot) and start_watching (dev mode)."""
+class Task(ABC):
+    """A unit of work with run (one-shot) and start_watching (dev mode)."""
 
     @abstractmethod
     def run(self) -> None: ...
@@ -21,8 +21,8 @@ class Stage(ABC):
 
 
 @dataclass(frozen=True)
-class NormalStage(Stage):
-    """Standard stage: run function + Watcher."""
+class Stage(Task):
+    """Standard task: run function + Watcher."""
 
     run_fn: Callable[[], None]
     watch_paths: Sequence[Path]
@@ -46,21 +46,21 @@ class NormalStage(Stage):
         yield
 
 
-class Pipeline(Stage):
-    """Composite stage: runs a sequence of stages as one."""
+class Pipeline(Task):
+    """Composite task: runs a sequence of tasks as one."""
 
-    def __init__(self, stages: Sequence[Stage]) -> None:
-        self._stages = stages
+    def __init__(self, tasks: Sequence[Task]) -> None:
+        self._tasks = tasks
 
     def run(self) -> None:
-        """Run all stages sequentially."""
-        for stage in self._stages:
-            stage.run()
+        """Run all tasks sequentially."""
+        for task in self._tasks:
+            task.run()
 
     @contextmanager
     def start_watching(self) -> Generator[None]:
-        """Start all stages watching. Cleans up all on exit."""
+        """Start all tasks watching. Cleans up all on exit."""
         with ExitStack() as stack:
-            for stage in self._stages:
-                stack.enter_context(stage.start_watching())
+            for task in self._tasks:
+                stack.enter_context(task.start_watching())
             yield

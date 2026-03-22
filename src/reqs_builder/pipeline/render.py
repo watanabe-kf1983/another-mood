@@ -8,11 +8,11 @@ from pathlib import Path
 
 from reqs_builder.adapters import renderer
 from reqs_builder.adapters.watcher import Watcher
-from reqs_builder.pipeline.base import Stage
+from reqs_builder.pipeline.base import Task
 
 
 @dataclass(frozen=True)
-class RenderStage(Stage):
+class RenderStage(Task):
     """Render stage with Hugo-specific build/watch behavior."""
 
     src_dir: Path
