@@ -7,6 +7,9 @@ and delegates to the renderer callable.
 from dataclasses import dataclass, field
 from typing import Any
 
+import pytest
+from jinja2 import TemplateSyntaxError
+
 from reqs_builder.generator.section_extension import make_section_env
 
 
@@ -84,3 +87,10 @@ class TestSectionOutput:
         result = template.render(d={"id": "1"})
 
         assert result == "beforeafter"
+
+
+class TestSectionSyntaxError:
+    def test_missing_with_keyword(self) -> None:
+        env = make_section_env(MockProcessor())
+        with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
+            env.from_string('{% section "profile" user %}')
