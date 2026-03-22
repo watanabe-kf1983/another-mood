@@ -3,7 +3,7 @@
 from reqs_builder.adapters.renderer import render_dev
 from reqs_builder.config import ProjectConfig
 from reqs_builder.entrypoints.build import build
-from reqs_builder.watcher import Watcher
+from reqs_builder.adapters.watcher import Watcher
 
 
 def dev(config: ProjectConfig) -> None:

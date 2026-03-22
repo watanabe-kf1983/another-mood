@@ -34,7 +34,7 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["reqs_builder"]
 branch = true
-omit = ["src/reqs_builder/entrypoints/*", "src/reqs_builder/adapters/*", "src/reqs_builder/watcher.py"]
+omit = ["src/reqs_builder/entrypoints/*", "src/reqs_builder/adapters/*"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
