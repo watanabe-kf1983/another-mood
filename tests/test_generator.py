@@ -134,3 +134,44 @@ class TestGenerate:
         generate(views_dir, templates_dir, out_dir)
 
         assert (out_dir / "index.md").read_text() == "# Hello\n"
+
+
+class TestGenerateErrorPage:
+    def test_writes_error_page_on_template_error(self, tmp_path: Path) -> None:
+        views_dir = tmp_path / "views"
+        views_dir.mkdir()
+        _write_yaml(views_dir / "data.yaml", {"x": 1})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text('{% section "bad" with x %}')
+
+        out_dir = tmp_path / "output"
+        generate(views_dir, templates_dir, out_dir)
+
+        error_page = (out_dir / "index.md").read_text()
+        assert error_page.startswith("# Build Error")
+
+    def test_replaces_stale_output_with_error(self, tmp_path: Path) -> None:
+        views_dir = tmp_path / "views"
+        views_dir.mkdir()
+        _write_yaml(views_dir / "data.yaml", {"title": "Hello"})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text("# {{ title }}\n")
+
+        out_dir = tmp_path / "output"
+
+        # First build succeeds
+        generate(views_dir, templates_dir, out_dir)
+        assert (out_dir / "index.md").read_text() == "# Hello\n"
+
+        # Break the template
+        (templates_dir / "index.md").write_text('{% section "bad" with title %}')
+        generate(views_dir, templates_dir, out_dir)
+
+        # Stale output is gone, error page is shown
+        error_page = (out_dir / "index.md").read_text()
+        assert "# Build Error" in error_page
+        assert len(list(out_dir.iterdir())) == 1
