@@ -12,6 +12,8 @@ from jinja2.parser import Parser
 
 SectionProcessor = Callable[[str, dict[str, Any]], str]
 
+_PROCESSOR_KEY = "_section_processor"
+
 
 def make_section_env(processor: SectionProcessor) -> Environment:
     """Create a Jinja2 Environment with the section extension wired up."""
@@ -19,7 +21,7 @@ def make_section_env(processor: SectionProcessor) -> Environment:
         extensions=[SectionExtension],
         keep_trailing_newline=True,
     )
-    env.globals["_section_processor"] = processor  # type: ignore[assignment]
+    env.globals[_PROCESSOR_KEY] = processor  # type: ignore[assignment]
     return env
 
 
@@ -40,5 +42,5 @@ class SectionExtension(Extension):
         ).set_lineno(lineno)
 
     def _render(self, template_name: str, data: dict[str, Any], caller: Any) -> str:
-        processor: SectionProcessor = self.environment.globals["_section_processor"]  # type: ignore[assignment]
+        processor: SectionProcessor = self.environment.globals[_PROCESSOR_KEY]  # type: ignore[assignment]
         return processor(template_name, data)
