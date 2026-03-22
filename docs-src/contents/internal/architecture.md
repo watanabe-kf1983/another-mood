@@ -32,7 +32,7 @@ OUT: `render.outDir`
 パイプライン構成とプロセス連携:
 - [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成
 - [pipeline/process-coordination.md](pipeline/process-coordination.md) — プロセス間連携
-- [pipeline/stage-runner.md](pipeline/stage-runner.md) — StageRunner（出力の原子性・順序性）
+- [pipeline/stage-runner.md](pipeline/stage-runner.md) — AtomicDirWriter（出力の原子性・順序性）
 
 共通データモデル:
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略）
