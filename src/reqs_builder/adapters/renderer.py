@@ -12,31 +12,31 @@ from pathlib import Path
 _HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
 
 
-def prepare_hugo_content(src_dir: Path, out_dir: Path) -> None:
+def prepare(src_dir: Path, out_dir: Path) -> None:
     """Copy src_dir to out_dir, renaming index.md → _index.md."""
     shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
     for index_file in out_dir.rglob("index.md"):
         index_file.rename(index_file.with_name("_index.md"))
 
 
-def hugo_build(hugo_content_dir: Path, render_out_dir: Path) -> None:
-    """Run hugo build to generate static HTML."""
+def build(content_dir: Path, out_dir: Path) -> None:
+    """Run renderer build to generate static HTML."""
     subprocess.run(
         [
             "hugo",
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(hugo_content_dir.resolve()),
+            str(content_dir.resolve()),
             "--destination",
-            str(render_out_dir.resolve()),
+            str(out_dir.resolve()),
         ],
         check=True,
     )
 
 
-def hugo_server(hugo_content_dir: Path, port: int) -> subprocess.Popen[bytes]:
-    """Start hugo server for live preview. Returns the Popen process."""
+def serve(content_dir: Path, port: int) -> subprocess.Popen[bytes]:
+    """Start renderer dev server for live preview. Returns the Popen process."""
     return subprocess.Popen(
         [
             "hugo",
@@ -44,7 +44,7 @@ def hugo_server(hugo_content_dir: Path, port: int) -> subprocess.Popen[bytes]:
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
-            str(hugo_content_dir.resolve()),
+            str(content_dir.resolve()),
             "--port",
             str(port),
             "--renderToMemory",

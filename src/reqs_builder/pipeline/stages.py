@@ -46,7 +46,12 @@ def generator_stage(config: ProjectConfig) -> Stage:
 
 def render_stage(config: ProjectConfig) -> Stage:
     """Prepare Hugo content and render to HTML."""
-    return RenderStage(config)
+    return RenderStage(
+        src_dir=config.out_dir,
+        render_input_dir=config.hugo_content_dir,
+        render_output_dir=config.render_out_dir,
+        port=config.port,
+    )
 
 
 def pipeline(config: ProjectConfig) -> Pipeline:
