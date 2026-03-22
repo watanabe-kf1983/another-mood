@@ -1,9 +1,13 @@
 """AtomicDirWriter — execute a processing function with atomic output and ordering guarantees.
 
 Wraps a dir_writer_fn call with:
-- Atomic output: write to tmpDir, then rename to outputDir
+- Safe output: write to tmpDir, then sync contents to outputDir under lock
 - Ordering: compare startTime to prevent stale results from overwriting newer ones
 - Locking: filelock-based lock to prevent concurrent write conflicts
+
+The output directory is updated in-place (contents cleared + copied)
+rather than replaced via rename so that filesystem watchers keep
+tracking the same directory inode.
 """
 
 from __future__ import annotations
@@ -45,11 +49,12 @@ class DirWriterFn(Protocol):
 
 
 class AtomicDirWriter:
-    """Ensure atomic directory output with ordering guarantees.
+    """Ensure safe directory output with ordering guarantees.
 
     Bind output_dir and dir_writer_fn at construction time, then call run().
     The dir_writer_fn receives a temporary directory to write into;
-    AtomicDirWriter handles the atomic swap to the final output_dir.
+    AtomicDirWriter syncs the result to output_dir under a file lock.
+    If dir_writer_fn fails, output_dir is left untouched.
     """
 
     def __init__(self, output_dir: Path, dir_writer_fn: DirWriterFn) -> None:
@@ -59,11 +64,11 @@ class AtomicDirWriter:
         self._lock_path = output_dir.parent / f"{output_dir.name}.lock"
 
     def run(self) -> None:
-        """Run the processing function with atomic output.
+        """Run the processing function with safe output.
 
         1. Record startTime
         2. Run dir_writer_fn into a temporary directory
-        3. Acquire lock, compare timestamps, swap if newer
+        3. Acquire lock, compare timestamps, sync if newer
         """
         start_time = datetime.now(timezone.utc)
 
@@ -77,13 +82,17 @@ class AtomicDirWriter:
 
         try:
             self._dir_writer_fn(tmp_dir)
-            self._swap_if_newer(tmp_dir, start_time)
+            self._sync_if_newer(tmp_dir, start_time)
         finally:
             if tmp_dir.exists():
                 shutil.rmtree(tmp_dir)
 
-    def _swap_if_newer(self, tmp_dir: Path, start_time: datetime) -> None:
-        """Atomically replace outputDir with tmpDir if startTime is newer."""
+    def _sync_if_newer(self, tmp_dir: Path, start_time: datetime) -> None:
+        """Sync tmp_dir contents to output_dir if startTime is newer.
+
+        Clears output_dir contents and copies from tmp_dir, preserving
+        the directory itself so filesystem watchers keep working.
+        """
         lock = FileLock(self._lock_path)
 
         with lock:
@@ -92,9 +101,13 @@ class AtomicDirWriter:
             if existing is not None and start_time <= existing.start_time:
                 return
 
-            if self._output_dir.exists():
-                shutil.rmtree(self._output_dir)
-            tmp_dir.rename(self._output_dir)
+            self._output_dir.mkdir(parents=True, exist_ok=True)
+            for child in self._output_dir.iterdir():
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            shutil.copytree(tmp_dir, self._output_dir, dirs_exist_ok=True)
 
             version_info = VersionInfo(start_time=start_time)
             self._version_path.write_text(version_info.to_json())

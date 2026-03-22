@@ -24,9 +24,19 @@ class TestProjectConfigDefaults:
         config = ProjectConfig(project_dir=Path("myproject"))
         assert config.port == 1313
 
+    def test_definition_dir_defaults_to_project_dir_definition(self) -> None:
+        paths = ProjectConfig(project_dir=Path("myproject"))
+        assert paths.definition_dir == Path("myproject/definition")
+
+    def test_templates_dir_defaults_to_definition_templates(self) -> None:
+        paths = ProjectConfig(project_dir=Path("myproject"))
+        assert paths.templates_dir == Path("myproject/definition/templates")
+
     def test_subdir_project_dir(self) -> None:
         paths = ProjectConfig(project_dir=Path("docs/api"))
         assert paths.contents_dir == Path("docs/api/contents")
+        assert paths.definition_dir == Path("docs/api/definition")
+        assert paths.templates_dir == Path("docs/api/definition/templates")
         assert paths.out_dir == Path(".reqs-builder/docs/api/output")
         assert paths.render_out_dir == Path(".reqs-builder/docs/api/render")
         assert paths.hugo_content_dir == Path(".reqs-builder/docs/api/hugo-content")
