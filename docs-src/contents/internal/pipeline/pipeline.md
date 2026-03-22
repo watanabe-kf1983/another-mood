@@ -5,7 +5,7 @@
 ## ユーザパイプライン
 
 ユーザの定義・コンテンツから最終的なドキュメントを生成するパイプライン。
-各ステージは AtomicDirWriter 経由で実行される（[stage-runner.md](stage-runner.md) 参照）。
+各ステージは AtomicDirWriter 経由で実行される（[atomic-dir-writer.md](atomic-dir-writer.md) 参照）。
 
 ```
 schemaDir   → Normalizer → normalizedSchemaDir
