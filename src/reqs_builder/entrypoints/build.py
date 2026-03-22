@@ -5,7 +5,7 @@ from pathlib import Path
 
 from reqs_builder.adapters.renderer import render_build
 from reqs_builder.config import ProjectConfig
-from reqs_builder.pipeline.atomic_dir_writer import AtomicDirWriter
+from reqs_builder.atomic_dir_writer import AtomicDirWriter
 
 
 def build(paths: ProjectConfig) -> None:

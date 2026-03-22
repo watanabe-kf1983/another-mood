@@ -10,7 +10,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from reqs_builder.config import ProjectConfig
-from reqs_builder.pipeline.atomic_dir_writer import AtomicDirWriter
+from reqs_builder.atomic_dir_writer import AtomicDirWriter
 
 _HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
 
