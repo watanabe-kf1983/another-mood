@@ -1,10 +1,9 @@
 """Dev command — build + watch for changes and rebuild, with Hugo live preview."""
 
-from watchfiles import watch
-
 from reqs_builder.adapters.renderer import render_dev
 from reqs_builder.config import ProjectConfig
 from reqs_builder.entrypoints.build import build
+from reqs_builder.watcher import Watcher
 
 
 def dev(config: ProjectConfig) -> None:
@@ -20,10 +19,12 @@ def dev(config: ProjectConfig) -> None:
     hugo_process = render_dev(config)
     print(f"Hugo server started on http://localhost:{config.port}/", flush=True)
 
+    def rebuild() -> None:
+        build(config)
+        print("Build complete.", flush=True)
+
     try:
-        for _changes in watch(config.contents_dir, debounce=300):
-            build(config)
-            print("Build complete.", flush=True)
+        Watcher([config.contents_dir], rebuild).run()
     except KeyboardInterrupt:
         pass
     finally:
