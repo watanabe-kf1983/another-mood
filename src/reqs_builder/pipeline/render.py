@@ -3,11 +3,9 @@
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
-from functools import partial
 
 from reqs_builder.adapters.renderer import hugo_build, hugo_server, prepare_hugo_content
 from reqs_builder.adapters.watcher import Watcher
-from reqs_builder.atomic_dir_writer import AtomicDirWriter
 from reqs_builder.config import ProjectConfig
 from reqs_builder.pipeline.base import Stage
 
@@ -46,7 +44,4 @@ class RenderStage(Stage):
 
 
 def _prepare(config: ProjectConfig) -> None:
-    AtomicDirWriter(
-        config.hugo_content_dir,
-        partial(prepare_hugo_content, config.out_dir),
-    ).run()
+    prepare_hugo_content(config.out_dir, config.hugo_content_dir)

@@ -28,10 +28,13 @@ class NormalStage(Stage):
         output_dir: Path,
         dir_writer_fn: DirWriterFn,
         watch_paths: Sequence[Path],
+        *,
+        name: str = "Build",
     ) -> None:
         self._output_dir = output_dir
         self._dir_writer_fn = dir_writer_fn
         self._watch_paths = watch_paths
+        self._name = name
 
     def run(self) -> None:
         """Run the stage once via AtomicDirWriter."""
@@ -41,7 +44,7 @@ class NormalStage(Stage):
     def start_watching(self) -> Generator[None]:
         """Initial run + watch in background. Cleans up on exit."""
         self.run()
-        print("Build complete.", flush=True)
+        print(f"{self._name} complete.", flush=True)
 
         thread = threading.Thread(
             target=lambda: Watcher(self._watch_paths, self._on_change).run(),
@@ -52,7 +55,7 @@ class NormalStage(Stage):
 
     def _on_change(self) -> None:
         self.run()
-        print("Build complete.", flush=True)
+        print(f"{self._name} complete.", flush=True)
 
 
 class Pipeline(Stage):
