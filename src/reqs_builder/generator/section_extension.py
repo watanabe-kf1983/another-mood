@@ -44,5 +44,10 @@ class SectionExtension(Extension):
         ).set_lineno(lineno)
 
     def _render(self, template_name: str, data: dict[str, Any], caller: Any) -> str:
+        if not isinstance(data, dict) or "id" not in data:  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise TypeError(
+                f'{{% section "{template_name}" with ... %}} requires a dict '
+                f'with "id" key, got: {type(data).__name__}'
+            )
         processor: SectionProcessor = self.environment.globals[_PROCESSOR_KEY]  # type: ignore[assignment]
         return processor(template_name, data)

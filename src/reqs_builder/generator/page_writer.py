@@ -18,11 +18,6 @@ class PageWriter:
     render: RenderFn
 
     def __call__(self, template_name: str, data: dict[str, Any]) -> str:
-        if "id" not in data:
-            raise KeyError(
-                f'{{% section "{template_name}" %}} requires "id" in data, '
-                f"got keys: {sorted(data.keys())}"
-            )
         rendered = self.render(template_name, data)
         page_dir = self.out_dir / template_name
         page_dir.mkdir(parents=True, exist_ok=True)

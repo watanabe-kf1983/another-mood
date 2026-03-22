@@ -94,3 +94,21 @@ class TestSectionSyntaxError:
         env = make_section_env(MockProcessor())
         with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
             env.from_string('{% section "profile" user %}')
+
+
+class TestSectionDataValidation:
+    def test_raises_on_missing_id(self) -> None:
+        mock = MockProcessor()
+        env = make_section_env(mock)
+        template = env.from_string('{% section "profile" with user %}')
+
+        with pytest.raises(TypeError, match='requires a dict with "id" key'):
+            template.render(user={"name": "Alice"})
+
+    def test_raises_on_non_dict(self) -> None:
+        mock = MockProcessor()
+        env = make_section_env(mock)
+        template = env.from_string('{% section "profile" with user %}')
+
+        with pytest.raises(TypeError, match="got: str"):
+            template.render(user="not a dict")

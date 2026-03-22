@@ -6,8 +6,6 @@ Tested independently of Jinja2 by injecting a mock render function.
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from reqs_builder.generator.page_writer import PageWriter
 
 
@@ -61,9 +59,3 @@ class TestPageWriter:
         writer("card", {"id": "x", "title": "Hello"})
 
         assert calls == [("card", {"id": "x", "title": "Hello"})]
-
-    def test_raises_on_missing_id(self, tmp_path: Path) -> None:
-        writer = PageWriter(out_dir=tmp_path, render=_mock_render)
-
-        with pytest.raises(KeyError, match='requires "id" in data'):
-            writer("profile", {"name": "Alice"})
