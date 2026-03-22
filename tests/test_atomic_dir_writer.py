@@ -20,13 +20,13 @@ def _write(content: str) -> DirWriterFn:
 class TestAtomicDirWriterBasic:
     def test_output_contains_result(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(out, _write("hello")).run()
+        AtomicDirWriter(_write("hello"), out).run()
         assert (out / "result.txt").read_text() == "hello"
 
     def test_creates_version_json(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
         before = datetime.now(timezone.utc)
-        AtomicDirWriter(out, _write("x")).run()
+        AtomicDirWriter(_write("x"), out).run()
         after = datetime.now(timezone.utc)
 
         info = json.loads((tmp_path / "output.version.json").read_text())
@@ -35,13 +35,13 @@ class TestAtomicDirWriterBasic:
 
     def test_replaces_entire_directory(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(out, _write("first")).run()
+        AtomicDirWriter(_write("first"), out).run()
         assert (out / "result.txt").read_text() == "first"
 
         def write_different(out_dir: Path) -> None:
             (out_dir / "other.txt").write_text("second")
 
-        AtomicDirWriter(out, write_different).run()
+        AtomicDirWriter(write_different, out).run()
         assert (out / "other.txt").read_text() == "second"
         assert not (out / "result.txt").exists()
 
@@ -49,29 +49,29 @@ class TestAtomicDirWriterBasic:
 class TestAtomicDirWriterOrdering:
     def test_stale_result_is_discarded(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(out, _write("original")).run()
+        AtomicDirWriter(_write("original"), out).run()
 
         # Simulate a future version already completed
         (tmp_path / "output.version.json").write_text(
             json.dumps({"startTime": "2099-01-01T00:00:00+00:00"})
         )
 
-        AtomicDirWriter(out, _write("stale")).run()
+        AtomicDirWriter(_write("stale"), out).run()
         assert (out / "result.txt").read_text() == "original"
 
 
 class TestAtomicDirWriterCleanup:
     def test_no_tmp_dirs_left(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(out, _write("x")).run()
+        AtomicDirWriter(_write("x"), out).run()
 
         siblings = {p.name for p in tmp_path.iterdir() if p.name.startswith("output")}
         assert siblings == {"output", "output.version.json"}
 
     def test_lock_is_released(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(out, _write("first")).run()
-        AtomicDirWriter(out, _write("second")).run()
+        AtomicDirWriter(_write("first"), out).run()
+        AtomicDirWriter(_write("second"), out).run()
         assert (out / "result.txt").read_text() == "second"
 
 

@@ -12,7 +12,7 @@ class Watcher:
     def __init__(
         self,
         watch_paths: Sequence[Path],
-        on_change: Callable[[], None],
+        on_change: Callable[[], object],
         *,
         debounce: int = 300,
     ) -> None:

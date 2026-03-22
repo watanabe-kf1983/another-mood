@@ -64,7 +64,7 @@ class AtomicDirWriter:
     If dir_writer_fn fails, output_dir is left untouched.
     """
 
-    def __init__(self, output_dir: Path, dir_writer_fn: DirWriterFn) -> None:
+    def __init__(self, dir_writer_fn: DirWriterFn, output_dir: Path) -> None:
         self._output_dir = output_dir
         self._dir_writer_fn = dir_writer_fn
         self._version_path = output_dir.parent / f"{output_dir.name}.version.json"
