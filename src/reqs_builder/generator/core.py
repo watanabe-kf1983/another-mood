@@ -61,6 +61,25 @@ def _write_error_page(out_dir: Path, exc: Exception, tb: str) -> None:
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    summary = f"{type(exc).__name__}: {exc}"
-    body = f"# Build Error\n\n**{summary}**\n\n<details>\n<summary>Traceback</summary>\n\n```\n{tb}```\n\n</details>\n"
-    (out_dir / "index.md").write_text(body)
+    (out_dir / "index.md").write_text(_format_error(exc, tb))
+
+
+def _format_error(exc: Exception, tb: str) -> str:
+    lines = ["# Build Error\n"]
+    location = _extract_location(exc)
+    if location:
+        lines.append(f"**{location}**\n")
+    lines.append(f"**{type(exc).__name__}**: {exc}\n")
+    lines.append(
+        f"<details>\n<summary>Traceback</summary>\n\n```\n{tb}```\n\n</details>\n"
+    )
+    return "\n".join(lines)
+
+
+def _extract_location(exc: Exception) -> str | None:
+    """Extract template filename and line number from Jinja2 errors."""
+    filename = getattr(exc, "filename", None)
+    lineno = getattr(exc, "lineno", None)
+    if filename and lineno:
+        return f"{filename}, line {lineno}"
+    return None
