@@ -1,0 +1,44 @@
+"""Jinja2 Extension for {% section "template" with data %} tag.
+
+Parses the tag and delegates rendering to a SectionProcessor callable.
+"""
+
+from collections.abc import Callable
+from typing import Any
+
+from jinja2 import Environment, nodes
+from jinja2.ext import Extension
+from jinja2.parser import Parser
+
+SectionProcessor = Callable[[str, dict[str, Any]], str]
+
+
+def make_section_env(processor: SectionProcessor) -> Environment:
+    """Create a Jinja2 Environment with the section extension wired up."""
+    env = Environment(
+        extensions=[SectionExtension],
+        keep_trailing_newline=True,
+    )
+    env.globals["_section_processor"] = processor  # type: ignore[assignment]
+    return env
+
+
+class SectionExtension(Extension):
+    tags = {"section"}
+
+    def parse(self, parser: Parser) -> nodes.Node:
+        lineno = next(parser.stream).lineno
+        template_name = parser.parse_expression()
+        parser.stream.expect("name:with")
+        data = parser.parse_expression()
+
+        return nodes.CallBlock(
+            self.call_method("_render", [template_name, data]),
+            [],
+            [],
+            [],
+        ).set_lineno(lineno)
+
+    def _render(self, template_name: str, data: dict[str, Any], caller: Any) -> str:
+        processor: SectionProcessor = self.environment.globals["_section_processor"]  # type: ignore[assignment]
+        return processor(template_name, data)
