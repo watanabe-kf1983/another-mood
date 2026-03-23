@@ -28,7 +28,7 @@
 - [x] 5-1. AtomicDirWriter（safe output: tmpDir 書き出し → インプレース同期、version.json、lock）+ パススルーに組み込み
 - [x] 5-2. Watcher をパイプライン基盤に載せ替え（docs-src の既存挙動を維持）
 - [x] 5-3. Generator コア（definition/ 有無でパイプライン分岐、views 読み込み・マージ、Jinja2 + {% section %} インライン展開）
-- [ ] 5-4. Normalizer スケルトン（パススルー、検証・正規化は Phase 6）
+- [x] 5-4. Normalizer スケルトン（パススルー、検証・正規化は Phase 6）
 - [ ] 5-5. Composer スケルトン（パススルー、YAML DSL クエリ評価は Phase 6）
 
 ### Phase 6: メタドキュメンテーション前提機能
