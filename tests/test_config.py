@@ -32,6 +32,10 @@ class TestProjectConfigDefaults:
         paths = ProjectConfig(project_dir=Path("myproject"))
         assert paths.templates_dir == Path("myproject/definition/templates")
 
+    def test_views_dir_defaults(self) -> None:
+        paths = ProjectConfig(project_dir=Path("myproject"))
+        assert paths.views_dir == Path(".reqs-builder/myproject/tmp/views")
+
     def test_normalized_contents_dir_defaults(self) -> None:
         paths = ProjectConfig(project_dir=Path("myproject"))
         assert paths.normalized_contents_dir == Path(
@@ -49,3 +53,4 @@ class TestProjectConfigDefaults:
         assert paths.normalized_contents_dir == Path(
             ".reqs-builder/docs/api/tmp/normalized/contents"
         )
+        assert paths.views_dir == Path(".reqs-builder/docs/api/tmp/views")
