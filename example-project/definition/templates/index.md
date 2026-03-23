@@ -2,6 +2,10 @@
 
 ## エンティティ一覧
 
+{%- for entity in entities %}
+- [{{ entity.name }}](entity-detail/{{ entity.id }}.md)
+{%- endfor %}
+
 {%- for entity in entities -%}
 {% section "entity-detail" with entity %}
 {%- endfor %}
