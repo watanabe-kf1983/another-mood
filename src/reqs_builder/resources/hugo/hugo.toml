@@ -1,6 +1,4 @@
 baseURL = '/'
-languageCode = 'ja'
-title = 'reqs-builder'
 uglyURLs = true
 
 [markup.goldmark.renderHooks.link]
