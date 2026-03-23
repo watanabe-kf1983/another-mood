@@ -6,6 +6,7 @@ from pathlib import Path
 from reqs_builder.atomic_dir_writer import AtomicDirWriter
 from reqs_builder.config import ProjectConfig
 from reqs_builder.generator import generate
+from reqs_builder.normalizer import normalize
 from reqs_builder.pipeline.base import Pipeline, Stage, Task
 from reqs_builder.pipeline.render import RenderStage
 
@@ -27,19 +28,34 @@ def copy_stage(config: ProjectConfig) -> Task:
     )
 
 
+def normalize_contents_stage(config: ProjectConfig) -> Task:
+    """Normalize contents_dir to normalized_contents_dir (passthrough)."""
+    writer = AtomicDirWriter(
+        lambda out_dir: normalize(config.contents_dir, out_dir),
+        config.normalized_contents_dir,
+    )
+    return Stage(
+        run_fn=writer.run,
+        watch_paths=[config.contents_dir],
+        name="Normalize",
+    )
+
+
 def generator_stage(config: ProjectConfig) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates.
 
-    Temporary: reads from contents_dir instead of views_dir
+    Temporary: reads from normalized_contents_dir instead of views_dir
     until Composer is implemented.
     """
     writer = AtomicDirWriter(
-        lambda out_dir: generate(config.contents_dir, config.templates_dir, out_dir),
+        lambda out_dir: generate(
+            config.normalized_contents_dir, config.templates_dir, out_dir
+        ),
         config.out_dir,
     )
     return Stage(
         run_fn=writer.run,
-        watch_paths=[config.contents_dir, config.templates_dir],
+        watch_paths=[config.normalized_contents_dir, config.templates_dir],
         name="Generate",
     )
 
@@ -57,7 +73,11 @@ def render_stage(config: ProjectConfig) -> Task:
 def pipeline(config: ProjectConfig) -> Pipeline:
     """Create the full pipeline, branching on definition_dir existence."""
     if config.definition_dir.is_dir():
-        content_stage: Task = generator_stage(config)
+        stages: list[Task] = [
+            normalize_contents_stage(config),
+            generator_stage(config),
+            render_stage(config),
+        ]
     else:
-        content_stage = copy_stage(config)
-    return Pipeline([content_stage, render_stage(config)])
+        stages = [copy_stage(config), render_stage(config)]
+    return Pipeline(stages)
