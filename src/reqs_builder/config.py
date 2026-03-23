@@ -25,6 +25,7 @@ class ProjectConfig(BaseSettings):
     templates_dir: Path = Field(default=Path(""))
 
     # Output (generated)
+    normalized_contents_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
     render_out_dir: Path = Field(default=Path(""))
     hugo_content_dir: Path = Field(default=Path(""))
@@ -43,6 +44,8 @@ class ProjectConfig(BaseSettings):
             values["contents_dir"] = pd / "contents"
         if not values.get("templates_dir"):
             values["templates_dir"] = pd / "definition" / "templates"
+        if not values.get("normalized_contents_dir"):
+            values["normalized_contents_dir"] = rb / "tmp" / "normalized" / "contents"
         if not values.get("out_dir"):
             values["out_dir"] = rb / "output"
         if not values.get("render_out_dir"):
