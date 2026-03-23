@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 from reqs_builder.atomic_dir_writer import AtomicDirWriter
+from reqs_builder.composer import compose
 from reqs_builder.config import ProjectConfig
 from reqs_builder.generator import generate
 from reqs_builder.normalizer import normalize
@@ -41,21 +42,28 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     )
 
 
-def generator_stage(config: ProjectConfig) -> Task:
-    """Generate Markdown from views YAML + Jinja2 templates.
-
-    Temporary: reads from normalized_contents_dir instead of views_dir
-    until Composer is implemented.
-    """
+def compose_stage(config: ProjectConfig) -> Task:
+    """Compose views from normalized contents (passthrough)."""
     writer = AtomicDirWriter(
-        lambda out_dir: generate(
-            config.normalized_contents_dir, config.templates_dir, out_dir
-        ),
+        lambda out_dir: compose(config.normalized_contents_dir, out_dir),
+        config.views_dir,
+    )
+    return Stage(
+        run_fn=writer.run,
+        watch_paths=[config.normalized_contents_dir],
+        name="Compose",
+    )
+
+
+def generator_stage(config: ProjectConfig) -> Task:
+    """Generate Markdown from views YAML + Jinja2 templates."""
+    writer = AtomicDirWriter(
+        lambda out_dir: generate(config.views_dir, config.templates_dir, out_dir),
         config.out_dir,
     )
     return Stage(
         run_fn=writer.run,
-        watch_paths=[config.normalized_contents_dir, config.templates_dir],
+        watch_paths=[config.views_dir, config.templates_dir],
         name="Generate",
     )
 
@@ -75,6 +83,7 @@ def pipeline(config: ProjectConfig) -> Pipeline:
     if config.definition_dir.is_dir():
         stages: list[Task] = [
             normalize_contents_stage(config),
+            compose_stage(config),
             generator_stage(config),
             render_stage(config),
         ]
