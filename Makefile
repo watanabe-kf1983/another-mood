@@ -12,7 +12,7 @@ typecheck:
 	uv run pyright --warnings
 
 test:
-	uv run pytest --cov --cov-fail-under=85 --junitxml=reports/junit.xml --cov-report=xml:reports/coverage.xml --cov-report=html:reports/htmlcov
+	uv run pytest --cov --cov-fail-under=90 --junitxml=reports/junit.xml --cov-report=xml:reports/coverage.xml --cov-report=html:reports/htmlcov
 
 secrets:
 	uv run pre-commit run gitleaks --all-files
