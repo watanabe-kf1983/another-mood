@@ -42,6 +42,27 @@ class TestProjectConfigDefaults:
             ".reqs-builder/myproject/tmp/normalized/contents"
         )
 
+    def test_explicit_values_override_defaults(self) -> None:
+        paths = ProjectConfig(
+            project_dir=Path("myproject"),
+            definition_dir=Path("custom/def"),
+            contents_dir=Path("custom/contents"),
+            templates_dir=Path("custom/templates"),
+            normalized_contents_dir=Path("custom/normalized"),
+            views_dir=Path("custom/views"),
+            out_dir=Path("custom/out"),
+            render_out_dir=Path("custom/render"),
+            hugo_content_dir=Path("custom/hugo"),
+        )
+        assert paths.definition_dir == Path("custom/def")
+        assert paths.contents_dir == Path("custom/contents")
+        assert paths.templates_dir == Path("custom/templates")
+        assert paths.normalized_contents_dir == Path("custom/normalized")
+        assert paths.views_dir == Path("custom/views")
+        assert paths.out_dir == Path("custom/out")
+        assert paths.render_out_dir == Path("custom/render")
+        assert paths.hugo_content_dir == Path("custom/hugo")
+
     def test_subdir_project_dir(self) -> None:
         paths = ProjectConfig(project_dir=Path("docs/api"))
         assert paths.contents_dir == Path("docs/api/contents")
