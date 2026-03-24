@@ -1,0 +1,9 @@
+erds:
+  from: entities
+  grouped:
+    by: category
+  select:
+    - item: category
+      as: id
+    - item: category
+    - item: entities

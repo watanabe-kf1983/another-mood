@@ -10,6 +10,16 @@
 {% section "entity-detail" with entity %}
 {%- endfor %}
 
+## ER図（カテゴリ別）
+
+{%- for entry in erds %}
+- [{{ entry.category }} の ER図](erds/{{ entry.id }}.md)
+{%- endfor %}
+
+{%- for entry in erds -%}
+{% section "erd" with entry %}
+{%- endfor %}
+
 ## リレーション一覧
 
 | From | To | Cardinality | Description |
