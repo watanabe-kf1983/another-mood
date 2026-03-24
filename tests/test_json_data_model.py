@@ -1,8 +1,11 @@
-"""Tests for JSON data model — deep merge strategy."""
+"""Tests for JSON data model — deep merge and YAML loading."""
 
+from pathlib import Path
 from typing import Any
 
-from reqs_builder.json_data_model import deep_merge
+import yaml
+
+from reqs_builder.json_data_model import deep_merge, load_yamls
 
 
 class TestDeepMerge:
@@ -52,3 +55,45 @@ class TestDeepMerge:
         deep_merge(base, override)
         assert base == base_copy
         assert override == override_copy
+
+
+def _write_yaml(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(data, allow_unicode=True))
+
+
+class TestLoadYamls:
+    def test_single_file(self, tmp_path: Path) -> None:
+        d = tmp_path / "views"
+        d.mkdir()
+        _write_yaml(d / "entities.yaml", {"entities": [{"id": "user", "name": "User"}]})
+
+        assert load_yamls(d) == {
+            "entities": [{"id": "user", "name": "User"}],
+        }
+
+    def test_merges_multiple_files(self, tmp_path: Path) -> None:
+        d = tmp_path / "views"
+        d.mkdir()
+        _write_yaml(d / "entities.yaml", {"entities": [{"id": "user"}]})
+        _write_yaml(
+            d / "relations.yaml",
+            {"relations": [{"from": "user", "to": "role"}]},
+        )
+
+        result = load_yamls(d)
+        assert list(result.keys()) == ["entities", "relations"]
+
+    def test_empty_dir_returns_empty_dict(self, tmp_path: Path) -> None:
+        d = tmp_path / "views"
+        d.mkdir()
+
+        assert load_yamls(d) == {}
+
+    def test_non_yaml_files_ignored(self, tmp_path: Path) -> None:
+        d = tmp_path / "views"
+        d.mkdir()
+        (d / "readme.md").write_text("# Not YAML")
+        _write_yaml(d / "data.yaml", {"key": "value"})
+
+        assert load_yamls(d) == {"key": "value"}

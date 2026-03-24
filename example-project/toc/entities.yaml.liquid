@@ -1,9 +1,0 @@
-# ERD documents - one page per category
-erds:
-{% assign categories = source.entities | map: "category" | uniq %}
-{% for cat in categories %}
-  - id: {{ cat }}
-    title: {{ cat }} の ER図
-    sectionId: {{ cat }}
-    permalink: erds/{{ cat }}.md
-{% endfor %}

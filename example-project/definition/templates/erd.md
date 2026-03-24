@@ -1,15 +1,8 @@
----
-pagination:
-  data: toc.erds
-  size: 1
-  alias: entry
-permalink: "{{ entry.permalink }}"
----
-# {{ entry.title }}
+# {{ category }} の ER図
 
 ## エンティティ一覧
 
-{% for entity in source.entities %}{% if entity.category == entry.id %}
+{% for entity in entities %}
 ### {{ entity.name }}
 
 {{ entity.description }}
@@ -20,8 +13,4 @@ permalink: "{{ entry.permalink }}"
 | {{ field.name }} | {{ field.type }} | {% if field.pk %}PK{% endif %}{% if field.fk %}FK → {{ field.fk }}{% endif %} |
 {% endfor %}
 
-{% endif %}{% endfor %}
-
----
-
-[← トップに戻る](../_index.md)
+{% endfor %}

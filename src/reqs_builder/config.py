@@ -22,6 +22,7 @@ class ProjectConfig(BaseSettings):
     # Input (user-edited)
     definition_dir: Path = Field(default=Path(""))
     contents_dir: Path = Field(default=Path(""))
+    queries_dir: Path = Field(default=Path(""))
     templates_dir: Path = Field(default=Path(""))
 
     # Output (generated)
@@ -43,6 +44,8 @@ class ProjectConfig(BaseSettings):
             values["definition_dir"] = pd / "definition"
         if not values.get("contents_dir"):
             values["contents_dir"] = pd / "contents"
+        if not values.get("queries_dir"):
+            values["queries_dir"] = pd / "definition" / "queries"
         if not values.get("templates_dir"):
             values["templates_dir"] = pd / "definition" / "templates"
         if not values.get("normalized_contents_dir"):

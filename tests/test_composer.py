@@ -1,11 +1,12 @@
-"""Tests for Composer — passthrough copy of normalized contents to views."""
+"""Tests for Composer — passthrough copy and query evaluation."""
 
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from reqs_builder.composer import compose
+from reqs_builder.composer import compose, parse_query
+from reqs_builder.query import From, Grouped, Query, Select, SelectItem
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
@@ -14,50 +15,94 @@ def _write_yaml(path: Path, data: dict[str, Any]) -> None:
 
 
 class TestCompose:
-    def test_copies_yaml_files(self, tmp_path: Path) -> None:
-        src = tmp_path / "normalized"
-        src.mkdir()
-        _write_yaml(src / "entities.yaml", {"entities": [{"id": "user"}]})
-        _write_yaml(src / "relations.yaml", {"relations": [{"from": "a", "to": "b"}]})
+    def test_passthrough_and_query(self, tmp_path: Path) -> None:
+        contents = tmp_path / "contents"
+        contents.mkdir()
+        _write_yaml(
+            contents / "items.yaml",
+            {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]},
+        )
+
+        queries = tmp_path / "queries"
+        queries.mkdir()
+        _write_yaml(
+            queries / "names.yaml",
+            {
+                "names": {
+                    "from": "items",
+                    "select": [{"item": "name"}],
+                }
+            },
+        )
 
         out = tmp_path / "views"
-        compose(src, out)
+        compose(contents, queries, out)
 
-        assert yaml.safe_load((out / "entities.yaml").read_text()) == {
-            "entities": [{"id": "user"}],
-        }
-        assert yaml.safe_load((out / "relations.yaml").read_text()) == {
-            "relations": [{"from": "a", "to": "b"}],
+        # Passthrough
+        assert yaml.safe_load((out / "items.yaml").read_text()) == {
+            "items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]
         }
 
-    def test_copies_non_yaml_files(self, tmp_path: Path) -> None:
-        src = tmp_path / "normalized"
-        src.mkdir()
-        (src / "notes.md").write_text("# Notes\n")
+        # Query result
+        assert yaml.safe_load((out / "names.yaml").read_text()) == {
+            "names": [{"name": "a"}, {"name": "b"}]
+        }
+
+    def test_empty_queries_dir(self, tmp_path: Path) -> None:
+        contents = tmp_path / "contents"
+        contents.mkdir()
+        _write_yaml(contents / "data.yaml", {"key": "value"})
+
+        queries = tmp_path / "queries"
+        queries.mkdir()
 
         out = tmp_path / "views"
-        compose(src, out)
+        compose(contents, queries, out)
 
-        assert (out / "notes.md").read_text() == "# Notes\n"
+        assert yaml.safe_load((out / "data.yaml").read_text()) == {"key": "value"}
 
-    def test_copies_subdirectories(self, tmp_path: Path) -> None:
-        src = tmp_path / "normalized"
-        (src / "sub").mkdir(parents=True)
-        _write_yaml(src / "sub" / "data.yaml", {"key": "value"})
 
-        out = tmp_path / "views"
-        compose(src, out)
-
-        assert yaml.safe_load((out / "sub" / "data.yaml").read_text()) == {
-            "key": "value",
+class TestParseQuery:
+    def test_full_query(self) -> None:
+        raw = {
+            "from": "entities",
+            "grouped": {"by": "category", "as": "items"},
+            "select": [
+                {"item": "category", "as": "id"},
+                {"item": "category"},
+            ],
         }
+        assert parse_query(raw) == Query(
+            select=Select(
+                items=[
+                    SelectItem(item="category", as_name="id"),
+                    SelectItem(item="category", as_name="category"),
+                ]
+            ),
+            from_clause=From(source="entities"),
+            grouped=Grouped(by="category", as_name="items"),
+        )
 
-    def test_creates_output_dir(self, tmp_path: Path) -> None:
-        src = tmp_path / "normalized"
-        src.mkdir()
-        _write_yaml(src / "data.yaml", {"x": 1})
+    def test_grouped_as_defaults_to_from_name(self) -> None:
+        raw = {
+            "from": "entities",
+            "grouped": {"by": "category"},
+            "select": [{"item": "category"}],
+        }
+        assert parse_query(raw).grouped == Grouped(by="category", as_name="entities")
 
-        out = tmp_path / "deep" / "nested" / "views"
-        compose(src, out)
+    def test_without_grouped(self) -> None:
+        raw = {
+            "from": "items",
+            "select": [{"item": "name"}],
+        }
+        assert parse_query(raw).grouped is None
 
-        assert (out / "data.yaml").exists()
+    def test_select_item_as_defaults_to_item(self) -> None:
+        raw = {
+            "from": "items",
+            "select": [{"item": "name"}],
+        }
+        assert parse_query(raw).select == Select(
+            items=[SelectItem(item="name", as_name="name")]
+        )
