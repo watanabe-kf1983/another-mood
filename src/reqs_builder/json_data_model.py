@@ -15,7 +15,14 @@ type JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 def load_yamls(directory: Path) -> dict[str, Any]:
     """Load all YAML files from a directory and deep-merge into a single dict."""
     files = sorted(directory.glob("*.yaml"))
-    docs: list[dict[str, Any]] = [yaml.safe_load(f.read_text()) or {} for f in files]
+    docs: list[dict[str, Any]] = []
+    for f in files:
+        loaded: object = yaml.safe_load(f.read_text())
+        if not isinstance(loaded, dict):
+            raise ValueError(
+                f"Expected a YAML mapping in {f}, got {type(loaded).__name__}"
+            )
+        docs.append(loaded)  # type: ignore[arg-type]
     return reduce(deep_merge, docs, {})
 
 

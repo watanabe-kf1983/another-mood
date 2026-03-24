@@ -43,14 +43,16 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
 
 
 def compose_stage(config: ProjectConfig) -> Task:
-    """Compose views from normalized contents (passthrough)."""
+    """Compose views from normalized contents + query evaluation."""
     writer = AtomicDirWriter(
-        lambda out_dir: compose(config.normalized_contents_dir, out_dir),
+        lambda out_dir: compose(
+            config.normalized_contents_dir, config.queries_dir, out_dir
+        ),
         config.views_dir,
     )
     return Stage(
         run_fn=writer.run,
-        watch_paths=[config.normalized_contents_dir],
+        watch_paths=[config.normalized_contents_dir, config.queries_dir],
         name="Compose",
     )
 
