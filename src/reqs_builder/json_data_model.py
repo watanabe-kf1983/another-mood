@@ -3,9 +3,20 @@
 See: docs-src/contents/internal/json-data-model.md
 """
 
+from functools import reduce
+from pathlib import Path
 from typing import Any
 
+import yaml
+
 type JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
+
+
+def load_yamls(directory: Path) -> dict[str, Any]:
+    """Load all YAML files from a directory and deep-merge into a single dict."""
+    files = sorted(directory.glob("*.yaml"))
+    docs: list[dict[str, Any]] = [yaml.safe_load(f.read_text()) or {} for f in files]
+    return reduce(deep_merge, docs, {})
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
