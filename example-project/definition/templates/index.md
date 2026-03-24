@@ -13,7 +13,7 @@
 ## ER図（カテゴリ別）
 
 {%- for entry in erds %}
-- [{{ entry.category }} の ER図](erds/{{ entry.id }}.md)
+- [{{ entry.category }} の ER図](erd/{{ entry.id }}.md)
 {%- endfor %}
 
 {%- for entry in erds -%}
