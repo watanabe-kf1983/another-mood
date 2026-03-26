@@ -12,7 +12,7 @@ reqs build docs-src
 
 ビルドされたドキュメントは `.reqs-builder/docs-src/output/` に出力される。
 
-起点: [.reqs-builder/docs-src/output/index.md](../.reqs-builder/docs-src/output/index.md)
+起点: [.reqs-builder/docs-src/output/prose/index.md](../.reqs-builder/docs-src/output/prose/index.md)
 
 コマンドが動かない場合は、[uv](https://docs.astral.sh/uv/) をインストールし `uv sync` を実行する。
 

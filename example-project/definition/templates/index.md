@@ -20,6 +20,10 @@
 {% section "erd" with entry %}
 {%- endfor %}
 
+{%- for record in prose -%}
+{% section "prose" with record %}
+{%- endfor %}
+
 ## リレーション一覧
 
 | From | To | Cardinality | Description |

@@ -97,3 +97,12 @@ class TestLoadYamls:
         _write_yaml(d / "data.yaml", {"key": "value"})
 
         assert load_yamls(d) == {"key": "value"}
+
+    def test_loads_subdirectory_yaml(self, tmp_path: Path) -> None:
+        d = tmp_path / "views"
+        d.mkdir()
+        _write_yaml(d / "top.yaml", {"prose": [{"id": "top"}]})
+        _write_yaml(d / "sub" / "nested.yaml", {"prose": [{"id": "sub/nested"}]})
+
+        result = load_yamls(d)
+        assert result == {"prose": [{"id": "sub/nested"}, {"id": "top"}]}

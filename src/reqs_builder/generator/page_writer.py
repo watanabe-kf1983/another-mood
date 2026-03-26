@@ -19,7 +19,7 @@ class PageWriter:
 
     def __call__(self, template_name: str, data: dict[str, Any]) -> str:
         rendered = self.render(template_name, data)
-        page_dir = self.out_dir / template_name
-        page_dir.mkdir(parents=True, exist_ok=True)
-        (page_dir / f"{data['id']}.md").write_text(rendered)
+        out_file = self.out_dir / template_name / f"{data['id']}.md"
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(rendered)
         return ""
