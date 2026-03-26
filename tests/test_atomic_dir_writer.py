@@ -5,7 +5,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from reqs_builder.atomic_dir_writer import AtomicDirWriter, DirWriterFn, VersionInfo
+from reqs_builder.pipeline.atomic_dir_writer import (
+    AtomicDirWriter,
+    DirWriterFn,
+    VersionInfo,
+)
 
 
 def _write(content: str) -> DirWriterFn:

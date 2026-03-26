@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 from reqs_builder.normalizer.prose import parse_markdown
-from reqs_builder import yaml_dumper
+from reqs_builder.shared import yaml_dumper
 
 
 def normalize(src_dir: Path, out_dir: Path) -> None:

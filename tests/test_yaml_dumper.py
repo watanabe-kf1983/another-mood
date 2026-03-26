@@ -4,7 +4,7 @@ from io import StringIO
 
 import yaml
 
-from reqs_builder import yaml_dumper
+from reqs_builder.shared import yaml_dumper
 
 
 def _dump_to_str(data: object) -> str:

@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.composer.json_data_model import load_yamls
+from reqs_builder.shared.json_data_model import load_yamls
 from reqs_builder.composer.query import From, Grouped, Query, Select, SelectItem
 
 
