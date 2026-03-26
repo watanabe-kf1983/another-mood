@@ -1,23 +1,52 @@
 """Prose — convert Markdown files to JSON data model records."""
 
-import re
-from typing import Any
+from collections.abc import Mapping
+from dataclasses import dataclass
 
-_H1_PATTERN = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+from markdown_it import MarkdownIt
+from markdown_it.tree import SyntaxTreeNode
+
+_MD = MarkdownIt()
 
 
-def parse_markdown(content: str, id: str) -> dict[str, Any]:
-    """Parse a Markdown string into a prose record.
+@dataclass(frozen=True)
+class ProseRecord:
+    id: str
+    title: str | None
+    body: str
+    mime_type: str
 
-    Returns a dict with id, title (from first H1 or None), and body
-    as a Typed Value with _mime_type and _content.
+    def to_data(self) -> Mapping[str, object]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "body": {
+                "_mime_type": self.mime_type,
+                "_content": self.body,
+            },
+        }
+
+
+def parse_markdown(content: str, id: str) -> ProseRecord:
+    """Parse a Markdown string into a ProseRecord.
+
+    Extracts title from the first H1 heading (None if absent).
+    Body is the full file content.
     """
-    match = _H1_PATTERN.search(content)
-    return {
-        "id": id,
-        "title": match.group(1).strip() if match else None,
-        "body": {
-            "_mime_type": "text/markdown",
-            "_content": content,
-        },
-    }
+    title = _extract_h1_title(content)
+    return ProseRecord(
+        id=id,
+        title=title,
+        body=content,
+        mime_type="text/markdown",
+    )
+
+
+def _extract_h1_title(content: str) -> str | None:
+    """Extract text from the first H1 heading using Markdown AST."""
+    tokens = _MD.parse(content)
+    tree = SyntaxTreeNode(tokens)
+    for node in tree.walk():
+        if node.type == "heading" and node.tag == "h1":
+            return node.children[0].content if node.children else None
+    return None

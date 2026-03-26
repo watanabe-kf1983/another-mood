@@ -62,7 +62,8 @@
 
 #### コードスタイル
 
-- **関数型スタイルを優先**: `for` ループより内包表記、`map/filter` 等を使う
+- **関数型スタイルを優先**: `for` ループより内包表記、`map/filter` 等を使う。関数の引数・戻り値はイミュータブルな型を使う（`dict` → `Mapping`、`list` → `Sequence` 等）
+- **`Any` はなるべく使わない**: `object` 等で型安全性を保つ
 - **命名はモジュール名に合わせる**: `source` モジュールなら `is_source_file`, `build_source`
 - **関数の並び順（Newspaper style）**: 公開API を先頭に、ヘルパー関数を後に配置。ヘルパーはパイプラインの順序に沿って配置
 - **`@dataclass` は `frozen=True` で使う**: `__init__` ボイラープレートの削減が目的。immutable がデフォルト
