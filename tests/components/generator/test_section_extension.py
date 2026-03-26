@@ -8,11 +8,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
-from jinja2 import TemplateSyntaxError
+from jinja2 import Environment, TemplateSyntaxError
 
-from reqs_builder.components.generator.section_extension import (
-    make_section_env,
-    set_processor,
+from reqs_builder.components.generator.template_engine import (
+    PROCESSOR_KEY,
+    SectionExtension,
 )
 
 
@@ -28,13 +28,18 @@ class MockProcessor:
         return self.return_value
 
 
+def _make_env(processor: MockProcessor) -> Environment:
+    env = Environment(extensions=[SectionExtension], keep_trailing_newline=True)
+    env.globals[PROCESSOR_KEY] = processor  # type: ignore[assignment]
+    return env
+
+
 class TestSectionParsing:
     """1) Extension correctly parses template name and data from the tag."""
 
     def test_receives_template_name_and_data(self) -> None:
         mock = MockProcessor()
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('{% section "profile" with user %}')
         template.render(user={"id": "alice", "name": "Alice"})
 
@@ -45,8 +50,7 @@ class TestSectionParsing:
     def test_data_is_resolved_expression(self) -> None:
         """The with-expression is evaluated, not passed as a string."""
         mock = MockProcessor()
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('{% section "card" with items[0] %}')
         template.render(items=[{"id": "x", "val": 42}])
 
@@ -54,8 +58,7 @@ class TestSectionParsing:
 
     def test_called_once_per_tag(self) -> None:
         mock = MockProcessor()
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('{% section "a" with x %}{% section "b" with y %}')
         template.render(x={"id": "1"}, y={"id": "2"})
 
@@ -65,8 +68,7 @@ class TestSectionParsing:
 
     def test_inside_for_loop(self) -> None:
         mock = MockProcessor()
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string(
             '{% for item in items %}{% section "detail" with item %}{% endfor %}'
         )
@@ -81,8 +83,7 @@ class TestSectionOutput:
 
     def test_return_value_appears_in_output(self) -> None:
         mock = MockProcessor(return_value="REPLACED")
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('before{% section "x" with d %}after')
         result = template.render(d={"id": "1"})
 
@@ -90,8 +91,7 @@ class TestSectionOutput:
 
     def test_empty_return_produces_nothing(self) -> None:
         mock = MockProcessor(return_value="")
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('before{% section "x" with d %}after')
         result = template.render(d={"id": "1"})
 
@@ -100,8 +100,7 @@ class TestSectionOutput:
 
 class TestSectionSyntaxError:
     def test_missing_with_keyword(self) -> None:
-        env = make_section_env()
-        set_processor(env, MockProcessor())
+        env = _make_env(MockProcessor())
         with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
             env.from_string('{% section "profile" user %}')
 
@@ -109,8 +108,7 @@ class TestSectionSyntaxError:
 class TestSectionDataValidation:
     def test_raises_on_missing_id(self) -> None:
         mock = MockProcessor()
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('{% section "profile" with user %}')
 
         with pytest.raises(TypeError, match='requires a dict with "id" key'):
@@ -118,8 +116,7 @@ class TestSectionDataValidation:
 
     def test_raises_on_non_dict(self) -> None:
         mock = MockProcessor()
-        env = make_section_env()
-        set_processor(env, mock)
+        env = _make_env(mock)
         template = env.from_string('{% section "profile" with user %}')
 
         with pytest.raises(TypeError, match="got: str"):
