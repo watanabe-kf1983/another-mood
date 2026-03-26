@@ -31,7 +31,7 @@
 - [x] 5-4. Normalizer スケルトン（パススルー、検証・正規化は Phase 6）
 - [x] 5-5. Composer スケルトン（パススルー、YAML DSL クエリ評価は Phase 6）
 - [x] 5-6. クエリ DSL 対応（example-project/toc/entities.yaml.liquid 相当）
-- [ ] 5-7. Markdown prose のファイル単位正規化
+- [x] 5-7. Markdown prose のファイル単位正規化
 - [ ] 5-8. Markdown prose の出力と definition/ によるパイプライン分岐の削除
 
 ### Phase 6: メタドキュメンテーション前提機能

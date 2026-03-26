@@ -1,64 +1,51 @@
-"""Tests for Normalizer — passthrough copy of contents."""
+"""Tests for Normalizer."""
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 
-
-from reqs_builder.normalizer import normalize
-
-
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True))
+from reqs_builder.normalizer import normalize, normalize_markdown
 
 
 class TestNormalize:
-    def test_copies_yaml_files(self, tmp_path: Path) -> None:
+    """normalize dispatches md vs non-md correctly."""
+
+    def test_dispatches_md_and_yaml(self, tmp_path: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
-        _write_yaml(src / "entities.yaml", {"entities": [{"id": "user"}]})
-        _write_yaml(src / "relations.yaml", {"relations": [{"from": "a", "to": "b"}]})
-
-        out = tmp_path / "normalized"
-        normalize(src, out)
-
-        assert yaml.safe_load((out / "entities.yaml").read_text()) == {
-            "entities": [{"id": "user"}],
-        }
-        assert yaml.safe_load((out / "relations.yaml").read_text()) == {
-            "relations": [{"from": "a", "to": "b"}],
-        }
-
-    def test_copies_non_yaml_files(self, tmp_path: Path) -> None:
-        src = tmp_path / "contents"
-        src.mkdir()
+        (src / "data.yaml").write_text("key: value\n")
         (src / "notes.md").write_text("# Notes\n")
 
         out = tmp_path / "normalized"
         normalize(src, out)
 
-        assert (out / "notes.md").read_text() == "# Notes\n"
+        # YAML copied as-is
+        assert (out / "data.yaml").read_text() == "key: value\n"
+        # Markdown converted to .yaml, not copied
+        assert (out / "notes.yaml").exists()
+        assert not (out / "notes.md").exists()
 
-    def test_copies_subdirectories(self, tmp_path: Path) -> None:
-        src = tmp_path / "contents"
-        (src / "sub").mkdir(parents=True)
-        _write_yaml(src / "sub" / "data.yaml", {"key": "value"})
 
-        out = tmp_path / "normalized"
-        normalize(src, out)
+class TestNormalizeMarkdown:
+    def test_writes_prose_yaml(self, tmp_path: Path) -> None:
+        src = tmp_path / "guide.md"
+        src.write_text("# Guide\n\nSteps.\n")
+        out_dir = tmp_path / "out"
 
-        assert yaml.safe_load((out / "sub" / "data.yaml").read_text()) == {
-            "key": "value",
-        }
+        normalize_markdown(src, Path("guide.md"), out_dir)
 
-    def test_creates_output_dir(self, tmp_path: Path) -> None:
-        src = tmp_path / "contents"
-        src.mkdir()
-        _write_yaml(src / "data.yaml", {"x": 1})
+        data = yaml.safe_load((out_dir / "guide.yaml").read_text())
+        assert data["prose"][0]["id"] == "guide"
+        assert data["prose"][0]["title"] == "Guide"
+        assert data["prose"][0]["body"]["_mime_type"] == "text/markdown"
 
-        out = tmp_path / "deep" / "nested" / "normalized"
-        normalize(src, out)
+    def test_subdirectory_id(self, tmp_path: Path) -> None:
+        src = tmp_path / "sub" / "doc.md"
+        src.parent.mkdir()
+        src.write_text("# Doc\n")
+        out_dir = tmp_path / "out"
 
-        assert (out / "data.yaml").exists()
+        normalize_markdown(src, Path("sub/doc.md"), out_dir)
+
+        data = yaml.safe_load((out_dir / "sub" / "doc.yaml").read_text())
+        assert data["prose"][0]["id"] == "sub/doc"
