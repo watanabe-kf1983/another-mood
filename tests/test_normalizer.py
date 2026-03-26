@@ -30,11 +30,11 @@ class TestNormalizeMarkdown:
     def test_writes_prose_yaml(self, tmp_path: Path) -> None:
         src = tmp_path / "guide.md"
         src.write_text("# Guide\n\nSteps.\n")
-        dst = tmp_path / "out" / "guide.yaml"
+        out_dir = tmp_path / "out"
 
-        normalize_markdown(src, dst, Path("guide.md"))
+        normalize_markdown(src, Path("guide.md"), out_dir)
 
-        data = yaml.safe_load(dst.read_text())
+        data = yaml.safe_load((out_dir / "guide.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
         assert data["prose"][0]["body"]["_mime_type"] == "text/markdown"
@@ -43,9 +43,9 @@ class TestNormalizeMarkdown:
         src = tmp_path / "sub" / "doc.md"
         src.parent.mkdir()
         src.write_text("# Doc\n")
-        dst = tmp_path / "out" / "sub" / "doc.yaml"
+        out_dir = tmp_path / "out"
 
-        normalize_markdown(src, dst, Path("sub/doc.md"))
+        normalize_markdown(src, Path("sub/doc.md"), out_dir)
 
-        data = yaml.safe_load(dst.read_text())
+        data = yaml.safe_load((out_dir / "sub" / "doc.yaml").read_text())
         assert data["prose"][0]["id"] == "sub/doc"
