@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.components.composer import compose, parse_query
+from reqs_builder.components.composer.core import compose, parse_query
 from reqs_builder.components.composer.query import (
     From,
     Grouped,
