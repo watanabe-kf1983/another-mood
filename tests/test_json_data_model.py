@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.json_data_model import deep_merge, load_yamls
+from reqs_builder.composer.json_data_model import deep_merge, load_yamls
 
 
 class TestDeepMerge:

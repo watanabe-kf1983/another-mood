@@ -7,7 +7,7 @@ with the built-in prose schema.
 import shutil
 from pathlib import Path
 
-from reqs_builder.prose import parse_markdown
+from reqs_builder.normalizer.prose import parse_markdown
 from reqs_builder import yaml_dumper
 
 

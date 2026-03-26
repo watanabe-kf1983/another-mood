@@ -6,7 +6,7 @@ from typing import Any
 import yaml
 
 from reqs_builder.composer import compose, parse_query
-from reqs_builder.query import From, Grouped, Query, Select, SelectItem
+from reqs_builder.composer.query import From, Grouped, Query, Select, SelectItem
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
