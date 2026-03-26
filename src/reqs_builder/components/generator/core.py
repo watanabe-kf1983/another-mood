@@ -11,9 +11,9 @@ from typing import Any
 
 from jinja2 import FileSystemLoader
 
-from reqs_builder.generator.page_writer import PageWriter
-from reqs_builder.generator.section_extension import make_section_env
-from reqs_builder.shared.json_data_model import load_yamls
+from reqs_builder.components.generator.page_writer import PageWriter
+from reqs_builder.components.generator.section_extension import make_section_env
+from reqs_builder.components.shared.json_data_model import load_yamls
 
 
 def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:

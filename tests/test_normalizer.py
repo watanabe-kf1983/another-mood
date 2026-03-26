@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from reqs_builder.normalizer import normalize, normalize_markdown
+from reqs_builder.components.normalizer import normalize, normalize_markdown
 
 
 class TestNormalize:

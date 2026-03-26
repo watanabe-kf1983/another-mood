@@ -1,6 +1,6 @@
 """Tests for prose — Markdown to JSON data model conversion."""
 
-from reqs_builder.normalizer.prose import parse_markdown
+from reqs_builder.components.normalizer.prose import parse_markdown
 
 
 class TestParseMarkdown:

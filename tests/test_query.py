@@ -2,7 +2,13 @@
 
 import pytest
 
-from reqs_builder.composer.query import From, Grouped, Query, Select, SelectItem
+from reqs_builder.components.composer.query import (
+    From,
+    Grouped,
+    Query,
+    Select,
+    SelectItem,
+)
 
 
 class TestFrom:
