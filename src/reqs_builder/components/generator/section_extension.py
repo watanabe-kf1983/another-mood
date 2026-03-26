@@ -17,14 +17,17 @@ class SectionProcessor(Protocol):
 _PROCESSOR_KEY = "_section_processor"
 
 
-def make_section_env(processor: SectionProcessor) -> Environment:
-    """Create a Jinja2 Environment with the section extension wired up."""
-    env = Environment(
+def make_section_env() -> Environment:
+    """Create a Jinja2 Environment with the section extension."""
+    return Environment(
         extensions=[SectionExtension],
         keep_trailing_newline=True,
     )
+
+
+def set_processor(env: Environment, processor: SectionProcessor) -> None:
+    """Wire a SectionProcessor into the environment."""
     env.globals[_PROCESSOR_KEY] = processor  # type: ignore[assignment]
-    return env
 
 
 class SectionExtension(Extension):
