@@ -7,12 +7,8 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Any
 
-from jinja2 import FileSystemLoader
-
-from reqs_builder.components.generator.page_writer import PageWriter
-from reqs_builder.components.generator.section_extension import make_section_env
+from reqs_builder.components.generator import template_engine
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
@@ -24,17 +20,7 @@ def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
     """
     try:
         views = load_yamls(views_dir)
-
-        def render_template(template_name: str, data: dict[str, Any]) -> str:
-            template = env.get_template(f"{template_name}.md")
-            return template.render(data)
-
-        writer = PageWriter(out_dir=out_dir, render=render_template)
-        env = make_section_env(writer)
-        env.loader = FileSystemLoader(templates_dir)
-
-        template = env.get_template("index.md")
-        rendered = template.render(views)
+        rendered = template_engine.render("index", templates_dir, views, out_dir)
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)
