@@ -60,6 +60,26 @@
 
 ライブラリ導入は、常にその時点での有力なものを比較検討したうえで決定する。
 
+#### パッケージ構成と依存ルール
+
+```
+reqs_builder/
+├── cli.py                  # Main: エントリポイント、依存の組み立て
+├── config.py               # 設定
+├── components/             # ビジネスロジック
+│   ├── shared/             #   共通基盤（json_data_model, yaml_dumper）
+│   ├── normalizer/         #   正規化: Markdown → YAML
+│   ├── composer/            #   合成: 正規化データ + クエリ → ビュー
+│   └── generator/          #   生成: ビュー + テンプレート → Markdown
+├── pipeline/               # オーケストレーション: ステージ実行・監視
+│   └── adapters/           #   外部ツール連携（Hugo, watchfiles）
+└── resources/              # 静的リソース
+```
+
+依存ルール:
+
+- `cli` → `pipeline` → `components/*` → `components/shared`
+
 #### コードスタイル
 
 - **関数型スタイルを優先**: `for` ループより内包表記、`map/filter` 等を使う。関数の引数・戻り値はイミュータブルな型を使う（`dict` → `Mapping`、`list` → `Sequence` 等）
