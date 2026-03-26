@@ -10,9 +10,9 @@ from typing import Any
 import pytest
 from jinja2 import Environment, TemplateSyntaxError
 
-from reqs_builder.components.generator.template_engine import (
-    PROCESSOR_KEY,
+from reqs_builder.components.generator.section_processor import (
     SectionExtension,
+    PROCESSOR_KEY,
 )
 
 

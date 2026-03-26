@@ -6,7 +6,7 @@ Tested independently of Jinja2 by injecting a mock render function.
 from pathlib import Path
 from typing import Any
 
-from reqs_builder.components.generator.page_writer import PageWriter
+from reqs_builder.components.generator.section_processor import PageWriter
 
 
 def _mock_render(template_name: str, data: dict[str, Any]) -> str:
