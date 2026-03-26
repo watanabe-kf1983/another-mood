@@ -4,7 +4,6 @@ Owns the entire "section" concept: Jinja2 tag parsing, data validation,
 template rendering, and file output.
 """
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,31 +12,25 @@ from jinja2 import Environment, nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
 
-RenderFn = Callable[[str, dict[str, Any]], str]
-
 PROCESSOR_KEY = "_section_processor"
 
 
 def install(env: Environment, out_dir: Path) -> None:
     """Wire section processing into a Jinja2 Environment.
 
-    Must be called after env.loader is set, since the PageWriter
+    Must be called after env.loader is set, since the processor
     uses the environment to render sub-templates.
     """
-    writer = PageWriter(
-        out_dir=out_dir,
-        render=lambda name, data: env.get_template(f"{name}.md").render(data),
-    )
-    env.globals[PROCESSOR_KEY] = writer  # type: ignore[assignment]
+    env.globals[PROCESSOR_KEY] = SectionProcessorImpl(env=env, out_dir=out_dir)  # type: ignore[assignment]
 
 
 @dataclass(frozen=True)
-class PageWriter:
+class SectionProcessorImpl:
+    env: Environment
     out_dir: Path
-    render: RenderFn
 
     def __call__(self, template_name: str, data: dict[str, Any]) -> str:
-        rendered = self.render(template_name, data)
+        rendered = self.env.get_template(f"{template_name}.md").render(data)
         out_file = self.out_dir / template_name / f"{data['id']}.md"
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(rendered)
