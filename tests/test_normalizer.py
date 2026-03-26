@@ -31,15 +31,17 @@ class TestNormalize:
             "relations": [{"from": "a", "to": "b"}],
         }
 
-    def test_copies_non_yaml_files(self, tmp_path: Path) -> None:
+    def test_markdown_files_become_yaml(self, tmp_path: Path) -> None:
         src = tmp_path / "contents"
-        src.mkdir()
-        (src / "notes.md").write_text("# Notes\n")
+        (src / "sub").mkdir(parents=True)
+        (src / "sub" / "guide.md").write_text("# Guide\n\nSteps.\n")
 
         out = tmp_path / "normalized"
         normalize(src, out)
 
-        assert (out / "notes.md").read_text() == "# Notes\n"
+        guide = yaml.safe_load((out / "sub" / "guide.yaml").read_text())
+        assert guide["prose"][0]["id"] == "sub/guide"
+        assert not (out / "sub" / "guide.md").exists()
 
     def test_copies_subdirectories(self, tmp_path: Path) -> None:
         src = tmp_path / "contents"
