@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.generator import generate
+from reqs_builder.components.generator.generator import generate
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:

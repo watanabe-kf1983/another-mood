@@ -6,8 +6,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from reqs_builder.adapters import renderer
-from reqs_builder.adapters.watcher import Watcher
+from reqs_builder.pipeline.adapters import renderer
+from reqs_builder.pipeline.adapters.watcher import Watcher
 from reqs_builder.pipeline.base import Task
 
 

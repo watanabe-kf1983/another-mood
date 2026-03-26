@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from jinja2 import TemplateSyntaxError
 
-from reqs_builder.generator.section_extension import make_section_env
+from reqs_builder.components.generator.section_extension import make_section_env
 
 
 @dataclass
