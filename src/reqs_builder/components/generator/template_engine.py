@@ -11,18 +11,14 @@ from reqs_builder.components.generator.section_processor import (
 )
 
 
-def render(
-    template_name: str,
-    templates_dir: Path,
-    data: dict[str, Any],
-    out_dir: Path,
-) -> str:
-    """Render a template with data and write section pages to out_dir."""
-    env = Environment(
-        extensions=[SectionExtension],
-        keep_trailing_newline=True,
-    )
-    env.loader = FileSystemLoader(templates_dir)
-    install_section_processor(env, out_dir)
+class TemplateEngine:
+    def __init__(self, templates_dir: Path, out_dir: Path) -> None:
+        self._env = Environment(
+            extensions=[SectionExtension],
+            keep_trailing_newline=True,
+        )
+        self._env.loader = FileSystemLoader(templates_dir)
+        install_section_processor(self._env, out_dir)
 
-    return env.get_template(f"{template_name}.md").render(data)
+    def render(self, template_name: str, data: dict[str, Any]) -> str:
+        return self._env.get_template(f"{template_name}.md").render(data)

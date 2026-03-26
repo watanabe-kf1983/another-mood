@@ -8,7 +8,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from reqs_builder.components.generator import template_engine
+from reqs_builder.components.generator.template_engine import TemplateEngine
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
@@ -20,7 +20,8 @@ def generate(data_dir: Path, templates_dir: Path, out_dir: Path) -> None:
     """
     try:
         data = load_yamls(data_dir)
-        rendered = template_engine.render("index", templates_dir, data, out_dir)
+        engine = TemplateEngine(templates_dir=templates_dir, out_dir=out_dir)
+        rendered = engine.render("index", data)
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)
