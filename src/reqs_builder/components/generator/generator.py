@@ -12,15 +12,15 @@ from reqs_builder.components.generator import template_engine
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
-    """Load views, render index.md template, and write output.
+def generate(data_dir: Path, templates_dir: Path, out_dir: Path) -> None:
+    """Load data, render index.md template, and write output.
 
     On error, clears out_dir and writes an error page so the
     developer sees the problem in the browser instead of stale output.
     """
     try:
-        views = load_yamls(views_dir)
-        rendered = template_engine.render("index", templates_dir, views, out_dir)
+        data = load_yamls(data_dir)
+        rendered = template_engine.render("index", templates_dir, data, out_dir)
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)
