@@ -1,11 +1,12 @@
 """CLI entry point."""
 
+import threading
 from pathlib import Path
 
 import typer
 
 from reqs_builder.config import ProjectConfig
-from reqs_builder.entrypoints import commands
+from reqs_builder.pipeline.stages import pipeline
 
 app = typer.Typer()
 
@@ -19,7 +20,7 @@ def callback() -> None:
 def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project (copy contents to output)."""
     config = ProjectConfig(project_dir=Path(project_dir))
-    commands.build(config)
+    pipeline(config).run()
 
 
 @app.command()
@@ -29,7 +30,11 @@ def dev(
 ) -> None:
     """Watch for changes and rebuild automatically with Hugo live preview."""
     config = ProjectConfig(project_dir=Path(project_dir), port=port)
-    commands.dev(config)
+    with pipeline(config).start_watching():
+        try:
+            threading.Event().wait()
+        except KeyboardInterrupt:
+            pass
 
 
 def main() -> None:
