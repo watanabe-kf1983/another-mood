@@ -28,7 +28,7 @@ prose:
 | フィールド | 説明 |
 |---|---|
 | `id` | `contentsDir` からの相対パス（拡張子なし） |
-| `title` | H1 見出しから抽出 |
+| `title` | H1 見出しから抽出。H1 がなければ null |
 | `body` | ファイル全体（H1 含む。title との二重持ち） |
 
 ### Typed Value と auto-escape
