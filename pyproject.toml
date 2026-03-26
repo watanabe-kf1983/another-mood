@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-reqs = "reqs_builder.entrypoints.cli:main"
+reqs = "reqs_builder.cli:main"
 
 [build-system]
 requires = ["hatchling"]
