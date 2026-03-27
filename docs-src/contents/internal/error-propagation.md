@@ -46,7 +46,7 @@ __errors:
 |---|---|---|
 | Normalizer | `__errors` YAML | 入力に `__errors` があればパススルー |
 | Composer | `__errors` YAML | 入力に `__errors` があればパススルー |
-| Generator | `__errors` を内蔵テンプレートで **Markdown** にレンダリング | 入力に `__errors` があれば Markdown に変換 |
+| Generator | `__errors` を内蔵ルートテンプレートで **Markdown** にレンダリング（[generator.md](components/generator.md) 参照） | 入力に `__errors` があれば Markdown に変換 |
 | Renderer (Hugo) | 対象外（stderr にそのまま出力） | — |
 
 ## 実装方針: ミドルウェア
