@@ -1,1 +1,1 @@
-{% include "index.md" %}
+{% if __errors is defined %}{% include "__errors.md" %}{% else %}{% include "index.md" %}{% endif %}
