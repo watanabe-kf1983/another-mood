@@ -7,34 +7,21 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Any
 
-from jinja2 import FileSystemLoader
-
-from reqs_builder.components.generator.page_writer import PageWriter
-from reqs_builder.components.generator.section_extension import make_section_env
+from reqs_builder.components.generator.template_engine import TemplateEngine
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-def generate(views_dir: Path, templates_dir: Path, out_dir: Path) -> None:
-    """Load views, render index.md template, and write output.
+def generate(data_dir: Path, templates_dir: Path, out_dir: Path) -> None:
+    """Load data, render index.md template, and write output.
 
     On error, clears out_dir and writes an error page so the
     developer sees the problem in the browser instead of stale output.
     """
     try:
-        views = load_yamls(views_dir)
-
-        def render_template(template_name: str, data: dict[str, Any]) -> str:
-            template = env.get_template(f"{template_name}.md")
-            return template.render(data)
-
-        writer = PageWriter(out_dir=out_dir, render=render_template)
-        env = make_section_env(writer)
-        env.loader = FileSystemLoader(templates_dir)
-
-        template = env.get_template("index.md")
-        rendered = template.render(views)
+        data = load_yamls(data_dir)
+        engine = TemplateEngine(templates_dir=templates_dir, out_dir=out_dir)
+        rendered = engine.render("index", data)
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)

@@ -1,16 +1,20 @@
-"""Tests for SectionExtension — Jinja2 integration layer.
-
-Verify that the extension correctly parses {% section %} tags
-and delegates to the renderer callable.
-"""
+"""Tests for section_processor — SectionExtension and SectionProcessorImpl."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import pytest
-from jinja2 import TemplateSyntaxError
+from jinja2 import DictLoader, Environment, TemplateSyntaxError
 
-from reqs_builder.components.generator.section_extension import make_section_env
+from reqs_builder.components.generator.section_processor import (
+    PROCESSOR_KEY,
+    SectionExtension,
+    SectionProcessorImpl,
+)
+
+
+# -- Helpers --
 
 
 @dataclass
@@ -25,12 +29,21 @@ class MockProcessor:
         return self.return_value
 
 
+def _make_extension_env(processor: MockProcessor) -> Environment:
+    env = Environment(extensions=[SectionExtension], keep_trailing_newline=True)
+    env.globals[PROCESSOR_KEY] = processor  # type: ignore[assignment]
+    return env
+
+
+# -- SectionExtension --
+
+
 class TestSectionParsing:
-    """1) Extension correctly parses template name and data from the tag."""
+    """Extension correctly parses template name and data from the tag."""
 
     def test_receives_template_name_and_data(self) -> None:
         mock = MockProcessor()
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('{% section "profile" with user %}')
         template.render(user={"id": "alice", "name": "Alice"})
 
@@ -41,7 +54,7 @@ class TestSectionParsing:
     def test_data_is_resolved_expression(self) -> None:
         """The with-expression is evaluated, not passed as a string."""
         mock = MockProcessor()
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('{% section "card" with items[0] %}')
         template.render(items=[{"id": "x", "val": 42}])
 
@@ -49,7 +62,7 @@ class TestSectionParsing:
 
     def test_called_once_per_tag(self) -> None:
         mock = MockProcessor()
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('{% section "a" with x %}{% section "b" with y %}')
         template.render(x={"id": "1"}, y={"id": "2"})
 
@@ -59,7 +72,7 @@ class TestSectionParsing:
 
     def test_inside_for_loop(self) -> None:
         mock = MockProcessor()
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string(
             '{% for item in items %}{% section "detail" with item %}{% endfor %}'
         )
@@ -70,11 +83,11 @@ class TestSectionParsing:
 
 
 class TestSectionOutput:
-    """2) Extension returns renderer's output into the Jinja2 result."""
+    """Extension returns renderer's output into the Jinja2 result."""
 
     def test_return_value_appears_in_output(self) -> None:
         mock = MockProcessor(return_value="REPLACED")
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('before{% section "x" with d %}after')
         result = template.render(d={"id": "1"})
 
@@ -82,7 +95,7 @@ class TestSectionOutput:
 
     def test_empty_return_produces_nothing(self) -> None:
         mock = MockProcessor(return_value="")
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('before{% section "x" with d %}after')
         result = template.render(d={"id": "1"})
 
@@ -91,7 +104,7 @@ class TestSectionOutput:
 
 class TestSectionSyntaxError:
     def test_missing_with_keyword(self) -> None:
-        env = make_section_env(MockProcessor())
+        env = _make_extension_env(MockProcessor())
         with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
             env.from_string('{% section "profile" user %}')
 
@@ -99,7 +112,7 @@ class TestSectionSyntaxError:
 class TestSectionDataValidation:
     def test_raises_on_missing_id(self) -> None:
         mock = MockProcessor()
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('{% section "profile" with user %}')
 
         with pytest.raises(TypeError, match='requires a dict with "id" key'):
@@ -107,8 +120,55 @@ class TestSectionDataValidation:
 
     def test_raises_on_non_dict(self) -> None:
         mock = MockProcessor()
-        env = make_section_env(mock)
+        env = _make_extension_env(mock)
         template = env.from_string('{% section "profile" with user %}')
 
         with pytest.raises(TypeError, match="got: str"):
             template.render(user="not a dict")
+
+
+# -- SectionProcessorImpl --
+
+
+class TestSectionProcessorImpl:
+    def test_writes_file_to_correct_path(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        processor("profile", {"id": "alice", "name": "Alice"})
+
+        assert (tmp_path / "profile" / "alice.md").exists()
+
+    def test_file_contains_rendered_content(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        processor("profile", {"id": "alice", "name": "Alice"})
+
+        assert (tmp_path / "profile" / "alice.md").read_text() == "hi alice"
+
+    def test_returns_empty_string(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"profile.md": "content"})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        result = processor("profile", {"id": "alice"})
+
+        assert result == ""
+
+    def test_creates_subdirectory(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"entity-detail.md": ""})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        processor("entity-detail", {"id": "user"})
+
+        assert (tmp_path / "entity-detail").is_dir()
+
+    def test_multiple_pages_in_same_directory(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"detail.md": "{{ id }}"})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        processor("detail", {"id": "a"})
+        processor("detail", {"id": "b"})
+
+        assert (tmp_path / "detail" / "a.md").read_text() == "a"
+        assert (tmp_path / "detail" / "b.md").read_text() == "b"
