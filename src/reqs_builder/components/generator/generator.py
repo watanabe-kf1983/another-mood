@@ -21,7 +21,7 @@ def generate(data_dir: Path, templates_dir: Path, out_dir: Path) -> None:
     try:
         data = load_yamls(data_dir)
         engine = TemplateEngine(templates_dir=templates_dir, out_dir=out_dir)
-        rendered = engine.render("index", data)
+        rendered = engine.render(data)
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "index.md").write_text(rendered)
