@@ -1,8 +1,8 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
+from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
-from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -12,9 +12,6 @@ from reqs_builder.components.generator.section_processor import (
 )
 
 _BUILT_IN_TEMPLATES_DIR = resources.files("reqs_builder.resources") / "templates"
-
-_ROOT_TEMPLATE = "__root.md"
-_ERRORS_TEMPLATE = "__errors.md"
 
 
 class TemplateEngine:
@@ -29,6 +26,5 @@ class TemplateEngine:
         self._env.loader = FileSystemLoader(search_paths)
         install_section_processor(self._env, out_dir)
 
-    def render(self, data: dict[str, Any]) -> str:
-        template = _ERRORS_TEMPLATE if "__errors" in data else _ROOT_TEMPLATE
-        return self._env.get_template(template).render(data)
+    def render(self, template_name: str, data: Mapping[str, object]) -> str:
+        return self._env.get_template(f"{template_name}.md").render(data)
