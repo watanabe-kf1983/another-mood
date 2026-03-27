@@ -17,14 +17,15 @@ _ROOT_TEMPLATE = "__root.md"
 
 
 class TemplateEngine:
-    def __init__(self, templates_dir: Path, out_dir: Path) -> None:
+    def __init__(self, out_dir: Path, *, templates_dir: Path | None = None) -> None:
         self._env = Environment(
             extensions=[SectionExtension],
             keep_trailing_newline=True,
         )
-        self._env.loader = FileSystemLoader(
-            [str(_BUILT_IN_TEMPLATES_DIR), templates_dir]
-        )
+        search_paths: list[str | Path] = [str(_BUILT_IN_TEMPLATES_DIR)]
+        if templates_dir is not None:
+            search_paths.append(templates_dir)
+        self._env.loader = FileSystemLoader(search_paths)
         install_section_processor(self._env, out_dir)
 
     def render(self, data: dict[str, Any]) -> str:
