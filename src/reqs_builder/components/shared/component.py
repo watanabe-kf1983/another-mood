@@ -57,6 +57,16 @@ class ComponentCall:
     def input_dirs(self) -> Sequence[Path]:
         return [cast(Path, self._kwargs[k]) for k in self._input_dir_keys]
 
+    def wrap_fn(self, fn: Callable[..., None]) -> ComponentCall:
+        """Return a copy with _fn replaced. For use by decorators."""
+        return ComponentCall(
+            _fn=fn,
+            _out_dir_key=self._out_dir_key,
+            _input_dir_keys=list(self._input_dir_keys),
+            _args=self._args,
+            _kwargs=dict(self._kwargs),
+        )
+
     def __call__(self, *args: object, **kwargs: object) -> None:
         if args or kwargs:
             self.bind(*args, **kwargs)()
