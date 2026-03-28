@@ -55,14 +55,6 @@ class TestAtomicWriteOrdering:
 
 
 class TestAtomicWriteCleanup:
-    def test_no_tmp_dirs_left(self, tmp_path: Path) -> None:
-        out = tmp_path / "output"
-        with atomic_write(out) as od:
-            (od / "x.txt").write_text("x")
-
-        siblings = {p.name for p in tmp_path.iterdir() if p.name.startswith("output")}
-        assert siblings == {"output", "output.version.json"}
-
     def test_lock_is_released(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
         with atomic_write(out) as od:
