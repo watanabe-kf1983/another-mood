@@ -1,0 +1,99 @@
+"""Atomic directory write — decorator for ComponentCall.
+
+Wraps a ComponentCall so that its out_dir is replaced with a temporary
+directory during execution. On success, the temp dir is synced to the
+real out_dir under a file lock with ordering guarantees.
+
+Design notes:
+- The output directory is updated in-place (contents cleared + copied)
+  rather than replaced via rename so that filesystem watchers keep
+  tracking the same directory inode.
+- Timestamps over monotonic counters: system clock is reliable enough
+  on a single machine and requires no shared state between processes.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+from filelock import FileLock
+
+from reqs_builder.components.shared.component import ComponentCall
+
+
+def with_atomic_write(component: ComponentCall) -> ComponentCall:
+    """Decorator: wrap a ComponentCall with atomic output and ordering.
+
+    1. Record startTime
+    2. Run fn with out_dir replaced by a temporary directory
+    3. Acquire lock, compare timestamps, sync if newer
+    """
+
+    out_dir_key = component.out_dir_key
+
+    def wrapped(*args: object, **kwargs: object) -> None:
+        bound = component.bind(*args, **kwargs)
+        out_dir = bound.out_dir
+
+        out_dir.parent.mkdir(parents=True, exist_ok=True)
+        tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}.", dir=out_dir.parent))
+
+        start_time = datetime.now(timezone.utc)
+        try:
+            component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
+            _sync_if_newer(tmp_dir, out_dir, start_time)
+        finally:
+            if tmp_dir.exists():
+                shutil.rmtree(tmp_dir)
+
+    return component.wrap_fn(wrapped)
+
+
+def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:
+    """Sync tmp_dir contents to out_dir if startTime is newer."""
+    version_path = out_dir.parent / f"{out_dir.name}.version.json"
+    lock_path = out_dir.parent / f"{out_dir.name}.lock"
+    lock = FileLock(lock_path)
+
+    with lock:
+        existing = VersionInfo.from_file(version_path)
+
+        if existing is not None and start_time <= existing.start_time:
+            return
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for child in out_dir.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        shutil.copytree(tmp_dir, out_dir, dirs_exist_ok=True)
+
+        version_info = VersionInfo(start_time=start_time)
+        version_path.write_text(version_info.to_json())
+
+
+@dataclass(frozen=True)
+class VersionInfo:
+    """Metadata for a stage output (stored in {outputDir}.version.json)."""
+
+    start_time: datetime
+
+    def to_json(self) -> str:
+        return json.dumps({"startTime": self.start_time.isoformat()})
+
+    @staticmethod
+    def from_json(text: str) -> VersionInfo:
+        data = json.loads(text)
+        return VersionInfo(start_time=datetime.fromisoformat(data["startTime"]))
+
+    @staticmethod
+    def from_file(path: Path) -> VersionInfo | None:
+        if not path.exists():
+            return None
+        return VersionInfo.from_json(path.read_text())

@@ -2,19 +2,17 @@
 
 from reqs_builder.components import compose, generate, normalize
 from reqs_builder.config import ProjectConfig
-from reqs_builder.pipeline.atomic_dir_writer import AtomicDirWriter
 from reqs_builder.pipeline.base import Pipeline, Stage, Task
 from reqs_builder.pipeline.render import RenderStage
 
 
 def normalize_contents_stage(config: ProjectConfig) -> Task:
     """Normalize contents_dir to normalized_contents_dir (passthrough)."""
-    writer = AtomicDirWriter(
-        lambda out_dir: normalize(src_dir=config.contents_dir, out_dir=out_dir),
-        config.normalized_contents_dir,
-    )
     return Stage(
-        run_fn=writer.run,
+        run_fn=normalize.bind(
+            src_dir=config.contents_dir,
+            out_dir=config.normalized_contents_dir,
+        ),
         watch_paths=[config.contents_dir],
         name="Normalize",
     )
@@ -22,16 +20,12 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
 
 def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
-    writer = AtomicDirWriter(
-        lambda out_dir: compose(
+    return Stage(
+        run_fn=compose.bind(
             contents_dir=config.normalized_contents_dir,
             queries_dir=config.queries_dir,
-            out_dir=out_dir,
+            out_dir=config.views_dir,
         ),
-        config.views_dir,
-    )
-    return Stage(
-        run_fn=writer.run,
         watch_paths=[config.normalized_contents_dir, config.queries_dir],
         name="Compose",
     )
@@ -39,16 +33,12 @@ def compose_stage(config: ProjectConfig) -> Task:
 
 def generator_stage(config: ProjectConfig) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
-    writer = AtomicDirWriter(
-        lambda out_dir: generate(
+    return Stage(
+        run_fn=generate.bind(
             data_dir=config.views_dir,
             templates_dir=config.templates_dir,
-            out_dir=out_dir,
+            out_dir=config.out_dir,
         ),
-        config.out_dir,
-    )
-    return Stage(
-        run_fn=writer.run,
         watch_paths=[config.views_dir, config.templates_dir],
         name="Generate",
     )

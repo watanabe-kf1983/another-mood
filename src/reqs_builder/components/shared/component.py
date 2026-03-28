@@ -50,6 +50,10 @@ class ComponentCall:
         )
 
     @property
+    def out_dir_key(self) -> str:
+        return self._out_dir_key
+
+    @property
     def out_dir(self) -> Path:
         return cast(Path, self._kwargs[self._out_dir_key])
 

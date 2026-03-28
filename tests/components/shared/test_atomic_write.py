@@ -1,36 +1,35 @@
-"""Tests for AtomicDirWriter — atomic output with ordering guarantees."""
+"""Tests for with_atomic_write — atomic output with ordering guarantees."""
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from reqs_builder.pipeline.atomic_dir_writer import (
-    AtomicDirWriter,
-    DirWriterFn,
-    VersionInfo,
-)
+from reqs_builder.components.shared.atomic_write import VersionInfo, with_atomic_write
+from reqs_builder.components.shared.component import Component
 
 
-def _write(content: str) -> DirWriterFn:
-    """Create a processFn that writes a single file."""
+def _writer(content: str, filename: str = "result.txt") -> Any:
+    """Create a component that writes a single file."""
 
-    def fn(out_dir: Path) -> None:
-        (out_dir / "result.txt").write_text(content)
+    @with_atomic_write
+    @Component(out_dir="out_dir", input_dirs=[])
+    def write_fn(*, out_dir: Path) -> None:
+        (out_dir / filename).write_text(content)
 
-    return fn
+    return write_fn
 
 
-class TestAtomicDirWriterBasic:
+class TestAtomicWriteBasic:
     def test_output_contains_result(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(_write("hello"), out).run()
+        _writer("hello")(out_dir=out)
         assert (out / "result.txt").read_text() == "hello"
 
     def test_creates_version_json(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
         before = datetime.now(timezone.utc)
-        AtomicDirWriter(_write("x"), out).run()
+        _writer("x")(out_dir=out)
         after = datetime.now(timezone.utc)
 
         info = json.loads((tmp_path / "output.version.json").read_text())
@@ -39,43 +38,40 @@ class TestAtomicDirWriterBasic:
 
     def test_replaces_entire_directory(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(_write("first"), out).run()
+        _writer("first")(out_dir=out)
         assert (out / "result.txt").read_text() == "first"
 
-        def write_different(out_dir: Path) -> None:
-            (out_dir / "other.txt").write_text("second")
-
-        AtomicDirWriter(write_different, out).run()
+        _writer("second", filename="other.txt")(out_dir=out)
         assert (out / "other.txt").read_text() == "second"
         assert not (out / "result.txt").exists()
 
 
-class TestAtomicDirWriterOrdering:
+class TestAtomicWriteOrdering:
     def test_stale_result_is_discarded(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(_write("original"), out).run()
+        _writer("original")(out_dir=out)
 
         # Simulate a future version already completed
         (tmp_path / "output.version.json").write_text(
             json.dumps({"startTime": "2099-01-01T00:00:00+00:00"})
         )
 
-        AtomicDirWriter(_write("stale"), out).run()
+        _writer("stale")(out_dir=out)
         assert (out / "result.txt").read_text() == "original"
 
 
-class TestAtomicDirWriterCleanup:
+class TestAtomicWriteCleanup:
     def test_no_tmp_dirs_left(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(_write("x"), out).run()
+        _writer("x")(out_dir=out)
 
         siblings = {p.name for p in tmp_path.iterdir() if p.name.startswith("output")}
         assert siblings == {"output", "output.version.json"}
 
     def test_lock_is_released(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        AtomicDirWriter(_write("first"), out).run()
-        AtomicDirWriter(_write("second"), out).run()
+        _writer("first")(out_dir=out)
+        _writer("second")(out_dir=out)
         assert (out / "result.txt").read_text() == "second"
 
 
