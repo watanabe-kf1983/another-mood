@@ -39,7 +39,7 @@ def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
     return RenderStage(
         src_dir=config.out_dir,
-        render_input_dir=config.hugo_content_dir,
+        render_input_dir=config.render_in_dir,
         render_output_dir=config.render_out_dir,
         port=config.port,
     )
