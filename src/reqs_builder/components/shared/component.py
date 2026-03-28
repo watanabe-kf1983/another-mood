@@ -20,7 +20,7 @@ Usage:
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
@@ -33,49 +33,29 @@ class ComponentCall:
     or call directly with arguments.
     """
 
-    _fn: Callable[..., None]
-    _out_dir_key: str
-    _input_dir_keys: Sequence[str]
-    _args: tuple[object, ...] = ()
-    _kwargs: dict[str, object] = field(default_factory=lambda: {})
+    fn: Callable[..., None]
+    out_dir_key: str
+    input_dir_keys: Sequence[str]
+    args: tuple[object, ...] = ()
+    kwargs: dict[str, object] = field(default_factory=lambda: {})
 
     def bind(self, *args: object, **kwargs: object) -> ComponentCall:
         """Bind arguments and return a new ComponentCall ready to execute."""
-        return ComponentCall(
-            _fn=self._fn,
-            _args=args,
-            _kwargs=dict(kwargs),
-            _out_dir_key=self._out_dir_key,
-            _input_dir_keys=list(self._input_dir_keys),
-        )
-
-    @property
-    def out_dir_key(self) -> str:
-        return self._out_dir_key
+        return replace(self, args=args, kwargs=kwargs)
 
     @property
     def out_dir(self) -> Path:
-        return cast(Path, self._kwargs[self._out_dir_key])
+        return cast(Path, self.kwargs[self.out_dir_key])
 
     @property
     def input_dirs(self) -> Sequence[Path]:
-        return [cast(Path, self._kwargs[k]) for k in self._input_dir_keys]
-
-    def wrap_fn(self, fn: Callable[..., None]) -> ComponentCall:
-        """Return a copy with _fn replaced. For use by decorators."""
-        return ComponentCall(
-            _fn=fn,
-            _out_dir_key=self._out_dir_key,
-            _input_dir_keys=list(self._input_dir_keys),
-            _args=self._args,
-            _kwargs=dict(self._kwargs),
-        )
+        return [cast(Path, self.kwargs[k]) for k in self.input_dir_keys]
 
     def __call__(self, *args: object, **kwargs: object) -> None:
         if args or kwargs:
             self.bind(*args, **kwargs)()
         else:
-            self._fn(*self._args, **self._kwargs)
+            self.fn(*self.args, **self.kwargs)
 
 
 @dataclass(frozen=True)
@@ -94,9 +74,9 @@ class Component:
 
     def __call__(self, fn: Callable[..., None]) -> ComponentCall:
         component = ComponentCall(
-            _fn=fn,
-            _out_dir_key=self.out_dir,
-            _input_dir_keys=list(self.input_dirs),
+            fn=fn,
+            out_dir_key=self.out_dir,
+            input_dir_keys=self.input_dirs,
         )
         if self.error_propagation:
             component = _wrap_error_propagation(component)
@@ -118,7 +98,7 @@ def _wrap_atomic_write(component: ComponentCall) -> ComponentCall:
         with _atomic_write(bound.out_dir) as tmp_dir:
             component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
 
-    return component.wrap_fn(wrapped)
+    return replace(component, fn=wrapped)
 
 
 def _wrap_error_propagation(component: ComponentCall) -> ComponentCall:
@@ -133,4 +113,4 @@ def _wrap_error_propagation(component: ComponentCall) -> ComponentCall:
             if ok:
                 bound()
 
-    return component.wrap_fn(wrapped)
+    return replace(component, fn=wrapped)
