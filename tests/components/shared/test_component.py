@@ -5,23 +5,19 @@ from typing import Any
 
 import yaml
 
+
 from reqs_builder.components.shared.component import Component, ComponentCall
-
-
-def _bare(**kw: Any) -> Component:
-    """Component with no wrapping, for testing ComponentCall in isolation."""
-    return Component(atomic_write=False, error_propagation=False, **kw)
 
 
 class TestComponent:
     def test_decorator_creates_component_call(self) -> None:
-        @_bare(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         assert isinstance(my_fn, ComponentCall)
 
     def test_bind_returns_component_call(self) -> None:
-        @_bare(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(src_dir=Path("/in"), out_dir=Path("/out"))
@@ -30,14 +26,14 @@ class TestComponent:
 
 class TestComponentCall:
     def test_out_dir(self) -> None:
-        @_bare(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(src_dir=Path("/in"), out_dir=Path("/out"))
         assert call.out_dir == Path("/out")
 
     def test_input_dirs(self) -> None:
-        @_bare(out_dir="out_dir", input_dirs=["contents_dir", "queries_dir"])
+        @Component(out_dir="out_dir", input_dirs=["contents_dir", "queries_dir"])
         def my_fn(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(
@@ -46,7 +42,7 @@ class TestComponentCall:
         assert call.input_dirs == [Path("/a"), Path("/b")]
 
     def test_direct_call(self, tmp_path: Path) -> None:
-        @_bare(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:
             (out_dir / "result.txt").write_text(str(src_dir))
 
@@ -56,7 +52,7 @@ class TestComponentCall:
         assert (out / "result.txt").read_text() == "/input"
 
     def test_bind_then_call(self, tmp_path: Path) -> None:
-        @_bare(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:
             (out_dir / "result.txt").write_text(str(src_dir))
 
@@ -67,7 +63,7 @@ class TestComponentCall:
         assert (out / "result.txt").read_text() == "/input"
 
     def test_call_with_positional_args(self, tmp_path: Path) -> None:
-        @_bare(out_dir="out_dir", input_dirs=[])
+        @Component(out_dir="out_dir", input_dirs=[])
         def my_fn(label: str, *, out_dir: Path) -> None:
             (out_dir / "result.txt").write_text(label)
 
