@@ -1,8 +1,8 @@
-"""Atomic directory write — decorator for ComponentCall.
+"""Atomic directory write — context manager and decorator.
 
-Wraps a ComponentCall so that its out_dir is replaced with a temporary
-directory during execution. On success, the temp dir is synced to the
-real out_dir under a file lock with ordering guarantees.
+Provides atomic output directory updates: work is done in a temporary
+directory, then synced to the real output under a file lock with
+ordering guarantees.
 
 Design notes:
 - The output directory is updated in-place (contents cleared + copied)
@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,30 +28,34 @@ from filelock import FileLock
 from reqs_builder.components.shared.component import ComponentCall
 
 
-def with_atomic_write(component: ComponentCall) -> ComponentCall:
-    """Decorator: wrap a ComponentCall with atomic output and ordering.
+@contextmanager
+def atomic_write(out_dir: Path) -> Generator[Path, None, None]:
+    """Context manager: write to a temporary directory, then sync atomically.
 
-    1. Record startTime
-    2. Run fn with out_dir replaced by a temporary directory
-    3. Acquire lock, compare timestamps, sync if newer
+    Yields a temporary directory path. On successful exit, the temp dir
+    is synced to out_dir under a file lock with ordering guarantees.
     """
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}.", dir=out_dir.parent))
+
+    start_time = datetime.now(timezone.utc)
+    try:
+        yield tmp_dir
+        _sync_if_newer(tmp_dir, out_dir, start_time)
+    finally:
+        if tmp_dir.exists():
+            shutil.rmtree(tmp_dir)
+
+
+def with_atomic_write(component: ComponentCall) -> ComponentCall:
+    """Decorator: wrap a ComponentCall with atomic output and ordering."""
 
     out_dir_key = component.out_dir_key
 
     def wrapped(*args: object, **kwargs: object) -> None:
         bound = component.bind(*args, **kwargs)
-        out_dir = bound.out_dir
-
-        out_dir.parent.mkdir(parents=True, exist_ok=True)
-        tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}.", dir=out_dir.parent))
-
-        start_time = datetime.now(timezone.utc)
-        try:
+        with atomic_write(bound.out_dir) as tmp_dir:
             component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
-            _sync_if_newer(tmp_dir, out_dir, start_time)
-        finally:
-            if tmp_dir.exists():
-                shutil.rmtree(tmp_dir)
 
     return component.wrap_fn(wrapped)
 
