@@ -1,7 +1,7 @@
 # Build Error
 
 {% for error in __errors %}
-**{{ error.source }}**
+{% if error.source %}**{{ error.source }}{% if error.lineno %}, line {{ error.lineno }}{% endif %}**{% endif %}
 
 {{ error.message }}
 

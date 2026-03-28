@@ -3,6 +3,7 @@
 See: docs-src/contents/internal/components/generator.md
 """
 
+import shutil
 import sys
 import traceback
 from collections.abc import Mapping
@@ -31,27 +32,25 @@ def generate(data_dir: Path, templates_dir: Path, out_dir: Path) -> None:
 
 def _render(data: Mapping[str, object], templates_dir: Path, out_dir: Path) -> str:
     if "__errors" in data:
+        _clear_dir(out_dir)
         return TemplateEngine(out_dir).render("__errors", data)
     return TemplateEngine(out_dir, templates_dir=templates_dir).render("__root", data)
 
 
-def _errors_data(exc: Exception) -> dict[str, list[dict[str, str]]]:
-    source = _extract_location(exc) or ""
+def _clear_dir(path: Path) -> None:
+    """Remove all contents of a directory."""
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def _errors_data(exc: Exception) -> dict[str, list[dict[str, object]]]:
     return {
         "__errors": [
             {
-                "source": source,
+                "source": getattr(exc, "filename", None) or "",
+                "lineno": getattr(exc, "lineno", None),
                 "message": f"{type(exc).__name__}: {exc}",
                 "traceback": traceback.format_exc(),
             }
         ]
     }
-
-
-def _extract_location(exc: Exception) -> str | None:
-    """Extract template filename and line number from Jinja2 errors."""
-    filename = getattr(exc, "filename", None)
-    lineno = getattr(exc, "lineno", None)
-    if filename and lineno:
-        return f"{filename}, line {lineno}"
-    return None
