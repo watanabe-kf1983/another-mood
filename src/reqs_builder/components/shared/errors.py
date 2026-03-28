@@ -13,7 +13,6 @@ from typing import Any
 import yaml
 
 from reqs_builder.components.shared import yaml_dumper
-from reqs_builder.components.shared.component import ComponentCall
 
 _ERRORS_KEY = "__errors"
 
@@ -36,18 +35,6 @@ def error_propagation(
     except Exception as exc:
         traceback.print_exc(file=sys.stderr)
         _write_exception(exc, out_dir)
-
-
-def with_error_propagation(component: ComponentCall) -> ComponentCall:
-    """Decorator: wrap a ComponentCall with error propagation."""
-
-    def wrapped(*args: object, **kwargs: object) -> None:
-        bound = component.bind(*args, **kwargs)
-        with error_propagation(bound.input_dirs, bound.out_dir) as ok:
-            if ok:
-                bound()
-
-    return component.wrap_fn(wrapped)
 
 
 def _check_and_passthrough_errors(input_dirs: Sequence[Path], out_dir: Path) -> bool:

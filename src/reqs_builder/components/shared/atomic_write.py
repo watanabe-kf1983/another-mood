@@ -1,4 +1,4 @@
-"""Atomic directory write — context manager and decorator.
+"""Atomic directory write — context manager.
 
 Provides atomic output directory updates: work is done in a temporary
 directory, then synced to the real output under a file lock with
@@ -25,8 +25,6 @@ from pathlib import Path
 
 from filelock import FileLock
 
-from reqs_builder.components.shared.component import ComponentCall
-
 
 @contextmanager
 def atomic_write(out_dir: Path) -> Generator[Path, None, None]:
@@ -45,19 +43,6 @@ def atomic_write(out_dir: Path) -> Generator[Path, None, None]:
     finally:
         if tmp_dir.exists():
             shutil.rmtree(tmp_dir)
-
-
-def with_atomic_write(component: ComponentCall) -> ComponentCall:
-    """Decorator: wrap a ComponentCall with atomic output and ordering."""
-
-    out_dir_key = component.out_dir_key
-
-    def wrapped(*args: object, **kwargs: object) -> None:
-        bound = component.bind(*args, **kwargs)
-        with atomic_write(bound.out_dir) as tmp_dir:
-            component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
-
-    return component.wrap_fn(wrapped)
 
 
 def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:

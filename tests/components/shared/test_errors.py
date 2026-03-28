@@ -5,11 +5,11 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.errors import (
-    passthrough_if_errors,
+from reqs_builder.components.shared.component import (
+    Component,
     with_error_propagation,
 )
+from reqs_builder.components.shared.errors import passthrough_if_errors
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:

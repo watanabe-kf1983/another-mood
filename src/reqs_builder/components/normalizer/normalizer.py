@@ -9,9 +9,11 @@ from pathlib import Path
 
 from reqs_builder.components.normalizer.prose import parse_markdown
 from reqs_builder.components.shared import yaml_dumper
-from reqs_builder.components.shared.atomic_write import with_atomic_write
-from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.errors import with_error_propagation
+from reqs_builder.components.shared.component import (
+    Component,
+    with_atomic_write,
+    with_error_propagation,
+)
 
 
 @with_atomic_write

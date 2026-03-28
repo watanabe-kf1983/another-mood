@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from reqs_builder.components.shared.atomic_write import VersionInfo, with_atomic_write
-from reqs_builder.components.shared.component import Component
+from reqs_builder.components.shared.atomic_write import VersionInfo
+from reqs_builder.components.shared.component import Component, with_atomic_write
 
 
 def _writer(content: str, filename: str = "result.txt") -> Any:

@@ -2,10 +2,12 @@
 
 A Component wraps a plain function with metadata about which keyword arguments
 are input directories and which is the output directory. This enables decorators
-like error_propagation and atomic_write to operate on the metadata without
-introspecting kwargs at runtime.
+like with_error_propagation and with_atomic_write to operate on the metadata
+without introspecting kwargs at runtime.
 
 Usage:
+    @with_atomic_write
+    @with_error_propagation
     @Component(out_dir="out_dir", input_dirs=["src_dir"])
     def normalize(src_dir: Path, *, out_dir: Path) -> None: ...
 
@@ -23,6 +25,9 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
+
+from reqs_builder.components.shared.atomic_write import atomic_write
+from reqs_builder.components.shared.errors import error_propagation
 
 
 @dataclass(frozen=True)
@@ -96,3 +101,28 @@ class Component:
             _out_dir_key=self._out_dir_key,
             _input_dir_keys=list(self._input_dir_keys),
         )
+
+
+def with_atomic_write(component: ComponentCall) -> ComponentCall:
+    """Decorator: wrap a ComponentCall with atomic output and ordering."""
+
+    out_dir_key = component.out_dir_key
+
+    def wrapped(*args: object, **kwargs: object) -> None:
+        bound = component.bind(*args, **kwargs)
+        with atomic_write(bound.out_dir) as tmp_dir:
+            component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
+
+    return component.wrap_fn(wrapped)
+
+
+def with_error_propagation(component: ComponentCall) -> ComponentCall:
+    """Decorator: wrap a ComponentCall with error propagation."""
+
+    def wrapped(*args: object, **kwargs: object) -> None:
+        bound = component.bind(*args, **kwargs)
+        with error_propagation(bound.input_dirs, bound.out_dir) as ok:
+            if ok:
+                bound()
+
+    return component.wrap_fn(wrapped)
