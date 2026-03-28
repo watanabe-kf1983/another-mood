@@ -9,9 +9,11 @@ from pathlib import Path
 
 from reqs_builder.components.normalizer.prose import parse_markdown
 from reqs_builder.components.shared import yaml_dumper
+from reqs_builder.components.shared.errors import with_error_propagation
 
 
-def normalize(src_dir: Path, out_dir: Path) -> None:
+@with_error_propagation
+def normalize(src_dir: Path, *, out_dir: Path) -> None:
     """Normalize src_dir contents into out_dir."""
     for src_file in sorted(src_dir.rglob("*")):
         if not src_file.is_file():

@@ -42,7 +42,7 @@ class TestCompose:
         )
 
         out = tmp_path / "views"
-        compose(contents, queries, out)
+        compose(contents_dir=contents, queries_dir=queries, out_dir=out)
 
         # Passthrough
         assert yaml.safe_load((out / "items.yaml").read_text()) == {
@@ -63,7 +63,7 @@ class TestCompose:
         queries.mkdir()
 
         out = tmp_path / "views"
-        compose(contents, queries, out)
+        compose(contents_dir=contents, queries_dir=queries, out_dir=out)
 
         assert yaml.safe_load((out / "data.yaml").read_text()) == {"key": "value"}
 

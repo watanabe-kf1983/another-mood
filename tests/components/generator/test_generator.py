@@ -36,7 +36,7 @@ class TestGenerate:
         )
 
         out_dir = tmp_path / "output"
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         assert (out_dir / "index.md").read_text() == dedent("""\
             # List
@@ -69,7 +69,7 @@ class TestGenerateErrorTemplate:
         (templates_dir / "index.md").write_text("# Normal\n")
 
         out_dir = tmp_path / "output"
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Error" in result
@@ -87,7 +87,7 @@ class TestGenerateErrorTemplate:
         (templates_dir / "index.md").write_text("# {{ title }}\n")
 
         out_dir = tmp_path / "output"
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         assert (out_dir / "index.md").read_text() == "# Hello\n"
 
@@ -103,7 +103,7 @@ class TestGenerateErrorPage:
         (templates_dir / "index.md").write_text('{% section "bad" with x %}')
 
         out_dir = tmp_path / "output"
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         error_page = (out_dir / "index.md").read_text()
         assert error_page.startswith("# Build Error")
@@ -120,12 +120,12 @@ class TestGenerateErrorPage:
         out_dir = tmp_path / "output"
 
         # First build succeeds
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
         assert (out_dir / "index.md").read_text() == "# Hello\n"
 
         # Break the template
         (templates_dir / "index.md").write_text('{% section "bad" with title %}')
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         # Stale output is gone, error page is shown
         error_page = (out_dir / "index.md").read_text()
