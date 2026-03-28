@@ -1,1 +1,1 @@
-{{ body._content }}
+{{ body.content }}

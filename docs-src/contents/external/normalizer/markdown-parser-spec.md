@@ -17,8 +17,8 @@ prose:
   - id: "internal/architecture"
     title: "Architecture"
     body:
-      _mime_type: text/markdown
-      _content: |
+      mime_type: text/markdown
+      content: |
         # Architecture
 
         ## アーキテクチャ概要
@@ -35,13 +35,13 @@ prose:
 
 パイプライン内の値は素の string（デフォルト）または Typed Value オブジェクトのいずれか。テンプレートエンジンはデフォルトで全ての素の string をエスケープする。
 
-Typed Value は `_mime_type` と `_content` を持つオブジェクトで、テンプレート側は値自体を見て判定できる（スキーマ等の外部情報は不要）。`_` プレフィックスは予約プレフィックスであり、ユーザ定義のフィールド名と衝突しない（[json-data-model.md](../../internal/json-data-model.md) 参照）:
+Typed Value は `mime_type` と `content` を持つオブジェクトで、テンプレート側は値自体を見て判定できる（スキーマ等の外部情報は不要）:
 
 ```yaml
-# Typed Value — _mime_type に応じてエスケープをバイパス
+# Typed Value — mime_type に応じてエスケープをバイパス
 body:
-  _mime_type: text/markdown
-  _content: |
+  mime_type: text/markdown
+  content: |
     # Architecture
     ...
 ```
@@ -85,8 +85,8 @@ prose:
   - id: "entities"
     title: "エンティティ定義"
     body:
-      _mime_type: text/markdown
-      _content: |
+      mime_type: text/markdown
+      content: |
         # エンティティ定義
         ...（ファイル全体）
 
@@ -94,8 +94,8 @@ prose:
   - id: user-entity
     title: "ユーザー"
     body:
-      _mime_type: text/markdown
-      _content: |
+      mime_type: text/markdown
+      content: |
         システムの利用者を表す。
 
         # 補足
@@ -105,8 +105,8 @@ prose:
   - id: order-entity
     title: "注文"
     body:
-      _mime_type: text/markdown
-      _content: |
+      mime_type: text/markdown
+      content: |
         ユーザーが商品を購入する際に作成されるトランザクション。
 ```
 

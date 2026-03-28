@@ -37,7 +37,7 @@ class TestNormalizeMarkdown:
         data = yaml.safe_load((out_dir / "guide.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
-        assert data["prose"][0]["body"]["_mime_type"] == "text/markdown"
+        assert data["prose"][0]["body"]["mime_type"] == "text/markdown"
 
     def test_subdirectory_id(self, tmp_path: Path) -> None:
         src = tmp_path / "sub" / "doc.md"
