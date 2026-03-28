@@ -34,7 +34,6 @@ OUT: `render.outDir`
 
 コンポーネント間通信:
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
-- [error-propagation.md](error-propagation.md) — エラー伝播（`__errors` によるブラウザ表示）
 
 各コンポーネントの処理フローと技術選定:
 - [components/normalizer.md](components/normalizer.md)

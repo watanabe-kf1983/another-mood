@@ -23,7 +23,6 @@
 
 - [architecture.md](internal/architecture.md) — アーキテクチャ概要
 - [json-data-model.md](internal/json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
-- [error-propagation.md](internal/error-propagation.md) — エラー伝播（`__errors` によるブラウザ表示）
 - [pipeline/](internal/pipeline/) — パイプライン構成、プロセス連携、AtomicDirWriter
 - [components/](internal/components/) — Normalizer、Composer、Generator、Renderer
 
