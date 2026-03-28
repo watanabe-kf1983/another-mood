@@ -34,7 +34,7 @@ def atomic_write(out_dir: Path) -> Generator[Path, None, None]:
     is synced to out_dir under a file lock with ordering guarantees.
     """
     out_dir.parent.mkdir(parents=True, exist_ok=True)
-    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}.", dir=out_dir.parent))
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}."))
 
     start_time = datetime.now(timezone.utc)
     try:
