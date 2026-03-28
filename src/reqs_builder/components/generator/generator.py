@@ -13,7 +13,12 @@ from reqs_builder.components.shared.errors import collect_errors, error_propagat
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-@Component(out_dir="out_dir", input_dirs=["data_dir", "templates_dir"])
+@Component(
+    out_dir="out_dir",
+    input_dirs=["data_dir", "templates_dir"],
+    atomic_write=False,
+    error_propagation=False,
+)
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Generate Markdown output, rendering errors as a page if present."""
     with atomic_write(out_dir) as od:

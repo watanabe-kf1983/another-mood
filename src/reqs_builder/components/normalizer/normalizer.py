@@ -9,15 +9,9 @@ from pathlib import Path
 
 from reqs_builder.components.normalizer.prose import parse_markdown
 from reqs_builder.components.shared import yaml_dumper
-from reqs_builder.components.shared.component import (
-    Component,
-    with_atomic_write,
-    with_error_propagation,
-)
+from reqs_builder.components.shared.component import Component
 
 
-@with_atomic_write
-@with_error_propagation
 @Component(out_dir="out_dir", input_dirs=["src_dir"])
 def normalize(src_dir: Path, *, out_dir: Path) -> None:
     """Normalize src_dir contents into out_dir."""
