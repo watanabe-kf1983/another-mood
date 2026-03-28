@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.errors import (
     passthrough_if_errors,
     with_error_propagation,
@@ -53,6 +54,7 @@ class TestWithErrorPropagation:
         _write_yaml(input_dir / "data.yaml", {"items": [1, 2]})
 
         @with_error_propagation
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def component(*, src_dir: Path, out_dir: Path) -> None:
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "result.yaml").write_text("ok")
@@ -69,6 +71,7 @@ class TestWithErrorPropagation:
         called = False
 
         @with_error_propagation
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def component(*, src_dir: Path, out_dir: Path) -> None:
             nonlocal called
             called = True
@@ -81,6 +84,7 @@ class TestWithErrorPropagation:
         _write_yaml(input_dir / "data.yaml", {"x": 1})
 
         @with_error_propagation
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def component(*, src_dir: Path, out_dir: Path) -> None:
             raise ValueError("boom")
 

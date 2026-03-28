@@ -17,11 +17,15 @@ from reqs_builder.components.composer.query import (
     Select,
     SelectItem,
 )
+from reqs_builder.components.shared.atomic_write import with_atomic_write
+from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.errors import with_error_propagation
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
+@with_atomic_write
 @with_error_propagation
+@Component(out_dir="out_dir", input_dirs=["contents_dir", "queries_dir"])
 def compose(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None:
     """Copy contents as passthrough, then evaluate queries and write views."""
     shutil.copytree(contents_dir, out_dir, dirs_exist_ok=True)

@@ -10,10 +10,14 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from reqs_builder.components.generator.template_engine import TemplateEngine
+from reqs_builder.components.shared.atomic_write import with_atomic_write
+from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.errors import errors_data
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
+@with_atomic_write
+@Component(out_dir="out_dir", input_dirs=["data_dir", "templates_dir"])
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Load data, render through built-in root template, and write output.
 
