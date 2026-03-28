@@ -8,40 +8,31 @@ from reqs_builder.pipeline.render import RenderStage
 
 def normalize_contents_stage(config: ProjectConfig) -> Task:
     """Normalize contents_dir to normalized_contents_dir (passthrough)."""
-    return Stage(
-        run_fn=normalize.bind(
-            src_dir=config.contents_dir,
-            out_dir=config.normalized_contents_dir,
-        ),
-        watch_paths=[config.contents_dir],
-        name="Normalize",
+    call = normalize.bind(
+        src_dir=config.contents_dir,
+        out_dir=config.normalized_contents_dir,
     )
+    return Stage(run_fn=call, watch_paths=call.input_dirs, name="Normalize")
 
 
 def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
-    return Stage(
-        run_fn=compose.bind(
-            contents_dir=config.normalized_contents_dir,
-            queries_dir=config.queries_dir,
-            out_dir=config.views_dir,
-        ),
-        watch_paths=[config.normalized_contents_dir, config.queries_dir],
-        name="Compose",
+    call = compose.bind(
+        contents_dir=config.normalized_contents_dir,
+        queries_dir=config.queries_dir,
+        out_dir=config.views_dir,
     )
+    return Stage(run_fn=call, watch_paths=call.input_dirs, name="Compose")
 
 
 def generator_stage(config: ProjectConfig) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
-    return Stage(
-        run_fn=generate.bind(
-            data_dir=config.views_dir,
-            templates_dir=config.templates_dir,
-            out_dir=config.out_dir,
-        ),
-        watch_paths=[config.views_dir, config.templates_dir],
-        name="Generate",
+    call = generate.bind(
+        data_dir=config.views_dir,
+        templates_dir=config.templates_dir,
+        out_dir=config.out_dir,
     )
+    return Stage(run_fn=call, watch_paths=call.input_dirs, name="Generate")
 
 
 def render_stage(config: ProjectConfig) -> Task:
