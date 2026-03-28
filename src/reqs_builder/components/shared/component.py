@@ -78,37 +78,29 @@ class ComponentCall:
             self._fn(*self._args, **self._kwargs)
 
 
+@dataclass(frozen=True)
 class Component:
     """Decorator that converts a function into a ComponentCall.
 
     Usage:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"],
-                   atomic_write=True, error_propagation=True)
+        @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def normalize(src_dir: Path, *, out_dir: Path) -> None: ...
     """
 
-    def __init__(
-        self,
-        *,
-        out_dir: str,
-        input_dirs: Sequence[str],
-        atomic_write: bool = True,
-        error_propagation: bool = True,
-    ) -> None:
-        self._out_dir_key = out_dir
-        self._input_dir_keys = input_dirs
-        self._atomic_write = atomic_write
-        self._error_propagation = error_propagation
+    out_dir: str
+    input_dirs: Sequence[str]
+    atomic_write: bool = True
+    error_propagation: bool = True
 
     def __call__(self, fn: Callable[..., None]) -> ComponentCall:
         component = ComponentCall(
             _fn=fn,
-            _out_dir_key=self._out_dir_key,
-            _input_dir_keys=list(self._input_dir_keys),
+            _out_dir_key=self.out_dir,
+            _input_dir_keys=list(self.input_dirs),
         )
-        if self._error_propagation:
+        if self.error_propagation:
             component = _wrap_error_propagation(component)
-        if self._atomic_write:
+        if self.atomic_write:
             component = _wrap_atomic_write(component)
         return component
 
