@@ -17,7 +17,7 @@ class TestNormalize:
         (src / "notes.md").write_text("# Notes\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out)
+        normalize(src_dir=src, out_dir=out)
 
         # YAML copied as-is
         assert (out / "data.yaml").read_text() == "key: value\n"

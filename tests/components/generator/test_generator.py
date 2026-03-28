@@ -36,7 +36,7 @@ class TestGenerate:
         )
 
         out_dir = tmp_path / "output"
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         assert (out_dir / "index.md").read_text() == dedent("""\
             # List
@@ -45,6 +45,51 @@ class TestGenerate:
             - Bob
 
         """)
+
+
+class TestGenerateErrorTemplate:
+    def test_renders_errors_from_data(self, tmp_path: Path) -> None:
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        _write_yaml(
+            data_dir / "errors.yaml",
+            {
+                "__errors": [
+                    {
+                        "source": "contents/entities.yaml",
+                        "message": "Unknown field 'stauts'",
+                        "traceback": "Traceback ...\nValidationError: Unknown field",
+                    }
+                ]
+            },
+        )
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text("# Normal\n")
+
+        out_dir = tmp_path / "output"
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
+
+        result = (out_dir / "index.md").read_text()
+        assert "# Build Error" in result
+        assert "contents/entities.yaml" in result
+        assert "Unknown field 'stauts'" in result
+        assert "Traceback" in result
+
+    def test_renders_normal_when_no_errors(self, tmp_path: Path) -> None:
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text("# {{ title }}\n")
+
+        out_dir = tmp_path / "output"
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
+
+        assert (out_dir / "index.md").read_text() == "# Hello\n"
 
 
 class TestGenerateErrorPage:
@@ -58,7 +103,7 @@ class TestGenerateErrorPage:
         (templates_dir / "index.md").write_text('{% section "bad" with x %}')
 
         out_dir = tmp_path / "output"
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         error_page = (out_dir / "index.md").read_text()
         assert error_page.startswith("# Build Error")
@@ -75,12 +120,12 @@ class TestGenerateErrorPage:
         out_dir = tmp_path / "output"
 
         # First build succeeds
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
         assert (out_dir / "index.md").read_text() == "# Hello\n"
 
         # Break the template
         (templates_dir / "index.md").write_text('{% section "bad" with title %}')
-        generate(data_dir, templates_dir, out_dir)
+        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         # Stale output is gone, error page is shown
         error_page = (out_dir / "index.md").read_text()

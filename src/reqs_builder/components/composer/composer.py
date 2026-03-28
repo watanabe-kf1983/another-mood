@@ -10,7 +10,6 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.components.shared.json_data_model import load_yamls
 from reqs_builder.components.composer.query import (
     From,
     Grouped,
@@ -18,9 +17,12 @@ from reqs_builder.components.composer.query import (
     Select,
     SelectItem,
 )
+from reqs_builder.components.shared.errors import with_error_propagation
+from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-def compose(contents_dir: Path, queries_dir: Path, out_dir: Path) -> None:
+@with_error_propagation
+def compose(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None:
     """Copy contents as passthrough, then evaluate queries and write views."""
     shutil.copytree(contents_dir, out_dir, dirs_exist_ok=True)
     sources = load_yamls(contents_dir)

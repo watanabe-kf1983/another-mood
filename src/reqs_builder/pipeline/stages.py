@@ -10,7 +10,7 @@ from reqs_builder.pipeline.render import RenderStage
 def normalize_contents_stage(config: ProjectConfig) -> Task:
     """Normalize contents_dir to normalized_contents_dir (passthrough)."""
     writer = AtomicDirWriter(
-        lambda out_dir: normalize(config.contents_dir, out_dir),
+        lambda out_dir: normalize(src_dir=config.contents_dir, out_dir=out_dir),
         config.normalized_contents_dir,
     )
     return Stage(
@@ -24,7 +24,9 @@ def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
     writer = AtomicDirWriter(
         lambda out_dir: compose(
-            config.normalized_contents_dir, config.queries_dir, out_dir
+            contents_dir=config.normalized_contents_dir,
+            queries_dir=config.queries_dir,
+            out_dir=out_dir,
         ),
         config.views_dir,
     )
@@ -38,7 +40,11 @@ def compose_stage(config: ProjectConfig) -> Task:
 def generator_stage(config: ProjectConfig) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
     writer = AtomicDirWriter(
-        lambda out_dir: generate(config.views_dir, config.templates_dir, out_dir),
+        lambda out_dir: generate(
+            data_dir=config.views_dir,
+            templates_dir=config.templates_dir,
+            out_dir=out_dir,
+        ),
         config.out_dir,
     )
     return Stage(
