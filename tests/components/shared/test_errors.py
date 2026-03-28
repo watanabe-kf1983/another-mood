@@ -5,11 +5,10 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.components.shared.component import (
-    Component,
-    with_error_propagation,
+from reqs_builder.components.shared.errors import (
+    error_propagation,
+    passthrough_if_errors,
 )
-from reqs_builder.components.shared.errors import passthrough_if_errors
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
@@ -48,48 +47,39 @@ class TestPassthroughIfErrors:
         assert "other" not in data
 
 
-class TestWithErrorPropagation:
-    def test_runs_fn_when_no_errors(self, tmp_path: Path) -> None:
+class TestErrorPropagation:
+    def test_runs_body_when_no_errors(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
         _write_yaml(input_dir / "data.yaml", {"items": [1, 2]})
 
-        @with_error_propagation
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
-        def component(*, src_dir: Path, out_dir: Path) -> None:
-            out_dir.mkdir(parents=True, exist_ok=True)
-            (out_dir / "result.yaml").write_text("ok")
-
         out_dir = tmp_path / "output"
-        component(src_dir=input_dir, out_dir=out_dir)
+        with error_propagation([input_dir], out_dir) as ok:
+            if ok:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                (out_dir / "result.yaml").write_text("ok")
 
         assert (out_dir / "result.yaml").read_text() == "ok"
 
-    def test_skips_fn_on_upstream_errors(self, tmp_path: Path) -> None:
+    def test_skips_body_on_upstream_errors(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
         _write_yaml(input_dir / "err.yaml", {"__errors": [{"message": "upstream"}]})
 
-        called = False
+        ran = False
+        out_dir = tmp_path / "output"
+        with error_propagation([input_dir], out_dir) as ok:
+            if ok:
+                ran = True
 
-        @with_error_propagation
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
-        def component(*, src_dir: Path, out_dir: Path) -> None:
-            nonlocal called
-            called = True
-
-        component(src_dir=input_dir, out_dir=tmp_path / "output")
-        assert not called
+        assert not ran
 
     def test_catches_exception(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
         _write_yaml(input_dir / "data.yaml", {"x": 1})
 
-        @with_error_propagation
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
-        def component(*, src_dir: Path, out_dir: Path) -> None:
-            raise ValueError("boom")
-
         out_dir = tmp_path / "output"
-        component(src_dir=input_dir, out_dir=out_dir)
+        with error_propagation([input_dir], out_dir) as ok:
+            if ok:
+                raise ValueError("boom")
 
         data = yaml.safe_load((out_dir / "__errors.yaml").read_text())
         assert "boom" in data["__errors"][0]["message"]
