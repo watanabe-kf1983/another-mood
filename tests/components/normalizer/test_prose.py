@@ -56,8 +56,8 @@ class TestProseRecordToData:
             "id": "background",
             "title": "Hello",
             "body": {
-                "_mime_type": "text/markdown",
-                "_content": md,
+                "mime_type": "text/markdown",
+                "content": md,
             },
         }
 

@@ -21,8 +21,8 @@ class ProseRecord:
             "id": self.id,
             "title": self.title,
             "body": {
-                "_mime_type": self.mime_type,
-                "_content": self.body,
+                "mime_type": self.mime_type,
+                "content": self.body,
             },
         }
 
