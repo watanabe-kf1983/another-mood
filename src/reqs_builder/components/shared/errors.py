@@ -1,7 +1,4 @@
-"""Error data model — __errors serialization for pipeline error propagation.
-
-See: docs-src/contents/internal/error-propagation.md
-"""
+"""Error data model — __errors serialization for pipeline error propagation."""
 
 import sys
 import traceback
