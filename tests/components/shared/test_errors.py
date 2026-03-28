@@ -7,44 +7,12 @@ import yaml
 
 from reqs_builder.components.shared.errors import (
     error_propagation,
-    passthrough_if_errors,
 )
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(data, allow_unicode=True))
-
-
-class TestPassthroughIfErrors:
-    def test_returns_true_and_writes_errors(self, tmp_path: Path) -> None:
-        src = tmp_path / "input" / "data.yaml"
-        _write_yaml(src, {"__errors": [{"message": "broken"}]})
-        out_dir = tmp_path / "output"
-
-        assert passthrough_if_errors(src, tmp_path / "input", out_dir) is True
-
-        data = yaml.safe_load((out_dir / "data.yaml").read_text())
-        assert data["__errors"][0]["message"] == "broken"
-
-    def test_returns_false_for_normal_file(self, tmp_path: Path) -> None:
-        src = tmp_path / "input" / "data.yaml"
-        _write_yaml(src, {"items": [1, 2]})
-        out_dir = tmp_path / "output"
-
-        assert passthrough_if_errors(src, tmp_path / "input", out_dir) is False
-        assert not out_dir.exists()
-
-    def test_extracts_only_errors_key(self, tmp_path: Path) -> None:
-        src = tmp_path / "input" / "data.yaml"
-        _write_yaml(src, {"__errors": [{"message": "err"}], "other": "data"})
-        out_dir = tmp_path / "output"
-
-        passthrough_if_errors(src, tmp_path / "input", out_dir)
-
-        data = yaml.safe_load((out_dir / "data.yaml").read_text())
-        assert "__errors" in data
-        assert "other" not in data
 
 
 class TestErrorPropagation:
@@ -83,3 +51,21 @@ class TestErrorPropagation:
 
         data = yaml.safe_load((out_dir / "__errors.yaml").read_text())
         assert "boom" in data["__errors"][0]["message"]
+
+    def test_merges_errors_from_multiple_input_dirs(self, tmp_path: Path) -> None:
+        input_a = tmp_path / "input_a"
+        input_b = tmp_path / "input_b"
+        _write_yaml(input_a / "__errors.yaml", {"__errors": [{"message": "err_a"}]})
+        _write_yaml(input_b / "__errors.yaml", {"__errors": [{"message": "err_b"}]})
+
+        ran = False
+        out_dir = tmp_path / "output"
+        with error_propagation([input_a, input_b], out_dir) as ok:
+            if ok:
+                ran = True
+
+        assert not ran
+        data = yaml.safe_load((out_dir / "__errors.yaml").read_text())
+        messages = [e["message"] for e in data["__errors"]]
+        assert "err_a" in messages
+        assert "err_b" in messages

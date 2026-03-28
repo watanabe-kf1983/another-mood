@@ -38,14 +38,19 @@ def error_propagation(
 
 
 def _check_and_passthrough_errors(input_dirs: Sequence[Path], out_dir: Path) -> bool:
-    """Check input dirs for __errors and passthrough to out_dir."""
-    has_errors = False
+    """Check input dirs for __errors and merge into a single file in out_dir."""
+    all_errors: list[Any] = []
     for d in input_dirs:
         if not d.exists():
             continue
-        for f in d.rglob("*.yaml"):
-            has_errors |= passthrough_if_errors(f, d, out_dir)
-    return has_errors
+        if (errors := collect_errors(d)) is not None:
+            all_errors.extend(errors[_ERRORS_KEY])
+    if all_errors:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        with (out_dir / f"{_ERRORS_KEY}.yaml").open("w") as f:
+            yaml_dumper.dump({_ERRORS_KEY: all_errors}, f)
+        return True
+    return False
 
 
 def errors_data(exc: Exception) -> dict[str, list[dict[str, object]]]:
@@ -66,17 +71,6 @@ def _write_exception(exc: Exception, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     with (out_dir / f"{_ERRORS_KEY}.yaml").open("w") as f:
         yaml_dumper.dump(errors_data(exc), f)
-
-
-def passthrough_if_errors(src: Path, base_dir: Path, out_dir: Path) -> bool:
-    if (errors := _extract_errors(src)) is not None:
-        dest = out_dir / src.relative_to(base_dir)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        with dest.open("w") as f:
-            yaml_dumper.dump(errors, f)
-        return True
-    else:
-        return False
 
 
 def collect_errors(directory: Path) -> dict[str, list[Any]] | None:
