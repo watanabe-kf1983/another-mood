@@ -30,7 +30,7 @@ class ProjectConfig(BaseSettings):
     views_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
     render_out_dir: Path = Field(default=Path(""))
-    hugo_content_dir: Path = Field(default=Path(""))
+    render_in_dir: Path = Field(default=Path(""))
 
     # Server
     port: int = Field(default=1313)
@@ -56,6 +56,6 @@ class ProjectConfig(BaseSettings):
             values["out_dir"] = rb / "output"
         if not values.get("render_out_dir"):
             values["render_out_dir"] = rb / "render"
-        if not values.get("hugo_content_dir"):
-            values["hugo_content_dir"] = rb / "hugo-content"
+        if not values.get("render_in_dir"):
+            values["render_in_dir"] = rb / "tmp" / "render-input"
         return values
