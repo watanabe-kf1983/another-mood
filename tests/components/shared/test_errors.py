@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 from reqs_builder.components.shared.errors import (
     error_propagation,
 )
@@ -78,3 +79,35 @@ class TestErrorPropagation:
         messages = [e["message"] for e in data["__build_report"]["errors"]]
         assert "err_a" in messages
         assert "err_b" in messages
+
+    def test_catches_file_validation_error(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        _write_yaml(input_dir / "data.yaml", {"x": 1})
+
+        out_dir = tmp_path / "output"
+        with error_propagation([input_dir], out_dir) as ok:
+            if ok:
+                raise FileValidationError(
+                    [
+                        Diagnostic(
+                            file=Path("a.yaml"), line=3, column=1, message="bad value"
+                        ),
+                    ]
+                )
+
+        data = yaml.safe_load((out_dir / "__build_report.yaml").read_text())
+        assert data["__build_report"] == {
+            "errors": [
+                {"message": "FileValidationError: 1 validation error"},
+            ],
+            "diagnostics": [
+                {
+                    "file": str(Path("a.yaml").resolve()),
+                    "line": 3,
+                    "column": 1,
+                    "message": "bad value",
+                    "severity": "error",
+                    "source": "",
+                },
+            ],
+        }

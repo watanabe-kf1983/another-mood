@@ -48,13 +48,18 @@ def _check_and_passthrough_errors(input_dirs: Sequence[Path], out_dir: Path) -> 
 
 
 def _report_data(exc: Exception) -> dict[str, dict[str, list[dict[str, object]]]]:
-    """Convert an exception to __build_report data structure."""
+    """Convert an exception to __build_report data structure.
+
+    If the exception has a ``report_data`` property, use it directly.
+    Otherwise, fall back to a generic error representation with traceback.
+    """
+    report = getattr(exc, "report_data", None)
+    if report is not None:
+        return {_REPORT_KEY: report}
     return {
         _REPORT_KEY: {
             _ERRORS_KEY: [
                 {
-                    "source": getattr(exc, "filename", None) or "",
-                    "lineno": getattr(exc, "lineno", None),
                     "message": f"{type(exc).__name__}: {exc}",
                     "traceback": traceback.format_exc(),
                 }
