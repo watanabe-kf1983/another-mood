@@ -594,6 +594,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "ruamel-yaml" },
     { name = "ruff" },
     { name = "types-jsonschema" },
 ]
@@ -618,6 +619,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "ruamel-yaml", specifier = ">=0.19.1" },
     { name = "ruff", specifier = ">=0.15.7" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20260325" },
 ]

@@ -30,6 +30,7 @@ dev = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "ruamel-yaml>=0.19.1",
     "ruff>=0.15.7",
     "types-jsonschema>=4.26.0.20260325",
 ]

@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from reqs_builder.components.normalizer.schema_validator import validate_schema_file
+from reqs_builder.components.normalizer.schema_validator import (
+    validate_schema_file,
+    validate_schema_source,
+)
 
 _EXAMPLE_SCHEMA_DIR = Path("example-project/definition/schema")
 
@@ -237,3 +240,32 @@ class TestRejectedSchemas:
     @pytest.mark.parametrize("src", _REJECTED_CASES)
     def test_rejected(self, src: str) -> None:
         _invalid(src)
+
+
+# ── validate_schema_source integration ────────────────────────────────
+
+
+class TestValidateSchemaSource:
+    def test_error_has_position(self) -> None:
+        src = (
+            "schemas:\n"
+            "  users:\n"
+            "    type: 42\n"  # line 3 — invalid type value
+        )
+        errors = validate_schema_source(src)
+        assert len(errors) >= 1
+        assert errors[0].position.line == 3
+        assert errors[0].position.column is not None
+
+    def test_valid_source_returns_empty(self) -> None:
+        src = "schemas:\n  users:\n    type: object\n"
+        assert validate_schema_source(src) == []
+
+    def test_non_mapping_source(self) -> None:
+        src = "- just a list\n"
+        errors = validate_schema_source(src)
+        assert len(errors) == 1
+
+    def test_example_project(self) -> None:
+        src = (_EXAMPLE_SCHEMA_DIR / "entities.yaml").read_text()
+        assert validate_schema_source(src) == []
