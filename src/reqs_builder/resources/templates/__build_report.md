@@ -1,16 +1,25 @@
 # Build Report
 
-{% for error in errors %}
-{% if error.source %}**{{ error.source }}{% if error.lineno %}, line {{ error.lineno }}{% endif %}**{% endif %}
+{% if diagnostics %}
+## Problems
 
+{% for d in diagnostics %}
+**{{ d.file }}{% if d.line %}:{{ d.line }}{% endif %}{% if d.column %}:{{ d.column }}{% endif %}**
+
+{{ d.message }}
+
+{% endfor %}
+{% endif %}
+{% if errors %}
+## Errors
+
+{% for error in errors %}
 {{ error.message }}
 
-<details>
-<summary>Traceback</summary>
-
+{% if error.traceback %}
 ```
 {{ error.traceback }}```
 
-</details>
-
+{% endif %}
 {% endfor %}
+{% endif %}
