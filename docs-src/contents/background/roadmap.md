@@ -37,7 +37,7 @@
 ### Phase 6: メタドキュメンテーション前提機能
 
 - [x] 6-1. エラーの伝播と汎用ドキュメンテーション
-- [ ] 6-2. JSON Schema によるスキーマ検証
+- [x] 6-2. JSON Schema によるスキーマ検証
 - [ ] 6-3. 辞書→配列の正規化（additionalProperties パターン、再帰的）
 - [ ] 6-4. YAML DSL クエリ評価（from / join / where / group_by / select / sort）
 

@@ -1,0 +1,29 @@
+schemas:
+  entities:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              pk:
+                type: boolean
+              fk:
+                type: string
+            required: [name, type]
+      required: [id, name, fields]
