@@ -1,0 +1,15 @@
+relations:
+  type: array
+  items:
+    type: object
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+      cardinality:
+        type: string
+        enum: ["1:1", "1:N", "N:N"]
+      description:
+        type: string
+    required: [from, to, cardinality]
