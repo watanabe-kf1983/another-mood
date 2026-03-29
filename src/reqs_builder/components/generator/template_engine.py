@@ -4,12 +4,13 @@ from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 
 from reqs_builder.components.generator.section_processor import (
     SectionExtension,
     install as install_section_processor,
 )
+from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 
 _BUILT_IN_TEMPLATES_DIR = resources.files("reqs_builder.resources") / "templates"
 
@@ -27,4 +28,17 @@ class TemplateEngine:
         install_section_processor(self._env, out_dir)
 
     def render(self, template_name: str, data: Mapping[str, object]) -> str:
-        return self._env.get_template(f"{template_name}.md").render(data)
+        try:
+            return self._env.get_template(f"{template_name}.md").render(data)
+        except TemplateSyntaxError as exc:
+            raise FileValidationError(
+                [
+                    Diagnostic(
+                        file=Path(exc.filename or template_name),
+                        line=exc.lineno,
+                        column=None,
+                        message=str(exc.message),
+                        source="jinja2",
+                    )
+                ]
+            ) from exc
