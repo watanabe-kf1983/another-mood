@@ -38,8 +38,8 @@
 
 - [x] 6-1. エラーの伝播と汎用ドキュメンテーション
 - [x] 6-2. JSON Schema によるスキーマ検証
-- [ ] 6-3. 辞書→配列の正規化（additionalProperties パターン、再帰的）
-- [ ] 6-4. YAML DSL クエリ評価（from / join / where / group_by / select / sort）
+- [ ] 6-3. 辞書→配列の正規化（コンテンツデータ向け、additionalProperties パターン、再帰的）
+- [ ] 6-4. ユーザスキーマからのメタデータ抽出（可視化・参照整合性チェックの基盤）
 
 ### Phase 7: メタドキュメンテーション
 
@@ -49,6 +49,7 @@
 
 優先順位はその時点の必要性で決定。
 
+- [ ] YAML DSL クエリ評価の拡充（from / join / where / group_by / select / sort）
 - [ ] Markdown パーサー（データソースとしての Markdown 読み込み）
 - [ ] 参照整合性チェック（references.yaml、`--strict`）
 - [ ] 標準テンプレート（ER図、DFD、CRUD マトリクス）
