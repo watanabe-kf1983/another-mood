@@ -1,0 +1,27 @@
+schemas:
+  entities_2:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              pk:
+                type: boolean
+              fk:
+                type: string
+            required: [name, type]
+      required: [name, fields]
