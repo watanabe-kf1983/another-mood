@@ -35,7 +35,7 @@ class TestWriteIndex:
     def test_renders_error_template(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"
         data = {
-            "__errors": [
+            "errors": [
                 {
                     "source": "contents/entities.yaml",
                     "message": "Unknown field 'stauts'",
@@ -43,10 +43,10 @@ class TestWriteIndex:
                 }
             ]
         }
-        render("__errors", data, out_dir)
+        render("__build_report", data, out_dir)
 
         result = (out_dir / "index.md").read_text()
-        assert "# Build Error" in result
+        assert "# Build Report" in result
         assert "contents/entities.yaml" in result
         assert "Unknown field 'stauts'" in result
         assert "Traceback" in result

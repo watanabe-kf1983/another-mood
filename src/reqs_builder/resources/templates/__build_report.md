@@ -1,6 +1,6 @@
-# Build Error
+# Build Report
 
-{% for error in __errors %}
+{% for error in errors %}
 {% if error.source %}**{{ error.source }}{% if error.lineno %}, line {{ error.lineno }}{% endif %}**{% endif %}
 
 {{ error.message }}

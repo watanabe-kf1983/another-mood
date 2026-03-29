@@ -1,17 +1,19 @@
-"""Error data model — __errors serialization for pipeline error propagation."""
+"""Build report — __build_report serialization for pipeline error propagation."""
 
 import sys
 import traceback
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
+from functools import reduce
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from reqs_builder.components.shared import yaml_dumper
+from reqs_builder.components.shared.json_data_model import deep_merge, load_yamls
 
-_ERRORS_KEY = "__errors"
+_REPORT_KEY = "__build_report"
+_ERRORS_KEY = "errors"
+_REPORT_FILENAME = f"{_REPORT_KEY}.yaml"
 
 
 @contextmanager
@@ -35,57 +37,49 @@ def error_propagation(
 
 
 def _check_and_passthrough_errors(input_dirs: Sequence[Path], out_dir: Path) -> bool:
-    """Check input dirs for __errors and merge into a single file in out_dir."""
-    all_errors: list[Any] = []
-    for d in input_dirs:
-        if not d.exists():
-            continue
-        if (errors := collect_errors(d)) is not None:
-            all_errors.extend(errors[_ERRORS_KEY])
-    if all_errors:
-        out_dir.mkdir(parents=True, exist_ok=True)
-        with (out_dir / f"{_ERRORS_KEY}.yaml").open("w") as f:
-            yaml_dumper.dump({_ERRORS_KEY: all_errors}, f)
-        return True
-    return False
+    """Check input dirs for __build_report and merge into a single file in out_dir."""
+    report = collect_report(*input_dirs)
+    if report is None or not report[_REPORT_KEY].get(_ERRORS_KEY):
+        return False
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / _REPORT_FILENAME).open("w") as f:
+        yaml_dumper.dump(report, f)
+    return True
 
 
-def errors_data(exc: Exception) -> dict[str, list[dict[str, object]]]:
-    """Convert an exception to __errors data structure."""
+def _report_data(exc: Exception) -> dict[str, dict[str, list[dict[str, object]]]]:
+    """Convert an exception to __build_report data structure."""
     return {
-        _ERRORS_KEY: [
-            {
-                "source": getattr(exc, "filename", None) or "",
-                "lineno": getattr(exc, "lineno", None),
-                "message": f"{type(exc).__name__}: {exc}",
-                "traceback": traceback.format_exc(),
-            }
-        ]
+        _REPORT_KEY: {
+            _ERRORS_KEY: [
+                {
+                    "source": getattr(exc, "filename", None) or "",
+                    "lineno": getattr(exc, "lineno", None),
+                    "message": f"{type(exc).__name__}: {exc}",
+                    "traceback": traceback.format_exc(),
+                }
+            ]
+        }
     }
 
 
 def _write_exception(exc: Exception, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    with (out_dir / f"{_ERRORS_KEY}.yaml").open("w") as f:
-        yaml_dumper.dump(errors_data(exc), f)
+    with (out_dir / _REPORT_FILENAME).open("w") as f:
+        yaml_dumper.dump(_report_data(exc), f)
 
 
-def collect_errors(directory: Path) -> dict[str, list[Any]] | None:
-    """Collect all __errors from YAML files in a directory.
+def collect_report(*directories: Path) -> dict[str, dict[str, Any]] | None:
+    """Collect all __build_report from YAML files across directories.
 
-    Returns a merged ``{"__errors": [...]}`` dict, or None if no errors found.
+    Returns a merged ``{"__build_report": {"errors": [...]}}`` dict,
+    or None if no report found.
     """
-    all_errors: list[Any] = []
-    for f in sorted(directory.rglob("*.yaml")):
-        extracted = _extract_errors(f)
-        if extracted is not None:
-            all_errors.extend(extracted[_ERRORS_KEY])
-    return {_ERRORS_KEY: all_errors} if all_errors else None
-
-
-def _extract_errors(path: Path) -> dict[str, Any] | None:
-    """Extract __errors data from a YAML file, or None if not present."""
-    loaded: object = yaml.safe_load(path.read_text())
-    if isinstance(loaded, dict) and _ERRORS_KEY in loaded:
-        return {_ERRORS_KEY: loaded[_ERRORS_KEY]}
+    merged: dict[str, Any] = reduce(
+        deep_merge,
+        (load_yamls(d) for d in directories if d.exists()),
+        {},
+    )
+    if _REPORT_KEY in merged:
+        return {_REPORT_KEY: merged[_REPORT_KEY]}
     return None

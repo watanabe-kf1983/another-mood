@@ -115,7 +115,8 @@ class TestErrorPropagationWrapping:
     def test_skips_fn_on_upstream_errors(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
         self._write_yaml(
-            input_dir / "err.yaml", {"__errors": [{"message": "upstream"}]}
+            input_dir / "err.yaml",
+            {"__build_report": {"errors": [{"message": "upstream"}]}},
         )
 
         called = False
@@ -139,5 +140,5 @@ class TestErrorPropagationWrapping:
         out = tmp_path / "output"
         my_fn(src_dir=input_dir, out_dir=out)
 
-        data = yaml.safe_load((out / "__errors.yaml").read_text())
-        assert "boom" in data["__errors"][0]["message"]
+        data = yaml.safe_load((out / "__build_report.yaml").read_text())
+        assert "boom" in data["__build_report"]["errors"][0]["message"]
