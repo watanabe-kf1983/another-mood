@@ -41,7 +41,7 @@ class TestGenerate:
         generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         error_page = (out_dir / "index.md").read_text()
-        assert error_page.startswith("# Build Error")
+        assert error_page.startswith("# Build Report")
 
     def test_replaces_stale_output_with_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data"
@@ -64,5 +64,5 @@ class TestGenerate:
 
         # Stale output is gone, error page is shown
         error_page = (out_dir / "index.md").read_text()
-        assert "# Build Error" in error_page
+        assert "# Build Report" in error_page
         assert len(list(out_dir.iterdir())) == 1

@@ -6,19 +6,18 @@ so that validation errors can point to exact YAML source locations.
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from importlib import resources
+from pathlib import Path
 from typing import Any
 
-import yaml
 import jsonschema
+import yaml
 from jsonschema.protocols import Validator
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
+from ruamel.yaml import YAMLError
 
-from reqs_builder.components.normalizer.position_resolver import (
-    Position,
-    resolve_position,
-)
+from reqs_builder.components.normalizer.position_resolver import resolve_position
+from reqs_builder.components.shared.diagnostic import Diagnostic
 
 _SCHEMA_SCHEMA_PATH = (
     resources.files("reqs_builder.resources") / "schemas" / "schema-schema.yaml"
@@ -33,14 +32,6 @@ _validator: Validator = jsonschema.Draft202012Validator(_VALIDATOR_SCHEMA)
 _ruamel = YAML()
 
 
-@dataclass(frozen=True)
-class ValidationIssue:
-    """A schema validation error with source location."""
-
-    message: str
-    position: Position
-
-
 def validate_schema_file(
     data: Mapping[str, Any],
 ) -> Sequence[jsonschema.ValidationError]:
@@ -53,31 +44,41 @@ def validate_schema_file(
     return list(_validator.iter_errors(data))  # type: ignore[arg-type]
 
 
-def validate_schema_source(source: str) -> Sequence[ValidationIssue]:
-    """Validate a YAML schema string and return errors with line numbers.
+def validate_schema_source(source: str, file: Path) -> Sequence[Diagnostic]:
+    """Validate a YAML schema string and return diagnostics with line numbers.
 
     Parses with ruamel.yaml to preserve positions, then validates
-    against SchemaSchema.
+    against SchemaSchema.  Also catches ruamel.yaml parse errors
+    (syntax errors, duplicate keys) and converts them to Diagnostic.
     """
-    # TODO: catch ruamel.yaml.YAMLError (ParserError, ScannerError,
-    # DuplicateKeyError) and convert to the pipeline error type once the
-    # error model is redesigned (see normalizer.md TODO).
-    data: Any = _ruamel.load(source)  # type: ignore[no-untyped-call]
-    if not isinstance(data, Mapping):
+    try:
+        data: Any = _ruamel.load(source)  # type: ignore[no-untyped-call]
+    except YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
         return [
-            ValidationIssue(
-                message="Schema file must be a YAML mapping",
-                position=Position(line=1, column=1),
+            Diagnostic(
+                file=file,
+                line=mark.line + 1 if mark else None,
+                column=mark.column + 1 if mark else None,
+                message=getattr(exc, "problem", None) or str(exc),
+                source="ruamel.yaml",
             )
         ]
 
-    raw_errors: list[jsonschema.ValidationError] = list(
-        _validator.iter_errors(data)  # type: ignore[arg-type]
-    )
     return [
-        ValidationIssue(
-            message=err.message,
-            position=resolve_position(err.absolute_path, data),
-        )
-        for err in raw_errors
+        _jsonschema_error_to_diagnostic(err, data, file)
+        for err in _validator.iter_errors(data)
     ]
+
+
+def _jsonschema_error_to_diagnostic(
+    err: jsonschema.ValidationError, data: Any, file: Path
+) -> Diagnostic:
+    pos = resolve_position(err.absolute_path, data)
+    return Diagnostic(
+        file=file,
+        line=pos.line,
+        column=pos.column,
+        message=err.message,
+        source="jsonschema",
+    )

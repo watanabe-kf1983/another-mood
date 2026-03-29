@@ -245,6 +245,9 @@ class TestRejectedSchemas:
 # ── validate_schema_source integration ────────────────────────────────
 
 
+_DUMMY_FILE = Path("test.yaml")
+
+
 class TestValidateSchemaSource:
     def test_error_has_position(self) -> None:
         src = (
@@ -252,20 +255,40 @@ class TestValidateSchemaSource:
             "  users:\n"
             "    type: 42\n"  # line 3 — invalid type value
         )
-        errors = validate_schema_source(src)
+        errors = validate_schema_source(src, _DUMMY_FILE)
         assert len(errors) >= 1
-        assert errors[0].position.line == 3
-        assert errors[0].position.column is not None
+        assert errors[0].line == 3
+        assert errors[0].column is not None
+        assert errors[0].file == _DUMMY_FILE
+        assert errors[0].source == "jsonschema"
 
     def test_valid_source_returns_empty(self) -> None:
         src = "schemas:\n  users:\n    type: object\n"
-        assert validate_schema_source(src) == []
+        assert validate_schema_source(src, _DUMMY_FILE) == []
 
     def test_non_mapping_source(self) -> None:
         src = "- just a list\n"
-        errors = validate_schema_source(src)
+        errors = validate_schema_source(src, _DUMMY_FILE)
         assert len(errors) == 1
+        assert errors[0].file == _DUMMY_FILE
+        assert errors[0].source == "jsonschema"
+
+    def test_yaml_syntax_error(self) -> None:
+        src = "a: [\n"
+        errors = validate_schema_source(src, _DUMMY_FILE)
+        assert len(errors) == 1
+        assert errors[0].line is not None
+        assert errors[0].source == "ruamel.yaml"
+        assert errors[0].file == _DUMMY_FILE
+
+    def test_yaml_duplicate_key(self) -> None:
+        src = "schemas:\n  a:\n    type: object\n  a:\n    type: string\n"
+        errors = validate_schema_source(src, _DUMMY_FILE)
+        assert len(errors) == 1
+        assert errors[0].source == "ruamel.yaml"
+        assert "duplicate" in errors[0].message
 
     def test_example_project(self) -> None:
-        src = (_EXAMPLE_SCHEMA_DIR / "entities.yaml").read_text()
-        assert validate_schema_source(src) == []
+        path = _EXAMPLE_SCHEMA_DIR / "entities.yaml"
+        src = path.read_text()
+        assert validate_schema_source(src, path) == []

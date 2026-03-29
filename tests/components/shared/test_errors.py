@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 from reqs_builder.components.shared.errors import (
     error_propagation,
 )
@@ -30,7 +31,10 @@ class TestErrorPropagation:
 
     def test_skips_body_on_upstream_errors(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "err.yaml", {"__errors": [{"message": "upstream"}]})
+        _write_yaml(
+            input_dir / "err.yaml",
+            {"__build_report": {"errors": [{"message": "upstream"}]}},
+        )
 
         ran = False
         out_dir = tmp_path / "output"
@@ -49,14 +53,20 @@ class TestErrorPropagation:
             if ok:
                 raise ValueError("boom")
 
-        data = yaml.safe_load((out_dir / "__errors.yaml").read_text())
-        assert "boom" in data["__errors"][0]["message"]
+        data = yaml.safe_load((out_dir / "__build_report.yaml").read_text())
+        assert "boom" in data["__build_report"]["errors"][0]["message"]
 
     def test_merges_errors_from_multiple_input_dirs(self, tmp_path: Path) -> None:
         input_a = tmp_path / "input_a"
         input_b = tmp_path / "input_b"
-        _write_yaml(input_a / "__errors.yaml", {"__errors": [{"message": "err_a"}]})
-        _write_yaml(input_b / "__errors.yaml", {"__errors": [{"message": "err_b"}]})
+        _write_yaml(
+            input_a / "__build_report.yaml",
+            {"__build_report": {"errors": [{"message": "err_a"}]}},
+        )
+        _write_yaml(
+            input_b / "__build_report.yaml",
+            {"__build_report": {"errors": [{"message": "err_b"}]}},
+        )
 
         ran = False
         out_dir = tmp_path / "output"
@@ -65,7 +75,39 @@ class TestErrorPropagation:
                 ran = True
 
         assert not ran
-        data = yaml.safe_load((out_dir / "__errors.yaml").read_text())
-        messages = [e["message"] for e in data["__errors"]]
+        data = yaml.safe_load((out_dir / "__build_report.yaml").read_text())
+        messages = [e["message"] for e in data["__build_report"]["errors"]]
         assert "err_a" in messages
         assert "err_b" in messages
+
+    def test_catches_file_validation_error(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        _write_yaml(input_dir / "data.yaml", {"x": 1})
+
+        out_dir = tmp_path / "output"
+        with error_propagation([input_dir], out_dir) as ok:
+            if ok:
+                raise FileValidationError(
+                    [
+                        Diagnostic(
+                            file=Path("a.yaml"), line=3, column=1, message="bad value"
+                        ),
+                    ]
+                )
+
+        data = yaml.safe_load((out_dir / "__build_report.yaml").read_text())
+        assert data["__build_report"] == {
+            "errors": [
+                {"message": "FileValidationError: 1 validation error"},
+            ],
+            "diagnostics": [
+                {
+                    "file": str(Path("a.yaml").resolve()),
+                    "line": 3,
+                    "column": 1,
+                    "message": "bad value",
+                    "severity": "error",
+                    "source": "",
+                },
+            ],
+        }
