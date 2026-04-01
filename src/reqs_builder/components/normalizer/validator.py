@@ -1,8 +1,15 @@
-"""Schema validation using the built-in SchemaSchema.
+"""Schema validation — validate YAML sources against JSON Schema.
 
-Loads the SchemaSchema from resources and validates user-defined schema
-files against it.  Uses ruamel.yaml to preserve line/column positions
-so that validation errors can point to exact YAML source locations.
+Provides a general-purpose ``validate_source`` that parses a YAML string
+with ruamel.yaml (preserving line/column positions) and validates it
+against any jsonschema Validator.
+
+Builder functions create Validators for specific use-cases:
+
+* ``build_schema_validator`` — validates user schema files against the
+  built-in SchemaSchema.
+* ``build_content_validator`` — validates content files against
+  user-defined schemas.
 """
 
 from collections.abc import Mapping, Sequence
@@ -27,29 +34,17 @@ _VALIDATOR_SCHEMA: dict[str, Any] = yaml.safe_load(
     _SCHEMA_SCHEMA_PATH.read_text(encoding="utf-8")
 )
 
-_validator: Validator = jsonschema.Draft202012Validator(_VALIDATOR_SCHEMA)
-
 _ruamel = YAML()
 
 
-def validate_schema_file(
-    data: Mapping[str, Any],
-) -> Sequence[jsonschema.ValidationError]:
-    """Validate a parsed schema file against SchemaSchema.
+def validate_source(
+    source: str, file: Path, validator: Validator
+) -> Sequence[Diagnostic]:
+    """Validate a YAML source string and return diagnostics with line numbers.
 
-    Returns a list of validation errors (empty if valid).
-    """
-    # Mapping[str, Any] is not assignable to the recursive _JsonParameter alias
-    # in the jsonschema stubs, but yaml.safe_load always produces JSON-compatible data.
-    return list(_validator.iter_errors(data))  # type: ignore[arg-type]
-
-
-def validate_schema_source(source: str, file: Path) -> Sequence[Diagnostic]:
-    """Validate a YAML schema string and return diagnostics with line numbers.
-
-    Parses with ruamel.yaml to preserve positions, then validates
-    against SchemaSchema.  Also catches ruamel.yaml parse errors
-    (syntax errors, duplicate keys) and converts them to Diagnostic.
+    Parses with ruamel.yaml to preserve positions, then validates against
+    the given Validator.  Also catches ruamel.yaml parse errors (syntax
+    errors, duplicate keys) and converts them to Diagnostic.
     """
     try:
         data: Any = _ruamel.load(source)  # type: ignore[no-untyped-call]
@@ -67,8 +62,25 @@ def validate_schema_source(source: str, file: Path) -> Sequence[Diagnostic]:
 
     return [
         _jsonschema_error_to_diagnostic(err, data, file)
-        for err in _validator.iter_errors(data)
+        for err in validator.iter_errors(data)
     ]
+
+
+def build_schema_validator() -> Validator:
+    """Build a Validator for user schema files (against built-in SchemaSchema)."""
+    return jsonschema.Draft202012Validator(_VALIDATOR_SCHEMA)
+
+
+def build_content_validator(schemas: Mapping[str, Any]) -> Validator:
+    """Build a Validator for content files from user-defined schemas.
+
+    Each key in *schemas* maps a schema name to its JSON Schema definition.
+    The returned Validator checks that content file top-level keys conform
+    to their corresponding schema.
+    """
+    return jsonschema.Draft202012Validator(
+        {"type": "object", "properties": dict(schemas)}
+    )
 
 
 def _jsonschema_error_to_diagnostic(
