@@ -28,57 +28,64 @@ def normalize(
     src_dir: Path, *, out_dir: Path, validator: Validator | None = None
 ) -> None:
     """Normalize src_dir contents into out_dir."""
+    all_diagnostics: list[Diagnostic] = []
     for src_file in sorted(src_dir.rglob("*")):
         if not src_file.is_file():
             continue
         rel = src_file.relative_to(src_dir)
-
-        # Parse
-        data, diagnostics = _parse(src_file, rel)
-        if diagnostics:
-            raise FileValidationError(diagnostics=list(diagnostics))
-
-        # Validate
-        if validator is not None:
-            errors = validate_data(data, rel, validator)
-            if errors:
-                raise FileValidationError(diagnostics=list(errors))
-
-        # Write
-        dst = out_dir / rel.with_suffix(".yaml")
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        with dst.open("w", encoding="utf-8") as f:
-            yaml_dumper.dump(data, f)
+        try:
+            _process_file(src_file, rel, out_dir, validator)
+        except FileValidationError as exc:
+            all_diagnostics.extend(exc.diagnostics)
+    if all_diagnostics:
+        raise FileValidationError(diagnostics=all_diagnostics)
 
 
-def _parse(src: Path, rel: Path) -> tuple[Any, list[Diagnostic]]:
-    """Parse a source file into data.
+def _process_file(
+    src: Path, rel: Path, out_dir: Path, validator: Validator | None
+) -> None:
+    """Parse, validate, and write a single file."""
+    # Parse
+    data = _parse(src, rel)
 
-    Returns (data, diagnostics).  On parse error, data is None and
-    diagnostics contains the error.
-    """
+    # Validate
+    if validator is not None:
+        errors = validate_data(data, rel, validator)
+        if errors:
+            raise FileValidationError(diagnostics=list(errors))
+
+    # Write
+    dst = out_dir / rel.with_suffix(".yaml")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open("w", encoding="utf-8") as f:
+        yaml_dumper.dump(data, f)
+
+
+def _parse(src: Path, rel: Path) -> Any:
+    """Parse a source file into data."""
     source = src.read_text(encoding="utf-8")
     if src.suffix == ".md":
-        return _parse_markdown(source, rel), []
+        return _parse_markdown(source, rel)
     return _parse_yaml(source, rel)
 
 
-def _parse_yaml(source: str, rel: Path) -> tuple[Any, list[Diagnostic]]:
+def _parse_yaml(source: str, rel: Path) -> Any:
     """Parse YAML with ruamel.yaml, preserving source positions."""
     try:
-        data: Any = _ruamel.load(source)  # type: ignore[no-untyped-call]
+        return _ruamel.load(source)  # type: ignore[no-untyped-call]
     except YAMLError as exc:
         mark = getattr(exc, "problem_mark", None)
-        return None, [
-            Diagnostic(
-                file=rel,
-                line=mark.line + 1 if mark else None,
-                column=mark.column + 1 if mark else None,
-                message=getattr(exc, "problem", None) or str(exc),
-                source="ruamel.yaml",
-            )
-        ]
-    return data, []
+        raise FileValidationError(
+            diagnostics=[
+                Diagnostic(
+                    file=rel,
+                    line=mark.line + 1 if mark else None,
+                    column=mark.column + 1 if mark else None,
+                    message=getattr(exc, "problem", None) or str(exc),
+                    source="ruamel.yaml",
+                )
+            ]
+        ) from exc
 
 
 def _parse_markdown(source: str, rel: Path) -> dict[str, Any]:
