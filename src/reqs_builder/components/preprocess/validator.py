@@ -73,6 +73,18 @@ class Validator:
             for err in self._validator.iter_errors(data)  # type: ignore[arg-type]
         ]
 
+    def validate_yaml(self, src: Path) -> Sequence[Diagnostic]:
+        """Parse a YAML file and validate against the schema.
+
+        Combines parse_yaml and validate in one call.
+        Returns parse error diagnostics instead of raising.
+        """
+        try:
+            data = parse_yaml(src)
+        except FileValidationError as exc:
+            return exc.diagnostics
+        return self.validate(data, src)
+
 
 def _to_diagnostic(
     err: jsonschema.ValidationError, data: object, file: Path
