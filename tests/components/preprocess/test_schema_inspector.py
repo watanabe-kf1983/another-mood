@@ -9,8 +9,6 @@ from reqs_builder.components.preprocess.schema_inspector import (
     build_schema_validator,
     inspect_schema,
 )
-from reqs_builder.components.preprocess.validator import validate_data
-from reqs_builder.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
 
