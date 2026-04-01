@@ -7,8 +7,8 @@ YAML files are parsed with ruamel.yaml to preserve source positions
 for line-number-accurate validation errors.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
 
 from jsonschema.protocols import Validator
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
@@ -61,7 +61,7 @@ def _process_file(
         yaml_dumper.dump(data, f)
 
 
-def _parse(src: Path, rel: Path) -> Any:
+def _parse(src: Path, rel: Path) -> Mapping[str, object]:
     """Parse a source file into data."""
     source = src.read_text(encoding="utf-8")
     if src.suffix == ".md":
@@ -69,10 +69,11 @@ def _parse(src: Path, rel: Path) -> Any:
     return _parse_yaml(source, rel)
 
 
-def _parse_yaml(source: str, rel: Path) -> Any:
+def _parse_yaml(source: str, rel: Path) -> Mapping[str, object]:
     """Parse YAML with ruamel.yaml, preserving source positions."""
     try:
-        return _ruamel.load(source)  # type: ignore[no-untyped-call]
+        # ruamel.yaml returns CommentedMap (a Mapping) with .lc metadata
+        data: Mapping[str, object] = _ruamel.load(source)  # type: ignore[no-untyped-call]
     except YAMLError as exc:
         mark = getattr(exc, "problem_mark", None)
         raise FileValidationError(
@@ -86,8 +87,9 @@ def _parse_yaml(source: str, rel: Path) -> Any:
                 )
             ]
         ) from exc
+    return data
 
 
-def _parse_markdown(source: str, rel: Path) -> dict[str, Any]:
+def _parse_markdown(source: str, rel: Path) -> Mapping[str, object]:
     record = parse_markdown(source, str(rel.with_suffix("")))
     return {"prose": [record.to_data()]}
