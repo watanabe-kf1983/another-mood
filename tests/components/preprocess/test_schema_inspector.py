@@ -1,4 +1,4 @@
-"""Tests for SchemaInspector — SchemaSchema validation and inspect_schema logic."""
+"""Tests for SchemaInspector — SchemaSchema validation and check_schema."""
 
 from pathlib import Path
 
@@ -7,8 +7,9 @@ import yaml
 
 from reqs_builder.components.preprocess.schema_inspector import (
     build_schema_validator,
-    inspect_schema,
+    check_schema,
 )
+from reqs_builder.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
 
@@ -220,16 +221,15 @@ class TestBuildSchemaValidator:
         assert len(self._validator.validate(data, _DUMMY_FILE)) > 0
 
 
-# ── inspect_schema (Component wrapper) ──────────────────────────────
+# ── check_schema ────────────────────────────────────────────────────
 
 
-class TestInspectSchema:
-    """inspect_schema: end-to-end through Component wrapper."""
+class TestCheckSchema:
+    """check_schema: validate schema files directly."""
 
     def test_valid_schemas_pass(self, tmp_path: Path) -> None:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "entities.yaml").write_text(
+        f = tmp_path / "entities.yaml"
+        f.write_text(
             "schemas:\n"
             "  users:\n"
             "    type: object\n"
@@ -238,17 +238,11 @@ class TestInspectSchema:
             "      properties:\n"
             "        name: { type: string }\n"
         )
-        out = tmp_path / "out"
-        inspect_schema(schema_dir=schema_dir, out_dir=out)
+        check_schema([f])
 
-        # No error report (stage name not set in direct call)
-        assert not (out / "__build_report.yaml").exists()
-
-    def test_invalid_schema_writes_error_report(self, tmp_path: Path) -> None:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        # properties + additionalProperties is mutually exclusive
-        (schema_dir / "bad.yaml").write_text(
+    def test_invalid_schema_raises(self, tmp_path: Path) -> None:
+        f = tmp_path / "bad.yaml"
+        f.write_text(
             "schemas:\n"
             "  items:\n"
             "    type: object\n"
@@ -257,19 +251,14 @@ class TestInspectSchema:
             "    additionalProperties:\n"
             "      type: object\n"
         )
-        out = tmp_path / "out"
-        inspect_schema(schema_dir=schema_dir, out_dir=out)
-
-        report = yaml.safe_load((out / "__build_report.yaml").read_text())
-        assert report["__build_report"]["errors"]
-        assert report["__build_report"]["diagnostics"]
-        diag = report["__build_report"]["diagnostics"][0]
-        assert "bad.yaml" in diag["file"]
+        with pytest.raises(FileValidationError) as exc_info:
+            check_schema([f])
+        assert len(exc_info.value.diagnostics) >= 1
+        assert exc_info.value.diagnostics[0].file == f
 
     def test_collects_errors_across_files(self, tmp_path: Path) -> None:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "good.yaml").write_text(
+        good = tmp_path / "good.yaml"
+        good.write_text(
             "schemas:\n"
             "  users:\n"
             "    type: array\n"
@@ -278,8 +267,8 @@ class TestInspectSchema:
             "      properties:\n"
             "        name: { type: string }\n"
         )
-        # properties + additionalProperties is mutually exclusive
-        (schema_dir / "bad.yaml").write_text(
+        bad = tmp_path / "bad.yaml"
+        bad.write_text(
             "schemas:\n"
             "  items:\n"
             "    type: object\n"
@@ -288,10 +277,16 @@ class TestInspectSchema:
             "    additionalProperties:\n"
             "      type: object\n"
         )
-        out = tmp_path / "out"
-        inspect_schema(schema_dir=schema_dir, out_dir=out)
+        with pytest.raises(FileValidationError) as exc_info:
+            check_schema([good, bad])
+        files_with_errors = {d.file for d in exc_info.value.diagnostics}
+        assert bad in files_with_errors
+        assert good not in files_with_errors
 
-        report = yaml.safe_load((out / "__build_report.yaml").read_text())
-        diag_files = [d["file"] for d in report["__build_report"]["diagnostics"]]
-        assert any("bad.yaml" in f for f in diag_files)
-        assert not any("good.yaml" in f for f in diag_files)
+    def test_broken_yaml_collected_as_diagnostic(self, tmp_path: Path) -> None:
+        f = tmp_path / "broken.yaml"
+        f.write_text("a: [unterminated\n")
+        with pytest.raises(FileValidationError) as exc_info:
+            check_schema([f])
+        assert exc_info.value.diagnostics[0].file == f
+        assert exc_info.value.diagnostics[0].source == "ruamel.yaml"
