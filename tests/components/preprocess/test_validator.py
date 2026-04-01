@@ -7,7 +7,7 @@ import pytest
 import yaml
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from reqs_builder.components.normalizer.validator import (
+from reqs_builder.components.preprocess.validator import (
     build_content_validator,
     build_schema_validator,
     validate_data,

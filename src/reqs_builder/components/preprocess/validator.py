@@ -21,7 +21,7 @@ import jsonschema
 import yaml
 from jsonschema.protocols import Validator
 
-from reqs_builder.components.normalizer.position_resolver import resolve_position
+from reqs_builder.components.preprocess.position_resolver import resolve_position
 from reqs_builder.components.shared.diagnostic import Diagnostic
 
 _SCHEMA_SCHEMA_PATH = (

@@ -14,8 +14,8 @@ from jsonschema.protocols import Validator
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 
-from reqs_builder.components.normalizer.prose import parse_markdown
-from reqs_builder.components.normalizer.validator import validate_data
+from reqs_builder.components.preprocess.prose import parse_markdown
+from reqs_builder.components.preprocess.validator import validate_data
 from reqs_builder.components.shared import yaml_dumper
 from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
