@@ -17,9 +17,13 @@ from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 
 
-@Component(out_dir="out_dir", input_dirs=["src_dir"])
+@Component(out_dir="out_dir", input_dirs=["src_dir", "upstream_dir"])
 def normalize(
-    src_dir: Path, *, out_dir: Path, validator: Validator | None = None
+    src_dir: Path,
+    *,
+    out_dir: Path,
+    upstream_dir: Path | None = None,
+    validator: Validator | None = None,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
     all_diagnostics: list[Diagnostic] = []

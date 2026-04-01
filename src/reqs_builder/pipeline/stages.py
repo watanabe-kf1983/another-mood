@@ -20,8 +20,13 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     call = normalize.on_stage("normalize_contents").bind(
         src_dir=config.contents_dir,
         out_dir=config.normalized_contents_dir,
+        upstream_dir=config.data_catalog_dir,
     )
-    return Stage(run_fn=call, watch_paths=call.input_dirs, name="Normalize")
+    return Stage(
+        run_fn=call,
+        watch_paths=[config.contents_dir, config.data_catalog_dir],
+        name="Normalize",
+    )
 
 
 def compose_stage(config: ProjectConfig) -> Task:
