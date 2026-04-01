@@ -21,7 +21,10 @@ from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 
 _SCHEMA_SCHEMA_PATH = (
-    resources.files("reqs_builder.resources") / "schemas" / "schema-schema.yaml"
+    resources.files("reqs_builder.resources")
+    / "schemas"
+    / "schema"
+    / "schema-schema.yaml"
 )
 
 _SCHEMA_SCHEMA: dict[str, Any] = yaml.safe_load(
