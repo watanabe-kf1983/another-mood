@@ -1,42 +1,64 @@
-"""Tests for schema_validator — SchemaSchema validation."""
+"""Tests for validator — validate_data and validator builders."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
+from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from reqs_builder.components.normalizer.schema_validator import (
-    validate_schema_file,
-    validate_schema_source,
+from reqs_builder.components.normalizer.validator import (
+    build_content_validator,
+    build_schema_validator,
+    validate_data,
 )
 
-_EXAMPLE_SCHEMA_DIR = Path("example-project/definition/schema")
+_DUMMY_FILE = Path("test.yaml")
+_ruamel = YAML()
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
+def _ruamel_load(src: str) -> Any:
+    return _ruamel.load(src)  # type: ignore[no-untyped-call]
 
 
-def _valid(src: str) -> None:
-    assert validate_schema_file(yaml.safe_load(src)) == []
+# ── validate_data ───────────────────────────────────────────────────
 
 
-def _invalid(src: str) -> None:
-    assert len(validate_schema_file(yaml.safe_load(src))) > 0
+class TestValidateData:
+    """Core validation: Diagnostic conversion, position resolution."""
+
+    _schema_validator = build_schema_validator()
+
+    def test_ruamel_data_has_position(self) -> None:
+        data = _ruamel_load("schemas:\n  users:\n    type: 42\n")
+        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        assert len(errors) >= 1
+        assert errors[0].line == 3
+        assert errors[0].column is not None
+        assert errors[0].file == _DUMMY_FILE
+        assert errors[0].source == "jsonschema"
+
+    def test_plain_dict_has_no_position(self) -> None:
+        data = {"schemas": {"users": {"type": 42}}}
+        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        assert len(errors) >= 1
+        assert errors[0].line is None
+        assert errors[0].column is None
+
+    def test_valid_data_returns_empty(self) -> None:
+        data = _ruamel_load("schemas:\n  users:\n    type: object\n")
+        assert validate_data(data, _DUMMY_FILE, self._schema_validator) == []
+
+    def test_non_mapping(self) -> None:
+        data = [{"just": "a list"}]
+        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        assert len(errors) == 1
+        assert errors[0].source == "jsonschema"
 
 
-# ── Example-project schemas ─────────────────────────────────────────
+# ── build_schema_validator ──────────────────────────────────────────
 
-
-class TestExampleProjectSchemas:
-    @pytest.mark.parametrize("name", ["entities", "relations"])
-    def test_passes(self, name: str) -> None:
-        data = yaml.safe_load((_EXAMPLE_SCHEMA_DIR / f"{name}.yaml").read_text())
-        assert validate_schema_file(data) == []
-
-
-# ── Valid patterns ───────────────────────────────────────────────────
-
-_VALID_CASES = [
+_VALID_SCHEMA_CASES = [
     pytest.param(
         """
         schemas:
@@ -138,16 +160,7 @@ _VALID_CASES = [
     ),
 ]
 
-
-class TestValidSchemas:
-    @pytest.mark.parametrize("src", _VALID_CASES)
-    def test_accepted(self, src: str) -> None:
-        _valid(src)
-
-
-# ── Rejected patterns ───────────────────────────────────────────────
-
-_REJECTED_CASES = [
+_REJECTED_SCHEMA_CASES = [
     pytest.param(
         """
         schemas:
@@ -236,59 +249,43 @@ _REJECTED_CASES = [
 ]
 
 
-class TestRejectedSchemas:
-    @pytest.mark.parametrize("src", _REJECTED_CASES)
+class TestBuildSchemaValidator:
+    _validator = build_schema_validator()
+
+    @pytest.mark.parametrize("src", _VALID_SCHEMA_CASES)
+    def test_accepted(self, src: str) -> None:
+        data = yaml.safe_load(src)
+        assert list(self._validator.iter_errors(data)) == []
+
+    @pytest.mark.parametrize("src", _REJECTED_SCHEMA_CASES)
     def test_rejected(self, src: str) -> None:
-        _invalid(src)
+        data = yaml.safe_load(src)
+        assert len(list(self._validator.iter_errors(data))) > 0
 
 
-# ── validate_schema_source integration ────────────────────────────────
+# ── build_content_validator ─────────────────────────────────────────
 
 
-_DUMMY_FILE = Path("test.yaml")
+class TestBuildContentValidator:
+    _validator = build_content_validator(
+        yaml.safe_load("""
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                required: [id, name]
+        """)
+    )
 
+    def test_valid(self) -> None:
+        data = yaml.safe_load("items:\n  - id: a\n    name: Alice\n")
+        assert validate_data(data, _DUMMY_FILE, self._validator) == []
 
-class TestValidateSchemaSource:
-    def test_error_has_position(self) -> None:
-        src = (
-            "schemas:\n"
-            "  users:\n"
-            "    type: 42\n"  # line 3 — invalid type value
-        )
-        errors = validate_schema_source(src, _DUMMY_FILE)
+    def test_invalid(self) -> None:
+        data = yaml.safe_load("items:\n  - id: a\n")  # missing 'name'
+        errors = validate_data(data, _DUMMY_FILE, self._validator)
         assert len(errors) >= 1
-        assert errors[0].line == 3
-        assert errors[0].column is not None
-        assert errors[0].file == _DUMMY_FILE
-        assert errors[0].source == "jsonschema"
-
-    def test_valid_source_returns_empty(self) -> None:
-        src = "schemas:\n  users:\n    type: object\n"
-        assert validate_schema_source(src, _DUMMY_FILE) == []
-
-    def test_non_mapping_source(self) -> None:
-        src = "- just a list\n"
-        errors = validate_schema_source(src, _DUMMY_FILE)
-        assert len(errors) == 1
-        assert errors[0].file == _DUMMY_FILE
-        assert errors[0].source == "jsonschema"
-
-    def test_yaml_syntax_error(self) -> None:
-        src = "a: [\n"
-        errors = validate_schema_source(src, _DUMMY_FILE)
-        assert len(errors) == 1
-        assert errors[0].line is not None
-        assert errors[0].source == "ruamel.yaml"
-        assert errors[0].file == _DUMMY_FILE
-
-    def test_yaml_duplicate_key(self) -> None:
-        src = "schemas:\n  a:\n    type: object\n  a:\n    type: string\n"
-        errors = validate_schema_source(src, _DUMMY_FILE)
-        assert len(errors) == 1
-        assert errors[0].source == "ruamel.yaml"
-        assert "duplicate" in errors[0].message
-
-    def test_example_project(self) -> None:
-        path = _EXAMPLE_SCHEMA_DIR / "entities.yaml"
-        src = path.read_text()
-        assert validate_schema_source(src, path) == []
+        assert "name" in errors[0].message

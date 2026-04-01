@@ -1,41 +1,95 @@
-"""Normalizer — validate and normalize input data.
+"""Normalizer — parse, validate, and normalize input data.
 
-Copies non-Markdown files as-is. Converts Markdown files into YAML
-with the built-in prose schema.
+Every source file is parsed into data, validated against a schema
+when a validator is provided, and written to the output directory.
+Markdown files are converted via the built-in prose schema;
+YAML files are parsed with ruamel.yaml to preserve source positions
+for line-number-accurate validation errors.
 """
 
-import shutil
+from collections.abc import Mapping
 from pathlib import Path
 
+from jsonschema.protocols import Validator
+from ruamel.yaml import YAML  # type: ignore[attr-defined]
+from ruamel.yaml import YAMLError
+
 from reqs_builder.components.normalizer.prose import parse_markdown
+from reqs_builder.components.normalizer.validator import validate_data
 from reqs_builder.components.shared import yaml_dumper
 from reqs_builder.components.shared.component import Component
+from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
+
+_ruamel = YAML()
 
 
 @Component(out_dir="out_dir", input_dirs=["src_dir"])
-def normalize(src_dir: Path, *, out_dir: Path) -> None:
+def normalize(
+    src_dir: Path, *, out_dir: Path, validator: Validator | None = None
+) -> None:
     """Normalize src_dir contents into out_dir."""
+    all_diagnostics: list[Diagnostic] = []
     for src_file in sorted(src_dir.rglob("*")):
         if not src_file.is_file():
             continue
         rel = src_file.relative_to(src_dir)
-        if src_file.suffix == ".md":
-            normalize_markdown(src_file, rel, out_dir)
-        else:
-            _copy_file(src_file, out_dir / rel)
+        try:
+            _process_file(src_file, rel, out_dir, validator)
+        except FileValidationError as exc:
+            all_diagnostics.extend(exc.diagnostics)
+    if all_diagnostics:
+        raise FileValidationError(diagnostics=all_diagnostics)
 
 
-def normalize_markdown(src: Path, rel: Path, out_dir: Path) -> None:
-    record = parse_markdown(
-        src.read_text(encoding="utf-8"),
-        str(rel.with_suffix("")),
-    )
+def _process_file(
+    src: Path, rel: Path, out_dir: Path, validator: Validator | None
+) -> None:
+    """Parse, validate, and write a single file."""
+    # Parse
+    data = _parse(src, rel)
+
+    # Validate
+    if validator is not None:
+        errors = validate_data(data, rel, validator)
+        if errors:
+            raise FileValidationError(diagnostics=list(errors))
+
+    # Write
     dst = out_dir / rel.with_suffix(".yaml")
     dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("w", encoding="utf-8") as f:
-        yaml_dumper.dump({"prose": [record.to_data()]}, f)
+        yaml_dumper.dump(data, f)
 
 
-def _copy_file(src: Path, dst: Path) -> None:
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dst)
+def _parse(src: Path, rel: Path) -> Mapping[str, object]:
+    """Parse a source file into data."""
+    source = src.read_text(encoding="utf-8")
+    if src.suffix == ".md":
+        return _parse_markdown(source, rel)
+    return _parse_yaml(source, rel)
+
+
+def _parse_yaml(source: str, rel: Path) -> Mapping[str, object]:
+    """Parse YAML with ruamel.yaml, preserving source positions."""
+    try:
+        # ruamel.yaml returns CommentedMap (a Mapping) with .lc metadata
+        data: Mapping[str, object] = _ruamel.load(source)  # type: ignore[no-untyped-call]
+    except YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        raise FileValidationError(
+            diagnostics=[
+                Diagnostic(
+                    file=rel,
+                    line=mark.line + 1 if mark else None,
+                    column=mark.column + 1 if mark else None,
+                    message=getattr(exc, "problem", None) or str(exc),
+                    source="ruamel.yaml",
+                )
+            ]
+        ) from exc
+    return data
+
+
+def _parse_markdown(source: str, rel: Path) -> Mapping[str, object]:
+    record = parse_markdown(source, str(rel.with_suffix("")))
+    return {"prose": [record.to_data()]}

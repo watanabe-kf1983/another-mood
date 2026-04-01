@@ -5,9 +5,8 @@ as Python attributes, invisible to JSON Schema validation and YAML
 serialization.  This module provides a clean API to extract positions
 given a data path (e.g. from jsonschema's ValidationError.absolute_path).
 
-Precondition: root and all intermediate nodes must be ruamel.yaml objects
-(CommentedMap/CommentedSeq) with .lc attributes.  Passing plain dicts
-will raise AttributeError — that is a caller bug.
+When the data lacks .lc metadata (e.g. plain dicts from non-ruamel
+sources), resolve_position returns None instead of raising.
 """
 
 from collections.abc import Sequence
@@ -29,12 +28,20 @@ class Position:
     column: int
 
 
-def resolve_position(path: Sequence[str | int], root: Any) -> Position:
+def resolve_position(path: Sequence[str | int], root: Any) -> Position | None:
     """Resolve the source position for a data path in a ruamel.yaml tree.
 
     path: sequence of keys/indices (e.g. ["schemas", "users", "type"]).
-    root: ruamel.yaml parsed data (CommentedMap).
+    root: parsed data — ruamel.yaml CommentedMap for positions, or plain
+          dict/list (returns None).
     """
+    try:
+        return _resolve(path, root)
+    except (AttributeError, TypeError):
+        return None
+
+
+def _resolve(path: Sequence[str | int], root: Any) -> Position:
     if not path:
         return _node_position(root)
 
