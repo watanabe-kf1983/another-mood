@@ -9,7 +9,8 @@ from pathlib import Path
 
 from reqs_builder.components.generator.template_engine import TemplateEngine
 from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.errors import collect_report, error_propagation
+from reqs_builder.components.shared.build_report import BuildReport
+from reqs_builder.components.shared.errors import error_propagation
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
@@ -23,10 +24,10 @@ def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
             data = load_yamls(data_dir)
             render("__root", data, out_dir, templates_dir=templates_dir)
 
-    report = collect_report(out_dir)
-    if report is not None and report["__build_report"].get("errors"):
+    report = BuildReport.collect(out_dir)
+    if report.has_errors():
         _clear_contents(out_dir)
-        render("__build_report", report["__build_report"], out_dir)
+        render("__build_report", report.to_data(), out_dir)
 
 
 def _clear_contents(directory: Path) -> None:

@@ -36,12 +36,17 @@ class ComponentCall:
     fn: Callable[..., None]
     out_dir_key: str
     input_dir_keys: Sequence[str]
+    stage: str = ""
     args: tuple[object, ...] = ()
     kwargs: dict[str, object] = field(default_factory=lambda: {})
 
     def bind(self, *args: object, **kwargs: object) -> ComponentCall:
         """Bind arguments and return a new ComponentCall ready to execute."""
         return replace(self, args=args, kwargs=kwargs)
+
+    def on_stage(self, stage: str) -> ComponentCall:
+        """Return a copy with the given stage name."""
+        return replace(self, stage=stage)
 
     @property
     def out_dir(self) -> Path:
@@ -109,7 +114,9 @@ def _wrap_error_propagation(component: ComponentCall) -> ComponentCall:
 
     def wrapped(*args: object, **kwargs: object) -> None:
         bound = component.bind(*args, **kwargs)
-        with _error_propagation(bound.input_dirs, bound.out_dir) as ok:
+        with _error_propagation(
+            bound.input_dirs, bound.out_dir, stage=bound.stage
+        ) as ok:
             if ok:
                 bound()
 
