@@ -19,7 +19,7 @@ from reqs_builder.components.shared.json_data_model import load_yamls
 )
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Generate Markdown output, rendering errors as a page if present."""
-    with error_propagation([data_dir, templates_dir], out_dir) as ok:
+    with error_propagation([data_dir, templates_dir], out_dir, stage="generate") as ok:
         if ok:
             data = load_yamls(data_dir)
             render("__root", data, out_dir, templates_dir=templates_dir)

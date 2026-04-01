@@ -25,14 +25,6 @@ class StageResult:
     result: str
     timestamp: str
 
-    @staticmethod
-    def ok(stage: str) -> "StageResult":
-        return StageResult(stage=stage, result="ok", timestamp=_now_iso())
-
-    @staticmethod
-    def ng(stage: str) -> "StageResult":
-        return StageResult(stage=stage, result="ng", timestamp=_now_iso())
-
     def to_data(self) -> Mapping[str, object]:
         return {self.stage: {"result": self.result, "timestamp": self.timestamp}}
 
@@ -80,13 +72,11 @@ class BuildReport:
     def add_exception(self, exc: Exception) -> None:
         self._data = deep_merge(self._data, dict(_error_data(exc)))
 
-    def add_stage_success(self, stage: str) -> None:
+    def add_stage_result(self, stage: str, result: str) -> None:
         if stage:
-            self._data.update(StageResult.ok(stage).to_data())
-
-    def add_stage_failure(self, stage: str) -> None:
-        if stage:
-            self._data.update(StageResult.ng(stage).to_data())
+            self._data.update(
+                StageResult(stage=stage, result=result, timestamp=_now_iso()).to_data()
+            )
 
     def to_data(self) -> Mapping[str, object]:
         """Return the report content (without the __build_report wrapper)."""
