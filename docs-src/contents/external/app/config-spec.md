@@ -52,7 +52,7 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `normalizedSchemaDir` | string | `.reqs-builder/<projectDir>/tmp/normalized/schema` | `RB_NORMALIZED_SCHEMA_DIR` | schema の Normalizer 出力先 |
+| `dataCatalogDir` | string | `.reqs-builder/<projectDir>/tmp/data-catalog` | `RB_DATA_CATALOG_DIR` | SchemaInspector の出力先（データカタログ） |
 | `normalizedContentsDir` | string | `.reqs-builder/<projectDir>/tmp/normalized/contents` | `RB_NORMALIZED_CONTENTS_DIR` | contents の Normalizer 出力先 |
 | `normalizedQueriesDir` | string | `.reqs-builder/<projectDir>/tmp/normalized/queries` | `RB_NORMALIZED_QUERIES_DIR` | queries の Normalizer 出力先 |
 | `viewsDir` | string | `.reqs-builder/<projectDir>/tmp/views` | `RB_VIEWS_DIR` | Composer の出力先 |
