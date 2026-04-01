@@ -26,12 +26,10 @@ class Stage(Task):
 
     run_fn: Callable[[], None]
     watch_paths: Sequence[Path]
-    name: str = "Build"
 
     def run(self) -> None:
         """Run the stage once."""
         self.run_fn()
-        print(f"{self.name} complete.", flush=True)
 
     @contextmanager
     def start_watching(self) -> Generator[None]:

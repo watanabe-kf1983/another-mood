@@ -39,6 +39,8 @@ class ComponentCall:
     fn: Callable[..., None]
     out_dir_key: str
     input_dir_keys: Sequence[str]
+    use_atomic_write: bool = True
+    use_error_propagation: bool = True
     stage: str = ""
     args: tuple[object, ...] = ()
     kwargs: dict[str, object] = field(default_factory=lambda: {})
@@ -52,10 +54,6 @@ class ComponentCall:
         return replace(self, stage=stage)
 
     @property
-    def out_dir(self) -> Path:
-        return cast(Path, self.kwargs[self.out_dir_key])
-
-    @property
     def input_dirs(self) -> Sequence[Path]:
         return [
             cast(Path, v)
@@ -67,7 +65,36 @@ class ComponentCall:
         if args or kwargs:
             self.bind(*args, **kwargs)()
         else:
-            self.fn(*self.args, **self.kwargs)
+            self._run()
+
+    def _run(self) -> None:
+        def action(*args: object, **kwargs: object) -> None:
+            self.fn(*args, **kwargs)
+
+        if self.use_error_propagation:
+            _inner = action
+
+            def _with_propagation(*args: object, **kwargs: object) -> None:
+                out_dir = cast(Path, kwargs[self.out_dir_key])
+                with error_propagation(
+                    self.input_dirs, out_dir, stage=self.stage
+                ) as ok:
+                    if ok:
+                        _inner(*args, **kwargs)
+
+            action = _with_propagation
+
+        if self.use_atomic_write:
+            _inner2 = action
+
+            def _with_atomic(*args: object, **kwargs: object) -> None:
+                out_dir = cast(Path, kwargs[self.out_dir_key])
+                with atomic_write(out_dir) as tmp_dir:
+                    _inner2(*args, **{**kwargs, self.out_dir_key: tmp_dir})
+
+            action = _with_atomic
+
+        action(*self.args, **self.kwargs)
 
 
 @dataclass(frozen=True)
@@ -85,39 +112,10 @@ class Component:
     error_propagation: bool = True
 
     def __call__(self, fn: Callable[..., None]) -> ComponentCall:
-        component = ComponentCall(
+        return ComponentCall(
             fn=fn,
             out_dir_key=self.out_dir,
             input_dir_keys=self.input_dirs,
+            use_atomic_write=self.atomic_write,
+            use_error_propagation=self.error_propagation,
         )
-        if self.error_propagation:
-            component = _wrap_error_propagation(component)
-        if self.atomic_write:
-            component = _wrap_atomic_write(component)
-        return component
-
-
-def _wrap_atomic_write(component: ComponentCall) -> ComponentCall:
-    """Wrap a ComponentCall with atomic output and ordering."""
-    out_dir_key = component.out_dir_key
-
-    def wrapped(*args: object, **kwargs: object) -> None:
-        bound = component.bind(*args, **kwargs)
-        with atomic_write(bound.out_dir) as tmp_dir:
-            component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
-
-    return replace(component, fn=wrapped)
-
-
-def _wrap_error_propagation(component: ComponentCall) -> ComponentCall:
-    """Wrap a ComponentCall with error propagation."""
-
-    def wrapped(*args: object, **kwargs: object) -> None:
-        bound = component.bind(*args, **kwargs)
-        with error_propagation(
-            bound.input_dirs, bound.out_dir, stage=bound.stage
-        ) as ok:
-            if ok:
-                bound()
-
-    return replace(component, fn=wrapped)

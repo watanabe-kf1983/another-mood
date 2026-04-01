@@ -25,12 +25,12 @@ class TestComponent:
 
 
 class TestComponentCall:
-    def test_out_dir(self) -> None:
+    def test_out_dir_in_kwargs(self) -> None:
         @Component(out_dir="out_dir", input_dirs=["src_dir"])
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(src_dir=Path("/in"), out_dir=Path("/out"))
-        assert call.out_dir == Path("/out")
+        assert call.kwargs["out_dir"] == Path("/out")
 
     def test_input_dirs(self) -> None:
         @Component(out_dir="out_dir", input_dirs=["contents_dir", "queries_dir"])
