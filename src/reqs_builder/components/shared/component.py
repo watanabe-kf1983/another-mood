@@ -24,6 +24,9 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
+from reqs_builder.components.shared.atomic_write import atomic_write
+from reqs_builder.components.shared.errors import error_propagation
+
 
 @dataclass(frozen=True)
 class ComponentCall:
@@ -92,15 +95,11 @@ class Component:
 
 def _wrap_atomic_write(component: ComponentCall) -> ComponentCall:
     """Wrap a ComponentCall with atomic output and ordering."""
-    from reqs_builder.components.shared.atomic_write import (
-        atomic_write as _atomic_write,
-    )
-
     out_dir_key = component.out_dir_key
 
     def wrapped(*args: object, **kwargs: object) -> None:
         bound = component.bind(*args, **kwargs)
-        with _atomic_write(bound.out_dir) as tmp_dir:
+        with atomic_write(bound.out_dir) as tmp_dir:
             component.bind(*args, **{**kwargs, out_dir_key: tmp_dir})()
 
     return replace(component, fn=wrapped)
@@ -108,13 +107,10 @@ def _wrap_atomic_write(component: ComponentCall) -> ComponentCall:
 
 def _wrap_error_propagation(component: ComponentCall) -> ComponentCall:
     """Wrap a ComponentCall with error propagation."""
-    from reqs_builder.components.shared.errors import (
-        error_propagation as _error_propagation,
-    )
 
     def wrapped(*args: object, **kwargs: object) -> None:
         bound = component.bind(*args, **kwargs)
-        with _error_propagation(
+        with error_propagation(
             bound.input_dirs, bound.out_dir, stage=bound.stage
         ) as ok:
             if ok:
