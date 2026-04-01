@@ -8,7 +8,7 @@ from reqs_builder.pipeline.render import RenderStage
 
 def normalize_contents_stage(config: ProjectConfig) -> Task:
     """Normalize contents_dir to normalized_contents_dir (passthrough)."""
-    call = normalize.bind(
+    call = normalize.on_stage("normalize_contents").bind(
         src_dir=config.contents_dir,
         out_dir=config.normalized_contents_dir,
     )
@@ -17,7 +17,7 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
 
 def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
-    call = compose.bind(
+    call = compose.on_stage("compose").bind(
         contents_dir=config.normalized_contents_dir,
         queries_dir=config.queries_dir,
         out_dir=config.views_dir,
@@ -27,7 +27,7 @@ def compose_stage(config: ProjectConfig) -> Task:
 
 def generator_stage(config: ProjectConfig) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
-    call = generate.bind(
+    call = generate.on_stage("generate").bind(
         data_dir=config.views_dir,
         templates_dir=config.templates_dir,
         out_dir=config.out_dir,
