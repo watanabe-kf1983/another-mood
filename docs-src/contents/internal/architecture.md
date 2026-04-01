@@ -2,19 +2,24 @@
 
 ## アーキテクチャ概要
 
-3コンポーネント + レンダラー構成:
+4コンポーネント + レンダラー構成:
+
+**SchemaInspector**
+スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
+IN: `schemaDir`
+OUT: `dataCatalogDir`
 
 **Normalizer**
 入力ディレクトリを検証し、辞書形式を配列形式に正規化する。
-schema / contents / queries の3種類の入力に対してそれぞれ独立したステージとして実行される。
+contents / queries の2種類の入力に対してそれぞれ独立したステージとして実行される。
 Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../external/normalizer/markdown-parser-spec.md) 参照）。
 contents の Normalize では `--strict` モードで参照整合性もチェックする。
-IN: `schemaDir`、`contentsDir`、`queriesDir`（各ステージで異なる）
-OUT: `normalizedSchemaDir`、`normalizedContentsDir`、`normalizedQueriesDir`
+IN: `contentsDir`、`queriesDir`（各ステージで異なる。詳細は [pipeline.md](pipeline/pipeline.md) 参照）
+OUT: `normalizedContentsDir`、`normalizedQueriesDir`
 
 **Composer**
 正規化済みデータを自動的にビューとしてパススルーし、さらに正規化済みクエリがあれば評価して追加のビューを生成する。
-IN: `normalizedSchemaDir`、`normalizedContentsDir`、`normalizedQueriesDir`
+IN: `dataCatalogDir`、`normalizedContentsDir`、`normalizedQueriesDir`
 OUT: `viewsDir`
 
 **Document Generator**
