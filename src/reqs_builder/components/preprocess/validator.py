@@ -1,36 +1,54 @@
-"""Schema validation — validate data against JSON Schema.
+"""Validation infrastructure — parse YAML and validate against JSON Schema.
 
-Provides ``validate_data`` that validates parsed data against any
-jsonschema Validator, returning Diagnostic objects.  When the data
-carries ruamel.yaml position metadata, diagnostics include line/column.
+Provides shared building blocks used by both SchemaInspector and Normalizer:
 
-Builder functions create Validators for specific use-cases:
-
-* ``build_schema_validator`` — validates user schema files against the
-  built-in SchemaSchema.
-* ``build_content_validator`` — validates content files against
+* ``parse_yaml`` — parse YAML with ruamel.yaml, preserving source positions
+  for line-accurate diagnostics.
+* ``validate_data`` — validate parsed data against any jsonschema Validator,
+  returning Diagnostic objects.
+* ``build_content_validator`` — build a Validator for content files against
   user-defined schemas.
 """
 
 from collections.abc import Mapping, Sequence
-from importlib import resources
 from pathlib import Path
 from typing import Any
 
 import jsonschema
-import yaml
 from jsonschema.protocols import Validator
+from ruamel.yaml import YAML  # type: ignore[attr-defined]
+from ruamel.yaml import YAMLError
 
 from reqs_builder.components.preprocess.position_resolver import resolve_position
-from reqs_builder.components.shared.diagnostic import Diagnostic
+from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 
-_SCHEMA_SCHEMA_PATH = (
-    resources.files("reqs_builder.resources") / "schemas" / "schema-schema.yaml"
-)
+_ruamel = YAML()
 
-_VALIDATOR_SCHEMA: dict[str, Any] = yaml.safe_load(
-    _SCHEMA_SCHEMA_PATH.read_text(encoding="utf-8")
-)
+
+def parse_yaml(src: Path, rel: Path) -> Mapping[str, object]:
+    """Parse a YAML file with ruamel.yaml, preserving source positions.
+
+    On parse error, raises FileValidationError with a Diagnostic
+    containing line/column from the YAML error mark.
+    """
+    try:
+        data: Mapping[str, object] = _ruamel.load(  # type: ignore[no-untyped-call]
+            src.read_text(encoding="utf-8")
+        )
+    except YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        raise FileValidationError(
+            diagnostics=[
+                Diagnostic(
+                    file=rel,
+                    line=mark.line + 1 if mark else None,
+                    column=mark.column + 1 if mark else None,
+                    message=getattr(exc, "problem", None) or str(exc),
+                    source="ruamel.yaml",
+                )
+            ]
+        ) from exc
+    return data
 
 
 def validate_data(data: Any, file: Path, validator: Validator) -> Sequence[Diagnostic]:
@@ -44,11 +62,6 @@ def validate_data(data: Any, file: Path, validator: Validator) -> Sequence[Diagn
         _jsonschema_error_to_diagnostic(err, data, file)
         for err in validator.iter_errors(data)
     ]
-
-
-def build_schema_validator() -> Validator:
-    """Build a Validator for user schema files (against built-in SchemaSchema)."""
-    return jsonschema.Draft202012Validator(_VALIDATOR_SCHEMA)
 
 
 def build_content_validator(schemas: Mapping[str, Any]) -> Validator:

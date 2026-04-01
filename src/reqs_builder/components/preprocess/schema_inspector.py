@@ -1,26 +1,37 @@
 """SchemaInspector — validate user schema files against SchemaSchema.
 
-Reads all YAML files from schema_dir, parses them with ruamel.yaml
-(preserving source positions for line-accurate diagnostics), and
-validates each against the built-in SchemaSchema.
+Reads all YAML files from schema_dir, validates each against the
+built-in SchemaSchema, and reports errors via BuildReport.
 
 This stage produces no data output; its sole purpose is to gate
 downstream stages via BuildReport error propagation.
 """
 
+from collections.abc import Mapping
+from importlib import resources
 from pathlib import Path
+from typing import Any
 
-from ruamel.yaml import YAML  # type: ignore[attr-defined]
-from ruamel.yaml import YAMLError
+import jsonschema
+import yaml
+from jsonschema.protocols import Validator
 
-from reqs_builder.components.preprocess.validator import (
-    build_schema_validator,
-    validate_data,
-)
+from reqs_builder.components.preprocess.validator import parse_yaml, validate_data
 from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 
-_ruamel = YAML()
+_SCHEMA_SCHEMA_PATH = (
+    resources.files("reqs_builder.resources") / "schemas" / "schema-schema.yaml"
+)
+
+_SCHEMA_SCHEMA: dict[str, Any] = yaml.safe_load(
+    _SCHEMA_SCHEMA_PATH.read_text(encoding="utf-8")
+)
+
+
+def build_schema_validator() -> Validator:
+    """Build a Validator for user schema files (against built-in SchemaSchema)."""
+    return jsonschema.Draft202012Validator(_SCHEMA_SCHEMA)
 
 
 @Component(out_dir="out_dir", input_dirs=["schema_dir"])
@@ -33,29 +44,10 @@ def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
             continue
         rel = src_file.relative_to(schema_dir)
         try:
-            data = _parse_yaml(src_file, rel)
+            data: Mapping[str, object] = parse_yaml(src_file, rel)
         except FileValidationError as exc:
             all_diagnostics.extend(exc.diagnostics)
             continue
         all_diagnostics.extend(validate_data(data, rel, validator))
     if all_diagnostics:
         raise FileValidationError(diagnostics=all_diagnostics)
-
-
-def _parse_yaml(src: Path, rel: Path) -> object:
-    """Parse a YAML file with ruamel.yaml, preserving source positions."""
-    try:
-        return _ruamel.load(src.read_text(encoding="utf-8"))  # type: ignore[no-untyped-call]
-    except YAMLError as exc:
-        mark = getattr(exc, "problem_mark", None)
-        raise FileValidationError(
-            diagnostics=[
-                Diagnostic(
-                    file=rel,
-                    line=mark.line + 1 if mark else None,
-                    column=mark.column + 1 if mark else None,
-                    message=getattr(exc, "problem", None) or str(exc),
-                    source="ruamel.yaml",
-                )
-            ]
-        ) from exc

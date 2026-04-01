@@ -1,4 +1,4 @@
-"""Tests for validator — validate_data and validator builders."""
+"""Tests for validator — validate_data, parse_yaml, and content validator."""
 
 from pathlib import Path
 from typing import Any
@@ -9,9 +9,10 @@ from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
 from reqs_builder.components.preprocess.validator import (
     build_content_validator,
-    build_schema_validator,
+    parse_yaml,
     validate_data,
 )
+from reqs_builder.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
 _ruamel = YAML()
@@ -23,244 +24,65 @@ def _ruamel_load(src: str) -> Any:
 
 # ── validate_data ───────────────────────────────────────────────────
 
+# Use a simple schema for testing validate_data independently.
+_SIMPLE_VALIDATOR = build_content_validator(
+    yaml.safe_load("""
+        name: { type: string }
+        age: { type: integer }
+    """)
+)
+
 
 class TestValidateData:
     """Core validation: Diagnostic conversion, position resolution."""
 
-    _schema_validator = build_schema_validator()
-
     def test_ruamel_data_has_position(self) -> None:
-        data = _ruamel_load("schemas:\n  users:\n    type: 42\n")
-        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        data = _ruamel_load("name: 42\n")
+        errors = validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR)
         assert len(errors) >= 1
-        assert errors[0].line == 3
+        assert errors[0].line == 1
         assert errors[0].column is not None
         assert errors[0].file == _DUMMY_FILE
         assert errors[0].source == "jsonschema"
 
     def test_plain_dict_has_no_position(self) -> None:
-        data = {"schemas": {"users": {"type": 42}}}
-        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        data = {"name": 42}
+        errors = validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR)
         assert len(errors) >= 1
         assert errors[0].line is None
         assert errors[0].column is None
 
     def test_valid_data_returns_empty(self) -> None:
-        data = _ruamel_load("schemas:\n  users:\n    type: object\n")
-        assert validate_data(data, _DUMMY_FILE, self._schema_validator) == []
+        data = _ruamel_load("name: Alice\nage: 30\n")
+        assert validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR) == []
 
     def test_non_mapping(self) -> None:
         data = [{"just": "a list"}]
-        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        errors = validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR)
         assert len(errors) == 1
         assert errors[0].source == "jsonschema"
 
 
-# ── build_schema_validator ──────────────────────────────────────────
-
-_VALID_SCHEMA_CASES = [
-    pytest.param(
-        """
-        schemas:
-          users:
-            type: object
-            additionalProperties:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-              required: [name]
-        """,
-        id="dict pattern",
-    ),
-    pytest.param(
-        """
-        schemas:
-          config:
-            type: object
-            properties:
-              version: { type: string }
-              debug: { type: boolean }
-            required: [version]
-        """,
-        id="fixed structure",
-    ),
-    pytest.param(
-        """
-        schemas:
-          items:
-            type: array
-            items:
-              type: object
-              properties:
-                id: { type: string }
-        """,
-        id="array schema",
-    ),
-    pytest.param(
-        """
-        references:
-          - from: orders.customer
-            to: users
-        """,
-        id="references only",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            type: object
-            additionalProperties:
-              type: object
-              properties:
-                name: { type: string }
-        references:
-          - from: orders.customer
-            to: users
-        """,
-        id="schemas and references",
-    ),
-    pytest.param(
-        """
-        schemas:
-          products:
-            type: object
-            additionalProperties:
-              type: object
-              properties:
-                name: { type: string, minLength: 1 }
-                price: { type: number, minimum: 0, exclusiveMinimum: 0 }
-                status: { type: string, enum: [active, archived] }
-                tags:
-                  type: array
-                  items: { type: string }
-                  minItems: 1
-                  uniqueItems: true
-              required: [name, price]
-        """,
-        id="validation keywords passthrough",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            type: object
-            title: User schema
-            description: Defines user entities
-            additionalProperties:
-              type: object
-              properties:
-                name:
-                  type: string
-                  title: User name
-                  default: anonymous
-                  examples: [Alice, Bob]
-        """,
-        id="metadata keywords",
-    ),
-]
-
-_REJECTED_SCHEMA_CASES = [
-    pytest.param(
-        """
-        schemas:
-          users:
-            $ref: "#/$defs/user"
-        """,
-        id="$ref rejected",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            $defs:
-              name: { type: string }
-            type: object
-        """,
-        id="$defs rejected",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            allOf:
-              - type: object
-        """,
-        id="allOf rejected",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            anyOf:
-              - type: string
-              - type: number
-        """,
-        id="anyOf rejected",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            if: { type: string }
-            then: { minLength: 1 }
-        """,
-        id="if/then/else rejected",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            type: object
-            patternProperties:
-              "^S_": { type: string }
-        """,
-        id="patternProperties rejected",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            type: object
-            properties:
-              version: { type: string }
-            additionalProperties:
-              type: object
-              properties:
-                name: { type: string }
-        """,
-        id="properties + additionalProperties mutual exclusion",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users: { type: object }
-        unknown_key: something
-        """,
-        id="unknown top-level key rejected",
-    ),
-    pytest.param(
-        """
-        references:
-          - from: orders.customer
-        """,
-        id="references missing required field",
-    ),
-]
+# ── parse_yaml ─────────────────────────────────────────────────────
 
 
-class TestBuildSchemaValidator:
-    _validator = build_schema_validator()
+class TestParseYaml:
+    """parse_yaml: YAML parsing with source position preservation."""
 
-    @pytest.mark.parametrize("src", _VALID_SCHEMA_CASES)
-    def test_accepted(self, src: str) -> None:
-        data = yaml.safe_load(src)
-        assert list(self._validator.iter_errors(data)) == []
+    def test_valid_yaml(self, tmp_path: Path) -> None:
+        f = tmp_path / "ok.yaml"
+        f.write_text("key: value\n")
+        result = parse_yaml(f, Path("ok.yaml"))
+        assert result["key"] == "value"
 
-    @pytest.mark.parametrize("src", _REJECTED_SCHEMA_CASES)
-    def test_rejected(self, src: str) -> None:
-        data = yaml.safe_load(src)
-        assert len(list(self._validator.iter_errors(data))) > 0
+    def test_broken_yaml_raises_diagnostic(self, tmp_path: Path) -> None:
+        f = tmp_path / "broken.yaml"
+        f.write_text("a: [unterminated\n")
+        with pytest.raises(FileValidationError) as exc_info:
+            parse_yaml(f, Path("broken.yaml"))
+        diag = exc_info.value.diagnostics[0]
+        assert diag.file == Path("broken.yaml")
+        assert diag.source == "ruamel.yaml"
 
 
 # ── build_content_validator ─────────────────────────────────────────
