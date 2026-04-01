@@ -26,7 +26,7 @@ from reqs_builder.components.shared.json_data_model import load_yamls
 _ruamel = YAML()
 
 
-def parse_yaml(src: Path, rel: Path) -> Mapping[str, object]:
+def parse_yaml(src: Path) -> Mapping[str, object]:
     """Parse a YAML file with ruamel.yaml, preserving source positions.
 
     On parse error, raises FileValidationError with a Diagnostic
@@ -41,7 +41,7 @@ def parse_yaml(src: Path, rel: Path) -> Mapping[str, object]:
         raise FileValidationError(
             diagnostics=[
                 Diagnostic(
-                    file=rel,
+                    file=src,
                     line=mark.line + 1 if mark else None,
                     column=mark.column + 1 if mark else None,
                     message=getattr(exc, "problem", None) or str(exc),

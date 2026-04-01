@@ -32,12 +32,11 @@ def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
     for src_file in sorted(schema_dir.rglob("*.yaml")):
         if not src_file.is_file():
             continue
-        rel = src_file.relative_to(schema_dir)
         try:
-            data: Mapping[str, object] = parse_yaml(src_file, rel)
+            data: Mapping[str, object] = parse_yaml(src_file)
         except FileValidationError as exc:
             all_diagnostics.extend(exc.diagnostics)
             continue
-        all_diagnostics.extend(validate_data(data, rel, validator))
+        all_diagnostics.extend(validate_data(data, src_file, validator))
     if all_diagnostics:
         raise FileValidationError(diagnostics=all_diagnostics)

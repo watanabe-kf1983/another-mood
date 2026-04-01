@@ -72,16 +72,16 @@ class TestParseYaml:
     def test_valid_yaml(self, tmp_path: Path) -> None:
         f = tmp_path / "ok.yaml"
         f.write_text("key: value\n")
-        result = parse_yaml(f, Path("ok.yaml"))
+        result = parse_yaml(f)
         assert result["key"] == "value"
 
     def test_broken_yaml_raises_diagnostic(self, tmp_path: Path) -> None:
         f = tmp_path / "broken.yaml"
         f.write_text("a: [unterminated\n")
         with pytest.raises(FileValidationError) as exc_info:
-            parse_yaml(f, Path("broken.yaml"))
+            parse_yaml(f)
         diag = exc_info.value.diagnostics[0]
-        assert diag.file == Path("broken.yaml")
+        assert diag.file == f
         assert diag.source == "ruamel.yaml"
 
 

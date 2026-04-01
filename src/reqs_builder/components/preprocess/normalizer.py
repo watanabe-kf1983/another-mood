@@ -63,4 +63,4 @@ def _parse(src: Path, rel: Path) -> Mapping[str, object]:
         source = src.read_text(encoding="utf-8")
         record = parse_markdown(source, str(rel.with_suffix("")))
         return {"prose": [record.to_data()]}
-    return parse_yaml(src, rel)
+    return parse_yaml(src)
