@@ -78,9 +78,7 @@ def build_content_validator(schemas: Mapping[str, Any]) -> Validator:
     The returned Validator checks that content file top-level keys conform
     to their corresponding schema.
     """
-    return jsonschema.Draft202012Validator(
-        {"type": "object", "properties": dict(schemas)}
-    )
+    return jsonschema.Draft202012Validator({"type": "object", "properties": schemas})
 
 
 def _jsonschema_error_to_diagnostic(
