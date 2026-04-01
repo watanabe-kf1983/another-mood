@@ -6,9 +6,10 @@ import pytest
 import yaml
 
 from reqs_builder.components.preprocess.schema_inspector import (
-    build_schema_validator,
+    _SCHEMA_SCHEMA_DIR,
     inspect_schema,
 )
+from reqs_builder.components.preprocess.validator import build_validator
 
 _DUMMY_FILE = Path("test.yaml")
 
@@ -207,7 +208,7 @@ _REJECTED_SCHEMA_CASES = [
 
 
 class TestBuildSchemaValidator:
-    _validator = build_schema_validator()
+    _validator = build_validator(_SCHEMA_SCHEMA_DIR)
 
     @pytest.mark.parametrize("src", _VALID_SCHEMA_CASES)
     def test_accepted(self, src: str) -> None:

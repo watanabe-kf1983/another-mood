@@ -21,6 +21,7 @@ from ruamel.yaml import YAMLError
 
 from reqs_builder.components.preprocess.position_resolver import resolve_position
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
+from reqs_builder.components.shared.json_data_model import load_yamls
 
 _ruamel = YAML()
 
@@ -62,6 +63,12 @@ def validate_data(data: Any, file: Path, validator: Validator) -> Sequence[Diagn
         _jsonschema_error_to_diagnostic(err, data, file)
         for err in validator.iter_errors(data)
     ]
+
+
+def build_validator(*directories: Path) -> Validator:
+    """Build a Validator from YAML schema files in the given directories."""
+    schema = load_yamls(*directories)
+    return jsonschema.Draft202012Validator(schema)
 
 
 def build_content_validator(schemas: Mapping[str, Any]) -> Validator:
