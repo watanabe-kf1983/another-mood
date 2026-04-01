@@ -4,9 +4,7 @@ import traceback
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from functools import reduce
 from pathlib import Path
-from typing import Any
 
 from reqs_builder.components.shared import yaml_dumper
 from reqs_builder.components.shared.json_data_model import deep_merge, load_yamls
@@ -70,11 +68,7 @@ class BuildReport:
     @staticmethod
     def collect(*directories: Path) -> "BuildReport":
         """Collect __build_report entries from input directories."""
-        merged: dict[str, Any] = reduce(
-            deep_merge,
-            (load_yamls(d) for d in directories if d.exists()),
-            {},
-        )
+        merged = load_yamls(*directories)
         return BuildReport(merged.get(_REPORT_KEY))
 
     def has_errors(self) -> bool:

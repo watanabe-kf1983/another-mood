@@ -1,59 +1,17 @@
-"""Tests for validator — validate_data and validator builders."""
+"""Tests for SchemaInspector — SchemaSchema validation and check_schema."""
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
-from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from reqs_builder.components.normalizer.validator import (
-    build_content_validator,
+from reqs_builder.components.preprocess.schema_inspector import (
     build_schema_validator,
-    validate_data,
+    check_schema,
 )
+from reqs_builder.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
-_ruamel = YAML()
-
-
-def _ruamel_load(src: str) -> Any:
-    return _ruamel.load(src)  # type: ignore[no-untyped-call]
-
-
-# ── validate_data ───────────────────────────────────────────────────
-
-
-class TestValidateData:
-    """Core validation: Diagnostic conversion, position resolution."""
-
-    _schema_validator = build_schema_validator()
-
-    def test_ruamel_data_has_position(self) -> None:
-        data = _ruamel_load("schemas:\n  users:\n    type: 42\n")
-        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
-        assert len(errors) >= 1
-        assert errors[0].line == 3
-        assert errors[0].column is not None
-        assert errors[0].file == _DUMMY_FILE
-        assert errors[0].source == "jsonschema"
-
-    def test_plain_dict_has_no_position(self) -> None:
-        data = {"schemas": {"users": {"type": 42}}}
-        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
-        assert len(errors) >= 1
-        assert errors[0].line is None
-        assert errors[0].column is None
-
-    def test_valid_data_returns_empty(self) -> None:
-        data = _ruamel_load("schemas:\n  users:\n    type: object\n")
-        assert validate_data(data, _DUMMY_FILE, self._schema_validator) == []
-
-    def test_non_mapping(self) -> None:
-        data = [{"just": "a list"}]
-        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
-        assert len(errors) == 1
-        assert errors[0].source == "jsonschema"
 
 
 # ── build_schema_validator ──────────────────────────────────────────
@@ -255,37 +213,80 @@ class TestBuildSchemaValidator:
     @pytest.mark.parametrize("src", _VALID_SCHEMA_CASES)
     def test_accepted(self, src: str) -> None:
         data = yaml.safe_load(src)
-        assert list(self._validator.iter_errors(data)) == []
+        assert self._validator.validate(data, _DUMMY_FILE) == []
 
     @pytest.mark.parametrize("src", _REJECTED_SCHEMA_CASES)
     def test_rejected(self, src: str) -> None:
         data = yaml.safe_load(src)
-        assert len(list(self._validator.iter_errors(data))) > 0
+        assert len(self._validator.validate(data, _DUMMY_FILE)) > 0
 
 
-# ── build_content_validator ─────────────────────────────────────────
+# ── check_schema ────────────────────────────────────────────────────
 
 
-class TestBuildContentValidator:
-    _validator = build_content_validator(
-        yaml.safe_load("""
-            items:
-              type: array
-              items:
-                type: object
-                properties:
-                  id: { type: string }
-                  name: { type: string }
-                required: [id, name]
-        """)
-    )
+class TestCheckSchema:
+    """check_schema: validate schema files directly."""
 
-    def test_valid(self) -> None:
-        data = yaml.safe_load("items:\n  - id: a\n    name: Alice\n")
-        assert validate_data(data, _DUMMY_FILE, self._validator) == []
+    def test_valid_schemas_pass(self, tmp_path: Path) -> None:
+        f = tmp_path / "entities.yaml"
+        f.write_text(
+            "schemas:\n"
+            "  users:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        name: { type: string }\n"
+        )
+        check_schema([f])
 
-    def test_invalid(self) -> None:
-        data = yaml.safe_load("items:\n  - id: a\n")  # missing 'name'
-        errors = validate_data(data, _DUMMY_FILE, self._validator)
-        assert len(errors) >= 1
-        assert "name" in errors[0].message
+    def test_invalid_schema_raises(self, tmp_path: Path) -> None:
+        f = tmp_path / "bad.yaml"
+        f.write_text(
+            "schemas:\n"
+            "  items:\n"
+            "    type: object\n"
+            "    properties:\n"
+            "      name: { type: string }\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            check_schema([f])
+        assert len(exc_info.value.diagnostics) >= 1
+        assert exc_info.value.diagnostics[0].file == f
+
+    def test_collects_errors_across_files(self, tmp_path: Path) -> None:
+        good = tmp_path / "good.yaml"
+        good.write_text(
+            "schemas:\n"
+            "  users:\n"
+            "    type: array\n"
+            "    items:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        name: { type: string }\n"
+        )
+        bad = tmp_path / "bad.yaml"
+        bad.write_text(
+            "schemas:\n"
+            "  items:\n"
+            "    type: object\n"
+            "    properties:\n"
+            "      name: { type: string }\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            check_schema([good, bad])
+        files_with_errors = {d.file for d in exc_info.value.diagnostics}
+        assert bad in files_with_errors
+        assert good not in files_with_errors
+
+    def test_broken_yaml_collected_as_diagnostic(self, tmp_path: Path) -> None:
+        f = tmp_path / "broken.yaml"
+        f.write_text("a: [unterminated\n")
+        with pytest.raises(FileValidationError) as exc_info:
+            check_schema([f])
+        assert exc_info.value.diagnostics[0].file == f
+        assert exc_info.value.diagnostics[0].source == "ruamel.yaml"

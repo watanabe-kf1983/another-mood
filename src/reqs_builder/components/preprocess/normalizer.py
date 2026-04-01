@@ -10,22 +10,20 @@ for line-number-accurate validation errors.
 from collections.abc import Mapping
 from pathlib import Path
 
-from jsonschema.protocols import Validator
-from ruamel.yaml import YAML  # type: ignore[attr-defined]
-from ruamel.yaml import YAMLError
-
-from reqs_builder.components.normalizer.prose import parse_markdown
-from reqs_builder.components.normalizer.validator import validate_data
+from reqs_builder.components.preprocess.prose import parse_markdown
+from reqs_builder.components.preprocess.validator import Validator, parse_yaml
 from reqs_builder.components.shared import yaml_dumper
 from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
 
-_ruamel = YAML()
 
-
-@Component(out_dir="out_dir", input_dirs=["src_dir"])
+@Component(out_dir="out_dir", input_dirs=["src_dir", "upstream_dir"])
 def normalize(
-    src_dir: Path, *, out_dir: Path, validator: Validator | None = None
+    src_dir: Path,
+    *,
+    out_dir: Path,
+    upstream_dir: Path | None = None,
+    validator: Validator | None = None,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
     all_diagnostics: list[Diagnostic] = []
@@ -50,7 +48,7 @@ def _process_file(
 
     # Validate
     if validator is not None:
-        errors = validate_data(data, rel, validator)
+        errors = validator.validate(data, rel)
         if errors:
             raise FileValidationError(diagnostics=list(errors))
 
@@ -63,33 +61,8 @@ def _process_file(
 
 def _parse(src: Path, rel: Path) -> Mapping[str, object]:
     """Parse a source file into data."""
-    source = src.read_text(encoding="utf-8")
     if src.suffix == ".md":
-        return _parse_markdown(source, rel)
-    return _parse_yaml(source, rel)
-
-
-def _parse_yaml(source: str, rel: Path) -> Mapping[str, object]:
-    """Parse YAML with ruamel.yaml, preserving source positions."""
-    try:
-        # ruamel.yaml returns CommentedMap (a Mapping) with .lc metadata
-        data: Mapping[str, object] = _ruamel.load(source)  # type: ignore[no-untyped-call]
-    except YAMLError as exc:
-        mark = getattr(exc, "problem_mark", None)
-        raise FileValidationError(
-            diagnostics=[
-                Diagnostic(
-                    file=rel,
-                    line=mark.line + 1 if mark else None,
-                    column=mark.column + 1 if mark else None,
-                    message=getattr(exc, "problem", None) or str(exc),
-                    source="ruamel.yaml",
-                )
-            ]
-        ) from exc
-    return data
-
-
-def _parse_markdown(source: str, rel: Path) -> Mapping[str, object]:
-    record = parse_markdown(source, str(rel.with_suffix("")))
-    return {"prose": [record.to_data()]}
+        source = src.read_text(encoding="utf-8")
+        record = parse_markdown(source, str(rel.with_suffix("")))
+        return {"prose": [record.to_data()]}
+    return parse_yaml(src)

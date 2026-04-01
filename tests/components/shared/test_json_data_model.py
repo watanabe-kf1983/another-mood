@@ -106,3 +106,39 @@ class TestLoadYamls:
 
         result = load_yamls(d)
         assert result == {"prose": [{"id": "sub/nested"}, {"id": "top"}]}
+
+    def test_multiple_directories(self, tmp_path: Path) -> None:
+        d1 = tmp_path / "contents"
+        d2 = tmp_path / "queries"
+        d1.mkdir()
+        d2.mkdir()
+        _write_yaml(d1 / "entities.yaml", {"entities": [{"id": "user"}]})
+        _write_yaml(d2 / "query.yaml", {"queries": [{"name": "q1"}]})
+
+        result = load_yamls(d1, d2)
+        assert result == {
+            "entities": [{"id": "user"}],
+            "queries": [{"name": "q1"}],
+        }
+
+    def test_multiple_directories_deep_merged(self, tmp_path: Path) -> None:
+        d1 = tmp_path / "a"
+        d2 = tmp_path / "b"
+        d1.mkdir()
+        d2.mkdir()
+        _write_yaml(d1 / "data.yaml", {"items": [{"id": "x"}]})
+        _write_yaml(d2 / "data.yaml", {"items": [{"id": "y"}]})
+
+        result = load_yamls(d1, d2)
+        assert result == {"items": [{"id": "x"}, {"id": "y"}]}
+
+    def test_nonexistent_directory_skipped(self, tmp_path: Path) -> None:
+        d1 = tmp_path / "exists"
+        d2 = tmp_path / "missing"
+        d1.mkdir()
+        _write_yaml(d1 / "data.yaml", {"key": "value"})
+
+        assert load_yamls(d1, d2) == {"key": "value"}
+
+    def test_no_directories_returns_empty(self) -> None:
+        assert load_yamls() == {}

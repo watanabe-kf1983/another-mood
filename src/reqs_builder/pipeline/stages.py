@@ -1,9 +1,18 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
-from reqs_builder.components import compose, generate, normalize
+from reqs_builder.components import compose, generate, inspect_schema, normalize
 from reqs_builder.config import ProjectConfig
 from reqs_builder.pipeline.base import Pipeline, Stage, Task
 from reqs_builder.pipeline.render import RenderStage
+
+
+def inspect_schema_stage(config: ProjectConfig) -> Task:
+    """Validate schema files against SchemaSchema."""
+    call = inspect_schema.on_stage("inspect_schema").bind(
+        schema_dir=config.schema_dir,
+        out_dir=config.data_catalog_dir,
+    )
+    return Stage(run_fn=call, watch_paths=call.input_dirs, name="Inspect Schema")
 
 
 def normalize_contents_stage(config: ProjectConfig) -> Task:
@@ -11,8 +20,13 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     call = normalize.on_stage("normalize_contents").bind(
         src_dir=config.contents_dir,
         out_dir=config.normalized_contents_dir,
+        upstream_dir=config.data_catalog_dir,
     )
-    return Stage(run_fn=call, watch_paths=call.input_dirs, name="Normalize")
+    return Stage(
+        run_fn=call,
+        watch_paths=[config.contents_dir, config.data_catalog_dir],
+        name="Normalize",
+    )
 
 
 def compose_stage(config: ProjectConfig) -> Task:
@@ -46,8 +60,9 @@ def render_stage(config: ProjectConfig) -> Task:
 
 
 def pipeline(config: ProjectConfig) -> Pipeline:
-    """Create the full pipeline: Normalize → Compose → Generate → Render."""
+    """Create the full pipeline: [Inspect Schema →] Normalize → Compose → Generate → Render."""
     stages: list[Task] = [
+        inspect_schema_stage(config),
         normalize_contents_stage(config),
         compose_stage(config),
         generator_stage(config),

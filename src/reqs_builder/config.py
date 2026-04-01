@@ -21,11 +21,13 @@ class ProjectConfig(BaseSettings):
 
     # Input (user-edited)
     definition_dir: Path = Field(default=Path(""))
+    schema_dir: Path = Field(default=Path(""))
     contents_dir: Path = Field(default=Path(""))
     queries_dir: Path = Field(default=Path(""))
     templates_dir: Path = Field(default=Path(""))
 
     # Output (generated)
+    data_catalog_dir: Path = Field(default=Path(""))
     normalized_contents_dir: Path = Field(default=Path(""))
     views_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
@@ -42,12 +44,16 @@ class ProjectConfig(BaseSettings):
         rb = Path(".reqs-builder") / pd
         if not values.get("definition_dir"):
             values["definition_dir"] = pd / "definition"
+        if not values.get("schema_dir"):
+            values["schema_dir"] = pd / "definition" / "schema"
         if not values.get("contents_dir"):
             values["contents_dir"] = pd / "contents"
         if not values.get("queries_dir"):
             values["queries_dir"] = pd / "definition" / "queries"
         if not values.get("templates_dir"):
             values["templates_dir"] = pd / "definition" / "templates"
+        if not values.get("data_catalog_dir"):
+            values["data_catalog_dir"] = rb / "tmp" / "data-catalog"
         if not values.get("normalized_contents_dir"):
             values["normalized_contents_dir"] = rb / "tmp" / "normalized" / "contents"
         if not values.get("views_dir"):

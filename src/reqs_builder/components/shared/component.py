@@ -57,7 +57,11 @@ class ComponentCall:
 
     @property
     def input_dirs(self) -> Sequence[Path]:
-        return [cast(Path, self.kwargs[k]) for k in self.input_dir_keys]
+        return [
+            cast(Path, v)
+            for k in self.input_dir_keys
+            if (v := self.kwargs.get(k)) is not None
+        ]
 
     def __call__(self, *args: object, **kwargs: object) -> None:
         if args or kwargs:
