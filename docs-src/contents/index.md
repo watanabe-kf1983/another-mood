@@ -24,7 +24,7 @@
 - [architecture.md](internal/architecture.md) — アーキテクチャ概要
 - [json-data-model.md](internal/json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
 - [pipeline/](internal/pipeline/) — パイプライン構成、プロセス連携、AtomicDirWriter
-- [components/](internal/components/) — Normalizer、Composer、Generator、Renderer
+- [components/](internal/components/) — SchemaInspector、Normalizer、Composer、Generator、Renderer
 
 ## [dev/](dev/)
 

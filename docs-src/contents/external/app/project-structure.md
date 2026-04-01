@@ -19,8 +19,8 @@ my-project/                    # CWD = <projectDir>（reqs build .）
   contents/                    # contentsDir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
   .reqs-builder/               # gitignore（生成物・中間生成物）
     tmp/
-      normalized/              # Normalizer 出力（3ステージ分）
-        schema/                # normalizedSchemaDir: schema の Normalizer 出力
+      data-catalog/            # dataCatalogDir: SchemaInspector 出力
+      normalized/              # Normalizer 出力（2ステージ分）
         contents/              # normalizedContentsDir: contents の Normalizer 出力
         queries/               # normalizedQueriesDir: queries の Normalizer 出力
       views/                   # viewsDir: Composer 出力
