@@ -21,15 +21,14 @@ def error_propagation(
     """
     report = BuildReport.collect(*input_dirs)
     if report.has_errors():
-        report.write(out_dir)
         yield False
-        return
-    try:
-        yield True
-    except Exception as exc:
-        traceback.print_exc(file=sys.stderr)
-        report.add_exception(exc)
-        report.add_stage_failure(stage)
     else:
-        report.add_stage_result(stage)
+        try:
+            yield True
+        except Exception as exc:
+            traceback.print_exc(file=sys.stderr)
+            report.add_exception(exc)
+            report.add_stage_failure(stage)
+        else:
+            report.add_stage_success(stage)
     report.write(out_dir)

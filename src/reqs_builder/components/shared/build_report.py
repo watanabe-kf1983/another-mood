@@ -86,7 +86,7 @@ class BuildReport:
     def add_exception(self, exc: Exception) -> None:
         self._data = deep_merge(self._data, dict(_error_data(exc)))
 
-    def add_stage_result(self, stage: str) -> None:
+    def add_stage_success(self, stage: str) -> None:
         if stage:
             self._data.update(StageResult.ok(stage).to_data())
 
