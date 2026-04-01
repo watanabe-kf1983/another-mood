@@ -10,10 +10,8 @@ for line-number-accurate validation errors.
 from collections.abc import Mapping
 from pathlib import Path
 
-from jsonschema.protocols import Validator
-
 from reqs_builder.components.preprocess.prose import parse_markdown
-from reqs_builder.components.preprocess.validator import parse_yaml, validate_data
+from reqs_builder.components.preprocess.validator import Validator, parse_yaml
 from reqs_builder.components.shared import yaml_dumper
 from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
@@ -46,7 +44,7 @@ def _process_file(
 
     # Validate
     if validator is not None:
-        errors = validate_data(data, rel, validator)
+        errors = validator.validate(data, rel)
         if errors:
             raise FileValidationError(diagnostics=list(errors))
 

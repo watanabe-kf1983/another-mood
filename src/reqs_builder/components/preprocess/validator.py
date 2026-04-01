@@ -4,10 +4,8 @@ Provides shared building blocks used by both SchemaInspector and Normalizer:
 
 * ``parse_yaml`` — parse YAML with ruamel.yaml, preserving source positions
   for line-accurate diagnostics.
-* ``validate_data`` — validate parsed data against any jsonschema Validator,
-  returning Diagnostic objects.
-* ``build_content_validator`` — build a Validator for content files against
-  user-defined schemas.
+* ``Validator`` — load JSON Schema from directories and validate data,
+  returning Diagnostic objects with line/column positions.
 """
 
 from collections.abc import Mapping, Sequence
@@ -15,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
-from jsonschema.protocols import Validator
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 
@@ -52,36 +49,32 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
     return data
 
 
-def validate_data(data: Any, file: Path, validator: Validator) -> Sequence[Diagnostic]:
-    """Validate parsed data and return diagnostics.
+class Validator:
+    """JSON Schema validator built from YAML schema files.
 
-    When *data* is a ruamel.yaml object (CommentedMap/CommentedSeq),
-    diagnostics include line/column positions.  For plain dicts/lists,
-    line and column are None.
+    Loads and merges YAML files from the given directories to build
+    a jsonschema validator. Use ``validate`` to check data and get
+    Diagnostic objects with line/column positions.
     """
-    return [
-        _jsonschema_error_to_diagnostic(err, data, file)
-        for err in validator.iter_errors(data)
-    ]
+
+    def __init__(self, *directories: Path) -> None:
+        schema = load_yamls(*directories)
+        self._validator = jsonschema.Draft202012Validator(schema)
+
+    def validate(self, data: Any, file: Path) -> Sequence[Diagnostic]:
+        """Validate parsed data and return diagnostics.
+
+        When *data* is a ruamel.yaml object (CommentedMap/CommentedSeq),
+        diagnostics include line/column positions.  For plain dicts/lists,
+        line and column are None.
+        """
+        return [
+            _to_diagnostic(err, data, file)
+            for err in self._validator.iter_errors(data)  # type: ignore[arg-type]
+        ]
 
 
-def build_validator(*directories: Path) -> Validator:
-    """Build a Validator from YAML schema files in the given directories."""
-    schema = load_yamls(*directories)
-    return jsonschema.Draft202012Validator(schema)
-
-
-def build_content_validator(schemas: Mapping[str, Any]) -> Validator:
-    """Build a Validator for content files from user-defined schemas.
-
-    Each key in *schemas* maps a schema name to its JSON Schema definition.
-    The returned Validator checks that content file top-level keys conform
-    to their corresponding schema.
-    """
-    return jsonschema.Draft202012Validator({"type": "object", "properties": schemas})
-
-
-def _jsonschema_error_to_diagnostic(
+def _to_diagnostic(
     err: jsonschema.ValidationError, data: object, file: Path
 ) -> Diagnostic:
     pos = resolve_position(err.absolute_path, data)

@@ -1,4 +1,4 @@
-"""Tests for validator — validate_data, parse_yaml, and content validator."""
+"""Tests for validator — Validator class, parse_yaml."""
 
 from pathlib import Path
 from typing import Any
@@ -7,11 +7,7 @@ import pytest
 import yaml
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from reqs_builder.components.preprocess.validator import (
-    build_content_validator,
-    parse_yaml,
-    validate_data,
-)
+from reqs_builder.components.preprocess.validator import Validator, parse_yaml
 from reqs_builder.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
@@ -22,23 +18,32 @@ def _ruamel_load(src: str) -> Any:
     return _ruamel.load(src)  # type: ignore[no-untyped-call]
 
 
-# ── validate_data ───────────────────────────────────────────────────
-
-# Use a simple schema for testing validate_data independently.
-_SIMPLE_VALIDATOR = build_content_validator(
-    yaml.safe_load("""
-        name: { type: string }
-        age: { type: integer }
-    """)
-)
+# ── Validator.validate ──────────────────────────────────────────────
 
 
-class TestValidateData:
-    """Core validation: Diagnostic conversion, position resolution."""
+class TestValidate:
+    """Validator.validate: Diagnostic conversion, position resolution."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, tmp_path: Path) -> None:
+        schema_dir = tmp_path / "schema"
+        schema_dir.mkdir()
+        (schema_dir / "schema.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "age": {"type": "integer"},
+                    },
+                }
+            )
+        )
+        self.validator = Validator(schema_dir)
 
     def test_ruamel_data_has_position(self) -> None:
         data = _ruamel_load("name: 42\n")
-        errors = validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR)
+        errors = self.validator.validate(data, _DUMMY_FILE)
         assert len(errors) >= 1
         assert errors[0].line == 1
         assert errors[0].column is not None
@@ -47,18 +52,18 @@ class TestValidateData:
 
     def test_plain_dict_has_no_position(self) -> None:
         data = {"name": 42}
-        errors = validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR)
+        errors = self.validator.validate(data, _DUMMY_FILE)
         assert len(errors) >= 1
         assert errors[0].line is None
         assert errors[0].column is None
 
     def test_valid_data_returns_empty(self) -> None:
         data = _ruamel_load("name: Alice\nage: 30\n")
-        assert validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR) == []
+        assert self.validator.validate(data, _DUMMY_FILE) == []
 
     def test_non_mapping(self) -> None:
         data = [{"just": "a list"}]
-        errors = validate_data(data, _DUMMY_FILE, _SIMPLE_VALIDATOR)
+        errors = self.validator.validate(data, _DUMMY_FILE)
         assert len(errors) == 1
         assert errors[0].source == "jsonschema"
 
@@ -83,31 +88,3 @@ class TestParseYaml:
         diag = exc_info.value.diagnostics[0]
         assert diag.file == f
         assert diag.source == "ruamel.yaml"
-
-
-# ── build_content_validator ─────────────────────────────────────────
-
-
-class TestBuildContentValidator:
-    _validator = build_content_validator(
-        yaml.safe_load("""
-            items:
-              type: array
-              items:
-                type: object
-                properties:
-                  id: { type: string }
-                  name: { type: string }
-                required: [id, name]
-        """)
-    )
-
-    def test_valid(self) -> None:
-        data = yaml.safe_load("items:\n  - id: a\n    name: Alice\n")
-        assert validate_data(data, _DUMMY_FILE, self._validator) == []
-
-    def test_invalid(self) -> None:
-        data = yaml.safe_load("items:\n  - id: a\n")  # missing 'name'
-        errors = validate_data(data, _DUMMY_FILE, self._validator)
-        assert len(errors) >= 1
-        assert "name" in errors[0].message
