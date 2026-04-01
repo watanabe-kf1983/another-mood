@@ -4,11 +4,11 @@ from pathlib import Path
 
 import yaml
 
-from reqs_builder.components.normalizer.normalizer import normalize, normalize_markdown
+from reqs_builder.components.normalizer.normalizer import normalize
 
 
 class TestNormalize:
-    """normalize dispatches md vs non-md correctly."""
+    """normalize: parse → validate → write for all file types."""
 
     def test_dispatches_md_and_yaml(self, tmp_path: Path) -> None:
         src = tmp_path / "contents"
@@ -19,33 +19,33 @@ class TestNormalize:
         out = tmp_path / "normalized"
         normalize(src_dir=src, out_dir=out)
 
-        # YAML copied as-is
-        assert (out / "data.yaml").read_text() == "key: value\n"
+        # YAML written as .yaml
+        data = yaml.safe_load((out / "data.yaml").read_text())
+        assert data == {"key": "value"}
         # Markdown converted to .yaml, not copied
         assert (out / "notes.yaml").exists()
         assert not (out / "notes.md").exists()
 
+    def test_markdown_prose_output(self, tmp_path: Path) -> None:
+        src = tmp_path / "contents"
+        src.mkdir()
+        (src / "guide.md").write_text("# Guide\n\nSteps.\n")
 
-class TestNormalizeMarkdown:
-    def test_writes_prose_yaml(self, tmp_path: Path) -> None:
-        src = tmp_path / "guide.md"
-        src.write_text("# Guide\n\nSteps.\n")
-        out_dir = tmp_path / "out"
+        out = tmp_path / "normalized"
+        normalize(src_dir=src, out_dir=out)
 
-        normalize_markdown(src, Path("guide.md"), out_dir)
-
-        data = yaml.safe_load((out_dir / "guide.yaml").read_text())
+        data = yaml.safe_load((out / "guide.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
         assert data["prose"][0]["body"]["mime_type"] == "text/markdown"
 
-    def test_subdirectory_id(self, tmp_path: Path) -> None:
-        src = tmp_path / "sub" / "doc.md"
-        src.parent.mkdir()
-        src.write_text("# Doc\n")
-        out_dir = tmp_path / "out"
+    def test_markdown_subdirectory_id(self, tmp_path: Path) -> None:
+        src = tmp_path / "contents"
+        (src / "sub").mkdir(parents=True)
+        (src / "sub" / "doc.md").write_text("# Doc\n")
 
-        normalize_markdown(src, Path("sub/doc.md"), out_dir)
+        out = tmp_path / "normalized"
+        normalize(src_dir=src, out_dir=out)
 
-        data = yaml.safe_load((out_dir / "sub" / "doc.yaml").read_text())
+        data = yaml.safe_load((out / "sub" / "doc.yaml").read_text())
         assert data["prose"][0]["id"] == "sub/doc"

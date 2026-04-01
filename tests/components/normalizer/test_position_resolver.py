@@ -76,12 +76,10 @@ class TestResolvePosition:
         with pytest.raises(KeyError):
             resolve_position(["missing"], root)
 
-    def test_plain_dict_raises(self) -> None:
-        with pytest.raises(AttributeError):
-            resolve_position([], {"plain": "dict"})
+    def test_plain_dict_returns_none(self) -> None:
+        assert resolve_position([], {"plain": "dict"}) is None
 
-    def test_unexpected_node_type_raises(self) -> None:
+    def test_unexpected_node_type_returns_none(self) -> None:
         root = _load("key: value\n")
-        with pytest.raises(TypeError):
-            # path ends with int but parent is a map
-            resolve_position(["key", 0], root)
+        # path ends with int but parent is a map
+        assert resolve_position(["key", 0], root) is None

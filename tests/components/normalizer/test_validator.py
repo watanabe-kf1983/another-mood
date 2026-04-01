@@ -1,65 +1,59 @@
-"""Tests for validator — validate_source and validator builders."""
+"""Tests for validator — validate_data and validator builders."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
+from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
 from reqs_builder.components.normalizer.validator import (
     build_content_validator,
     build_schema_validator,
-    validate_source,
+    validate_data,
 )
 
 _DUMMY_FILE = Path("test.yaml")
+_ruamel = YAML()
 
 
-# ── validate_source ─────────────────────────────────────────────────
+def _ruamel_load(src: str) -> Any:
+    return _ruamel.load(src)  # type: ignore[no-untyped-call]
 
 
-class TestValidateSource:
-    """Core validation: YAML parsing, position resolution, Diagnostic conversion."""
+# ── validate_data ───────────────────────────────────────────────────
+
+
+class TestValidateData:
+    """Core validation: Diagnostic conversion, position resolution."""
 
     _schema_validator = build_schema_validator()
 
-    def test_error_has_position(self) -> None:
-        src = (
-            "schemas:\n"
-            "  users:\n"
-            "    type: 42\n"  # line 3 — invalid type value
-        )
-        errors = validate_source(src, _DUMMY_FILE, self._schema_validator)
+    def test_ruamel_data_has_position(self) -> None:
+        data = _ruamel_load("schemas:\n  users:\n    type: 42\n")
+        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
         assert len(errors) >= 1
         assert errors[0].line == 3
         assert errors[0].column is not None
         assert errors[0].file == _DUMMY_FILE
         assert errors[0].source == "jsonschema"
 
-    def test_valid_source_returns_empty(self) -> None:
-        src = "schemas:\n  users:\n    type: object\n"
-        assert validate_source(src, _DUMMY_FILE, self._schema_validator) == []
+    def test_plain_dict_has_no_position(self) -> None:
+        data = {"schemas": {"users": {"type": 42}}}
+        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
+        assert len(errors) >= 1
+        assert errors[0].line is None
+        assert errors[0].column is None
 
-    def test_non_mapping_source(self) -> None:
-        src = "- just a list\n"
-        errors = validate_source(src, _DUMMY_FILE, self._schema_validator)
+    def test_valid_data_returns_empty(self) -> None:
+        data = _ruamel_load("schemas:\n  users:\n    type: object\n")
+        assert validate_data(data, _DUMMY_FILE, self._schema_validator) == []
+
+    def test_non_mapping(self) -> None:
+        data = [{"just": "a list"}]
+        errors = validate_data(data, _DUMMY_FILE, self._schema_validator)
         assert len(errors) == 1
-        assert errors[0].file == _DUMMY_FILE
         assert errors[0].source == "jsonschema"
-
-    def test_yaml_syntax_error(self) -> None:
-        src = "a: [\n"
-        errors = validate_source(src, _DUMMY_FILE, self._schema_validator)
-        assert len(errors) == 1
-        assert errors[0].line is not None
-        assert errors[0].source == "ruamel.yaml"
-        assert errors[0].file == _DUMMY_FILE
-
-    def test_yaml_duplicate_key(self) -> None:
-        src = "schemas:\n  a:\n    type: object\n  a:\n    type: string\n"
-        errors = validate_source(src, _DUMMY_FILE, self._schema_validator)
-        assert len(errors) == 1
-        assert errors[0].source == "ruamel.yaml"
-        assert "duplicate" in errors[0].message
 
 
 # ── build_schema_validator ──────────────────────────────────────────
@@ -283,20 +277,15 @@ class TestBuildContentValidator:
                   id: { type: string }
                   name: { type: string }
                 required: [id, name]
-            config:
-              type: object
-              properties:
-                version: { type: string }
-              required: [version]
         """)
     )
 
     def test_valid(self) -> None:
-        src = "items:\n  - id: a\n    name: Alice\n"
-        assert validate_source(src, _DUMMY_FILE, self._validator) == []
+        data = yaml.safe_load("items:\n  - id: a\n    name: Alice\n")
+        assert validate_data(data, _DUMMY_FILE, self._validator) == []
 
     def test_invalid(self) -> None:
-        src = "items:\n  - id: a\n"  # missing 'name'
-        errors = validate_source(src, _DUMMY_FILE, self._validator)
+        data = yaml.safe_load("items:\n  - id: a\n")  # missing 'name'
+        errors = validate_data(data, _DUMMY_FILE, self._validator)
         assert len(errors) >= 1
         assert "name" in errors[0].message
