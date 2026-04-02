@@ -30,6 +30,7 @@ def compose(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None:
     parsed_queries = {
         name: parse_query(query_def)
         for name, query_def in load_yamls(queries_dir).items()
+        if not name.startswith("__")
     }
 
     for name, query in parsed_queries.items():

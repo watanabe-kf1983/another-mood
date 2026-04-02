@@ -29,6 +29,7 @@ class ProjectConfig(BaseSettings):
     # Output (generated)
     data_catalog_dir: Path = Field(default=Path(""))
     normalized_contents_dir: Path = Field(default=Path(""))
+    normalized_queries_dir: Path = Field(default=Path(""))
     views_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
     render_out_dir: Path = Field(default=Path(""))
@@ -56,6 +57,8 @@ class ProjectConfig(BaseSettings):
             values["data_catalog_dir"] = rb / "tmp" / "data-catalog"
         if not values.get("normalized_contents_dir"):
             values["normalized_contents_dir"] = rb / "tmp" / "normalized" / "contents"
+        if not values.get("normalized_queries_dir"):
+            values["normalized_queries_dir"] = rb / "tmp" / "normalized" / "queries"
         if not values.get("views_dir"):
             values["views_dir"] = rb / "tmp" / "views"
         if not values.get("out_dir"):

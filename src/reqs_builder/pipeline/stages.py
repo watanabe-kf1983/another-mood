@@ -5,6 +5,7 @@ from reqs_builder.components import (
     generate,
     inspect_schema,
     normalize_contents,
+    normalize_queries,
 )
 from reqs_builder.config import ProjectConfig
 from reqs_builder.pipeline.base import Pipeline, Stage, Task
@@ -34,16 +35,25 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     )
 
 
+def normalize_queries_stage(config: ProjectConfig) -> Task:
+    """Validate and normalize query files."""
+    call = normalize_queries.on_stage("normalize_queries").bind(
+        queries_dir=config.queries_dir,
+        out_dir=config.normalized_queries_dir,
+    )
+    return Stage(run_fn=call, watch_paths=[config.queries_dir])
+
+
 def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
     call = compose.on_stage("compose").bind(
         contents_dir=config.normalized_contents_dir,
-        queries_dir=config.queries_dir,
+        queries_dir=config.normalized_queries_dir,
         out_dir=config.views_dir,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.normalized_contents_dir, config.queries_dir],
+        watch_paths=[config.normalized_contents_dir, config.normalized_queries_dir],
     )
 
 
@@ -71,10 +81,11 @@ def render_stage(config: ProjectConfig) -> Task:
 
 
 def pipeline(config: ProjectConfig) -> Pipeline:
-    """Create the full pipeline: [Inspect Schema →] Normalize → Compose → Generate → Render."""
+    """Create the full pipeline."""
     stages: list[Task] = [
         inspect_schema_stage(config),
         normalize_contents_stage(config),
+        normalize_queries_stage(config),
         compose_stage(config),
         generator_stage(config),
         render_stage(config),
