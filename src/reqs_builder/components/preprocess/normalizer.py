@@ -1,13 +1,14 @@
 """Normalizer — parse, validate, and normalize input data.
 
 Every source file is parsed into data, validated against a schema
-when a validator is provided, and written to the output directory.
+when a schema_dir is provided, and written to the output directory.
 Markdown files are converted via the built-in prose schema;
 YAML files are parsed with ruamel.yaml to preserve source positions
 for line-number-accurate validation errors.
 """
 
 from collections.abc import Mapping
+from importlib import resources
 from pathlib import Path
 
 from reqs_builder.components.preprocess.prose import parse_markdown
@@ -15,6 +16,11 @@ from reqs_builder.components.preprocess.validator import Validator, parse_yaml
 from reqs_builder.components.shared import yaml_dumper
 from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
+from reqs_builder.components.shared.json_data_model import load_yamls
+
+_BUILTIN_CONTENTS_SCHEMA_DIR = Path(
+    str(resources.files("reqs_builder.resources") / "schemas" / "contents")
+)
 
 
 @Component(out_dir="out_dir", input_dirs=["src_dir", "upstream_dir"])
@@ -23,9 +29,10 @@ def normalize(
     *,
     out_dir: Path,
     upstream_dir: Path | None = None,
-    validator: Validator | None = None,
+    schema_dir: Path | None = None,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
+    validator = build_contents_validator(schema_dir) if schema_dir is not None else None
     all_diagnostics: list[Diagnostic] = []
     for src_file in sorted(src_dir.rglob("*")):
         if not src_file.is_file():
@@ -37,6 +44,18 @@ def normalize(
             all_diagnostics.extend(exc.diagnostics)
     if all_diagnostics:
         raise FileValidationError(diagnostics=all_diagnostics)
+
+
+def build_contents_validator(schema_dir: Path) -> Validator:
+    """Build a Validator for content files from built-in + user schemas.
+
+    Merges the built-in prose schema with user-defined schemas from
+    schema_dir, then wraps them as JSON Schema properties so that
+    each top-level key in a content file is validated against its schema.
+    """
+    merged = load_yamls(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
+    schemas = merged.get("schemas", {})
+    return Validator({"type": "object", "properties": schemas})
 
 
 def _process_file(
