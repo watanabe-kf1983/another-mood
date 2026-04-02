@@ -30,6 +30,15 @@ class Diagnostic:
     severity: DiagnosticSeverity = DiagnosticSeverity.error
     source: str = ""
 
+    def format(self) -> str:
+        """Format for user-facing output."""
+        path = self.file.resolve()
+        if self.line and self.column:
+            return f"  {path}:{self.line}:{self.column}: {self.message}"
+        if self.line:
+            return f"  {path}:{self.line}: {self.message}"
+        return f"  {path}: {self.message}"
+
     def to_data(self) -> dict[str, object]:
         """Serialize to a plain dict for YAML output."""
         return {
@@ -56,13 +65,8 @@ class FileValidationError(Exception):
     @property
     def user_error_message(self) -> str:
         """Human-readable error summary for stderr output."""
-        lines = [
-            f"  {d.file}:{d.line}:{d.column}: {d.message}"
-            if d.line
-            else f"  {d.file}: {d.message}"
-            for d in self.diagnostics
-        ]
-        return "\n".join(lines)
+        details = [d.format() for d in self.diagnostics]
+        return f"Found {self}:\n" + "\n".join(details)
 
     @property
     def report_data(self) -> dict[str, list[dict[str, object]]]:

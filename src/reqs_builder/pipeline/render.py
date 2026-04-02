@@ -1,5 +1,8 @@
 """Render stage — prepare Hugo content and render to HTML."""
 
+import signal
+import subprocess
+import sys
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -26,17 +29,22 @@ class RenderStage(Task):
         renderer.build(prepared, self.render_output_dir)
 
     @contextmanager
-    def start_watching(self) -> Generator[None]:
+    def start_watching(self, shutdown: threading.Event) -> Generator[None]:
         """Initial prepare + dev server + cascade watcher. Terminates server on exit."""
         prepared = self._prepare()
         process = renderer.serve(prepared, self.port)
-        print(f"Renderer started on http://localhost:{self.port}/", flush=True)
+        print(f"Server running at http://localhost:{self.port}/", flush=True)
 
         cascade = threading.Thread(
             target=lambda: Watcher([self.src_dir], self._prepare).run(),
             daemon=True,
         )
         cascade.start()
+
+        monitor = threading.Thread(
+            target=_wait_for_exit, args=(process, shutdown), daemon=True
+        )
+        monitor.start()
 
         try:
             yield
@@ -47,3 +55,26 @@ class RenderStage(Task):
     def _prepare(self) -> Path:
         renderer.prepare(self.src_dir, self.render_input_dir)
         return self.render_input_dir
+
+
+_NORMAL_EXIT_CODES = {0, -signal.SIGTERM, -signal.SIGINT}
+
+
+def _wait_for_exit(process: subprocess.Popen[bytes], shutdown: threading.Event) -> None:
+    """Wait for the process to exit and signal shutdown on unexpected termination.
+
+    Normal exit codes:
+    - 0: Hugo handles SIGINT (Ctrl+C) gracefully and exits 0
+    - -SIGTERM (-15): our own terminate() call during shutdown
+    - -SIGINT (-2): SIGINT before Hugo's handler runs
+    """
+    process.wait()
+    if process.returncode in _NORMAL_EXIT_CODES:
+        pass  # Normal shutdown (Ctrl+C or our terminate() call).
+    else:
+        print(
+            f"Hugo server exited (exit code {process.returncode}).",
+            file=sys.stderr,
+            flush=True,
+        )
+        shutdown.set()

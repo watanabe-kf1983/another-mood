@@ -1,6 +1,5 @@
 """CLI entry point."""
 
-import threading
 from pathlib import Path
 
 import typer
@@ -21,6 +20,7 @@ def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project (copy contents to output)."""
     config = ProjectConfig(project_dir=Path(project_dir))
     pipeline(config).run()
+    print("Build completed.", flush=True)
 
 
 @app.command()
@@ -29,10 +29,14 @@ def dev(
     port: int = typer.Option(1313, help="Hugo server port"),
 ) -> None:
     """Watch for changes and rebuild automatically with Hugo live preview."""
+    import reqs_builder.context as ctx
+
+    ctx.watch_mode = True
     config = ProjectConfig(project_dir=Path(project_dir), port=port)
-    with pipeline(config).start_watching():
+    with pipeline(config).start_watching() as shutdown:
         try:
-            threading.Event().wait()
+            print("Press Ctrl+C to stop.", flush=True)
+            shutdown.wait()
         except KeyboardInterrupt:
             pass
 

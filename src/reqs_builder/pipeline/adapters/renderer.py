@@ -58,8 +58,11 @@ def build(content_dir: Path, out_dir: Path) -> None:
             str(content_dir.resolve()),
             "--destination",
             str(out_dir.resolve()),
+            "--logLevel",
+            "error",
         ],
         check=True,
+        stdout=subprocess.DEVNULL,
     )
 
 
@@ -76,5 +79,8 @@ def serve(content_dir: Path, port: int) -> subprocess.Popen[bytes]:
             "--port",
             str(port),
             "--renderToMemory",
+            "--logLevel",
+            "error",
         ],
+        stdout=subprocess.DEVNULL,
     )
