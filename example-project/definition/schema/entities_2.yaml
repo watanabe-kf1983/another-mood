@@ -23,5 +23,7 @@ schemas:
                 type: boolean
               fk:
                 type: string
+            additionalProperties: false
             required: [name, type]
+      additionalProperties: false
       required: [name, fields]

@@ -27,6 +27,7 @@ _VALID_SCHEMA_CASES = [
               properties:
                 name: { type: string }
                 email: { type: string }
+              additionalProperties: false
               required: [name]
         """,
         id="dict pattern",
@@ -39,6 +40,7 @@ _VALID_SCHEMA_CASES = [
             properties:
               version: { type: string }
               debug: { type: boolean }
+            additionalProperties: false
             required: [version]
         """,
         id="fixed structure",
@@ -52,6 +54,7 @@ _VALID_SCHEMA_CASES = [
               type: object
               properties:
                 id: { type: string }
+              additionalProperties: false
         """,
         id="array schema",
     ),
@@ -72,6 +75,7 @@ _VALID_SCHEMA_CASES = [
               type: object
               properties:
                 name: { type: string }
+              additionalProperties: false
         references:
           - from: orders.customer
             to: users
@@ -94,6 +98,7 @@ _VALID_SCHEMA_CASES = [
                   items: { type: string }
                   minItems: 1
                   uniqueItems: true
+              additionalProperties: false
               required: [name, price]
         """,
         id="validation keywords passthrough",
@@ -113,6 +118,7 @@ _VALID_SCHEMA_CASES = [
                   title: User name
                   default: anonymous
                   examples: [Alice, Bob]
+              additionalProperties: false
         """,
         id="metadata keywords",
     ),
@@ -186,8 +192,19 @@ _REJECTED_SCHEMA_CASES = [
               type: object
               properties:
                 name: { type: string }
+              additionalProperties: false
         """,
-        id="properties + additionalProperties mutual exclusion",
+        id="properties + additionalProperties as schema rejected",
+    ),
+    pytest.param(
+        """
+        schemas:
+          users:
+            type: object
+            properties:
+              version: { type: string }
+        """,
+        id="properties without additionalProperties: false rejected",
     ),
     pytest.param(
         """
@@ -237,6 +254,7 @@ class TestCheckSchema:
             "      type: object\n"
             "      properties:\n"
             "        name: { type: string }\n"
+            "      additionalProperties: false\n"
         )
         check_schema([f])
 
@@ -266,6 +284,7 @@ class TestCheckSchema:
             "      type: object\n"
             "      properties:\n"
             "        name: { type: string }\n"
+            "      additionalProperties: false\n"
         )
         bad = tmp_path / "bad.yaml"
         bad.write_text(

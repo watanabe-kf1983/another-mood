@@ -21,6 +21,7 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
         src_dir=config.contents_dir,
         out_dir=config.normalized_contents_dir,
         upstream_dir=config.data_catalog_dir,
+        schema_dir=config.schema_dir,
     )
     return Stage(
         run_fn=call,

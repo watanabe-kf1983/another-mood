@@ -13,4 +13,5 @@ schemas:
           enum: ["1:1", "1:N", "N:N"]
         description:
           type: string
+      additionalProperties: false
       required: [from, to, cardinality]

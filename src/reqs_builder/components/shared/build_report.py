@@ -1,6 +1,5 @@
 """Build report — __build_report model and I/O."""
 
-import traceback
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -33,21 +32,6 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _error_data(exc: Exception) -> Mapping[str, object]:
-    """Convert an exception to error report data."""
-    report = getattr(exc, "report_data", None)
-    if report is not None:
-        return report
-    return {
-        _ERRORS_KEY: [
-            {
-                "message": f"{type(exc).__name__}: {exc}",
-                "traceback": traceback.format_exc(),
-            }
-        ]
-    }
-
-
 # -- Report ------------------------------------------------------------------
 
 
@@ -69,8 +53,8 @@ class BuildReport:
     def is_empty(self) -> bool:
         return not self._data
 
-    def add_exception(self, exc: Exception) -> None:
-        self._data = deep_merge(self._data, dict(_error_data(exc)))
+    def add_data(self, data: Mapping[str, object]) -> None:
+        self._data = deep_merge(self._data, dict(data))
 
     def add_stage_result(self, stage: str, result: str) -> None:
         if stage:

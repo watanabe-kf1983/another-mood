@@ -54,6 +54,17 @@ class FileValidationError(Exception):
         super().__init__(f"{count} validation error{'s' if count != 1 else ''}")
 
     @property
+    def user_error_message(self) -> str:
+        """Human-readable error summary for stderr output."""
+        lines = [
+            f"  {d.file}:{d.line}:{d.column}: {d.message}"
+            if d.line
+            else f"  {d.file}: {d.message}"
+            for d in self.diagnostics
+        ]
+        return "\n".join(lines)
+
+    @property
     def report_data(self) -> dict[str, list[dict[str, object]]]:
         """Build report content for pipeline error propagation."""
         return {

@@ -4,7 +4,7 @@ Provides shared building blocks used by both SchemaInspector and Normalizer:
 
 * ``parse_yaml`` — parse YAML with ruamel.yaml, preserving source positions
   for line-accurate diagnostics.
-* ``Validator`` — load JSON Schema from directories and validate data,
+* ``Validator`` — validate data against a JSON Schema,
   returning Diagnostic objects with line/column positions.
 """
 
@@ -18,7 +18,6 @@ from ruamel.yaml import YAMLError
 
 from reqs_builder.components.preprocess.position_resolver import resolve_position
 from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
-from reqs_builder.components.shared.json_data_model import load_yamls
 
 _ruamel = YAML()
 
@@ -50,15 +49,13 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
 
 
 class Validator:
-    """JSON Schema validator built from YAML schema files.
+    """JSON Schema validator that checks data against a JSON Schema object.
 
-    Loads and merges YAML files from the given directories to build
-    a jsonschema validator. Use ``validate`` to check data and get
-    Diagnostic objects with line/column positions.
+    Callers are responsible for loading/building the schema;
+    Validator only handles validation and diagnostic conversion.
     """
 
-    def __init__(self, *directories: Path) -> None:
-        schema = load_yamls(*directories)
+    def __init__(self, schema: Mapping[str, object]) -> None:
         self._validator = jsonschema.Draft202012Validator(schema)
 
     def validate(self, data: Any, file: Path) -> Sequence[Diagnostic]:
@@ -89,6 +86,9 @@ class Validator:
 def _to_diagnostic(
     err: jsonschema.ValidationError, data: object, file: Path
 ) -> Diagnostic:
+    # TODO: For additionalProperties errors, resolve_position points to the
+    # parent object, not the unexpected key.  Extract the property name from
+    # the error and look up its position in the CommentedMap for a precise line.
     pos = resolve_position(err.absolute_path, data)
     return Diagnostic(
         file=file,

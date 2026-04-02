@@ -14,6 +14,7 @@ from pathlib import Path
 from reqs_builder.components.preprocess.validator import Validator
 from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.diagnostic import FileValidationError
+from reqs_builder.components.shared.json_data_model import load_yamls
 
 _SCHEMA_SCHEMA_DIR = Path(
     str(resources.files("reqs_builder.resources") / "schemas" / "schema")
@@ -40,4 +41,4 @@ def check_schema(schema_files: Sequence[Path]) -> None:
 
 def build_schema_validator() -> Validator:
     """Build a Validator for user schema files (against built-in SchemaSchema)."""
-    return Validator(_SCHEMA_SCHEMA_DIR)
+    return Validator(load_yamls(_SCHEMA_SCHEMA_DIR))

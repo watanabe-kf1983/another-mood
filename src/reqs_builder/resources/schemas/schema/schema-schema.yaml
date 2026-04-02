@@ -49,7 +49,9 @@ $defs:
         additionalProperties:
           $ref: "#/$defs/jsonSchemaSubset"
       additionalProperties:
-        $ref: "#/$defs/jsonSchemaSubset"
+        anyOf:
+          - $ref: "#/$defs/jsonSchemaSubset"
+          - const: false
       items:
         $ref: "#/$defs/jsonSchemaSubset"
 
@@ -96,6 +98,13 @@ $defs:
 
     additionalProperties: false
 
-    # properties and additionalProperties are mutually exclusive
-    not:
-      required: [properties, additionalProperties]
+    # When properties is defined, additionalProperties: false is required.
+    # When properties is absent, additionalProperties can be a schema object
+    # (dict pattern for dict-to-array normalization).
+    if:
+      required: [properties]
+    then:
+      properties:
+        additionalProperties:
+          const: false
+      required: [additionalProperties]
