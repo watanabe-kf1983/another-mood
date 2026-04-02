@@ -13,7 +13,7 @@ _ERRORS_KEY = "errors"
 
 @contextmanager
 def error_propagation(
-    input_dirs: Sequence[Path], out_dir: Path, *, stage: str = ""
+    upstream_dirs: Sequence[Path], out_dir: Path, *, stage: str = ""
 ) -> Generator[bool, None, None]:
     """Context manager: propagate errors through the pipeline.
 
@@ -21,7 +21,7 @@ def error_propagation(
     Otherwise yields True and runs the body. On success or failure,
     adds stage result and writes the accumulated report.
     """
-    report = BuildReport.collect(*input_dirs)
+    report = BuildReport.collect(*upstream_dirs)
     if report.has_errors():
         result = "skipped"
         yield False

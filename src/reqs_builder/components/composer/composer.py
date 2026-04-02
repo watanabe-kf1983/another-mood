@@ -21,7 +21,7 @@ from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-@Component(out_dir="out_dir", input_dirs=["contents_dir", "queries_dir"])
+@Component(out_dir="out_dir", upstream_dirs=["contents_dir"])
 def compose(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None:
     """Copy contents as passthrough, then evaluate queries and write views."""
     shutil.copytree(contents_dir, out_dir, dirs_exist_ok=True)

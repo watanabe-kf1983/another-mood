@@ -23,7 +23,7 @@ _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
 )
 
 
-@Component(out_dir="out_dir", input_dirs=["src_dir", "upstream_dir"])
+@Component(out_dir="out_dir", upstream_dirs=["upstream_dir"])
 def normalize(
     src_dir: Path,
     *,

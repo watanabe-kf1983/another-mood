@@ -12,7 +12,7 @@ def inspect_schema_stage(config: ProjectConfig) -> Task:
         schema_dir=config.schema_dir,
         out_dir=config.data_catalog_dir,
     )
-    return Stage(run_fn=call, watch_paths=call.input_dirs)
+    return Stage(run_fn=call, watch_paths=[config.schema_dir])
 
 
 def normalize_contents_stage(config: ProjectConfig) -> Task:
@@ -36,7 +36,10 @@ def compose_stage(config: ProjectConfig) -> Task:
         queries_dir=config.queries_dir,
         out_dir=config.views_dir,
     )
-    return Stage(run_fn=call, watch_paths=call.input_dirs)
+    return Stage(
+        run_fn=call,
+        watch_paths=[config.normalized_contents_dir, config.queries_dir],
+    )
 
 
 def generator_stage(config: ProjectConfig) -> Task:
@@ -46,7 +49,10 @@ def generator_stage(config: ProjectConfig) -> Task:
         templates_dir=config.templates_dir,
         out_dir=config.out_dir,
     )
-    return Stage(run_fn=call, watch_paths=call.input_dirs)
+    return Stage(
+        run_fn=call,
+        watch_paths=[config.views_dir, config.templates_dir],
+    )
 
 
 def render_stage(config: ProjectConfig) -> Task:
