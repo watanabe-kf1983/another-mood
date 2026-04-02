@@ -40,11 +40,12 @@ def _print_result(has_errors: bool) -> None:
         return
     timestamp = datetime.now().strftime("%H:%M:%S")
     if has_errors:
-        print(
-            f"Contents updated, but document build failed at {timestamp}.", flush=True
-        )
+        print(f"Files updated, but document build failed at {timestamp}.", flush=True)
     else:
-        print(f"Document updated at {timestamp}.", flush=True)
+        print(
+            f"Files updated, and document successfully built at {timestamp}.",
+            flush=True,
+        )
 
 
 def _clear_contents(directory: Path) -> None:
