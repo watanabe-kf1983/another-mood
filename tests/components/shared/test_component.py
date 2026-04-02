@@ -11,13 +11,13 @@ from reqs_builder.components.shared.component import Component, ComponentCall
 
 class TestComponent:
     def test_decorator_creates_component_call(self) -> None:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         assert isinstance(my_fn, ComponentCall)
 
     def test_bind_returns_component_call(self) -> None:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(src_dir=Path("/in"), out_dir=Path("/out"))
@@ -26,23 +26,23 @@ class TestComponent:
 
 class TestComponentCall:
     def test_out_dir_in_kwargs(self) -> None:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(src_dir=Path("/in"), out_dir=Path("/out"))
         assert call.kwargs["out_dir"] == Path("/out")
 
-    def test_input_dirs(self) -> None:
-        @Component(out_dir="out_dir", input_dirs=["contents_dir", "queries_dir"])
-        def my_fn(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None: ...
+    def test_upstream_dirs(self) -> None:
+        @Component(out_dir="out_dir", upstream_dirs=["upstream_a", "upstream_b"])
+        def my_fn(upstream_a: Path, upstream_b: Path, *, out_dir: Path) -> None: ...
 
         call = my_fn.bind(
-            contents_dir=Path("/a"), queries_dir=Path("/b"), out_dir=Path("/out")
+            upstream_a=Path("/a"), upstream_b=Path("/b"), out_dir=Path("/out")
         )
-        assert call.input_dirs == [Path("/a"), Path("/b")]
+        assert call.upstream_dirs == [Path("/a"), Path("/b")]
 
     def test_direct_call(self, tmp_path: Path) -> None:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:
             (out_dir / "result.txt").write_text(str(src_dir))
 
@@ -52,7 +52,7 @@ class TestComponentCall:
         assert (out / "result.txt").read_text() == "/input"
 
     def test_bind_then_call(self, tmp_path: Path) -> None:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
+        @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:
             (out_dir / "result.txt").write_text(str(src_dir))
 
@@ -63,7 +63,7 @@ class TestComponentCall:
         assert (out / "result.txt").read_text() == "/input"
 
     def test_call_with_positional_args(self, tmp_path: Path) -> None:
-        @Component(out_dir="out_dir", input_dirs=[])
+        @Component(out_dir="out_dir")
         def my_fn(label: str, *, out_dir: Path) -> None:
             (out_dir / "result.txt").write_text(label)
 
@@ -78,7 +78,7 @@ class TestAtomicWriteWrapping:
         """atomic_write replaces out_dir with a tmp dir during execution."""
         actual_out_dir = None
 
-        @Component(out_dir="out_dir", input_dirs=[], error_propagation=False)
+        @Component(out_dir="out_dir", error_propagation=False)
         def my_fn(*, out_dir: Path) -> None:
             nonlocal actual_out_dir
             actual_out_dir = out_dir
@@ -95,7 +95,7 @@ class TestAtomicWriteWrapping:
     def test_replaces_entire_directory(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
 
-        @Component(out_dir="out_dir", input_dirs=[], error_propagation=False)
+        @Component(out_dir="out_dir", error_propagation=False)
         def write(filename: str, *, out_dir: Path) -> None:
             (out_dir / filename).write_text("x")
 
@@ -113,32 +113,44 @@ class TestErrorPropagationWrapping:
         path.write_text(yaml.safe_dump(data, allow_unicode=True))
 
     def test_skips_fn_on_upstream_errors(self, tmp_path: Path) -> None:
-        input_dir = tmp_path / "input"
+        upstream_dir = tmp_path / "upstream"
         self._write_yaml(
-            input_dir / "err.yaml",
+            upstream_dir / "err.yaml",
             {"__build_report": {"errors": [{"message": "upstream"}]}},
         )
 
         called = False
 
-        @Component(out_dir="out_dir", input_dirs=["src_dir"], atomic_write=False)
-        def my_fn(*, src_dir: Path, out_dir: Path) -> None:
+        @Component(
+            out_dir="out_dir",
+            upstream_dirs=["upstream_dir"],
+            atomic_write=False,
+        )
+        def my_fn(*, src_dir: Path, upstream_dir: Path, out_dir: Path) -> None:
             nonlocal called
             called = True
 
-        my_fn(src_dir=input_dir, out_dir=tmp_path / "output")
+        my_fn(
+            src_dir=tmp_path / "src",
+            upstream_dir=upstream_dir,
+            out_dir=tmp_path / "output",
+        )
         assert not called
 
     def test_catches_exception_and_writes_errors(self, tmp_path: Path) -> None:
-        input_dir = tmp_path / "input"
-        self._write_yaml(input_dir / "data.yaml", {"x": 1})
+        upstream_dir = tmp_path / "upstream"
+        self._write_yaml(upstream_dir / "data.yaml", {"x": 1})
 
-        @Component(out_dir="out_dir", input_dirs=["src_dir"], atomic_write=False)
-        def my_fn(*, src_dir: Path, out_dir: Path) -> None:
+        @Component(
+            out_dir="out_dir",
+            upstream_dirs=["upstream_dir"],
+            atomic_write=False,
+        )
+        def my_fn(*, src_dir: Path, upstream_dir: Path, out_dir: Path) -> None:
             raise ValueError("boom")
 
         out = tmp_path / "output"
-        my_fn(src_dir=input_dir, out_dir=out)
+        my_fn(src_dir=tmp_path / "src", upstream_dir=upstream_dir, out_dir=out)
 
         data = yaml.safe_load((out / "__build_report.yaml").read_text())
         assert "boom" in data["__build_report"]["errors"][0]["message"]

@@ -21,7 +21,7 @@ _SCHEMA_SCHEMA_DIR = Path(
 )
 
 
-@Component(out_dir="out_dir", input_dirs=["schema_dir"])
+@Component(out_dir="out_dir")
 def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
     """Validate all schema files in schema_dir against SchemaSchema."""
     schema_files = [f for f in sorted(schema_dir.rglob("*.yaml")) if f.is_file()]

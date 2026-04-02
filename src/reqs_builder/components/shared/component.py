@@ -1,19 +1,18 @@
-"""Component — declarative callable with explicit input/output directory metadata.
+"""Component — declarative callable with explicit output/upstream directory metadata.
 
-A Component wraps a plain function with metadata about which keyword arguments
-are input directories and which is the output directory. Optional flags enable
-atomic writes and error propagation.
+A Component wraps a plain function with metadata about which keyword argument
+is the output directory and which are upstream (previous-stage output)
+directories. Optional flags enable atomic writes and error propagation.
 
 Usage:
-    @Component(out_dir="out_dir", input_dirs=["src_dir"],
-               atomic_write=True, error_propagation=True)
-    def normalize(src_dir: Path, *, out_dir: Path) -> None: ...
+    @Component(out_dir="out_dir", upstream_dirs=["upstream_dir"])
+    def normalize(src_dir: Path, *, out_dir: Path, upstream_dir: Path) -> None: ...
 
     # Direct call
-    normalize(src_dir=some_path, out_dir=other_path)
+    normalize(src_dir=some_path, out_dir=other_path, upstream_dir=other_path2)
 
     # Bind for deferred execution
-    call = normalize.bind(src_dir=some_path, out_dir=other_path)
+    call = normalize.bind(src_dir=some_path, out_dir=other_path, upstream_dir=other_path2)
     call()  # executes the function
 """
 
@@ -38,7 +37,7 @@ class ComponentCall:
 
     fn: Callable[..., None]
     out_dir_key: str
-    input_dir_keys: Sequence[str]
+    upstream_dir_keys: Sequence[str] = ()
     use_atomic_write: bool = True
     use_error_propagation: bool = True
     stage: str = ""
@@ -54,10 +53,10 @@ class ComponentCall:
         return replace(self, stage=stage)
 
     @property
-    def input_dirs(self) -> Sequence[Path]:
+    def upstream_dirs(self) -> Sequence[Path]:
         return [
             cast(Path, v)
-            for k in self.input_dir_keys
+            for k in self.upstream_dir_keys
             if (v := self.kwargs.get(k)) is not None
         ]
 
@@ -77,7 +76,7 @@ class ComponentCall:
             def _with_propagation(*args: object, **kwargs: object) -> None:
                 out_dir = cast(Path, kwargs[self.out_dir_key])
                 with error_propagation(
-                    self.input_dirs, out_dir, stage=self.stage
+                    self.upstream_dirs, out_dir, stage=self.stage
                 ) as ok:
                     if ok:
                         _inner(*args, **kwargs)
@@ -102,12 +101,12 @@ class Component:
     """Decorator that converts a function into a ComponentCall.
 
     Usage:
-        @Component(out_dir="out_dir", input_dirs=["src_dir"])
-        def normalize(src_dir: Path, *, out_dir: Path) -> None: ...
+        @Component(out_dir="out_dir", upstream_dirs=["upstream_dir"])
+        def normalize(src_dir: Path, *, out_dir: Path, upstream_dir: Path) -> None: ...
     """
 
     out_dir: str
-    input_dirs: Sequence[str]
+    upstream_dirs: Sequence[str] = ()
     atomic_write: bool = True
     error_propagation: bool = True
 
@@ -115,7 +114,7 @@ class Component:
         return ComponentCall(
             fn=fn,
             out_dir_key=self.out_dir,
-            input_dir_keys=self.input_dirs,
+            upstream_dir_keys=self.upstream_dirs,
             use_atomic_write=self.atomic_write,
             use_error_propagation=self.error_propagation,
         )

@@ -23,13 +23,13 @@ _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
 )
 
 
-@Component(out_dir="out_dir", input_dirs=["src_dir", "upstream_dir"])
+@Component(out_dir="out_dir", upstream_dirs=["data_catalog_dir"])
 def normalize(
     src_dir: Path,
     *,
-    out_dir: Path,
-    upstream_dir: Path | None = None,
     schema_dir: Path,
+    data_catalog_dir: Path | None = None,
+    out_dir: Path,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
     check_contents(src_dir, schema_dir)
