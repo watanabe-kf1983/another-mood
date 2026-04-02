@@ -86,6 +86,9 @@ class Validator:
 def _to_diagnostic(
     err: jsonschema.ValidationError, data: object, file: Path
 ) -> Diagnostic:
+    # TODO: For additionalProperties errors, resolve_position points to the
+    # parent object, not the unexpected key.  Extract the property name from
+    # the error and look up its position in the CommentedMap for a precise line.
     pos = resolve_position(err.absolute_path, data)
     return Diagnostic(
         file=file,
