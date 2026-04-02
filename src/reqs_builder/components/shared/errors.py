@@ -35,7 +35,6 @@ def error_propagation(
         else:
             result = "ok"
     if stage:
-        print(f"{stage} {result}.", flush=True)
         report.add_stage_result(stage, result)
     report.write(out_dir)
 
