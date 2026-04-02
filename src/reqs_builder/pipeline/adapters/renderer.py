@@ -76,5 +76,8 @@ def serve(content_dir: Path, port: int) -> subprocess.Popen[bytes]:
             "--port",
             str(port),
             "--renderToMemory",
+            "--logLevel",
+            "error",
         ],
+        stdout=subprocess.DEVNULL,
     )

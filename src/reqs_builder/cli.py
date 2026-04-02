@@ -1,6 +1,5 @@
 """CLI entry point."""
 
-import threading
 from pathlib import Path
 
 import typer
@@ -30,9 +29,9 @@ def dev(
 ) -> None:
     """Watch for changes and rebuild automatically with Hugo live preview."""
     config = ProjectConfig(project_dir=Path(project_dir), port=port)
-    with pipeline(config).start_watching():
+    with pipeline(config).start_watching() as shutdown:
         try:
-            threading.Event().wait()
+            shutdown.wait()
         except KeyboardInterrupt:
             pass
 

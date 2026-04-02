@@ -17,7 +17,9 @@ class Task(ABC):
     def run(self) -> None: ...
 
     @abstractmethod
-    def start_watching(self) -> AbstractContextManager[None]: ...
+    def start_watching(
+        self, shutdown: threading.Event
+    ) -> AbstractContextManager[None]: ...
 
 
 @dataclass(frozen=True)
@@ -32,7 +34,7 @@ class Stage(Task):
         self.run_fn()
 
     @contextmanager
-    def start_watching(self) -> Generator[None]:
+    def start_watching(self, shutdown: threading.Event) -> Generator[None]:
         """Initial run + watch in background. Cleans up on exit."""
         self.run()
 
@@ -44,7 +46,7 @@ class Stage(Task):
         yield
 
 
-class Pipeline(Task):
+class Pipeline:
     """Composite task: runs a sequence of tasks as one."""
 
     def __init__(self, tasks: Sequence[Task]) -> None:
@@ -56,9 +58,10 @@ class Pipeline(Task):
             task.run()
 
     @contextmanager
-    def start_watching(self) -> Generator[None]:
-        """Start all tasks watching. Cleans up all on exit."""
+    def start_watching(self) -> Generator[threading.Event]:
+        """Start all tasks watching. Yields shutdown event. Cleans up all on exit."""
+        shutdown = threading.Event()
         with ExitStack() as stack:
             for task in self._tasks:
-                stack.enter_context(task.start_watching())
-            yield
+                stack.enter_context(task.start_watching(shutdown))
+            yield shutdown
