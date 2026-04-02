@@ -58,8 +58,11 @@ def build(content_dir: Path, out_dir: Path) -> None:
             str(content_dir.resolve()),
             "--destination",
             str(out_dir.resolve()),
+            "--logLevel",
+            "error",
         ],
         check=True,
+        stdout=subprocess.DEVNULL,
     )
 
 

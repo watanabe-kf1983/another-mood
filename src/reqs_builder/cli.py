@@ -20,6 +20,7 @@ def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project (copy contents to output)."""
     config = ProjectConfig(project_dir=Path(project_dir))
     pipeline(config).run()
+    print("Build completed.", flush=True)
 
 
 @app.command()
@@ -31,6 +32,7 @@ def dev(
     config = ProjectConfig(project_dir=Path(project_dir), port=port)
     with pipeline(config).start_watching() as shutdown:
         try:
+            print("Press Ctrl+C to stop.", flush=True)
             shutdown.wait()
         except KeyboardInterrupt:
             pass
