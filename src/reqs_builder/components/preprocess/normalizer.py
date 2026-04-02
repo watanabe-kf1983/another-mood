@@ -22,9 +22,16 @@ _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
     str(resources.files("reqs_builder.resources") / "schemas" / "contents")
 )
 
+_QUERY_SCHEMA_DIR = Path(
+    str(resources.files("reqs_builder.resources") / "schemas" / "queries")
+)
+
+
+# ── components ─────────────────────────────────────────────────────
+
 
 @Component(out_dir="out_dir", upstream_dirs=["data_catalog_dir"])
-def normalize(
+def normalize_contents(
     src_dir: Path,
     *,
     schema_dir: Path,
@@ -32,30 +39,16 @@ def normalize(
     out_dir: Path,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
-    check_contents(src_dir, schema_dir)
-    for src_file in _source_files(src_dir):
-        rel = src_file.relative_to(src_dir)
-        data = _parse(src_file, rel)
-        _write(data, rel, out_dir)
+    normalize(src_dir, out_dir, build_contents_validator(schema_dir))
 
 
-def check_contents(src_dir: Path, schema_dir: Path) -> None:
-    """Validate all content files against built-in + user schemas.
+@Component(out_dir="out_dir")
+def normalize_queries(queries_dir: Path, *, out_dir: Path) -> None:
+    """Validate and normalize query files from queries_dir into out_dir."""
+    normalize(queries_dir, out_dir, build_query_validator())
 
-    Raises FileValidationError if any file has diagnostics.
-    """
-    validator = build_contents_validator(schema_dir)
-    diagnostics: list[Diagnostic] = []
-    for src_file in _source_files(src_dir):
-        rel = src_file.relative_to(src_dir)
-        try:
-            data = _parse(src_file, rel)
-        except FileValidationError as exc:
-            diagnostics.extend(exc.diagnostics)
-            continue
-        diagnostics.extend(validator.validate(data, rel))
-    if diagnostics:
-        raise FileValidationError(diagnostics=diagnostics)
+
+# ── validator builders ─────────────────────────────────────────────
 
 
 def build_contents_validator(schema_dir: Path) -> Validator:
@@ -68,6 +61,41 @@ def build_contents_validator(schema_dir: Path) -> Validator:
     merged = load_yamls(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
     schemas = merged.get("schemas", {})
     return Validator({"type": "object", "properties": schemas})
+
+
+def build_query_validator() -> Validator:
+    """Build a Validator for query files (against built-in QuerySchema)."""
+    return Validator(load_yamls(_QUERY_SCHEMA_DIR))
+
+
+# ── shared core ────────────────────────────────────────────────────
+
+
+def normalize(src_dir: Path, out_dir: Path, validator: Validator) -> None:
+    """Validate all files, then parse and write each to out_dir."""
+    check(src_dir, validator)
+    for src_file in _source_files(src_dir):
+        rel = src_file.relative_to(src_dir)
+        data = _parse(src_file, rel)
+        _write(data, rel, out_dir)
+
+
+def check(src_dir: Path, validator: Validator) -> None:
+    """Validate all files in src_dir against the given validator.
+
+    Raises FileValidationError if any file has diagnostics.
+    """
+    diagnostics: list[Diagnostic] = []
+    for src_file in _source_files(src_dir):
+        rel = src_file.relative_to(src_dir)
+        try:
+            data = _parse(src_file, rel)
+        except FileValidationError as exc:
+            diagnostics.extend(exc.diagnostics)
+            continue
+        diagnostics.extend(validator.validate(data, rel))
+    if diagnostics:
+        raise FileValidationError(diagnostics=diagnostics)
 
 
 # ── helpers ────────────────────────────────────────────────────────
