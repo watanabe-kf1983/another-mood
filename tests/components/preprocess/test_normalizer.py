@@ -7,6 +7,7 @@ import yaml
 
 from reqs_builder.components.preprocess.normalizer import (
     build_contents_validator,
+    check_contents,
     normalize,
 )
 from reqs_builder.components.shared.diagnostic import FileValidationError
@@ -15,14 +16,20 @@ from reqs_builder.components.shared.diagnostic import FileValidationError
 class TestNormalize:
     """normalize: parse → validate → write for all file types."""
 
-    def test_dispatches_md_and_yaml(self, tmp_path: Path) -> None:
+    @pytest.fixture()
+    def schema_dir(self, tmp_path: Path) -> Path:
+        d = tmp_path / "schema"
+        d.mkdir()
+        return d
+
+    def test_dispatches_md_and_yaml(self, tmp_path: Path, schema_dir: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "data.yaml").write_text("key: value\n")
         (src / "notes.md").write_text("# Notes\n")
 
         out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out)
+        normalize(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
         # YAML written as .yaml
         data = yaml.safe_load((out / "data.yaml").read_text())
@@ -31,33 +38,36 @@ class TestNormalize:
         assert (out / "notes.yaml").exists()
         assert not (out / "notes.md").exists()
 
-    def test_markdown_prose_output(self, tmp_path: Path) -> None:
+    def test_markdown_prose_output(self, tmp_path: Path, schema_dir: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "guide.md").write_text("# Guide\n\nSteps.\n")
 
         out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out)
+        normalize(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
         data = yaml.safe_load((out / "guide.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
         assert data["prose"][0]["body"]["mime_type"] == "text/markdown"
 
-    def test_markdown_subdirectory_id(self, tmp_path: Path) -> None:
+    def test_markdown_subdirectory_id(self, tmp_path: Path, schema_dir: Path) -> None:
         src = tmp_path / "contents"
         (src / "sub").mkdir(parents=True)
         (src / "sub" / "doc.md").write_text("# Doc\n")
 
         out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out)
+        normalize(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
         data = yaml.safe_load((out / "sub" / "doc.yaml").read_text())
         assert data["prose"][0]["id"] == "sub/doc"
 
 
-class TestNormalizeWithSchemaValidation:
-    """normalize with schema_dir: validates all content against schemas."""
+# ── check_contents ─────────────────────────────────────────────────
+
+
+class TestCheckContents:
+    """check_contents: parse + validate all content files."""
 
     @pytest.fixture()
     def schema_dir(self, tmp_path: Path) -> Path:
@@ -80,11 +90,7 @@ class TestNormalizeWithSchemaValidation:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text("entities:\n  - id: user\n    name: User\n")
-        out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out, schema_dir=schema_dir)
-
-        data = yaml.safe_load((out / "entities.yaml").read_text())
-        assert data["entities"][0]["id"] == "user"
+        check_contents(src, schema_dir)
 
     def test_invalid_content_raises(self, tmp_path: Path, schema_dir: Path) -> None:
         src = tmp_path / "contents"
@@ -94,10 +100,8 @@ class TestNormalizeWithSchemaValidation:
             "  - id: 123\n"  # type error: integer instead of string
             "    name: User\n"
         )
-        out = tmp_path / "normalized"
-        out.mkdir()
         with pytest.raises(FileValidationError) as exc_info:
-            normalize.fn(src_dir=src, out_dir=out, schema_dir=schema_dir)
+            check_contents(src, schema_dir)
         assert len(exc_info.value.diagnostics) >= 1
         assert exc_info.value.diagnostics[0].source == "jsonschema"
 
@@ -108,27 +112,14 @@ class TestNormalizeWithSchemaValidation:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "notes.md").write_text("# Notes\n")
-        out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out, schema_dir=schema_dir)
-        assert (out / "notes.yaml").exists()
+        check_contents(src, schema_dir)
 
     def test_unschematized_yaml_passes(self, tmp_path: Path, schema_dir: Path) -> None:
         """YAML files with keys not in schemas pass (additionalProperties allowed)."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "config.yaml").write_text("config:\n  debug: true\n")
-        out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out, schema_dir=schema_dir)
-        assert (out / "config.yaml").exists()
-
-    def test_no_schema_dir_skips_validation(self, tmp_path: Path) -> None:
-        """Without schema_dir, no validation occurs."""
-        src = tmp_path / "contents"
-        src.mkdir()
-        (src / "entities.yaml").write_text("entities:\n  - bad: data\n")
-        out = tmp_path / "normalized"
-        normalize(src_dir=src, out_dir=out)
-        assert (out / "entities.yaml").exists()
+        check_contents(src, schema_dir)
 
     def test_collects_errors_across_files(
         self, tmp_path: Path, schema_dir: Path
@@ -147,12 +138,13 @@ class TestNormalizeWithSchemaValidation:
         (src / "relations.yaml").write_text(
             "relations:\n  - description: missing required\n"
         )
-        out = tmp_path / "normalized"
-        out.mkdir()
         with pytest.raises(FileValidationError) as exc_info:
-            normalize.fn(src_dir=src, out_dir=out, schema_dir=schema_dir)
+            check_contents(src, schema_dir)
         files = {str(d.file) for d in exc_info.value.diagnostics}
         assert len(files) == 2
+
+
+# ── build_contents_validator ───────────────────────────────────────
 
 
 class TestBuildContentsValidator:

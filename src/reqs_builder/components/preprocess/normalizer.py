@@ -1,13 +1,13 @@
 """Normalizer — parse, validate, and normalize input data.
 
-Every source file is parsed into data, validated against a schema
-when a schema_dir is provided, and written to the output directory.
+Every source file is parsed into data, validated against the schema,
+and written to the output directory.
 Markdown files are converted via the built-in prose schema;
 YAML files are parsed with ruamel.yaml to preserve source positions
 for line-number-accurate validation errors.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from importlib import resources
 from pathlib import Path
 
@@ -29,21 +29,33 @@ def normalize(
     *,
     out_dir: Path,
     upstream_dir: Path | None = None,
-    schema_dir: Path | None = None,
+    schema_dir: Path,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
-    validator = build_contents_validator(schema_dir) if schema_dir is not None else None
-    all_diagnostics: list[Diagnostic] = []
-    for src_file in sorted(src_dir.rglob("*")):
-        if not src_file.is_file():
-            continue
+    check_contents(src_dir, schema_dir)
+    for src_file in _source_files(src_dir):
+        rel = src_file.relative_to(src_dir)
+        data = _parse(src_file, rel)
+        _write(data, rel, out_dir)
+
+
+def check_contents(src_dir: Path, schema_dir: Path) -> None:
+    """Validate all content files against built-in + user schemas.
+
+    Raises FileValidationError if any file has diagnostics.
+    """
+    validator = build_contents_validator(schema_dir)
+    diagnostics: list[Diagnostic] = []
+    for src_file in _source_files(src_dir):
         rel = src_file.relative_to(src_dir)
         try:
-            _process_file(src_file, rel, out_dir, validator)
+            data = _parse(src_file, rel)
         except FileValidationError as exc:
-            all_diagnostics.extend(exc.diagnostics)
-    if all_diagnostics:
-        raise FileValidationError(diagnostics=all_diagnostics)
+            diagnostics.extend(exc.diagnostics)
+            continue
+        diagnostics.extend(validator.validate(data, rel))
+    if diagnostics:
+        raise FileValidationError(diagnostics=diagnostics)
 
 
 def build_contents_validator(schema_dir: Path) -> Validator:
@@ -58,24 +70,11 @@ def build_contents_validator(schema_dir: Path) -> Validator:
     return Validator({"type": "object", "properties": schemas})
 
 
-def _process_file(
-    src: Path, rel: Path, out_dir: Path, validator: Validator | None
-) -> None:
-    """Parse, validate, and write a single file."""
-    # Parse
-    data = _parse(src, rel)
+# ── helpers ────────────────────────────────────────────────────────
 
-    # Validate
-    if validator is not None:
-        errors = validator.validate(data, rel)
-        if errors:
-            raise FileValidationError(diagnostics=list(errors))
 
-    # Write
-    dst = out_dir / rel.with_suffix(".yaml")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    with dst.open("w", encoding="utf-8") as f:
-        yaml_dumper.dump(data, f)
+def _source_files(src_dir: Path) -> Sequence[Path]:
+    return [f for f in sorted(src_dir.rglob("*")) if f.is_file()]
 
 
 def _parse(src: Path, rel: Path) -> Mapping[str, object]:
@@ -85,3 +84,10 @@ def _parse(src: Path, rel: Path) -> Mapping[str, object]:
         record = parse_markdown(source, str(rel.with_suffix("")))
         return {"prose": [record.to_data()]}
     return parse_yaml(src)
+
+
+def _write(data: Mapping[str, object], rel: Path, out_dir: Path) -> None:
+    dst = out_dir / rel.with_suffix(".yaml")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open("w", encoding="utf-8") as f:
+        yaml_dumper.dump(data, f)
