@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
 from reqs_builder.components.preprocess.validator import Validator, parse_yaml
@@ -25,21 +24,16 @@ class TestValidate:
     """Validator.validate: Diagnostic conversion, position resolution."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, tmp_path: Path) -> None:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "schema.yaml").write_text(
-            yaml.safe_dump(
-                {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "age": {"type": "integer"},
-                    },
-                }
-            )
+    def _setup(self) -> None:
+        self.validator = Validator(
+            {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "age": {"type": "integer"},
+                },
+            }
         )
-        self.validator = Validator(schema_dir)
 
     def test_ruamel_data_has_position(self) -> None:
         data = _ruamel_load("name: 42\n")
