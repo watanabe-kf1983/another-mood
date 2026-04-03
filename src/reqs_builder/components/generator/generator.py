@@ -19,7 +19,7 @@ import reqs_builder.context as ctx
 @Component(out_dir="out_dir", error_propagation=False)
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Generate Markdown output, rendering errors as a page if present."""
-    with error_propagation([data_dir], out_dir, stage="generate") as ok:
+    with error_propagation([data_dir], out_dir, component="generate") as ok:
         if ok:
             data = load_yamls(data_dir)
             render("__root", data, out_dir, templates_dir=templates_dir)

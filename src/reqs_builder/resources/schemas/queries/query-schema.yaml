@@ -1,0 +1,33 @@
+# QuerySchema — built-in schema that validates user-defined query files.
+#
+# Query files have one or more top-level keys, each mapping to a query
+# definition with from (required), grouped (optional), and select (optional).
+
+type: object
+additionalProperties:
+  type: object
+  properties:
+    from:
+      type: string
+    grouped:
+      type: object
+      properties:
+        by:
+          type: string
+        as:
+          type: string
+      required: [by]
+      additionalProperties: false
+    select:
+      type: array
+      items:
+        type: object
+        properties:
+          item:
+            type: string
+          as:
+            type: string
+        required: [item]
+        additionalProperties: false
+  required: [from]
+  additionalProperties: false

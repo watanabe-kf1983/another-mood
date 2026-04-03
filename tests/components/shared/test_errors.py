@@ -91,7 +91,7 @@ class TestErrorPropagation:
             return_value="2026-04-01T00:00:00+00:00",
         ):
             with error_propagation(
-                [input_dir], out_dir, stage="normalize_contents"
+                [input_dir], out_dir, component="normalize_contents"
             ) as ok:
                 if ok:
                     out_dir.mkdir(parents=True, exist_ok=True)
@@ -103,7 +103,7 @@ class TestErrorPropagation:
             "timestamp": "2026-04-01T00:00:00+00:00",
         }
 
-    def test_writes_ng_report_with_stage_on_error(self, tmp_path: Path) -> None:
+    def test_writes_ng_report_with_component_on_error(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
         _write_yaml(input_dir / "data.yaml", {"x": 1})
 
@@ -113,7 +113,7 @@ class TestErrorPropagation:
             return_value="2026-04-01T00:00:00+00:00",
         ):
             with error_propagation(
-                [input_dir], out_dir, stage="normalize_contents"
+                [input_dir], out_dir, component="normalize_contents"
             ) as ok:
                 if ok:
                     raise ValueError("boom")

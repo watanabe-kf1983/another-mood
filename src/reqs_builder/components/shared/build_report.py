@@ -17,15 +17,15 @@ _REPORT_FILENAME = f"{_REPORT_KEY}.yaml"
 
 
 @dataclass(frozen=True)
-class StageResult:
-    """Outcome of a pipeline stage execution."""
+class ComponentResult:
+    """Outcome of a component execution."""
 
-    stage: str
+    component: str
     result: str
     timestamp: str
 
     def to_data(self) -> Mapping[str, object]:
-        return {self.stage: {"result": self.result, "timestamp": self.timestamp}}
+        return {self.component: {"result": self.result, "timestamp": self.timestamp}}
 
 
 def _now_iso() -> str:
@@ -56,10 +56,12 @@ class BuildReport:
     def add_data(self, data: Mapping[str, object]) -> None:
         self._data = deep_merge(self._data, dict(data))
 
-    def add_stage_result(self, stage: str, result: str) -> None:
-        if stage:
+    def add_component_result(self, component: str, result: str) -> None:
+        if component:
             self._data.update(
-                StageResult(stage=stage, result=result, timestamp=_now_iso()).to_data()
+                ComponentResult(
+                    component=component, result=result, timestamp=_now_iso()
+                ).to_data()
             )
 
     def to_data(self) -> Mapping[str, object]:
