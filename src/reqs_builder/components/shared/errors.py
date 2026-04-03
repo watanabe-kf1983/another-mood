@@ -13,7 +13,7 @@ _ERRORS_KEY = "errors"
 
 @contextmanager
 def error_propagation(
-    upstream_dirs: Sequence[Path], out_dir: Path, *, stage: str = ""
+    upstream_dirs: Sequence[Path], out_dir: Path, *, component: str = ""
 ) -> Generator[bool, None, None]:
     """Context manager: propagate errors through the pipeline.
 
@@ -34,8 +34,8 @@ def error_propagation(
             report.add_data(_error_data(exc))
         else:
             result = "ok"
-    if stage:
-        report.add_stage_result(stage, result)
+    if component:
+        report.add_component_result(component, result)
     report.write(out_dir)
 
 

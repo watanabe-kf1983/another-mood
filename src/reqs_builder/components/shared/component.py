@@ -11,7 +11,7 @@ Usage:
     # Direct call
     normalize(src_dir=some_path, out_dir=other_path, upstream_dir=other_path2)
 
-    # Bind for deferred execution
+    # Bind for deferred execution (component name derived from function name)
     call = normalize.bind(src_dir=some_path, out_dir=other_path, upstream_dir=other_path2)
     call()  # executes the function
 """
@@ -36,21 +36,17 @@ class ComponentCall:
     """
 
     fn: Callable[..., None]
+    name: str
     out_dir_key: str
     upstream_dir_keys: Sequence[str] = ()
     use_atomic_write: bool = True
     use_error_propagation: bool = True
-    stage: str = ""
     args: tuple[object, ...] = ()
     kwargs: dict[str, object] = field(default_factory=lambda: {})
 
     def bind(self, *args: object, **kwargs: object) -> ComponentCall:
         """Bind arguments and return a new ComponentCall ready to execute."""
         return replace(self, args=args, kwargs=kwargs)
-
-    def on_stage(self, stage: str) -> ComponentCall:
-        """Return a copy with the given stage name."""
-        return replace(self, stage=stage)
 
     @property
     def upstream_dirs(self) -> Sequence[Path]:
@@ -76,7 +72,7 @@ class ComponentCall:
             def _with_propagation(*args: object, **kwargs: object) -> None:
                 out_dir = cast(Path, kwargs[self.out_dir_key])
                 with error_propagation(
-                    self.upstream_dirs, out_dir, stage=self.stage
+                    self.upstream_dirs, out_dir, component=self.name
                 ) as ok:
                     if ok:
                         _inner(*args, **kwargs)
@@ -113,6 +109,7 @@ class Component:
     def __call__(self, fn: Callable[..., None]) -> ComponentCall:
         return ComponentCall(
             fn=fn,
+            name=fn.__name__,
             out_dir_key=self.out_dir,
             upstream_dir_keys=self.upstream_dirs,
             use_atomic_write=self.atomic_write,
