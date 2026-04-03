@@ -65,4 +65,7 @@ class TestGenerate:
         # Stale output is gone, error page is shown
         error_page = (out_dir / "index.md").read_text()
         assert "# Build Report" in error_page
-        assert len(list(out_dir.iterdir())) == 1
+        assert sorted(p.name for p in out_dir.iterdir()) == [
+            "__build_report.yaml",
+            "index.md",
+        ]

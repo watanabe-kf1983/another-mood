@@ -1,5 +1,7 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
+from datetime import datetime
+
 from reqs_builder.components import (
     compose,
     generate,
@@ -7,6 +9,7 @@ from reqs_builder.components import (
     normalize_contents,
     normalize_queries,
 )
+from reqs_builder.components.shared.build_report import BuildReport
 from reqs_builder.config import ProjectConfig
 from reqs_builder.pipeline.base import Pipeline, Stage, Task
 from reqs_builder.pipeline.render import RenderStage
@@ -70,6 +73,26 @@ def generator_stage(config: ProjectConfig) -> Task:
     )
 
 
+def notify_result_stage(config: ProjectConfig) -> Task:
+    """Notify user of build/update result after generation."""
+    first = True
+
+    def notify_result() -> None:
+        nonlocal first
+        succeeded = not BuildReport.collect(config.out_dir).has_errors()
+        messages = {
+            (True, True): "Build successfully completed",
+            (True, False): "Build failed",
+            (False, True): "Files updated, and re-build successfully completed",
+            (False, False): "Files updated, but re-build failed",
+        }
+        msg = messages[first, succeeded]
+        first = False
+        print(f"{msg} at {datetime.now():%H:%M:%S}.", flush=True)
+
+    return Stage(run_fn=notify_result, watch_paths=[config.out_dir])
+
+
 def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
     return RenderStage(
@@ -88,6 +111,7 @@ def pipeline(config: ProjectConfig) -> Pipeline:
         normalize_queries_stage(config),
         compose_stage(config),
         generator_stage(config),
+        notify_result_stage(config),
         render_stage(config),
     ]
     return Pipeline(stages)
