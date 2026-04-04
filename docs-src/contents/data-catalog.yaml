@@ -1,0 +1,105 @@
+# SchemaInspector の出力形状自体をデータカタログで表現
+data_catalog:
+  overview:
+    entities:
+      entities:
+        fields:
+          id:
+            type: string
+            required: true
+          fields:
+            type: array
+            required: true
+
+      fields:
+        fields:
+          id:
+            type: string
+            required: true
+          type:
+            type: string
+            required: true
+          required:
+            type: boolean
+            required: true
+          validation:
+            type: object
+            required: false
+          validation.enum:
+            type: array
+            required: false
+          validation.const:
+            type: any
+            required: false
+          validation.minimum:
+            type: number
+            required: false
+          validation.maximum:
+            type: number
+            required: false
+          validation.exclusiveMinimum:
+            type: number
+            required: false
+          validation.exclusiveMaximum:
+            type: number
+            required: false
+          validation.multipleOf:
+            type: number
+            required: false
+          validation.minLength:
+            type: integer
+            required: false
+          validation.maxLength:
+            type: integer
+            required: false
+          validation.pattern:
+            type: string
+            required: false
+          validation.minItems:
+            type: integer
+            required: false
+          validation.maxItems:
+            type: integer
+            required: false
+          validation.uniqueItems:
+            type: boolean
+            required: false
+          validation.minProperties:
+            type: integer
+            required: false
+          validation.maxProperties:
+            type: integer
+            required: false
+          metadata:
+            type: object
+            required: false
+          metadata.title:
+            type: string
+            required: false
+          metadata.description:
+            type: string
+            required: false
+          metadata.default:
+            type: any
+            required: false
+          metadata.examples:
+            type: array
+            required: false
+          metadata.deprecated:
+            type: boolean
+            required: false
+          metadata.readOnly:
+            type: boolean
+            required: false
+          metadata.writeOnly:
+            type: boolean
+            required: false
+          metadata.format:
+            type: string
+            required: false
+
+    references:
+      - from: entities.fields
+        to: fields
+      - from: fields.type
+        to: entities

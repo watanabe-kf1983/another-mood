@@ -90,12 +90,6 @@ $defs:
       # --- Format annotation (pass-through) ---
       format: { type: string }
 
-      # --- Content keywords (pass-through) ---
-      contentMediaType: { type: string }
-      contentEncoding: { type: string }
-      contentSchema:
-        $ref: "#/$defs/jsonSchemaSubset"
-
     additionalProperties: false
 
     # When properties is defined, additionalProperties: false is required.

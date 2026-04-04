@@ -1,0 +1,37 @@
+schemas:
+  data_catalog:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        entities:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              fields:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    required:
+                      type: boolean
+                  additionalProperties: false
+                  required: [type, required]
+            additionalProperties: false
+            required: [fields]
+        references:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+            additionalProperties: false
+            required: [from, to]
+      additionalProperties: false
+      required: [entities, references]
