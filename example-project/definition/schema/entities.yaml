@@ -1,11 +1,9 @@
 schemas:
   entities:
-    type: array
-    items:
+    type: object
+    additionalProperties:
       type: object
       properties:
-        id:
-          type: string
         name:
           type: string
         category:
@@ -13,8 +11,8 @@ schemas:
         description:
           type: string
         fields:
-          type: array
-          items:
+          type: object
+          additionalProperties:
             type: object
             properties:
               name:
@@ -28,4 +26,4 @@ schemas:
             additionalProperties: false
             required: [name, type]
       additionalProperties: false
-      required: [id, name, fields]
+      required: [name, fields]

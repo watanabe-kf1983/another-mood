@@ -2,53 +2,61 @@
 
 from pathlib import Path
 
+from collections.abc import Mapping
+
 import pytest
 import yaml
 
 from reqs_builder.components.preprocess.normalizer import (
-    build_contents_validator,
-    build_query_validator,
+    build_contents_schema,
+    build_query_schema,
     check,
     normalize,
     normalize_contents,
     normalize_queries,
 )
-from reqs_builder.components.preprocess.validator import Validator
 from reqs_builder.components.shared.diagnostic import FileValidationError
 
 
 class TestNormalize:
-    """normalize: parse → validate → write for all file types."""
+    """normalize: parse → validate → normalize → write for all file types."""
 
     @pytest.fixture()
-    def validator(self, tmp_path: Path) -> Validator:
+    def schema(self, tmp_path: Path) -> dict[str, object]:
         schema_dir = tmp_path / "schema"
         schema_dir.mkdir()
-        return build_contents_validator(schema_dir)
+        (schema_dir / "test.yaml").write_text(
+            "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
+        )
+        return dict(build_contents_schema(schema_dir))
 
-    def test_dispatches_md_and_yaml(self, tmp_path: Path, validator: Validator) -> None:
+    def test_dispatches_md_and_yaml(
+        self, tmp_path: Path, schema: dict[str, object]
+    ) -> None:
         src = tmp_path / "contents"
         src.mkdir()
-        (src / "data.yaml").write_text("key: value\n")
+        (src / "data.yaml").write_text("items:\n  - name: a\n")
         (src / "notes.md").write_text("# Notes\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, validator)
+        normalize(src, out, schema)
 
         # YAML written as .yaml
         data = yaml.safe_load((out / "data.yaml").read_text())
-        assert data == {"key": "value"}
+        assert data == {"items": [{"name": "a"}]}
         # Markdown converted to .yaml, not copied
         assert (out / "notes.yaml").exists()
         assert not (out / "notes.md").exists()
 
-    def test_markdown_prose_output(self, tmp_path: Path, validator: Validator) -> None:
+    def test_markdown_prose_output(
+        self, tmp_path: Path, schema: dict[str, object]
+    ) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "guide.md").write_text("# Guide\n\nSteps.\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, validator)
+        normalize(src, out, schema)
 
         data = yaml.safe_load((out / "guide.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
@@ -56,14 +64,14 @@ class TestNormalize:
         assert data["prose"][0]["body"]["mime_type"] == "text/markdown"
 
     def test_markdown_subdirectory_id(
-        self, tmp_path: Path, validator: Validator
+        self, tmp_path: Path, schema: dict[str, object]
     ) -> None:
         src = tmp_path / "contents"
         (src / "sub").mkdir(parents=True)
         (src / "sub" / "doc.md").write_text("# Doc\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, validator)
+        normalize(src, out, schema)
 
         data = yaml.safe_load((out / "sub" / "doc.yaml").read_text())
         assert data["prose"][0]["id"] == "sub/doc"
@@ -96,7 +104,7 @@ class TestCheck:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text("entities:\n  - id: user\n    name: User\n")
-        check(src, build_contents_validator(schema_dir))
+        check(src, build_contents_schema(schema_dir))
 
     def test_invalid_content_raises(self, tmp_path: Path, schema_dir: Path) -> None:
         src = tmp_path / "contents"
@@ -107,7 +115,7 @@ class TestCheck:
             "    name: User\n"
         )
         with pytest.raises(FileValidationError) as exc_info:
-            check(src, build_contents_validator(schema_dir))
+            check(src, build_contents_schema(schema_dir))
         assert len(exc_info.value.diagnostics) >= 1
         assert exc_info.value.diagnostics[0].source == "jsonschema"
 
@@ -118,14 +126,17 @@ class TestCheck:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "notes.md").write_text("# Notes\n")
-        check(src, build_contents_validator(schema_dir))
+        check(src, build_contents_schema(schema_dir))
 
-    def test_unschematized_yaml_passes(self, tmp_path: Path, schema_dir: Path) -> None:
-        """YAML files with keys not in schemas pass (additionalProperties allowed)."""
+    def test_unschematized_yaml_rejected(
+        self, tmp_path: Path, schema_dir: Path
+    ) -> None:
+        """YAML files with keys not in any schema are rejected."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "config.yaml").write_text("config:\n  debug: true\n")
-        check(src, build_contents_validator(schema_dir))
+        with pytest.raises(FileValidationError):
+            check(src, build_contents_schema(schema_dir))
 
     def test_collects_errors_across_files(
         self, tmp_path: Path, schema_dir: Path
@@ -145,16 +156,16 @@ class TestCheck:
             "relations:\n  - description: missing required\n"
         )
         with pytest.raises(FileValidationError) as exc_info:
-            check(src, build_contents_validator(schema_dir))
+            check(src, build_contents_schema(schema_dir))
         files = {str(d.file) for d in exc_info.value.diagnostics}
         assert len(files) == 2
 
 
-# ── build_contents_validator ───────────────────────────────────────
+# ── build_contents_schema ─────────────────────────────────────────
 
 
-class TestBuildContentsValidator:
-    """build_contents_validator: merge built-in prose + user schemas."""
+class TestBuildContentsSchema:
+    """build_contents_schema: merge built-in prose + user schemas."""
 
     def test_merges_builtin_and_user_schemas(self, tmp_path: Path) -> None:
         schema_dir = tmp_path / "schema"
@@ -169,9 +180,13 @@ class TestBuildContentsValidator:
             "        id: { type: string }\n"
             "      required: [id]\n"
         )
-        validator = build_contents_validator(schema_dir)
+        schema = build_contents_schema(schema_dir)
+        validator_schema = schema
 
         # User schema: entities validated
+        from reqs_builder.components.preprocess.validator import Validator
+
+        validator = Validator(validator_schema)
         errors = validator.validate({"entities": [{"id": 123}]}, Path("test.yaml"))
         assert len(errors) >= 1
 
@@ -190,8 +205,11 @@ class TestBuildContentsValidator:
         assert errors == []
 
     def test_nonexistent_schema_dir_uses_builtin_only(self) -> None:
-        validator = build_contents_validator(Path("/nonexistent"))
+        schema = build_contents_schema(Path("/nonexistent"))
 
+        from reqs_builder.components.preprocess.validator import Validator
+
+        validator = Validator(schema)
         # prose still validated
         errors = validator.validate(
             {
@@ -207,33 +225,37 @@ class TestBuildContentsValidator:
         assert errors == []
 
 
-# ── build_query_validator ─────────────────────────────────────────
+# ── build_query_schema ───────────────────────────────────────────
 
 
-class TestBuildQueryValidator:
-    """build_query_validator: validate against built-in QuerySchema."""
+class TestBuildQuerySchema:
+    """build_query_schema: validate against built-in QuerySchema."""
 
-    _validator = build_query_validator()
+    def _validate(self, data: Mapping[str, object]) -> list[object]:
+        from reqs_builder.components.preprocess.validator import Validator
+
+        validator = Validator(build_query_schema())
+        return list(validator.validate(data, Path("test.yaml")))
 
     def test_valid_query_accepted(self) -> None:
         data = {"q": {"from": "items", "select": [{"item": "name"}]}}
-        assert self._validator.validate(data, Path("test.yaml")) == []
+        assert self._validate(data) == []
 
     def test_from_only_accepted(self) -> None:
         data = {"q": {"from": "items"}}
-        assert self._validator.validate(data, Path("test.yaml")) == []
+        assert self._validate(data) == []
 
     def test_missing_from_rejected(self) -> None:
         data = {"q": {"select": [{"item": "name"}]}}
-        assert len(self._validator.validate(data, Path("test.yaml"))) >= 1
+        assert len(self._validate(data)) >= 1
 
     def test_unknown_key_rejected(self) -> None:
         data = {"q": {"from": "items", "unknown": "value"}}
-        assert len(self._validator.validate(data, Path("test.yaml"))) >= 1
+        assert len(self._validate(data)) >= 1
 
     def test_select_missing_item_rejected(self) -> None:
         data = {"q": {"from": "items", "select": [{"as": "alias"}]}}
-        assert len(self._validator.validate(data, Path("test.yaml"))) >= 1
+        assert len(self._validate(data)) >= 1
 
 
 # ── normalize_contents ────────────────────────────────────────────
@@ -245,14 +267,19 @@ class TestNormalizeContents:
     def test_validates_and_writes(self, tmp_path: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
-        (src / "data.yaml").write_text("key: value\n")
+        (src / "data.yaml").write_text("items:\n  - name: a\n")
         schema_dir = tmp_path / "schema"
         schema_dir.mkdir()
+        (schema_dir / "test.yaml").write_text(
+            "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
+        )
 
         out = tmp_path / "normalized"
         normalize_contents(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
-        assert yaml.safe_load((out / "data.yaml").read_text()) == {"key": "value"}
+        assert yaml.safe_load((out / "data.yaml").read_text()) == {
+            "items": [{"name": "a"}]
+        }
 
 
 # ── normalize_queries ─────────────────────────────────────────────
@@ -272,4 +299,10 @@ class TestNormalizeQueries:
         normalize_queries(queries_dir=queries, out_dir=out)
 
         data = yaml.safe_load((out / "erds.yaml").read_text())
-        assert data["erds"]["from"] == "entities"
+        assert data == {
+            "__definition": {
+                "queries": [
+                    {"id": "erds", "from": "entities", "select": [{"item": "name"}]}
+                ]
+            }
+        }
