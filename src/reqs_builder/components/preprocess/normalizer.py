@@ -1,8 +1,8 @@
 """Normalizer — parse, validate, and normalize input data.
 
 Every source file is parsed into data, validated against the schema,
-and written to the output directory.
-Markdown files are converted via the built-in prose schema;
+and normalized (dict-to-array conversion for additionalProperties
+patterns). Markdown files are converted via the built-in prose schema;
 YAML files are parsed with ruamel.yaml to preserve source positions
 for line-number-accurate validation errors.
 """
@@ -10,7 +10,7 @@ for line-number-accurate validation errors.
 from collections.abc import Mapping, Sequence
 from importlib import resources
 from pathlib import Path
-
+from reqs_builder.components.preprocess.dict_to_array import normalize_data
 from reqs_builder.components.preprocess.prose import parse_markdown
 from reqs_builder.components.preprocess.validator import Validator, parse_yaml
 from reqs_builder.components.shared import yaml_dumper
@@ -39,20 +39,22 @@ def normalize_contents(
     out_dir: Path,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
-    normalize(src_dir, out_dir, build_contents_validator(schema_dir))
+    normalize(src_dir, out_dir, build_contents_schema(schema_dir))
 
 
 @Component(out_dir="out_dir")
 def normalize_queries(queries_dir: Path, *, out_dir: Path) -> None:
     """Validate and normalize query files from queries_dir into out_dir."""
-    normalize(queries_dir, out_dir, build_query_validator())
+    normalize(queries_dir, out_dir, build_query_schema())
 
 
-# ── validator builders ─────────────────────────────────────────────
+# ── schema builders ───────────────────────────────────────────────
 
 
-def build_contents_validator(schema_dir: Path) -> Validator:
-    """Build a Validator for content files from built-in + user schemas.
+def build_contents_schema(
+    schema_dir: Path,
+) -> Mapping[str, object]:
+    """Build a validation/normalization schema for content files.
 
     Merges the built-in prose schema with user-defined schemas from
     schema_dir, then wraps them as JSON Schema properties so that
@@ -60,31 +62,33 @@ def build_contents_validator(schema_dir: Path) -> Validator:
     """
     merged = load_yamls(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
     schemas = merged.get("schemas", {})
-    return Validator({"type": "object", "properties": schemas})
+    return {"type": "object", "properties": schemas}
 
 
-def build_query_validator() -> Validator:
-    """Build a Validator for query files (against built-in QuerySchema)."""
-    return Validator(load_yamls(_QUERY_SCHEMA_DIR))
+def build_query_schema() -> Mapping[str, object]:
+    """Build a validation/normalization schema for query files."""
+    return load_yamls(_QUERY_SCHEMA_DIR)
 
 
 # ── shared core ────────────────────────────────────────────────────
 
 
-def normalize(src_dir: Path, out_dir: Path, validator: Validator) -> None:
-    """Validate all files, then parse and write each to out_dir."""
-    check(src_dir, validator)
+def normalize(src_dir: Path, out_dir: Path, schema: Mapping[str, object]) -> None:
+    """Validate all files, then parse, normalize, and write each to out_dir."""
+    check(src_dir, schema)
     for src_file in _source_files(src_dir):
         rel = src_file.relative_to(src_dir)
         data = _parse(src_file, rel)
-        _write(data, rel, out_dir)
+        normalized = normalize_data(data, schema)
+        _write(normalized, rel, out_dir)
 
 
-def check(src_dir: Path, validator: Validator) -> None:
-    """Validate all files in src_dir against the given validator.
+def check(src_dir: Path, schema: Mapping[str, object]) -> None:
+    """Validate all files in src_dir against the given schema.
 
     Raises FileValidationError if any file has diagnostics.
     """
+    validator = Validator(schema)
     diagnostics: list[Diagnostic] = []
     for src_file in _source_files(src_dir):
         rel = src_file.relative_to(src_dir)
@@ -114,7 +118,7 @@ def _parse(src: Path, rel: Path) -> Mapping[str, object]:
     return parse_yaml(src)
 
 
-def _write(data: Mapping[str, object], rel: Path, out_dir: Path) -> None:
+def _write(data: object, rel: Path, out_dir: Path) -> None:
     dst = out_dir / rel.with_suffix(".yaml")
     dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("w", encoding="utf-8") as f:
