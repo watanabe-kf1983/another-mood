@@ -19,7 +19,9 @@ def callback() -> None:
 def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project (copy contents to output)."""
     config = ProjectConfig(project_dir=Path(project_dir))
-    pipeline(config).run()
+    report = pipeline(config).run()
+    if report.has_errors():
+        raise SystemExit(1)
 
 
 @app.command()

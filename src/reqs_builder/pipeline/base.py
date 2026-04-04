@@ -7,6 +7,7 @@ from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from reqs_builder.components.shared.build_report import BuildReport
 from reqs_builder.pipeline.adapters.watcher import Watcher
 
 
@@ -46,22 +47,41 @@ class Stage(Task):
         yield
 
 
+class ReportingStage(Stage):
+    """Like Stage, but report_fn returns a BuildReport exposed via .report."""
+
+    report: BuildReport
+
+    def __init__(
+        self, report_fn: Callable[[], BuildReport], watch_paths: Sequence[Path]
+    ) -> None:
+        self._report_fn = report_fn
+        self.report = BuildReport()
+        super().__init__(run_fn=self._collect, watch_paths=watch_paths)
+
+    def _collect(self) -> None:
+        self.report = self._report_fn()
+
+
 class Pipeline:
     """Composite task: runs a sequence of tasks as one."""
 
-    def __init__(self, tasks: Sequence[Task]) -> None:
-        self._tasks = tasks
+    def __init__(self, stages: Sequence[Task], reporting: ReportingStage) -> None:
+        self._stages = stages
+        self._reporting = reporting
 
-    def run(self) -> None:
-        """Run all tasks sequentially."""
-        for task in self._tasks:
-            task.run()
+    def run(self) -> BuildReport:
+        """Run all stages then reporting. Return the build report."""
+        for stage in self._stages:
+            stage.run()
+        self._reporting.run()
+        return self._reporting.report
 
     @contextmanager
     def start_watching(self) -> Generator[threading.Event]:
         """Start all tasks watching. Yields shutdown event. Cleans up all on exit."""
         shutdown = threading.Event()
         with ExitStack() as stack:
-            for task in self._tasks:
+            for task in [*self._stages, self._reporting]:
                 stack.enter_context(task.start_watching(shutdown))
             yield shutdown
