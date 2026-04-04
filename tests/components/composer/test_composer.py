@@ -34,9 +34,14 @@ class TestCompose:
         _write_yaml(
             queries / "names.yaml",
             {
-                "names": {
-                    "from": "items",
-                    "select": [{"item": "name"}],
+                "__definition": {
+                    "queries": [
+                        {
+                            "id": "names",
+                            "from": "items",
+                            "select": [{"item": "name"}],
+                        }
+                    ]
                 }
             },
         )

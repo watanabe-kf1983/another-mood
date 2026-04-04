@@ -7,7 +7,7 @@ YAML files are parsed with ruamel.yaml to preserve source positions
 for line-number-accurate validation errors.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
 from pathlib import Path
 from reqs_builder.components.preprocess.dict_to_array import normalize_data
@@ -45,7 +45,12 @@ def normalize_contents(
 @Component(out_dir="out_dir")
 def normalize_queries(queries_dir: Path, *, out_dir: Path) -> None:
     """Validate and normalize query files from queries_dir into out_dir."""
-    normalize(queries_dir, out_dir, build_query_schema())
+    normalize(
+        queries_dir,
+        out_dir,
+        build_query_schema(),
+        wrapper=lambda data: {"__definition": {"queries": data}},
+    )
 
 
 # ── schema builders ───────────────────────────────────────────────
@@ -62,7 +67,7 @@ def build_contents_schema(
     """
     merged = load_yamls(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
     schemas = merged.get("schemas", {})
-    return {"type": "object", "properties": schemas}
+    return {"type": "object", "properties": schemas, "additionalProperties": False}
 
 
 def build_query_schema() -> Mapping[str, object]:
@@ -73,14 +78,20 @@ def build_query_schema() -> Mapping[str, object]:
 # ── shared core ────────────────────────────────────────────────────
 
 
-def normalize(src_dir: Path, out_dir: Path, schema: Mapping[str, object]) -> None:
+def normalize(
+    src_dir: Path,
+    out_dir: Path,
+    schema: Mapping[str, object],
+    *,
+    wrapper: Callable[[object], object] = lambda x: x,
+) -> None:
     """Validate all files, then parse, normalize, and write each to out_dir."""
     check(src_dir, schema)
     for src_file in _source_files(src_dir):
         rel = src_file.relative_to(src_dir)
         data = _parse(src_file, rel)
         normalized = normalize_data(data, schema)
-        _write(normalized, rel, out_dir)
+        _write(wrapper(normalized), rel, out_dir)
 
 
 def check(src_dir: Path, schema: Mapping[str, object]) -> None:

@@ -27,11 +27,10 @@ def compose(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None:
     shutil.copytree(contents_dir, out_dir, dirs_exist_ok=True)
     sources = load_yamls(contents_dir)
 
-    parsed_queries = {
-        name: parse_query(query_def)
-        for name, query_def in load_yamls(queries_dir).items()
-        if not name.startswith("__")
-    }
+    merged = load_yamls(queries_dir)
+    definition: dict[str, Any] = merged.get("__definition", {})
+    raw_queries: list[dict[str, Any]] = definition.get("queries", [])
+    parsed_queries = {record["id"]: parse_query(record) for record in raw_queries}
 
     for name, query in parsed_queries.items():
         sources[name] = query.evaluate(sources)

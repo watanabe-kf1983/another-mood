@@ -25,6 +25,9 @@ class TestNormalize:
     def schema(self, tmp_path: Path) -> dict[str, object]:
         schema_dir = tmp_path / "schema"
         schema_dir.mkdir()
+        (schema_dir / "test.yaml").write_text(
+            "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
+        )
         return dict(build_contents_schema(schema_dir))
 
     def test_dispatches_md_and_yaml(
@@ -32,7 +35,7 @@ class TestNormalize:
     ) -> None:
         src = tmp_path / "contents"
         src.mkdir()
-        (src / "data.yaml").write_text("key: value\n")
+        (src / "data.yaml").write_text("items:\n  - name: a\n")
         (src / "notes.md").write_text("# Notes\n")
 
         out = tmp_path / "normalized"
@@ -40,7 +43,7 @@ class TestNormalize:
 
         # YAML written as .yaml
         data = yaml.safe_load((out / "data.yaml").read_text())
-        assert data == {"key": "value"}
+        assert data == {"items": [{"name": "a"}]}
         # Markdown converted to .yaml, not copied
         assert (out / "notes.yaml").exists()
         assert not (out / "notes.md").exists()
@@ -125,12 +128,15 @@ class TestCheck:
         (src / "notes.md").write_text("# Notes\n")
         check(src, build_contents_schema(schema_dir))
 
-    def test_unschematized_yaml_passes(self, tmp_path: Path, schema_dir: Path) -> None:
-        """YAML files with keys not in schemas pass (additionalProperties allowed)."""
+    def test_unschematized_yaml_rejected(
+        self, tmp_path: Path, schema_dir: Path
+    ) -> None:
+        """YAML files with keys not in any schema are rejected."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "config.yaml").write_text("config:\n  debug: true\n")
-        check(src, build_contents_schema(schema_dir))
+        with pytest.raises(FileValidationError):
+            check(src, build_contents_schema(schema_dir))
 
     def test_collects_errors_across_files(
         self, tmp_path: Path, schema_dir: Path
@@ -261,14 +267,19 @@ class TestNormalizeContents:
     def test_validates_and_writes(self, tmp_path: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
-        (src / "data.yaml").write_text("key: value\n")
+        (src / "data.yaml").write_text("items:\n  - name: a\n")
         schema_dir = tmp_path / "schema"
         schema_dir.mkdir()
+        (schema_dir / "test.yaml").write_text(
+            "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
+        )
 
         out = tmp_path / "normalized"
         normalize_contents(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
-        assert yaml.safe_load((out / "data.yaml").read_text()) == {"key": "value"}
+        assert yaml.safe_load((out / "data.yaml").read_text()) == {
+            "items": [{"name": "a"}]
+        }
 
 
 # ── normalize_queries ─────────────────────────────────────────────
@@ -288,6 +299,10 @@ class TestNormalizeQueries:
         normalize_queries(queries_dir=queries, out_dir=out)
 
         data = yaml.safe_load((out / "erds.yaml").read_text())
-        assert data == [
-            {"id": "erds", "from": "entities", "select": [{"item": "name"}]}
-        ]
+        assert data == {
+            "__definition": {
+                "queries": [
+                    {"id": "erds", "from": "entities", "select": [{"item": "name"}]}
+                ]
+            }
+        }
