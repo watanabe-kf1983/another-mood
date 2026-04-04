@@ -37,18 +37,13 @@ reqs dev <projectDir> [--port <port>]
 
 ### reqs build
 
-一括ビルド。全段を実行し、静的ファイルを生成する。CI やリリース用途を想定。
+一括ビルド。全段を実行し、静的ファイルを生成する。
 
 ```
 reqs build <projectDir>
 ```
 
-### reqs normalize / compose / generate
+用途:
 
-各ステージの単体実行。
-
-```
-reqs normalize <projectDir>
-reqs compose <projectDir>
-reqs generate <projectDir>
-```
+- CI やリリース
+- コーディングエージェントとの協業。エージェントがファイルを編集した後に `reqs build` を実行し、exit code で成否を判定する。ブラウザ側は VS Code Live Server 等で `render/` ディレクトリを常時配信し、人がリロードで確認する。`reqs dev` の Watcher はエージェントがファイルを書き換える場合は不要であり、同期的な `reqs build` の方がエージェントのワークフローに合う。
