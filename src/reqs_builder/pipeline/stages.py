@@ -1,5 +1,6 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
+import sys
 from datetime import datetime
 
 from reqs_builder.components import (
@@ -99,7 +100,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
         }
         msg = messages[first, succeeded]
         first = False
-        print(f"{msg} at {datetime.now():%H:%M:%S}.", flush=True)
+        print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
         return result
 
     return ReportingStage(report_fn=report, watch_paths=[config.out_dir])

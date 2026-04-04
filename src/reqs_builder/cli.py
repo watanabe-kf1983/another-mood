@@ -1,5 +1,6 @@
 """CLI entry point."""
 
+import sys
 from pathlib import Path
 
 import typer
@@ -33,7 +34,7 @@ def dev(
     config = ProjectConfig(project_dir=Path(project_dir), port=port)
     with pipeline(config).start_watching() as shutdown:
         try:
-            print("Press Ctrl+C to stop.", flush=True)
+            print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
             shutdown.wait()
         except KeyboardInterrupt:
             pass
