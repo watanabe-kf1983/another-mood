@@ -33,7 +33,11 @@ class RenderStage(Task):
         """Initial prepare + dev server + cascade watcher. Terminates server on exit."""
         prepared = self._prepare()
         process = renderer.serve(prepared, self.port)
-        print(f"Server running at http://localhost:{self.port}/", flush=True)
+        print(
+            f"Server running at http://localhost:{self.port}/",
+            file=sys.stderr,
+            flush=True,
+        )
 
         cascade = threading.Thread(
             target=lambda: Watcher([self.src_dir], self._prepare).run(),

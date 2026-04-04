@@ -1,5 +1,6 @@
 """CLI entry point."""
 
+import sys
 from pathlib import Path
 
 import typer
@@ -19,7 +20,9 @@ def callback() -> None:
 def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project (copy contents to output)."""
     config = ProjectConfig(project_dir=Path(project_dir))
-    pipeline(config).run()
+    report = pipeline(config).run()
+    if report.has_errors():
+        raise SystemExit(1)
 
 
 @app.command()
@@ -31,7 +34,7 @@ def dev(
     config = ProjectConfig(project_dir=Path(project_dir), port=port)
     with pipeline(config).start_watching() as shutdown:
         try:
-            print("Press Ctrl+C to stop.", flush=True)
+            print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
             shutdown.wait()
         except KeyboardInterrupt:
             pass

@@ -1,5 +1,6 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
+import sys
 from datetime import datetime
 
 from reqs_builder.components import (
@@ -11,7 +12,7 @@ from reqs_builder.components import (
 )
 from reqs_builder.components.shared.build_report import BuildReport
 from reqs_builder.config import ProjectConfig
-from reqs_builder.pipeline.base import Pipeline, Stage, Task
+from reqs_builder.pipeline.base import Pipeline, ReportingStage, Stage, Task
 from reqs_builder.pipeline.render import RenderStage
 
 
@@ -73,26 +74,6 @@ def generator_stage(config: ProjectConfig) -> Task:
     )
 
 
-def notify_result_stage(config: ProjectConfig) -> Task:
-    """Notify user of build/update result after generation."""
-    first = True
-
-    def notify_result() -> None:
-        nonlocal first
-        succeeded = not BuildReport.collect(config.out_dir).has_errors()
-        messages = {
-            (True, True): "Build successfully completed",
-            (True, False): "Build failed",
-            (False, True): "Files updated, and re-build successfully completed",
-            (False, False): "Files updated, but re-build failed",
-        }
-        msg = messages[first, succeeded]
-        first = False
-        print(f"{msg} at {datetime.now():%H:%M:%S}.", flush=True)
-
-    return Stage(run_fn=notify_result, watch_paths=[config.out_dir])
-
-
 def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
     return RenderStage(
@@ -103,6 +84,28 @@ def render_stage(config: ProjectConfig) -> Task:
     )
 
 
+def build_report_stage(config: ProjectConfig) -> ReportingStage:
+    """Report build result to user. Exposes BuildReport for CLI."""
+    first = True
+
+    def report() -> BuildReport:
+        nonlocal first
+        result = BuildReport.collect(config.out_dir)
+        succeeded = not result.has_errors()
+        messages = {
+            (True, True): "Build successfully completed",
+            (True, False): "Build failed",
+            (False, True): "Files updated, and re-build successfully completed",
+            (False, False): "Files updated, but re-build failed",
+        }
+        msg = messages[first, succeeded]
+        first = False
+        print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
+        return result
+
+    return ReportingStage(report_fn=report, watch_paths=[config.out_dir])
+
+
 def pipeline(config: ProjectConfig) -> Pipeline:
     """Create the full pipeline."""
     stages: list[Task] = [
@@ -111,7 +114,6 @@ def pipeline(config: ProjectConfig) -> Pipeline:
         normalize_queries_stage(config),
         compose_stage(config),
         generator_stage(config),
-        notify_result_stage(config),
         render_stage(config),
     ]
-    return Pipeline(stages)
+    return Pipeline(stages, reporting=build_report_stage(config))

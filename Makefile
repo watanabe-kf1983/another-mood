@@ -1,6 +1,6 @@
-.PHONY: ci format-check lint typecheck test secrets format
+.PHONY: ci format-check lint typecheck test secrets build-projects format
 
-ci: format-check lint typecheck test secrets
+ci: format-check lint typecheck test secrets build-projects
 
 format-check:
 	uv run ruff format --check .
@@ -16,6 +16,10 @@ test:
 
 secrets:
 	uv run pre-commit run gitleaks --all-files
+
+build-projects:
+	uv run reqs build docs-src
+	uv run reqs build example-project
 
 format:
 	uv run ruff format .
