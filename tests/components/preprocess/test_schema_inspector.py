@@ -1,4 +1,4 @@
-"""Tests for SchemaInspector — SchemaSchema validation and check_schema."""
+"""Tests for SchemaInspector — SchemaSchema validation and data catalog extraction."""
 
 from pathlib import Path
 
@@ -8,6 +8,7 @@ import yaml
 from reqs_builder.components.preprocess.schema_inspector import (
     build_schema_validator,
     check_schema,
+    extract_data_catalog,
 )
 from reqs_builder.components.shared.diagnostic import FileValidationError
 
@@ -309,3 +310,55 @@ class TestCheckSchema:
             check_schema([f])
         assert exc_info.value.diagnostics[0].file == f
         assert exc_info.value.diagnostics[0].source == "ruamel.yaml"
+
+
+# ── extract_data_catalog ─────────────────────────────────────────────
+
+
+class TestExtractDataCatalog:
+    """extract_data_catalog: orchestrates entity extraction + references."""
+
+    def test_references_passthrough(self) -> None:
+        schema = yaml.safe_load("""
+            schemas:
+              recipes:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    title: { type: string }
+                  additionalProperties: false
+            references:
+              - from: recipes.ingredients.name
+                to: ingredients
+              - from: recipes.category
+                to: categories
+        """)
+        result = extract_data_catalog(schema)
+        assert result["references"] == [
+            {"from": "recipes.ingredients.name", "to": "ingredients"},
+            {"from": "recipes.category", "to": "categories"},
+        ]
+
+    def test_no_references(self) -> None:
+        schema = yaml.safe_load("""
+            schemas:
+              recipes:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    title: { type: string }
+                  additionalProperties: false
+        """)
+        result = extract_data_catalog(schema)
+        assert "references" not in result
+
+    def test_no_schemas(self) -> None:
+        schema = yaml.safe_load("""
+            references:
+              - from: recipes.category
+                to: categories
+        """)
+        result = extract_data_catalog(schema)
+        assert "entities" not in result
