@@ -138,6 +138,62 @@ class TestBuildSchemaTree:
             ("a", True), ("b", False), ("c", True),
         ]
 
+    def test_object_containing_object(self) -> None:
+        """Object-Object: property with nested object (properties pattern)."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              address:
+                type: object
+                properties:
+                  city: { type: string }
+                additionalProperties: false
+            additionalProperties: false
+        """))
+        assert tree == ObjectNode(fields=[
+            SchemaField("address", False, ObjectNode(fields=[
+                SchemaField("city", False, ValueNode(type="string")),
+            ])),
+        ])
+
+    def test_object_containing_array(self) -> None:
+        """Object-Array: property with array type."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              scores:
+                type: array
+                items: { type: integer }
+            additionalProperties: false
+        """))
+        assert tree == ObjectNode(fields=[
+            SchemaField("scores", False, ArrayNode(child=ValueNode(type="integer"))),
+        ])
+
+    def test_object_mixed_children(self) -> None:
+        """Object-[Object, Array, Value]: properties with all three child types."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              name: { type: string }
+              tags:
+                type: array
+                items: { type: string }
+              address:
+                type: object
+                properties:
+                  city: { type: string }
+                additionalProperties: false
+            additionalProperties: false
+        """))
+        assert tree == ObjectNode(fields=[
+            SchemaField("name", False, ValueNode(type="string")),
+            SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
+            SchemaField("address", False, ObjectNode(fields=[
+                SchemaField("city", False, ValueNode(type="string")),
+            ])),
+        ])
+
     def test_array_of_arrays(self) -> None:
         """array of arrays → ArrayNode(child=ArrayNode(child=ValueNode))."""
         tree = build_schema_tree(yaml.safe_load("""
