@@ -84,6 +84,17 @@ JSON Schema の構造パターン（`additionalProperties`, `properties`, `items
 - Step 2 は JSON Schema を意識せず、木の走査だけでデータカタログを生成できる
 - 将来 `dict_to_array`（コンテンツデータの正規化）も同じ木構造を利用して簡素化できる可能性がある
 
+### dict_to_array との統合構想
+
+SchemaTree は SchemaInspector（データカタログ抽出）だけでなく、Normalizer のデータ正規化（現 `dict_to_array`）にも利用できる。各ノードにデータ変換関数を持たせることで、木とデータを同時に走査するだけで正規化が完了する:
+
+- **ObjectNode** → `_recurse_properties`（各フィールドに再帰）
+- **ArrayNode（`array` 由来）** → `_recurse_items`（各要素に再帰）
+- **ArrayNode（`additionalProperties` 由来）** → `_flatten_dict`（dict → array + id 付与）
+- **ValueNode** → パススルー
+
+SchemaTree の構築はスキーマを走査するだけの軽量処理なので、ステージ間でシリアライズせず、各ステージが `build_schema_tree(schema)` を呼んでそれぞれの用途に使う。共有するのはコード（関数）であってデータ（シリアライズされた木）ではない。
+
 ## データカタログの出力形状
 
 → [データカタログ出力形状](../../../data-catalog/overview.md)（フィールド一覧・クラス図・ERD）
