@@ -1,4 +1,4 @@
-"""Tests for SchemaInspector — SchemaSchema validation and check_schema."""
+"""Tests for SchemaInspector — SchemaSchema validation and data catalog extraction."""
 
 from pathlib import Path
 
@@ -8,6 +8,8 @@ import yaml
 from reqs_builder.components.preprocess.schema_inspector import (
     build_schema_validator,
     check_schema,
+    extract_data_catalog,
+    inspect_schema,
 )
 from reqs_builder.components.shared.diagnostic import FileValidationError
 
@@ -309,3 +311,87 @@ class TestCheckSchema:
             check_schema([f])
         assert exc_info.value.diagnostics[0].file == f
         assert exc_info.value.diagnostics[0].source == "ruamel.yaml"
+
+
+# ── extract_data_catalog ─────────────────────────────────────────────
+
+
+class TestExtractDataCatalog:
+    """extract_data_catalog: orchestrates entity extraction + references."""
+
+    def test_references_passthrough(self) -> None:
+        schema = yaml.safe_load("""
+            schemas:
+              recipes:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    title: { type: string }
+                  additionalProperties: false
+            references:
+              - from: recipes.ingredients.name
+                to: ingredients
+              - from: recipes.category
+                to: categories
+        """)
+        result = extract_data_catalog(schema)
+        assert result["references"] == [
+            {"from": "recipes.ingredients.name", "to": "ingredients"},
+            {"from": "recipes.category", "to": "categories"},
+        ]
+
+    def test_no_references(self) -> None:
+        schema = yaml.safe_load("""
+            schemas:
+              recipes:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    title: { type: string }
+                  additionalProperties: false
+        """)
+        result = extract_data_catalog(schema)
+        assert "references" not in result
+
+    def test_no_schemas(self) -> None:
+        schema = yaml.safe_load("""
+            references:
+              - from: recipes.category
+                to: categories
+        """)
+        result = extract_data_catalog(schema)
+        assert "entities" not in result
+
+
+# ── inspect_schema (component) ───────────────────────────────────────
+
+
+class TestInspectSchema:
+    """inspect_schema: pipeline component writes per-file data catalog."""
+
+    def test_writes_per_file(self, tmp_path: Path) -> None:
+        schema_dir = tmp_path / "schema"
+        schema_dir.mkdir()
+        (schema_dir / "recipes.yaml").write_text(
+            "schemas:\n"
+            "  recipes:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        title: { type: string }\n"
+            "      additionalProperties: false\n"
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_dir, out_dir=out_dir)
+
+        out_file = out_dir / "recipes.yaml"
+        assert out_file.exists()
+        data = yaml.safe_load(out_file.read_text())
+        assert "__definition" in data
+        entities = data["__definition"]["entities"]
+        assert entities[0]["id"] == "recipes"

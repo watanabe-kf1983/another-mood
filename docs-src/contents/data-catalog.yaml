@@ -10,6 +10,33 @@ data_catalog:
           fields:
             type: array
             required: true
+          metadata:
+            type: object
+            required: false
+          metadata.title:
+            type: string
+            required: false
+          metadata.description:
+            type: string
+            required: false
+          metadata.default:
+            type: any
+            required: false
+          metadata.examples:
+            type: array
+            required: false
+          metadata.deprecated:
+            type: boolean
+            required: false
+          metadata.readOnly:
+            type: boolean
+            required: false
+          metadata.writeOnly:
+            type: boolean
+            required: false
+          metadata.format:
+            type: string
+            required: false
 
       fields:
         fields:
@@ -63,12 +90,6 @@ data_catalog:
             required: false
           validation.uniqueItems:
             type: boolean
-            required: false
-          validation.minProperties:
-            type: integer
-            required: false
-          validation.maxProperties:
-            type: integer
             required: false
           metadata:
             type: object
