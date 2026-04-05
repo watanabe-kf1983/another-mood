@@ -101,12 +101,8 @@ def build_schema_tree(schema: Mapping[str, object]) -> Node:
             return _build_array_from_additional(schema, metadata)
 
     if schema_type == "array":
-        items = schema.get("items")
-        if isinstance(items, Mapping):
-            child = build_schema_tree(cast(SchemaDict, items))
-        else:
-            child = ValueNode(type="string")
-        return ArrayNode(child=child, metadata=metadata)
+        items = cast(SchemaDict, schema["items"])
+        return ArrayNode(child=build_schema_tree(items), metadata=metadata)
 
     return ValueNode(
         type=str(schema_type) if schema_type else "string",

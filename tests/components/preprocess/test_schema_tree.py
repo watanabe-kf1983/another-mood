@@ -1,6 +1,5 @@
-"""Tests for SchemaTree — schema → tree → data catalog."""
+"""Tests for SchemaTree — unit tests derived from schema-inspector.md spec rules."""
 
-import pytest
 import yaml
 
 from reqs_builder.components.preprocess.data_catalog import (
@@ -14,335 +13,269 @@ from reqs_builder.components.preprocess.schema_tree import (
     ValueNode,
     build_schema_tree,
     collect_entities,
-    extract_entities,
 )
 
 # fmt: off
 
-# Each case: (schema_name, schema_yaml, expected_tree, expected_catalog)
-_CASES = [
-    pytest.param(
-        "recipes",
-        """
-        type: object
-        additionalProperties:
-          type: object
-          properties:
-            title: { type: string }
-            servings: { type: integer }
-          additionalProperties: false
-          required: [title]
-        """,
-        ArrayNode(child=ObjectNode(fields=[
-            SchemaField("id",       True,  ValueNode(type="string")),
-            SchemaField("title",    True,  ValueNode(type="string")),
-            SchemaField("servings", False, ValueNode(type="integer")),
-        ])),
-        [CatalogEntity("recipes", fields=[
-            CatalogField("id",       "string",  True),
-            CatalogField("title",    "string",  True),
-            CatalogField("servings", "integer", False),
-        ])],
-        id="additionalProperties — entity with implicit id",
-    ),
-    pytest.param(
-        "kitchen",
-        """
-        type: object
-        properties:
-          name: { type: string }
-          capacity: { type: integer }
-        additionalProperties: false
-        required: [name]
-        """,
-        ObjectNode(fields=[
-            SchemaField("name",     True,  ValueNode(type="string")),
-            SchemaField("capacity", False, ValueNode(type="integer")),
-        ]),
-        [CatalogEntity("kitchen", fields=[
-            CatalogField("name",     "string",  True),
-            CatalogField("capacity", "integer", False),
-        ])],
-        id="properties — flat fields",
-    ),
-    pytest.param(
-        "steps",
-        """
-        type: array
-        items:
-          type: object
-          properties:
-            order: { type: integer }
-            instruction: { type: string }
-          additionalProperties: false
-          required: [order, instruction]
-        """,
-        ArrayNode(child=ObjectNode(fields=[
-            SchemaField("order",       True, ValueNode(type="integer")),
-            SchemaField("instruction", True, ValueNode(type="string")),
-        ])),
-        [CatalogEntity("steps", fields=[
-            CatalogField("order",       "integer", True),
-            CatalogField("instruction", "string",  True),
-        ])],
-        id="array of objects — entity without id",
-    ),
-    pytest.param(
-        "recipe",
-        """
-        type: object
-        properties:
-          tags:
-            type: array
-            items: { type: string }
-        additionalProperties: false
-        """,
-        ObjectNode(fields=[
-            SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
-        ]),
-        [CatalogEntity("recipe", fields=[
-            CatalogField("tags", "string[]", False),
-        ])],
-        id="array of scalars — type[]",
-    ),
-    pytest.param(
-        "recipes",
-        """
-        type: object
-        additionalProperties:
-          type: object
-          properties:
-            title: { type: string }
-            ingredients:
-              type: object
-              additionalProperties:
-                type: object
-                properties:
-                  name: { type: string }
-                  amount: { type: string }
-                additionalProperties: false
-                required: [name, amount]
-          additionalProperties: false
-          required: [title, ingredients]
-        """,
-        ArrayNode(child=ObjectNode(fields=[
-            SchemaField("id",    True, ValueNode(type="string")),
-            SchemaField("title", True, ValueNode(type="string")),
-            SchemaField("ingredients", True, ArrayNode(child=ObjectNode(fields=[
-                SchemaField("id",     True, ValueNode(type="string")),
-                SchemaField("name",   True, ValueNode(type="string")),
-                SchemaField("amount", True, ValueNode(type="string")),
-            ]))),
-        ])),
-        [
-            CatalogEntity("recipes", fields=[
-                CatalogField("id",          "string",   True),
-                CatalogField("title",       "string",   True),
-                CatalogField("ingredients", "object[]", True),
-            ]),
-            CatalogEntity("recipes.ingredients", fields=[
-                CatalogField("id",     "string", True),
-                CatalogField("name",   "string", True),
-                CatalogField("amount", "string", True),
-            ]),
-        ],
-        id="nested additionalProperties — parent.child entity",
-    ),
-    pytest.param(
-        "recipe",
-        """
-        type: object
-        properties:
-          nutrition:
+
+# ── A→B: build_schema_tree ──────────────────────────────────────────
+#
+# Spec: "スキーマ → SchemaTree の変換ルール" (schema-inspector.md)
+
+
+class TestBuildSchemaTree:
+    """build_schema_tree: JSON Schema → SchemaTree node."""
+
+    def test_object_properties(self) -> None:
+        """object + properties → ObjectNode with Field per property."""
+        tree = build_schema_tree(yaml.safe_load("""
             type: object
             properties:
-              calories: { type: number }
-              protein: { type: number }
+              name: { type: string }
+              age: { type: integer }
             additionalProperties: false
-            required: [calories]
-        additionalProperties: false
-        required: [nutrition]
-        """,
-        ObjectNode(fields=[
-            SchemaField("nutrition", True, ObjectNode(fields=[
-                SchemaField("calories", True,  ValueNode(type="number")),
-                SchemaField("protein",  False, ValueNode(type="number")),
-            ])),
-        ]),
-        [CatalogEntity("recipe", fields=[
-            CatalogField("nutrition",          "object", True),
-            CatalogField("nutrition.calories", "number", True),
-            CatalogField("nutrition.protein",  "number", False),
-        ])],
-        id="nested properties — prefix-separated fields",
-    ),
-    pytest.param(
-        "recipe",
-        """
-        type: object
-        properties:
-          steps:
+            required: [name]
+        """))
+        assert tree == ObjectNode(fields=[
+            SchemaField("name", True,  ValueNode(type="string")),
+            SchemaField("age",  False, ValueNode(type="integer")),
+        ])
+
+    def test_additional_properties_object(self) -> None:
+        """object + additionalProperties: {type: object} → ArrayNode with implicit id."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                title: { type: string }
+              additionalProperties: false
+              required: [title]
+        """))
+        assert tree == ArrayNode(child=ObjectNode(fields=[
+            SchemaField("id",    True, ValueNode(type="string")),
+            SchemaField("title", True, ValueNode(type="string")),
+        ]))
+
+    def test_additional_properties_scalar(self) -> None:
+        """object + additionalProperties: {type: T} (non-object) → ArrayNode({id, value})."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            additionalProperties: { type: number }
+        """))
+        assert tree == ArrayNode(child=ObjectNode(fields=[
+            SchemaField("id",    True, ValueNode(type="string")),
+            SchemaField("value", True, ValueNode(type="number")),
+        ]))
+
+    def test_array_items(self) -> None:
+        """array + items → ArrayNode(child=recursive)."""
+        tree = build_schema_tree(yaml.safe_load("""
             type: array
             items:
               type: object
               properties:
-                instruction: { type: string }
-                duration_min: { type: integer }
+                x: { type: integer }
               additionalProperties: false
-              required: [instruction]
-        additionalProperties: false
-        """,
-        ObjectNode(fields=[
-            SchemaField("steps", False, ArrayNode(child=ObjectNode(fields=[
-                SchemaField("instruction",  True,  ValueNode(type="string")),
-                SchemaField("duration_min", False, ValueNode(type="integer")),
+        """))
+        assert tree == ArrayNode(child=ObjectNode(fields=[
+            SchemaField("x", False, ValueNode(type="integer")),
+        ]))
+
+    def test_array_scalar_items(self) -> None:
+        """array + items: scalar → ArrayNode(child=ValueNode)."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: array
+            items: { type: boolean }
+        """))
+        assert tree == ArrayNode(child=ValueNode(type="boolean"))
+
+    def test_scalar_type(self) -> None:
+        """scalar type → ValueNode."""
+        tree = build_schema_tree(yaml.safe_load("type: number"))
+        assert tree == ValueNode(type="number")
+
+    def test_metadata_on_object(self) -> None:
+        """metadata keywords are extracted to node.metadata on any node type."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            title: My Object
+            description: A test object
+            properties:
+              x: { type: string }
+            additionalProperties: false
+        """))
+        assert isinstance(tree, ObjectNode)
+        assert tree.metadata == {"title": "My Object", "description": "A test object"}
+
+    def test_metadata_on_value(self) -> None:
+        """metadata and validation on ValueNode."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: string
+            title: A label
+            minLength: 1
+            pattern: "^[A-Z]"
+        """))
+        assert tree == ValueNode(
+            type="string",
+            metadata={"title": "A label"},
+            validation={"minLength": 1, "pattern": "^[A-Z]"},
+        )
+
+    def test_required_propagation(self) -> None:
+        """Field.required reflects parent's required list."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              a: { type: string }
+              b: { type: string }
+              c: { type: string }
+            additionalProperties: false
+            required: [a, c]
+        """))
+        assert isinstance(tree, ObjectNode)
+        assert [(f.name, f.required) for f in tree.fields] == [
+            ("a", True), ("b", False), ("c", True),
+        ]
+
+    def test_array_of_arrays(self) -> None:
+        """array of arrays → ArrayNode(child=ArrayNode(child=ValueNode))."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: array
+            items:
+              type: array
+              items: { type: string }
+        """))
+        assert tree == ArrayNode(child=ArrayNode(child=ValueNode(type="string")))
+
+
+# ── B→C: collect_entities ────────────────────────────────────────────
+#
+# Spec: "SchemaTree → データカタログの変換ルール" (schema-inspector.md)
+
+
+class TestCollectEntities:
+    """collect_entities: SchemaTree → flat CatalogEntity list."""
+
+    def test_top_level_object(self) -> None:
+        """Top-level ObjectNode → single entity."""
+        tree = ObjectNode(fields=[
+            SchemaField("name", True,  ValueNode(type="string")),
+            SchemaField("age",  False, ValueNode(type="integer")),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("person", tree, entities)
+        assert entities == [CatalogEntity("person", fields=[
+            CatalogField("name", "string",  True),
+            CatalogField("age",  "integer", False),
+        ])]
+
+    def test_top_level_array_of_objects(self) -> None:
+        """Top-level ArrayNode → ObjectNode → entity."""
+        tree = ArrayNode(child=ObjectNode(fields=[
+            SchemaField("x", True, ValueNode(type="number")),
+        ]))
+        entities: list[CatalogEntity] = []
+        collect_entities("points", tree, entities)
+        assert entities == [CatalogEntity("points", fields=[
+            CatalogField("x", "number", True),
+        ])]
+
+    def test_nested_object_prefix_flattened(self) -> None:
+        """ObjectNode inside properties → prefix.name flat fields."""
+        tree = ObjectNode(fields=[
+            SchemaField("address", True, ObjectNode(fields=[
+                SchemaField("city",    True,  ValueNode(type="string")),
+                SchemaField("zipcode", False, ValueNode(type="string")),
+            ])),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("person", tree, entities)
+        assert entities == [CatalogEntity("person", fields=[
+            CatalogField("address",         "object", True),
+            CatalogField("address.city",    "string", True),
+            CatalogField("address.zipcode", "string", False),
+        ])]
+
+    def test_array_object_creates_child_entity(self) -> None:
+        """ArrayNode → ObjectNode inside properties → object[] field + child entity."""
+        tree = ObjectNode(fields=[
+            SchemaField("items", False, ArrayNode(child=ObjectNode(fields=[
+                SchemaField("name", True, ValueNode(type="string")),
             ]))),
-        ]),
-        [
-            CatalogEntity("recipe", fields=[
-                CatalogField("steps", "object[]", False),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("order", tree, entities)
+        assert entities == [
+            CatalogEntity("order", fields=[
+                CatalogField("items", "object[]", False),
             ]),
-            CatalogEntity("recipe.steps", fields=[
-                CatalogField("instruction",  "string",  True),
-                CatalogField("duration_min", "integer", False),
+            CatalogEntity("order.items", fields=[
+                CatalogField("name", "string", True),
             ]),
-        ],
-        id="array of objects inside properties — new entity without id",
-    ),
-    pytest.param(
-        "recipes",
-        """
-        type: object
-        title: Recipe collection
-        description: All recipes in the cookbook
-        additionalProperties:
-          type: object
-          properties:
-            title: { type: string }
-          additionalProperties: false
-        """,
-        ArrayNode(
+        ]
+
+    def test_array_value_type_bracket(self) -> None:
+        """ArrayNode → ValueNode → type[] field."""
+        tree = ObjectNode(fields=[
+            SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("article", tree, entities)
+        assert entities == [CatalogEntity("article", fields=[
+            CatalogField("tags", "string[]", False),
+        ])]
+
+    def test_nested_array_type_brackets(self) -> None:
+        """ArrayNode → ArrayNode → type[][] field."""
+        tree = ObjectNode(fields=[
+            SchemaField("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("sheet", tree, entities)
+        assert entities == [CatalogEntity("sheet", fields=[
+            CatalogField("matrix", "number[][]", False),
+        ])]
+
+    def test_entity_metadata_from_array_node(self) -> None:
+        """ArrayNode.metadata → CatalogEntity.metadata (not ObjectNode's)."""
+        tree = ArrayNode(
             child=ObjectNode(fields=[
-                SchemaField("id",    True,  ValueNode(type="string")),
-                SchemaField("title", False, ValueNode(type="string")),
+                SchemaField("x", True, ValueNode(type="string")),
             ]),
-            metadata={"title": "Recipe collection", "description": "All recipes in the cookbook"},
-        ),
-        [CatalogEntity(
-            "recipes",
-            fields=[
-                CatalogField("id",    "string", True),
-                CatalogField("title", "string", False),
-            ],
-            metadata={"title": "Recipe collection", "description": "All recipes in the cookbook"},
-        )],
-        id="entity metadata — title and description",
-    ),
-    pytest.param(
-        "recipes",
-        """
-        type: object
-        additionalProperties:
-          type: object
-          properties:
-            title:
-              type: string
-              title: Recipe title
-              description: Short name of the dish
-              default: Untitled
-              examples: [Curry, Pasta]
-              deprecated: false
-              format: kebab-case
-            servings:
-              type: integer
-              minimum: 1
-              maximum: 100
-              exclusiveMinimum: 0
-            difficulty:
-              type: string
-              enum: [easy, medium, hard]
-          additionalProperties: false
-          required: [title]
-        """,
-        ArrayNode(child=ObjectNode(fields=[
-            SchemaField("id", True, ValueNode(type="string")),
-            SchemaField("title", True, ValueNode(type="string", metadata={
-                "title": "Recipe title", "description": "Short name of the dish",
-                "default": "Untitled", "examples": ["Curry", "Pasta"],
-                "deprecated": False, "format": "kebab-case",
-            })),
-            SchemaField("servings", False, ValueNode(type="integer", validation={
-                "minimum": 1, "maximum": 100, "exclusiveMinimum": 0,
-            })),
-            SchemaField("difficulty", False, ValueNode(type="string", validation={
-                "enum": ["easy", "medium", "hard"],
-            })),
-        ])),
-        [CatalogEntity("recipes", fields=[
-            CatalogField("id", "string", True),
-            CatalogField("title", "string", True, metadata={
-                "title": "Recipe title", "description": "Short name of the dish",
-                "default": "Untitled", "examples": ["Curry", "Pasta"],
-                "deprecated": False, "format": "kebab-case",
-            }),
-            CatalogField("servings", "integer", False, validation={
-                "minimum": 1, "maximum": 100, "exclusiveMinimum": 0,
-            }),
-            CatalogField("difficulty", "string", False, validation={
-                "enum": ["easy", "medium", "hard"],
-            }),
-        ])],
-        id="field metadata and validation keywords",
-    ),
-]
+            metadata={"title": "My Collection"},
+        )
+        entities: list[CatalogEntity] = []
+        collect_entities("things", tree, entities)
+        assert entities[0].metadata == {"title": "My Collection"}
+
+    def test_field_metadata_and_validation(self) -> None:
+        """ValueNode metadata/validation → CatalogField metadata/validation."""
+        tree = ObjectNode(fields=[
+            SchemaField("score", True, ValueNode(
+                type="integer",
+                metadata={"description": "Player score"},
+                validation={"minimum": 0, "maximum": 100},
+            )),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("game", tree, entities)
+        assert entities[0].fields[0] == CatalogField(
+            "score", "integer", True,
+            metadata={"description": "Player score"},
+            validation={"minimum": 0, "maximum": 100},
+        )
+
+    def test_required_transferred(self) -> None:
+        """Field.required → CatalogField.required."""
+        tree = ObjectNode(fields=[
+            SchemaField("a", True,  ValueNode(type="string")),
+            SchemaField("b", False, ValueNode(type="string")),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("t", tree, entities)
+        assert [(f.id, f.required) for f in entities[0].fields] == [
+            ("a", True), ("b", False),
+        ]
 
 # fmt: on
-
-
-class TestBuildSchemaTree:
-    """A → B: schema YAML → SchemaTree."""
-
-    @pytest.mark.parametrize(("name", "src", "expected_tree", "_catalog"), _CASES)
-    def test_build(
-        self,
-        name: str,
-        src: str,
-        expected_tree: ObjectNode | ArrayNode | ValueNode,
-        _catalog: object,
-    ) -> None:
-        schema = yaml.safe_load(src)
-        assert build_schema_tree(schema) == expected_tree
-
-
-class TestExtractEntities:
-    """B → C: SchemaTree → DataCatalog."""
-
-    @pytest.mark.parametrize(("name", "_src", "_tree", "expected_catalog"), _CASES)
-    def test_extract(
-        self,
-        name: str,
-        _src: str,
-        _tree: object,
-        expected_catalog: list[CatalogEntity],
-    ) -> None:
-        schema = yaml.safe_load(_src)
-        tree = build_schema_tree(schema)
-        entities: list[CatalogEntity] = []
-        collect_entities(name, tree, entities)
-        assert entities == expected_catalog
-
-
-class TestSchemaToDataCatalog:
-    """A → C: schema YAML → DataCatalog (integration)."""
-
-    @pytest.mark.parametrize(("name", "src", "_tree", "expected_catalog"), _CASES)
-    def test_end_to_end(
-        self,
-        name: str,
-        src: str,
-        _tree: object,
-        expected_catalog: list[CatalogEntity],
-    ) -> None:
-        schemas = yaml.safe_load(src)
-        result = extract_entities({name: schemas})
-        assert result == expected_catalog
