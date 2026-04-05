@@ -75,9 +75,6 @@ $defs:
       minItems: { type: integer, minimum: 0 }
       maxItems: { type: integer, minimum: 0 }
       uniqueItems: { type: boolean }
-      minProperties: { type: integer, minimum: 0 }
-      maxProperties: { type: integer, minimum: 0 }
-
       # --- Meta-data keywords (pass-through) ---
       title: { type: string }
       description: { type: string }

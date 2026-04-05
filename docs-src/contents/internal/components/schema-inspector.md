@@ -55,56 +55,28 @@ example-project のスキーマを入力とした場合:
 ```yaml
 __definition:
   entities:
-    entities:
+    - id: entities
       fields:
-        id:
-          type: string
-          required: true
-        name:
-          type: string
-          required: true
-        category:
-          type: string
-          required: false
-        description:
-          type: string
-          required: false
-        fields:
-          type: object[]
-          required: true
+        - { id: id, type: string, required: true }
+        - { id: name, type: string, required: true }
+        - { id: category, type: string, required: false }
+        - { id: description, type: string, required: false }
+        - { id: fields, type: "object[]", required: true }
 
-    entities.fields:
+    - id: entities.fields
       fields:
-        id:
-          type: string
-          required: true
-        name:
-          type: string
-          required: true
-        type:
-          type: string
-          required: true
-        pk:
-          type: boolean
-          required: false
-        fk:
-          type: string
-          required: false
+        - { id: id, type: string, required: true }
+        - { id: name, type: string, required: true }
+        - { id: type, type: string, required: true }
+        - { id: pk, type: boolean, required: false }
+        - { id: fk, type: string, required: false }
 
-    relations:
+    - id: relations
       fields:
-        from:
-          type: string
-          required: true
-        to:
-          type: string
-          required: true
-        cardinality:
-          type: string
-          required: true
-        description:
-          type: string
-          required: false
+        - { id: from, type: string, required: true }
+        - { id: to, type: string, required: true }
+        - { id: cardinality, type: string, required: true }
+        - { id: description, type: string, required: false }
 
   references:
     - from: entities.fields

@@ -39,6 +39,11 @@ def check_schema(schema_files: Sequence[Path]) -> None:
         raise FileValidationError(diagnostics=diagnostics)
 
 
+def extract_data_catalog(schema: dict[str, object]) -> dict[str, object]:
+    """Extract data catalog (entities + references) from merged schema data."""
+    raise NotImplementedError
+
+
 def build_schema_validator() -> Validator:
     """Build a Validator for user schema files (against built-in SchemaSchema)."""
     return Validator(load_yamls(_SCHEMA_SCHEMA_DIR))
