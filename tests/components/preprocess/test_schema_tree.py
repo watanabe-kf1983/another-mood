@@ -17,6 +17,8 @@ from reqs_builder.components.preprocess.schema_tree import (
     extract_entities,
 )
 
+# fmt: off
+
 # Each case: (schema_name, schema_yaml, expected_tree, expected_catalog)
 _CASES = [
     pytest.param(
@@ -31,27 +33,16 @@ _CASES = [
           additionalProperties: false
           required: [title]
         """,
-        # B: SchemaTree
-        ArrayNode(
-            child=ObjectNode(
-                fields=[
-                    SchemaField("id", True, ValueNode(type="string")),
-                    SchemaField("title", True, ValueNode(type="string")),
-                    SchemaField("servings", False, ValueNode(type="integer")),
-                ]
-            )
-        ),
-        # C: DataCatalog
-        [
-            CatalogEntity(
-                "recipes",
-                fields=[
-                    CatalogField("id", "string", True),
-                    CatalogField("title", "string", True),
-                    CatalogField("servings", "integer", False),
-                ],
-            )
-        ],
+        ArrayNode(child=ObjectNode(fields=[
+            SchemaField("id",       True,  ValueNode(type="string")),
+            SchemaField("title",    True,  ValueNode(type="string")),
+            SchemaField("servings", False, ValueNode(type="integer")),
+        ])),
+        [CatalogEntity("recipes", fields=[
+            CatalogField("id",       "string",  True),
+            CatalogField("title",    "string",  True),
+            CatalogField("servings", "integer", False),
+        ])],
         id="additionalProperties — entity with implicit id",
     ),
     pytest.param(
@@ -64,21 +55,14 @@ _CASES = [
         additionalProperties: false
         required: [name]
         """,
-        ObjectNode(
-            fields=[
-                SchemaField("name", True, ValueNode(type="string")),
-                SchemaField("capacity", False, ValueNode(type="integer")),
-            ]
-        ),
-        [
-            CatalogEntity(
-                "kitchen",
-                fields=[
-                    CatalogField("name", "string", True),
-                    CatalogField("capacity", "integer", False),
-                ],
-            )
-        ],
+        ObjectNode(fields=[
+            SchemaField("name",     True,  ValueNode(type="string")),
+            SchemaField("capacity", False, ValueNode(type="integer")),
+        ]),
+        [CatalogEntity("kitchen", fields=[
+            CatalogField("name",     "string",  True),
+            CatalogField("capacity", "integer", False),
+        ])],
         id="properties — flat fields",
     ),
     pytest.param(
@@ -93,23 +77,14 @@ _CASES = [
           additionalProperties: false
           required: [order, instruction]
         """,
-        ArrayNode(
-            child=ObjectNode(
-                fields=[
-                    SchemaField("order", True, ValueNode(type="integer")),
-                    SchemaField("instruction", True, ValueNode(type="string")),
-                ]
-            )
-        ),
-        [
-            CatalogEntity(
-                "steps",
-                fields=[
-                    CatalogField("order", "integer", True),
-                    CatalogField("instruction", "string", True),
-                ],
-            )
-        ],
+        ArrayNode(child=ObjectNode(fields=[
+            SchemaField("order",       True, ValueNode(type="integer")),
+            SchemaField("instruction", True, ValueNode(type="string")),
+        ])),
+        [CatalogEntity("steps", fields=[
+            CatalogField("order",       "integer", True),
+            CatalogField("instruction", "string",  True),
+        ])],
         id="array of objects — entity without id",
     ),
     pytest.param(
@@ -122,19 +97,12 @@ _CASES = [
             items: { type: string }
         additionalProperties: false
         """,
-        ObjectNode(
-            fields=[
-                SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
-            ]
-        ),
-        [
-            CatalogEntity(
-                "recipe",
-                fields=[
-                    CatalogField("tags", "string[]", False),
-                ],
-            )
-        ],
+        ObjectNode(fields=[
+            SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
+        ]),
+        [CatalogEntity("recipe", fields=[
+            CatalogField("tags", "string[]", False),
+        ])],
         id="array of scalars — type[]",
     ),
     pytest.param(
@@ -157,46 +125,26 @@ _CASES = [
           additionalProperties: false
           required: [title, ingredients]
         """,
-        ArrayNode(
-            child=ObjectNode(
-                fields=[
-                    SchemaField("id", True, ValueNode(type="string")),
-                    SchemaField("title", True, ValueNode(type="string")),
-                    SchemaField(
-                        "ingredients",
-                        True,
-                        ArrayNode(
-                            child=ObjectNode(
-                                fields=[
-                                    SchemaField("id", True, ValueNode(type="string")),
-                                    SchemaField("name", True, ValueNode(type="string")),
-                                    SchemaField(
-                                        "amount", True, ValueNode(type="string")
-                                    ),
-                                ]
-                            )
-                        ),
-                    ),
-                ]
-            )
-        ),
+        ArrayNode(child=ObjectNode(fields=[
+            SchemaField("id",    True, ValueNode(type="string")),
+            SchemaField("title", True, ValueNode(type="string")),
+            SchemaField("ingredients", True, ArrayNode(child=ObjectNode(fields=[
+                SchemaField("id",     True, ValueNode(type="string")),
+                SchemaField("name",   True, ValueNode(type="string")),
+                SchemaField("amount", True, ValueNode(type="string")),
+            ]))),
+        ])),
         [
-            CatalogEntity(
-                "recipes",
-                fields=[
-                    CatalogField("id", "string", True),
-                    CatalogField("title", "string", True),
-                    CatalogField("ingredients", "object[]", True),
-                ],
-            ),
-            CatalogEntity(
-                "recipes.ingredients",
-                fields=[
-                    CatalogField("id", "string", True),
-                    CatalogField("name", "string", True),
-                    CatalogField("amount", "string", True),
-                ],
-            ),
+            CatalogEntity("recipes", fields=[
+                CatalogField("id",          "string",   True),
+                CatalogField("title",       "string",   True),
+                CatalogField("ingredients", "object[]", True),
+            ]),
+            CatalogEntity("recipes.ingredients", fields=[
+                CatalogField("id",     "string", True),
+                CatalogField("name",   "string", True),
+                CatalogField("amount", "string", True),
+            ]),
         ],
         id="nested additionalProperties — parent.child entity",
     ),
@@ -215,30 +163,17 @@ _CASES = [
         additionalProperties: false
         required: [nutrition]
         """,
-        ObjectNode(
-            fields=[
-                SchemaField(
-                    "nutrition",
-                    True,
-                    ObjectNode(
-                        fields=[
-                            SchemaField("calories", True, ValueNode(type="number")),
-                            SchemaField("protein", False, ValueNode(type="number")),
-                        ]
-                    ),
-                ),
-            ]
-        ),
-        [
-            CatalogEntity(
-                "recipe",
-                fields=[
-                    CatalogField("nutrition", "object", True),
-                    CatalogField("nutrition.calories", "number", True),
-                    CatalogField("nutrition.protein", "number", False),
-                ],
-            )
-        ],
+        ObjectNode(fields=[
+            SchemaField("nutrition", True, ObjectNode(fields=[
+                SchemaField("calories", True,  ValueNode(type="number")),
+                SchemaField("protein",  False, ValueNode(type="number")),
+            ])),
+        ]),
+        [CatalogEntity("recipe", fields=[
+            CatalogField("nutrition",          "object", True),
+            CatalogField("nutrition.calories", "number", True),
+            CatalogField("nutrition.protein",  "number", False),
+        ])],
         id="nested properties — prefix-separated fields",
     ),
     pytest.param(
@@ -257,40 +192,20 @@ _CASES = [
               required: [instruction]
         additionalProperties: false
         """,
-        ObjectNode(
-            fields=[
-                SchemaField(
-                    "steps",
-                    False,
-                    ArrayNode(
-                        child=ObjectNode(
-                            fields=[
-                                SchemaField(
-                                    "instruction", True, ValueNode(type="string")
-                                ),
-                                SchemaField(
-                                    "duration_min", False, ValueNode(type="integer")
-                                ),
-                            ]
-                        )
-                    ),
-                ),
-            ]
-        ),
+        ObjectNode(fields=[
+            SchemaField("steps", False, ArrayNode(child=ObjectNode(fields=[
+                SchemaField("instruction",  True,  ValueNode(type="string")),
+                SchemaField("duration_min", False, ValueNode(type="integer")),
+            ]))),
+        ]),
         [
-            CatalogEntity(
-                "recipe",
-                fields=[
-                    CatalogField("steps", "object[]", False),
-                ],
-            ),
-            CatalogEntity(
-                "recipe.steps",
-                fields=[
-                    CatalogField("instruction", "string", True),
-                    CatalogField("duration_min", "integer", False),
-                ],
-            ),
+            CatalogEntity("recipe", fields=[
+                CatalogField("steps", "object[]", False),
+            ]),
+            CatalogEntity("recipe.steps", fields=[
+                CatalogField("instruction",  "string",  True),
+                CatalogField("duration_min", "integer", False),
+            ]),
         ],
         id="array of objects inside properties — new entity without id",
     ),
@@ -307,30 +222,20 @@ _CASES = [
           additionalProperties: false
         """,
         ArrayNode(
-            child=ObjectNode(
-                fields=[
-                    SchemaField("id", True, ValueNode(type="string")),
-                    SchemaField("title", False, ValueNode(type="string")),
-                ]
-            ),
-            metadata={
-                "title": "Recipe collection",
-                "description": "All recipes in the cookbook",
-            },
+            child=ObjectNode(fields=[
+                SchemaField("id",    True,  ValueNode(type="string")),
+                SchemaField("title", False, ValueNode(type="string")),
+            ]),
+            metadata={"title": "Recipe collection", "description": "All recipes in the cookbook"},
         ),
-        [
-            CatalogEntity(
-                "recipes",
-                fields=[
-                    CatalogField("id", "string", True),
-                    CatalogField("title", "string", False),
-                ],
-                metadata={
-                    "title": "Recipe collection",
-                    "description": "All recipes in the cookbook",
-                },
-            )
-        ],
+        [CatalogEntity(
+            "recipes",
+            fields=[
+                CatalogField("id",    "string", True),
+                CatalogField("title", "string", False),
+            ],
+            metadata={"title": "Recipe collection", "description": "All recipes in the cookbook"},
+        )],
         id="entity metadata — title and description",
     ),
     pytest.param(
@@ -359,90 +264,39 @@ _CASES = [
           additionalProperties: false
           required: [title]
         """,
-        ArrayNode(
-            child=ObjectNode(
-                fields=[
-                    SchemaField("id", True, ValueNode(type="string")),
-                    SchemaField(
-                        "title",
-                        True,
-                        ValueNode(
-                            type="string",
-                            metadata={
-                                "title": "Recipe title",
-                                "description": "Short name of the dish",
-                                "default": "Untitled",
-                                "examples": ["Curry", "Pasta"],
-                                "deprecated": False,
-                                "format": "kebab-case",
-                            },
-                        ),
-                    ),
-                    SchemaField(
-                        "servings",
-                        False,
-                        ValueNode(
-                            type="integer",
-                            validation={
-                                "minimum": 1,
-                                "maximum": 100,
-                                "exclusiveMinimum": 0,
-                            },
-                        ),
-                    ),
-                    SchemaField(
-                        "difficulty",
-                        False,
-                        ValueNode(
-                            type="string",
-                            validation={"enum": ["easy", "medium", "hard"]},
-                        ),
-                    ),
-                ]
-            )
-        ),
-        [
-            CatalogEntity(
-                "recipes",
-                fields=[
-                    CatalogField("id", "string", True),
-                    CatalogField(
-                        "title",
-                        "string",
-                        True,
-                        metadata={
-                            "title": "Recipe title",
-                            "description": "Short name of the dish",
-                            "default": "Untitled",
-                            "examples": ["Curry", "Pasta"],
-                            "deprecated": False,
-                            "format": "kebab-case",
-                        },
-                    ),
-                    CatalogField(
-                        "servings",
-                        "integer",
-                        False,
-                        validation={
-                            "minimum": 1,
-                            "maximum": 100,
-                            "exclusiveMinimum": 0,
-                        },
-                    ),
-                    CatalogField(
-                        "difficulty",
-                        "string",
-                        False,
-                        validation={
-                            "enum": ["easy", "medium", "hard"],
-                        },
-                    ),
-                ],
-            )
-        ],
+        ArrayNode(child=ObjectNode(fields=[
+            SchemaField("id", True, ValueNode(type="string")),
+            SchemaField("title", True, ValueNode(type="string", metadata={
+                "title": "Recipe title", "description": "Short name of the dish",
+                "default": "Untitled", "examples": ["Curry", "Pasta"],
+                "deprecated": False, "format": "kebab-case",
+            })),
+            SchemaField("servings", False, ValueNode(type="integer", validation={
+                "minimum": 1, "maximum": 100, "exclusiveMinimum": 0,
+            })),
+            SchemaField("difficulty", False, ValueNode(type="string", validation={
+                "enum": ["easy", "medium", "hard"],
+            })),
+        ])),
+        [CatalogEntity("recipes", fields=[
+            CatalogField("id", "string", True),
+            CatalogField("title", "string", True, metadata={
+                "title": "Recipe title", "description": "Short name of the dish",
+                "default": "Untitled", "examples": ["Curry", "Pasta"],
+                "deprecated": False, "format": "kebab-case",
+            }),
+            CatalogField("servings", "integer", False, validation={
+                "minimum": 1, "maximum": 100, "exclusiveMinimum": 0,
+            }),
+            CatalogField("difficulty", "string", False, validation={
+                "enum": ["easy", "medium", "hard"],
+            }),
+        ])],
         id="field metadata and validation keywords",
     ),
 ]
+
+# fmt: on
 
 
 class TestBuildSchemaTree:
