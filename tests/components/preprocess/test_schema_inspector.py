@@ -9,6 +9,7 @@ from reqs_builder.components.preprocess.schema_inspector import (
     build_schema_validator,
     check_schema,
     extract_data_catalog,
+    inspect_schema,
 )
 from reqs_builder.components.shared.diagnostic import FileValidationError
 
@@ -362,3 +363,35 @@ class TestExtractDataCatalog:
         """)
         result = extract_data_catalog(schema)
         assert "entities" not in result
+
+
+# ── inspect_schema (component) ───────────────────────────────────────
+
+
+class TestInspectSchema:
+    """inspect_schema: pipeline component writes per-file data catalog."""
+
+    def test_writes_per_file(self, tmp_path: Path) -> None:
+        schema_dir = tmp_path / "schema"
+        schema_dir.mkdir()
+        (schema_dir / "recipes.yaml").write_text(
+            "schemas:\n"
+            "  recipes:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        title: { type: string }\n"
+            "      additionalProperties: false\n"
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_dir, out_dir=out_dir)
+
+        out_file = out_dir / "recipes.yaml"
+        assert out_file.exists()
+        data = yaml.safe_load(out_file.read_text())
+        assert "__definition" in data
+        entities = data["__definition"]["entities"]
+        assert entities[0]["id"] == "recipes"

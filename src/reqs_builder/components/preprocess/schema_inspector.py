@@ -11,6 +11,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
+import yaml
+
 from reqs_builder.components.preprocess.schema_tree import extract_entities
 from reqs_builder.components.preprocess.validator import Validator
 from reqs_builder.components.shared import yaml_dumper
@@ -25,15 +27,19 @@ _SCHEMA_SCHEMA_DIR = Path(
 
 @Component(out_dir="out_dir")
 def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
-    """Validate schema files and extract data catalog."""
+    """Validate schema files and extract data catalog per file."""
     schema_files = [f for f in sorted(schema_dir.rglob("*.yaml")) if f.is_file()]
     check_schema(schema_files)
 
-    merged = load_yamls(schema_dir)
-    catalog = extract_data_catalog(merged)
-    if catalog:
-        with (out_dir / "__definition.yaml").open("w") as f:
-            yaml_dumper.dump({"__definition": catalog}, f)
+    for schema_file in schema_files:
+        rel = schema_file.relative_to(schema_dir)
+        data = yaml.safe_load(schema_file.read_text(encoding="utf-8"))
+        catalog = extract_data_catalog(data)
+        if catalog:
+            dst = out_dir / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            with dst.open("w", encoding="utf-8") as f:
+                yaml_dumper.dump({"__definition": catalog}, f)
 
 
 def check_schema(schema_files: Sequence[Path]) -> None:
