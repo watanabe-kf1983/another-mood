@@ -1,11 +1,9 @@
-"""Integration tests for SchemaTree — schema YAML → catalog YAML (A→C)."""
+"""Integration tests for SchemaTree — schema YAML → catalog YAML."""
 
 import pytest
 import yaml
 
 from reqs_builder.components.preprocess.schema_inspector import extract_data_catalog
-
-# fmt: off
 
 _CASES = [
     pytest.param(
@@ -297,11 +295,9 @@ _CASES = [
     ),
 ]
 
-# fmt: on
-
 
 class TestSchemaToDataCatalog:
-    """A → C: schema YAML → catalog YAML (end-to-end via extract_data_catalog)."""
+    """schema YAML → catalog YAML (end-to-end via extract_data_catalog)."""
 
     @pytest.mark.parametrize(("src", "expected_src"), _CASES)
     def test_end_to_end(self, src: str, expected_src: str) -> None:
