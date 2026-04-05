@@ -41,6 +41,7 @@ OUT: `render.outDir`
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
 
 各コンポーネントの処理フローと技術選定:
+- [components/schema-inspector.md](components/schema-inspector.md)
 - [components/normalizer.md](components/normalizer.md)
 - [components/composer.md](components/composer.md)
 - [components/generator.md](components/generator.md)
