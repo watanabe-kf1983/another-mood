@@ -12,6 +12,11 @@
 
 ユーザ向け外部仕様。詳細は [external/index.md](external/index.md) を参照。
 
+- normalizer — スキーマ定義、Markdownパーサー
+- composer — YAML DSL クエリ仕様
+- generator — テンプレート、アンカー、ページ分割
+- app — CLI、設定、MCP、メタドキュメンテーション
+
 ## internal
 
 内部設計・実装仕様。
