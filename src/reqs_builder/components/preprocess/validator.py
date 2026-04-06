@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
+import regex
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 
@@ -48,6 +49,27 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
     return data
 
 
+def _pattern_with_unicode(
+    validator: jsonschema.Draft202012Validator,
+    patrn: str,
+    instance: object,
+    schema: object,
+) -> Any:
+    """Pattern validator using ``regex`` module for Unicode property support.
+
+    Replaces the default ``re``-based pattern validator so that
+    ECMA 262 Unicode property escapes (e.g. ``\\p{L}``) work correctly.
+    """
+    if isinstance(instance, str) and not regex.search(patrn, instance):
+        yield jsonschema.ValidationError(f"{instance!r} does not match {patrn!r}")
+
+
+_UnicodeValidator: type[jsonschema.Draft202012Validator] = jsonschema.validators.extend(  # type: ignore[assignment]
+    jsonschema.Draft202012Validator,
+    validators={"pattern": _pattern_with_unicode},
+)
+
+
 class Validator:
     """JSON Schema validator that checks data against a JSON Schema object.
 
@@ -56,7 +78,7 @@ class Validator:
     """
 
     def __init__(self, schema: Mapping[str, object]) -> None:
-        self._validator = jsonschema.Draft202012Validator(schema)
+        self._validator = _UnicodeValidator(schema)
 
     def validate(self, data: Any, file: Path) -> Sequence[Diagnostic]:
         """Validate parsed data and return diagnostics.

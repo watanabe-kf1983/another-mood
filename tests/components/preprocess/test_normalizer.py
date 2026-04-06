@@ -257,6 +257,14 @@ class TestBuildQuerySchema:
         data = {"q": {"from": "items", "select": [{"as": "alias"}]}}
         assert len(self._validate(data)) >= 1
 
+    def test_unicode_query_name_accepted(self) -> None:
+        data = {"クエリ": {"from": "items"}}
+        assert self._validate(data) == []
+
+    def test_hyphenated_query_name_rejected(self) -> None:
+        data = {"my-query": {"from": "items"}}
+        assert len(self._validate(data)) >= 1
+
 
 # ── normalize_contents ────────────────────────────────────────────
 

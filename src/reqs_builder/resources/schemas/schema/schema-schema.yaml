@@ -13,6 +13,8 @@ type: object
 properties:
   schemas:
     type: object
+    propertyNames:
+      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
     additionalProperties:
       $ref: "#/$defs/jsonSchemaSubset"
 
@@ -46,6 +48,8 @@ $defs:
             uniqueItems: true
       properties:
         type: object
+        propertyNames:
+          pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
         additionalProperties:
           $ref: "#/$defs/jsonSchemaSubset"
       additionalProperties:
