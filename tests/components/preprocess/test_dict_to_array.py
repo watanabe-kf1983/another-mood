@@ -158,6 +158,123 @@ class TestArrayItems:
         """)
 
 
+class TestNonObjectAdditionalProperties:
+    """additionalProperties with non-object type wraps values as {id, value}."""
+
+    SCHEMA_STRING = _schema("""
+        type: object
+        additionalProperties:
+          type: string
+    """)
+
+    SCHEMA_NUMBER = _schema("""
+        type: object
+        additionalProperties:
+          type: number
+    """)
+
+    def test_string_values(self) -> None:
+        data = _y("""
+            en: English
+            ja: Japanese
+        """)
+        result = normalize_data(data, self.SCHEMA_STRING)
+        assert result == _y("""
+            - id: en
+              value: English
+            - id: ja
+              value: Japanese
+        """)
+
+    def test_number_values(self) -> None:
+        data = _y("""
+            width: 100
+            height: 200
+        """)
+        result = normalize_data(data, self.SCHEMA_NUMBER)
+        assert result == _y("""
+            - id: width
+              value: 100
+            - id: height
+              value: 200
+        """)
+
+    def test_empty_dict(self) -> None:
+        assert normalize_data({}, self.SCHEMA_STRING) == []
+
+
+class TestNestedNonObjectAdditionalProperties:
+    """Non-object additionalProperties nested inside object properties."""
+
+    SCHEMA = _schema("""
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            name: { type: string }
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+          additionalProperties: false
+          required: [name, labels]
+    """)
+
+    def test_normalizes_nested_scalar_dict(self) -> None:
+        data = _y("""
+            item1:
+              name: Item
+              labels:
+                color: red
+                size: large
+        """)
+        result = normalize_data(data, self.SCHEMA)
+        assert result == _y("""
+            - id: item1
+              name: Item
+              labels:
+                - id: color
+                  value: red
+                - id: size
+                  value: large
+        """)
+
+
+class TestNonObjectAdditionalPropertiesRecursion:
+    """Non-object additionalProperties with nested structure recurses into value."""
+
+    SCHEMA = _schema("""
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                label: { type: string }
+              additionalProperties: false
+    """)
+
+    def test_recurses_into_array_value(self) -> None:
+        data = _y("""
+            group1:
+              - tagA:
+                  label: A
+                tagB:
+                  label: B
+        """)
+        result = normalize_data(data, self.SCHEMA)
+        assert result == _y("""
+            - id: group1
+              value:
+                - - id: tagA
+                    label: A
+                  - id: tagB
+                    label: B
+        """)
+
+
 class TestNonObjectValues:
     """Scalar and non-object values pass through unchanged."""
 

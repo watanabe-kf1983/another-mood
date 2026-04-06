@@ -36,10 +36,20 @@ def normalize_data(data: object, schema: Schema) -> object:
 
 
 def _flatten_dict(data: DataMap, additional_schema: Schema) -> list[dict[str, object]]:
-    """Convert a dict-pattern object to an array with ``id`` fields."""
-    props = cast(Schema, additional_schema.get("properties"))
+    """Convert a dict-pattern object to an array with ``id`` fields.
+
+    When additionalProperties is an object schema with properties, the
+    value's properties are expanded directly.  For non-object types
+    (string, number, etc.) the value is wrapped as ``{"id": key, "value": val}``.
+    """
+    if additional_schema.get("type") == "object" and "properties" in additional_schema:
+        props = cast(Schema, additional_schema.get("properties"))
+        return [
+            {"id": key, **_recurse_properties(cast(DataMap, value), props)}
+            for key, value in data.items()
+        ]
     return [
-        {"id": key, **_recurse_properties(cast(DataMap, value), props)}
+        {"id": key, "value": normalize_data(value, additional_schema)}
         for key, value in data.items()
     ]
 
