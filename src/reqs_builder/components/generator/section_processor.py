@@ -31,7 +31,10 @@ class SectionProcessorImpl:
 
     def __call__(self, template_name: str, data: dict[str, Any]) -> str:
         rendered = self.env.get_template(f"{template_name}.md").render(data)
-        out_file = self.out_dir / template_name / f"{data['id']}.md"
+        if "id" in data:
+            out_file = self.out_dir / template_name / f"{data['id']}.md"
+        else:
+            out_file = self.out_dir / f"{template_name}.md"
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(rendered)
         return ""
@@ -56,10 +59,10 @@ class SectionExtension(Extension):
         ).set_lineno(lineno)
 
     def _render(self, template_name: str, data: dict[str, Any], caller: Any) -> str:
-        if not isinstance(data, dict) or "id" not in data:  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(
-                f'{{% section "{template_name}" with ... %}} requires a dict '
-                f'with "id" key, got: {type(data).__name__}'
+                f'{{% section "{template_name}" with ... %}} requires a dict, '
+                f"got: {type(data).__name__}"
             )
         processor = self.environment.globals[PROCESSOR_KEY]
         return processor(template_name, data)  # type: ignore[return-value]

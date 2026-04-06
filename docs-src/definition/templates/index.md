@@ -4,6 +4,5 @@
 {% section "prose" with record %}
 {%- endfor %}
 
-{%- for dc in data_catalog -%}
+{% set dc = {"entities": entities, "references": references} %}
 {% section "data-catalog" with dc %}
-{%- endfor %}
