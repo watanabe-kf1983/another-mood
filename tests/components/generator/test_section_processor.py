@@ -110,13 +110,14 @@ class TestSectionSyntaxError:
 
 
 class TestSectionDataValidation:
-    def test_raises_on_missing_id(self) -> None:
+    def test_accepts_dict_without_id(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
         template = env.from_string('{% section "profile" with user %}')
+        template.render(user={"name": "Alice"})
 
-        with pytest.raises(TypeError, match='requires a dict with "id" key'):
-            template.render(user={"name": "Alice"})
+        assert len(mock.calls) == 1
+        assert mock.calls[0][1] == {"name": "Alice"}
 
     def test_raises_on_non_dict(self) -> None:
         mock = MockProcessor()
@@ -172,3 +173,20 @@ class TestSectionProcessorImpl:
 
         assert (tmp_path / "detail" / "a.md").read_text() == "a"
         assert (tmp_path / "detail" / "b.md").read_text() == "b"
+
+    def test_no_id_writes_flat_file(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"summary.md": "count={{ items|length }}"})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        processor("summary", {"items": [1, 2, 3]})
+
+        assert (tmp_path / "summary.md").read_text() == "count=3"
+
+    def test_no_id_does_not_create_subdirectory(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"report.md": "ok"})
+        processor = SectionProcessorImpl(env=env, out_dir=tmp_path)
+        processor("report", {"data": "value"})
+
+        assert (tmp_path / "report.md").exists()
+        assert not (tmp_path / "report").exists()
