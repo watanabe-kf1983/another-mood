@@ -4,6 +4,8 @@
 # definition with from (required), grouped (optional), and select (optional).
 
 type: object
+propertyNames:
+  pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
 additionalProperties:
   type: object
   properties:

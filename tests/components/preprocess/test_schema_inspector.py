@@ -124,6 +124,19 @@ _VALID_SCHEMA_CASES = [
         """,
         id="metadata keywords",
     ),
+    pytest.param(
+        """
+        schemas:
+          エンティティ:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                名前: { type: string }
+              additionalProperties: false
+        """,
+        id="unicode schema and property names",
+    ),
 ]
 
 _REJECTED_SCHEMA_CASES = [
@@ -222,6 +235,30 @@ _REJECTED_SCHEMA_CASES = [
           - from: orders.customer
         """,
         id="references missing required field",
+    ),
+    pytest.param(
+        """
+        schemas:
+          my-schema:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                name: { type: string }
+              additionalProperties: false
+        """,
+        id="hyphenated schema name rejected",
+    ),
+    pytest.param(
+        """
+        schemas:
+          users:
+            type: object
+            properties:
+              first-name: { type: string }
+            additionalProperties: false
+        """,
+        id="hyphenated property name rejected",
     ),
 ]
 
