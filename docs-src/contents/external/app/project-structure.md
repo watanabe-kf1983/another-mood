@@ -26,9 +26,6 @@ my-project/                    # CWD = <projectDir>（reqs build .）
       views/                   # viewsDir: Composer 出力
     output/                    # outDir: Document Generator 出力
     render/                    # render.outDir: Document Renderer 出力
-    meta/                      # ツールパイプライン出力
-      output/                  # meta.outDir
-      render/                  # meta.render.outDir
 ```
 
 `<projectDir>` にサブディレクトリを指定した場合（例: `reqs build docs/`）、出力は `.reqs-builder/docs/` 配下に配置される。

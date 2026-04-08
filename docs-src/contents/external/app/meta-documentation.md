@@ -4,7 +4,7 @@
 
 ## 概要
 
-ユーザプロジェクトの `schemaDir`、`queriesDir`、`contentsDir` の全体を source データとして扱い、ツール内蔵のスキーマ・クエリ・テンプレートを用いてツールを実行することで実現する。出力先は `meta.outDir`（Generator）および `meta.render.outDir`（Renderer）。
+ユーザプロジェクトの `schemaDir`、`queriesDir`、`contentsDir` の全体を source データとして扱い、ツール内蔵のスキーマ・クエリ・テンプレートを用いてツールを実行することで実現する。
 
 | | ツール内蔵（メタレベル） | ユーザプロジェクト |
 |---|---|---|
