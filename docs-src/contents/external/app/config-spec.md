@@ -59,13 +59,6 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 | `outDir` | string | `.reqs-builder/<projectDir>/output` | `RB_OUT_DIR` | Document Generator の出力先 |
 | `render.outDir` | string | `.reqs-builder/<projectDir>/render` | `RB_RENDER_OUT_DIR` | Document Renderer の出力先 |
 
-### 出力（ツールパイプライン）
-
-| キー | 型 | デフォルト | 環境変数 | 説明 |
-|------|-----|---------|----------|------|
-| `meta.outDir` | string | `.reqs-builder/<projectDir>/meta/output` | `RB_META_OUT_DIR` | メタドキュメンテーション Generator の出力先 |
-| `meta.render.outDir` | string | `.reqs-builder/<projectDir>/meta/render` | `RB_META_RENDER_OUT_DIR` | メタドキュメンテーション Renderer の出力先 |
-
 ### サーバ
 
 | キー | 型 | デフォルト | 環境変数 | CLI | 説明 |

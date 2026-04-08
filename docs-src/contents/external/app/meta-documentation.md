@@ -1,24 +1,14 @@
 # メタドキュメンテーション
 
-ツール自身のスキーマ定義やクエリ定義を、ツール自身で可視化する機能。
+ユーザが書いたスキーマ定義とクエリ定義を、ツールが内蔵のテンプレートで自動的に可視化する機能。
 
-## 概要
+## 自動生成される内容
 
-ユーザプロジェクトの `schemaDir`、`queriesDir`、`contentsDir` の全体を source データとして扱い、ツール内蔵のスキーマ・クエリ・テンプレートを用いてツールを実行することで実現する。出力先は `meta.outDir`（Generator）および `meta.render.outDir`（Renderer）。
+ビルドのたびに、以下が `outDir` 配下に出力される。出力先のディレクトリ名は `__` で始まり、ユーザのコンテンツと視覚的に分離される。
 
-| | ツール内蔵（メタレベル） | ユーザプロジェクト |
-|---|---|---|
-| schema | JSON Schema の検証規則、YAML DSL の構文規則 | `schemaDir` の各ファイル |
-| queries | schema / queries / contents を可視化するクエリ | `queriesDir` の各ファイル |
-| templates | Query Design View、スキーマ一覧 等の可視化テンプレート | `templatesDir` の各ファイル |
-| source（対象） | ユーザの `schemaDir` + `queriesDir` + `contentsDir` | ドメインデータ |
+- エンティティ一覧
+- フィールド一覧（型・必須・メタデータ）
+- 参照一覧（`references.yaml` の宣言を表示）
+- Query Design View（クエリ定義の構造表示）
 
-## できること
-
-- ユーザの `schemaDir` を検証する（内蔵 schema で）
-- ユーザの `queriesDir` を Query Design View として可視化する（内蔵 queries + templates で）
-- ユーザの `contentsDir` をドメインビューとして可視化する（ユーザの queries + templates で）
-
-## dog fooding
-
-Phase 3（Normalizer）・Phase 4（Composer）の開発自体がこのツールの dog fooding になる。Phase 2 で Document Generator が動いた時点から、ツール自身を使いながら標準 schema / queries / templates を開発できる。
+ER 図や実データのテーブル表示は出力しない。実データを目視確認したい場合は `viewsDir` の YAML を直接参照する。

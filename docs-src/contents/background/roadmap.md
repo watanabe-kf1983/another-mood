@@ -43,15 +43,31 @@
 
 ### Phase 7: メタドキュメンテーション
 
-スキーマ・クエリの可視化（[meta-documentation.md](../external/app/meta-documentation.md)）。ツール内蔵のスキーマ・クエリ・テンプレートでユーザ定義を可視化する。
+スキーマ・クエリの「定義」をツール内蔵のテンプレートで可視化する（[meta-documentation.md](../external/app/meta-documentation.md)）。
 
-### Phase 8: 追加機能（欲しい順）
+- [ ] 7-1. Composer に dataCatalog を配線し、`__metadata` として views に passthrough
+- [ ] 7-2. Composer で normalizedQueries を `__metadata.queries` として views に passthrough
+- [ ] 7-3. 内蔵 root（`__meta_root.md`）を導入し、エンティティ一覧を表示
+- [ ] 7-4. フィールド一覧と参照一覧を追加
+- [ ] 7-5. Query Design View を追加（Mermaid 等は使わない軽量版）
 
-優先順位はその時点の必要性で決定。
+### Phase 8〜10: 追加機能
+
+Phase 9 を **MCP サーバ対応** とし、Phase 8 をその前に実装すべき機能、Phase 10 をその後に回してよい機能として位置付ける。
+
+Phase 8 開始時に、以下を含めて全タスクをいったん整理する:
+
+- このロードマップに未タスク化のまま `docs-src/contents/` に仕様だけ書かれている項目を拾い出し、タスク化する
+- Phase 7 から繰り越した項目（ER 図、Table View / Query View 等）を再評価する
+- 各タスクを Phase 8 / Phase 9 / Phase 10 に振り分ける
+
+#### 現時点での候補（振り分け前）
 
 - [ ] YAML DSL クエリ評価の拡充（from / join / where / group_by / select / sort）
 - [ ] Markdown パーサー（データソースとしての Markdown 読み込み）
 - [ ] 参照整合性チェック（references.yaml、`--strict`）
-- [ ] 標準テンプレート（ER図、DFD、CRUD マトリクス）
-- [ ] MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認）
+- [ ] 標準テンプレート（ER図、DFD、CRUD マトリクス） — ER 図は join / 参照整合性が動いてから視認性が出るため Phase 7 から繰り越し
+- [ ] メタ可視化: Table View / Query View（実データ表示） — 動的名前引きの Generator 拡張が必要になるため Phase 7 から繰り越し
+- [ ] MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認） — Phase 9
 - [ ] 計算機能プラグインのインターフェース検討（例: ファンクションポイント算出プラグイン）
+- [ ] `docs-src/` 自身のリファクタリング — 現状はツールの機能を十分に活かせておらず、本来このツールで書かれるべき構造になっていない。dog-fooding を通じたツール機能の十分性検証を兼ねる（Phase 8 で実施するか Phase 10 に回すかは整理時に判断。十分性なきまま MCP サーバ作りに進む是非も併せて検討）
