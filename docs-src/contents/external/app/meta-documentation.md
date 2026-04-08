@@ -18,7 +18,3 @@
 - ユーザの `schemaDir` を検証する（内蔵 schema で）
 - ユーザの `queriesDir` を Query Design View として可視化する（内蔵 queries + templates で）
 - ユーザの `contentsDir` をドメインビューとして可視化する（ユーザの queries + templates で）
-
-## dog fooding
-
-Phase 3（Normalizer）・Phase 4（Composer）の開発自体がこのツールの dog fooding になる。Phase 2 で Document Generator が動いた時点から、ツール自身を使いながら標準 schema / queries / templates を開発できる。
