@@ -2,11 +2,13 @@
 
 ## 処理フロー
 
-1. `normalizedContentsDir` の *.yaml を読み込み、自動パススルーとして `viewsDir` にコピー
-2. `normalizedQueriesDir` の *.yaml を読み込み、クエリを評価
-   - 各クエリの `from` で参照するデータソースを `normalizedContentsDir` から取得
+1. `dataCatalogDir` の *.yaml を読み込み、`__definition` 名前空間のまま `viewsDir` に passthrough（メタドキュメンテーション用、[meta-documentation.md](../../external/app/meta-documentation.md) 参照）
+2. `normalizedContentsDir` の *.yaml を読み込み、自動パススルーとして `viewsDir` にコピー
+3. `normalizedQueriesDir` の *.yaml を読み込み:
+   - クエリ定義そのものを `__definition.queries` として `viewsDir` に passthrough
+   - 各クエリを評価し、結果を `viewsDir` に *.yaml として書き出し
+   - 各クエリの `from` で参照するデータソースは `normalizedContentsDir` から取得
    - `grouped` → `select` の順に適用
-3. クエリ評価結果を `viewsDir` に *.yaml として書き出し
 
 ### クエリ評価の詳細
 
