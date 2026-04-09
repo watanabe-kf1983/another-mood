@@ -47,9 +47,8 @@ class TestComponentCall:
             (out_dir / "result.txt").write_text(str(src_dir))
 
         out = tmp_path / "out"
-        out.mkdir()
         my_fn(src_dir=Path("/input"), out_dir=out)
-        assert (out / "result.txt").read_text() == "/input"
+        assert (out / "data" / "result.txt").read_text() == "/input"
 
     def test_bind_then_call(self, tmp_path: Path) -> None:
         @Component(out_dir="out_dir")
@@ -57,10 +56,9 @@ class TestComponentCall:
             (out_dir / "result.txt").write_text(str(src_dir))
 
         out = tmp_path / "out"
-        out.mkdir()
         call = my_fn.bind(src_dir=Path("/input"), out_dir=out)
         call()
-        assert (out / "result.txt").read_text() == "/input"
+        assert (out / "data" / "result.txt").read_text() == "/input"
 
     def test_call_with_positional_args(self, tmp_path: Path) -> None:
         @Component(out_dir="out_dir")
@@ -68,9 +66,8 @@ class TestComponentCall:
             (out_dir / "result.txt").write_text(label)
 
         out = tmp_path / "out"
-        out.mkdir()
         my_fn("hello", out_dir=out)
-        assert (out / "result.txt").read_text() == "hello"
+        assert (out / "data" / "result.txt").read_text() == "hello"
 
 
 class TestExclusiveWriteWrapping:
@@ -115,7 +112,7 @@ class TestErrorPropagationWrapping:
     def test_skips_fn_on_upstream_errors(self, tmp_path: Path) -> None:
         upstream_dir = tmp_path / "upstream"
         self._write_yaml(
-            upstream_dir / "err.yaml",
+            upstream_dir / "reports" / "err.yaml",
             {"__build_report": {"errors": [{"message": "upstream"}]}},
         )
 
@@ -139,7 +136,7 @@ class TestErrorPropagationWrapping:
 
     def test_catches_exception_and_writes_errors(self, tmp_path: Path) -> None:
         upstream_dir = tmp_path / "upstream"
-        self._write_yaml(upstream_dir / "data.yaml", {"x": 1})
+        self._write_yaml(upstream_dir / "reports" / "data.yaml", {"x": 1})
 
         @Component(
             out_dir="out_dir",
@@ -152,5 +149,5 @@ class TestErrorPropagationWrapping:
         out = tmp_path / "output"
         my_fn(src_dir=tmp_path / "src", upstream_dir=upstream_dir, out_dir=out)
 
-        data = yaml.safe_load((out / "__build_report.yaml").read_text())
+        data = yaml.safe_load((out / "reports" / "__build_report.yaml").read_text())
         assert "boom" in data["__build_report"]["errors"][0]["message"]

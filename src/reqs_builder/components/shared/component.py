@@ -73,9 +73,17 @@ class ComponentCall:
                 out_dir = cast(Path, kwargs[self.out_dir_key])
                 with error_propagation(
                     self.upstream_dirs, out_dir, component=self.name
-                ) as ok:
-                    if ok:
-                        _inner(*args, **kwargs)
+                ) as data_dirs:
+                    if data_dirs is not None:
+                        updated = {
+                            **kwargs,
+                            self.out_dir_key: data_dirs.out,
+                        }
+                        for key, path in zip(
+                            self.upstream_dir_keys, data_dirs.upstreams
+                        ):
+                            updated[key] = path
+                        _inner(*args, **updated)
 
             action = _with_propagation
 

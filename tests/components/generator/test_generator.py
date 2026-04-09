@@ -15,8 +15,8 @@ def _write_yaml(path: Path, data: dict[str, Any]) -> None:
 
 class TestGenerate:
     def test_renders_normal_output(self, tmp_path: Path) -> None:
-        data_dir = tmp_path / "data"
-        data_dir.mkdir()
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
         _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
 
         templates_dir = tmp_path / "templates"
@@ -24,15 +24,19 @@ class TestGenerate:
         (templates_dir / "index.md").write_text("# {{ title }}\n")
 
         out_dir = tmp_path / "output"
-        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            out_dir=out_dir,
+        )
 
-        assert (out_dir / "index.md").read_text() == "# Hello\n"
+        assert (out_dir / "data" / "index.md").read_text() == "# Hello\n"
         # __meta_root is always rendered alongside __root.
-        assert (out_dir / "__reference" / "index.md").exists()
+        assert (out_dir / "data" / "__reference" / "index.md").exists()
 
     def test_renders_error_page_on_template_error(self, tmp_path: Path) -> None:
-        data_dir = tmp_path / "data"
-        data_dir.mkdir()
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
         _write_yaml(data_dir / "data.yaml", {"x": 1})
 
         templates_dir = tmp_path / "templates"
@@ -40,14 +44,18 @@ class TestGenerate:
         (templates_dir / "index.md").write_text('{% section "bad" with x %}')
 
         out_dir = tmp_path / "output"
-        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            out_dir=out_dir,
+        )
 
-        error_page = (out_dir / "index.md").read_text()
+        error_page = (out_dir / "data" / "index.md").read_text()
         assert error_page.startswith("# Build Report")
 
     def test_replaces_stale_output_with_error(self, tmp_path: Path) -> None:
-        data_dir = tmp_path / "data"
-        data_dir.mkdir()
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
         _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
 
         templates_dir = tmp_path / "templates"
@@ -57,17 +65,25 @@ class TestGenerate:
         out_dir = tmp_path / "output"
 
         # First build succeeds
-        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
-        assert (out_dir / "index.md").read_text() == "# Hello\n"
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            out_dir=out_dir,
+        )
+        assert (out_dir / "data" / "index.md").read_text() == "# Hello\n"
 
         # Break the template
         (templates_dir / "index.md").write_text('{% section "bad" with title %}')
-        generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            out_dir=out_dir,
+        )
 
         # Stale output is gone, error page is shown
-        error_page = (out_dir / "index.md").read_text()
+        data_out = out_dir / "data"
+        error_page = (data_out / "index.md").read_text()
         assert "# Build Report" in error_page
-        assert sorted(p.name for p in out_dir.iterdir()) == [
-            "__build_report.yaml",
+        assert sorted(p.name for p in data_out.iterdir()) == [
             "index.md",
         ]

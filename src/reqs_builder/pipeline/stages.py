@@ -84,7 +84,7 @@ def generator_stage(config: ProjectConfig) -> Task:
 def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
     return RenderStage(
-        src_dir=config.tmp_dir / generate.name,
+        src_dir=config.tmp_dir / generate.name / "data",
         render_input_dir=config.tmp_dir / "render_input",
         render_output_dir=config.tmp_dir / "render_output",
         port=config.port,
@@ -94,7 +94,7 @@ def render_stage(config: ProjectConfig) -> Task:
 def publish_stage(config: ProjectConfig) -> Task:
     """Copy final artifacts from tmp to output directories."""
     src_dirs = {
-        config.tmp_dir / generate.name: config.out_dir,
+        config.tmp_dir / generate.name / "data": config.out_dir,
         config.tmp_dir / "render_output": config.render_out_dir,
     }
 
@@ -116,7 +116,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
 
     def report() -> BuildReport:
         nonlocal first
-        result = BuildReport.collect(config.tmp_dir / generate.name)
+        result = BuildReport.collect(config.tmp_dir / generate.name / "reports")
         succeeded = not result.has_errors()
         messages = {
             (True, True): "Build successfully completed",
@@ -130,7 +130,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
         return result
 
     return ReportingStage(
-        report_fn=report, watch_paths=[config.tmp_dir / generate.name]
+        report_fn=report, watch_paths=[config.tmp_dir / generate.name / "reports"]
     )
 
 

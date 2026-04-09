@@ -21,18 +21,13 @@ def _write(path: Path, text: str) -> None:
 
 class TestCompose:
     def test_passthrough_and_query(self, tmp_path: Path) -> None:
-        contents = tmp_path / "contents"
+        contents = tmp_path / "contents" / "data"
         _write(
             contents / "items.yaml",
             "items:\n  - {name: a, value: 1}\n  - {name: b, value: 2}\n",
         )
-        # __build_report.yaml from upstream stages must NOT be passed through.
-        _write(
-            contents / "__build_report.yaml",
-            "__build_report: {normalize_contents: {result: ok}}\n",
-        )
 
-        queries = tmp_path / "queries"
+        queries = tmp_path / "queries" / "data"
         _write(
             queries / "name_query.yaml",
             "__definition:\n"
@@ -43,7 +38,7 @@ class TestCompose:
             "        - {item: name}\n",
         )
 
-        data_catalog = tmp_path / "data-catalog"
+        data_catalog = tmp_path / "data-catalog" / "data"
         _write(
             data_catalog / "schema.yaml",
             "__definition:\n  entities:\n    - {id: items, fields: []}\n",
@@ -51,51 +46,44 @@ class TestCompose:
 
         out = tmp_path / "views"
         compose(
-            contents_dir=contents,
-            queries_dir=queries,
-            data_catalog_dir=data_catalog,
+            contents_dir=tmp_path / "contents",
+            queries_dir=tmp_path / "queries",
+            data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
 
+        data_out = out / "data"
         # Passthrough: each input file is copied bytewise into a dedicated subdir.
-        # __build_report.yaml is filtered out because it belongs to error
-        # propagation, not the user-visible data.
         for src, sub in (
             (contents, "contents"),
             (data_catalog, "data-catalog"),
             (queries, "queries"),
         ):
             for f in src.rglob("*.yaml"):
-                dst = out / sub / f.relative_to(src)
-                if f.name == "__build_report.yaml":
-                    assert not dst.exists()
-                else:
-                    assert dst.read_text() == f.read_text()
+                dst = data_out / sub / f.relative_to(src)
+                assert dst.read_text() == f.read_text()
 
         # Query result.
         assert yaml.safe_load(
-            (out / "query-results" / "names.yaml").read_text()
+            (data_out / "query-results" / "names.yaml").read_text()
         ) == yaml.safe_load("names:\n  - {name: a}\n  - {name: b}\n")
 
     def test_empty_queries_dir(self, tmp_path: Path) -> None:
-        contents = tmp_path / "contents"
+        contents = tmp_path / "contents" / "data"
         _write(contents / "data.yaml", "key: value\n")
 
-        queries = tmp_path / "queries"
-        queries.mkdir()
-
-        data_catalog = tmp_path / "data-catalog"
-        data_catalog.mkdir()
+        (tmp_path / "queries" / "data").mkdir(parents=True)
+        (tmp_path / "data-catalog" / "data").mkdir(parents=True)
 
         out = tmp_path / "views"
         compose(
-            contents_dir=contents,
-            queries_dir=queries,
-            data_catalog_dir=data_catalog,
+            contents_dir=tmp_path / "contents",
+            queries_dir=tmp_path / "queries",
+            data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
 
-        assert (out / "contents" / "data.yaml").read_text() == "key: value\n"
+        assert (out / "data" / "contents" / "data.yaml").read_text() == "key: value\n"
 
 
 class TestParseQuery:
