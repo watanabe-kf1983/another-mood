@@ -20,7 +20,7 @@ def inspect_schema_stage(config: ProjectConfig) -> Task:
     """Validate schema files against SchemaSchema."""
     call = inspect_schema.bind(
         schema_dir=config.schema_dir,
-        out_dir=config.data_catalog_dir,
+        out_dir=config.tmp_dir / inspect_schema.name,
     )
     return Stage(run_fn=call, watch_paths=[config.schema_dir])
 
@@ -29,13 +29,13 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     """Normalize contents_dir to normalized_contents_dir (passthrough)."""
     call = normalize_contents.bind(
         src_dir=config.contents_dir,
-        data_catalog_dir=config.data_catalog_dir,
+        data_catalog_dir=config.tmp_dir / inspect_schema.name,
         schema_dir=config.schema_dir,
-        out_dir=config.normalized_contents_dir,
+        out_dir=config.tmp_dir / normalize_contents.name,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.contents_dir, config.data_catalog_dir],
+        watch_paths=[config.contents_dir, config.tmp_dir / inspect_schema.name],
     )
 
 
@@ -43,7 +43,7 @@ def normalize_queries_stage(config: ProjectConfig) -> Task:
     """Validate and normalize query files."""
     call = normalize_queries.bind(
         queries_dir=config.queries_dir,
-        out_dir=config.normalized_queries_dir,
+        out_dir=config.tmp_dir / normalize_queries.name,
     )
     return Stage(run_fn=call, watch_paths=[config.queries_dir])
 
@@ -51,17 +51,17 @@ def normalize_queries_stage(config: ProjectConfig) -> Task:
 def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
     call = compose.bind(
-        contents_dir=config.normalized_contents_dir,
-        queries_dir=config.normalized_queries_dir,
-        data_catalog_dir=config.data_catalog_dir,
-        out_dir=config.views_dir,
+        contents_dir=config.tmp_dir / normalize_contents.name,
+        queries_dir=config.tmp_dir / normalize_queries.name,
+        data_catalog_dir=config.tmp_dir / inspect_schema.name,
+        out_dir=config.tmp_dir / compose.name,
     )
     return Stage(
         run_fn=call,
         watch_paths=[
-            config.normalized_contents_dir,
-            config.normalized_queries_dir,
-            config.data_catalog_dir,
+            config.tmp_dir / normalize_contents.name,
+            config.tmp_dir / normalize_queries.name,
+            config.tmp_dir / inspect_schema.name,
         ],
     )
 
@@ -69,22 +69,22 @@ def compose_stage(config: ProjectConfig) -> Task:
 def generator_stage(config: ProjectConfig) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
     call = generate.bind(
-        data_dir=config.views_dir,
+        data_dir=config.tmp_dir / compose.name,
         templates_dir=config.templates_dir,
-        out_dir=config.out_dir,
+        out_dir=config.tmp_dir / generate.name,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.views_dir, config.templates_dir],
+        watch_paths=[config.tmp_dir / compose.name, config.templates_dir],
     )
 
 
 def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
     return RenderStage(
-        src_dir=config.out_dir,
-        render_input_dir=config.render_in_dir,
-        render_output_dir=config.render_out_dir,
+        src_dir=config.tmp_dir / generate.name,
+        render_input_dir=config.tmp_dir / "render_input",
+        render_output_dir=config.tmp_dir / "render_output",
         port=config.port,
     )
 
@@ -95,7 +95,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
 
     def report() -> BuildReport:
         nonlocal first
-        result = BuildReport.collect(config.out_dir)
+        result = BuildReport.collect(config.tmp_dir / generate.name)
         succeeded = not result.has_errors()
         messages = {
             (True, True): "Build successfully completed",
@@ -108,7 +108,9 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
         print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
         return result
 
-    return ReportingStage(report_fn=report, watch_paths=[config.out_dir])
+    return ReportingStage(
+        report_fn=report, watch_paths=[config.tmp_dir / generate.name]
+    )
 
 
 def pipeline(config: ProjectConfig) -> Pipeline:
