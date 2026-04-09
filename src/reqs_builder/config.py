@@ -20,7 +20,6 @@ class ProjectConfig(BaseSettings):
     project_dir: Path
 
     # Input (user-edited)
-    definition_dir: Path = Field(default=Path(""))
     schema_dir: Path = Field(default=Path(""))
     contents_dir: Path = Field(default=Path(""))
     queries_dir: Path = Field(default=Path(""))
@@ -39,8 +38,6 @@ class ProjectConfig(BaseSettings):
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         pd = Path(values.get("project_dir", ""))
         rb = Path(".reqs-builder") / pd
-        if not values.get("definition_dir"):
-            values["definition_dir"] = pd / "definition"
         if not values.get("schema_dir"):
             values["schema_dir"] = pd / "definition" / "schema"
         if not values.get("contents_dir"):
