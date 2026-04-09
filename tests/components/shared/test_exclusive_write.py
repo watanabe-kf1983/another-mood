@@ -1,24 +1,24 @@
-"""Tests for atomic_write — atomic output with ordering guarantees."""
+"""Tests for exclusive_write — exclusive output with ordering guarantees."""
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from reqs_builder.components.shared.atomic_write import VersionInfo, atomic_write
+from reqs_builder.components.shared.exclusive_write import VersionInfo, exclusive_write
 
 
-class TestAtomicWrite:
+class TestExclusiveWrite:
     def test_output_contains_result(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "result.txt").write_text("hello")
         assert (out / "result.txt").read_text() == "hello"
 
     def test_creates_version_json(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
         before = datetime.now(timezone.utc)
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "x.txt").write_text("x")
         after = datetime.now(timezone.utc)
 
@@ -28,20 +28,20 @@ class TestAtomicWrite:
 
     def test_replaces_entire_directory(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "result.txt").write_text("first")
         assert (out / "result.txt").read_text() == "first"
 
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "other.txt").write_text("second")
         assert (out / "other.txt").read_text() == "second"
         assert not (out / "result.txt").exists()
 
 
-class TestAtomicWriteOrdering:
+class TestExclusiveWriteOrdering:
     def test_stale_result_is_discarded(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "result.txt").write_text("original")
 
         # Simulate a future version already completed
@@ -49,17 +49,17 @@ class TestAtomicWriteOrdering:
             json.dumps({"startTime": "2099-01-01T00:00:00+00:00"})
         )
 
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "result.txt").write_text("stale")
         assert (out / "result.txt").read_text() == "original"
 
 
-class TestAtomicWriteCleanup:
+class TestExclusiveWriteCleanup:
     def test_lock_is_released(self, tmp_path: Path) -> None:
         out = tmp_path / "output"
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "result.txt").write_text("first")
-        with atomic_write(out) as od:
+        with exclusive_write(out) as od:
             (od / "result.txt").write_text("second")
         assert (out / "result.txt").read_text() == "second"
 

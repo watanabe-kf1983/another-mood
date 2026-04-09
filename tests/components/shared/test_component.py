@@ -73,9 +73,9 @@ class TestComponentCall:
         assert (out / "result.txt").read_text() == "hello"
 
 
-class TestAtomicWriteWrapping:
+class TestExclusiveWriteWrapping:
     def test_writes_to_tmp_then_syncs(self, tmp_path: Path) -> None:
-        """atomic_write replaces out_dir with a tmp dir during execution."""
+        """exclusive_write replaces out_dir with a tmp dir during execution."""
         actual_out_dir = None
 
         @Component(out_dir="out_dir", error_propagation=False)
@@ -124,7 +124,7 @@ class TestErrorPropagationWrapping:
         @Component(
             out_dir="out_dir",
             upstream_dirs=["upstream_dir"],
-            atomic_write=False,
+            exclusive_write=False,
         )
         def my_fn(*, src_dir: Path, upstream_dir: Path, out_dir: Path) -> None:
             nonlocal called
@@ -144,7 +144,7 @@ class TestErrorPropagationWrapping:
         @Component(
             out_dir="out_dir",
             upstream_dirs=["upstream_dir"],
-            atomic_write=False,
+            exclusive_write=False,
         )
         def my_fn(*, src_dir: Path, upstream_dir: Path, out_dir: Path) -> None:
             raise ValueError("boom")

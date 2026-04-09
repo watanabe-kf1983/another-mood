@@ -1,6 +1,6 @@
-"""Atomic directory write — context manager.
+"""Exclusive directory write — context manager.
 
-Provides atomic output directory updates: work is done in a temporary
+Provides exclusive output directory updates: work is done in a temporary
 directory, then synced to the real output under a file lock with
 ordering guarantees.
 
@@ -27,8 +27,8 @@ from filelock import FileLock
 
 
 @contextmanager
-def atomic_write(out_dir: Path) -> Generator[Path, None, None]:
-    """Context manager: write to a temporary directory, then sync atomically.
+def exclusive_write(out_dir: Path) -> Generator[Path, None, None]:
+    """Context manager: write to a temporary directory, then sync exclusively.
 
     Yields a temporary directory path. On successful exit, the temp dir
     is synced to out_dir under a file lock with ordering guarantees.
