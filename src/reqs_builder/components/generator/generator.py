@@ -17,17 +17,18 @@ from reqs_builder.components.shared.json_data_model import load_yamls
 @Component(out_dir="out_dir", error_propagation=False)
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Generate Markdown output, rendering errors as a page if present."""
-    with error_propagation([data_dir], out_dir, component="generate") as ok:
-        if ok:
-            data = load_yamls(data_dir)
-            render("__root", data, out_dir, templates_dir=templates_dir)
-            render("__meta_root", data, out_dir / "__reference")
+    with error_propagation([data_dir], out_dir, component="generate") as data_dirs:
+        if data_dirs is not None:
+            data = load_yamls(data_dirs.upstreams[0])
+            render("__root", data, data_dirs.out, templates_dir=templates_dir)
+            render("__meta_root", data, data_dirs.out / "__reference")
 
-    report = BuildReport.collect(out_dir)
+    report = BuildReport.collect(out_dir / "reports")
     if report.has_errors():
-        _clear_contents(out_dir)
-        render("__build_report", report.to_data(), out_dir)
-        report.write(out_dir)
+        data_out = out_dir / "data"
+        _clear_contents(data_out)
+        render("__build_report", report.to_data(), data_out)
+        report.write(out_dir / "reports")
 
 
 def _clear_contents(directory: Path) -> None:

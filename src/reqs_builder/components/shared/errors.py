@@ -5,29 +5,43 @@ import traceback
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
+from typing import NamedTuple
 
 from reqs_builder.components.shared.build_report import BuildReport
 
 _ERRORS_KEY = "errors"
 
 
+class DataDirs(NamedTuple):
+    """Data directories resolved by error_propagation."""
+
+    out: Path
+    upstreams: Sequence[Path]
+
+
 @contextmanager
 def error_propagation(
     upstream_dirs: Sequence[Path], out_dir: Path, *, component: str = ""
-) -> Generator[bool, None, None]:
+) -> Generator[DataDirs | None, None, None]:
     """Context manager: propagate errors through the pipeline.
 
-    Collects upstream build reports, yields False if errors found.
-    Otherwise yields True and runs the body. On success or failure,
-    adds stage result and writes the accumulated report.
+    Receives component-level directories (e.g. tmp/<name>/) and internally
+    separates data/ and reports/ subdirectories. Yields DataDirs with
+    resolved data paths on success, or None if upstream errors are found.
     """
-    report = BuildReport.collect(*upstream_dirs)
+    report_dir = out_dir / "reports"
+    data_dir = out_dir / "data"
+    upstream_report_dirs = [d / "reports" for d in upstream_dirs]
+    upstream_data_dirs = [d / "data" for d in upstream_dirs]
+
+    report = BuildReport.collect(*upstream_report_dirs)
+    result = "skipped"
     if report.has_errors():
-        result = "skipped"
-        yield False
+        yield None
     else:
+        data_dir.mkdir(parents=True, exist_ok=True)
         try:
-            yield True
+            yield DataDirs(out=data_dir, upstreams=upstream_data_dirs)
         except Exception as exc:
             result = "ng"
             _print_error(exc)
@@ -36,7 +50,7 @@ def error_propagation(
             result = "ok"
     if component:
         report.add_component_result(component, result)
-    report.write(out_dir)
+    report.write(report_dir)
 
 
 def _error_data(exc: Exception) -> Mapping[str, object]:

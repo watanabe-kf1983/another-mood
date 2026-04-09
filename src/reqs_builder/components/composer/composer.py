@@ -22,10 +22,10 @@ from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-_IGNORE_BUILD_REPORT = shutil.ignore_patterns("__build_report.yaml")
-
-
-@Component(out_dir="out_dir", upstream_dirs=["contents_dir", "queries_dir"])
+@Component(
+    out_dir="out_dir",
+    upstream_dirs=["contents_dir", "queries_dir", "data_catalog_dir"],
+)
 def compose(
     contents_dir: Path,
     queries_dir: Path,
@@ -39,9 +39,9 @@ def compose(
     queries_out = out_dir / "queries"
     query_results_out = out_dir / "query-results"
 
-    shutil.copytree(contents_dir, contents_out, ignore=_IGNORE_BUILD_REPORT)
-    shutil.copytree(data_catalog_dir, data_catalog_out, ignore=_IGNORE_BUILD_REPORT)
-    shutil.copytree(queries_dir, queries_out, ignore=_IGNORE_BUILD_REPORT)
+    shutil.copytree(contents_dir, contents_out)
+    shutil.copytree(data_catalog_dir, data_catalog_out)
+    shutil.copytree(queries_dir, queries_out)
 
     sources = load_yamls(contents_out)
 

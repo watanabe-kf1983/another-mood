@@ -2,7 +2,7 @@
 
 A Component wraps a plain function with metadata about which keyword argument
 is the output directory and which are upstream (previous-stage output)
-directories. Optional flags enable atomic writes and error propagation.
+directories. Optional flags enable exclusive writes and error propagation.
 
 Usage:
     @Component(out_dir="out_dir", upstream_dirs=["upstream_dir"])
@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from reqs_builder.components.shared.atomic_write import atomic_write
+from reqs_builder.components.shared.exclusive_write import exclusive_write
 from reqs_builder.components.shared.errors import error_propagation
 
 
@@ -39,7 +39,7 @@ class ComponentCall:
     name: str
     out_dir_key: str
     upstream_dir_keys: Sequence[str] = ()
-    use_atomic_write: bool = True
+    use_exclusive_write: bool = True
     use_error_propagation: bool = True
     args: tuple[object, ...] = ()
     kwargs: dict[str, object] = field(default_factory=lambda: {})
@@ -73,21 +73,29 @@ class ComponentCall:
                 out_dir = cast(Path, kwargs[self.out_dir_key])
                 with error_propagation(
                     self.upstream_dirs, out_dir, component=self.name
-                ) as ok:
-                    if ok:
-                        _inner(*args, **kwargs)
+                ) as data_dirs:
+                    if data_dirs is not None:
+                        updated = {
+                            **kwargs,
+                            self.out_dir_key: data_dirs.out,
+                        }
+                        for key, path in zip(
+                            self.upstream_dir_keys, data_dirs.upstreams
+                        ):
+                            updated[key] = path
+                        _inner(*args, **updated)
 
             action = _with_propagation
 
-        if self.use_atomic_write:
+        if self.use_exclusive_write:
             _inner2 = action
 
-            def _with_atomic(*args: object, **kwargs: object) -> None:
+            def _with_exclusive(*args: object, **kwargs: object) -> None:
                 out_dir = cast(Path, kwargs[self.out_dir_key])
-                with atomic_write(out_dir) as tmp_dir:
+                with exclusive_write(out_dir) as tmp_dir:
                     _inner2(*args, **{**kwargs, self.out_dir_key: tmp_dir})
 
-            action = _with_atomic
+            action = _with_exclusive
 
         action(*self.args, **self.kwargs)
 
@@ -103,7 +111,7 @@ class Component:
 
     out_dir: str
     upstream_dirs: Sequence[str] = ()
-    atomic_write: bool = True
+    exclusive_write: bool = True
     error_propagation: bool = True
 
     def __call__(self, fn: Callable[..., None]) -> ComponentCall:
@@ -112,6 +120,6 @@ class Component:
             name=fn.__name__,
             out_dir_key=self.out_dir,
             upstream_dir_keys=self.upstream_dirs,
-            use_atomic_write=self.atomic_write,
+            use_exclusive_write=self.exclusive_write,
             use_error_propagation=self.error_propagation,
         )

@@ -285,7 +285,7 @@ class TestNormalizeContents:
         out = tmp_path / "normalized"
         normalize_contents(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
-        assert yaml.safe_load((out / "data.yaml").read_text()) == {
+        assert yaml.safe_load((out / "data" / "data.yaml").read_text()) == {
             "items": [{"name": "a"}]
         }
 
@@ -306,7 +306,7 @@ class TestNormalizeQueries:
         out = tmp_path / "normalized"
         normalize_queries(queries_dir=queries, out_dir=out)
 
-        data = yaml.safe_load((out / "erds.yaml").read_text())
+        data = yaml.safe_load((out / "data" / "erds.yaml").read_text())
         assert data == {
             "__definition": {
                 "queries": [
