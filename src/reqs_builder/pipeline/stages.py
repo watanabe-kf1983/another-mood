@@ -1,5 +1,6 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
+import shutil
 import sys
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from reqs_builder.components import (
     normalize_queries,
 )
 from reqs_builder.components.shared.build_report import BuildReport
+from reqs_builder.components.shared.exclusive_write import exclusive_write
 from reqs_builder.config import ProjectConfig
 from reqs_builder.pipeline.base import Pipeline, ReportingStage, Stage, Task
 from reqs_builder.pipeline.render import RenderStage
@@ -89,6 +91,25 @@ def render_stage(config: ProjectConfig) -> Task:
     )
 
 
+def publish_stage(config: ProjectConfig) -> Task:
+    """Copy final artifacts from tmp to output directories."""
+    src_dirs = {
+        config.tmp_dir / generate.name: config.out_dir,
+        config.tmp_dir / "render_output": config.render_out_dir,
+    }
+
+    def publish() -> None:
+        for src, dst in src_dirs.items():
+            if src.exists():
+                with exclusive_write(dst) as tmp:
+                    shutil.copytree(src, tmp, dirs_exist_ok=True)
+
+    return Stage(
+        run_fn=publish,
+        watch_paths=[config.tmp_dir / "render_output"],
+    )
+
+
 def build_report_stage(config: ProjectConfig) -> ReportingStage:
     """Report build result to user. Exposes BuildReport for CLI."""
     first = True
@@ -122,5 +143,6 @@ def pipeline(config: ProjectConfig) -> Pipeline:
         compose_stage(config),
         generator_stage(config),
         render_stage(config),
+        publish_stage(config),
     ]
     return Pipeline(stages, reporting=build_report_stage(config))
