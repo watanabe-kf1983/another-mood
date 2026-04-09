@@ -36,6 +36,7 @@ OUT: `render.outDir`
 
 パイプライン構成:
 - [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成
+- [pipeline/component-runtime.md](pipeline/component-runtime.md) — コンポーネント実行基盤（リファクタ TOBE）
 
 コンポーネント間通信:
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
