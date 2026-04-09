@@ -34,7 +34,8 @@ class RenderStage(Task):
         prepared = self._prepare()
         process = renderer.serve(prepared, self.port)
         print(
-            f"Server running at http://localhost:{self.port}/",
+            f"Server running at http://localhost:{self.port}/\n"
+            f"  Auto-generated reference: http://localhost:{self.port}/__reference/",
             file=sys.stderr,
             flush=True,
         )

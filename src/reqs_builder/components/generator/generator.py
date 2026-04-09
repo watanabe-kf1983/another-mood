@@ -21,6 +21,7 @@ def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
         if ok:
             data = load_yamls(data_dir)
             render("__root", data, out_dir, templates_dir=templates_dir)
+            render("__meta_root", data, out_dir / "__reference")
 
     report = BuildReport.collect(out_dir)
     if report.has_errors():

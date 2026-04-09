@@ -1,7 +1,8 @@
 """Composer — combine normalized data into views.
 
-Passthrough-copies normalized contents to views, then evaluates
-query definitions (YAML DSL) and writes additional view files.
+Passthrough-copies normalized contents and the `__definition` namespace
+(data catalog + query definitions) to views, then evaluates query
+definitions (YAML DSL) and writes additional view files.
 """
 
 import shutil
@@ -21,20 +22,38 @@ from reqs_builder.components.shared.component import Component
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-@Component(out_dir="out_dir", upstream_dirs=["contents_dir"])
-def compose(contents_dir: Path, queries_dir: Path, *, out_dir: Path) -> None:
-    """Copy contents as passthrough, then evaluate queries and write views."""
-    shutil.copytree(contents_dir, out_dir, dirs_exist_ok=True)
-    sources = load_yamls(contents_dir)
+_IGNORE_BUILD_REPORT = shutil.ignore_patterns("__build_report.yaml")
 
-    merged = load_yamls(queries_dir)
+
+@Component(out_dir="out_dir", upstream_dirs=["contents_dir", "queries_dir"])
+def compose(
+    contents_dir: Path,
+    queries_dir: Path,
+    data_catalog_dir: Path,
+    *,
+    out_dir: Path,
+) -> None:
+    """Copy contents + meta-definition passthrough, then evaluate queries."""
+    contents_out = out_dir / "contents"
+    data_catalog_out = out_dir / "data-catalog"
+    queries_out = out_dir / "queries"
+    query_results_out = out_dir / "query-results"
+
+    shutil.copytree(contents_dir, contents_out, ignore=_IGNORE_BUILD_REPORT)
+    shutil.copytree(data_catalog_dir, data_catalog_out, ignore=_IGNORE_BUILD_REPORT)
+    shutil.copytree(queries_dir, queries_out, ignore=_IGNORE_BUILD_REPORT)
+
+    sources = load_yamls(contents_out)
+
+    merged = load_yamls(queries_out)
     definition: dict[str, Any] = merged.get("__definition", {})
     raw_queries: list[dict[str, Any]] = definition.get("queries", [])
     parsed_queries = {record["id"]: parse_query(record) for record in raw_queries}
 
+    query_results_out.mkdir(parents=True, exist_ok=True)
     for name, query in parsed_queries.items():
         sources[name] = query.evaluate(sources)
-        (out_dir / f"{name}.yaml").write_text(
+        (query_results_out / f"{name}.yaml").write_text(
             yaml.safe_dump(
                 {name: sources[name]}, allow_unicode=True, default_flow_style=False
             )

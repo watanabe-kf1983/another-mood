@@ -53,11 +53,16 @@ def compose_stage(config: ProjectConfig) -> Task:
     call = compose.bind(
         contents_dir=config.normalized_contents_dir,
         queries_dir=config.normalized_queries_dir,
+        data_catalog_dir=config.data_catalog_dir,
         out_dir=config.views_dir,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.normalized_contents_dir, config.normalized_queries_dir],
+        watch_paths=[
+            config.normalized_contents_dir,
+            config.normalized_queries_dir,
+            config.data_catalog_dir,
+        ],
     )
 
 

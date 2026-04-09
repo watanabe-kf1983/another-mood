@@ -27,6 +27,8 @@ class TestGenerate:
         generate(data_dir=data_dir, templates_dir=templates_dir, out_dir=out_dir)
 
         assert (out_dir / "index.md").read_text() == "# Hello\n"
+        # __meta_root is always rendered alongside __root.
+        assert (out_dir / "__reference" / "index.md").exists()
 
     def test_renders_error_page_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data"
