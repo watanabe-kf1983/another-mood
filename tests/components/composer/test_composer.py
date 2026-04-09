@@ -1,7 +1,6 @@
 """Tests for Composer — passthrough copy and query evaluation."""
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -15,62 +14,88 @@ from reqs_builder.components.composer.query import (
 )
 
 
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
+def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True))
+    path.write_text(text)
 
 
 class TestCompose:
     def test_passthrough_and_query(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents"
-        contents.mkdir()
-        _write_yaml(
+        _write(
             contents / "items.yaml",
-            {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]},
+            "items:\n  - {name: a, value: 1}\n  - {name: b, value: 2}\n",
+        )
+        # __build_report.yaml from upstream stages must NOT be passed through.
+        _write(
+            contents / "__build_report.yaml",
+            "__build_report: {normalize_contents: {result: ok}}\n",
         )
 
         queries = tmp_path / "queries"
-        queries.mkdir()
-        _write_yaml(
-            queries / "names.yaml",
-            {
-                "__definition": {
-                    "queries": [
-                        {
-                            "id": "names",
-                            "from": "items",
-                            "select": [{"item": "name"}],
-                        }
-                    ]
-                }
-            },
+        _write(
+            queries / "name_query.yaml",
+            "__definition:\n"
+            "  queries:\n"
+            "    - id: names\n"
+            "      from: items\n"
+            "      select:\n"
+            "        - {item: name}\n",
+        )
+
+        data_catalog = tmp_path / "data-catalog"
+        _write(
+            data_catalog / "schema.yaml",
+            "__definition:\n  entities:\n    - {id: items, fields: []}\n",
         )
 
         out = tmp_path / "views"
-        compose(contents_dir=contents, queries_dir=queries, out_dir=out)
+        compose(
+            contents_dir=contents,
+            queries_dir=queries,
+            data_catalog_dir=data_catalog,
+            out_dir=out,
+        )
 
-        # Passthrough
-        assert yaml.safe_load((out / "items.yaml").read_text()) == {
-            "items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]
-        }
+        # Passthrough: each input file is copied bytewise into a dedicated subdir.
+        # __build_report.yaml is filtered out because it belongs to error
+        # propagation, not the user-visible data.
+        for src, sub in (
+            (contents, "contents"),
+            (data_catalog, "data-catalog"),
+            (queries, "queries"),
+        ):
+            for f in src.rglob("*.yaml"):
+                dst = out / sub / f.relative_to(src)
+                if f.name == "__build_report.yaml":
+                    assert not dst.exists()
+                else:
+                    assert dst.read_text() == f.read_text()
 
-        # Query result
-        assert yaml.safe_load((out / "names.yaml").read_text()) == {
-            "names": [{"name": "a"}, {"name": "b"}]
-        }
+        # Query result.
+        assert yaml.safe_load(
+            (out / "query-results" / "names.yaml").read_text()
+        ) == yaml.safe_load("names:\n  - {name: a}\n  - {name: b}\n")
 
     def test_empty_queries_dir(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents"
-        contents.mkdir()
-        _write_yaml(contents / "data.yaml", {"key": "value"})
+        _write(contents / "data.yaml", "key: value\n")
 
         queries = tmp_path / "queries"
         queries.mkdir()
 
-        out = tmp_path / "views"
-        compose(contents_dir=contents, queries_dir=queries, out_dir=out)
+        data_catalog = tmp_path / "data-catalog"
+        data_catalog.mkdir()
 
-        assert yaml.safe_load((out / "data.yaml").read_text()) == {"key": "value"}
+        out = tmp_path / "views"
+        compose(
+            contents_dir=contents,
+            queries_dir=queries,
+            data_catalog_dir=data_catalog,
+            out_dir=out,
+        )
+
+        assert (out / "contents" / "data.yaml").read_text() == "key: value\n"
 
 
 class TestParseQuery:

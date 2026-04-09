@@ -45,9 +45,9 @@
 
 スキーマ・クエリの「定義」をツール内蔵のテンプレートで可視化する（[meta-documentation.md](../external/app/meta-documentation.md)）。
 
-- [ ] 7-1. Composer に dataCatalog を配線し、`__definition` として views に passthrough
-- [ ] 7-2. Composer で normalizedQueries を `__definition.queries` として views に passthrough
-- [ ] 7-3. 内蔵 root（`__meta_root.md`）を導入し、エンティティ一覧を表示
+- [x] 7-1. Composer に dataCatalog を配線し、`__definition` として views に passthrough
+- [x] 7-2. Composer で normalizedQueries を `__definition.queries` として views に passthrough
+- [x] 7-3. 内蔵 root（`__meta_root.md`）を導入し、エンティティ一覧を表示
 - [ ] 7-4. フィールド一覧と参照一覧を追加
 - [ ] 7-5. Query Design View を追加（Mermaid 等は使わない軽量版）
 
