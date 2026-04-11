@@ -49,7 +49,7 @@
 - [x] 7-2. Composer で normalizedQueries を `__definition.queries` として views に passthrough
 - [x] 7-3. 内蔵 root（`__meta_root.md`）を導入し、エンティティ一覧を表示
 - [x] 7-4. フィールド一覧と参照一覧を追加
-- [ ] 7-5. Query Design View を追加（Mermaid 等は使わない軽量版）
+- [x] 7-5. Query Design View を追加（Mermaid 等は使わない軽量版）
 
 ### Phase 8〜10: 追加機能
 
