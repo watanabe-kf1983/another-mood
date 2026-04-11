@@ -4,7 +4,7 @@ Markdown ファイルからデータを抽出するパーサーの仕様。
 
 ## 概要
 
-データのフォーマットとして YAML に加えて Markdown も選択可能とする。`contentsDir`（デフォルト: `docs/contents/`）に配置された Markdown ファイルは、Normalizer が内蔵の `prose` スキーマに従って自動的に正規化する。
+データのフォーマットとして YAML に加えて Markdown も選択可能とする。`contents_dir`（デフォルト: `docs/contents/`）に配置された Markdown ファイルは、Normalizer が内蔵の `prose` スキーマに従って自動的に正規化する。
 
 Markdown は散文（説明文、背景、補足など）の記述に適している。ソース Markdown は普通の Markdown のまま保たれ、GitHub 上でもそのまま閲覧・リンク遷移できる。
 
@@ -27,7 +27,7 @@ prose:
 
 | フィールド | 説明 |
 |---|---|
-| `id` | `contentsDir` からの相対パス（拡張子なし） |
+| `id` | `contents_dir` からの相対パス（拡張子なし） |
 | `title` | H1 見出しから抽出。H1 がなければ null |
 | `body` | ファイル全体（H1 含む。title との二重持ち） |
 
@@ -53,7 +53,7 @@ title: "Architecture"
 
 MIME types は [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838) に準拠する。想定される型: `text/markdown`, `text/html`, `text/plain` 等。
 
-このスキーマはツール内蔵であり、ユーザが `schemaDir` に定義する必要はない。
+このスキーマはツール内蔵であり、ユーザが `schema_dir` に定義する必要はない。
 
 ## セクション単位抽出
 
@@ -164,12 +164,12 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 ### 変換ルール
 
 1. Markdown リンク `[text](relative/path.md)` を検出
-2. 相対パスを `contentsDir` 基点の正規化パスに解決
+2. 相対パスを `contents_dir` 基点の正規化パスに解決
 3. 対応する prose レコードのアンカー ID に変換
 
 ### 例
 
-`{contentsDir}/internal/normalizer.md` 内のリンク:
+`{contents_dir}/internal/normalizer.md` 内のリンク:
 
 ```markdown
 処理フローの詳細は[Composer](composer.md)を参照。

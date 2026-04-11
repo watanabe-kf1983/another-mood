@@ -32,7 +32,7 @@ class ProjectConfig(BaseSettings):
     # Output (generated)
     tmp_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
-    render_out_dir: Path = Field(default=Path(""))
+    render_dir: Path = Field(default=Path(""))
 
     # Server
     port: int = Field(default=1313)
@@ -79,6 +79,6 @@ class ProjectConfig(BaseSettings):
             values["tmp_dir"] = rb / "tmp"
         if not values.get("out_dir"):
             values["out_dir"] = rb / "output"
-        if not values.get("render_out_dir"):
-            values["render_out_dir"] = rb / "render"
+        if not values.get("render_dir"):
+            values["render_dir"] = rb / "render"
         return values

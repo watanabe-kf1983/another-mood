@@ -10,22 +10,25 @@ CLI の第一位置パラメータ `<projectDir>` で処理対象ディレクト
 my-project/                    # CWD = <projectDir>（reqs build .）
   index.md                     # ビルドコマンド + 生成物へのリンク
   definition/                  # リーダが管理する定義類
-    schema/                    # schemaDir: スキーマ定義（JSON Schema + references.yaml）
+    schema/                    # schema_dir: スキーマ定義（JSON Schema + references.yaml）
       entities.yaml            #   トップレベルキーがスキーマ名
       references.yaml          #   参照整合性定義（宣言的 FK）
-    queries/                   # queriesDir: Query 定義（YAML DSL、Composer が評価）
-    templates/                 # templatesDir: ドキュメントテンプレート
+    queries/                   # queries_dir: Query 定義（YAML DSL、Composer が評価）
+    templates/                 # templates_dir: ドキュメントテンプレート
     profiles.yaml              # profilesFile: プロファイル設定（ページ分割戦略）
-  contents/                    # contentsDir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
+  contents/                    # contents_dir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
   .reqs-builder/               # gitignore（生成物・中間生成物）
-    tmp/
-      data-catalog/            # dataCatalogDir: SchemaInspector 出力
-      normalized/              # Normalizer 出力（2ステージ分）
-        contents/              # normalizedContentsDir: contents の Normalizer 出力
-        queries/               # normalizedQueriesDir: queries の Normalizer 出力
-      views/                   # viewsDir: Composer 出力
-    output/                    # outDir: Document Generator 出力
-    render/                    # render.outDir: Document Renderer 出力
+    tmp/                       # パイプライン中間出力（ステージ名ベース）
+      inspect_schema/          #   SchemaInspector 出力
+      normalize_contents/      #   contents Normalizer 出力
+      normalize_queries/       #   queries Normalizer 出力
+      compose/                 #   Composer 出力
+      generate/                #   Generator 出力
+      reconcile/               #   Reconcile 出力
+      render_input/            #   Hugo に渡す直前の prepared content
+      render/                  #   Hugo ビルド結果
+    output/                    # out_dir: Document Generator 出力（最終）
+    render/                    # render_dir: Document Renderer 出力（最終）
 ```
 
 `<projectDir>` にサブディレクトリを指定した場合（例: `reqs build docs/`）、出力は `.reqs-builder/docs/` 配下に配置される。
@@ -36,9 +39,9 @@ contents / queries / templates の三層構造は MS-Access の Table / Query / 
 
 | MS-Access | このアプリ | 役割 |
 |---|---|---|
-| Table | `contentsDir` | 正規化されたデータ |
-| Query (View) | `queriesDir` | データの整形・射影・結合の**定義** |
-| Form / Report | `templatesDir` | 表現・レイアウト |
+| Table | `contents_dir` | 正規化されたデータ |
+| Query (View) | `queries_dir` | データの整形・射影・結合の**定義** |
+| Form / Report | `templates_dir` | 表現・レイアウト |
 
 Access の Query は SQL で書く。テンプレートエンジンで Query を書くのは、Excel のセルに SQL を文字列として組み立てるようなもの。Query にはクエリ言語を使うべき。
 
@@ -58,7 +61,7 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 - `.` prefix はフレームワーク固有の作業領域を示す慣習（`.next/`, `.pytest_cache/` 等）に従う
 - gitignore がシンプル（ルートに `/.reqs-builder/` の1行で済む）
 - 入力がプロジェクト外（git submodule 等）にある場合でも破綻しない
-- `contentsDir` を編集するメンバの視界に入らない
+- `contents_dir` を編集するメンバの視界に入らない
 
 ## 背景: 出力を `<projectDir>` ごとにサブディレクトリで分離する理由
 

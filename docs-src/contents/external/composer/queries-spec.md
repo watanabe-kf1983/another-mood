@@ -4,21 +4,21 @@
 
 ## ファイル構成
 
-`queriesDir`（デフォルト: `definition/queries/`）配下に YAML ファイルとして配置する。
+`queries_dir`（デフォルト: `definition/queries/`）配下に YAML ファイルとして配置する。
 
 ```
-{queriesDir}/
+{queries_dir}/
   erds.yaml            # entities を category で group した view
   screen-details.yaml  # screens を加工した view
 ```
 
 ## データソース
 
-クエリは `normalizedContentsDir` の正規化済みデータに対して評価される。`from:` にはデータソース名を指定する。データソース名は `normalizedContentsDir` 内のファイル名（拡張子なし）のトップレベルキーに対応する。
+クエリは `normalize_contents_dir` の正規化済みデータに対して評価される。`from:` にはデータソース名を指定する。データソース名は `normalize_contents_dir` 内のファイル名（拡張子なし）のトップレベルキーに対応する。
 
 ### 自動パススルー
 
-正規化済みデータは自動的に views にコピーされる（パススルー）。`contentsDir` に配置したデータは、クエリを書かなくてもテンプレートから参照可能。クエリは追加の view（group、join 等）を定義する場合にのみ記述する。
+正規化済みデータは自動的に views にコピーされる（パススルー）。`contents_dir` に配置したデータは、クエリを書かなくてもテンプレートから参照可能。クエリは追加の view（group、join 等）を定義する場合にのみ記述する。
 
 ### 同名禁止
 
@@ -58,7 +58,7 @@ erds:
 データソースとなる正規化済みデータの名前を指定する。
 
 ```yaml
-from: entities    # normalizedContentsDir 内の entities をソースとする
+from: entities    # normalize_contents_dir 内の entities をソースとする
 ```
 
 ### grouped
@@ -179,11 +179,11 @@ erds:
 
 ## 出力
 
-views は `viewsDir` に YAML ファイルとして書き出される。自動パススルー分と、クエリ評価結果の両方が含まれる。
+views は `compose_dir` に YAML ファイルとして書き出される。自動パススルー分と、クエリ評価結果の両方が含まれる。
 
 ```
-{viewsDir}/
+{compose_dir}/
   entities.yaml       # 自動パススルー（normalized からコピー）
   relations.yaml      # 自動パススルー
-  erds.yaml           # {queriesDir}/erds.yaml の評価結果
+  erds.yaml           # {queries_dir}/erds.yaml の評価結果
 ```

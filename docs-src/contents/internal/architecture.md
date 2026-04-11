@@ -6,36 +6,36 @@
 
 **SchemaInspector**
 スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
-IN: `schemaDir`
-OUT: `dataCatalogDir`
+IN: `schema_dir`
+OUT: `inspect_schema_dir`
 
 **Normalizer**
 入力ディレクトリを検証し、辞書形式を配列形式に正規化する。
 contents / queries の2種類の入力に対してそれぞれ独立したステージとして実行される。
 Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../external/normalizer/markdown-parser-spec.md) 参照）。
 contents の Normalize では `--strict` モードで参照整合性もチェックする。
-IN: `contentsDir`、`queriesDir`（各ステージで異なる。詳細は [pipeline.md](pipeline/pipeline.md) 参照）
-OUT: `normalizedContentsDir`、`normalizedQueriesDir`
+IN: `contents_dir`、`queries_dir`（各ステージで異なる。詳細は [pipeline.md](pipeline/pipeline.md) 参照）
+OUT: `normalize_contents_dir`、`normalize_queries_dir`
 
 **Composer**
 正規化済みデータを自動的にビューとしてパススルーし、さらに正規化済みクエリがあれば評価して追加のビューを生成する。
-IN: `dataCatalogDir`、`normalizedContentsDir`、`normalizedQueriesDir`
-OUT: `viewsDir`
+IN: `inspect_schema_dir`、`normalize_contents_dir`、`normalize_queries_dir`
+OUT: `compose_dir`
 
 **Document Generator**
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
-IN: `viewsDir`、`templatesDir`、`profilesFile`
-OUT: `generatedDir`
+IN: `compose_dir`、`templates_dir`、`profilesFile`
+OUT: `generate_dir`
 
 **Reconcile**
 Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_report` ページに差し替える。詳細は [components/generator.md](components/generator.md) 参照。
-IN: `generatedDir`
-OUT: `reconcileDir`
+IN: `generate_dir`
+OUT: `reconcile_dir`
 
 **Document Renderer**
 生成された Markdown を HTML にレンダリングする。
-IN: `reconcileDir`
-OUT: `render.outDir`
+IN: `reconcile_dir`
+OUT: `render_dir`
 
 各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。入力データを変更すると normalized → views → documents とカスケードで更新される。
 

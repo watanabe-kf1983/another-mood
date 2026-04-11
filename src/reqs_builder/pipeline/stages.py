@@ -99,7 +99,7 @@ def render_stage(config: ProjectConfig) -> Task:
     return RenderStage(
         src_dir=config.tmp_subdir(reconcile.name, "data"),
         render_input_dir=config.tmp_subdir("render_input"),
-        render_output_dir=config.tmp_subdir("render_output"),
+        render_dir=config.tmp_subdir("render"),
         port=config.port,
     )
 
@@ -108,7 +108,7 @@ def publish_stage(config: ProjectConfig) -> Task:
     """Copy final artifacts from tmp to output directories."""
     src_dirs = {
         config.tmp_subdir(reconcile.name, "data"): config.out_dir,
-        config.tmp_subdir("render_output"): config.render_out_dir,
+        config.tmp_subdir("render"): config.render_dir,
     }
 
     def publish() -> None:
@@ -119,7 +119,7 @@ def publish_stage(config: ProjectConfig) -> Task:
 
     return Stage(
         run_fn=publish,
-        watch_paths=[config.tmp_subdir("render_output")],
+        watch_paths=[config.tmp_subdir("render")],
     )
 
 
