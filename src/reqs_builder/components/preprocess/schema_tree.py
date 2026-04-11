@@ -179,12 +179,14 @@ def _extract_validation(
 
 def extract_entities(
     schemas: Mapping[str, object],
+    *,
+    builtin: bool = False,
 ) -> list[CatalogEntity]:
     """Convert a schemas dict into a flat list of CatalogEntity."""
     entities: list[CatalogEntity] = []
     for name, schema in schemas.items():
         tree = build_schema_tree(cast(SchemaDict, schema))
-        collect_entities(name, tree, entities)
+        collect_entities(name, tree, entities, builtin=builtin)
     return entities
 
 
@@ -192,15 +194,24 @@ def collect_entities(
     name: str,
     node: Node,
     entities: list[CatalogEntity],
+    *,
+    builtin: bool = False,
 ) -> None:
     """Walk tree and collect entities from ObjectNodes."""
     if isinstance(node, ArrayNode) and isinstance(node.child, ObjectNode):
-        _emit_object_entity(name, node.child, entities, metadata=node.metadata)
+        _emit_object_entity(
+            name, node.child, entities, metadata=node.metadata, builtin=builtin
+        )
     elif isinstance(node, ObjectNode):
-        _emit_object_entity(name, node, entities)
+        _emit_object_entity(name, node, entities, builtin=builtin)
 
 
-def _to_catalog_field(field_id: str, field: SchemaField) -> CatalogField:
+def _to_catalog_field(
+    field_id: str,
+    field: SchemaField,
+    *,
+    child_entity: str | None = None,
+) -> CatalogField:
     """Convert a SchemaField to a CatalogField."""
     return CatalogField(
         id=field_id,
@@ -210,6 +221,7 @@ def _to_catalog_field(field_id: str, field: SchemaField) -> CatalogField:
         validation=(
             field.node.validation if isinstance(field.node, ValueNode) else None
         ),
+        child_entity=child_entity,
     )
 
 
@@ -219,23 +231,30 @@ def _emit_object_entity(
     entities: list[CatalogEntity],
     *,
     metadata: Mapping[str, object] | None = None,
+    parent_entity: str | None = None,
+    builtin: bool = False,
 ) -> None:
     """Emit a CatalogEntity from an ObjectNode, recursing into children."""
     catalog_fields: list[CatalogField] = []
     child_entities: list[tuple[str, ObjectNode]] = []
 
     for field in obj.fields:
-        catalog_fields.append(_to_catalog_field(field.name, field))
+        child_entity_id: str | None = None
+        if isinstance(field.node, ArrayNode) and isinstance(
+            field.node.child, ObjectNode
+        ):
+            child_entity_id = f"{name}.{field.name}"
+            child_entities.append((child_entity_id, field.node.child))
+
+        catalog_fields.append(
+            _to_catalog_field(field.name, field, child_entity=child_entity_id)
+        )
 
         if isinstance(field.node, ObjectNode):
             for sub in field.node.fields:
                 catalog_fields.append(
                     _to_catalog_field(f"{field.name}.{sub.name}", sub)
                 )
-        elif isinstance(field.node, ArrayNode) and isinstance(
-            field.node.child, ObjectNode
-        ):
-            child_entities.append((f"{name}.{field.name}", field.node.child))
 
     # ArrayNode metadata takes precedence: the outer dict-pattern schema owns
     # the entity-level metadata (title, description, etc.), while the inner
@@ -245,11 +264,15 @@ def _emit_object_entity(
             id=name,
             fields=catalog_fields,
             metadata=metadata or obj.metadata,
+            parent_entity=parent_entity,
+            builtin=builtin,
         )
     )
 
     for child_name, child_obj in child_entities:
-        _emit_object_entity(child_name, child_obj, entities)
+        _emit_object_entity(
+            child_name, child_obj, entities, parent_entity=name, builtin=builtin
+        )
 
 
 def _resolve_type(node: Node) -> str:

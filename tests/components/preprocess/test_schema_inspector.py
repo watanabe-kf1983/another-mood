@@ -260,6 +260,32 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="hyphenated property name rejected",
     ),
+    pytest.param(
+        """
+        schemas:
+          users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                name: { type: [string, "null"] }
+              additionalProperties: false
+        """,
+        id="array type rejected",
+    ),
+    pytest.param(
+        """
+        schemas:
+          users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                placeholder: { type: "null" }
+              additionalProperties: false
+        """,
+        id="null type rejected",
+    ),
 ]
 
 
@@ -432,3 +458,18 @@ class TestInspectSchema:
         assert "__definition" in data
         entities = data["__definition"]["entities"]
         assert entities[0]["id"] == "recipes"
+
+    def test_emits_builtin_prose_catalog(self, tmp_path: Path) -> None:
+        """Built-in prose schema is emitted under __builtin/ so it shows up in meta-docs."""
+        schema_dir = tmp_path / "schema"
+        schema_dir.mkdir()
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_dir, out_dir=out_dir)
+
+        out_file = out_dir / "__builtin" / "prose.yaml"
+        assert out_file.exists()
+        data = yaml.safe_load(out_file.read_text())
+        prose = next(e for e in data["__definition"]["entities"] if e["id"] == "prose")
+        assert prose["builtin"] is True

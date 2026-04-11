@@ -17,14 +17,16 @@ class ProseRecord:
     mime_type: str
 
     def to_data(self) -> Mapping[str, object]:
-        return {
+        data: dict[str, object] = {
             "id": self.id,
-            "title": self.title,
             "body": {
                 "mime_type": self.mime_type,
                 "content": self.body,
             },
         }
+        if self.title is not None:
+            data["title"] = self.title
+        return data
 
 
 def parse_markdown(content: str, id: str) -> ProseRecord:

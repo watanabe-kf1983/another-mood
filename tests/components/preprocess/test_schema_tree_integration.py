@@ -22,6 +22,7 @@ _CASES = [
         """
         entities:
           - id: recipes
+            builtin: false
             fields:
               - { id: id, type: string, required: true }
               - { id: title, type: string, required: true }
@@ -43,6 +44,7 @@ _CASES = [
         """
         entities:
           - id: kitchen
+            builtin: false
             fields:
               - { id: name, type: string, required: true }
               - { id: capacity, type: integer, required: false }
@@ -65,6 +67,7 @@ _CASES = [
         """
         entities:
           - id: steps
+            builtin: false
             fields:
               - { id: order, type: integer, required: true }
               - { id: instruction, type: string, required: true }
@@ -85,6 +88,7 @@ _CASES = [
         """
         entities:
           - id: recipe
+            builtin: false
             fields:
               - { id: tags, type: "string[]", required: false }
         """,
@@ -114,11 +118,14 @@ _CASES = [
         """
         entities:
           - id: recipes
+            builtin: false
             fields:
               - { id: id, type: string, required: true }
               - { id: title, type: string, required: true }
-              - { id: ingredients, type: "object[]", required: true }
+              - { id: ingredients, type: "object[]", required: true, child_entity: recipes.ingredients }
           - id: recipes.ingredients
+            builtin: false
+            parent_entity: recipes
             fields:
               - { id: id, type: string, required: true }
               - { id: name, type: string, required: true }
@@ -145,6 +152,7 @@ _CASES = [
         """
         entities:
           - id: recipe
+            builtin: false
             fields:
               - { id: nutrition, type: object, required: true }
               - { id: nutrition.calories, type: number, required: true }
@@ -172,9 +180,12 @@ _CASES = [
         """
         entities:
           - id: recipe
+            builtin: false
             fields:
-              - { id: steps, type: "object[]", required: false }
+              - { id: steps, type: "object[]", required: false, child_entity: recipe.steps }
           - id: recipe.steps
+            builtin: false
+            parent_entity: recipe
             fields:
               - { id: instruction, type: string, required: true }
               - { id: duration_min, type: integer, required: false }
@@ -197,6 +208,7 @@ _CASES = [
         """
         entities:
           - id: recipes
+            builtin: false
             metadata:
               title: Recipe collection
               description: All recipes in the cookbook
@@ -236,6 +248,7 @@ _CASES = [
         """
         entities:
           - id: recipes
+            builtin: false
             fields:
               - { id: id, type: string, required: true }
               - id: title
@@ -282,6 +295,7 @@ _CASES = [
         """
         entities:
           - id: recipes
+            builtin: false
             fields:
               - { id: id, type: string, required: true }
               - { id: title, type: string, required: false }

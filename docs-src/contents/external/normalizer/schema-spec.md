@@ -53,6 +53,10 @@ references:
 - `additionalProperties` — 辞書パターンのシグナル
 - `items` — 配列要素のスキーマ
 
+**`type` の制約**: 単一の型のみサポートする。`object`, `array`, `string`, `number`, `integer`, `boolean` のいずれか。JSON Schema が許す配列形式（例: `type: [string, "null"]`）や `"null"` 型は禁止する。
+
+TBD 値は型の中ではなく、データ側で `remarks` フィールド等のテキスト注記として表現する。
+
 **排他制約**: `properties` と `additionalProperties` は同一オブジェクト内で併用できない。
 
 - `additionalProperties` のみ → 辞書パターン（全キーが同型のエントリ、正規化で配列に変換）

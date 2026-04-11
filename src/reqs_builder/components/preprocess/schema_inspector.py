@@ -24,6 +24,10 @@ _SCHEMA_SCHEMA_DIR = Path(
     str(resources.files("reqs_builder.resources") / "schemas" / "schema")
 )
 
+_BUILTIN_CONTENTS_SCHEMA_DIR = Path(
+    str(resources.files("reqs_builder.resources") / "schemas" / "contents")
+)
+
 
 @Component(out_dir="out_dir")
 def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
@@ -33,13 +37,27 @@ def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
 
     for schema_file in schema_files:
         rel = schema_file.relative_to(schema_dir)
-        data = yaml.safe_load(schema_file.read_text(encoding="utf-8"))
-        catalog = extract_data_catalog(data)
-        if catalog:
-            dst = out_dir / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            with dst.open("w", encoding="utf-8") as f:
-                yaml_dumper.dump({"__definition": catalog}, f)
+        _emit_catalog_file(schema_file, out_dir / rel)
+
+    # Emit built-in contents schemas (e.g. prose) so that their entities
+    # appear in meta-documentation alongside user-defined schemas.
+    for schema_file in sorted(_BUILTIN_CONTENTS_SCHEMA_DIR.rglob("*.yaml")):
+        _emit_catalog_file(
+            schema_file,
+            out_dir / "__builtin" / schema_file.name,
+            builtin=True,
+        )
+
+
+def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
+    """Extract data catalog from a single schema file and write it to dst."""
+    data = yaml.safe_load(schema_file.read_text(encoding="utf-8"))
+    catalog = extract_data_catalog(data, builtin=builtin)
+    if not catalog:
+        return
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open("w", encoding="utf-8") as f:
+        yaml_dumper.dump({"__definition": catalog}, f)
 
 
 def check_schema(schema_files: Sequence[Path]) -> None:
@@ -54,14 +72,16 @@ def check_schema(schema_files: Sequence[Path]) -> None:
 
 
 def extract_data_catalog(
-    schema: Mapping[str, object],
+    schema: Mapping[str, object], *, builtin: bool = False
 ) -> dict[str, Any]:
     """Extract data catalog (entities + references) from merged schema data."""
     result: dict[str, Any] = {}
 
     schemas = schema.get("schemas")
     if isinstance(schemas, Mapping) and schemas:
-        entities = extract_entities(cast(Mapping[str, object], schemas))
+        entities = extract_entities(
+            cast(Mapping[str, object], schemas), builtin=builtin
+        )
         result["entities"] = [_strip_nones(asdict(e)) for e in entities]
 
     references = schema.get("references")
