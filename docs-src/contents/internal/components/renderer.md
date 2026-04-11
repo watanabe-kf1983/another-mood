@@ -2,7 +2,7 @@
 
 ## 処理フロー
 
-1. Hugo が `outDir` → `render.outDir` に変換
+1. Hugo が `reconcileDir` → `render.outDir` に変換
 
 ## Technical Stack
 
