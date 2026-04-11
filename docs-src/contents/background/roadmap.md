@@ -62,14 +62,3 @@ Phase 8 開始時に、以下を含めて全タスクをいったん整理する
 - 各タスクを Phase 8 / Phase 9 / Phase 10 に振り分ける
 
 整理結果は [phase8-tasks.md](../../phase8-tasks.md) を参照（機能別の MECE タスクリスト。フェーズ振り分けは MCP サーバの仕様詰めと並行して別途行う）。
-
-#### 現時点での候補（振り分け前）
-
-- [ ] YAML DSL クエリ評価の拡充（from / join / where / group_by / select / sort）
-- [ ] Markdown パーサー（データソースとしての Markdown 読み込み）
-- [ ] 参照整合性チェック（references.yaml、`--strict`）
-- [ ] 標準テンプレート（ER図、DFD、CRUD マトリクス） — ER 図は join / 参照整合性が動いてから視認性が出るため Phase 7 から繰り越し
-- [ ] メタ可視化: Table View / Query View（実データ表示） — 動的名前引きの Generator 拡張が必要になるため Phase 7 から繰り越し
-- [ ] MCP サーバ対応（AI へのコンテキスト提供: validate 結果、DSL 仕様、schema 要約、生成結果確認） — Phase 9
-- [ ] 計算機能プラグインのインターフェース検討（例: ファンクションポイント算出プラグイン）
-- [ ] `docs-src/` 自身のリファクタリング — 現状はツールの機能を十分に活かせておらず、本来このツールで書かれるべき構造になっていない。dog-fooding を通じたツール機能の十分性検証を兼ねる（Phase 8 で実施するか Phase 10 に回すかは整理時に判断。十分性なきまま MCP サーバ作りに進む是非も併せて検討）
