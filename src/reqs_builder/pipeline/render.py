@@ -20,13 +20,13 @@ class RenderStage(Task):
 
     src_dir: Path
     render_input_dir: Path
-    render_output_dir: Path
+    render_dir: Path
     port: int
 
     def run(self) -> None:
         """Prepare content, then run renderer build."""
         prepared = self._prepare()
-        renderer.build(prepared, self.render_output_dir)
+        renderer.build(prepared, self.render_dir)
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:

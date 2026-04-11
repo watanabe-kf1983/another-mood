@@ -1,6 +1,6 @@
 # データカタログ出力形状
 
-SchemaInspector が `dataCatalogDir` に出力するデータカタログの形状。
+SchemaInspector が `inspect_schema_dir` に出力するデータカタログの形状。
 入力例: example-project の entities / relations スキーマ。
 
 ## フィールド一覧
