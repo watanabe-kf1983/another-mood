@@ -2,13 +2,14 @@
 
 ## 内蔵ルートテンプレート
 
-Generator はユーザの `index.md` テンプレートを直接エントリポイントとせず、内蔵のルートテンプレートを起点とする。ルートテンプレートは以下の 3 セクションを持つ:
+Generator はユーザの `index.md` テンプレートを直接エントリポイントとせず、内蔵のルートテンプレートを起点とする。ルートテンプレートは以下の 2 セクションを持つ:
 
-1. **エラー** — `__build_report` にエラーがあればビルドレポートテンプレート（内蔵）でレンダリング
-2. **メタドキュメンテーション** — 内蔵テンプレートでスキーマ・クエリを可視化（[meta-documentation.md](../../external/app/meta-documentation.md) 参照）
-3. **ユーザドキュメント** — ユーザの `index.md` テンプレートを呼び出す
+1. **メタドキュメンテーション** — 内蔵テンプレートでスキーマ・クエリを可視化（[meta-documentation.md](../../external/app/meta-documentation.md) 参照）
+2. **ユーザドキュメント** — ユーザの `index.md` テンプレートを呼び出す
 
-これにより、エラー表示・メタドキュメンテーション・ユーザドキュメントがすべて同じテンプレートシステム上で動作する。generator.py にハードコードされたエラーフォーマット処理は不要になる。
+これにより、メタドキュメンテーション・ユーザドキュメントが同じテンプレートシステム上で動作する。
+
+エラー時の出力差し替えは Generator の責務ではなく、後段の Reconcile ステージ（後述）が担う。Generator 自身は views を Markdown に変換する純粋な責務に集中する。テンプレートのレンダリング中に発生した例外は `error_propagation` が捕捉して reports/ に書き出し、Reconcile がそれを見てエラーページに差し替える。
 
 ## 処理フロー
 
@@ -60,3 +61,20 @@ Jinja2 を採用する:
 - **autoescape**: パーシャル単位のエスケープモード切り替えにフィット
 - **フィルタの充実**: `map`, `select`, `reject`, `groupby` 等のフィルタが標準で利用可能
 - **カスタムタグ（Extension）**: `{% section %}` の実装に使用
+
+## Reconcile
+
+Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
+
+- エラー無し: Generator の出力をそのまま `reconcileDir` に通す（pass-through）
+- エラー有り: Generator の出力を破棄し、`__build_report` テンプレートでエラーページをレンダリングして `reconcileDir` に書き出す
+
+この分離により以下が成立する:
+
+- Generator は「views を Markdown に変換する」純粋な責務に集中できる（エラー時の出力差し替えロジックを持たない）
+- 下流の Render / publish_stage / build_report_stage はすべて `reconcileDir`（= Reconcile の出力）の単一視点を持てばよく、エラー時と正常時の分岐を知らなくてよい
+- Reconcile が pipeline の意味的な末端 = ビルドの canonical な状態を表すため、`build_report_stage` が見るべき reports も Reconcile の出力に含まれる reports/ となる
+
+### 命名について
+
+「reconcile（突き合わせる）」は本リポジトリ独自の語ではなく一般的な英単語だが、ドキュメントビルダーの文脈では珍しい語であり、馴染みのある語が引き起こす意味の取り違えを避ける狙いで採用した。読み手はこの定義に立ち戻ることで、Reconcile ステージの責務を一意に把握できる。

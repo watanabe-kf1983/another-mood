@@ -10,6 +10,7 @@ from reqs_builder.components import (
     inspect_schema,
     normalize_contents,
     normalize_queries,
+    reconcile,
 )
 from reqs_builder.components.shared.build_report import BuildReport
 from reqs_builder.components.shared.exclusive_write import exclusive_write
@@ -81,10 +82,22 @@ def generator_stage(config: ProjectConfig) -> Task:
     )
 
 
+def reconcile_stage(config: ProjectConfig) -> Task:
+    """Pass Generator output through, or replace with build report on errors."""
+    call = reconcile.bind(
+        data_dir=config.tmp_subdir(generate.name),
+        out_dir=config.tmp_subdir(reconcile.name),
+    )
+    return Stage(
+        run_fn=call,
+        watch_paths=[config.tmp_subdir(generate.name)],
+    )
+
+
 def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
     return RenderStage(
-        src_dir=config.tmp_subdir(generate.name, "data"),
+        src_dir=config.tmp_subdir(reconcile.name, "data"),
         render_input_dir=config.tmp_subdir("render_input"),
         render_output_dir=config.tmp_subdir("render_output"),
         port=config.port,
@@ -94,7 +107,7 @@ def render_stage(config: ProjectConfig) -> Task:
 def publish_stage(config: ProjectConfig) -> Task:
     """Copy final artifacts from tmp to output directories."""
     src_dirs = {
-        config.tmp_subdir(generate.name, "data"): config.out_dir,
+        config.tmp_subdir(reconcile.name, "data"): config.out_dir,
         config.tmp_subdir("render_output"): config.render_out_dir,
     }
 
@@ -116,7 +129,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
 
     def report() -> BuildReport:
         nonlocal first
-        result = BuildReport.collect(config.tmp_subdir(generate.name, "reports"))
+        result = BuildReport.collect(config.tmp_subdir(reconcile.name, "reports"))
         succeeded = not result.has_errors()
         messages = {
             (True, True): "Build successfully completed",
@@ -130,7 +143,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
         return result
 
     return ReportingStage(
-        report_fn=report, watch_paths=[config.tmp_subdir(generate.name, "reports")]
+        report_fn=report, watch_paths=[config.tmp_subdir(reconcile.name, "reports")]
     )
 
 
@@ -142,6 +155,7 @@ def pipeline(config: ProjectConfig) -> Pipeline:
         normalize_queries_stage(config),
         compose_stage(config),
         generator_stage(config),
+        reconcile_stage(config),
         render_stage(config),
         publish_stage(config),
     ]

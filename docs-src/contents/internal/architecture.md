@@ -2,7 +2,7 @@
 
 ## アーキテクチャ概要
 
-4コンポーネント + レンダラー構成:
+5コンポーネント + レンダラー構成:
 
 **SchemaInspector**
 スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
@@ -25,11 +25,16 @@ OUT: `viewsDir`
 **Document Generator**
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
 IN: `viewsDir`、`templatesDir`、`profilesFile`
-OUT: `outDir`
+OUT: `generatedDir`
+
+**Reconcile**
+Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_report` ページに差し替える。詳細は [components/generator.md](components/generator.md) 参照。
+IN: `generatedDir`
+OUT: `reconcileDir`
 
 **Document Renderer**
 生成された Markdown を HTML にレンダリングする。
-IN: `outDir`
+IN: `reconcileDir`
 OUT: `render.outDir`
 
 各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。入力データを変更すると normalized → views → documents とカスケードで更新される。
