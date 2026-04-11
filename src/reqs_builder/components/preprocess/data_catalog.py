@@ -18,6 +18,7 @@ class CatalogField:
     required: bool
     metadata: Mapping[str, object] | None = None
     validation: Mapping[str, object] | None = None
+    child_entity: str | None = None
 
 
 @dataclass(frozen=True)
@@ -27,3 +28,4 @@ class CatalogEntity:
     id: str
     fields: Sequence[CatalogField]
     metadata: Mapping[str, object] | None = None
+    parent_entity: str | None = None

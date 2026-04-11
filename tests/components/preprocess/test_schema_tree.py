@@ -254,7 +254,7 @@ class TestCollectEntities:
         ])]
 
     def test_array_object_creates_child_entity(self) -> None:
-        """ArrayNode → ObjectNode inside properties → object[] field + child entity."""
+        """ArrayNode → ObjectNode inside properties → object[] field + linked child entity."""
         tree = ObjectNode(fields=[
             SchemaField("items", False, ArrayNode(child=ObjectNode(fields=[
                 SchemaField("name", True, ValueNode(type="string")),
@@ -264,11 +264,13 @@ class TestCollectEntities:
         collect_entities("order", tree, entities)
         assert entities == [
             CatalogEntity("order", fields=[
-                CatalogField("items", "object[]", False),
+                CatalogField("items", "object[]", False, child_entity="order.items"),
             ]),
-            CatalogEntity("order.items", fields=[
-                CatalogField("name", "string", True),
-            ]),
+            CatalogEntity(
+                "order.items",
+                fields=[CatalogField("name", "string", True)],
+                parent_entity="order",
+            ),
         ]
 
     def test_array_value_type_bracket(self) -> None:

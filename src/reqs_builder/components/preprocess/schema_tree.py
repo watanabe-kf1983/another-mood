@@ -200,7 +200,12 @@ def collect_entities(
         _emit_object_entity(name, node, entities)
 
 
-def _to_catalog_field(field_id: str, field: SchemaField) -> CatalogField:
+def _to_catalog_field(
+    field_id: str,
+    field: SchemaField,
+    *,
+    child_entity: str | None = None,
+) -> CatalogField:
     """Convert a SchemaField to a CatalogField."""
     return CatalogField(
         id=field_id,
@@ -210,6 +215,7 @@ def _to_catalog_field(field_id: str, field: SchemaField) -> CatalogField:
         validation=(
             field.node.validation if isinstance(field.node, ValueNode) else None
         ),
+        child_entity=child_entity,
     )
 
 
@@ -219,23 +225,29 @@ def _emit_object_entity(
     entities: list[CatalogEntity],
     *,
     metadata: Mapping[str, object] | None = None,
+    parent_entity: str | None = None,
 ) -> None:
     """Emit a CatalogEntity from an ObjectNode, recursing into children."""
     catalog_fields: list[CatalogField] = []
     child_entities: list[tuple[str, ObjectNode]] = []
 
     for field in obj.fields:
-        catalog_fields.append(_to_catalog_field(field.name, field))
+        child_entity_id: str | None = None
+        if isinstance(field.node, ArrayNode) and isinstance(
+            field.node.child, ObjectNode
+        ):
+            child_entity_id = f"{name}.{field.name}"
+            child_entities.append((child_entity_id, field.node.child))
+
+        catalog_fields.append(
+            _to_catalog_field(field.name, field, child_entity=child_entity_id)
+        )
 
         if isinstance(field.node, ObjectNode):
             for sub in field.node.fields:
                 catalog_fields.append(
                     _to_catalog_field(f"{field.name}.{sub.name}", sub)
                 )
-        elif isinstance(field.node, ArrayNode) and isinstance(
-            field.node.child, ObjectNode
-        ):
-            child_entities.append((f"{name}.{field.name}", field.node.child))
 
     # ArrayNode metadata takes precedence: the outer dict-pattern schema owns
     # the entity-level metadata (title, description, etc.), while the inner
@@ -245,11 +257,12 @@ def _emit_object_entity(
             id=name,
             fields=catalog_fields,
             metadata=metadata or obj.metadata,
+            parent_entity=parent_entity,
         )
     )
 
     for child_name, child_obj in child_entities:
-        _emit_object_entity(child_name, child_obj, entities)
+        _emit_object_entity(child_name, child_obj, entities, parent_entity=name)
 
 
 def _resolve_type(node: Node) -> str:

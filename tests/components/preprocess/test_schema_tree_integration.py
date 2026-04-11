@@ -117,8 +117,9 @@ _CASES = [
             fields:
               - { id: id, type: string, required: true }
               - { id: title, type: string, required: true }
-              - { id: ingredients, type: "object[]", required: true }
+              - { id: ingredients, type: "object[]", required: true, child_entity: recipes.ingredients }
           - id: recipes.ingredients
+            parent_entity: recipes
             fields:
               - { id: id, type: string, required: true }
               - { id: name, type: string, required: true }
@@ -173,8 +174,9 @@ _CASES = [
         entities:
           - id: recipe
             fields:
-              - { id: steps, type: "object[]", required: false }
+              - { id: steps, type: "object[]", required: false, child_entity: recipe.steps }
           - id: recipe.steps
+            parent_entity: recipe
             fields:
               - { id: instruction, type: string, required: true }
               - { id: duration_min, type: integer, required: false }
