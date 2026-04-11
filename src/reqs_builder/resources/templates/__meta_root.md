@@ -24,3 +24,16 @@
 {%- else -%}
 (no references defined yet)
 {%- endif %}
+
+## Queries
+
+{% if __definition.queries -%}
+{% for query in __definition.queries -%}
+- [{{ query.id }}](__meta_query/{{ query.id }}.md) — from {{ query.from }}
+{% endfor %}
+{% for query in __definition.queries -%}
+{% section "__meta_query" with query %}
+{%- endfor %}
+{%- else -%}
+(no queries defined yet)
+{%- endif %}
