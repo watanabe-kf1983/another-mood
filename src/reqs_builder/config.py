@@ -7,6 +7,10 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class ConfigValidationError(Exception):
+    """Raised when ProjectConfig fails post-construction validation."""
+
+
 class ProjectConfig(BaseSettings):
     """Project configuration for reqs-builder.
 
@@ -32,6 +36,31 @@ class ProjectConfig(BaseSettings):
 
     # Server
     port: int = Field(default=1313)
+
+    def tmp_subdir(self, *parts: str) -> Path:
+        """Return tmp_dir/<parts>, creating it if missing."""
+        path = self.tmp_dir.joinpath(*parts)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def verify(self) -> None:
+        """Run post-construction checks. Raises ConfigValidationError on failure."""
+        if not self.project_dir.is_dir():
+            raise ConfigValidationError(
+                f"Project directory not found: {self.project_dir}"
+            )
+        sources = {
+            "schema_dir": self.schema_dir,
+            "contents_dir": self.contents_dir,
+            "queries_dir": self.queries_dir,
+            "templates_dir": self.templates_dir,
+        }
+        missing = [(name, p) for name, p in sources.items() if not p.is_dir()]
+        if missing:
+            lines = [f"  {name}: {p}" for name, p in missing]
+            raise ConfigValidationError(
+                "Source directories not found:\n" + "\n".join(lines)
+            )
 
     @model_validator(mode="before")
     @classmethod

@@ -40,10 +40,8 @@ class RenderStage(Task):
             flush=True,
         )
 
-        cascade = threading.Thread(
-            target=lambda: Watcher([self.src_dir], self._prepare).run(),
-            daemon=True,
-        )
+        cascade_watcher = Watcher([self.src_dir], self._prepare)
+        cascade = threading.Thread(target=cascade_watcher.run, daemon=True)
         cascade.start()
 
         monitor = threading.Thread(

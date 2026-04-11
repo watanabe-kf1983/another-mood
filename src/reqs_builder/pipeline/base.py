@@ -39,10 +39,8 @@ class Stage(Task):
         """Initial run + watch in background. Cleans up on exit."""
         self.run()
 
-        thread = threading.Thread(
-            target=lambda: Watcher(self.watch_paths, self.run).run(),
-            daemon=True,
-        )
+        watcher = Watcher(self.watch_paths, self.run)
+        thread = threading.Thread(target=watcher.run, daemon=True)
         thread.start()
         yield
 

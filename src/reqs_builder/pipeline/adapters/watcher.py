@@ -18,6 +18,9 @@ class Watcher:
         *,
         debounce: int = 300,
     ) -> None:
+        missing = [str(p) for p in watch_paths if not p.exists()]
+        if missing:
+            raise FileNotFoundError("Watch paths do not exist: " + ", ".join(missing))
         self._watch_paths = watch_paths
         self._on_change = on_change
         self._debounce = debounce

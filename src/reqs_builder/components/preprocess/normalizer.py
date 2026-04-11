@@ -117,7 +117,11 @@ def check(src_dir: Path, schema: Mapping[str, object]) -> None:
 
 
 def _source_files(src_dir: Path) -> Sequence[Path]:
-    return [f for f in sorted(src_dir.rglob("*")) if f.is_file()]
+    return [
+        f
+        for f in sorted(src_dir.rglob("*"))
+        if f.is_file() and not f.name.startswith(".")
+    ]
 
 
 def _parse(src: Path, rel: Path) -> Mapping[str, object]:
