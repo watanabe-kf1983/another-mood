@@ -4,7 +4,12 @@ from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+from jinja2 import (
+    ChainableUndefined,
+    Environment,
+    FileSystemLoader,
+    TemplateSyntaxError,
+)
 
 from reqs_builder.components.generator.section_processor import (
     SectionExtension,
@@ -20,6 +25,7 @@ class TemplateEngine:
         self._env = Environment(
             extensions=[SectionExtension],
             keep_trailing_newline=True,
+            undefined=ChainableUndefined,
         )
         search_paths: list[str | Path] = [str(_BUILT_IN_TEMPLATES_DIR)]
         if templates_dir is not None:

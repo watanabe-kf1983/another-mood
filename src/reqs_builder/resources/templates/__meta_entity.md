@@ -3,10 +3,10 @@
 {% if parent_entity -%}
 Parent: [{{ parent_entity }}]({{ parent_entity }}.md)
 {% endif -%}
-{% if metadata and metadata.title %}
+{% if metadata.title %}
 **{{ metadata.title }}**
 {% endif -%}
-{% if metadata and metadata.description %}
+{% if metadata.description %}
 {{ metadata.description }}
 {% endif %}
 ## Fields
@@ -17,10 +17,8 @@ Parent: [{{ parent_entity }}]({{ parent_entity }}.md)
 {% for field in fields -%}
 {%- set type_cell = "[" ~ field.type ~ "](" ~ field.child_entity ~ ".md)" if field.child_entity else field.type -%}
 {%- set required_cell = "yes" if field.required else "" -%}
-{%- set title_cell = field.metadata.title if field.metadata else "" -%}
-{%- set desc_cell = field.metadata.description if field.metadata else "" -%}
-| {{ field.id }} | {{ type_cell }} | {{ required_cell }} | {{ title_cell }} | {{ desc_cell }} |
+| {{ field.id }} | {{ type_cell }} | {{ required_cell }} | {{ field.metadata.title }} | {{ field.metadata.description }} |
 {% endfor -%}
 {%- else -%}
-（フィールドはまだ定義されていません）
+(no fields defined yet)
 {%- endif %}
