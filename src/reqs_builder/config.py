@@ -45,7 +45,7 @@ class ProjectConfig(BaseSettings):
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""
-        if not self.project_dir.exists():
+        if not self.project_dir.is_dir():
             raise ConfigValidationError(
                 f"Project directory not found: {self.project_dir}"
             )
@@ -55,7 +55,7 @@ class ProjectConfig(BaseSettings):
             "queries_dir": self.queries_dir,
             "templates_dir": self.templates_dir,
         }
-        missing = [(name, p) for name, p in sources.items() if not p.exists()]
+        missing = [(name, p) for name, p in sources.items() if not p.is_dir()]
         if missing:
             lines = [f"  {name}: {p}" for name, p in missing]
             raise ConfigValidationError(
