@@ -29,3 +29,4 @@ class CatalogEntity:
     fields: Sequence[CatalogField]
     metadata: Mapping[str, object] | None = None
     parent_entity: str | None = None
+    builtin: bool = False

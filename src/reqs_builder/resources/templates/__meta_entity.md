@@ -1,4 +1,4 @@
-# {{ id }}
+# {{ id }}{% if builtin %} (built-in){% endif %}
 
 {% if parent_entity -%}
 Parent: [{{ parent_entity }}]({{ parent_entity }}.md)

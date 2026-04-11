@@ -179,12 +179,14 @@ def _extract_validation(
 
 def extract_entities(
     schemas: Mapping[str, object],
+    *,
+    builtin: bool = False,
 ) -> list[CatalogEntity]:
     """Convert a schemas dict into a flat list of CatalogEntity."""
     entities: list[CatalogEntity] = []
     for name, schema in schemas.items():
         tree = build_schema_tree(cast(SchemaDict, schema))
-        collect_entities(name, tree, entities)
+        collect_entities(name, tree, entities, builtin=builtin)
     return entities
 
 
@@ -192,12 +194,16 @@ def collect_entities(
     name: str,
     node: Node,
     entities: list[CatalogEntity],
+    *,
+    builtin: bool = False,
 ) -> None:
     """Walk tree and collect entities from ObjectNodes."""
     if isinstance(node, ArrayNode) and isinstance(node.child, ObjectNode):
-        _emit_object_entity(name, node.child, entities, metadata=node.metadata)
+        _emit_object_entity(
+            name, node.child, entities, metadata=node.metadata, builtin=builtin
+        )
     elif isinstance(node, ObjectNode):
-        _emit_object_entity(name, node, entities)
+        _emit_object_entity(name, node, entities, builtin=builtin)
 
 
 def _to_catalog_field(
@@ -226,6 +232,7 @@ def _emit_object_entity(
     *,
     metadata: Mapping[str, object] | None = None,
     parent_entity: str | None = None,
+    builtin: bool = False,
 ) -> None:
     """Emit a CatalogEntity from an ObjectNode, recursing into children."""
     catalog_fields: list[CatalogField] = []
@@ -258,11 +265,14 @@ def _emit_object_entity(
             fields=catalog_fields,
             metadata=metadata or obj.metadata,
             parent_entity=parent_entity,
+            builtin=builtin,
         )
     )
 
     for child_name, child_obj in child_entities:
-        _emit_object_entity(child_name, child_obj, entities, parent_entity=name)
+        _emit_object_entity(
+            child_name, child_obj, entities, parent_entity=name, builtin=builtin
+        )
 
 
 def _resolve_type(node: Node) -> str:

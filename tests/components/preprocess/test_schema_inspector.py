@@ -445,4 +445,5 @@ class TestInspectSchema:
         out_file = out_dir / "__builtin" / "prose.yaml"
         assert out_file.exists()
         data = yaml.safe_load(out_file.read_text())
-        assert any(e["id"] == "prose" for e in data["__definition"]["entities"])
+        prose = next(e for e in data["__definition"]["entities"] if e["id"] == "prose")
+        assert prose["builtin"] is True
