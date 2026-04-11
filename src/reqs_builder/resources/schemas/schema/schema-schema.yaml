@@ -37,15 +37,8 @@ $defs:
     properties:
       # --- Structural keywords (interpreted by this project) ---
       type:
-        anyOf:
-          - type: string
-            enum: [object, array, string, number, integer, boolean, "null"]
-          - type: array
-            items:
-              type: string
-              enum: [object, array, string, number, integer, boolean, "null"]
-            minItems: 1
-            uniqueItems: true
+        type: string
+        enum: [object, array, string, number, integer, boolean]
       properties:
         type: object
         propertyNames:

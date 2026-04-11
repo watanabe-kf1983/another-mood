@@ -15,7 +15,7 @@ schemas:
         id:
           type: string
         title:
-          type: [string, "null"]
+          type: string
         body:
           type: object
           properties:

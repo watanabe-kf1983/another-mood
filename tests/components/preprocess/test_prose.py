@@ -65,4 +65,4 @@ class TestProseRecordToData:
         md = "Just text.\n"
         result = parse_markdown(md, "notes")
         data = result.to_data()
-        assert data["title"] is None
+        assert "title" not in data

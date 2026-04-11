@@ -260,6 +260,32 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="hyphenated property name rejected",
     ),
+    pytest.param(
+        """
+        schemas:
+          users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                name: { type: [string, "null"] }
+              additionalProperties: false
+        """,
+        id="array type rejected",
+    ),
+    pytest.param(
+        """
+        schemas:
+          users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                placeholder: { type: "null" }
+              additionalProperties: false
+        """,
+        id="null type rejected",
+    ),
 ]
 
 
