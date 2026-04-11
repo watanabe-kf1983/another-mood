@@ -1,4 +1,5 @@
-"""Generator — render views data through Jinja2 templates to Markdown.
+"""Generator — render views data through Jinja2 templates to Markdown,
+and reconcile the output with the propagated BuildReport.
 
 See: docs-src/contents/internal/components/generator.md
 """
@@ -14,30 +15,27 @@ from reqs_builder.components.shared.errors import error_propagation
 from reqs_builder.components.shared.json_data_model import load_yamls
 
 
-@Component(out_dir="out_dir", error_propagation=False)
+@Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
-    """Generate Markdown output, rendering errors as a page if present."""
-    with error_propagation([data_dir], out_dir, component="generate") as data_dirs:
+    """Render views data through Jinja2 templates to Markdown."""
+    data = load_yamls(data_dir)
+    render("__root", data, out_dir, templates_dir=templates_dir)
+    render("__meta_root", data, out_dir / "__reference")
+
+
+@Component(out_dir="out_dir", error_propagation=False)
+def reconcile(data_dir: Path, *, out_dir: Path) -> None:
+    """Reconcile Generator output with the propagated BuildReport.
+
+    No upstream errors: pass Generator's data through unchanged.
+    Upstream errors: render a __build_report page in its place.
+    """
+    with error_propagation([data_dir], out_dir, component="reconcile") as data_dirs:
         if data_dirs is not None:
-            data = load_yamls(data_dirs.upstreams[0])
-            render("__root", data, data_dirs.out, templates_dir=templates_dir)
-            render("__meta_root", data, data_dirs.out / "__reference")
-
-    report = BuildReport.collect(out_dir / "reports")
-    if report.has_errors():
-        data_out = out_dir / "data"
-        _clear_contents(data_out)
-        render("__build_report", report.to_data(), data_out)
-        report.write(out_dir / "reports")
-
-
-def _clear_contents(directory: Path) -> None:
-    """Remove all children of *directory* while keeping the directory itself."""
-    for child in directory.iterdir():
-        if child.is_dir():
-            shutil.rmtree(child)
+            shutil.copytree(data_dirs.upstreams[0], data_dirs.out, dirs_exist_ok=True)
         else:
-            child.unlink()
+            report = BuildReport.collect(data_dir / "reports")
+            render("__build_report", report.to_data(), out_dir / "data")
 
 
 def render(
