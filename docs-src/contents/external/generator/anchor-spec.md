@@ -1,5 +1,7 @@
 # Anchor Specification
 
+> **未実装** — Phase 8 タスク [B1〜B6](../../../phase8-tasks.md)（ラッパーツリー / アンカー ID 規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `get_page_url`）
+
 アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。
 
 ## ID 体系

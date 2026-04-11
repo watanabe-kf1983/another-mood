@@ -51,7 +51,7 @@ erds:
 | `grouped` | 任意 | グループ化 |
 | `select` | 任意 | 出力フィールドの指定。省略時は空オブジェクトの配列 |
 
-将来の拡張候補: `where`, `sort`, `join`
+将来の拡張候補: `where`, `sort`, `join` — Phase 8 タスク [E1〜E4](../../../phase8-tasks.md)（仕様詰めが先）
 
 ### from
 
