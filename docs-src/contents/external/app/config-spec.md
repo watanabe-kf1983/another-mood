@@ -24,6 +24,8 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 ### 設定ファイル（未実装）
 
+> **未実装** — Phase 8 タスク [G2](../../../phase8-tasks.md)
+
 - ファイル名: `reqs-builder.config.json`
 - 配置場所: プロジェクトルート
 - 対応フォーマット: JSON
@@ -65,4 +67,4 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用（未実装） |
+| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用（未実装 — Phase 8 タスク [G3](../../../phase8-tasks.md)） |

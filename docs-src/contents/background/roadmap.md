@@ -61,6 +61,8 @@ Phase 8 開始時に、以下を含めて全タスクをいったん整理する
 - Phase 7 から繰り越した項目（ER 図、Table View / Query View 等）を再評価する
 - 各タスクを Phase 8 / Phase 9 / Phase 10 に振り分ける
 
+整理結果は [phase8-tasks.md](../../phase8-tasks.md) を参照（機能別の MECE タスクリスト。フェーズ振り分けは MCP サーバの仕様詰めと並行して別途行う）。
+
 #### 現時点での候補（振り分け前）
 
 - [ ] YAML DSL クエリ評価の拡充（from / join / where / group_by / select / sort）

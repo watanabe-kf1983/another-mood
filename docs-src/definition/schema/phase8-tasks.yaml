@@ -1,0 +1,27 @@
+schemas:
+  phase8_categories:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        title:
+          type: string
+        impl_paths:
+          type: array
+          items:
+            type: string
+        spec:
+          type: string
+        tasks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              title:
+                type: string
+              note:
+                type: string
+            additionalProperties: false
+            required: [title]
+      additionalProperties: false
+      required: [title, impl_paths, tasks]

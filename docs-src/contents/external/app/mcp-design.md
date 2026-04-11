@@ -1,5 +1,7 @@
 # MCP Server Design
 
+> **未実装** — Phase 8 タスク [K1〜K5](../../../phase8-tasks.md)（Phase 9 で実装予定）
+
 MCP サーバの設計。AI へのコンテキスト提供として機能する。
 
 ## 基本方針

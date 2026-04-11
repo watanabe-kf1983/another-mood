@@ -17,6 +17,8 @@ reqs-builder のコマンドラインインターフェース。
 
 ### reqs init
 
+> **未実装** — Phase 8 タスク [G1](../../../phase8-tasks.md)
+
 プロジェクトの初期化。`<projectDir>` に [project-structure.md](project-structure.md) に準拠したディレクトリ構成とサンプルデータを生成する。
 
 ```
