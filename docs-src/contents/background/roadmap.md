@@ -53,12 +53,4 @@
 
 ### Phase 8〜10: 追加機能
 
-Phase 9 を **MCP サーバ対応** とし、Phase 8 をその前に実装すべき機能、Phase 10 をその後に回してよい機能として位置付ける。
-
-Phase 8 開始時に、以下を含めて全タスクをいったん整理する:
-
-- このロードマップに未タスク化のまま `docs-src/contents/` に仕様だけ書かれている項目を拾い出し、タスク化する
-- Phase 7 から繰り越した項目（ER 図、Table View / Query View 等）を再評価する
-- 各タスクを Phase 8 / Phase 9 / Phase 10 に振り分ける
-
-整理結果は [phase8-tasks.md](../../phase8-tasks.md) を参照（機能別の MECE タスクリスト。フェーズ振り分けは MCP サーバの仕様詰めと並行して別途行う）。
+Phase 9 を **MCP サーバ対応** とし、Phase 8 をその前に実装すべき機能、Phase 10 をその後に回してよい機能として位置付ける。各タスクの実施フェーズは [phase8-tasks.md](../../phase8-tasks.md) を参照。MCP サーバの設計は [mcp-design.md](../external/app/mcp-design.md) を参照。

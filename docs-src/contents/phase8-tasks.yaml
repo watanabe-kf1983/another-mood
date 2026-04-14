@@ -9,21 +9,27 @@ phase8_categories:
       A1:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
+        phase: 10
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
+        phase: 10
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
+        phase: 10
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
+        phase: 10
       A5:
         title: ソース内相対リンク → toc 記法への変換
         note: contents_dir 基点パス解決が必要 (B2 と連携)
+        phase: 10
       A6:
         title: shiftHeadings(n) Jinja2 フィルタ
         note: テンプレート側で使用
+        phase: 10
 
   B:
     title: アンカー / リンク解決
@@ -34,19 +40,25 @@ phase8_categories:
       B1:
         title: views データのラッパーツリー構築
         note: data / parent / class_name フィールド
+        phase: 10
       B2:
         title: アンカー ID 生成規則
         note: リスト型 {class}.item.{id} / シングルトン {class}
+        phase: 10
       B3:
         title: アンカー → ラッパーのオンデマンド走査 + キャッシュ
+        phase: 10
       B4:
         title: link_md Jinja2 フィルタ
+        phase: 10
       B5:
         title: レンダリング後の toc:id 文字列のリンク URL 置換
         note: prose body 内も含む
+        phase: 10
       B6:
         title: ラッパーの get_page_url() 実装
         note: C3 と連携
+        phase: 10
 
   C:
     title: ページ分割 (paging)
@@ -57,48 +69,71 @@ phase8_categories:
     tasks:
       C1:
         title: profilesFile の読み込み・パース
+        phase: 10
       C2:
         title: paginate 設定の評価
         note: クラスが分割対象か判定
+        phase: 10
       C3:
         title: パス自動導出
         note: リスト型 {class}/{id}.md / シングルトン {class}.md
+        phase: 10
       C4:
         title: "{% section %} の振る舞い分岐: 分割 vs インライン展開"
         note: 現在は常に分割。インライン展開モードの新設になる
+        phase: 10
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
+        phase: 10
       C6:
         title: 複数プロファイルの並列ビルド
+        phase: 10
 
   D:
-    title: 参照整合性チェック
+    title: 参照整合性チェック + Unique 制約
     impl_paths:
       - src/reqs_builder/components/preprocess/normalizer.py
+      - src/reqs_builder/components/preprocess/
+      - src/reqs_builder/resources/schemas/schema/schema-schema.yaml
       - src/reqs_builder/cli.py
     spec: external/normalizer/schema-spec.md
     tasks:
       D1:
         title: --strict CLI フラグの配線
         note: pipeline 全体に伝播
+        phase: 10
       D2:
         title: "FK チェック: to: schema_name"
         note: additionalProperties パターンの .id 省略形
+        phase: 10
       D3:
         title: "FK チェック: to: schema_name.property_name"
         note: 明示プロパティ
+        phase: 10
       D4:
         title: "FK チェック: from がプロパティ名なし"
         note: 辞書キー自体が FK
+        phase: 10
       D5:
         title: "type: array スキーマ参照時のプロパティ名必須チェック"
+        phase: 10
       D6:
         title: 参照先がトップレベルスキーマのみであることの検証
         note: ネストパス禁止
+        phase: 10
       D7:
         title: 警告レポートを BuildReport に乗せる
         note: エラーではなく warning レベル
+        phase: 10
+      D8:
+        title: Unique 制約の仕様確定
+        note: 宣言場所 / 複合キー対応の有無（旧 I1）
+        phase: 10
+      D9:
+        title: Unique 制約の実装 + チェック
+        note: --strict 連動（旧 I2）
+        phase: 10
 
   E:
     title: YAML DSL クエリ評価拡充
@@ -110,13 +145,17 @@ phase8_categories:
       E1:
         title: where 句の仕様詰め + 実装
         note: 式言語にするか、単純な eq のみか
+        phase: 10
       E2:
         title: sort 句の仕様詰め + 実装
+        phase: 10
       E3:
         title: join 句の仕様詰め + 実装
         note: 参照整合性 (D) との関係整理
+        phase: 10
       E4:
         title: QuerySchema を E1〜E3 に合わせて拡張
+        phase: 10
 
   F:
     title: メタドキュメンテーション拡張
@@ -128,21 +167,27 @@ phase8_categories:
       F1:
         title: Generator の動的名前引き拡張
         note: 変数で view 名を参照できるようにする (F2/F3 の前提)
+        phase: 10
       F2:
         title: Table View (実データのテーブル表示)
         note: 前提 F1
+        phase: 10
       F3:
         title: Query View (クエリ結果の表示)
         note: 前提 F1
+        phase: 10
       F4:
         title: ER 図テンプレート
         note: 前提 D, E3, Mermaid エスケープ
+        phase: 10
       F5:
         title: DFD テンプレート
         note: 仕様未着手
+        phase: 10
       F6:
         title: CRUD マトリクステンプレート
         note: 仕様未着手
+        phase: 10
 
   G:
     title: CLI / 設定システム
@@ -153,13 +198,16 @@ phase8_categories:
     tasks:
       G1:
         title: reqs init コマンド (プロジェクト初期化)
-        note: cli-spec.md
+        note: cli-spec.md。MCP ツールとしても提供する
+        phase: 8
       G2:
         title: reqs-builder.config.json 読み込み
         note: config-spec.md
+        phase: 10
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
+        phase: 10
 
   H:
     title: バイナリファイルの取り扱い
@@ -172,22 +220,10 @@ phase8_categories:
       H1:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
+        phase: 10
       H2:
         title: 実装
-
-  I:
-    title: Unique 制約宣言
-    impl_paths:
-      - src/reqs_builder/components/preprocess/
-      - src/reqs_builder/resources/schemas/schema/schema-schema.yaml
-    spec: internal/components/normalizer.md
-    tasks:
-      I1:
-        title: 仕様確定
-        note: 宣言場所 / 複合キー対応の有無
-      I2:
-        title: 実装 + チェック
-        note: --strict 連動
+        phase: 10
 
   J:
     title: プラグインシステム
@@ -197,9 +233,11 @@ phase8_categories:
       J1:
         title: 計算機能プラグインの I/F 仕様検討
         note: 入出力 / 登録方法 / Composer か Generator のどこに挿すか
+        phase: 10
       J2:
         title: サンプル実装で I/F 検証
         note: 例 — ファンクションポイント算出
+        phase: 10
 
   K:
     title: MCP サーバ
@@ -209,18 +247,50 @@ phase8_categories:
     tasks:
       K1:
         title: MCP サーバの骨格
-        note: Python MCP SDK 選定 + 配線
+        note: FastMCP + build / dev start / dev stop ツール登録
+        phase: 9
       K2:
-        title: validate ツール
-        note: Normalizer 実行 + 結果返却
+        title: build ツール
+        note: CLI の reqs build と同一パイプラインをワンショット同期実行し結果を返す
+        phase: 9
       K3:
-        title: DSL 仕様の提供
-        note: queries-spec を tool description として供出
+        title: dev start / dev stop ツール
+        note: dev server のバックグラウンド起動・停止。PID 管理・二重起動防止
+        phase: 9
       K4:
-        title: schema + references の要約提供
+        title: Resources として output 全量を公開
+        note: resources/list + resources/read で AI がドキュメントをオンデマンド取得
+        phase: 9
       K5:
-        title: 生成結果の参照ツール
-        note: reconcile_dir の Markdown を返す
+        title: Server Instructions + Tool description の整備
+        note: Instructions は 200 語以内の誘導文。Tool description は docstring から自動生成
+        phase: 9
+      K6:
+        title: メタスキーマへの説明メタデータ埋め込み
+        note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K4 の効果を高める
+        phase: 8
+
+  N:
+    title: レンダリング / 出力形式
+    impl_paths:
+      - src/reqs_builder/pipeline/adapters/
+      - src/reqs_builder/components/generator/
+    tasks:
+      N1:
+        title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
+        phase: 10
+      N2:
+        title: HTML / Asciidoc / PlantUML ジェネレート対応
+        phase: 10
+
+  O:
+    title: バグ修正
+    impl_paths:
+      - src/reqs_builder/components/preprocess/
+    tasks:
+      O1:
+        title: スキーマチェックエラーの行番号ズレ修正
+        phase: 10
 
   L:
     title: dog-fooding リファクタ
@@ -230,17 +300,10 @@ phase8_categories:
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
+        phase: 8
       L2:
         title: スキーマ + クエリ + テンプレート群の構築
+        phase: 8
       L3:
         title: 実施過程で見つかったツールの不足を A〜K にフィードバック
-
-  M:
-    title: ハウスキーピング
-    impl_paths:
-      - src/reqs_builder/components/preprocess/
-      - docs-src/contents/internal/
-    tasks:
-      M1:
-        title: components/preprocess/ の命名整合性検討
-        note: 仕様の Normalizer / SchemaInspector 分離との対応
+        phase: 8
