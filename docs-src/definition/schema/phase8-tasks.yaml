@@ -21,7 +21,9 @@ schemas:
                 type: string
               note:
                 type: string
+              phase:
+                type: integer
             additionalProperties: false
-            required: [title]
+            required: [title, phase]
       additionalProperties: false
       required: [title, impl_paths, tasks]
