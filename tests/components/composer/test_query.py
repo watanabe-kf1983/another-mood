@@ -2,7 +2,7 @@
 
 import pytest
 
-from reqs_builder.components.composer.query import (
+from another_mood.components.composer.query import (
     From,
     Grouped,
     Query,

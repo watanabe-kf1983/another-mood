@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from reqs_builder.components.generator.template_engine import TemplateEngine
-from reqs_builder.components.shared.diagnostic import FileValidationError
+from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.shared.diagnostic import FileValidationError
 
 
 class TestRender:

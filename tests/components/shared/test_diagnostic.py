@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from reqs_builder.components.shared.diagnostic import (
+from another_mood.components.shared.diagnostic import (
     Diagnostic,
     DiagnosticSeverity,
     FileValidationError,

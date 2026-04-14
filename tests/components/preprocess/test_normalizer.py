@@ -7,7 +7,7 @@ from collections.abc import Mapping
 import pytest
 import yaml
 
-from reqs_builder.components.preprocess.normalizer import (
+from another_mood.components.preprocess.normalizer import (
     build_contents_schema,
     build_query_schema,
     check,
@@ -15,7 +15,7 @@ from reqs_builder.components.preprocess.normalizer import (
     normalize_contents,
     normalize_queries,
 )
-from reqs_builder.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.diagnostic import FileValidationError
 
 
 class TestNormalize:
@@ -184,7 +184,7 @@ class TestBuildContentsSchema:
         validator_schema = schema
 
         # User schema: entities validated
-        from reqs_builder.components.preprocess.validator import Validator
+        from another_mood.components.preprocess.validator import Validator
 
         validator = Validator(validator_schema)
         errors = validator.validate({"entities": [{"id": 123}]}, Path("test.yaml"))
@@ -207,7 +207,7 @@ class TestBuildContentsSchema:
     def test_nonexistent_schema_dir_uses_builtin_only(self) -> None:
         schema = build_contents_schema(Path("/nonexistent"))
 
-        from reqs_builder.components.preprocess.validator import Validator
+        from another_mood.components.preprocess.validator import Validator
 
         validator = Validator(schema)
         # prose still validated
@@ -232,7 +232,7 @@ class TestBuildQuerySchema:
     """build_query_schema: validate against built-in QuerySchema."""
 
     def _validate(self, data: Mapping[str, object]) -> list[object]:
-        from reqs_builder.components.preprocess.validator import Validator
+        from another_mood.components.preprocess.validator import Validator
 
         validator = Validator(build_query_schema())
         return list(validator.validate(data, Path("test.yaml")))

@@ -5,8 +5,8 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.components.generator.generator import generate, reconcile
-from reqs_builder.components.shared.build_report import BuildReport
+from another_mood.components.generator.generator import generate, reconcile
+from another_mood.components.shared.build_report import BuildReport
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:

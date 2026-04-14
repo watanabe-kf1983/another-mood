@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from reqs_builder.pipeline.adapters.renderer import prepare
+from another_mood.pipeline.adapters.renderer import prepare
 
 
 def _write(path: Path, content: str = "# Hello\n") -> None:

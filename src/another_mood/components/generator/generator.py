@@ -8,11 +8,11 @@ import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
-from reqs_builder.components.generator.template_engine import TemplateEngine
-from reqs_builder.components.shared.build_report import BuildReport
-from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.errors import error_propagation
-from reqs_builder.components.shared.json_data_model import load_yamls
+from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.shared.build_report import BuildReport
+from another_mood.components.shared.component import Component
+from another_mood.components.shared.errors import error_propagation
+from another_mood.components.shared.json_data_model import load_yamls
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])

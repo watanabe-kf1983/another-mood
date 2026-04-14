@@ -17,8 +17,8 @@ import regex
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 
-from reqs_builder.components.preprocess.position_resolver import resolve_position
-from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.preprocess.position_resolver import resolve_position
+from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 
 _ruamel = YAML()
 

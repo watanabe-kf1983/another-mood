@@ -1,13 +1,13 @@
 # 設定システム仕様
 
-reqs-builder の設定システムの振る舞いを定義する。
+another-mood の設定システムの振る舞いを定義する。
 
 ## パス解決ルール
 
 CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決される（[cli-spec.md](cli-spec.md) 参照）。
 
 - **入力パス**: `<projectDir>` を基準に解決される（例: `<projectDir>/contents`）
-- **出力パス**: CWD を基準に、`.reqs-builder/<projectDir>/` 配下に配置される（例: `.reqs-builder/<projectDir>/output`）
+- **出力パス**: CWD を基準に、`.another-mood/<projectDir>/` 配下に配置される（例: `.another-mood/<projectDir>/output`）
 
 環境変数や設定ファイルで明示指定した場合はそのパスがそのまま使われる。
 
@@ -26,7 +26,7 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 > **未実装** — Phase 8 タスク [G2](../../../phase8-tasks.md)
 
-- ファイル名: `reqs-builder.config.json`
+- ファイル名: `another-mood.config.json`
 - 配置場所: プロジェクトルート
 - 対応フォーマット: JSON
 
@@ -54,8 +54,8 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `out_dir` | string | `.reqs-builder/<projectDir>/output` | `RB_OUT_DIR` | Document Generator の出力先 |
-| `render_dir` | string | `.reqs-builder/<projectDir>/render` | `RB_RENDER_DIR` | Document Renderer の出力先 |
+| `out_dir` | string | `.another-mood/<projectDir>/output` | `RB_OUT_DIR` | Document Generator の出力先 |
+| `render_dir` | string | `.another-mood/<projectDir>/render` | `RB_RENDER_DIR` | Document Renderer の出力先 |
 
 ### サーバ
 

@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-from reqs_builder.components.preprocess.data_catalog import (
+from another_mood.components.preprocess.data_catalog import (
     CatalogEntity,
     CatalogField,
 )

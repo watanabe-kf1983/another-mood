@@ -3,7 +3,7 @@
 import pytest
 import yaml
 
-from reqs_builder.components.preprocess.schema_inspector import extract_data_catalog
+from another_mood.components.preprocess.schema_inspector import extract_data_catalog
 
 _CASES = [
     pytest.param(

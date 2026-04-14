@@ -5,7 +5,7 @@
 プロジェクトの背景と経緯。
 
 - [product.md](background/product.md) — 製品ビジョンとコア設計判断
-- [reqs-builder-original.md](background/reqs-builder-original.md) — 初期構想（要件定義ツール時代）
+- [another-mood-original.md](background/another-mood-original.md) — 初期構想（要件定義ツール時代）
 - [roadmap.md](background/roadmap.md) — ロードマップ
 
 ## external

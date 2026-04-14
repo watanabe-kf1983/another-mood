@@ -10,20 +10,20 @@ for line-number-accurate validation errors.
 from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
 from pathlib import Path
-from reqs_builder.components.preprocess.dict_to_array import normalize_data
-from reqs_builder.components.preprocess.prose import parse_markdown
-from reqs_builder.components.preprocess.validator import Validator, parse_yaml
-from reqs_builder.components.shared import yaml_dumper
-from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
-from reqs_builder.components.shared.json_data_model import load_yamls
+from another_mood.components.preprocess.dict_to_array import normalize_data
+from another_mood.components.preprocess.prose import parse_markdown
+from another_mood.components.preprocess.validator import Validator, parse_yaml
+from another_mood.components.shared import yaml_dumper
+from another_mood.components.shared.component import Component
+from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.json_data_model import load_yamls
 
 _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
-    str(resources.files("reqs_builder.resources") / "schemas" / "contents")
+    str(resources.files("another_mood.resources") / "schemas" / "contents")
 )
 
 _QUERY_SCHEMA_DIR = Path(
-    str(resources.files("reqs_builder.resources") / "schemas" / "queries")
+    str(resources.files("another_mood.resources") / "schemas" / "queries")
 )
 
 

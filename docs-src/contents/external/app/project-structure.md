@@ -4,10 +4,10 @@
 
 ## ディレクトリ構成
 
-CLI の第一位置パラメータ `<projectDir>` で処理対象ディレクトリを指定する（[cli-spec.md](cli-spec.md) 参照）。典型的にはプロジェクトディレクトリで `reqs build .` のように `.` を指定する。
+CLI の第一位置パラメータ `<projectDir>` で処理対象ディレクトリを指定する（[cli-spec.md](cli-spec.md) 参照）。典型的にはプロジェクトディレクトリで `mood build .` のように `.` を指定する。
 
 ```
-my-project/                    # CWD = <projectDir>（reqs build .）
+my-project/                    # CWD = <projectDir>（mood build .）
   index.md                     # ビルドコマンド + 生成物へのリンク
   definition/                  # リーダが管理する定義類
     schema/                    # schema_dir: スキーマ定義（JSON Schema + references.yaml）
@@ -17,7 +17,7 @@ my-project/                    # CWD = <projectDir>（reqs build .）
     templates/                 # templates_dir: ドキュメントテンプレート
     profiles.yaml              # profilesFile: プロファイル設定（ページ分割戦略）
   contents/                    # contents_dir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
-  .reqs-builder/               # gitignore（生成物・中間生成物）
+  .another-mood/               # gitignore（生成物・中間生成物）
     tmp/                       # パイプライン中間出力（ステージ名ベース）
       inspect_schema/          #   SchemaInspector 出力
       normalize_contents/      #   contents Normalizer 出力
@@ -31,7 +31,7 @@ my-project/                    # CWD = <projectDir>（reqs build .）
     render/                    # render_dir: Document Renderer 出力（最終）
 ```
 
-`<projectDir>` にサブディレクトリを指定した場合（例: `reqs build docs/`）、出力は `.reqs-builder/docs/` 配下に配置される。
+`<projectDir>` にサブディレクトリを指定した場合（例: `mood build docs/`）、出力は `.another-mood/docs/` 配下に配置される。
 
 ## 背景: MS-Access アナロジー
 
@@ -49,20 +49,20 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 ## 背景: ソースコードリポジトリ内での配置
 
-ソースコードリポジトリ内で使う場合、プロジェクトディレクトリを `docs/` 等のサブディレクトリに配置し `reqs build docs/` のように指定する。`src/` や `tests/` との境界が明確になる。
+ソースコードリポジトリ内で使う場合、プロジェクトディレクトリを `docs/` 等のサブディレクトリに配置し `mood build docs/` のように指定する。`src/` や `tests/` との境界が明確になる。
 
-独立したプロジェクトの場合は、プロジェクトルートに直接配置し `reqs build .` を使う。
+独立したプロジェクトの場合は、プロジェクトルートに直接配置し `mood build .` を使う。
 
-## 背景: .reqs-builder/ を CWD 直下に配置する理由
+## 背景: .another-mood/ を CWD 直下に配置する理由
 
-出力ディレクトリ `.reqs-builder/` は `<projectDir>`（入力ディレクトリ）の中ではなく、CWD（プロジェクトルート）直下に配置する。
+出力ディレクトリ `.another-mood/` は `<projectDir>`（入力ディレクトリ）の中ではなく、CWD（プロジェクトルート）直下に配置する。
 
 - **入力ディレクトリはユーザのコンテンツ領域**: ツールから見れば参照先であり、生成物を書き込むべきでない
 - `.` prefix はフレームワーク固有の作業領域を示す慣習（`.next/`, `.pytest_cache/` 等）に従う
-- gitignore がシンプル（ルートに `/.reqs-builder/` の1行で済む）
+- gitignore がシンプル（ルートに `/.another-mood/` の1行で済む）
 - 入力がプロジェクト外（git submodule 等）にある場合でも破綻しない
 - `contents_dir` を編集するメンバの視界に入らない
 
 ## 背景: 出力を `<projectDir>` ごとにサブディレクトリで分離する理由
 
-`.reqs-builder/<projectDir>/` のように入力パスに対応するサブディレクトリを自動作成する。異なる `<projectDir>` を別プロセスで同時処理しても出力が衝突しない。サブディレクトリ名は CWD からの相対パスをそのまま使うため予測可能である。
+`.another-mood/<projectDir>/` のように入力パスに対応するサブディレクトリを自動作成する。異なる `<projectDir>` を別プロセスで同時処理しても出力が衝突しない。サブディレクトリ名は CWD からの相対パスをそのまま使うため予測可能である。

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
 
-from reqs_builder.components.shared.build_report import BuildReport
+from another_mood.components.shared.build_report import BuildReport
 
 _ERRORS_KEY = "errors"
 

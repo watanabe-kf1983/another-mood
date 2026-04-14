@@ -23,8 +23,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from reqs_builder.components.shared.exclusive_write import exclusive_write
-from reqs_builder.components.shared.errors import error_propagation
+from another_mood.components.shared.exclusive_write import exclusive_write
+from another_mood.components.shared.errors import error_propagation
 
 
 @dataclass(frozen=True)
