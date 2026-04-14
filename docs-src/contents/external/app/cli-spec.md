@@ -25,12 +25,12 @@ mood init <projectDir>
 
 - 既存ファイルがある場合は上書きしない（競合時は警告を表示してスキップ）
 
-### mood dev
+### mood watch
 
 常駐モード。ファイル変更を監視して自動再処理し、Hugo server でプレビューを配信する。
 
 ```
-mood dev <projectDir> [--port <port>]
+mood watch <projectDir> [--port <port>]
 ```
 
 複数ディレクトリを同時に監視したい場合は、複数プロセスで起動する。出力先は `<projectDir>` ごとに自動分離されるため衝突しない。ただしポートが競合するため、2つ目以降は `--port` で別ポートを指定する必要がある。
@@ -46,4 +46,4 @@ mood build <projectDir>
 用途:
 
 - CI やリリース
-- コーディングエージェントとの協業。エージェントがファイルを編集した後に `mood build` を実行し、exit code で成否を判定する。ブラウザ側は VS Code Live Server 等で `render/` ディレクトリを常時配信し、人がリロードで確認する。`mood dev` の Watcher はエージェントがファイルを書き換える場合は不要であり、同期的な `mood build` の方がエージェントのワークフローに合う。
+- コーディングエージェントとの協業。エージェントがファイルを編集した後に `mood build` を実行し、exit code で成否を判定する。ブラウザ側は VS Code Live Server 等で `render/` ディレクトリを常時配信し、人がリロードで確認する。`mood watch` の Watcher はエージェントがファイルを書き換える場合は不要であり、同期的な `mood build` の方がエージェントのワークフローに合う。

@@ -18,10 +18,10 @@ mood build docs-src
 
 ## ドキュメントを編集するには
 
-ソース (`docs-src/contents/`) を編集する場合、`mood dev` を使うとファイル変更を検知して自動でリビルドされる:
+ソース (`docs-src/contents/`) を編集する場合、`mood watch` を使うとファイル変更を検知して自動でリビルドされる:
 
 ```bash
-mood dev docs-src
+mood watch docs-src
 ```
 
-> **このプロジェクトの開発時**: another-mood 自身の Python コードを変更する場合、`mood dev` は古いコードで動き続ける。そのため `mood build docs-src` をつど実行する。
+> **このプロジェクトの開発時**: another-mood 自身の Python コードを変更する場合、`mood watch` は古いコードで動き続ける。そのため `mood build docs-src` をつど実行する。

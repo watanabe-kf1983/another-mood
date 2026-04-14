@@ -37,7 +37,7 @@ def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
 
 
 @app.command()
-def dev(
+def watch(
     project_dir: str = typer.Argument(help="Project directory"),
     port: int = typer.Option(1313, help="Hugo server port"),
 ) -> None:
