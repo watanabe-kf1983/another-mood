@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from jinja2 import DictLoader, Environment, TemplateSyntaxError
 
-from reqs_builder.components.generator.section_processor import (
+from another_mood.components.generator.section_processor import (
     PROCESSOR_KEY,
     SectionExtension,
     SectionProcessorImpl,

@@ -2,11 +2,11 @@
 
 import yaml
 
-from reqs_builder.components.preprocess.data_catalog import (
+from another_mood.components.preprocess.data_catalog import (
     CatalogEntity,
     CatalogField,
 )
-from reqs_builder.components.preprocess.schema_tree import (
+from another_mood.components.preprocess.schema_tree import (
     ArrayNode,
     ObjectNode,
     SchemaField,

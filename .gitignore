@@ -26,8 +26,8 @@ reports/
 .mypy_cache/
 .pytype/
 
-# reqs-builder output
-/.reqs-builder/
+# another-mood output
+/.another-mood/
 
 # OS files
 .DS_Store

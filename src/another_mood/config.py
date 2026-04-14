@@ -12,10 +12,10 @@ class ConfigValidationError(Exception):
 
 
 class ProjectConfig(BaseSettings):
-    """Project configuration for reqs-builder.
+    """Project configuration for another-mood.
 
     Default values use `project_dir` as base for input paths
-    and `.reqs-builder/<project_dir>/` for output paths.
+    and `.another-mood/<project_dir>/` for output paths.
     Environment variables (RB_ prefix) override defaults.
     """
 
@@ -66,7 +66,7 @@ class ProjectConfig(BaseSettings):
     @classmethod
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         pd = Path(values.get("project_dir", ""))
-        rb = Path(".reqs-builder") / pd
+        rb = Path(".another-mood") / pd
         if not values.get("schema_dir"):
             values["schema_dir"] = pd / "definition" / "schema"
         if not values.get("contents_dir"):

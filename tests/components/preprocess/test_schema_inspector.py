@@ -5,13 +5,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from reqs_builder.components.preprocess.schema_inspector import (
+from another_mood.components.preprocess.schema_inspector import (
     build_schema_validator,
     check_schema,
     extract_data_catalog,
     inspect_schema,
 )
-from reqs_builder.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
 

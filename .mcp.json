@@ -3,7 +3,7 @@
     "language-server": {
       "command": "mcp-language-server",
       "args": [
-        "--workspace", "/workspaces/reqs-builder",
+        "--workspace", "/workspaces/another-mood",
         "-lsp", "pyright-langserver", "--", "--stdio"
       ]
     },

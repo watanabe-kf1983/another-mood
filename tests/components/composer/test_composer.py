@@ -4,8 +4,8 @@ from pathlib import Path
 
 import yaml
 
-from reqs_builder.components.composer.composer import compose, parse_query
-from reqs_builder.components.composer.query import (
+from another_mood.components.composer.composer import compose, parse_query
+from another_mood.components.composer.query import (
     From,
     Grouped,
     Query,

@@ -11,15 +11,15 @@ from typing import Any
 
 import yaml
 
-from reqs_builder.components.composer.query import (
+from another_mood.components.composer.query import (
     From,
     Grouped,
     Query,
     Select,
     SelectItem,
 )
-from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.json_data_model import load_yamls
+from another_mood.components.shared.component import Component
+from another_mood.components.shared.json_data_model import load_yamls
 
 
 @Component(

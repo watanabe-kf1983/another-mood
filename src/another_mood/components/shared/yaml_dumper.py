@@ -4,7 +4,7 @@ Uses YAML 1.1 per json-data-model.md serialization spec.
 Multiline strings are automatically rendered as literal block scalars (|).
 
 Usage:
-    from reqs_builder.components.shared.yaml_dumper import dump
+    from another_mood.components.shared.yaml_dumper import dump
     dump(data, stream)
 """
 

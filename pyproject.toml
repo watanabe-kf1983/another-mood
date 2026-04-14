@@ -1,5 +1,5 @@
 [project]
-name = "reqs-builder"
+name = "another-mood"
 version = "0.1.0"
 description = "A documentation build tool"
 readme = "README.md"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-reqs = "reqs_builder.cli:main"
+mood = "another_mood.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -40,7 +40,7 @@ dev = [
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["reqs_builder.components"]
+source = ["another_mood.components"]
 branch = true
 
 [tool.pyright]

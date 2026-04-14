@@ -4,7 +4,7 @@ import shutil
 import sys
 from datetime import datetime
 
-from reqs_builder.components import (
+from another_mood.components import (
     compose,
     generate,
     inspect_schema,
@@ -12,11 +12,11 @@ from reqs_builder.components import (
     normalize_queries,
     reconcile,
 )
-from reqs_builder.components.shared.build_report import BuildReport
-from reqs_builder.components.shared.exclusive_write import exclusive_write
-from reqs_builder.config import ProjectConfig
-from reqs_builder.pipeline.base import Pipeline, ReportingStage, Stage, Task
-from reqs_builder.pipeline.render import RenderStage
+from another_mood.components.shared.build_report import BuildReport
+from another_mood.components.shared.exclusive_write import exclusive_write
+from another_mood.config import ProjectConfig
+from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task
+from another_mood.pipeline.render import RenderStage
 
 
 def inspect_schema_stage(config: ProjectConfig) -> Task:

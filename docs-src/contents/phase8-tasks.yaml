@@ -2,8 +2,8 @@ phase8_categories:
   A:
     title: Markdown パーサー拡張
     impl_paths:
-      - src/reqs_builder/components/preprocess/prose.py
-      - src/reqs_builder/components/generator/
+      - src/another_mood/components/preprocess/prose.py
+      - src/another_mood/components/generator/
     spec: external/normalizer/markdown-parser-spec.md
     tasks:
       A1:
@@ -34,7 +34,7 @@ phase8_categories:
   B:
     title: アンカー / リンク解決
     impl_paths:
-      - src/reqs_builder/components/generator/
+      - src/another_mood/components/generator/
     spec: external/generator/anchor-spec.md
     tasks:
       B1:
@@ -63,8 +63,8 @@ phase8_categories:
   C:
     title: ページ分割 (paging)
     impl_paths:
-      - src/reqs_builder/components/generator/
-      - src/reqs_builder/components/generator/section_processor.py
+      - src/another_mood/components/generator/
+      - src/another_mood/components/generator/section_processor.py
     spec: external/generator/paging-spec.md
     tasks:
       C1:
@@ -93,10 +93,10 @@ phase8_categories:
   D:
     title: 参照整合性チェック + Unique 制約
     impl_paths:
-      - src/reqs_builder/components/preprocess/normalizer.py
-      - src/reqs_builder/components/preprocess/
-      - src/reqs_builder/resources/schemas/schema/schema-schema.yaml
-      - src/reqs_builder/cli.py
+      - src/another_mood/components/preprocess/normalizer.py
+      - src/another_mood/components/preprocess/
+      - src/another_mood/resources/schemas/schema/schema-schema.yaml
+      - src/another_mood/cli.py
     spec: external/normalizer/schema-spec.md
     tasks:
       D1:
@@ -138,8 +138,8 @@ phase8_categories:
   E:
     title: YAML DSL クエリ評価拡充
     impl_paths:
-      - src/reqs_builder/components/composer/query.py
-      - src/reqs_builder/resources/schemas/
+      - src/another_mood/components/composer/query.py
+      - src/another_mood/resources/schemas/
     spec: external/composer/queries-spec.md
     tasks:
       E1:
@@ -160,8 +160,8 @@ phase8_categories:
   F:
     title: メタドキュメンテーション拡張
     impl_paths:
-      - src/reqs_builder/resources/
-      - src/reqs_builder/components/generator/
+      - src/another_mood/resources/
+      - src/another_mood/components/generator/
     spec: external/app/meta-documentation.md
     tasks:
       F1:
@@ -192,16 +192,16 @@ phase8_categories:
   G:
     title: CLI / 設定システム
     impl_paths:
-      - src/reqs_builder/cli.py
-      - src/reqs_builder/config.py
+      - src/another_mood/cli.py
+      - src/another_mood/config.py
     spec: external/app/cli-spec.md
     tasks:
       G1:
-        title: reqs init コマンド (プロジェクト初期化)
+        title: mood init コマンド (プロジェクト初期化)
         note: cli-spec.md。MCP ツールとしても提供する
         phase: 8
       G2:
-        title: reqs-builder.config.json 読み込み
+        title: another-mood.config.json 読み込み
         note: config-spec.md
         phase: 10
       G3:
@@ -212,9 +212,9 @@ phase8_categories:
   H:
     title: バイナリファイルの取り扱い
     impl_paths:
-      - src/reqs_builder/components/preprocess/normalizer.py
-      - src/reqs_builder/components/composer/
-      - src/reqs_builder/components/generator/
+      - src/another_mood/components/preprocess/normalizer.py
+      - src/another_mood/components/composer/
+      - src/another_mood/components/generator/
     spec: internal/components/normalizer.md
     tasks:
       H1:
@@ -228,7 +228,7 @@ phase8_categories:
   J:
     title: プラグインシステム
     impl_paths:
-      - src/reqs_builder/
+      - src/another_mood/
     tasks:
       J1:
         title: 計算機能プラグインの I/F 仕様検討
@@ -242,7 +242,7 @@ phase8_categories:
   K:
     title: MCP サーバ
     impl_paths:
-      - src/reqs_builder/mcp/
+      - src/another_mood/mcp/
     spec: external/app/mcp-design.md
     tasks:
       K1:
@@ -251,7 +251,7 @@ phase8_categories:
         phase: 9
       K2:
         title: build ツール
-        note: CLI の reqs build と同一パイプラインをワンショット同期実行し結果を返す
+        note: CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す
         phase: 9
       K3:
         title: dev start / dev stop ツール
@@ -273,8 +273,8 @@ phase8_categories:
   N:
     title: レンダリング / 出力形式
     impl_paths:
-      - src/reqs_builder/pipeline/adapters/
-      - src/reqs_builder/components/generator/
+      - src/another_mood/pipeline/adapters/
+      - src/another_mood/components/generator/
     tasks:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
@@ -286,7 +286,7 @@ phase8_categories:
   O:
     title: バグ修正
     impl_paths:
-      - src/reqs_builder/components/preprocess/
+      - src/another_mood/components/preprocess/
     tasks:
       O1:
         title: スキーマチェックエラーの行番号ズレ修正

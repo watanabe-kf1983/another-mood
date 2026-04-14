@@ -9,9 +9,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from reqs_builder.pipeline.adapters import renderer
-from reqs_builder.pipeline.adapters.watcher import Watcher
-from reqs_builder.pipeline.base import Task
+from another_mood.pipeline.adapters import renderer
+from another_mood.pipeline.adapters.watcher import Watcher
+from another_mood.pipeline.base import Task
 
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from reqs_builder.components.shared.exclusive_write import VersionInfo, exclusive_write
+from another_mood.components.shared.exclusive_write import VersionInfo, exclusive_write
 
 
 class TestExclusiveWrite:

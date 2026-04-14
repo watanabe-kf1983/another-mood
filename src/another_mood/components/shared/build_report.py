@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from reqs_builder.components.shared import yaml_dumper
-from reqs_builder.components.shared.json_data_model import deep_merge, load_yamls
+from another_mood.components.shared import yaml_dumper
+from another_mood.components.shared.json_data_model import deep_merge, load_yamls
 
 _REPORT_KEY = "__build_report"
 _ERRORS_KEY = "errors"

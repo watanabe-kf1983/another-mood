@@ -1,6 +1,6 @@
 """Tests for prose — Markdown to JSON data model conversion."""
 
-from reqs_builder.components.preprocess.prose import parse_markdown
+from another_mood.components.preprocess.prose import parse_markdown
 
 
 class TestParseMarkdown:

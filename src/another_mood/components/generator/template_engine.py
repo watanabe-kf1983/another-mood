@@ -11,13 +11,13 @@ from jinja2 import (
     TemplateSyntaxError,
 )
 
-from reqs_builder.components.generator.section_processor import (
+from another_mood.components.generator.section_processor import (
     SectionExtension,
     install as install_section_processor,
 )
-from reqs_builder.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 
-_BUILT_IN_TEMPLATES_DIR = resources.files("reqs_builder.resources") / "templates"
+_BUILT_IN_TEMPLATES_DIR = resources.files("another_mood.resources") / "templates"
 
 
 class TemplateEngine:

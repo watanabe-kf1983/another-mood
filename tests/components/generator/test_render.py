@@ -3,7 +3,7 @@
 from pathlib import Path
 from textwrap import dedent
 
-from reqs_builder.components.generator.generator import render
+from another_mood.components.generator.generator import render
 
 
 class TestWriteIndex:

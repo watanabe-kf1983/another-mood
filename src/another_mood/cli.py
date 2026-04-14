@@ -5,15 +5,15 @@ from pathlib import Path
 
 import typer
 
-from reqs_builder.config import ConfigValidationError, ProjectConfig
-from reqs_builder.pipeline.stages import pipeline
+from another_mood.config import ConfigValidationError, ProjectConfig
+from another_mood.pipeline.stages import pipeline
 
 app = typer.Typer()
 
 
 @app.callback()
 def callback() -> None:
-    """reqs-builder: a documentation build tool."""
+    """another-mood: a documentation build tool."""
 
 
 def _load_config(**kwargs: object) -> ProjectConfig:

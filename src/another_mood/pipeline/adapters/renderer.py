@@ -1,6 +1,6 @@
 """Hugo renderer adapter — low-level Hugo operations.
 
-Adapts reqs-builder output to Hugo conventions:
+Adapts another-mood output to Hugo conventions:
 - Renames index.md → _index.md (Hugo branch bundle requirement)
 - Replaces deleted .md files with a placeholder so Hugo's dev server
   reflects the removal (Hugo keeps deleted pages in memory otherwise)
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from filelock import FileLock
 
-_HUGO_SOURCE_DIR = files("reqs_builder.resources") / "hugo"
+_HUGO_SOURCE_DIR = files("another_mood.resources") / "hugo"
 
 _DELETED_CONTENT = "[This page has been removed. Go to top page.](/)\n"
 

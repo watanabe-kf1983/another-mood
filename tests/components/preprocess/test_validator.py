@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from reqs_builder.components.preprocess.validator import Validator, parse_yaml
-from reqs_builder.components.shared.diagnostic import FileValidationError
+from another_mood.components.preprocess.validator import Validator, parse_yaml
+from another_mood.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
 _ruamel = YAML()

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from reqs_builder.components.preprocess.position_resolver import (
+from another_mood.components.preprocess.position_resolver import (
     Position,
     resolve_position,
 )

@@ -1,5 +1,5 @@
 {
-  "name": "reqs-builder",
+  "name": "another-mood",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
@@ -27,7 +27,7 @@
     }
   },
 
-  "mounts": ["source=reqs-builder-claude-${devcontainerId},target=/home/vscode/.claude,type=volume"],
+  "mounts": ["source=another-mood-claude-${devcontainerId},target=/home/vscode/.claude,type=volume"],
 
   "postCreateCommand": {
     "claude-home": "sudo chown -R vscode:vscode /home/vscode/.claude",

@@ -7,8 +7,8 @@ from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from reqs_builder.components.shared.build_report import BuildReport
-from reqs_builder.pipeline.adapters.watcher import Watcher
+from another_mood.components.shared.build_report import BuildReport
+from another_mood.pipeline.adapters.watcher import Watcher
 
 
 class Task(ABC):

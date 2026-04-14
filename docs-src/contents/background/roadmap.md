@@ -13,9 +13,9 @@
 
 ### Phase 3: パススルーパイプライン（自己ドッグフーディング開始）
 
-- [x] 3-1. build コマンド（`<projectDir>/contents/` → `.reqs-builder/<projectDir>/output/` にコピー）
+- [x] 3-1. build コマンド（`<projectDir>/contents/` → `.another-mood/<projectDir>/output/` にコピー）
 - [x] 3-2. dev コマンド（build + ファイル監視で自動再実行）
-- [x] 3-3. docs/ を docs-src/contents/ に移行、参照先を .reqs-builder/docs-src/output/ に変更
+- [x] 3-3. docs/ を docs-src/contents/ に移行、参照先を .another-mood/docs-src/output/ に変更
 
 ### Phase 4: Hugo 連携
 

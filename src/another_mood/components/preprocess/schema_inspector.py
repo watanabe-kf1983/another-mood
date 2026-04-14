@@ -13,19 +13,19 @@ from typing import Any, cast
 
 import yaml
 
-from reqs_builder.components.preprocess.schema_tree import extract_entities
-from reqs_builder.components.preprocess.validator import Validator
-from reqs_builder.components.shared import yaml_dumper
-from reqs_builder.components.shared.component import Component
-from reqs_builder.components.shared.diagnostic import FileValidationError
-from reqs_builder.components.shared.json_data_model import load_yamls
+from another_mood.components.preprocess.schema_tree import extract_entities
+from another_mood.components.preprocess.validator import Validator
+from another_mood.components.shared import yaml_dumper
+from another_mood.components.shared.component import Component
+from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.json_data_model import load_yamls
 
 _SCHEMA_SCHEMA_DIR = Path(
-    str(resources.files("reqs_builder.resources") / "schemas" / "schema")
+    str(resources.files("another_mood.resources") / "schemas" / "schema")
 )
 
 _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
-    str(resources.files("reqs_builder.resources") / "schemas" / "contents")
+    str(resources.files("another_mood.resources") / "schemas" / "contents")
 )
 
 

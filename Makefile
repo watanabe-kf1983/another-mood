@@ -18,8 +18,8 @@ secrets:
 	uv run pre-commit run gitleaks --all-files
 
 build-projects:
-	uv run reqs build docs-src
-	uv run reqs build example-project
+	uv run mood build docs-src
+	uv run mood build example-project
 
 format:
 	uv run ruff format .
