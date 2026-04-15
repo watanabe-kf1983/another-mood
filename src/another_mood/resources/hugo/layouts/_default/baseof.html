@@ -3,14 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1/new.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css">
+  <style>
+    .markdown-body { max-width: 980px; margin: 0 auto; padding: 2rem; }
+  </style>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: false });
     await mermaid.run({ querySelector: 'code.language-mermaid' });
   </script>
 </head>
-<body>
+<body class="markdown-body">
   {{ block "main" . }}{{ end }}
 </body>
 </html>
