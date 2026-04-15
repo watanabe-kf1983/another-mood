@@ -61,6 +61,66 @@ erds:
 from: entities    # normalize_contents_dir 内の entities をソースとする
 ```
 
+#### 子エンティティのドット記法
+
+`from` にはドット記法で子エンティティを指定できる。ネストされた配列を親から引き剥がし、フラットな配列として取り出す。
+
+```yaml
+from: phase8_categories.tasks   # phase8_categories 内の tasks をフラットに展開
+```
+
+これは以下のサブクエリ正規形の構文糖衣である:
+
+```yaml
+from:
+  from: phase8_categories
+  select:
+    - item: tasks
+```
+
+取り出された各オブジェクトは `_parent` を通じて親オブジェクトにアクセスできる（[json-data-model.md](../../internal/json-data-model.md) 参照）。
+
+##### 例: タスクをフェーズ別にグループ化
+
+```yaml
+# contents/phase8-tasks.yaml（著者はカテゴリ単位でネストして記述）
+phase8_categories:
+  G:
+    title: CLI / 設定システム
+    tasks:
+      G1:
+        title: mood init コマンド
+        phase: 8
+        done: true
+
+# queries/tasks-by-phase.yaml
+tasks_by_phase:
+  from: phase8_categories.tasks
+  grouped:
+    by: phase
+  select:
+    - item: phase
+      as: id
+    - item: phase
+    - item: tasks
+```
+
+```jinja2
+{# templates/tasks-by-phase.md #}
+{% for group in tasks_by_phase %}
+## Phase {{ group.phase }}
+| ID | タスク | カテゴリ | 状態 |
+|---|---|---|---|
+{% for task in group.tasks -%}
+| {{ task.id }} | {{ task.title }} | {{ task._parent.title }} | {{ "✅" if task.done else "-" }} |
+{% endfor %}
+{% endfor %}
+```
+
+### 背景: 永続化形式とクエリモデルの分離
+
+著者がネスト（コンポジション）で書いたデータを、別の軸で再グループ化したいというニーズは、データの利用が進むにつれて事後的に現れる。`from` のドット記法は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上でフラットなアクセスを可能にする。詳細は [json-data-model.md](../../internal/json-data-model.md) の「背景: なぜ永続化形式をフラット化しないか」を参照。
+
 ### grouped
 
 オブジェクト配列を指定フィールドでグループ化する。結果は配列で、各要素はグループキーの値とグループ内の要素配列を持つ。
