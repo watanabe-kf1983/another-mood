@@ -156,6 +156,10 @@ phase8_categories:
       E4:
         title: QuerySchema を E1〜E3 に合わせて拡張
         phase: 10
+      E5:
+        title: from 句の子エンティティ対応
+        note: "from: parent.child ドット記法。内部的にはサブクエリ正規形に展開。前提 M1"
+        phase: 8
 
   F:
     title: メタドキュメンテーション拡張
@@ -271,6 +275,17 @@ phase8_categories:
         note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K4 の効果を高める
         phase: 8
 
+  M:
+    title: JSON データモデル
+    impl_paths:
+      - src/another_mood/components/shared/json_data_model.py
+    spec: internal/json-data-model.md
+    tasks:
+      M1:
+        title: _parent 参照の付与
+        note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
+        phase: 10
+
   N:
     title: レンダリング / 出力形式
     impl_paths:
@@ -307,4 +322,8 @@ phase8_categories:
         phase: 8
       L3:
         title: 実施過程で見つかったツールの不足を A〜K にフィードバック
+        phase: 8
+      L4:
+        title: phase8-tasks のフェーズ別ビュー作成
+        note: "前提 M1, E5。クエリ + テンプレートで実現"
         phase: 8

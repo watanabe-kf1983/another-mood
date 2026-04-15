@@ -14,9 +14,9 @@
 **仕様:** [{{ category.spec }}](prose/{{ category.spec }})
 {% endif %}
 
-| ID | タスク | 備考 |
-|---|---|---|
+| ID | タスク | 備考 | Phase | Done |
+|---|---|---|---|---|
 {% for task in category.tasks -%}
-| {{ task.id }} | {{ task.title }} | {{ task.note }} |
+| {{ task.id }} | {{ task.title }} | {{ task.note }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
 {% endfor %}
 {% endfor %}
