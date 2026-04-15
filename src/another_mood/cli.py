@@ -6,6 +6,7 @@ from pathlib import Path
 import typer
 
 from another_mood.config import ConfigValidationError, ProjectConfig
+from another_mood.components.scaffold.init import init_project
 from another_mood.pipeline.stages import pipeline
 
 app = typer.Typer()
@@ -25,6 +26,15 @@ def _load_config(**kwargs: object) -> ProjectConfig:
         print(str(exc), file=sys.stderr)
         raise typer.Exit(1) from exc
     return config
+
+
+@app.command()
+def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
+    """Initialize a new project with sample directories and data."""
+    target = Path(project_dir)
+    print(f"Initializing project in {target}/", file=sys.stderr)
+    if not init_project(target):
+        raise typer.Exit(1)
 
 
 @app.command()

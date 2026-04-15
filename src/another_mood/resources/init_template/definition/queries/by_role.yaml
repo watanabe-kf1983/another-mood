@@ -1,0 +1,9 @@
+by_role:
+  from: members
+  grouped:
+    by: role
+  select:
+    - item: role
+      as: id
+    - item: role
+    - item: members

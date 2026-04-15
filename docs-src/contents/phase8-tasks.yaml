@@ -200,6 +200,7 @@ phase8_categories:
         title: mood init コマンド (プロジェクト初期化)
         note: cli-spec.md。MCP ツールとしても提供する
         phase: 8
+        done: true
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md

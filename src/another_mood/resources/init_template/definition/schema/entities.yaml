@@ -1,0 +1,14 @@
+schemas:
+  members:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        description:
+          type: string
+      additionalProperties: false
+      required: [name, role]
