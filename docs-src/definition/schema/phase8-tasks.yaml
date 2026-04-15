@@ -23,6 +23,8 @@ schemas:
                 type: string
               phase:
                 type: integer
+              done:
+                type: boolean
             additionalProperties: false
             required: [title, phase]
       additionalProperties: false
