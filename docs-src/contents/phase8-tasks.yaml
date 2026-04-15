@@ -284,7 +284,7 @@ phase8_categories:
       M1:
         title: _parent 参照の付与
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
-        phase: 8
+        phase: 10
 
   N:
     title: レンダリング / 出力形式
