@@ -143,7 +143,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
         return result
 
     return ReportingStage(
-        report_fn=report, watch_paths=[config.tmp_subdir(reconcile.name, "reports")]
+        report_fn=report, watch_paths=[config.tmp_subdir(reconcile.name)]
     )
 
 
