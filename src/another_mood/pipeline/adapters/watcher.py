@@ -1,11 +1,18 @@
-"""Watcher — observe paths and invoke callback on changes."""
+"""Watcher — observe paths and invoke callback on changes.
+
+Thin wrapper over watchdog. Events within a burst are coalesced into a
+single callback fire after `debounce` milliseconds of silence. See
+internal/pipeline/pipeline.md for library-selection rationale.
+"""
 
 import sys
+import threading
 import traceback
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from watchfiles import watch
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers import Observer
 
 
 class Watcher:
@@ -23,11 +30,45 @@ class Watcher:
             raise FileNotFoundError("Watch paths do not exist: " + ", ".join(missing))
         self._watch_paths = watch_paths
         self._on_change = on_change
-        self._debounce = debounce
+        self._debounce_seconds = debounce / 1000.0
 
     def run(self) -> None:
         """Block and watch. Calls on_change for each debounced change set."""
-        for _changes in watch(*self._watch_paths, debounce=self._debounce):
+        event_received = threading.Event()
+
+        class _Handler(FileSystemEventHandler):
+            # Only listen for mutation events. Ignoring open/access/close
+            # prevents our own read of upstream from self-triggering the
+            # watcher (inotify emits open/close events for reads, which
+            # watchdog surfaces by default).
+            def on_created(self, event: FileSystemEvent) -> None:
+                del event
+                event_received.set()
+
+            def on_modified(self, event: FileSystemEvent) -> None:
+                del event
+                event_received.set()
+
+            def on_deleted(self, event: FileSystemEvent) -> None:
+                del event
+                event_received.set()
+
+            def on_moved(self, event: FileSystemEvent) -> None:
+                del event
+                event_received.set()
+
+        handler = _Handler()
+        observer = Observer()
+        for path in self._watch_paths:
+            observer.schedule(handler, str(path), recursive=True)
+        observer.start()
+
+        while True:
+            event_received.wait()
+            while True:
+                event_received.clear()
+                if not event_received.wait(self._debounce_seconds):
+                    break
             try:
                 self._on_change()
             except Exception:
