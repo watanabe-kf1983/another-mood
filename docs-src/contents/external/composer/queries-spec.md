@@ -69,14 +69,13 @@ from: entities    # normalize_contents_dir 内の entities をソースとする
 from: phase8_categories.tasks   # phase8_categories 内の tasks をフラットに展開
 ```
 
-これは以下のサブクエリ正規形の構文糖衣である:
+任意の深さまで連結可能:
 
 ```yaml
-from:
-  from: phase8_categories
-  select:
-    - item: tasks
+from: a.b.c.d   # a → b → c → d の順に段階的にフラット化
 ```
+
+各セグメントの値は**オブジェクトまたは（任意段数のネスト配列で包まれた）オブジェクト**であれば良い。単一オブジェクトは 1 要素、配列は深さに関わらず平坦化して連結される。スキーマが entity として認識する path のみが有効であり、スカラー末端や scalar 配列を指す path は参照整合性チェックで弾かれる。
 
 取り出された各オブジェクトは `_parent` を通じて親オブジェクトにアクセスできる（[json-data-model.md](../../internal/json-data-model.md) 参照）。
 

@@ -295,6 +295,26 @@ class TestCollectEntities:
             CatalogField("matrix", "number[][]", False),
         ])]
 
+    def test_nested_array_of_objects_creates_child_entity(self) -> None:
+        """ArrayNode → ArrayNode → ObjectNode inside properties → object[][] field + child entity."""
+        tree = ObjectNode(fields=[
+            SchemaField("grid", False, ArrayNode(child=ArrayNode(child=ObjectNode(fields=[
+                SchemaField("v", True, ValueNode(type="number")),
+            ])))),
+        ])
+        entities: list[CatalogEntity] = []
+        collect_entities("board", tree, entities)
+        assert entities == [
+            CatalogEntity("board", fields=[
+                CatalogField("grid", "object[][]", False, child_entity="board.grid"),
+            ]),
+            CatalogEntity(
+                "board.grid",
+                fields=[CatalogField("v", "number", True)],
+                parent_entity="board",
+            ),
+        ]
+
     def test_entity_metadata_from_array_node(self) -> None:
         """ArrayNode.metadata → CatalogEntity.metadata (not ObjectNode's)."""
         tree = ArrayNode(
