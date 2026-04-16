@@ -1,10 +1,10 @@
 """Query DSL — object model and evaluation."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import cast
 
 type Record = Mapping[str, object]
-type Sources = Mapping[str, Sequence[Record]]
 
 
 @dataclass(frozen=True)
@@ -35,16 +35,44 @@ class Select:
 
 @dataclass(frozen=True)
 class From:
-    """A from clause — resolves a data source by name."""
+    """A from clause — flatten a dot-path from parent records.
 
-    source: str
+    The initial parent is the root sources mapping (wrapped in a
+    single-element list by the caller). Each path segment extracts and
+    concatenates the named child array.
+    """
 
-    def resolve(self, sources: Sources) -> Sequence[Record]:
-        """Look up the named source and return its array."""
-        data = sources.get(self.source)
-        if not isinstance(data, Sequence):
-            raise ValueError(f"Unknown source: '{self.source}'")
-        return data
+    path: Sequence[str]
+
+    def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
+        """Flatten the path over the given parents."""
+        records = parents
+        for key in self.path:
+            records = flatten_children(records, key)
+        return records
+
+
+def flatten_children(
+    parents: Iterable[Mapping[str, object]], child_key: str
+) -> Sequence[Record]:
+    """Deep-flatten each parent's child_key into a sequence of objects.
+
+    Walks through any depth of nested arrays; a single object is taken
+    as-is. Non-object leaves are not expected (entity-addressed paths
+    only reach objects or arrays of objects, possibly nested).
+    """
+    result: list[Record] = []
+
+    def _walk(v: object) -> None:
+        if isinstance(v, Mapping):
+            result.append(cast(Record, v))
+            return
+        for item in cast(Sequence[object], v):
+            _walk(item)
+
+    for parent in parents:
+        _walk(parent[child_key])
+    return result
 
 
 @dataclass(frozen=True)
@@ -70,11 +98,9 @@ class Query:
     from_clause: From
     grouped: Grouped | None
 
-    def evaluate(self, sources: Sources) -> Sequence[Record]:
-        """Evaluate this query against the given data sources."""
-        records = self.from_clause.resolve(sources)
-
+    def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
+        """Evaluate this query: from → grouped → select."""
+        records = self.from_clause.apply(parents)
         if self.grouped:
             records = self.grouped.apply(records)
-
         return self.select.apply(records)

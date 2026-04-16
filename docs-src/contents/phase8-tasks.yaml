@@ -158,8 +158,9 @@ phase8_categories:
         phase: 10
       E5:
         title: from 句の子エンティティ対応
-        note: "from: parent.child ドット記法。内部的にはサブクエリ正規形に展開。前提 M1"
+        note: "from: parent.child ドット記法で任意の深さまでフラット化"
         phase: 8
+        done: true
 
   F:
     title: メタドキュメンテーション拡張
@@ -325,5 +326,5 @@ phase8_categories:
         phase: 8
       L4:
         title: phase8-tasks のフェーズ別ビュー作成
-        note: "前提 M1, E5。クエリ + テンプレートで実現"
+        note: "前提 M1。E5 で from: parent.child は完了。クエリ + テンプレートで実現"
         phase: 8

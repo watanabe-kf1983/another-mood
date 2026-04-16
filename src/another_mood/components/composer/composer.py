@@ -52,7 +52,7 @@ def compose(
 
     query_results_out.mkdir(parents=True, exist_ok=True)
     for name, query in parsed_queries.items():
-        sources[name] = query.evaluate(sources)
+        sources[name] = query.apply([sources])
         (query_results_out / f"{name}.yaml").write_text(
             yaml.safe_dump(
                 {name: sources[name]}, allow_unicode=True, default_flow_style=False
@@ -66,14 +66,15 @@ def parse_query(raw: Any) -> Query:
     This is the Any-to-typed boundary: raw YAML data comes in,
     validated Query objects come out.
     """
-    from_clause = From(source=raw["from"])
+    from_raw: str = raw["from"]
+    from_clause = From(path=from_raw.split("."))
 
     grouped = None
     if "grouped" in raw:
         grouped_raw = raw["grouped"]
         grouped = Grouped(
             by=grouped_raw["by"],
-            as_name=grouped_raw.get("as", from_clause.source),
+            as_name=grouped_raw.get("as", from_clause.path[-1]),
         )
 
     select_raw: list[dict[str, str]] = raw.get("select", [])

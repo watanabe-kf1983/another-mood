@@ -197,13 +197,23 @@ def collect_entities(
     *,
     builtin: bool = False,
 ) -> None:
-    """Walk tree and collect entities from ObjectNodes."""
-    if isinstance(node, ArrayNode) and isinstance(node.child, ObjectNode):
-        _emit_object_entity(
-            name, node.child, entities, metadata=node.metadata, builtin=builtin
-        )
-    elif isinstance(node, ObjectNode):
-        _emit_object_entity(name, node, entities, builtin=builtin)
+    """Walk tree and collect entities from ObjectNodes.
+
+    Any depth of ArrayNode wrapping is peeled off so that nested array
+    schemas (e.g. `object[][]`) still yield an entity.
+    """
+    obj = _unwrap_to_object(node)
+    if obj is None:
+        return
+    metadata = node.metadata if isinstance(node, ArrayNode) else None
+    _emit_object_entity(name, obj, entities, metadata=metadata, builtin=builtin)
+
+
+def _unwrap_to_object(node: Node) -> ObjectNode | None:
+    """Peel any number of ArrayNode layers; return the inner ObjectNode if any."""
+    while isinstance(node, ArrayNode):
+        node = node.child
+    return node if isinstance(node, ObjectNode) else None
 
 
 def _to_catalog_field(
@@ -240,11 +250,11 @@ def _emit_object_entity(
 
     for field in obj.fields:
         child_entity_id: str | None = None
-        if isinstance(field.node, ArrayNode) and isinstance(
-            field.node.child, ObjectNode
-        ):
-            child_entity_id = f"{name}.{field.name}"
-            child_entities.append((child_entity_id, field.node.child))
+        if isinstance(field.node, ArrayNode):
+            child_obj = _unwrap_to_object(field.node)
+            if child_obj is not None:
+                child_entity_id = f"{name}.{field.name}"
+                child_entities.append((child_entity_id, child_obj))
 
         catalog_fields.append(
             _to_catalog_field(field.name, field, child_entity=child_entity_id)

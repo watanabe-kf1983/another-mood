@@ -103,17 +103,21 @@ class TestParseQuery:
                     SelectItem(item="category", as_name="category"),
                 ]
             ),
-            from_clause=From(source="entities"),
+            from_clause=From(path=["entities"]),
             grouped=Grouped(by="category", as_name="items"),
         )
 
-    def test_grouped_as_defaults_to_from_name(self) -> None:
+    def test_grouped_as_defaults_to_last_path_segment(self) -> None:
         raw = {
             "from": "entities",
             "grouped": {"by": "category"},
             "select": [{"item": "category"}],
         }
         assert parse_query(raw).grouped == Grouped(by="category", as_name="entities")
+
+    def test_from_dot_notation_splits_into_path(self) -> None:
+        raw = {"from": "phase8_categories.tasks", "select": [{"item": "id"}]}
+        assert parse_query(raw).from_clause == From(path=["phase8_categories", "tasks"])
 
     def test_without_grouped(self) -> None:
         raw = {

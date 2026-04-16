@@ -20,3 +20,13 @@
 | {{ task.id }} | {{ task.title }} | {{ task.note }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
 {% endfor %}
 {% endfor %}
+
+## 全タスク（フラット）
+
+`from: phase8_categories.tasks` のドット記法で抽出した全タスクのフラット一覧（E5 動作確認用）。
+
+| ID | タスク | Phase |
+|---|---|---|
+{% for task in tasks_all -%}
+| {{ task.id }} | {{ task.title }} | {{ task.phase }} |
+{% endfor %}
