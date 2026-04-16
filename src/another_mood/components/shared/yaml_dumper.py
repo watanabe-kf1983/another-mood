@@ -8,7 +8,6 @@ Usage:
     dump(data, stream)
 """
 
-from collections.abc import Callable
 from typing import IO
 
 from ruamel.yaml import YAML
@@ -26,8 +25,17 @@ class _LiteralStrRepresenter(RoundTripRepresenter):
 
 _LiteralStrRepresenter.add_representer(str, _LiteralStrRepresenter.represent_str)  # type: ignore[reportUnknownMemberType]
 
-_yaml = YAML()
-_yaml.version = (1, 1)
-_yaml.Representer = _LiteralStrRepresenter
 
-dump: Callable[[object, IO[str]], None] = _yaml.dump  # type: ignore[reportUnknownMemberType]
+def dump(data: object, stream: IO[str]) -> None:
+    """Serialize `data` as YAML 1.1 into `stream`.
+
+    A fresh YAML instance is created per call because ruamel.yaml's
+    YAML() is not thread-safe: its emitter/serializer internal state
+    is shared across calls, and concurrent dumps from different
+    pipeline-stage watcher threads corrupt each other's state (e.g.
+    "ValueError: I/O operation on closed file").
+    """
+    yaml = YAML()
+    yaml.version = (1, 1)
+    yaml.Representer = _LiteralStrRepresenter
+    yaml.dump(data, stream)  # type: ignore[reportUnknownMemberType]

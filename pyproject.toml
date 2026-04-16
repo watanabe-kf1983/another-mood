@@ -14,7 +14,7 @@ dependencies = [
     "regex>=2026.4.4",
     "ruamel-yaml>=0.19.1",
     "typer>=0.24.1",
-    "watchfiles>=1.1.1",
+    "watchdog>=6.0.0",
 ]
 
 [project.scripts]

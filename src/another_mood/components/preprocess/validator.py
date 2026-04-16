@@ -20,17 +20,18 @@ from ruamel.yaml import YAMLError
 from another_mood.components.preprocess.position_resolver import resolve_position
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 
-_ruamel = YAML()
-
 
 def parse_yaml(src: Path) -> Mapping[str, object]:
     """Parse a YAML file with ruamel.yaml, preserving source positions.
 
     On parse error, raises FileValidationError with a Diagnostic
     containing line/column from the YAML error mark.
+
+    Uses a fresh YAML instance per call because ruamel.yaml's YAML()
+    is not thread-safe (see components/shared/yaml_dumper.py).
     """
     try:
-        data: Mapping[str, object] = _ruamel.load(  # type: ignore[no-untyped-call]
+        data: Mapping[str, object] = YAML().load(  # type: ignore[no-untyped-call]
             src.read_text(encoding="utf-8")
         )
     except YAMLError as exc:
