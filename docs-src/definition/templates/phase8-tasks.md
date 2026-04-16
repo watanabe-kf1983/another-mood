@@ -21,12 +21,16 @@
 {% endfor %}
 {% endfor %}
 
-## 全タスク（フラット）
+## フェーズ別
 
-`from: phase8_categories.tasks` のドット記法で抽出した全タスクのフラット一覧（E5 動作確認用）。
+機能別にネストしたタスクを phase でグループ化して再構成した横断ビュー。タスク ID の先頭文字が機能カテゴリに対応する。
 
-| ID | タスク | Phase |
-|---|---|---|
-{% for task in tasks_all -%}
-| {{ task.id }} | {{ task.title }} | {{ task.phase }} |
+{% for group in tasks_by_phase | sort(attribute='phase') %}
+### Phase {{ group.phase }}
+
+| ID | タスク | 備考 | Done |
+|---|---|---|---|
+{% for task in group.tasks -%}
+| {{ task.id }} | {{ task.title }} | {{ task.note }} | {{ "✅" if task.done else "" }} |
+{% endfor %}
 {% endfor %}
