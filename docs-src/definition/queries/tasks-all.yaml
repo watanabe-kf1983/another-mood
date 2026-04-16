@@ -1,6 +1,0 @@
-tasks_all:
-  from: phase8_categories.tasks
-  select:
-    - item: id
-    - item: title
-    - item: phase

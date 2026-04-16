@@ -326,5 +326,6 @@ phase8_categories:
         phase: 8
       L4:
         title: phase8-tasks のフェーズ別ビュー作成
-        note: "前提 M1。E5 で from: parent.child は完了。クエリ + テンプレートで実現"
+        note: "E5 で from: parent.child は完了。クエリ + テンプレートで実現"
         phase: 8
+        done: true

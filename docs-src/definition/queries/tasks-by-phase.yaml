@@ -1,0 +1,9 @@
+tasks_by_phase:
+  from: phase8_categories.tasks
+  grouped:
+    by: phase
+  select:
+    - item: phase
+      as: id
+    - item: phase
+    - item: tasks
