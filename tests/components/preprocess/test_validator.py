@@ -62,6 +62,49 @@ class TestValidate:
         assert errors[0].source == "jsonschema"
 
 
+# ── identifier-aware position resolution ────────────────────────────
+
+
+class TestQuotedIdentifierPosition:
+    """Diagnostics point at the quoted identifier in the error message
+    when that identifier exists in the YAML; otherwise fall back to the
+    parent location of the failing path."""
+
+    def test_unexpected_property_points_at_the_offending_key(self) -> None:
+        validator = Validator(
+            {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "additionalProperties": False,
+            }
+        )
+        data = _ruamel_load(
+            "name: Alice\n"  # line 1
+            "extra: foo\n"  # line 2, col 1
+        )
+        errors = validator.validate(data, _DUMMY_FILE)
+        assert len(errors) == 1
+        assert errors[0].line == 2
+        assert errors[0].column == 1
+
+    def test_message_without_quoted_identifier_uses_path_position(self) -> None:
+        # type errors do not quote an identifier; behaviour should be
+        # identical to before — point at the failing value.
+        validator = Validator(
+            {
+                "type": "object",
+                "properties": {"age": {"type": "integer"}},
+            }
+        )
+        data = _ruamel_load(
+            "age: not-a-number\n"  # line 1, value at col 6
+        )
+        errors = validator.validate(data, _DUMMY_FILE)
+        assert len(errors) == 1
+        assert errors[0].line == 1
+        assert errors[0].column == 6
+
+
 # ── parse_yaml ─────────────────────────────────────────────────────
 
 
