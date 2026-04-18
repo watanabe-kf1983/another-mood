@@ -32,15 +32,6 @@ class TestComponentCall:
         call = my_fn.bind(src_dir=Path("/in"), out_dir=Path("/out"))
         assert call.kwargs["out_dir"] == Path("/out")
 
-    def test_upstream_dirs(self) -> None:
-        @Component(out_dir="out_dir", upstream_dirs=["upstream_a", "upstream_b"])
-        def my_fn(upstream_a: Path, upstream_b: Path, *, out_dir: Path) -> None: ...
-
-        call = my_fn.bind(
-            upstream_a=Path("/a"), upstream_b=Path("/b"), out_dir=Path("/out")
-        )
-        assert call.upstream_dirs == [Path("/a"), Path("/b")]
-
     def test_direct_call(self, tmp_path: Path) -> None:
         @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:

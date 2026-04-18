@@ -51,14 +51,6 @@ class ComponentCall:
         """Bind arguments and return a new ComponentCall ready to execute."""
         return replace(self, args=args, kwargs=kwargs)
 
-    @property
-    def upstream_dirs(self) -> Sequence[Path]:
-        return [
-            cast(Path, v)
-            for k in self.upstream_dir_keys
-            if (v := self.kwargs.get(k)) is not None
-        ]
-
     def __call__(self, *args: object, **kwargs: object) -> None:
         if args or kwargs:
             self.bind(*args, **kwargs)()
