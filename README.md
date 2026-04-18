@@ -1,30 +1,24 @@
-# Structured Document Generator
+# another-mood
 
-任意の関連オブジェクト群から整合性の取れた構造的ドキュメントを生成する汎用ツール。
+ドキュメントビルドツール。関連するオブジェクト群（YAML / Markdown）とテンプレートから、整合性の取れた構造的ドキュメントを生成する。
 
-## 特徴
+## クイックスタート
 
-- **スキーマ駆動**: OpenAPI/JSON Schema ベースでオブジェクト構造を定義
-- **参照整合性チェック**: FK制約相当の検証を自動実行
-- **複数形式対応**: Markdown, Mermaid, PlantUML, AsciiDoc
-- **Git フレンドリー**: 全てのメタデータは YAML でバージョン管理可能
+```bash
+uv sync
+uv run mood build showcase/examples/ecommerce
+```
 
-## ユースケース
-
-- 要件定義書（ERD, DFD, CRUD マトリクス）
-- API ドキュメント
-- システム設計書
-- その他、構造化されたデータから生成できるドキュメント全般
+出力は `.another-mood/showcase/examples/ecommerce/output/` に書き出される。
 
 ## ステータス
 
-設計フェーズ
+開発中（private）。Phase 8 進行中 — [dev-docs/contents/phase8-tasks.yaml](dev-docs/contents/phase8-tasks.yaml) を参照（このファイル名は phases 8〜10 のタスクカタログを兼ねている）。Phase 10 完了後に public 化予定。
+
+設計判断と背景は [background/product.md](dev-docs/contents/background/product.md) を参照。
 
 ## ドキュメント
 
-- [ドキュメント](docs/README.md) — 開発者向け設計書・サンプルプロジェクトのビルド方法
-- [showcase/examples/ecommerce](showcase/examples/ecommerce/) — ER 図・リレーションのサンプル
-
-## ライセンス
-
-MIT
+- [docs/](docs/) — ユーザガイド *(執筆中)*
+- [DEVELOPMENT.md](DEVELOPMENT.md) — 開発者向けガイド
+- [showcase/examples/ecommerce/](showcase/examples/ecommerce/) — サンプルプロジェクト

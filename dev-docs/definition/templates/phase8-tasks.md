@@ -17,7 +17,7 @@
 | ID | タスク | 備考 | Phase | Done |
 |---|---|---|---|---|
 {% for task in category.tasks -%}
-| {{ task.id }} | {{ task.title }} | {{ task.note }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
+| {{ task.id }} | {{ task.title }} | {{ task.note | replace('\n', ' ') | trim }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
 {% endfor %}
 {% endfor %}
 
@@ -31,6 +31,6 @@
 | ID | タスク | 備考 | Done |
 |---|---|---|---|
 {% for task in group.tasks -%}
-| {{ task.id }} | {{ task.title }} | {{ task.note }} | {{ "✅" if task.done else "" }} |
+| {{ task.id }} | {{ task.title }} | {{ task.note | replace('\n', ' ') | trim }} | {{ "✅" if task.done else "" }} |
 {% endfor %}
 {% endfor %}

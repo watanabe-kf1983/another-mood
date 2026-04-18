@@ -338,6 +338,24 @@ phase8_categories:
         phase: 8
         done: true
       L5:
-        title: user-guide ドキュメントサイトの起筆
-        note: "showcase/user-guide/ を 1 から作成。利用者起点の章立てで、Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる"
+        title: user-guide ドキュメントの起筆（素 Markdown 版）
+        note: |
+          B/C/E3 待ちで another-mood 自身でのドッグフーディング版は組めないため、
+          まず docs/ に素 Markdown で利用者起点の章立て・本文を書く。
+          Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる。
+          B/C/E3 完了後に showcase/user-guide/ へ構造化移植する別タスクを立てる。
+
+          執筆スタイル: L6 で英訳する前提で、文体は簡潔な日本語と placeholder 中心。
+          ただし簡潔さは装飾・冗長表現を削ぐ意味で、内容の正確さ・網羅性・
+          分かりやすさは保つ（MCP 経由の LLM UX に直結する）。
+        phase: 8
+      L6:
+        title: README + docs/ の英訳 + 執筆言語の英語切替
+        note: |
+          phase 8 の最終タスク。phase 9 の MCP 実装が開始する前に英語化を完了し、
+          MCP 経由で読まれる際のトークン効率を確保する。
+          このタスクは単発の翻訳作業であると同時に「執筆言語の切替点」でもあり、
+          以降の docs/ 追記は英語直接で書く運用に移行する（bilingual 維持はしない）。
+          dev-docs/ は内部資料のため日本語のまま維持する。
+          翻訳対象: README.md, docs/ 配下全て。
         phase: 8
