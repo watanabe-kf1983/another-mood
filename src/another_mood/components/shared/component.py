@@ -24,8 +24,10 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.shared.dir_lock import exclusive_write, exclusive_read
+from another_mood.components.shared.dir_lock import exclusive_read, exclusive_write
 from another_mood.components.shared.errors import error_propagation
+
+_Action = Callable[..., None]
 
 
 @dataclass(frozen=True)
@@ -64,63 +66,80 @@ class ComponentCall:
             self._run()
 
     def _run(self) -> None:
-        def action(*args: object, **kwargs: object) -> None:
-            self.fn(*args, **kwargs)
+        action: _Action = self.fn
 
         if self.use_error_propagation:
-            _inner = action
-
-            def _with_propagation(*args: object, **kwargs: object) -> None:
-                out_dir = cast(Path, kwargs[self.out_dir_key])
-                upstream_dirs = [
-                    cast(Path, kwargs[k]) for k in self.upstream_dir_keys if k in kwargs
-                ]
-                with error_propagation(
-                    upstream_dirs, out_dir, component=self.name
-                ) as data_dirs:
-                    if data_dirs is not None:
-                        updated = {
-                            **kwargs,
-                            self.out_dir_key: data_dirs.out,
-                        }
-                        for key, path in zip(
-                            self.upstream_dir_keys, data_dirs.upstreams
-                        ):
-                            updated[key] = path
-                        _inner(*args, **updated)
-
-            action = _with_propagation
+            action = _wrap_error_propagation(
+                action,
+                out_dir_key=self.out_dir_key,
+                upstream_dir_keys=self.upstream_dir_keys,
+                name=self.name,
+            )
 
         if self.use_exclusive_write:
-            _inner2 = action
-
-            def _with_exclusive(*args: object, **kwargs: object) -> None:
-                out_dir = cast(Path, kwargs[self.out_dir_key])
-                with exclusive_write(out_dir) as tmp_dir:
-                    _inner2(*args, **{**kwargs, self.out_dir_key: tmp_dir})
-
-            action = _with_exclusive
+            action = _wrap_exclusive_write(action, out_dir_key=self.out_dir_key)
 
         if self.upstream_dir_keys:
-            _inner3 = action
-
-            def _with_exclusive_reads(*args: object, **kwargs: object) -> None:
-                keys = [k for k in self.upstream_dir_keys if k in kwargs]
-                with ExitStack() as stack:
-                    updated = {
-                        **kwargs,
-                        **{
-                            k: stack.enter_context(
-                                exclusive_read(cast(Path, kwargs[k]))
-                            )
-                            for k in keys
-                        },
-                    }
-                    _inner3(*args, **updated)
-
-            action = _with_exclusive_reads
+            action = _wrap_exclusive_read(
+                action, upstream_dir_keys=self.upstream_dir_keys
+            )
 
         action(*self.args, **self.kwargs)
+
+
+# -- Wrappers --------------------------------------------------------
+# Module-level functions so they cannot capture `self`.  Each wrapper
+# receives only the *configuration* it needs (key names, component name)
+# and must read all runtime values from kwargs.
+
+
+def _wrap_error_propagation(
+    inner: _Action,
+    *,
+    out_dir_key: str,
+    upstream_dir_keys: Sequence[str],
+    name: str,
+) -> _Action:
+    def wrapper(*args: object, **kwargs: object) -> None:
+        out_dir = cast(Path, kwargs[out_dir_key])
+        upstream_dirs = [
+            cast(Path, kwargs[k]) for k in upstream_dir_keys if k in kwargs
+        ]
+        with error_propagation(upstream_dirs, out_dir, component=name) as data_dirs:
+            if data_dirs is not None:
+                updated = {**kwargs, out_dir_key: data_dirs.out}
+                for key, path in zip(upstream_dir_keys, data_dirs.upstreams):
+                    updated[key] = path
+                inner(*args, **updated)
+
+    return wrapper
+
+
+def _wrap_exclusive_write(inner: _Action, *, out_dir_key: str) -> _Action:
+    def wrapper(*args: object, **kwargs: object) -> None:
+        out_dir = cast(Path, kwargs[out_dir_key])
+        with exclusive_write(out_dir) as tmp_dir:
+            inner(*args, **{**kwargs, out_dir_key: tmp_dir})
+
+    return wrapper
+
+
+def _wrap_exclusive_read(
+    inner: _Action, *, upstream_dir_keys: Sequence[str]
+) -> _Action:
+    def wrapper(*args: object, **kwargs: object) -> None:
+        keys = [k for k in upstream_dir_keys if k in kwargs]
+        with ExitStack() as stack:
+            updated = {
+                **kwargs,
+                **{
+                    k: stack.enter_context(exclusive_read(cast(Path, kwargs[k])))
+                    for k in keys
+                },
+            }
+            inner(*args, **updated)
+
+    return wrapper
 
 
 @dataclass(frozen=True)
