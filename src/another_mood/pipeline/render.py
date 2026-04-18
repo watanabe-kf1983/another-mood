@@ -40,7 +40,7 @@ class RenderStage(Task):
             flush=True,
         )
 
-        cascade_watcher = Watcher([self.src_dir.parent], self._prepare)
+        cascade_watcher = Watcher([self.src_dir.parent], self._prepare, debounce=50)
         cascade = threading.Thread(target=cascade_watcher.run, daemon=True)
         cascade.start()
 

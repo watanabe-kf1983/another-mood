@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from another_mood.components.shared.build_report import BuildReport
+from another_mood.components.shared.component_output import ComponentOutput
 from another_mood.pipeline.adapters.watcher import Watcher
 
 
@@ -29,6 +30,7 @@ class Stage(Task):
 
     run_fn: Callable[[], None]
     watch_paths: Sequence[Path]
+    upstreams: Sequence[ComponentOutput] = ()
 
     def run(self) -> None:
         """Run the stage once."""
@@ -39,23 +41,32 @@ class Stage(Task):
         """Initial run + watch in background. Cleans up on exit."""
         self.run()
 
-        watcher = Watcher(self.watch_paths, self.run)
-        thread = threading.Thread(target=watcher.run, daemon=True)
-        thread.start()
+        if self.watch_paths:
+            w = Watcher(self.watch_paths, self.run)
+            threading.Thread(target=w.run, daemon=True).start()
+
+        if self.upstreams:
+            paths = [u.watch_target_path for u in self.upstreams]
+            w = Watcher(paths, self.run, debounce=50)
+            threading.Thread(target=w.run, daemon=True).start()
+
         yield
 
 
 class ReportingStage(Stage):
     """Like Stage, but report_fn returns a BuildReport exposed via .report."""
 
-    report: BuildReport
-
     def __init__(
-        self, report_fn: Callable[[], BuildReport], watch_paths: Sequence[Path]
+        self,
+        report_fn: Callable[[], BuildReport],
+        watch_paths: Sequence[Path] = (),
+        upstreams: Sequence[ComponentOutput] = (),
     ) -> None:
         self._report_fn = report_fn
-        self.report = BuildReport()
-        super().__init__(run_fn=self._collect, watch_paths=watch_paths)
+        self.report: BuildReport = BuildReport()
+        super().__init__(
+            run_fn=self._collect, watch_paths=watch_paths, upstreams=upstreams
+        )
 
     def _collect(self) -> None:
         self.report = self._report_fn()

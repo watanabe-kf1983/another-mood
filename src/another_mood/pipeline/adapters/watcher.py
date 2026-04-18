@@ -35,32 +35,32 @@ class Watcher:
     def run(self) -> None:
         """Block and watch. Calls on_change for each debounced change set."""
         event_received = threading.Event()
+        file_filter = {str(p) for p in self._watch_paths if p.is_file()}
 
         class _Handler(FileSystemEventHandler):
             # Only listen for mutation events. Ignoring open/access/close
             # prevents our own read of upstream from self-triggering the
             # watcher (inotify emits open/close events for reads, which
             # watchdog surfaces by default).
-            def on_created(self, event: FileSystemEvent) -> None:
-                del event
-                event_received.set()
+            #
+            # When watching specific files (via parent dir), filter events
+            # to avoid cross-talk from sibling files in the same directory.
+            def _handle(self, event: FileSystemEvent) -> None:
+                if not file_filter or event.src_path in file_filter:
+                    event_received.set()
 
-            def on_modified(self, event: FileSystemEvent) -> None:
-                del event
-                event_received.set()
-
-            def on_deleted(self, event: FileSystemEvent) -> None:
-                del event
-                event_received.set()
-
-            def on_moved(self, event: FileSystemEvent) -> None:
-                del event
-                event_received.set()
+            on_created = _handle
+            on_modified = _handle
+            on_deleted = _handle
+            on_moved = _handle
 
         handler = _Handler()
         observer = Observer()
         for path in self._watch_paths:
-            observer.schedule(handler, str(path), recursive=True)
+            if path.is_file():
+                observer.schedule(handler, str(path.parent), recursive=False)
+            else:
+                observer.schedule(handler, str(path), recursive=True)
         observer.start()
 
         while True:
