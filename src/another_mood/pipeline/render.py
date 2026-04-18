@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from another_mood.components.shared.dir_lock import exclusive_write
 from another_mood.pipeline.adapters import renderer
 from another_mood.pipeline.adapters.watcher import Watcher
 from another_mood.pipeline.base import Task
@@ -24,9 +25,14 @@ class RenderStage(Task):
     port: int
 
     def run(self) -> None:
-        """Prepare content, then run renderer build."""
+        """Prepare content, then run renderer build into render_dir atomically.
+
+        Only reached in build mode — watch mode delegates rendering to the
+        Hugo live server started in start_watching.
+        """
         prepared = self._prepare()
-        renderer.build(prepared, self.render_dir)
+        with exclusive_write(self.render_dir) as tmp:
+            renderer.build(prepared, tmp)
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:

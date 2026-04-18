@@ -3,6 +3,7 @@
 import shutil
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from another_mood.components import (
     compose,
@@ -13,7 +14,8 @@ from another_mood.components import (
     reconcile,
 )
 from another_mood.components.shared.build_report import BuildReport
-from another_mood.components.shared.dir_lock import dir_lock, exclusive_write
+from another_mood.components.shared.component import Component
+from another_mood.components.shared.dir_lock import dir_lock
 from another_mood.config import ProjectConfig
 from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task
 from another_mood.pipeline.render import RenderStage
@@ -112,29 +114,29 @@ def render_stage(config: ProjectConfig) -> Task:
     return RenderStage(
         src_dir=reconcile_out.dir / "data",
         render_input_dir=config.tmp_subdir("render_input"),
-        render_dir=config.tmp_subdir("render"),
+        render_dir=config.render_dir,
         port=config.port,
     )
 
 
+@Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
+def publish(data_dir: Path, *, out_dir: Path) -> None:
+    """Copy reconciled Markdown from data_dir/data to out_dir."""
+    src = data_dir / "data"
+    if src.exists():
+        shutil.copytree(src, out_dir, dirs_exist_ok=True)
+
+
 def publish_stage(config: ProjectConfig) -> Task:
-    """Copy final artifacts from tmp to output directories."""
+    """Copy reconciled Markdown from tmp to out_dir.
+
+    Render output is published directly by RenderStage.run — it is
+    produced only in build mode, not watch mode (Hugo's live server
+    handles preview), so publishing it here would be dead work.
+    """
     reconcile_out = config.component_output(reconcile)
-    src_dirs = {
-        reconcile_out.dir / "data": config.out_dir,
-        config.tmp_subdir("render"): config.render_dir,
-    }
-
-    def publish() -> None:
-        for src, dst in src_dirs.items():
-            if src.exists():
-                with exclusive_write(dst) as tmp:
-                    shutil.copytree(src, tmp, dirs_exist_ok=True)
-
-    return Stage(
-        run_fn=publish,
-        watch_paths=[config.tmp_subdir("render")],
-    )
+    call = publish.bind(data_dir=reconcile_out.dir, out_dir=config.out_dir)
+    return Stage(run_fn=call, watch_paths=[], upstreams=[reconcile_out])
 
 
 def build_report_stage(config: ProjectConfig) -> ReportingStage:
