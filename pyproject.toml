@@ -36,6 +36,10 @@ dev = [
     "types-jsonschema>=4.26.0.20260325",
 ]
 
+[tool.hatch.build.targets.wheel.force-include]
+"showcase/starter" = "another_mood/_showcase/starter"
+"showcase/examples" = "another_mood/_showcase/examples"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

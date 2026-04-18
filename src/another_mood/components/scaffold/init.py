@@ -8,7 +8,12 @@ from typing import Sequence
 
 
 def _template_dir() -> Path:
-    return Path(str(resources.files("another_mood.resources") / "init_template"))
+    pkg_root = Path(str(resources.files("another_mood")))
+    packaged = pkg_root / "_showcase" / "starter"
+    if packaged.is_dir():
+        return packaged
+    # Editable install: the starter lives in the repo, not inside the package.
+    return pkg_root.parent.parent / "showcase" / "starter"
 
 
 def _collect_template_files(template_root: Path) -> Sequence[Path]:

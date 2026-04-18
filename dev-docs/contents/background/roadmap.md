@@ -43,7 +43,7 @@
 
 ### Phase 7: メタドキュメンテーション
 
-スキーマ・クエリの「定義」をツール内蔵のテンプレートで可視化する（[meta-documentation.md](../external/app/meta-documentation.md)）。
+スキーマ・クエリの「定義」をツール内蔵のテンプレートで可視化する（[meta-documentation.md](../design/app/meta-documentation.md)）。
 
 - [x] 7-1. Composer に dataCatalog を配線し、`__definition` として views に passthrough
 - [x] 7-2. Composer で normalizedQueries を `__definition.queries` として views に passthrough
@@ -53,4 +53,4 @@
 
 ### Phase 8〜10: 追加機能
 
-Phase 9 を **MCP サーバ対応** とし、Phase 8 をその前に実装すべき機能、Phase 10 をその後に回してよい機能として位置付ける。各タスクの実施フェーズは [phase8-tasks.md](../../phase8-tasks.md) を参照。MCP サーバの設計は [mcp-design.md](../external/app/mcp-design.md) を参照。
+Phase 9 を **MCP サーバ対応** とし、Phase 8 をその前に実装すべき機能、Phase 10 をその後に回してよい機能として位置付ける。各タスクの実施フェーズは [phase8-tasks.md](../../phase8-tasks.md) を参照。MCP サーバの設計は [mcp-design.md](../design/app/mcp-design.md) を参照。

@@ -2,7 +2,7 @@
 
 ## 処理フロー
 
-1. `inspect_schema_dir` の *.yaml を読み込み、`__definition` 名前空間のまま `compose_dir` に passthrough（メタドキュメンテーション用、[meta-documentation.md](../../external/app/meta-documentation.md) 参照）
+1. `inspect_schema_dir` の *.yaml を読み込み、`__definition` 名前空間のまま `compose_dir` に passthrough（メタドキュメンテーション用、[meta-documentation.md](../../design/app/meta-documentation.md) 参照）
 2. `normalize_contents_dir` の *.yaml を読み込み、自動パススルーとして `compose_dir` にコピー
 3. `normalize_queries_dir` の *.yaml を読み込み:
    - クエリ定義そのものを `__definition.queries` として `compose_dir` に passthrough

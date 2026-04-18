@@ -4,7 +4,7 @@
 # Normalizer's prose parser.  This schema is merged with user-defined
 # schemas so that all content files are validated uniformly.
 #
-# See: docs-src/contents/external/normalizer/markdown-parser-spec.md
+# See: dev-docs/contents/design/normalizer/markdown-parser-spec.md
 
 schemas:
   prose:

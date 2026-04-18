@@ -29,7 +29,7 @@
 
 {% section prose[id="internal/architecture.md"] %}
 {% section "erd" for views.erds %}
-{% section prose[id="external/normalizer/schema-spec.md"] %}
+{% section prose[id="design/normalizer/schema-spec.md"] %}
 {% section "screen" for views.screens %}
 ```
 

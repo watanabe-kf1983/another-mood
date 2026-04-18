@@ -4,7 +4,7 @@ phase8_categories:
     impl_paths:
       - src/another_mood/components/preprocess/prose.py
       - src/another_mood/components/generator/
-    spec: external/normalizer/markdown-parser-spec.md
+    spec: design/normalizer/markdown-parser-spec.md
     tasks:
       A1:
         title: "{#id} 付き見出しの検出"
@@ -35,7 +35,7 @@ phase8_categories:
     title: アンカー / リンク解決
     impl_paths:
       - src/another_mood/components/generator/
-    spec: external/generator/anchor-spec.md
+    spec: design/generator/anchor-spec.md
     tasks:
       B1:
         title: views データのラッパーツリー構築
@@ -65,7 +65,7 @@ phase8_categories:
     impl_paths:
       - src/another_mood/components/generator/
       - src/another_mood/components/generator/section_processor.py
-    spec: external/generator/paging-spec.md
+    spec: design/generator/paging-spec.md
     tasks:
       C1:
         title: profilesFile の読み込み・パース
@@ -97,7 +97,7 @@ phase8_categories:
       - src/another_mood/components/preprocess/
       - src/another_mood/resources/schemas/schema/schema-schema.yaml
       - src/another_mood/cli.py
-    spec: external/normalizer/schema-spec.md
+    spec: design/normalizer/schema-spec.md
     tasks:
       D1:
         title: --strict CLI フラグの配線
@@ -140,7 +140,7 @@ phase8_categories:
     impl_paths:
       - src/another_mood/components/composer/query.py
       - src/another_mood/resources/schemas/
-    spec: external/composer/queries-spec.md
+    spec: design/composer/queries-spec.md
     tasks:
       E1:
         title: where 句の仕様詰め + 実装
@@ -167,7 +167,7 @@ phase8_categories:
     impl_paths:
       - src/another_mood/resources/
       - src/another_mood/components/generator/
-    spec: external/app/meta-documentation.md
+    spec: design/app/meta-documentation.md
     tasks:
       F1:
         title: Generator の動的名前引き拡張
@@ -199,7 +199,7 @@ phase8_categories:
     impl_paths:
       - src/another_mood/cli.py
       - src/another_mood/config.py
-    spec: external/app/cli-spec.md
+    spec: design/app/cli-spec.md
     tasks:
       G1:
         title: mood init コマンド (プロジェクト初期化)
@@ -249,7 +249,7 @@ phase8_categories:
     title: MCP サーバ
     impl_paths:
       - src/another_mood/mcp/
-    spec: external/app/mcp-design.md
+    spec: design/app/mcp-design.md
     tasks:
       K1:
         title: MCP サーバの骨格
@@ -320,8 +320,8 @@ phase8_categories:
   L:
     title: dog-fooding リファクタ
     impl_paths:
-      - docs-src/contents/
-      - docs-src/definition/
+      - dev-docs/contents/
+      - dev-docs/definition/
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
@@ -337,3 +337,7 @@ phase8_categories:
         note: "E5 で from: parent.child は完了。クエリ + テンプレートで実現"
         phase: 8
         done: true
+      L5:
+        title: user-guide ドキュメントサイトの起筆
+        note: "showcase/user-guide/ を 1 から作成。利用者起点の章立てで、Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる"
+        phase: 8

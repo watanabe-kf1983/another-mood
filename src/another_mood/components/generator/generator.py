@@ -1,7 +1,7 @@
 """Generator — render views data through Jinja2 templates to Markdown,
 and reconcile the output with the propagated BuildReport.
 
-See: docs-src/contents/internal/components/generator.md
+See: dev-docs/contents/internal/components/generator.md
 """
 
 import shutil

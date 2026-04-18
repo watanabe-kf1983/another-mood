@@ -136,7 +136,7 @@ class TestGrouped:
 
 class TestQuery:
     def test_example_project_erds(self) -> None:
-        """Matches the example-project query: group entities by category."""
+        """Matches the ecommerce example query: group entities by category."""
         sources = {
             "entities": [
                 {"id": "user", "name": "ユーザー", "category": "user-management"},

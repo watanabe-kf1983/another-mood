@@ -1,6 +1,6 @@
 """JSON data model — merge strategy for multiple data sources.
 
-See: docs-src/contents/internal/json-data-model.md
+See: dev-docs/contents/internal/json-data-model.md
 """
 
 from functools import reduce
