@@ -32,6 +32,11 @@ from pathlib import Path
 from filelock import FileLock
 
 
+def version_path_for(managed_dir: Path) -> Path:
+    """Return the version file path for a directory managed by exclusive_write."""
+    return managed_dir.parent / f"{managed_dir.name}.version.json"
+
+
 @contextmanager
 def dir_lock(managed_dir: Path) -> Generator[None, None, None]:
     """Acquire the file lock for a directory managed by exclusive_write."""
@@ -61,7 +66,7 @@ def exclusive_write(out_dir: Path) -> Generator[Path, None, None]:
 
 def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:
     """Sync tmp_dir contents to out_dir if startTime is newer."""
-    version_path = out_dir.parent / f"{out_dir.name}.version.json"
+    version_path = version_path_for(out_dir)
 
     with dir_lock(out_dir):
         existing = VersionInfo.from_file(version_path)
