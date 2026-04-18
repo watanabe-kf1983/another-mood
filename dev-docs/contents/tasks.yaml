@@ -1,4 +1,4 @@
-phase8_categories:
+categories:
   A:
     title: Markdown パーサー拡張
     impl_paths:
@@ -333,7 +333,7 @@ phase8_categories:
         title: 実施過程で見つかったツールの不足を A〜K にフィードバック
         phase: 8
       L4:
-        title: phase8-tasks のフェーズ別ビュー作成
+        title: tasks のフェーズ別ビュー作成
         note: "E5 で from: parent.child は完了。クエリ + テンプレートで実現"
         phase: 8
         done: true

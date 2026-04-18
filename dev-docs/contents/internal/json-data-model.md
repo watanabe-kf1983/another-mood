@@ -43,7 +43,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 ```yaml
 # 正規化済みデータ（永続化形式）
-phase8_categories:
+categories:
 - id: G
   title: CLI / 設定システム
   tasks:

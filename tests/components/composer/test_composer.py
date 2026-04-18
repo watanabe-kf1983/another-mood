@@ -116,8 +116,8 @@ class TestParseQuery:
         assert parse_query(raw).grouped == Grouped(by="category", as_name="entities")
 
     def test_from_dot_notation_splits_into_path(self) -> None:
-        raw = {"from": "phase8_categories.tasks", "select": [{"item": "id"}]}
-        assert parse_query(raw).from_clause == From(path=["phase8_categories", "tasks"])
+        raw = {"from": "categories.tasks", "select": [{"item": "id"}]}
+        assert parse_query(raw).from_clause == From(path=["categories", "tasks"])
 
     def test_without_grouped(self) -> None:
         raw = {
