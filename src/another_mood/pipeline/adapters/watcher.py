@@ -60,7 +60,10 @@ class Watcher:
         handler = _Handler()
         observer = Observer()
         for path in self._watch_paths:
-            observer.schedule(handler, str(path), recursive=True)
+            if path.is_file():
+                observer.schedule(handler, str(path.parent), recursive=False)
+            else:
+                observer.schedule(handler, str(path), recursive=True)
         observer.start()
 
         while True:
