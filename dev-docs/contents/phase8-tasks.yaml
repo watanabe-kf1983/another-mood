@@ -320,8 +320,8 @@ phase8_categories:
   L:
     title: dog-fooding リファクタ
     impl_paths:
-      - docs-src/contents/
-      - docs-src/definition/
+      - dev-docs/contents/
+      - dev-docs/definition/
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
