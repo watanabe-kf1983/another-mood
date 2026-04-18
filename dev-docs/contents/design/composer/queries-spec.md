@@ -174,7 +174,7 @@ select:
 
 `select` に列挙しないフィールドは出力に含まれない。`grouped` で生成されるキーフィールドやグループ配列も、`select` に明示しなければ出力されない。
 
-## 例: example-project
+## 例: showcase/examples/ecommerce
 
 ### データソース
 

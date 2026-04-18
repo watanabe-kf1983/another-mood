@@ -1,7 +1,7 @@
 # データカタログ出力形状
 
 SchemaInspector が `inspect_schema_dir` に出力するデータカタログの形状。
-入力例: example-project の entities / relations スキーマ。
+入力例: showcase/examples/ecommerce の entities / relations スキーマ。
 
 ## フィールド一覧
 
