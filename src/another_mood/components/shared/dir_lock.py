@@ -1,8 +1,14 @@
-"""Exclusive directory write — context manager.
+"""Directory lock — concurrent access coordination for stage I/O.
 
-Provides exclusive output directory updates: work is done in a temporary
-directory, then synced to the real output under a file lock with
-ordering guarantees.
+Provides two complementary context managers for pipeline stage
+directories that may be read and written by concurrent threads:
+
+- exclusive_write: atomic output — work in a temp dir, then sync to the
+  real output under a file lock with ordering guarantees.
+- exclusive_read: consistent input — point-in-time copy of an upstream
+  directory taken under its lock so readers never see a torn state.
+
+Both share the same lock-path convention (dir_lock).
 
 Design notes:
 - The output directory is updated in-place (contents cleared + copied)
@@ -27,6 +33,14 @@ from filelock import FileLock
 
 
 @contextmanager
+def dir_lock(managed_dir: Path) -> Generator[None, None, None]:
+    """Acquire the file lock for a directory managed by exclusive_write."""
+    lock_path = managed_dir.parent / f"{managed_dir.name}.lock"
+    with FileLock(lock_path):
+        yield
+
+
+@contextmanager
 def exclusive_write(out_dir: Path) -> Generator[Path, None, None]:
     """Context manager: write to a temporary directory, then sync exclusively.
 
@@ -48,10 +62,8 @@ def exclusive_write(out_dir: Path) -> Generator[Path, None, None]:
 def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:
     """Sync tmp_dir contents to out_dir if startTime is newer."""
     version_path = out_dir.parent / f"{out_dir.name}.version.json"
-    lock_path = out_dir.parent / f"{out_dir.name}.lock"
-    lock = FileLock(lock_path)
 
-    with lock:
+    with dir_lock(out_dir):
         existing = VersionInfo.from_file(version_path)
 
         if existing is not None and start_time <= existing.start_time:
@@ -67,6 +79,25 @@ def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:
 
         version_info = VersionInfo(start_time=start_time)
         version_path.write_text(version_info.to_json())
+
+
+@contextmanager
+def exclusive_read(src: Path) -> Generator[Path, None, None]:
+    """Point-in-time copy of a directory managed by exclusive_write.
+
+    Acquires the directory's file lock, copies to a temp dir, then
+    releases the lock immediately. The caller reads from the exclusive_read
+    without blocking concurrent writes. Cleaned up on exit.
+    """
+    tmp = Path(tempfile.mkdtemp(prefix=f"{src.name}."))
+    try:
+        with dir_lock(src):
+            if src.exists():
+                shutil.copytree(src, tmp, dirs_exist_ok=True)
+        yield tmp
+    finally:
+        if tmp.exists():
+            shutil.rmtree(tmp)
 
 
 @dataclass(frozen=True)

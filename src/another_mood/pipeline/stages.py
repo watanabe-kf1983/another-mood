@@ -13,7 +13,7 @@ from another_mood.components import (
     reconcile,
 )
 from another_mood.components.shared.build_report import BuildReport
-from another_mood.components.shared.exclusive_write import exclusive_write
+from another_mood.components.shared.dir_lock import dir_lock, exclusive_write
 from another_mood.config import ProjectConfig
 from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task
 from another_mood.pipeline.render import RenderStage
@@ -129,7 +129,9 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
 
     def report() -> BuildReport:
         nonlocal first
-        result = BuildReport.collect(config.tmp_subdir(reconcile.name, "reports"))
+        reconcile_dir = config.tmp_subdir(reconcile.name)
+        with dir_lock(reconcile_dir):
+            result = BuildReport.collect(reconcile_dir / "reports")
         succeeded = not result.has_errors()
         messages = {
             (True, True): "Build successfully completed",

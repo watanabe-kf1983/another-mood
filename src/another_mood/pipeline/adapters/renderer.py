@@ -11,7 +11,7 @@ import subprocess
 from importlib.resources import files
 from pathlib import Path
 
-from filelock import FileLock
+from another_mood.components.shared.dir_lock import dir_lock
 
 _HUGO_SOURCE_DIR = files("another_mood.resources") / "hugo"
 
@@ -24,16 +24,20 @@ def prepare(src_dir: Path, out_dir: Path) -> None:
     Files present in out_dir but absent from src_dir are overwritten
     with a placeholder instead of being deleted, because Hugo's dev
     server keeps deleted pages in memory.
+
+    Acquires the upstream lock (on src_dir's parent, i.e. the stage
+    output managed by exclusive_write) to prevent reading a torn state
+    during concurrent writes.
     """
-    lock_path = out_dir.parent / f"{out_dir.name}.lock"
-    with FileLock(lock_path):
+    with dir_lock(out_dir):
         old_files: set[str] = _collect_md_files(out_dir) if out_dir.exists() else set()
-        # Build expected file set: src files with index.md → _index.md rename
-        src_files = {
-            p.replace("index.md", "_index.md") if p.endswith("index.md") else p
-            for p in _collect_md_files(src_dir)
-        }
-        shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
+        with dir_lock(src_dir.parent):
+            # Build expected file set: src files with index.md → _index.md rename
+            src_files = {
+                p.replace("index.md", "_index.md") if p.endswith("index.md") else p
+                for p in _collect_md_files(src_dir)
+            }
+            shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
         for index_file in out_dir.rglob("index.md"):
             index_file.rename(index_file.with_name("_index.md"))
         for deleted in old_files - src_files:
