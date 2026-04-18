@@ -72,8 +72,11 @@ class ComponentCall:
 
             def _with_propagation(*args: object, **kwargs: object) -> None:
                 out_dir = cast(Path, kwargs[self.out_dir_key])
+                upstream_dirs = [
+                    cast(Path, kwargs[k]) for k in self.upstream_dir_keys if k in kwargs
+                ]
                 with error_propagation(
-                    self.upstream_dirs, out_dir, component=self.name
+                    upstream_dirs, out_dir, component=self.name
                 ) as data_dirs:
                     if data_dirs is not None:
                         updated = {
