@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from another_mood.components.shared.dir_lock import version_path_for
 from another_mood.pipeline.adapters import renderer
 from another_mood.pipeline.adapters.watcher import Watcher
 from another_mood.pipeline.base import Task
@@ -40,7 +41,9 @@ class RenderStage(Task):
             flush=True,
         )
 
-        cascade_watcher = Watcher([self.src_dir.parent], self._prepare)
+        cascade_watcher = Watcher(
+            [version_path_for(self.src_dir.parent)], self._prepare, debounce=0
+        )
         cascade = threading.Thread(target=cascade_watcher.run, daemon=True)
         cascade.start()
 
