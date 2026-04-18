@@ -109,10 +109,9 @@ class Validator:
 def _to_diagnostic(
     err: jsonschema.ValidationError, data: object, file: Path
 ) -> Diagnostic:
-    # TODO: For additionalProperties errors, resolve_position points to the
-    # parent object, not the unexpected key.  Extract the property name from
-    # the error and look up its position in the CommentedMap for a precise line.
-    pos = resolve_position(err.absolute_path, data)
+    pos = resolve_position(
+        err.absolute_path, data, identifier=_subject_identifier(err.message)
+    )
     return Diagnostic(
         file=file,
         line=pos.line if pos else None,
@@ -120,3 +119,19 @@ def _to_diagnostic(
         message=err.message,
         source="jsonschema",
     )
+
+
+_SUBJECT_PATTERN = regex.compile(r"'([^']+)'")
+
+
+def _subject_identifier(message: str) -> str | None:
+    """The identifier the jsonschema error is about — an unexpected key,
+    a missing required key, etc.
+
+    jsonschema quotes this identifier in the message.  We extract it as
+    a hint to point the diagnostic at where the name actually appears
+    in the YAML, falling back to the parent location when it does not
+    exist there.
+    """
+    match = _SUBJECT_PATTERN.search(message)
+    return match.group(1) if match else None
