@@ -23,7 +23,7 @@
 
 - ドキュメント: **日本語**
 - 設計ソース: `dev-docs/contents/` 配下の 3 カテゴリ（background / design / internal）
-- 利用者向けドキュメント: `showcase/user-guide/`（Implemented 機能のみ記載。L5 で起筆）
+- 利用者向けドキュメント: `docs/user-guide/`（素 Markdown。Implemented 機能のみ記載。L5 で起筆）。B/C/E3 完了後に `showcase/user-guide/` へ構造化移植予定
 
 設計ドキュメントの変更は、必ず `dev-docs/contents/` 配下のソースに対して行い、変更後は `mood build dev-docs` を実行して `.another-mood/dev-docs/output/` の出力を確認する。
 
@@ -33,7 +33,7 @@
 
 #### design/ — What
 
-利用者視点の振る舞い仕様。設計工程の作業場として TOBE や検討中の方針も書き残す。実装済みのものは `showcase/user-guide/` 側に利用者向けリファレンスとして整理する。
+利用者視点の振る舞い仕様。設計工程の作業場として TOBE や検討中の方針も書き残す。実装済みのものは `docs/user-guide/` 側に利用者向けリファレンスとして整理する（将来 `showcase/user-guide/` へ構造化移植予定）。
 
 #### internal/ — How
 

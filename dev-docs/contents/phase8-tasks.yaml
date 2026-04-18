@@ -338,6 +338,10 @@ phase8_categories:
         phase: 8
         done: true
       L5:
-        title: user-guide ドキュメントサイトの起筆
-        note: "showcase/user-guide/ を 1 から作成。利用者起点の章立てで、Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる"
+        title: user-guide ドキュメントの起筆（素 Markdown 版）
+        note: |
+          B/C/E3 待ちで another-mood 自身でのドッグフーディング版は組めないため、
+          まず docs/user-guide/ に素 Markdown で利用者起点の章立て・本文を書く。
+          Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる。
+          B/C/E3 完了後に showcase/user-guide/ へ構造化移植する別タスクを立てる。
         phase: 8
