@@ -15,9 +15,9 @@ from typing import Any
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq  # type: ignore[attr-defined]
 
-# ruamel.yaml's YAML.load() returns Any, so callers cannot pass
-# a statically-typed CommentedMap.  We accept Any for root/node
-# and rely on the runtime precondition (see module docstring).
+# ruamel.yaml's YAML.load() returns Any, and .lc / LineCol members lack
+# type annotations.  We accept Any for root/node and access .lc via
+# getattr to prevent Unknown propagation through pyright.
 
 
 @dataclass(frozen=True)
@@ -28,59 +28,86 @@ class Position:
     column: int
 
 
-def resolve_position(path: Sequence[str | int], root: Any) -> Position | None:
+def resolve_position(
+    path: Sequence[str | int],
+    root: Any,
+    *,
+    identifier: str | None = None,
+) -> Position | None:
     """Resolve the source position for a data path in a ruamel.yaml tree.
 
     path: sequence of keys/indices (e.g. ["schemas", "users", "type"]).
     root: parsed data — ruamel.yaml CommentedMap for positions, or plain
           dict/list (returns None).
+
+    identifier: optional refinement — when given, search the subtree at
+        *path* for a CommentedMap that has *identifier* as one of its
+        keys (DFS, first match wins) and prefer that key's position
+        over the path-based result.  Lets callers point a diagnostic
+        at a quoted name from an error message (e.g. an unexpected key)
+        instead of the less informative parent the data path resolves
+        to.  Falls back to the path-based position when the identifier
+        is not found in the subtree.
     """
     try:
-        return _resolve(path, root)
+        subtree, parent, last_step = _walk(path, root)
+        base = _path_position(subtree, parent, last_step)
+        return _refine_with_identifier(base, subtree, identifier)
     except (AttributeError, TypeError):
         return None
 
 
-def _resolve(path: Sequence[str | int], root: Any) -> Position:
-    if not path:
-        return _node_position(root)
+def _walk(path: Sequence[str | int], root: Any) -> tuple[Any, Any, object]:
+    """Walk *path* down from *root*; return (subtree, parent, last_step).
 
-    steps = list(path)
-    node: Any = root
-    for step in steps[:-1]:
-        node = node[step]
-
-    last = steps[-1]
-    if isinstance(node, CommentedMap) and isinstance(last, str):
-        return _map_value_position(node, last)
-    if isinstance(node, CommentedSeq) and isinstance(last, int):
-        return _seq_item_position(node, last)
-
-    raise TypeError(f"unexpected node type {type(node)} at path {steps}")
+    parent and last_step are None when *path* is empty (subtree is root)."""
+    parent: Any = None
+    last_step: object = None
+    subtree: Any = root
+    for step in path:
+        parent, last_step, subtree = subtree, step, subtree[step]
+    return subtree, parent, last_step
 
 
-# ── LineCol → Position conversion ────────────────────────────────────
-#
-# ruamel.yaml's .lc attribute and LineCol members (.line, .col) lack
-# type annotations, so we access .lc via getattr (returns Any) to
-# prevent Unknown propagation through pyright.
+def _path_position(subtree: Any, parent: Any, last_step: object) -> Position:
+    """Position of subtree itself (path empty) or of parent[last_step]."""
+    if parent is None:
+        lc = getattr(subtree, "lc")
+        return _position(lc.line, lc.col)
+    lc = getattr(parent, "lc")
+    if isinstance(parent, CommentedMap) and isinstance(last_step, str):
+        return _position(*lc.value(last_step))
+    if isinstance(parent, CommentedSeq) and isinstance(last_step, int):
+        return _position(*lc.item(last_step))
+    raise TypeError(f"unexpected node {type(parent)} at step {last_step!r}")
 
 
-def _node_position(node: Any) -> Position:
-    """Position of the node itself."""
-    lc = getattr(node, "lc")
-    return Position(line=int(lc.line) + 1, column=int(lc.col) + 1)
+def _refine_with_identifier(
+    base: Position, subtree: Any, identifier: str | None
+) -> Position:
+    if identifier is None:
+        return base
+    return _search_key(subtree, identifier) or base
 
 
-def _map_value_position(node: CommentedMap, key: str) -> Position:
-    """Position of a key's value."""
-    lc = getattr(node, "lc")
-    pos = lc.value(key)
-    return Position(line=int(pos[0]) + 1, column=int(pos[1]) + 1)
+def _search_key(node: Any, identifier: str) -> Position | None:
+    """DFS for the first CommentedMap that has *identifier* as a key."""
+    if isinstance(node, CommentedMap):
+        if identifier in node:
+            lc = getattr(node, "lc")
+            return _position(*lc.key(identifier))
+        children: list[Any] = list(node.values())  # type: ignore[arg-type]
+    elif isinstance(node, CommentedSeq):
+        children = list(node)  # type: ignore[arg-type]
+    else:
+        return None
+    for child in children:
+        pos = _search_key(child, identifier)
+        if pos is not None:
+            return pos
+    return None
 
 
-def _seq_item_position(node: CommentedSeq, index: int) -> Position:
-    """Position of a list item."""
-    lc = getattr(node, "lc")
-    pos = lc.item(index)
-    return Position(line=int(pos[0]) + 1, column=int(pos[1]) + 1)
+def _position(line: Any, col: Any) -> Position:
+    """ruamel.yaml's 0-based (line, col) → 1-based Position."""
+    return Position(line=int(line) + 1, column=int(col) + 1)
