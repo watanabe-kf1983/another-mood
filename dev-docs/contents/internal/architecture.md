@@ -12,7 +12,7 @@ OUT: `inspect_schema_dir`
 **Normalizer**
 入力ディレクトリを検証し、辞書形式を配列形式に正規化する。
 contents / queries の2種類の入力に対してそれぞれ独立したステージとして実行される。
-Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../external/normalizer/markdown-parser-spec.md) 参照）。
+Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../design/normalizer/markdown-parser-spec.md) 参照）。
 contents の Normalize では `--strict` モードで参照整合性もチェックする。
 IN: `contents_dir`、`queries_dir`（各ステージで異なる。詳細は [pipeline.md](pipeline/pipeline.md) 参照）
 OUT: `normalize_contents_dir`、`normalize_queries_dir`
@@ -54,7 +54,7 @@ OUT: `render_dir`
 
 ## ユーザプロジェクト構成
 
-[project-structure.md](../external/app/project-structure.md) を参照。
+[project-structure.md](../design/app/project-structure.md) を参照。
 
 ## 設計判断
 

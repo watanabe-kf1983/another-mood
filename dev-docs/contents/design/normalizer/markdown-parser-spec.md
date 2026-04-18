@@ -177,14 +177,14 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 
 ```markdown
 処理フローの詳細は[Composer](composer.md)を参照。
-[スキーマ仕様](../external/normalizer/schema-spec.md)に従って検証する。
+[スキーマ仕様](../design/normalizer/schema-spec.md)に従って検証する。
 ```
 
 ↓ 正規化 ↓
 
 ```markdown
 処理フローの詳細は[Composer](toc:prose.item.internal/composer)を参照。
-[スキーマ仕様](toc:prose.item.external/normalizer/schema-spec)に従って検証する。
+[スキーマ仕様](toc:prose.item.design/normalizer/schema-spec)に従って検証する。
 ```
 
 アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。`toc:` リンクの解決は Document Generator が行う（[generator.md](../../internal/components/generator.md) 参照）。

@@ -8,9 +8,9 @@
 - [another-mood-original.md](background/another-mood-original.md) — 初期構想（要件定義ツール時代）
 - [roadmap.md](background/roadmap.md) — ロードマップ
 
-## external
+## design
 
-ユーザ向け外部仕様。詳細は [external/index.md](external/index.md) を参照。
+利用者視点の振る舞い仕様（What）。TOBE を含む設計工程の作業場。詳細は [design/index.md](design/index.md) を参照。
 
 - normalizer — スキーマ定義、Markdownパーサー
 - composer — YAML DSL クエリ仕様
