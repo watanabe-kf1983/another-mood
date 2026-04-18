@@ -305,6 +305,7 @@ phase8_categories:
     impl_paths:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/shared/
+      - src/another_mood/pipeline/
     tasks:
       O1:
         title: スキーマチェックエラーの行番号ズレ修正
@@ -312,7 +313,8 @@ phase8_categories:
       O2:
         title: カスケード handler の upstream 読み取りと上流書き込みの race 抑止
         note: "現状は error_propagation + watch 再 fire で最終状態に収束するが、transient な traceback と ng 状態が dev 体験を汚す。読み取り側で upstream の exclusive_write FileLock を共有・取得するなどで race 発生自体を防ぎたい"
-        phase: 10
+        phase: 8
+        done: true
 
   L:
     title: dog-fooding リファクタ

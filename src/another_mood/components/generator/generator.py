@@ -23,7 +23,7 @@ def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     render("__meta_root", data, out_dir / "__reference")
 
 
-@Component(out_dir="out_dir", error_propagation=False)
+@Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
 def reconcile(data_dir: Path, *, out_dir: Path) -> None:
     """Reconcile Generator output with the propagated BuildReport.
 

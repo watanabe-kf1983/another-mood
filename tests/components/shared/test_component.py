@@ -151,3 +151,32 @@ class TestErrorPropagationWrapping:
 
         data = yaml.safe_load((out / "reports" / "__build_report.yaml").read_text())
         assert "boom" in data["__build_report"]["errors"][0]["message"]
+
+
+class TestLockedReadWrapping:
+    def test_fn_receives_snapshot_paths(self, tmp_path: Path) -> None:
+        """Component with upstream_dirs receives snapshot copies, not originals."""
+        upstream = tmp_path / "upstream"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "data" / "x.txt").write_text("value")
+        (upstream / "reports").mkdir(parents=True)
+
+        received_path: Path | None = None
+
+        @Component(
+            out_dir="out_dir",
+            upstream_dirs=["upstream_dir"],
+            exclusive_write=False,
+            error_propagation=False,
+        )
+        def my_fn(*, upstream_dir: Path, out_dir: Path) -> None:
+            nonlocal received_path
+            received_path = upstream_dir
+
+        my_fn(upstream_dir=upstream, out_dir=tmp_path / "output")
+
+        # fn received a snapshot, not the original upstream dir
+        assert received_path is not None
+        assert received_path != upstream
+        # snapshot is cleaned up after call
+        assert not received_path.exists()

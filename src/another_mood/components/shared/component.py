@@ -19,11 +19,12 @@ Usage:
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.shared.exclusive_write import exclusive_write
+from another_mood.components.shared.dir_lock import exclusive_write, exclusive_read
 from another_mood.components.shared.errors import error_propagation
 
 
@@ -96,6 +97,25 @@ class ComponentCall:
                     _inner2(*args, **{**kwargs, self.out_dir_key: tmp_dir})
 
             action = _with_exclusive
+
+        if self.upstream_dir_keys:
+            _inner3 = action
+
+            def _with_exclusive_reads(*args: object, **kwargs: object) -> None:
+                keys = [k for k in self.upstream_dir_keys if k in kwargs]
+                with ExitStack() as stack:
+                    updated = {
+                        **kwargs,
+                        **{
+                            k: stack.enter_context(
+                                exclusive_read(cast(Path, kwargs[k]))
+                            )
+                            for k in keys
+                        },
+                    }
+                    _inner3(*args, **updated)
+
+            action = _with_exclusive_reads
 
         action(*self.args, **self.kwargs)
 
