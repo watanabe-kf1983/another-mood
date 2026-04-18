@@ -1,5 +1,5 @@
 tasks_by_phase:
-  from: phase8_categories.tasks
+  from: categories.tasks
   grouped:
     by: phase
   select:

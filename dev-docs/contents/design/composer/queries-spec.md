@@ -51,7 +51,7 @@ erds:
 | `grouped` | 任意 | グループ化 |
 | `select` | 任意 | 出力フィールドの指定。省略時は空オブジェクトの配列 |
 
-将来の拡張候補: `where`, `sort`, `join` — Phase 8 タスク [E1〜E4](../../../phase8-tasks.md)（仕様詰めが先）
+将来の拡張候補: `where`, `sort`, `join` — Phase 8 タスク [E1〜E4](../../../tasks.md)（仕様詰めが先）
 
 ### from
 
@@ -66,7 +66,7 @@ from: entities    # normalize_contents_dir 内の entities をソースとする
 `from` にはドット記法で子エンティティを指定できる。ネストされた配列を親から引き剥がし、フラットな配列として取り出す。
 
 ```yaml
-from: phase8_categories.tasks   # phase8_categories 内の tasks をフラットに展開
+from: categories.tasks   # categories 内の tasks をフラットに展開
 ```
 
 任意の深さまで連結可能:
@@ -82,8 +82,8 @@ from: a.b.c.d   # a → b → c → d の順に段階的にフラット化
 ##### 例: タスクをフェーズ別にグループ化
 
 ```yaml
-# contents/phase8-tasks.yaml（著者はカテゴリ単位でネストして記述）
-phase8_categories:
+# contents/tasks.yaml（著者はカテゴリ単位でネストして記述）
+categories:
   G:
     title: CLI / 設定システム
     tasks:
@@ -94,7 +94,7 @@ phase8_categories:
 
 # queries/tasks-by-phase.yaml
 tasks_by_phase:
-  from: phase8_categories.tasks
+  from: categories.tasks
   grouped:
     by: phase
   select:

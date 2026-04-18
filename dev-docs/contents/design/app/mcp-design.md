@@ -1,6 +1,6 @@
 # MCP Server Design
 
-> **未実装** — タスク [K1〜K6](../../../phase8-tasks.md)（K1〜K5 は Phase 9、K6 は Phase 8）
+> **未実装** — タスク [K1〜K6](../../../tasks.md)（K1〜K5 は Phase 9、K6 は Phase 8）
 
 MCP サーバの設計。AI へのコンテキスト提供として機能する。
 

@@ -1,6 +1,6 @@
 # Paging Specification
 
-> **未実装** — Phase 8 タスク [C1〜C6](../../../phase8-tasks.md)。現在の `{% section %}` は常に分割で、`paginate` 設定は読まれない。
+> **未実装** — Phase 8 タスク [C1〜C6](../../../tasks.md)。現在の `{% section %}` は常に分割で、`paginate` 設定は読まれない。
 
 ファイル分割戦略の仕様。ドキュメントのページ分割とプロファイル切り替えを定義する。
 

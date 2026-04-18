@@ -24,7 +24,7 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 ### 設定ファイル（未実装）
 
-> **未実装** — Phase 8 タスク [G2](../../../phase8-tasks.md)
+> **未実装** — Phase 8 タスク [G2](../../../tasks.md)
 
 - ファイル名: `another-mood.config.json`
 - 配置場所: プロジェクトルート
@@ -67,4 +67,4 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用（未実装 — Phase 8 タスク [G3](../../../phase8-tasks.md)） |
+| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用（未実装 — Phase 8 タスク [G3](../../../tasks.md)） |

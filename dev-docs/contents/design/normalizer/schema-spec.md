@@ -200,7 +200,7 @@ suzuki:                     # ← users.id への参照
 
 ### 実行時の振る舞い
 
-> **未実装** — Phase 8 タスク [D1〜D7](../../../phase8-tasks.md)。`references` の宣言は SchemaInspector が読み取り `__definition.references` として下流に流すところまで実装済みだが、FK チェック本体と `--strict` フラグは未配線。
+> **未実装** — Phase 8 タスク [D1〜D7](../../../tasks.md)。`references` の宣言は SchemaInspector が読み取り `__definition.references` として下流に流すところまで実装済みだが、FK チェック本体と `--strict` フラグは未配線。
 
 - 通常モード: 参照整合性チェックを行わない（TBD だらけの要件定義フェーズに配慮）
 - `--strict` モード: 整合性を検証し**警告**として報告（CI/リリース時に使用）。エラーではない
