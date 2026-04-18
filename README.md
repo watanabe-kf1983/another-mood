@@ -22,7 +22,7 @@
 
 ## ドキュメント
 
-- [ドキュメント](docs/README.md) — 開発者向け設計書・サンプルプロジェクトのビルド方法
+- [DEVELOPMENT.md](DEVELOPMENT.md) — 開発者向けガイド（セットアップ・規約・パッケージ構成）
 - [showcase/examples/ecommerce](showcase/examples/ecommerce/) — ER 図・リレーションのサンプル
 
 ## ライセンス

@@ -341,7 +341,7 @@ phase8_categories:
         title: user-guide ドキュメントの起筆（素 Markdown 版）
         note: |
           B/C/E3 待ちで another-mood 自身でのドッグフーディング版は組めないため、
-          まず docs/user-guide/ に素 Markdown で利用者起点の章立て・本文を書く。
+          まず docs/ に素 Markdown で利用者起点の章立て・本文を書く。
           Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる。
           B/C/E3 完了後に showcase/user-guide/ へ構造化移植する別タスクを立てる。
         phase: 8
