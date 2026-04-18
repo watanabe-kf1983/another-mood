@@ -344,6 +344,10 @@ phase8_categories:
           まず docs/ に素 Markdown で利用者起点の章立て・本文を書く。
           Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる。
           B/C/E3 完了後に showcase/user-guide/ へ構造化移植する別タスクを立てる。
+
+          執筆スタイル: L6 で英訳する前提で、文体は簡潔な日本語と placeholder 中心。
+          ただし簡潔さは装飾・冗長表現を削ぐ意味で、内容の正確さ・網羅性・
+          分かりやすさは保つ（MCP 経由の LLM UX に直結する）。
         phase: 8
       L6:
         title: README + docs/ の英訳 + 執筆言語の英語切替
