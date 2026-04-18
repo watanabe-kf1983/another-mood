@@ -47,7 +47,7 @@ class Stage(Task):
 
         if self.upstreams:
             paths = [u.watch_target_path for u in self.upstreams]
-            w = Watcher(paths, self.run, debounce=0)
+            w = Watcher(paths, self.run, debounce=50)
             threading.Thread(target=w.run, daemon=True).start()
 
         yield

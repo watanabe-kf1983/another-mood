@@ -35,7 +35,7 @@ class Watcher:
     def run(self) -> None:
         """Block and watch. Calls on_change for each debounced change set."""
         event_received = threading.Event()
-        file_filter = {str(p.resolve()) for p in self._watch_paths if p.is_file()}
+        file_filter = {str(p) for p in self._watch_paths if p.is_file()}
 
         class _Handler(FileSystemEventHandler):
             # Only listen for mutation events. Ignoring open/access/close

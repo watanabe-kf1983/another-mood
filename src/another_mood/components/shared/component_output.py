@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from another_mood.components.shared.dir_lock import version_path_for
-
 
 @dataclass(frozen=True)
 class ComponentOutput:
@@ -14,5 +12,5 @@ class ComponentOutput:
 
     @property
     def watch_target_path(self) -> Path:
-        """Path to watch for completion of upstream writes."""
-        return version_path_for(self.dir)
+        """Path to watch for upstream changes."""
+        return self.dir
