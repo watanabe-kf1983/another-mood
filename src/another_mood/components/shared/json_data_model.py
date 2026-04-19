@@ -4,31 +4,36 @@ See: dev-docs/contents/internal/json-data-model.md
 """
 
 from functools import reduce
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from another_mood.components.shared.file_type import FileType
+
 type JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 
 
-def load_yamls(*directories: Path) -> dict[str, Any]:
-    """Load all YAML files from directories and deep-merge into a single dict.
+def load_model(*directories: Path) -> dict[str, Any]:
+    """Load all YAML files from directories and deep-merge into a single dict."""
+    mappings = (
+        _load_mapping(f)
+        for f in sorted(chain.from_iterable(d.rglob("*") for d in directories))
+    )
+    return reduce(deep_merge, mappings, {})
 
-    Directories that do not exist are silently skipped.
-    """
-    docs: list[dict[str, Any]] = []
-    for directory in directories:
-        if not directory.exists():
-            continue
-        for f in sorted(directory.rglob("*.yaml")):
-            loaded: object = yaml.safe_load(f.read_text())
-            if not isinstance(loaded, dict):
-                raise ValueError(
-                    f"Expected a YAML mapping in {f}, got {type(loaded).__name__}"
-                )
-            docs.append(loaded)  # type: ignore[arg-type]
-    return reduce(deep_merge, docs, {})
+
+def _load_mapping(path: Path) -> dict[str, Any]:
+    """Parse path as a YAML mapping; return {} (merge identity) for non-YAML files."""
+    if FileType.YAML.match(path):
+        loaded: object = yaml.safe_load(path.read_text())
+        if not isinstance(loaded, dict):
+            raise ValueError(
+                f"Expected a YAML mapping in {path}, got {type(loaded).__name__}"
+            )
+        return loaded  # type: ignore[return-value]
+    return {}
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:

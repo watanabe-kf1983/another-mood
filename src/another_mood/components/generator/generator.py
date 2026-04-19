@@ -12,13 +12,13 @@ from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.build_report import BuildReport
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.errors import error_propagation
-from another_mood.components.shared.json_data_model import load_yamls
+from another_mood.components.shared.json_data_model import load_model
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Render views data through Jinja2 templates to Markdown."""
-    data = load_yamls(data_dir)
+    data = load_model(data_dir)
     render("__root", data, out_dir, templates_dir=templates_dir)
     render("__meta_root", data, out_dir / "__reference")
 

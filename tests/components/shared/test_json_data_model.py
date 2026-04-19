@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from another_mood.components.shared.json_data_model import deep_merge, load_yamls
+from another_mood.components.shared.json_data_model import deep_merge, load_model
 
 
 class TestDeepMerge:
@@ -68,7 +68,7 @@ class TestLoadYamls:
         d.mkdir()
         _write_yaml(d / "entities.yaml", {"entities": [{"id": "user", "name": "User"}]})
 
-        assert load_yamls(d) == {
+        assert load_model(d) == {
             "entities": [{"id": "user", "name": "User"}],
         }
 
@@ -81,14 +81,14 @@ class TestLoadYamls:
             {"relations": [{"from": "user", "to": "role"}]},
         )
 
-        result = load_yamls(d)
+        result = load_model(d)
         assert list(result.keys()) == ["entities", "relations"]
 
     def test_empty_dir_returns_empty_dict(self, tmp_path: Path) -> None:
         d = tmp_path / "views"
         d.mkdir()
 
-        assert load_yamls(d) == {}
+        assert load_model(d) == {}
 
     def test_non_yaml_files_ignored(self, tmp_path: Path) -> None:
         d = tmp_path / "views"
@@ -96,7 +96,7 @@ class TestLoadYamls:
         (d / "readme.md").write_text("# Not YAML")
         _write_yaml(d / "data.yaml", {"key": "value"})
 
-        assert load_yamls(d) == {"key": "value"}
+        assert load_model(d) == {"key": "value"}
 
     def test_loads_subdirectory_yaml(self, tmp_path: Path) -> None:
         d = tmp_path / "views"
@@ -104,7 +104,7 @@ class TestLoadYamls:
         _write_yaml(d / "top.yaml", {"prose": [{"id": "top"}]})
         _write_yaml(d / "sub" / "nested.yaml", {"prose": [{"id": "sub/nested"}]})
 
-        result = load_yamls(d)
+        result = load_model(d)
         assert result == {"prose": [{"id": "sub/nested"}, {"id": "top"}]}
 
     def test_multiple_directories(self, tmp_path: Path) -> None:
@@ -115,7 +115,7 @@ class TestLoadYamls:
         _write_yaml(d1 / "entities.yaml", {"entities": [{"id": "user"}]})
         _write_yaml(d2 / "query.yaml", {"queries": [{"name": "q1"}]})
 
-        result = load_yamls(d1, d2)
+        result = load_model(d1, d2)
         assert result == {
             "entities": [{"id": "user"}],
             "queries": [{"name": "q1"}],
@@ -129,7 +129,7 @@ class TestLoadYamls:
         _write_yaml(d1 / "data.yaml", {"items": [{"id": "x"}]})
         _write_yaml(d2 / "data.yaml", {"items": [{"id": "y"}]})
 
-        result = load_yamls(d1, d2)
+        result = load_model(d1, d2)
         assert result == {"items": [{"id": "x"}, {"id": "y"}]}
 
     def test_nonexistent_directory_skipped(self, tmp_path: Path) -> None:
@@ -138,7 +138,7 @@ class TestLoadYamls:
         d1.mkdir()
         _write_yaml(d1 / "data.yaml", {"key": "value"})
 
-        assert load_yamls(d1, d2) == {"key": "value"}
+        assert load_model(d1, d2) == {"key": "value"}
 
     def test_no_directories_returns_empty(self) -> None:
-        assert load_yamls() == {}
+        assert load_model() == {}

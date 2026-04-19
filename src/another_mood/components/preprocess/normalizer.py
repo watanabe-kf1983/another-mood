@@ -16,7 +16,8 @@ from another_mood.components.preprocess.validator import Validator, parse_yaml
 from another_mood.components.shared import yaml_dumper
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
-from another_mood.components.shared.json_data_model import load_yamls
+from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.file_type import FileType
 
 _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
     str(resources.files("another_mood.resources") / "schemas" / "contents")
@@ -65,14 +66,14 @@ def build_contents_schema(
     schema_dir, then wraps them as JSON Schema properties so that
     each top-level key in a content file is validated against its schema.
     """
-    merged = load_yamls(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
+    merged = load_model(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
     schemas = merged.get("schemas", {})
     return {"type": "object", "properties": schemas, "additionalProperties": False}
 
 
 def build_query_schema() -> Mapping[str, object]:
     """Build a validation/normalization schema for query files."""
-    return load_yamls(_QUERY_SCHEMA_DIR)
+    return load_model(_QUERY_SCHEMA_DIR)
 
 
 # ── shared core ────────────────────────────────────────────────────
@@ -87,9 +88,11 @@ def normalize(
 ) -> None:
     """Validate all files, then parse, normalize, and write each to out_dir."""
     check(src_dir, schema)
-    for src_file in _source_files(src_dir):
+    for src_file in _iter_files(src_dir):
         rel = src_file.relative_to(src_dir)
         data = _parse(src_file, rel)
+        if data is None:
+            continue
         normalized = normalize_data(data, schema)
         _write(wrapper(normalized), rel, out_dir)
 
@@ -101,12 +104,14 @@ def check(src_dir: Path, schema: Mapping[str, object]) -> None:
     """
     validator = Validator(schema)
     diagnostics: list[Diagnostic] = []
-    for src_file in _source_files(src_dir):
+    for src_file in _iter_files(src_dir):
         rel = src_file.relative_to(src_dir)
         try:
             data = _parse(src_file, rel)
         except FileValidationError as exc:
             diagnostics.extend(exc.diagnostics)
+            continue
+        if data is None:
             continue
         diagnostics.extend(validator.validate(data, rel))
     if diagnostics:
@@ -116,21 +121,20 @@ def check(src_dir: Path, schema: Mapping[str, object]) -> None:
 # ── helpers ────────────────────────────────────────────────────────
 
 
-def _source_files(src_dir: Path) -> Sequence[Path]:
-    return [
-        f
-        for f in sorted(src_dir.rglob("*"))
-        if f.is_file() and not f.name.startswith(".")
-    ]
+def _iter_files(src_dir: Path) -> Sequence[Path]:
+    """Recursively list regular files under src_dir (sorted)."""
+    return [f for f in sorted(src_dir.rglob("*")) if f.is_file()]
 
 
-def _parse(src: Path, rel: Path) -> Mapping[str, object]:
-    """Parse a source file into data."""
-    if src.suffix == ".md":
+def _parse(src: Path, rel: Path) -> Mapping[str, object] | None:
+    """Parse a source file into data, or None if the file is not a recognized source."""
+    if FileType.MARKDOWN.match(src):
         source = src.read_text(encoding="utf-8")
         record = parse_markdown(source, str(rel.with_suffix("")))
         return {"prose": [record.to_data()]}
-    return parse_yaml(src)
+    if FileType.YAML.match(src):
+        return parse_yaml(src)
+    return None
 
 
 def _write(data: object, rel: Path, out_dir: Path) -> None:
