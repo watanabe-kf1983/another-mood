@@ -161,6 +161,13 @@ categories:
         note: "from: parent.child ドット記法で任意の深さまでフラット化"
         phase: 8
         done: true
+      E6:
+        title: クエリ名と正規化済みデータ名の同名禁止チェック
+        note: |
+          queries-spec.md「同名禁止」。現状は composer.py が sources[name] を
+          silent に上書きするため、著者が気付かずにパススルーデータを
+          上書きする事故が起きる。重複を検知してエラーにする。
+        phase: 10
 
   F:
     title: メタドキュメンテーション拡張
@@ -300,6 +307,22 @@ categories:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
         phase: 10
 
+  P:
+    title: テンプレートエンジン拡張
+    impl_paths:
+      - src/another_mood/components/generator/section_processor.py
+      - src/another_mood/components/generator/template_engine.py
+    spec: design/generator/template-spec.md
+    tasks:
+      P1:
+        title: "{% section %} タグの拡張文法"
+        note: |
+          現状は {% section EXPR with EXPR %} 形式のみ対応。
+          template-spec.md の例示で使われている以下 2 形式を追加する。
+            - for 形式:    {% section "NAME" for SEQ %}
+            - filter 形式: {% section NAME[id="..."] %}
+        phase: 10
+
   O:
     title: バグ修正
     impl_paths:
@@ -353,6 +376,7 @@ categories:
           実装ベースで全量書き、ユーザレビューは TOC のみ。
           文体・用語の最終磨きは L5f（Reference polish）に委ねる。
         phase: 8
+        done: true
       L5c:
         title: "Reference: CLI 執筆"
         note: |
