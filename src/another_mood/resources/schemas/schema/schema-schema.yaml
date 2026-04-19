@@ -18,6 +18,11 @@ properties:
     additionalProperties:
       $ref: "#/$defs/jsonSchemaSubset"
 
+  # NOTE: `references` declarations are currently parsed and surfaced to
+  # downstream tools (composer / templates) but the referential integrity
+  # check itself is not implemented yet.  The syntax below is therefore
+  # minimal; the `.property` dotted form and the `.id` shorthand of `to:`
+  # will be pinned down once the --strict validator lands.
   references:
     type: array
     items:
