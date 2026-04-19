@@ -41,11 +41,11 @@ class TestNormalize:
         out = tmp_path / "normalized"
         normalize(src, out, schema)
 
-        # YAML written as .yaml
-        data = yaml.safe_load((out / "data.yaml").read_text())
+        # Output name is source name + ".yaml" (appended, not replaced)
+        data = yaml.safe_load((out / "data.yaml.yaml").read_text())
         assert data == {"items": [{"name": "a"}]}
-        # Markdown converted to .yaml, not copied
-        assert (out / "notes.yaml").exists()
+        # Markdown converted to YAML at .md.yaml, not copied
+        assert (out / "notes.md.yaml").exists()
         assert not (out / "notes.md").exists()
 
     def test_markdown_prose_output(
@@ -58,7 +58,7 @@ class TestNormalize:
         out = tmp_path / "normalized"
         normalize(src, out, schema)
 
-        data = yaml.safe_load((out / "guide.yaml").read_text())
+        data = yaml.safe_load((out / "guide.md.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
         assert data["prose"][0]["body"]["mime_type"] == "text/markdown"
@@ -73,8 +73,25 @@ class TestNormalize:
         out = tmp_path / "normalized"
         normalize(src, out, schema)
 
-        data = yaml.safe_load((out / "sub" / "doc.yaml").read_text())
+        data = yaml.safe_load((out / "sub" / "doc.md.yaml").read_text())
         assert data["prose"][0]["id"] == "sub/doc"
+
+    def test_same_stem_different_extensions_do_not_collide(
+        self, tmp_path: Path, schema: dict[str, object]
+    ) -> None:
+        src = tmp_path / "contents"
+        src.mkdir()
+        (src / "items.yaml").write_text("items:\n  - name: a\n")
+        (src / "items.yml").write_text("items:\n  - name: b\n")
+        (src / "items.md").write_text("# Items\n")
+
+        out = tmp_path / "normalized"
+        normalize(src, out, schema)
+
+        # Each source produces a distinct destination — nothing is overwritten.
+        assert (out / "items.yaml.yaml").exists()
+        assert (out / "items.yml.yaml").exists()
+        assert (out / "items.md.yaml").exists()
 
 
 # ── check ─────────────────────────────────────────────────────────
@@ -285,7 +302,7 @@ class TestNormalizeContents:
         out = tmp_path / "normalized"
         normalize_contents(src_dir=src, out_dir=out, schema_dir=schema_dir)
 
-        assert yaml.safe_load((out / "data" / "data.yaml").read_text()) == {
+        assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
             "items": [{"name": "a"}]
         }
 
@@ -306,7 +323,7 @@ class TestNormalizeQueries:
         out = tmp_path / "normalized"
         normalize_queries(queries_dir=queries, out_dir=out)
 
-        data = yaml.safe_load((out / "data" / "erds.yaml").read_text())
+        data = yaml.safe_load((out / "data" / "erds.yaml.yaml").read_text())
         assert data == {
             "__definition": {
                 "queries": [

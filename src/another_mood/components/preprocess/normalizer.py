@@ -134,7 +134,9 @@ def _parse(src: Path, rel: Path) -> Mapping[str, object]:
 
 
 def _write(data: object, rel: Path, out_dir: Path) -> None:
-    dst = out_dir / rel.with_suffix(".yaml")
+    # Append (not replace) so distinct source files (foo.yaml / foo.yml / foo.md)
+    # never collide on the same destination.
+    dst = out_dir / rel.with_name(rel.name + ".yaml")
     dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("w", encoding="utf-8") as f:
         yaml_dumper.dump(data, f)
