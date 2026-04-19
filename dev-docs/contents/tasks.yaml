@@ -337,17 +337,38 @@ categories:
         note: "E5 で from: parent.child は完了。クエリ + テンプレートで実現"
         phase: 8
         done: true
-      L5:
-        title: user-guide ドキュメントの起筆（素 Markdown 版）
+      L5a:
+        title: "Reference: Schema + Content Formats 執筆"
         note: |
-          B/C/E3 待ちで another-mood 自身でのドッグフーディング版は組めないため、
-          まず docs/ に素 Markdown で利用者起点の章立て・本文を書く。
-          Implemented 機能のみを記載。dev-docs/design/ を参照元にしつつ独立進化させる。
-          B/C/E3 完了後に showcase/user-guide/ へ構造化移植する別タスクを立てる。
-
-          執筆スタイル: L6 で英訳する前提で、文体は簡潔な日本語と placeholder 中心。
-          ただし簡潔さは装飾・冗長表現を削ぐ意味で、内容の正確さ・網羅性・
-          分かりやすさは保つ（MCP 経由の LLM UX に直結する）。
+          docs/reference/schema.md と docs/reference/content-formats.md の本文を埋める。
+          dev-docs/design/normalizer/ を参照元とし、Implemented 機能のみ記載。
+        phase: 8
+      L5b:
+        title: "Reference: Query DSL + Template 執筆"
+        note: |
+          docs/reference/query-dsl.md と docs/reference/template.md の本文を埋める。
+          dev-docs/design/composer/ と design/generator/ を参照元とし、
+          L5a で確定した schema 用語に揃える。Implemented 機能のみ。
+        phase: 8
+      L5c:
+        title: "Reference: CLI 執筆"
+        note: |
+          docs/reference/cli.md の本文を埋める。
+          dev-docs/design/app/cli-spec.md を参照元とし、init / build / watch の Implemented
+          サブコマンドのみ記載。
+        phase: 8
+      L5d:
+        title: Guides 執筆
+        note: |
+          docs/guides.md の本文を埋める。L5a〜L5c の Reference を参照しつつ、
+          ワークフロー単位（スキーマ設計 / コンテンツ記述 / クエリ / テンプレート /
+          ビルドと watch）で解説する。
+        phase: 8
+      L5e:
+        title: Getting Started 執筆
+        note: |
+          docs/getting-started.md の本文を埋める。インストールから最小例のビルド完了まで
+          を一気通貫で。L5a〜L5d 完了後に矛盾が出ない形で書く。
         phase: 8
       L6:
         title: README + docs/ の英訳 + 執筆言語の英語切替
