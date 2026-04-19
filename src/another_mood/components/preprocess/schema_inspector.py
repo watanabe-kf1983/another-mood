@@ -18,7 +18,8 @@ from another_mood.components.preprocess.validator import Validator
 from another_mood.components.shared import yaml_dumper
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
-from another_mood.components.shared.json_data_model import load_yamls
+from another_mood.components.shared.file_type import FileType
+from another_mood.components.shared.json_data_model import load_model
 
 _SCHEMA_SCHEMA_DIR = Path(
     str(resources.files("another_mood.resources") / "schemas" / "schema")
@@ -32,7 +33,7 @@ _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
 @Component(out_dir="out_dir")
 def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
     """Validate schema files and extract data catalog per file."""
-    schema_files = [f for f in sorted(schema_dir.rglob("*.yaml")) if f.is_file()]
+    schema_files = _list_yaml_files(schema_dir)
     check_schema(schema_files)
 
     for schema_file in schema_files:
@@ -41,12 +42,16 @@ def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
 
     # Emit built-in contents schemas (e.g. prose) so that their entities
     # appear in meta-documentation alongside user-defined schemas.
-    for schema_file in sorted(_BUILTIN_CONTENTS_SCHEMA_DIR.rglob("*.yaml")):
+    for schema_file in _list_yaml_files(_BUILTIN_CONTENTS_SCHEMA_DIR):
         _emit_catalog_file(
             schema_file,
             out_dir / "__builtin" / schema_file.name,
             builtin=True,
         )
+
+
+def _list_yaml_files(src_dir: Path) -> Sequence[Path]:
+    return [f for f in sorted(src_dir.rglob("*")) if FileType.YAML.match(f)]
 
 
 def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
@@ -106,4 +111,4 @@ def _strip_nones(d: Any) -> Any:  # noqa: ANN401
 
 def build_schema_validator() -> Validator:
     """Build a Validator for user schema files (against built-in SchemaSchema)."""
-    return Validator(load_yamls(_SCHEMA_SCHEMA_DIR))
+    return Validator(load_model(_SCHEMA_SCHEMA_DIR))

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from another_mood.components.shared import yaml_dumper
-from another_mood.components.shared.json_data_model import deep_merge, load_yamls
+from another_mood.components.shared.json_data_model import deep_merge, load_model
 
 _REPORT_KEY = "__build_report"
 _ERRORS_KEY = "errors"
@@ -44,7 +44,7 @@ class BuildReport:
     @staticmethod
     def collect(*directories: Path) -> "BuildReport":
         """Collect __build_report entries from input directories."""
-        merged = load_yamls(*directories)
+        merged = load_model(*directories)
         return BuildReport(merged.get(_REPORT_KEY))
 
     def has_errors(self) -> bool:

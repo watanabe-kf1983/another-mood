@@ -19,7 +19,7 @@ from another_mood.components.composer.query import (
     SelectItem,
 )
 from another_mood.components.shared.component import Component
-from another_mood.components.shared.json_data_model import load_yamls
+from another_mood.components.shared.json_data_model import load_model
 
 
 @Component(
@@ -43,9 +43,9 @@ def compose(
     shutil.copytree(data_catalog_dir, data_catalog_out)
     shutil.copytree(queries_dir, queries_out)
 
-    sources = load_yamls(contents_out)
+    sources = load_model(contents_out)
 
-    merged = load_yamls(queries_out)
+    merged = load_model(queries_out)
     definition: dict[str, Any] = merged.get("__definition", {})
     raw_queries: list[dict[str, Any]] = definition.get("queries", [])
     parsed_queries = {record["id"]: parse_query(record) for record in raw_queries}

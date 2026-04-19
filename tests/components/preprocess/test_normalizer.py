@@ -93,6 +93,23 @@ class TestNormalize:
         assert (out / "items.yml.yaml").exists()
         assert (out / "items.md.yaml").exists()
 
+    def test_unrecognized_extensions_are_ignored(
+        self, tmp_path: Path, schema: dict[str, object]
+    ) -> None:
+        src = tmp_path / "contents"
+        src.mkdir()
+        (src / "data.yaml").write_text("items:\n  - name: a\n")
+        # Files with unsupported extensions must not be treated as YAML.
+        (src / "notes.txt").write_text("not valid yaml: { [")
+        (src / "README").write_text("project readme")
+
+        out = tmp_path / "normalized"
+        normalize(src, out, schema)
+
+        assert (out / "data.yaml.yaml").exists()
+        assert not (out / "notes.txt.yaml").exists()
+        assert not (out / "README.yaml").exists()
+
 
 # ── check ─────────────────────────────────────────────────────────
 
