@@ -386,6 +386,7 @@ categories:
           実装ベースで全量書き、ユーザレビューは TOC のみ（L5b と同じ運用）。
           最終磨きは L5f。
         phase: 8
+        done: true
       L5d:
         title: Guides 執筆
         note: |
