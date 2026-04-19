@@ -179,15 +179,20 @@ categories:
       F1:
         title: Generator の動的名前引き拡張
         note: 変数で view 名を参照できるようにする (F2/F3 の前提)
-        phase: 10
+        phase: 8
       F2:
         title: Table View (実データのテーブル表示)
-        note: 前提 F1
-        phase: 10
+        note: |
+          前提 F1。L5d (Guides 執筆) の検討過程で、テンプレートを書く前に
+          スキーマ / コンテンツを育てるフィードバックチャネルとして不可欠と判明し、
+          phase 10 から phase 8 に昇格。F3 と実装の大半が共通化できる見込み。
+        phase: 8
       F3:
         title: Query View (クエリ結果の表示)
-        note: 前提 F1
-        phase: 10
+        note: |
+          前提 F1。F2 と実装共有できる見込みのため同時実装。
+          phase 10 から phase 8 に昇格。
+        phase: 8
       F4:
         title: ER 図テンプレート
         note: 前提 D, E3, Mermaid エスケープ
@@ -348,18 +353,25 @@ categories:
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
-        phase: 8
+        phase: 10
       L2:
         title: スキーマ + クエリ + テンプレート群の構築
-        phase: 8
+        phase: 10
       L3:
         title: 実施過程で見つかったツールの不足を A〜K にフィードバック
-        phase: 8
+        phase: 10
       L4:
         title: tasks のフェーズ別ビュー作成
         note: "E5 で from: parent.child は完了。クエリ + テンプレートで実現"
         phase: 8
         done: true
+
+  LII:
+    title: 利用者ドキュメント
+    impl_paths:
+      - docs/
+      - README.md
+    tasks:
       L5a:
         title: "Reference: Schema + Content Formats 執筆"
         note: |
@@ -374,7 +386,7 @@ categories:
           dev-docs/design/composer/ と design/generator/ を参照元とし、
           Implemented 機能のみ。
           実装ベースで全量書き、ユーザレビューは TOC のみ。
-          文体・用語の最終磨きは L5f（Reference polish）に委ねる。
+          文体・用語の最終磨きは L5e（Reference polish）に委ねる。
         phase: 8
         done: true
       L5c:
@@ -384,29 +396,30 @@ categories:
           dev-docs/design/app/cli-spec.md を参照元とし、init / build / watch の Implemented
           サブコマンドのみ記載。
           実装ベースで全量書き、ユーザレビューは TOC のみ（L5b と同じ運用）。
-          最終磨きは L5f。
+          最終磨きは L5e。
         phase: 8
         done: true
       L5d:
         title: Guides 執筆
         note: |
-          docs/guides.md の本文を埋める。Guides は docs/ の中核で、
-          用語定義とメンタルモデル構築をここに集約する。
-          L5a〜L5c の Reference を参照しつつ、ワークフロー単位
-          （スキーマ設計 / コンテンツ記述 / クエリ / テンプレート / ビルドと watch）で解説する。
+          docs/guides.md の本文を埋める。Intro / Quick Start / 執筆フロー /
+          コンテンツとスキーマ / クエリ / テンプレート を 1 ファイルに集約する。
+          見出し骨格は既に配置済み。
+
+          章構成は「another-mood とは → Quick Start → 執筆フロー →
+          コンテンツとスキーマ → クエリ → テンプレート」。出力側から
+          内側へ peel back する流れ。独立 how-to + 「なぜこう書くか」で構成し、
+          メンタルモデル節は置かない（利用者がワークフローを追ううちに
+          自然に獲得する構成）。用語はインライン定義で済ませる。
+
+          前提: F1〜F3 実装後に着手する。テンプレート章を最後に回す構成は、
+          F2/F3 のメタビューでスキーマ/コンテンツ/クエリを育てられることに依存する。
         phase: 8
       L5e:
-        title: Getting Started 執筆
-        note: |
-          docs/getting-started.md の本文を埋める。Guides の最小サンプルを
-          「動かすだけ」に絞り、概念説明は Guides 側に任せる。
-          インストールから成果物確認までを 1 ファイル分の最短経路で通す。
-        phase: 8
-      L5f:
         title: Reference polish
         note: |
-          L5a〜L5c で TOC 優先に書いた Reference を、L5d (Guides) と L5e (Getting
-          Started) で確定した語彙・例・書き味に揃える最終調整。
+          L5a〜L5c で TOC 優先に書いた Reference を、L5d (Guides) で確定した
+          語彙・例・書き味に揃える最終調整。
           用語定義の重複整理、cross-reference の見直し、文体の統一が主。
         phase: 8
       L6:
