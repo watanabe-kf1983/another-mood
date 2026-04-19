@@ -1,5 +1,124 @@
 # Template
 
-テンプレート構文のリファレンス。Jinja2 をベースに、root / section 等の独自タグを追加している。
+**テンプレート**（template）は views データを Markdown ドキュメントに変換する表現層。[Jinja2](https://jinja.palletsprojects.com/) をベースに、ファイル出力を司る `{% section %}` タグを独自に拡張している。
 
-> **TBD**: 本章は未執筆。ベースとなる Jinja2 構文の必要部分、独自タグの仕様、組み込みフィルタ・関数等を整理予定。
+テンプレートは `{project}/definition/templates/` 配下に `.md` 拡張子で置く。拡張子を `.md` にするのは、エディタのシンタックスハイライトに乗せて本文の編集体験を確保するため（テンプレート記法と Markdown 本文が混在するので、プレーンテキストとして扱うと視覚的に区別しづらい）。
+
+## エントリポイント: `index.md`
+
+`index.md` がルートテンプレートになる。ドキュメント全体の TOC（目次）を `index.md` に書き、サブページは `{% section %}` で呼び出す構成にする。
+
+```jinja2
+{# templates/index.md #}
+# システム設計ドキュメント
+
+## エンティティ一覧
+
+{%- for entity in entities %}
+- [{{ entity.name }}](entity-detail/{{ entity.id }}.md)
+{%- endfor %}
+
+{%- for entity in entities -%}
+{% section "entity-detail" with entity %}
+{%- endfor %}
+```
+
+読者や目的が異なる場合は index テンプレートを分ける想定（社内向け / 顧客向け等）。
+
+## テンプレートへのデータ入力
+
+テンプレートからは、正規化済みデータとクエリ view を同じ名前空間で参照できる（[Query DSL](query-dsl.md) 参照）。
+
+- 正規化済みデータ: `contents/` のトップレベルキー（= スキーマ名）
+- クエリ view: `queries/` のファイル内トップレベルキー
+- prose view: `contents/` 配下の Markdown ファイルから自動生成される（[Content Formats](content-formats.md#散文データ) 参照）
+
+```jinja2
+{# entities は正規化済みデータ、erds はクエリ view #}
+{% for entity in entities %}
+  ...
+{% endfor %}
+
+{% for entry in erds %}
+  ...
+{% endfor %}
+```
+
+## Jinja2 拡張: `{% section %}`
+
+`{% section %}` はサブテンプレートをレンダリングして**別ファイルに書き出す**独自タグ。
+
+```jinja2
+{% section "NAME" with DATA %}
+```
+
+| 部分 | 説明 |
+|---|---|
+| `NAME` | サブテンプレートのベース名（拡張子 `.md` を除いた名前を文字列で） |
+| `DATA` | サブテンプレートに渡すデータ（辞書オブジェクト） |
+
+`DATA` が辞書でない場合はエラー。
+
+### 出力先の自動決定
+
+`DATA` に `id` フィールドがあるかどうかで出力先パスが決まる。
+
+| `DATA` | 出力先 |
+|---|---|
+| `{ id: "foo", ... }` を含む | `{outDir}/NAME/foo.md` |
+| `id` フィールドなし | `{outDir}/NAME.md` |
+
+### タグの戻り値
+
+`{% section %}` タグ自体は空文字列を返す。出力ファイルは副作用として書き出されるので、親テンプレート内で `{% section %}` を置いた位置には何も現れない（空白のみ）。
+
+親ページからサブページへのリンクを張りたい場合は、`{% section %}` の外側に Markdown のリンク記法を別途書く:
+
+```jinja2
+{%- for entity in entities %}
+- [{{ entity.name }}](entity-detail/{{ entity.id }}.md)
+{%- endfor %}
+
+{%- for entity in entities -%}
+{% section "entity-detail" with entity %}
+{%- endfor %}
+```
+
+### サブテンプレート側
+
+サブテンプレート内では、`with` で渡した辞書のフィールドがトップレベル変数として参照できる。
+
+```jinja2
+{# templates/entity-detail.md #}
+# {{ name }}
+
+{{ description }}
+
+| フィールド | 型 | 備考 |
+|-----------|-----|------|
+{% for field in fields -%}
+| {{ field.name }} | {{ field.type }} | |
+{% endfor %}
+```
+
+## Undefined アクセスの扱い
+
+テンプレート内で未定義の変数・属性にアクセスしてもエラーにはならず、空文字列としてレンダリングされる。属性のチェインアクセス（例: `field.metadata.title`）も、途中のキーが存在しなくても空文字列になる。
+
+したがって optional なフィールドを参照する際、`if metadata is defined` のようなガードは不要:
+
+```jinja2
+{# metadata や metadata.title が存在しなくても安全 #}
+| {{ field.id }} | {{ field.metadata.title }} |
+```
+
+## Typed Value の取り扱い
+
+Markdown データソースの本文（`body`）のような Typed Value（`{ mime_type, content }` 形式のオブジェクト）は、`.content` を参照して埋め込む。
+
+```jinja2
+{# Markdown から変換された prose.body を埋め込む #}
+{{ body.content }}
+```
+
+Typed Value の詳細は [Content Formats](content-formats.md#typed-value) を参照。
