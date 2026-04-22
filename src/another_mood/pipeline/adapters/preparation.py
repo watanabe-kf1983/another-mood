@@ -49,21 +49,24 @@ def sync(src_dir: Path, out_dir: Path) -> None:
     in memory.
     """
     with dir_lock(out_dir):
-        old_files: set[str] = _collect_md_files(out_dir) if out_dir.exists() else set()
-        src_files = {
-            p.replace("index.md", "_index.md") if p.endswith("index.md") else p
-            for p in _collect_md_files(src_dir)
-        }
         out_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
-        for index_file in out_dir.rglob("index.md"):
-            index_file.rename(index_file.with_name("_index.md"))
+        old_files = _collect_files(out_dir)
+        src_files = {_hugo_name(p) for p in _collect_files(src_dir)}
+        for src_file in src_dir.rglob("*"):
+            if not src_file.is_file():
+                continue
+            dst = out_dir / _hugo_name(src_file.relative_to(src_dir))
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_file, dst)
         for deleted in old_files - src_files:
-            deleted_path = out_dir / deleted
-            deleted_path.parent.mkdir(parents=True, exist_ok=True)
-            deleted_path.write_text(_DELETED_CONTENT)
+            (out_dir / deleted).write_text(_DELETED_CONTENT)
 
 
-def _collect_md_files(directory: Path) -> set[str]:
-    """Collect relative paths of .md files in a directory."""
-    return {str(p.relative_to(directory)) for p in directory.rglob("*.md")}
+def _hugo_name(rel: Path) -> Path:
+    """Apply Hugo's index.md → _index.md rename at the leaf."""
+    return rel.with_name("_index.md") if rel.name == "index.md" else rel
+
+
+def _collect_files(directory: Path) -> set[Path]:
+    """Collect relative paths of files in a directory."""
+    return {p.relative_to(directory) for p in directory.rglob("*") if p.is_file()}
