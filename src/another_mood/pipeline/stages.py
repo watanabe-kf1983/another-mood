@@ -138,13 +138,13 @@ def publish_stage(config: ProjectConfig) -> Task:
 
 def build_report_stage(config: ProjectConfig) -> ReportingStage:
     """Report build result to user. Exposes BuildReport for CLI."""
-    reconcile_out = config.component_output(reconcile)
+    publish_out = config.component_output(publish)
     first = True
 
     def report() -> BuildReport:
         nonlocal first
-        with dir_lock(reconcile_out.dir):
-            result = BuildReport.collect(reconcile_out.dir / "reports")
+        with dir_lock(publish_out.dir):
+            result = BuildReport.collect(publish_out.dir / "reports")
         succeeded = not result.has_errors()
         messages = {
             (True, True): "Build successfully completed",
@@ -159,7 +159,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
 
     return ReportingStage(
         report_fn=report,
-        upstreams=[reconcile_out],
+        upstreams=[publish_out],
     )
 
 
