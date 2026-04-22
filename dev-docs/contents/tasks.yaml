@@ -226,6 +226,31 @@ categories:
         title: render.customServer.command 対応
         note: config-spec.md
         phase: 10
+      G4:
+        title: schema_dir の単複統一 (schema/ → schemas/)
+        note: |
+          ディレクトリ名が schema/ のみ単数で queries/ / templates/ と
+          揃わない問題を解消。2 層概念（ユーザが書く「schema」=
+          JSON Schema 由来 vs 内部で抽出される「entity」=
+          browsable ノード）は正当な区別として維持する方針のため、
+          以下は据え置き:
+            - YAML キー `schemas:` (OpenAPI の components.schemas 流)
+            - UI 見出し `Entities` (ネスト展開済みノード群を指す)
+            - 内部コード変数 `entity` (schema_tree / data_catalog 他)
+
+          リネーム対象 (破壊的):
+            - <project>/definition/schema/ → definition/schemas/
+            - ProjectConfig.schema_dir → schemas_dir (src/another_mood/config.py)
+            - 環境変数 RB_SCHEMA_DIR → RB_SCHEMAS_DIR
+            - src/another_mood/resources/schemas/schema/ →
+              src/another_mood/resources/schemas/schemas/
+            - showcase/examples/*/definition/schema/ 配下の移動
+            - dev-docs/definition/schema/ 配下の移動
+            - docs/ 内の schema/ 言及箇所の更新
+
+          CHANGELOG / 移行メモが必要。F1-F3 (Table / Query View) による
+          データシート UI 追加と認知負荷を集約できるので、同時期の実施が望ましい。
+        phase: 8
 
   H:
     title: バイナリファイルの取り扱い

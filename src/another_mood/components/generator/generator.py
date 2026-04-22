@@ -19,8 +19,8 @@ from another_mood.components.shared.json_data_model import load_model
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     data = load_model(data_dir)
-    render("__root", data, out_dir, templates_dir=templates_dir)
-    render("__meta_root", data, out_dir / "__reference")
+    render("__root", data, out_dir)
+    render("__reports", data, out_dir / "reports", templates_dir=templates_dir)
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)

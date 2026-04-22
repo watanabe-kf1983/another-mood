@@ -22,7 +22,7 @@ class TestWriteIndex:
 
         out_dir = tmp_path / "output"
         data = {"items": [{"name": "Alice"}, {"name": "Bob"}]}
-        render("__root", data, out_dir, templates_dir=templates_dir)
+        render("__reports", data, out_dir, templates_dir=templates_dir)
 
         assert (out_dir / "index.md").read_text() == dedent("""\
             # List

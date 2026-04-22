@@ -68,7 +68,7 @@ class _HugoServeTask(Task):
         process = renderer.serve(self.content_dir, self.port)
         print(
             f"Server running at http://localhost:{self.port}/\n"
-            f"  Auto-generated reference: http://localhost:{self.port}/__reference/",
+            f"  Reports: http://localhost:{self.port}/reports/",
             file=sys.stderr,
             flush=True,
         )
