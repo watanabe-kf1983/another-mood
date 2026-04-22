@@ -11,6 +11,7 @@ from pathlib import Path
 
 from another_mood.components.shared.dir_lock import exclusive_write
 from another_mood.pipeline.adapters import renderer
+from another_mood.pipeline.adapters.preparation import prepare_render
 from another_mood.pipeline.adapters.watcher import Watcher
 from another_mood.pipeline.base import Task
 
@@ -62,8 +63,8 @@ class RenderStage(Task):
             process.wait()
 
     def _prepare(self) -> Path:
-        renderer.prepare(self.src_dir, self.render_input_dir)
-        return self.render_input_dir
+        prepare_render(data_dir=self.src_dir.parent, out_dir=self.render_input_dir)
+        return self.render_input_dir / "data"
 
 
 _NORMAL_EXIT_CODES = {0, -signal.SIGTERM, -signal.SIGINT}

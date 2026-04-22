@@ -1,8 +1,8 @@
-"""Tests for renderer.prepare — Hugo content sync."""
+"""Tests for preparation.sync — Hugo content sync."""
 
 from pathlib import Path
 
-from another_mood.pipeline.adapters.renderer import prepare
+from another_mood.pipeline.adapters.preparation import sync
 
 
 def _write(path: Path, content: str = "# Hello\n") -> None:
@@ -10,13 +10,13 @@ def _write(path: Path, content: str = "# Hello\n") -> None:
     path.write_text(content)
 
 
-class TestPrepare:
+class TestSync:
     def test_copies_files(self, tmp_path: Path) -> None:
         src = tmp_path / "src"
         _write(src / "a.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
+        sync(src, out)
 
         assert (out / "a.md").read_text() == "# Hello\n"
 
@@ -25,7 +25,7 @@ class TestPrepare:
         _write(src / "index.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
+        sync(src, out)
 
         assert (out / "_index.md").exists()
         assert not (out / "index.md").exists()
@@ -35,7 +35,7 @@ class TestPrepare:
         _write(src / "sub" / "index.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
+        sync(src, out)
 
         assert (out / "sub" / "_index.md").exists()
         assert not (out / "sub" / "index.md").exists()
@@ -46,14 +46,14 @@ class TestPrepare:
         _write(src / "a.md")
         out = tmp_path / "out"
 
-        # First prepare: a.md and b.md
+        # First sync: a.md and b.md
         _write(src / "b.md")
-        prepare(src, out)
+        sync(src, out)
         assert (out / "b.md").read_text() == "# Hello\n"
 
-        # Second prepare: b.md removed from src
+        # Second sync: b.md removed from src
         (src / "b.md").unlink()
-        prepare(src, out)
+        sync(src, out)
 
         assert (
             out / "b.md"
@@ -66,13 +66,13 @@ class TestPrepare:
         _write(src / "sub" / "page.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
+        sync(src, out)
         assert (out / "sub" / "page.md").exists()
 
         # Remove sub/page.md from src
         (src / "sub" / "page.md").unlink()
         (src / "sub").rmdir()
-        prepare(src, out)
+        sync(src, out)
 
         assert (
             out / "sub" / "page.md"
@@ -85,14 +85,14 @@ class TestPrepare:
         _write(src / "sub" / "index.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
+        sync(src, out)
         assert (out / "_index.md").exists()
         assert (out / "sub" / "_index.md").exists()
 
         # Remove sub/index.md from src
         (src / "sub" / "index.md").unlink()
         (src / "sub").rmdir()
-        prepare(src, out)
+        sync(src, out)
 
         assert (
             out / "sub" / "_index.md"
@@ -104,18 +104,18 @@ class TestPrepare:
         _write(src / "b.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
-        prepare(src, out)
+        sync(src, out)
+        sync(src, out)
 
         assert (out / "a.md").read_text() == "# Hello\n"
         assert (out / "b.md").read_text() == "# Hello\n"
 
-    def test_first_prepare_no_crash(self, tmp_path: Path) -> None:
-        """First prepare with no existing out_dir should work."""
+    def test_first_sync_no_crash(self, tmp_path: Path) -> None:
+        """First sync with no existing out_dir should work."""
         src = tmp_path / "src"
         _write(src / "a.md")
         out = tmp_path / "out"
 
-        prepare(src, out)
+        sync(src, out)
 
         assert (out / "a.md").exists()
