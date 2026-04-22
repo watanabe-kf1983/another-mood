@@ -25,8 +25,8 @@ my-project/                    # CWD = <projectDir>（mood build .）
       compose/                 #   Composer 出力
       generate/                #   Generator 出力
       reconcile/               #   Reconcile 出力
-      render_input/            #   Hugo 向け content 準備 (RenderStage 内部 Component)
-      render/                  #   Hugo ビルド結果
+      prepare_render/          #   Hugo 向け content 準備 (RenderStage 内部 Component)
+      hugo_build/              #   Hugo ビルド結果 (RenderStage 内部 Component)
     output/                    # out_dir: Document Generator 出力（最終）
     render/                    # render_dir: Document Renderer 出力（最終）
 ```

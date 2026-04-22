@@ -1,9 +1,7 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
-import shutil
 import sys
 from datetime import datetime
-from pathlib import Path
 
 from another_mood.components import (
     compose,
@@ -11,14 +9,15 @@ from another_mood.components import (
     inspect_schema,
     normalize_contents,
     normalize_queries,
+    publish,
     reconcile,
 )
 from another_mood.components.shared.build_report import BuildReport
-from another_mood.components.shared.component import Component
 from another_mood.components.shared.dir_lock import dir_lock
 from another_mood.config import ProjectConfig
+from another_mood.pipeline.adapters.preparation import prepare_render
 from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task
-from another_mood.pipeline.render import RenderStage
+from another_mood.pipeline.render import RenderStage, hugo_build
 
 
 def inspect_schema_stage(config: ProjectConfig) -> Task:
@@ -110,44 +109,42 @@ def reconcile_stage(config: ProjectConfig) -> Task:
 
 def render_stage(config: ProjectConfig) -> Task:
     """Prepare Hugo content and render to HTML."""
-    reconcile_out = config.component_output(reconcile)
     return RenderStage(
-        src_dir=reconcile_out.dir / "data",
-        render_input_dir=config.tmp_subdir("render_input"),
-        render_dir=config.render_dir,
+        upstream=config.component_output(reconcile),
+        prep_dir=config.component_output(prepare_render).dir,
+        hugo_build_dir=config.component_output(hugo_build).dir,
         port=config.port,
     )
 
 
-@Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
-def publish(data_dir: Path, *, out_dir: Path) -> None:
-    """Copy reconciled Markdown from data_dir/data to out_dir."""
-    src = data_dir / "data"
-    if src.exists():
-        shutil.copytree(src, out_dir, dirs_exist_ok=True)
-
-
 def publish_stage(config: ProjectConfig) -> Task:
-    """Copy reconciled Markdown from tmp to out_dir.
+    """Copy reconciled Markdown and Hugo HTML from tmp to their public dirs.
 
-    Render output is published directly by RenderStage.run — it is
-    produced only in build mode, not watch mode (Hugo's live server
-    handles preview), so publishing it here would be dead work.
+    Watches only the terminal upstream (hugo_build): by the time it
+    completes, all prior stages have settled, so we publish both outputs
+    together in one cascade fire.
     """
     reconcile_out = config.component_output(reconcile)
-    call = publish.bind(data_dir=reconcile_out.dir, out_dir=config.out_dir)
-    return Stage(run_fn=call, watch_paths=[], upstreams=[reconcile_out])
+    hugo_out = config.component_output(hugo_build)
+    publish_out = config.component_output(publish)
+    call = publish.bind(
+        upstream=hugo_out.dir,
+        out_dir=publish_out.dir,
+        src_dirs=[reconcile_out.dir / "data", hugo_out.dir / "data"],
+        dist_dirs=[config.out_dir, config.render_dir],
+    )
+    return Stage(run_fn=call, watch_paths=[], upstreams=[hugo_out])
 
 
 def build_report_stage(config: ProjectConfig) -> ReportingStage:
     """Report build result to user. Exposes BuildReport for CLI."""
-    reconcile_out = config.component_output(reconcile)
+    publish_out = config.component_output(publish)
     first = True
 
     def report() -> BuildReport:
         nonlocal first
-        with dir_lock(reconcile_out.dir):
-            result = BuildReport.collect(reconcile_out.dir / "reports")
+        with dir_lock(publish_out.dir):
+            result = BuildReport.collect(publish_out.dir / "reports")
         succeeded = not result.has_errors()
         messages = {
             (True, True): "Build successfully completed",
@@ -162,7 +159,7 @@ def build_report_stage(config: ProjectConfig) -> ReportingStage:
 
     return ReportingStage(
         report_fn=report,
-        upstreams=[reconcile_out],
+        upstreams=[publish_out],
     )
 
 
