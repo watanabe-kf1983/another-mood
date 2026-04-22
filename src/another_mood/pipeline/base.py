@@ -72,25 +72,39 @@ class ReportingStage(Stage):
         self.report = self._report_fn()
 
 
+class MultiStageTask(Task):
+    """Composite Task: runs child tasks in sequence under a shared watch lifecycle."""
+
+    def __init__(self, tasks: Sequence[Task]) -> None:
+        self._tasks = tasks
+
+    def run(self) -> None:
+        for task in self._tasks:
+            task.run()
+
+    @contextmanager
+    def start_watching(self, shutdown: threading.Event) -> Generator[None]:
+        with ExitStack() as stack:
+            for task in self._tasks:
+                stack.enter_context(task.start_watching(shutdown))
+            yield
+
+
 class Pipeline:
-    """Composite task: runs a sequence of tasks as one."""
+    """Top-level pipeline: owns the shutdown Event and the reporting stage."""
 
     def __init__(self, stages: Sequence[Task], reporting: ReportingStage) -> None:
-        self._stages = stages
+        self._inner = MultiStageTask([*stages, reporting])
         self._reporting = reporting
 
     def run(self) -> BuildReport:
         """Run all stages then reporting. Return the build report."""
-        for stage in self._stages:
-            stage.run()
-        self._reporting.run()
+        self._inner.run()
         return self._reporting.report
 
     @contextmanager
     def start_watching(self) -> Generator[threading.Event]:
         """Start all tasks watching. Yields shutdown event. Cleans up all on exit."""
         shutdown = threading.Event()
-        with ExitStack() as stack:
-            for task in [*self._stages, self._reporting]:
-                stack.enter_context(task.start_watching(shutdown))
+        with self._inner.start_watching(shutdown):
             yield shutdown
