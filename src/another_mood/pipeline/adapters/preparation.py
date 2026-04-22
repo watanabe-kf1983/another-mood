@@ -38,8 +38,9 @@ def prepare_render(data_dir: Path, *, out_dir: Path) -> None:
         if data_dirs is not None:
             sync(data_dirs.upstreams[0], data_dirs.out)
         else:
-            error_page = (data_dir / "data" / "index.md").read_text()
-            sync(data_dir / "data", out_dir / "data", deleted_content=error_page)
+            page = data_dir / "data" / "index.md"
+            content = page.read_text() if page.is_file() else _DELETED_CONTENT
+            sync(data_dir / "data", out_dir / "data", deleted_content=content)
 
 
 def sync(
