@@ -1,13 +1,21 @@
-"""Tests for preparation.sync — Hugo content sync."""
+"""Tests for preparation — Hugo content sync + prepare_render Component."""
 
 from pathlib import Path
+from typing import Any
 
-from another_mood.pipeline.adapters.preparation import sync
+import yaml
+
+from another_mood.pipeline.adapters.preparation import prepare_render, sync
 
 
 def _write(path: Path, content: str = "# Hello\n") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content)
+
+
+def _write_yaml(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(data, allow_unicode=True))
 
 
 class TestSync:
@@ -119,3 +127,43 @@ class TestSync:
         sync(src, out)
 
         assert (out / "a.md").exists()
+
+    def test_deleted_content_override(self, tmp_path: Path) -> None:
+        """Caller-supplied deleted_content replaces the default placeholder."""
+        src = tmp_path / "src"
+        _write(src / "a.md")
+        _write(src / "b.md")
+        out = tmp_path / "out"
+
+        sync(src, out)
+        (src / "b.md").unlink()
+        sync(src, out, deleted_content="# Error\n")
+
+        assert (out / "b.md").read_text() == "# Error\n"
+        assert (out / "a.md").read_text() == "# Hello\n"
+
+
+class TestPrepareRender:
+    def test_upstream_error_replaces_deleted_pages_with_build_report(
+        self, tmp_path: Path
+    ) -> None:
+        """On upstream error, previously-rendered pages get the build-report body."""
+        data_dir = tmp_path / "upstream"
+        out_dir = tmp_path / "out"
+
+        # Previous successful run: out_dir has a regular page.
+        _write(out_dir / "data" / "foo.md")
+
+        # Upstream now carries an error + the build-report index.md from reconcile.
+        _write_yaml(
+            data_dir / "reports" / "__build_report.yaml",
+            {"__build_report": {"errors": [{"message": "boom"}]}},
+        )
+        _write(data_dir / "data" / "index.md", "# Build Failed\n\nboom\n")
+
+        prepare_render(data_dir=data_dir, out_dir=out_dir)
+
+        assert (
+            out_dir / "data" / "_index.md"
+        ).read_text() == "# Build Failed\n\nboom\n"
+        assert (out_dir / "data" / "foo.md").read_text() == "# Build Failed\n\nboom\n"
