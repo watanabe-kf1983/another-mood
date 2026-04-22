@@ -7,6 +7,7 @@ from another_mood.components.preprocess.normalizer import (
     normalize_queries,
 )
 from another_mood.components.preprocess.schema_inspector import inspect_schema
+from another_mood.components.publish.publish import publish
 
 __all__ = [
     "compose",
@@ -14,5 +15,6 @@ __all__ = [
     "inspect_schema",
     "normalize_contents",
     "normalize_queries",
+    "publish",
     "reconcile",
 ]

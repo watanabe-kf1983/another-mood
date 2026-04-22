@@ -1,9 +1,7 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
-import shutil
 import sys
 from datetime import datetime
-from pathlib import Path
 
 from another_mood.components import (
     compose,
@@ -11,10 +9,10 @@ from another_mood.components import (
     inspect_schema,
     normalize_contents,
     normalize_queries,
+    publish,
     reconcile,
 )
 from another_mood.components.shared.build_report import BuildReport
-from another_mood.components.shared.component import Component
 from another_mood.components.shared.dir_lock import dir_lock
 from another_mood.config import ProjectConfig
 from another_mood.pipeline.adapters.preparation import prepare_render
@@ -119,14 +117,6 @@ def render_stage(config: ProjectConfig) -> Task:
     )
 
 
-@Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
-def publish(data_dir: Path, *, out_dir: Path) -> None:
-    """Copy reconciled Markdown from data_dir/data to out_dir."""
-    src = data_dir / "data"
-    if src.exists():
-        shutil.copytree(src, out_dir, dirs_exist_ok=True)
-
-
 def publish_stage(config: ProjectConfig) -> Task:
     """Copy reconciled Markdown and Hugo HTML from tmp to their public dirs.
 
@@ -136,14 +126,14 @@ def publish_stage(config: ProjectConfig) -> Task:
     """
     reconcile_out = config.component_output(reconcile)
     hugo_out = config.component_output(hugo_build)
-    publish_md = publish.bind(data_dir=reconcile_out.dir, out_dir=config.out_dir)
-    publish_html = publish.bind(data_dir=hugo_out.dir, out_dir=config.render_dir)
-
-    def run_both() -> None:
-        publish_md()
-        publish_html()
-
-    return Stage(run_fn=run_both, watch_paths=[], upstreams=[hugo_out])
+    publish_out = config.component_output(publish)
+    call = publish.bind(
+        upstream=hugo_out.dir,
+        out_dir=publish_out.dir,
+        src_dirs=[reconcile_out.dir / "data", hugo_out.dir / "data"],
+        dist_dirs=[config.out_dir, config.render_dir],
+    )
+    return Stage(run_fn=call, watch_paths=[], upstreams=[hugo_out])
 
 
 def build_report_stage(config: ProjectConfig) -> ReportingStage:
