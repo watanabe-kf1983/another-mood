@@ -9,47 +9,69 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from another_mood.components.shared.dir_lock import exclusive_write
+from another_mood.components.shared.component import Component
+from another_mood.components.shared.component_output import ComponentOutput
+from another_mood.components.shared.errors import error_propagation
 from another_mood.pipeline.adapters import renderer
 from another_mood.pipeline.adapters.preparation import prepare_render
-from another_mood.pipeline.adapters.watcher import Watcher
-from another_mood.pipeline.base import Task
+from another_mood.pipeline.base import MultiStageTask, Stage, Task
+
+
+@Component(
+    out_dir="out_dir",
+    upstream_dirs=["prep_dir"],
+    error_propagation=False,
+)
+def hugo_build(prep_dir: Path, *, out_dir: Path) -> None:
+    """Run Hugo build. Runs even on upstream error to render the __build_report page."""
+    with error_propagation([prep_dir], out_dir, component="hugo_build") as data_dirs:
+        if data_dirs is not None:
+            renderer.build(data_dirs.upstreams[0], data_dirs.out)
+        else:
+            renderer.build(prep_dir / "data", out_dir / "data")
+
+
+def RenderStage(
+    *,
+    upstream: ComponentOutput,
+    prep_dir: Path,
+    hugo_build_dir: Path,
+    port: int,
+) -> MultiStageTask:
+    """Compose the render pipeline: prep Stage + Hugo serve Task + Hugo build Stage."""
+    prep_out = ComponentOutput(prep_dir)
+    prep_call = prepare_render.bind(data_dir=upstream.dir, out_dir=prep_dir)
+    hugo_build_call = hugo_build.bind(prep_dir=prep_dir, out_dir=hugo_build_dir)
+    content_dir = prep_dir / "data"
+
+    return MultiStageTask(
+        [
+            Stage(run_fn=prep_call, watch_paths=[], upstreams=[upstream]),
+            Stage(run_fn=hugo_build_call, watch_paths=[], upstreams=[prep_out]),
+            _HugoServeTask(content_dir=content_dir, port=port),
+        ]
+    )
 
 
 @dataclass(frozen=True)
-class RenderStage(Task):
-    """Render stage with Hugo-specific build/watch behavior."""
+class _HugoServeTask(Task):
+    """Hugo dev server. No-op in build mode (`hugo build` handles HTML output)."""
 
-    src_dir: Path
-    render_input_dir: Path
-    render_dir: Path
+    content_dir: Path
     port: int
 
     def run(self) -> None:
-        """Prepare content, then run renderer build into render_dir atomically.
-
-        Only reached in build mode — watch mode delegates rendering to the
-        Hugo live server started in start_watching.
-        """
-        prepared = self._prepare()
-        with exclusive_write(self.render_dir) as tmp:
-            renderer.build(prepared, tmp)
+        pass
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
-        """Initial prepare + dev server + cascade watcher. Terminates server on exit."""
-        prepared = self._prepare()
-        process = renderer.serve(prepared, self.port)
+        process = renderer.serve(self.content_dir, self.port)
         print(
             f"Server running at http://localhost:{self.port}/\n"
             f"  Auto-generated reference: http://localhost:{self.port}/__reference/",
             file=sys.stderr,
             flush=True,
         )
-
-        cascade_watcher = Watcher([self.src_dir.parent], self._prepare, debounce=50)
-        cascade = threading.Thread(target=cascade_watcher.run, daemon=True)
-        cascade.start()
 
         monitor = threading.Thread(
             target=_wait_for_exit, args=(process, shutdown), daemon=True
@@ -61,10 +83,6 @@ class RenderStage(Task):
         finally:
             process.terminate()
             process.wait()
-
-    def _prepare(self) -> Path:
-        prepare_render(data_dir=self.src_dir.parent, out_dir=self.render_input_dir)
-        return self.render_input_dir / "data"
 
 
 _NORMAL_EXIT_CODES = {0, -signal.SIGTERM, -signal.SIGINT}
