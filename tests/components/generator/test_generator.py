@@ -31,9 +31,10 @@ class TestGenerate:
             out_dir=out_dir,
         )
 
-        assert (out_dir / "data" / "index.md").read_text() == "# Hello\n"
-        # __meta_root is always rendered alongside __root.
-        assert (out_dir / "data" / "__reference" / "index.md").exists()
+        # User reports are rendered under reports/.
+        assert (out_dir / "data" / "reports" / "index.md").read_text() == "# Hello\n"
+        # Metadata root is always rendered at the site root.
+        assert (out_dir / "data" / "index.md").exists()
 
     def test_writes_error_to_reports_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
@@ -64,18 +65,16 @@ class TestReconcile:
     def test_passes_through_normal_output(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
-        (upstream / "data" / "index.md").write_text("# Hello\n")
-        (upstream / "data" / "__reference" / "index.md").parent.mkdir()
-        (upstream / "data" / "__reference" / "index.md").write_text("# Reference\n")
+        (upstream / "data" / "index.md").write_text("# Root\n")
+        (upstream / "data" / "reports" / "index.md").parent.mkdir()
+        (upstream / "data" / "reports" / "index.md").write_text("# Hello\n")
         (upstream / "reports").mkdir()
 
         out_dir = tmp_path / "reconcile"
         reconcile(data_dir=upstream, out_dir=out_dir)
 
-        assert (out_dir / "data" / "index.md").read_text() == "# Hello\n"
-        assert (
-            out_dir / "data" / "__reference" / "index.md"
-        ).read_text() == "# Reference\n"
+        assert (out_dir / "data" / "index.md").read_text() == "# Root\n"
+        assert (out_dir / "data" / "reports" / "index.md").read_text() == "# Hello\n"
 
     def test_renders_error_page_when_upstream_has_errors(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"
