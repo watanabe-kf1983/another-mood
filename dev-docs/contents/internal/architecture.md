@@ -6,8 +6,8 @@
 
 **SchemaInspector**
 スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
-IN: `schema_dir`
-OUT: `inspect_schema_dir`
+IN: `schemas_dir`
+OUT: `inspect_schemas_dir`
 
 **Normalizer**
 入力ディレクトリを検証し、辞書形式を配列形式に正規化する。
@@ -19,7 +19,7 @@ OUT: `normalize_contents_dir`、`normalize_queries_dir`
 
 **Composer**
 正規化済みデータを自動的にビューとしてパススルーし、さらに正規化済みクエリがあれば評価して追加のビューを生成する。
-IN: `inspect_schema_dir`、`normalize_contents_dir`、`normalize_queries_dir`
+IN: `inspect_schemas_dir`、`normalize_contents_dir`、`normalize_queries_dir`
 OUT: `compose_dir`
 
 **Document Generator**

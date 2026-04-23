@@ -435,9 +435,9 @@ class TestInspectSchema:
     """inspect_schema: pipeline component writes per-file data catalog."""
 
     def test_writes_per_file(self, tmp_path: Path) -> None:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "recipes.yaml").write_text(
+        schemas_dir = tmp_path / "schemas"
+        schemas_dir.mkdir()
+        (schemas_dir / "recipes.yaml").write_text(
             "schemas:\n"
             "  recipes:\n"
             "    type: object\n"
@@ -450,7 +450,7 @@ class TestInspectSchema:
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
-        inspect_schema.fn(schema_dir, out_dir=out_dir)
+        inspect_schema.fn(schemas_dir, out_dir=out_dir)
 
         out_file = out_dir / "recipes.yaml"
         assert out_file.exists()
@@ -461,12 +461,12 @@ class TestInspectSchema:
 
     def test_emits_builtin_prose_catalog(self, tmp_path: Path) -> None:
         """Built-in prose schema is emitted under __builtin/ so it shows up in meta-docs."""
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
+        schemas_dir = tmp_path / "schemas"
+        schemas_dir.mkdir()
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
-        inspect_schema.fn(schema_dir, out_dir=out_dir)
+        inspect_schema.fn(schemas_dir, out_dir=out_dir)
 
         out_file = out_dir / "__builtin" / "prose.yaml"
         assert out_file.exists()

@@ -1,6 +1,6 @@
 """SchemaInspector — validate and extract metadata from user schema files.
 
-Reads all YAML files from schema_dir, validates each against the
+Reads all YAML files from schemas_dir, validates each against the
 built-in SchemaSchema, extracts a data catalog (entities + fields),
 and writes the result to data_catalog_dir.
 """
@@ -22,7 +22,7 @@ from another_mood.components.shared.file_type import FileType
 from another_mood.components.shared.json_data_model import load_model
 
 _SCHEMA_SCHEMA_DIR = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "schema")
+    str(resources.files("another_mood.resources") / "schemas" / "schemas")
 )
 
 _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
@@ -31,13 +31,13 @@ _BUILTIN_CONTENTS_SCHEMA_DIR = Path(
 
 
 @Component(out_dir="out_dir")
-def inspect_schema(schema_dir: Path, *, out_dir: Path) -> None:
+def inspect_schema(schemas_dir: Path, *, out_dir: Path) -> None:
     """Validate schema files and extract data catalog per file."""
-    schema_files = _list_yaml_files(schema_dir)
+    schema_files = _list_yaml_files(schemas_dir)
     check_schema(schema_files)
 
     for schema_file in schema_files:
-        rel = schema_file.relative_to(schema_dir)
+        rel = schema_file.relative_to(schemas_dir)
         _emit_catalog_file(schema_file, out_dir / rel)
 
     # Emit built-in contents schemas (e.g. prose) so that their entities

@@ -35,12 +35,12 @@ _QUERY_SCHEMA_DIR = Path(
 def normalize_contents(
     src_dir: Path,
     *,
-    schema_dir: Path,
+    schemas_dir: Path,
     data_catalog_dir: Path | None = None,
     out_dir: Path,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
-    normalize(src_dir, out_dir, build_contents_schema(schema_dir))
+    normalize(src_dir, out_dir, build_contents_schema(schemas_dir))
 
 
 @Component(out_dir="out_dir")
@@ -58,15 +58,15 @@ def normalize_queries(queries_dir: Path, *, out_dir: Path) -> None:
 
 
 def build_contents_schema(
-    schema_dir: Path,
+    schemas_dir: Path,
 ) -> Mapping[str, object]:
     """Build a validation/normalization schema for content files.
 
     Merges the built-in prose schema with user-defined schemas from
-    schema_dir, then wraps them as JSON Schema properties so that
+    schemas_dir, then wraps them as JSON Schema properties so that
     each top-level key in a content file is validated against its schema.
     """
-    merged = load_model(_BUILTIN_CONTENTS_SCHEMA_DIR, schema_dir)
+    merged = load_model(_BUILTIN_CONTENTS_SCHEMA_DIR, schemas_dir)
     schemas = merged.get("schemas", {})
     return {"type": "object", "properties": schemas, "additionalProperties": False}
 
