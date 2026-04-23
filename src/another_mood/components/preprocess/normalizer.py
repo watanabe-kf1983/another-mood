@@ -89,12 +89,11 @@ def normalize(
     """Validate all files, then parse, normalize, and write each to out_dir."""
     check(src_dir, schema)
     for src_file in _iter_files(src_dir):
-        rel = src_file.relative_to(src_dir)
-        data = _parse(src_file, rel)
+        data = _parse(src_file, src_dir)
         if data is None:
             continue
         normalized = normalize_data(data, schema)
-        _write(wrapper(normalized), rel, out_dir)
+        _write(wrapper(normalized), src_file.relative_to(src_dir), out_dir)
 
 
 def check(src_dir: Path, schema: Mapping[str, object]) -> None:
@@ -105,15 +104,14 @@ def check(src_dir: Path, schema: Mapping[str, object]) -> None:
     validator = Validator(schema)
     diagnostics: list[Diagnostic] = []
     for src_file in _iter_files(src_dir):
-        rel = src_file.relative_to(src_dir)
         try:
-            data = _parse(src_file, rel)
+            data = _parse(src_file, src_dir)
         except FileValidationError as exc:
             diagnostics.extend(exc.diagnostics)
             continue
         if data is None:
             continue
-        diagnostics.extend(validator.validate(data, rel))
+        diagnostics.extend(validator.validate(data, src_file))
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
@@ -126,10 +124,11 @@ def _iter_files(src_dir: Path) -> Sequence[Path]:
     return [f for f in sorted(src_dir.rglob("*")) if f.is_file()]
 
 
-def _parse(src: Path, rel: Path) -> Mapping[str, object] | None:
+def _parse(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     """Parse a source file into data, or None if the file is not a recognized source."""
     if FileType.MARKDOWN.match(src):
         source = src.read_text(encoding="utf-8")
+        rel = src.relative_to(src_dir)
         record = parse_markdown(source, str(rel.with_suffix("")))
         return {"prose": [record.to_data()]}
     if FileType.YAML.match(src):
