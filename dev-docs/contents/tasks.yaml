@@ -168,6 +168,13 @@ categories:
           silent に上書きするため、著者が気付かずにパススルーデータを
           上書きする事故が起きる。重複を検知してエラーにする。
         phase: 10
+      E7:
+        title: "Query Object の apply_to_catalog 実装"
+        note: |
+          設計: internal/components/composer.md「Query Object の双対性」節。
+          クエリ定義から静的に出力スキーマを推論 + 合成 child entity を
+          __definition.entities に emit。F3 の前提。
+        phase: 8
 
   F:
     title: メタドキュメンテーション拡張
@@ -188,11 +195,13 @@ categories:
           スキーマ / コンテンツを育てるフィードバックチャネルとして不可欠と判明し、
           phase 10 から phase 8 に昇格。F3 と実装の大半が共通化できる見込み。
         phase: 8
+        done: true
       F3:
         title: Query View (クエリ結果の表示)
         note: |
-          前提 F1。F2 と実装共有できる見込みのため同時実装。
-          phase 10 から phase 8 に昇格。
+          前提 F1, E7。
+          設計: design/app/meta-documentation.md「Entity と Query のページ構成」節。
+          __meta_query.md に Definition / Output Schema / Results の 3 セクションを追加。
         phase: 8
       F4:
         title: ER 図テンプレート
@@ -354,6 +363,20 @@ categories:
             - for 形式:    {% section "NAME" for SEQ %}
             - filter 形式: {% section NAME[id="..."] %}
         phase: 10
+      P2:
+        title: "{% section %} に inline オプション"
+        note: |
+          設計: design/generator/template-spec.md「inline オプション」節。
+          強制インライン展開。F3 の Query View ページ内埋め込みで使う。
+          C4 (paginate 自動判定) の先行版。
+        phase: 8
+      P3:
+        title: "{% section %} → mood_section タグリネーム"
+        note: |
+          標準 Jinja2 タグと紛らわしい名前を独自タグ命名に寄せる。L6
+          (英訳 + MCP 準備) 前に実施するのが望ましいが必須ではない。
+          既存の組み込み / ユーザ / docs / reference の一括置換が必要。
+        phase: 8
 
   O:
     title: バグ修正
