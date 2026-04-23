@@ -24,7 +24,7 @@ contents / queries の2ステージは同一の処理フローに従う:
 
 ## エラー伝播
 
-Normalizer は処理の前に、inspect_schema_dir にエラーが含まれるかを確認する。
+Normalizer は処理の前に、inspect_schemas_dir にエラーが含まれるかを確認する。
 エラーがあれば検証・正規化を実行せず、エラー情報を出力ディレクトリに伝播する。
 queries の Normalize ではツール内蔵スキーマを使うため、この確認は空振りとなる。
 
