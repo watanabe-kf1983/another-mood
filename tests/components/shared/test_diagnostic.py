@@ -7,6 +7,7 @@ from another_mood.components.shared.diagnostic import (
     DiagnosticSeverity,
     FileValidationError,
 )
+from another_mood.components.shared.diagnostic_format import format_pointed
 
 
 class TestDiagnostic:
@@ -25,6 +26,7 @@ class TestDiagnostic:
             "message": "oops",
             "severity": "error",
             "source": "normalizer",
+            "snippet": "",
         }
 
     def test_to_data_with_none_line_column(self) -> None:
@@ -36,7 +38,27 @@ class TestDiagnostic:
             "message": "msg",
             "severity": "error",
             "source": "",
+            "snippet": "",
         }
+
+
+class TestSnippet:
+    def test_normal(self, tmp_path: Path) -> None:
+        file = tmp_path / "a.yaml"
+        text = "line1\nline2\nline3\n"
+        file.write_text(text)
+        d = Diagnostic(file=file, line=2, column=3, message="x")
+        assert d.snippet() == format_pointed(2, 3, text)
+
+    def test_returns_empty_when_file_missing(self, tmp_path: Path) -> None:
+        d = Diagnostic(file=tmp_path / "nope.yaml", line=1, column=1, message="x")
+        assert d.snippet() == ""
+
+    def test_replaces_non_utf8_bytes(self, tmp_path: Path) -> None:
+        file = tmp_path / "a.yaml"
+        file.write_bytes(b"line1\n\xff\xfeinvalid\nline3\n")
+        d = Diagnostic(file=file, line=2, column=1, message="x")
+        assert "�" in d.snippet()
 
 
 class TestFileValidationError:
@@ -73,6 +95,7 @@ class TestFileValidationError:
                     "message": "bad",
                     "severity": "error",
                     "source": "test",
+                    "snippet": "",
                 }
             ],
         }

@@ -153,6 +153,7 @@ class TestErrorPropagation:
                     "message": "bad value",
                     "severity": "error",
                     "source": "",
+                    "snippet": "",
                 },
             ],
         }

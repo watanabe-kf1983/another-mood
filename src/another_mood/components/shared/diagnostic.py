@@ -4,10 +4,13 @@ Based on the Diagnostic model from Language Server Protocol Specification 3.17:
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
 """
 
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+
+from another_mood.components.shared.diagnostic_format import format_pointed
 
 
 class DiagnosticSeverity(Enum):
@@ -48,7 +51,25 @@ class Diagnostic:
             "message": self.message,
             "severity": self.severity.value,
             "source": self.source,
+            "snippet": self.snippet(),
         }
+
+    def snippet(self) -> str:
+        """Code-frame snippet around (line, column).
+
+        Best-effort: returns "" on any failure (missing file, permission error,
+        bug in format_pointed) and emits a warning to stderr. Snippet enrichment
+        must never break diagnostic serialization.
+        """
+        try:
+            text = self.file.read_text(errors="replace")
+            return format_pointed(self.line, self.column, text)
+        except Exception as exc:
+            print(
+                f"warning: snippet generation failed for {self.file}: {exc}",
+                file=sys.stderr,
+            )
+            return ""
 
 
 class FileValidationError(Exception):
