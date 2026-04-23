@@ -24,10 +24,10 @@ def inspect_schema_stage(config: ProjectConfig) -> Task:
     """Validate schema files against SchemaSchema."""
     out = config.component_output(inspect_schema)
     call = inspect_schema.bind(
-        schema_dir=config.schema_dir,
+        schemas_dir=config.schemas_dir,
         out_dir=out.dir,
     )
-    return Stage(run_fn=call, watch_paths=[config.schema_dir])
+    return Stage(run_fn=call, watch_paths=[config.schemas_dir])
 
 
 def normalize_contents_stage(config: ProjectConfig) -> Task:
@@ -37,7 +37,7 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     call = normalize_contents.bind(
         src_dir=config.contents_dir,
         data_catalog_dir=inspect_out.dir,
-        schema_dir=config.schema_dir,
+        schemas_dir=config.schemas_dir,
         out_dir=out.dir,
     )
     return Stage(

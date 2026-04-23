@@ -27,7 +27,7 @@ class ProjectConfig(BaseSettings):
     project_dir: Path
 
     # Input (user-edited)
-    schema_dir: Path = Field(default=Path(""))
+    schemas_dir: Path = Field(default=Path(""))
     contents_dir: Path = Field(default=Path(""))
     queries_dir: Path = Field(default=Path(""))
     templates_dir: Path = Field(default=Path(""))
@@ -59,7 +59,7 @@ class ProjectConfig(BaseSettings):
                 f"Project directory not found: {self.project_dir}"
             )
         sources = {
-            "schema_dir": self.schema_dir,
+            "schemas_dir": self.schemas_dir,
             "contents_dir": self.contents_dir,
             "queries_dir": self.queries_dir,
             "templates_dir": self.templates_dir,
@@ -76,8 +76,8 @@ class ProjectConfig(BaseSettings):
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         pd = Path(values.get("project_dir", ""))
         rb = Path(".another-mood") / pd
-        if not values.get("schema_dir"):
-            values["schema_dir"] = pd / "definition" / "schema"
+        if not values.get("schemas_dir"):
+            values["schemas_dir"] = pd / "definition" / "schemas"
         if not values.get("contents_dir"):
             values["contents_dir"] = pd / "contents"
         if not values.get("queries_dir"):

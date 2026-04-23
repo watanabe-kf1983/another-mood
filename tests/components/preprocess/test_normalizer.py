@@ -23,12 +23,12 @@ class TestNormalize:
 
     @pytest.fixture()
     def schema(self, tmp_path: Path) -> dict[str, object]:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "test.yaml").write_text(
+        schemas_dir = tmp_path / "schemas"
+        schemas_dir.mkdir()
+        (schemas_dir / "test.yaml").write_text(
             "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
         )
-        return dict(build_contents_schema(schema_dir))
+        return dict(build_contents_schema(schemas_dir))
 
     def test_dispatches_md_and_yaml(
         self, tmp_path: Path, schema: dict[str, object]
@@ -118,8 +118,8 @@ class TestCheck:
     """check: parse + validate all files in src_dir."""
 
     @pytest.fixture()
-    def schema_dir(self, tmp_path: Path) -> Path:
-        d = tmp_path / "schema"
+    def schemas_dir(self, tmp_path: Path) -> Path:
+        d = tmp_path / "schemas"
         d.mkdir()
         (d / "entities.yaml").write_text(
             "schemas:\n"
@@ -134,13 +134,13 @@ class TestCheck:
         )
         return d
 
-    def test_valid_content_passes(self, tmp_path: Path, schema_dir: Path) -> None:
+    def test_valid_content_passes(self, tmp_path: Path, schemas_dir: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text("entities:\n  - id: user\n    name: User\n")
-        check(src, build_contents_schema(schema_dir))
+        check(src, build_contents_schema(schemas_dir))
 
-    def test_invalid_content_raises(self, tmp_path: Path, schema_dir: Path) -> None:
+    def test_invalid_content_raises(self, tmp_path: Path, schemas_dir: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text(
@@ -149,36 +149,36 @@ class TestCheck:
             "    name: User\n"
         )
         with pytest.raises(FileValidationError) as exc_info:
-            check(src, build_contents_schema(schema_dir))
+            check(src, build_contents_schema(schemas_dir))
         assert len(exc_info.value.diagnostics) >= 1
         assert exc_info.value.diagnostics[0].source == "jsonschema"
 
     def test_markdown_validated_against_prose_schema(
-        self, tmp_path: Path, schema_dir: Path
+        self, tmp_path: Path, schemas_dir: Path
     ) -> None:
         """Markdown produces {prose: [...]}, validated against built-in prose schema."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "notes.md").write_text("# Notes\n")
-        check(src, build_contents_schema(schema_dir))
+        check(src, build_contents_schema(schemas_dir))
 
     def test_unschematized_yaml_rejected(
-        self, tmp_path: Path, schema_dir: Path
+        self, tmp_path: Path, schemas_dir: Path
     ) -> None:
         """YAML files with keys not in any schema are rejected."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "config.yaml").write_text("config:\n  debug: true\n")
         with pytest.raises(FileValidationError):
-            check(src, build_contents_schema(schema_dir))
+            check(src, build_contents_schema(schemas_dir))
 
     def test_collects_errors_across_files(
-        self, tmp_path: Path, schema_dir: Path
+        self, tmp_path: Path, schemas_dir: Path
     ) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text("entities:\n  - id: 123\n    name: ok\n")
-        (schema_dir / "relations.yaml").write_text(
+        (schemas_dir / "relations.yaml").write_text(
             "schemas:\n"
             "  relations:\n"
             "    type: array\n"
@@ -190,7 +190,7 @@ class TestCheck:
             "relations:\n  - description: missing required\n"
         )
         with pytest.raises(FileValidationError) as exc_info:
-            check(src, build_contents_schema(schema_dir))
+            check(src, build_contents_schema(schemas_dir))
         files = {str(d.file) for d in exc_info.value.diagnostics}
         assert len(files) == 2
 
@@ -202,9 +202,9 @@ class TestBuildContentsSchema:
     """build_contents_schema: merge built-in prose + user schemas."""
 
     def test_merges_builtin_and_user_schemas(self, tmp_path: Path) -> None:
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "entities.yaml").write_text(
+        schemas_dir = tmp_path / "schemas"
+        schemas_dir.mkdir()
+        (schemas_dir / "entities.yaml").write_text(
             "schemas:\n"
             "  entities:\n"
             "    type: array\n"
@@ -214,7 +214,7 @@ class TestBuildContentsSchema:
             "        id: { type: string }\n"
             "      required: [id]\n"
         )
-        schema = build_contents_schema(schema_dir)
+        schema = build_contents_schema(schemas_dir)
         validator_schema = schema
 
         # User schema: entities validated
@@ -238,7 +238,7 @@ class TestBuildContentsSchema:
         )
         assert errors == []
 
-    def test_nonexistent_schema_dir_uses_builtin_only(self) -> None:
+    def test_nonexistent_schemas_dir_uses_builtin_only(self) -> None:
         schema = build_contents_schema(Path("/nonexistent"))
 
         from another_mood.components.preprocess.validator import Validator
@@ -310,14 +310,14 @@ class TestNormalizeContents:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "data.yaml").write_text("items:\n  - name: a\n")
-        schema_dir = tmp_path / "schema"
-        schema_dir.mkdir()
-        (schema_dir / "test.yaml").write_text(
+        schemas_dir = tmp_path / "schemas"
+        schemas_dir.mkdir()
+        (schemas_dir / "test.yaml").write_text(
             "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
         )
 
         out = tmp_path / "normalized"
-        normalize_contents(src_dir=src, out_dir=out, schema_dir=schema_dir)
+        normalize_contents(src_dir=src, out_dir=out, schemas_dir=schemas_dir)
 
         assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
             "items": [{"name": "a"}]
