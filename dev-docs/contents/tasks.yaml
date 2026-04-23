@@ -95,7 +95,7 @@ categories:
     impl_paths:
       - src/another_mood/components/preprocess/normalizer.py
       - src/another_mood/components/preprocess/
-      - src/another_mood/resources/schemas/schema/schema-schema.yaml
+      - src/another_mood/resources/schemas/schemas/schema-schema.yaml
       - src/another_mood/cli.py
     spec: design/normalizer/schema-spec.md
     tasks:
