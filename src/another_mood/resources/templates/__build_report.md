@@ -8,6 +8,12 @@
 
 {{ d.message }}
 
+{% if d.snippet %}
+```
+{{ d.snippet }}
+```
+
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if errors %}

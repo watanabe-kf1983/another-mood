@@ -56,6 +56,24 @@ class TestWriteIndex:
         assert "contents/entities.yaml" in result
         assert "Unknown field 'stauts'" in result
 
+    def test_renders_build_report_with_snippet(self, tmp_path: Path) -> None:
+        out_dir = tmp_path / "output"
+        data = {
+            "diagnostics": [
+                {
+                    "file": "x.yaml",
+                    "line": 1,
+                    "column": 1,
+                    "message": "bad",
+                    "snippet": "> 1 | bad value\n    | ^",
+                }
+            ],
+        }
+        render("__build_report", data, out_dir)
+
+        result = (out_dir / "index.md").read_text()
+        assert "```\n> 1 | bad value\n    | ^\n```" in result
+
     def test_renders_build_report_with_traceback(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"
         data = {
