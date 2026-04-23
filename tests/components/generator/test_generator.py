@@ -89,5 +89,5 @@ class TestReconcile:
 
         # Build report page is rendered, stale upstream data is not propagated.
         error_page = (out_dir / "data" / "index.md").read_text()
-        assert error_page.startswith("# Build Report")
+        assert error_page.startswith("# Build Failed - Another Mood")
         assert not (out_dir / "data" / "stale.md").exists()

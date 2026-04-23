@@ -69,7 +69,7 @@ Jinja2 を採用する:
 Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
 
 - エラー無し: Generator の出力をそのまま `reconcile_dir` に通す（pass-through）
-- エラー有り: Generator の出力を破棄し、`__build_report` テンプレートでエラーページをレンダリングして `reconcile_dir` に書き出す
+- エラー有り: Generator の出力を破棄し、`__build_failure` テンプレートでエラーページをレンダリングして `reconcile_dir` に書き出す
 
 この分離により以下が成立する:
 

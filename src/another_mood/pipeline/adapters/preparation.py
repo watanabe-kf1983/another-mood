@@ -8,7 +8,7 @@ Adapts another-mood output to Hugo conventions:
 exclusive_write=False: Hugo's live server watches this dir, so in-place
 incremental updates are preferred over atomic clear-and-replace.
 
-error_propagation=False: reconcile renders a __build_report page on
+error_propagation=False: reconcile renders a __build_failure page on
 upstream error, which Hugo must still serve. The sync runs unconditionally,
 while error_propagation is invoked manually to forward upstream reports to
 out_dir/reports where build_report_stage collects them.

@@ -4,6 +4,7 @@ Based on the Diagnostic model from Language Server Protocol Specification 3.17:
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
 """
 
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -48,7 +49,29 @@ class Diagnostic:
             "message": self.message,
             "severity": self.severity.value,
             "source": self.source,
+            "snippet": self.snippet(),
         }
+
+    def snippet(self) -> str:
+        """Code-frame snippet around (line, column).
+
+        Best-effort: returns "" on any failure (missing file, permission error,
+        bug in format_pointed) and emits a warning to stderr. Snippet enrichment
+        must never break diagnostic serialization.
+        """
+        try:
+            text = self.file.read_text(errors="replace")
+            # Bias context upward: for YAML/JSON, parent keys above matter
+            # more than siblings below.
+            return format_pointed(
+                self.line, self.column, text, lines_above=3, lines_below=1
+            )
+        except Exception as exc:
+            print(
+                f"warning: snippet generation failed for {self.file}: {exc}",
+                file=sys.stderr,
+            )
+            return ""
 
 
 class FileValidationError(Exception):
@@ -75,3 +98,41 @@ class FileValidationError(Exception):
             "errors": [{"message": f"FileValidationError: {self}"}],
             "diagnostics": [d.to_data() for d in self.diagnostics],
         }
+
+
+def format_pointed(
+    line: int | None,
+    column: int | None,
+    file_text: str,
+    *,
+    lines_above: int = 2,
+    lines_below: int = 2,
+) -> str:
+    """Render a code-frame snippet pointing at (line, column).
+
+    Example — format_pointed(line=4, column=7, file_text=...):
+
+        2 |   post:
+        3 |     fields:
+      > 4 |       stauts: string
+          |       ^
+        5 |       count: int
+        6 |       author: ref
+
+    Returns "" when line is missing or out of range.
+    """
+    lines = file_text.splitlines()
+    if not line or line > len(lines):
+        return ""
+
+    start = max(1, line - lines_above)
+    end = min(len(lines), line + lines_below)
+    gutter_width = len(str(end))
+
+    out: list[str] = []
+    for n in range(start, end + 1):
+        marker = ">" if n == line else " "
+        out.append(f"{marker} {n:>{gutter_width}} | {lines[n - 1]}")
+        if n == line and column is not None:
+            out.append(f"  {' ' * gutter_width} | {' ' * (column - 1)}^")
+    return "\n".join(out)

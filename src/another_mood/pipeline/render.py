@@ -23,7 +23,7 @@ from another_mood.pipeline.base import MultiStageTask, Stage, Task
     error_propagation=False,
 )
 def hugo_build(prep_dir: Path, *, out_dir: Path) -> None:
-    """Run Hugo build. Runs even on upstream error to render the __build_report page."""
+    """Run Hugo build. Runs even on upstream error to render the __build_failure page."""
     with error_propagation([prep_dir], out_dir, component="hugo_build") as data_dirs:
         if data_dirs is not None:
             renderer.build(data_dirs.upstreams[0], data_dirs.out)

@@ -1,4 +1,4 @@
-# Build Report
+# Build Failed - Another Mood
 
 {% if diagnostics %}
 ## Problems
@@ -8,6 +8,12 @@
 
 {{ d.message }}
 
+{% if d.snippet %}
+```
+{{ d.snippet }}
+```
+
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if errors %}

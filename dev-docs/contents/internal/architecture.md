@@ -28,7 +28,7 @@ IN: `compose_dir`、`templates_dir`、`profilesFile`
 OUT: `generate_dir`
 
 **Reconcile**
-Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_report` ページに差し替える。詳細は [components/generator.md](components/generator.md) 参照。
+Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_failure` ページに差し替える。詳細は [components/generator.md](components/generator.md) 参照。
 IN: `generate_dir`
 OUT: `reconcile_dir`
 
