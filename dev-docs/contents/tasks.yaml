@@ -251,6 +251,7 @@ categories:
           CHANGELOG / 移行メモが必要。F1-F3 (Table / Query View) による
           データシート UI 追加と認知負荷を集約できるので、同時期の実施が望ましい。
         phase: 8
+        done: true
 
   H:
     title: バイナリファイルの取り扱い
