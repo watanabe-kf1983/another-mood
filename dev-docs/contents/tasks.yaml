@@ -180,6 +180,7 @@ categories:
         title: Generator の動的名前引き拡張
         note: 変数で view 名を参照できるようにする (F2/F3 の前提)
         phase: 8
+        done: true
       F2:
         title: Table View (実データのテーブル表示)
         note: |

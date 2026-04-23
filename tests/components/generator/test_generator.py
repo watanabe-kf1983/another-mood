@@ -36,6 +36,46 @@ class TestGenerate:
         # Metadata root is always rendered at the site root.
         assert (out_dir / "data" / "index.md").exists()
 
+    def test_views_self_reference_accessible(self, tmp_path: Path) -> None:
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
+        _write_yaml(data_dir / "data.yaml", {"items": [{"id": "a"}, {"id": "b"}]})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text(
+            "{% for row in __views['items'] %}{{ row.id }}{% endfor %}"
+        )
+
+        out_dir = tmp_path / "output"
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            out_dir=out_dir,
+        )
+
+        assert (out_dir / "data" / "reports" / "index.md").read_text() == "ab"
+
+    def test_views_does_not_include_itself(self, tmp_path: Path) -> None:
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
+        _write_yaml(data_dir / "data.yaml", {"x": 1})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text(
+            "{% if '__views' in __views %}yes{% else %}no{% endif %}"
+        )
+
+        out_dir = tmp_path / "output"
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            out_dir=out_dir,
+        )
+
+        assert (out_dir / "data" / "reports" / "index.md").read_text() == "no"
+
     def test_writes_error_to_reports_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
