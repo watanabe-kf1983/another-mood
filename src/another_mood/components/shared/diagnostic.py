@@ -61,7 +61,11 @@ class Diagnostic:
         """
         try:
             text = self.file.read_text(errors="replace")
-            return format_pointed(self.line, self.column, text)
+            # Bias context upward: for YAML/JSON, parent keys above matter
+            # more than siblings below.
+            return format_pointed(
+                self.line, self.column, text, lines_above=3, lines_below=1
+            )
         except Exception as exc:
             print(
                 f"warning: snippet generation failed for {self.file}: {exc}",
@@ -96,28 +100,24 @@ class FileValidationError(Exception):
         }
 
 
-_LINES_ABOVE = 3
-_LINES_BELOW = 1
-
-
 def format_pointed(
     line: int | None,
     column: int | None,
     file_text: str,
     *,
-    lines_above: int = _LINES_ABOVE,
-    lines_below: int = _LINES_BELOW,
+    lines_above: int = 2,
+    lines_below: int = 2,
 ) -> str:
     """Render a code-frame snippet pointing at (line, column).
 
-    Example — format_pointed(line=6, column=7, file_text=...):
+    Example — format_pointed(line=4, column=7, file_text=...):
 
+        2 |   post:
         3 |     fields:
-        4 |       title: string
-        5 |       content: text
-      > 6 |       stauts: string
+      > 4 |       stauts: string
           |       ^
-        7 |       count: int
+        5 |       count: int
+        6 |       author: ref
 
     Returns "" when line is missing or out of range.
     """
