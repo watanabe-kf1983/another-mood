@@ -1,5 +1,7 @@
 # {{ id }}{% if builtin %} (built-in){% endif %}
 
+[→ Data](../__table_view/{{ id }}.md)
+
 {% if parent_entity -%}
 Parent: [{{ parent_entity }}]({{ parent_entity }}.md)
 {% endif -%}
