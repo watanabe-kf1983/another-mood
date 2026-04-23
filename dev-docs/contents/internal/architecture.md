@@ -6,7 +6,7 @@
 
 **SchemaInspector**
 スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
-IN: `schema_dir`
+IN: `schemas_dir`
 OUT: `inspect_schemas_dir`
 
 **Normalizer**

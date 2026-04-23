@@ -44,7 +44,7 @@ CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決さ
 
 | キー | 型 | デフォルト | 環境変数 | 説明 |
 |------|-----|---------|----------|------|
-| `schema_dir` | string | `<projectDir>/definition/schema` | `RB_SCHEMA_DIR` | スキーマ定義ディレクトリ |
+| `schemas_dir` | string | `<projectDir>/definition/schemas` | `RB_SCHEMAS_DIR` | スキーマ定義ディレクトリ |
 | `contents_dir` | string | `<projectDir>/contents` | `RB_CONTENTS_DIR` | ソースデータディレクトリ（YAML + Markdown） |
 | `queries_dir` | string | `<projectDir>/definition/queries` | `RB_QUERIES_DIR` | クエリ定義ディレクトリ |
 | `templates_dir` | string | `<projectDir>/definition/templates` | `RB_TEMPLATES_DIR` | テンプレートディレクトリ |
