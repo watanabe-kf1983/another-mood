@@ -1,8 +1,9 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 from jinja2 import (
     ChainableUndefined,
@@ -21,7 +22,13 @@ _BUILT_IN_TEMPLATES_DIR = resources.files("another_mood.resources") / "templates
 
 
 class TemplateEngine:
-    def __init__(self, out_dir: Path, *, templates_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        out_dir: Path,
+        *,
+        templates_dir: Path | None = None,
+        filters: Mapping[str, Callable[..., Any]] | None = None,
+    ) -> None:
         self._env = Environment(
             extensions=[SectionExtension],
             keep_trailing_newline=True,
@@ -31,6 +38,9 @@ class TemplateEngine:
         if templates_dir is not None:
             search_paths.append(templates_dir)
         self._env.loader = FileSystemLoader(search_paths)
+        if filters is not None:
+            for name, func in filters.items():
+                self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
         install_section_processor(self._env, out_dir)
 
     def render(self, template_name: str, data: Mapping[str, object]) -> str:

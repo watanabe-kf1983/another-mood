@@ -19,6 +19,25 @@ class TestRender:
         assert result == "# World\n"
 
 
+class TestFiltersParam:
+    """TemplateEngine forwards a `filters` mapping to the Jinja2 environment."""
+
+    def test_registers_custom_filter(self, tmp_path: Path) -> None:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text("{{ 'hi' | shout }}")
+
+        def shout(value: object) -> str:
+            return str(value).upper() + "!"
+
+        engine = TemplateEngine(
+            tmp_path,
+            templates_dir=templates_dir,
+            filters={"shout": shout},
+        )
+        assert engine.render("t", {}) == "HI!"
+
+
 class TestTemplateSyntaxErrorConversion:
     def test_raises_file_validation_error(self, tmp_path: Path) -> None:
         templates_dir = tmp_path / "templates"

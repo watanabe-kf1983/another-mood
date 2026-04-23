@@ -49,6 +49,38 @@
 {% section "mermaid-er" with entry.relations %}
 ```
 
+### inline オプション
+
+> **未着手** — P2 で対応予定。
+
+強制インライン展開用のキーワード。`{% section %}` の振る舞いを、その呼び出し時
+に限って「インライン」に固定する:
+
+```jinja2
+{% section "name" with data inline %}
+```
+
+この形式では、セクションの描画結果がファイルに書き出されず、呼び出し元の
+テンプレートにそのまま埋め込まれる (`{% include %}` に近い動作)。
+
+#### 用途
+
+F3 の Query View で Definition / Output Schema / Results を 1 ページに
+縦並びで表示する際に使う。`{% section %}` デフォルトの「別ファイル出力」では
+3 セクションが別々のページに散ってしまうため、明示的な `inline` 指定で
+1 ページに集約する (SQL クライアントの query + result pane パターン)。
+
+Entity の Schema と Data を 1 ページに統合したい用途もあり得るが、現状は
+別ページ + 相互リンクで運用している (結合度に基づく非対称設計、
+[meta-documentation.md](../app/meta-documentation.md) 参照)。
+
+#### C4 (paginate 自動判定) との関係
+
+C4 では `paginate` 設定を見て section が自動的に inline / 分割を判定する
+予定。`inline` キーワードはその自動判定を上書きする明示指定として P2 で先行
+実装する。C4 導入後も「常に inline を強制する escape hatch」として残すか、
+深い統合で吸収するかは C4 実装時に判断。
+
 ## Undefined アクセスの扱い
 
 テンプレート内で未定義の変数や属性へアクセスしてもエラーにはならず、空文字列としてレンダリングされる。属性のチェインアクセス（例: `field.metadata.title`）も同様で、途中のキーが存在しなくても空文字列になる。
