@@ -45,7 +45,7 @@ class BuildReport:
     def collect(*directories: Path) -> "BuildReport":
         """Collect __build_report entries from input directories."""
         merged = load_model(*directories)
-        return BuildReport(merged.get(_REPORT_KEY))
+        return BuildReport(_dedupe_arrays(merged.get(_REPORT_KEY)))
 
     def has_errors(self) -> bool:
         return bool(self._data.get(_ERRORS_KEY))
@@ -75,3 +75,30 @@ class BuildReport:
         out_dir.mkdir(parents=True, exist_ok=True)
         with (out_dir / _REPORT_FILENAME).open("w") as f:
             yaml_dumper.dump({_REPORT_KEY: self._data}, f)
+
+
+# Arrays that may be propagated through multiple DAG paths and need
+# de-duplication on merge. Generic deep_merge concatenates arrays, so
+# without this an inspect_schema error reaching compose via both
+# normalize_contents and the direct inspect upstream would appear twice.
+_DEDUPE_KEYS = ("errors", "diagnostics")
+
+
+def _dedupe_arrays(data: object) -> dict[str, object]:
+    """Drop exact-duplicate entries from errors/diagnostics arrays."""
+    if not isinstance(data, dict):
+        return {}
+    result: dict[str, object] = {**data}  # pyright: ignore[reportUnknownArgumentType]
+    for key in _DEDUPE_KEYS:
+        value = result.get(key)
+        if isinstance(value, list):
+            result[key] = _dedupe(value)  # pyright: ignore[reportUnknownArgumentType]
+    return result
+
+
+def _dedupe(items: list[object]) -> list[object]:
+    seen: list[object] = []
+    for item in items:
+        if item not in seen:
+            seen.append(item)
+    return seen
