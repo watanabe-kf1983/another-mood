@@ -32,7 +32,7 @@ class TestWriteIndex:
 
         """)
 
-    def test_renders_build_report_with_diagnostics(self, tmp_path: Path) -> None:
+    def test_renders_build_failure_with_diagnostics(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"
         data = {
             "errors": [
@@ -49,14 +49,14 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_report", data, out_dir)
+        render("__build_failure", data, out_dir)
 
         result = (out_dir / "index.md").read_text()
-        assert "# Build Report" in result
+        assert "# Build Failed - Another Mood" in result
         assert "contents/entities.yaml" in result
         assert "Unknown field 'stauts'" in result
 
-    def test_renders_build_report_with_snippet(self, tmp_path: Path) -> None:
+    def test_renders_build_failure_with_snippet(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"
         data = {
             "diagnostics": [
@@ -69,12 +69,12 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_report", data, out_dir)
+        render("__build_failure", data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "```\n> 1 | bad value\n    | ^\n```" in result
 
-    def test_renders_build_report_with_traceback(self, tmp_path: Path) -> None:
+    def test_renders_build_failure_with_traceback(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"
         data = {
             "errors": [
@@ -84,9 +84,9 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_report", data, out_dir)
+        render("__build_failure", data, out_dir)
 
         result = (out_dir / "index.md").read_text()
-        assert "# Build Report" in result
+        assert "# Build Failed - Another Mood" in result
         assert "KeyError" in result
         assert "Traceback" in result

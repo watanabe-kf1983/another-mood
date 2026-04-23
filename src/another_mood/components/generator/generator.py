@@ -28,14 +28,14 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
     """Reconcile Generator output with the propagated BuildReport.
 
     No upstream errors: pass Generator's data through unchanged.
-    Upstream errors: render a __build_report page in its place.
+    Upstream errors: render a __build_failure page in its place.
     """
     with error_propagation([data_dir], out_dir, component="reconcile") as data_dirs:
         if data_dirs is not None:
             shutil.copytree(data_dirs.upstreams[0], data_dirs.out, dirs_exist_ok=True)
         else:
             report = BuildReport.collect(data_dir / "reports")
-            render("__build_report", report.to_data(), out_dir / "data")
+            render("__build_failure", report.to_data(), out_dir / "data")
 
 
 def render(

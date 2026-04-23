@@ -1,4 +1,4 @@
-# Build Report
+# Build Failed - Another Mood
 
 {% if diagnostics %}
 ## Problems
