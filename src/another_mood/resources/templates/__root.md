@@ -6,10 +6,13 @@
 
 {% if __definition.entities -%}
 {% for entity in __definition.entities | sort(attribute='builtin') -%}
-- [{{ entity.id }}](__meta_entity/{{ entity.id }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.metadata.title %} — {{ entity.metadata.title }}{% endif %}
+- [{{ entity.id }}](__meta_entity/{{ entity.id }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.metadata.title %} — {{ entity.metadata.title }}{% endif %} — [Data](__table_view/{{ entity.id }}.md)
 {% endfor %}
 {% for entity in __definition.entities -%}
 {% section "__meta_entity" with entity %}
+{%- endfor %}
+{% for entity in __definition.entities -%}
+{% section "__table_view" with {"id": entity.id, "fields": entity.fields, "rows": __views | query_from(entity.id)} %}
 {%- endfor %}
 {%- else -%}
 (no entities defined yet)

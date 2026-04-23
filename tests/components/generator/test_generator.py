@@ -5,7 +5,12 @@ from typing import Any
 
 import yaml
 
-from another_mood.components.generator.generator import generate, reconcile
+from another_mood.components.generator.generator import (
+    _at,  # pyright: ignore[reportPrivateUsage]
+    _query_from,  # pyright: ignore[reportPrivateUsage]
+    generate,
+    reconcile,
+)
 from another_mood.components.shared.build_report import BuildReport
 
 
@@ -36,27 +41,7 @@ class TestGenerate:
         # Metadata root is always rendered at the site root.
         assert (out_dir / "data" / "index.md").exists()
 
-    def test_views_self_reference_accessible(self, tmp_path: Path) -> None:
-        data_dir = tmp_path / "data" / "data"
-        data_dir.mkdir(parents=True)
-        _write_yaml(data_dir / "data.yaml", {"items": [{"id": "a"}, {"id": "b"}]})
-
-        templates_dir = tmp_path / "templates"
-        templates_dir.mkdir()
-        (templates_dir / "index.md").write_text(
-            "{% for row in __views['items'] %}{{ row.id }}{% endfor %}"
-        )
-
-        out_dir = tmp_path / "output"
-        generate(
-            data_dir=tmp_path / "data",
-            templates_dir=templates_dir,
-            out_dir=out_dir,
-        )
-
-        assert (out_dir / "data" / "reports" / "index.md").read_text() == "ab"
-
-    def test_views_does_not_include_itself(self, tmp_path: Path) -> None:
+    def test_views_snapshot_excludes_self(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
         _write_yaml(data_dir / "data.yaml", {"x": 1})
@@ -64,7 +49,7 @@ class TestGenerate:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "index.md").write_text(
-            "{% if '__views' in __views %}yes{% else %}no{% endif %}"
+            "{% if '__views' in __views[0] %}yes{% else %}no{% endif %}"
         )
 
         out_dir = tmp_path / "output"
@@ -99,6 +84,51 @@ class TestGenerate:
         )
         assert report["__build_report"]["generate"]["result"] == "ng"
         assert report["__build_report"]["errors"]
+
+
+class TestAtFilter:
+    """Unit tests for the `at` filter function."""
+
+    def test_scalar(self) -> None:
+        assert _at({"x": "hi"}, "x") == "hi"
+
+    def test_nested_dotted_path(self) -> None:
+        assert _at({"m": {"title": "T"}}, "m.title") == "T"
+
+    def test_missing_path_returns_empty(self) -> None:
+        assert _at({"x": 1}, "missing") == ""
+
+    def test_stringifies_non_str(self) -> None:
+        assert _at({"x": True}, "x") == "True"
+        assert _at({"x": [1, 2]}, "x") == "[1, 2]"
+
+
+class TestQueryFromFilter:
+    """Unit tests for the `query_from` filter function."""
+
+    def test_resolves_entity_id(self) -> None:
+        parents = [{"items": [{"id": "a"}, {"id": "b"}]}]
+        assert _query_from(parents, "items") == [{"id": "a"}, {"id": "b"}]
+
+    def test_flattens_nested_entity(self) -> None:
+        parents = [
+            {
+                "parents": [
+                    {"id": "p1", "children": [{"id": "c1"}, {"id": "c2"}]},
+                    {"id": "p2", "children": [{"id": "c3"}]},
+                ]
+            }
+        ]
+        assert _query_from(parents, "parents.children") == [
+            {"id": "c1"},
+            {"id": "c2"},
+            {"id": "c3"},
+        ]
+
+    def test_empty_for_missing_key(self) -> None:
+        # Entity declared in the catalog but no records populated yet
+        # (common in a scaffolded project). Should return [], not raise.
+        assert _query_from([{"x": 1}], "missing") == []
 
 
 class TestReconcile:
