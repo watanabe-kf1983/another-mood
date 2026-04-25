@@ -3,6 +3,15 @@
 ユーザが書いたスキーマ定義とクエリ定義を、ツールが内蔵のテンプレートで自動的に
 可視化する機能。
 
+## Entity ID と Entity Name
+
+Entity は 2 つの識別子で参照される:
+
+- **Entity ID**: path-based identifier (例: `categories.item`)。anchor / ファイルパス / コード内識別子に使う
+- **Entity Name**: 表示ラベル (例: `Category`)。UI ヘッダや見出しに使う
+
+Entity Name は schema の `title:` キーワード (element schema) で author が指定する ([schema-spec.md](../normalizer/schema-spec.md))。未指定なら Entity ID をそのまま表示する。
+
 ## 自動生成される内容
 
 ビルドのたびに、以下が `out_dir` 配下に出力される。出力先のディレクトリ名は `__`

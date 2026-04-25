@@ -53,7 +53,7 @@ title: "Architecture"
 
 MIME types は [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838) に準拠する。想定される型: `text/markdown`, `text/html`, `text/plain` 等。
 
-このスキーマはツール内蔵であり、ユーザが `schemas_dir` に定義する必要はない。
+このスキーマはツール内蔵であり、ユーザが `schema_file` に定義する必要はない。
 
 ## セクション単位抽出
 

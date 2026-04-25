@@ -10,9 +10,7 @@ CLI の第一位置パラメータ `<projectDir>` で処理対象ディレクト
 my-project/                    # CWD = <projectDir>（mood build .）
   index.md                     # ビルドコマンド + 生成物へのリンク
   definition/                  # リーダが管理する定義類
-    schemas/                   # schemas_dir: スキーマ定義（JSON Schema + references.yaml）
-      entities.yaml            #   トップレベルキーがスキーマ名
-      references.yaml          #   参照整合性定義（宣言的 FK）
+    schema.yaml                # schema_file: スキーマ定義（JSON Schema）
     queries/                   # queries_dir: Query 定義（YAML DSL、Composer が評価）
     templates/                 # templates_dir: ドキュメントテンプレート
     profiles.yaml              # profilesFile: プロファイル設定（ページ分割戦略）
