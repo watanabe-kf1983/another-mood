@@ -5,9 +5,12 @@ from typing import Any
 
 import yaml
 
+from jinja2 import Undefined
+
 from another_mood.components.generator.generator import (
     _at,  # pyright: ignore[reportPrivateUsage]
     _query_from,  # pyright: ignore[reportPrivateUsage]
+    _to_yaml,  # pyright: ignore[reportPrivateUsage]
     generate,
     reconcile,
 )
@@ -129,6 +132,39 @@ class TestQueryFromFilter:
         # Entity declared in the catalog but no records populated yet
         # (common in a scaffolded project). Should return [], not raise.
         assert _query_from([{"x": 1}], "missing") == []
+
+
+class TestToYamlFilter:
+    """Unit tests for the `to_yaml` filter function."""
+
+    def test_flat_mapping(self) -> None:
+        assert _to_yaml({"title": "Hello", "description": "world"}) == (
+            "title: Hello\ndescription: world"
+        )
+
+    def test_preserves_key_order(self) -> None:
+        # `enum: [easy, medium, hard]` style validation values must keep
+        # author-defined ordering.
+        assert _to_yaml({"enum": ["easy", "medium", "hard"]}) == (
+            "enum:\n- easy\n- medium\n- hard"
+        )
+
+    def test_nested(self) -> None:
+        assert _to_yaml({"a": {"b": 1}}) == "a:\n  b: 1"
+
+    def test_none_yields_empty(self) -> None:
+        assert _to_yaml(None) == ""
+
+    def test_undefined_yields_empty(self) -> None:
+        assert _to_yaml(Undefined()) == ""
+
+    def test_flow_style_single_line(self) -> None:
+        # `flow=True` keeps the output on a single line — used in Markdown
+        # table cells where embedded newlines would break the row.
+        assert _to_yaml({"title": "Hi", "n": 1}, True) == "{title: Hi, n: 1}"
+        assert _to_yaml({"enum": ["easy", "medium"]}, True) == (
+            "{enum: [easy, medium]}"
+        )
 
 
 class TestReconcile:

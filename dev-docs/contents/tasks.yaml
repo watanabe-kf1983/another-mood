@@ -346,16 +346,19 @@ categories:
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
         phase: 10
       M2:
-        title: Entity ID と Entity Name の分離
-        note: |
-          Entity を path-based の Entity ID と `title:` 由来の Entity Name で識別する。
-          詳細は schema-spec.md / meta-documentation.md。
+        title: Entity と ObjectType の分離
+        note: CatalogEntity を access_path ベースの Entity と path+`.item` ベースの ObjectType に分割。Catalog プレフィックスも除去。
         phase: 8
+        done: true
       M3:
         title: CatalogField を CatalogAttribute にリネーム
         note: Entity-Attribute の container-member pair に揃える (データカタログは ER 文脈)。
         phase: 8
         done: true
+      M4:
+        title: Entity Name の導入 (`title:` 由来の表示ラベル)
+        note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
+        phase: 10
 
   N:
     title: レンダリング / 出力形式

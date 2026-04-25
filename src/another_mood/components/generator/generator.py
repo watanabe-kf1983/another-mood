@@ -9,6 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
+import yaml
 from jinja2 import Undefined
 
 from another_mood.components.composer.query import From, Record
@@ -96,7 +97,24 @@ def _at(row: object, path: str) -> str:
     return str(value)
 
 
+def _to_yaml(value: object, flow: bool = False) -> str:
+    """System-only Jinja2 filter: dump a value as YAML.
+
+    Built-in templates use this to render arbitrary Mapping[str, object]
+    fields (e.g. Attribute.metadata, Attribute.validation) without
+    enumerating known keys. Pass ``flow=True`` for single-line flow style
+    suitable for Markdown table cells. Returns an empty string for
+    None/Undefined.
+    """
+    if value is None or isinstance(value, Undefined):
+        return ""
+    return yaml.safe_dump(
+        value, allow_unicode=True, default_flow_style=flow, sort_keys=False
+    ).rstrip()
+
+
 _FILTERS: Mapping[str, Callable[..., Any]] = {
     "query_from": _query_from,
     "at": _at,
+    "to_yaml": _to_yaml,
 }

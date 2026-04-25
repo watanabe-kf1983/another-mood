@@ -48,8 +48,8 @@ class Query:
 
 ### 合成 child entity
 
-composite フィールド (`object[]` / child_entity 持ち) を query 出力に含む場合、
-child_entity は source entity をそのまま指すのではなく、**query 側で自分の子を
+composite フィールド (`object[]` / `entity` ref 持ち) を query 出力に含む場合、
+`entity` ref は source entity をそのまま指すのではなく、**query 側で自分の子を
 合成して `__definition.entities` に追記**する。命名は raw entity と揃えた
 `{query_id}.{attribute_id}` 形式 (例: `tasks_by_phase.tasks`)。
 

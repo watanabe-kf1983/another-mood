@@ -24,10 +24,12 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
-            attributes:
-              - { id: id, type: string, required: true }
-              - { id: title, type: string, required: true }
-              - { id: servings, type: integer, required: false }
+            item_type:
+              id: recipes.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: title, type: string, required: true }
+                - { id: servings, type: integer, required: false }
         """,
         id="additionalProperties — entity with implicit id",
     ),
@@ -47,11 +49,13 @@ _CASES = [
         entities:
           - id: kitchen
             builtin: false
-            attributes:
-              - { id: name, type: string, required: true }
-              - { id: capacity, type: integer, required: false }
+            item_type:
+              id: kitchen
+              attributes:
+                - { id: name, type: string, required: true }
+                - { id: capacity, type: integer, required: false }
         """,
-        id="properties — flat fields",
+        id="properties — flat fields (singleton, no .item)",
     ),
     pytest.param(
         """
@@ -71,9 +75,11 @@ _CASES = [
         entities:
           - id: steps
             builtin: false
-            attributes:
-              - { id: order, type: integer, required: true }
-              - { id: instruction, type: string, required: true }
+            item_type:
+              id: steps.item
+              attributes:
+                - { id: order, type: integer, required: true }
+                - { id: instruction, type: string, required: true }
         """,
         id="array of objects — entity without id",
     ),
@@ -93,8 +99,10 @@ _CASES = [
         entities:
           - id: recipe
             builtin: false
-            attributes:
-              - { id: tags, type: "string[]", required: false }
+            item_type:
+              id: recipe
+              attributes:
+                - { id: tags, type: "string[]", required: false }
         """,
         id="array of scalars — type[]",
     ),
@@ -124,17 +132,25 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
-            attributes:
-              - { id: id, type: string, required: true }
-              - { id: title, type: string, required: true }
-              - { id: ingredients, type: "object[]", required: true, child_entity: recipes.ingredients }
+            item_type:
+              id: recipes.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: title, type: string, required: true }
+                - id: ingredients
+                  type: "object[]"
+                  required: true
+                  entity: recipes.ingredients
+                  item_type: recipes.item.ingredients.item
           - id: recipes.ingredients
             builtin: false
             parent_entity: recipes
-            attributes:
-              - { id: id, type: string, required: true }
-              - { id: name, type: string, required: true }
-              - { id: amount, type: string, required: true }
+            item_type:
+              id: recipes.item.ingredients.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: name, type: string, required: true }
+                - { id: amount, type: string, required: true }
         """,
         id="nested additionalProperties — parent.child entity",
     ),
@@ -159,10 +175,12 @@ _CASES = [
         entities:
           - id: recipe
             builtin: false
-            attributes:
-              - { id: nutrition, type: object, required: true }
-              - { id: nutrition.calories, type: number, required: true }
-              - { id: nutrition.protein, type: number, required: false }
+            item_type:
+              id: recipe
+              attributes:
+                - { id: nutrition, type: object, required: true }
+                - { id: nutrition.calories, type: number, required: true }
+                - { id: nutrition.protein, type: number, required: false }
         """,
         id="nested properties — prefix-separated fields",
     ),
@@ -188,14 +206,22 @@ _CASES = [
         entities:
           - id: recipe
             builtin: false
-            attributes:
-              - { id: steps, type: "object[]", required: false, child_entity: recipe.steps }
+            item_type:
+              id: recipe
+              attributes:
+                - id: steps
+                  type: "object[]"
+                  required: false
+                  entity: recipe.steps
+                  item_type: recipe.steps.item
           - id: recipe.steps
             builtin: false
             parent_entity: recipe
-            attributes:
-              - { id: instruction, type: string, required: true }
-              - { id: duration_min, type: integer, required: false }
+            item_type:
+              id: recipe.steps.item
+              attributes:
+                - { id: instruction, type: string, required: true }
+                - { id: duration_min, type: integer, required: false }
         """,
         id="array of objects inside properties — new entity without id",
     ),
@@ -217,12 +243,14 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
-            metadata:
-              title: Recipe collection
-              description: All recipes in the cookbook
-            attributes:
-              - { id: id, type: string, required: true }
-              - { id: title, type: string, required: false }
+            item_type:
+              id: recipes.item
+              metadata:
+                title: Recipe collection
+                description: All recipes in the cookbook
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: title, type: string, required: false }
         """,
         id="entity metadata — title and description",
     ),
@@ -258,30 +286,32 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
-            attributes:
-              - { id: id, type: string, required: true }
-              - id: title
-                type: string
-                required: true
-                metadata:
-                  title: Recipe title
-                  description: Short name of the dish
-                  default: Untitled
-                  examples: [Curry, Pasta]
-                  deprecated: false
-                  format: kebab-case
-              - id: servings
-                type: integer
-                required: false
-                validation:
-                  minimum: 1
-                  maximum: 100
-                  exclusiveMinimum: 0
-              - id: difficulty
-                type: string
-                required: false
-                validation:
-                  enum: [easy, medium, hard]
+            item_type:
+              id: recipes.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - id: title
+                  type: string
+                  required: true
+                  metadata:
+                    title: Recipe title
+                    description: Short name of the dish
+                    default: Untitled
+                    examples: [Curry, Pasta]
+                    deprecated: false
+                    format: kebab-case
+                - id: servings
+                  type: integer
+                  required: false
+                  validation:
+                    minimum: 1
+                    maximum: 100
+                    exclusiveMinimum: 0
+                - id: difficulty
+                  type: string
+                  required: false
+                  validation:
+                    enum: [easy, medium, hard]
         """,
         id="field metadata and validation keywords",
     ),

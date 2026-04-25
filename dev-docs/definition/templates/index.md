@@ -4,9 +4,6 @@
 {% section "prose" with record %}
 {%- endfor %}
 
-{% set dc = {"entities": entities, "references": references} %}
-{% section "data-catalog" with dc %}
-
 {% set tc = {"categories": categories} %}
 {% section "tasks" with tc %}
 
