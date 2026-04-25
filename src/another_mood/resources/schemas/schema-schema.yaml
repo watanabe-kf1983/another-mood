@@ -1,40 +1,16 @@
-# SchemaSchema — built-in meta-schema that validates user-defined schema files.
+# SchemaSchema — built-in meta-schema that validates the user's schema.yaml.
 #
-# Schema files have two top-level keys:
-#   schemas:    name -> JSON Schema subset (additionalProperties pattern)
-#   references: array of referential integrity constraints
+# The user's schema.yaml is a JSON Schema (draft 2020-12) subset whose
+# root is `type: object` with `properties:` listing each top-level
+# entity collection.  See dev-docs schema-spec.md for the full list of
+# supported keywords.
 #
 # This meta-schema uses $ref/$defs for recursion, which is NOT available
 # to user-defined schemas.  The restriction is intentional: user schemas
 # go through normalization and visualization pipelines that cannot handle
 # $ref; this built-in schema is only consumed by the jsonschema validator.
 
-type: object
-properties:
-  schemas:
-    type: object
-    propertyNames:
-      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
-    additionalProperties:
-      $ref: "#/$defs/jsonSchemaSubset"
-
-  # NOTE: `references` declarations are currently parsed and surfaced to
-  # downstream tools (composer / templates) but the referential integrity
-  # check itself is not implemented yet.  The syntax below is therefore
-  # minimal; the `.property` dotted form and the `.id` shorthand of `to:`
-  # will be pinned down once the --strict validator lands.
-  references:
-    type: array
-    items:
-      type: object
-      properties:
-        from:
-          type: string
-        to:
-          type: string
-      required: [from, to]
-
-additionalProperties: false
+$ref: "#/$defs/jsonSchemaSubset"
 
 $defs:
   jsonSchemaSubset:
