@@ -27,7 +27,7 @@ class ProjectConfig(BaseSettings):
     project_dir: Path
 
     # Input (user-edited)
-    schemas_dir: Path = Field(default=Path(""))
+    schema_file: Path = Field(default=Path(""))
     contents_dir: Path = Field(default=Path(""))
     queries_dir: Path = Field(default=Path(""))
     templates_dir: Path = Field(default=Path(""))
@@ -58,26 +58,28 @@ class ProjectConfig(BaseSettings):
             raise ConfigValidationError(
                 f"Project directory not found: {self.project_dir}"
             )
-        sources = {
-            "schemas_dir": self.schemas_dir,
+        dir_sources = {
             "contents_dir": self.contents_dir,
             "queries_dir": self.queries_dir,
             "templates_dir": self.templates_dir,
         }
-        missing = [(name, p) for name, p in sources.items() if not p.is_dir()]
+        file_sources = {
+            "schema_file": self.schema_file,
+        }
+        missing = [(name, p) for name, p in dir_sources.items() if not p.is_dir()] + [
+            (name, p) for name, p in file_sources.items() if not p.is_file()
+        ]
         if missing:
             lines = [f"  {name}: {p}" for name, p in missing]
-            raise ConfigValidationError(
-                "Source directories not found:\n" + "\n".join(lines)
-            )
+            raise ConfigValidationError("Source paths not found:\n" + "\n".join(lines))
 
     @model_validator(mode="before")
     @classmethod
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         pd = Path(values.get("project_dir", ""))
         rb = Path(".another-mood") / pd
-        if not values.get("schemas_dir"):
-            values["schemas_dir"] = pd / "definition" / "schemas"
+        if not values.get("schema_file"):
+            values["schema_file"] = pd / "definition" / "schema.yaml"
         if not values.get("contents_dir"):
             values["contents_dir"] = pd / "contents"
         if not values.get("queries_dir"):

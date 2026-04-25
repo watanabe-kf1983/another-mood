@@ -24,16 +24,16 @@ mood watch .
 
 ### 入力パスの解決
 
-入力ディレクトリ（schemas / contents / queries / templates）は `<project_dir>` を基準に解決される。デフォルト配置は次の通り:
+入力パス（schema ファイル / contents・queries・templates の各ディレクトリ）は `<project_dir>` を基準に解決される。デフォルト配置は次の通り:
 
 | 種類 | デフォルト | 環境変数 |
 |---|---|---|
-| スキーマ | `<project_dir>/definition/schemas` | `RB_SCHEMAS_DIR` |
+| スキーマ | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` |
 | コンテンツ | `<project_dir>/contents` | `RB_CONTENTS_DIR` |
 | クエリ | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` |
 | テンプレート | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` |
 
-`build` / `watch` 起動時にこれらのディレクトリが存在しないとエラーになり、終了コード 1 で停止する。
+`build` / `watch` 起動時にこれらのパスが存在しないとエラーになり、終了コード 1 で停止する。
 
 ### 出力パスの解決
 
@@ -55,12 +55,12 @@ mood watch .
 mood init <project_dir>
 ```
 
-`<project_dir>` 配下に、内蔵の starter テンプレート（schemas / contents / queries / templates の最小サンプル一式）をコピーする。`<project_dir>` が存在しない場合は親ディレクトリごと作成される。
+`<project_dir>` 配下に、内蔵の starter テンプレート（schema / contents / queries / templates の最小サンプル一式）をコピーする。`<project_dir>` が存在しない場合は親ディレクトリごと作成される。
 
 **既存ファイルの上書き**: 同名のファイルが既にある場合、上書きはせず警告を表示してスキップする。
 
 ```
-warning: skipped (already exists): ./definition/schemas/entities.yaml
+warning: skipped (already exists): ./definition/schema.yaml
 ```
 
 すべてのファイルが新規作成された場合は終了コード 0、いずれか 1 つでもスキップされた場合は終了コード 1 で終了する。これは「初回実行時に空ディレクトリへ書き込めたか」を CI 等から判定できるようにするためで、既存プロジェクトに対して `init` を再実行しても破壊的な変更は起きない。
@@ -75,7 +75,7 @@ mood build <project_dir>
 
 実行内容:
 
-1. `<project_dir>/definition/schemas` 以下のスキーマを読み込み、`<project_dir>/contents` を正規化
+1. `<project_dir>/definition/schema.yaml` を読み込み、`<project_dir>/contents` を正規化
 2. `<project_dir>/definition/queries` のクエリを評価して view を構築
 3. `<project_dir>/definition/templates` を使って Markdown を `output/` に書き出す
 4. `output/` を Hugo に渡して HTML を `render/` に書き出す
@@ -95,7 +95,7 @@ mood build <project_dir>
 mood watch <project_dir> [--port <port>]
 ```
 
-入力ディレクトリ（schemas / contents / queries / templates）の変更を検知すると、影響のあるステージのみを再実行する。Hugo server はファイル更新を検知してブラウザ側を自動リロードする。`Ctrl+C` で停止する。
+入力パス（schema ファイル / contents・queries・templates の各ディレクトリ）の変更を検知すると、影響のあるステージのみを再実行する。Hugo server はファイル更新を検知してブラウザ側を自動リロードする。`Ctrl+C` で停止する。
 
 ```
 $ mood watch .
@@ -130,7 +130,7 @@ RB_PORT=8080 mood watch .
 | キー | 既定値 | 環境変数 | CLI |
 |---|---|---|---|
 | `project_dir` | （引数で必須） | — | 第一位置パラメータ |
-| `schemas_dir` | `<project_dir>/definition/schemas` | `RB_SCHEMAS_DIR` | — |
+| `schema_file` | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` | — |
 | `contents_dir` | `<project_dir>/contents` | `RB_CONTENTS_DIR` | — |
 | `queries_dir` | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` | — |
 | `templates_dir` | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` | — |

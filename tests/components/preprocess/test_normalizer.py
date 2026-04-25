@@ -23,12 +23,17 @@ class TestNormalize:
 
     @pytest.fixture()
     def schema(self, tmp_path: Path) -> dict[str, object]:
-        schemas_dir = tmp_path / "schemas"
-        schemas_dir.mkdir()
-        (schemas_dir / "test.yaml").write_text(
-            "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
+            "  items:\n"
+            "    type: array\n"
+            "    items:\n"
+            "      type: object\n"
+            "additionalProperties: false\n"
         )
-        return dict(build_contents_schema(schemas_dir))
+        return dict(build_contents_schema(schema_file))
 
     def test_dispatches_md_and_yaml(
         self, tmp_path: Path, schema: dict[str, object]
@@ -118,11 +123,11 @@ class TestCheck:
     """check: parse + validate all files in src_dir."""
 
     @pytest.fixture()
-    def schemas_dir(self, tmp_path: Path) -> Path:
-        d = tmp_path / "schemas"
-        d.mkdir()
-        (d / "entities.yaml").write_text(
-            "schemas:\n"
+    def schema_file(self, tmp_path: Path) -> Path:
+        f = tmp_path / "schema.yaml"
+        f.write_text(
+            "type: object\n"
+            "properties:\n"
             "  entities:\n"
             "    type: array\n"
             "    items:\n"
@@ -131,16 +136,17 @@ class TestCheck:
             "        id: { type: string }\n"
             "        name: { type: string }\n"
             "      required: [id, name]\n"
+            "additionalProperties: false\n"
         )
-        return d
+        return f
 
-    def test_valid_content_passes(self, tmp_path: Path, schemas_dir: Path) -> None:
+    def test_valid_content_passes(self, tmp_path: Path, schema_file: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text("entities:\n  - id: user\n    name: User\n")
-        check(src, build_contents_schema(schemas_dir))
+        check(src, build_contents_schema(schema_file))
 
-    def test_invalid_content_raises(self, tmp_path: Path, schemas_dir: Path) -> None:
+    def test_invalid_content_raises(self, tmp_path: Path, schema_file: Path) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text(
@@ -149,48 +155,38 @@ class TestCheck:
             "    name: User\n"
         )
         with pytest.raises(FileValidationError) as exc_info:
-            check(src, build_contents_schema(schemas_dir))
+            check(src, build_contents_schema(schema_file))
         assert len(exc_info.value.diagnostics) >= 1
         assert exc_info.value.diagnostics[0].source == "jsonschema"
 
     def test_markdown_validated_against_prose_schema(
-        self, tmp_path: Path, schemas_dir: Path
+        self, tmp_path: Path, schema_file: Path
     ) -> None:
         """Markdown produces {prose: [...]}, validated against built-in prose schema."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "notes.md").write_text("# Notes\n")
-        check(src, build_contents_schema(schemas_dir))
+        check(src, build_contents_schema(schema_file))
 
     def test_unschematized_yaml_rejected(
-        self, tmp_path: Path, schemas_dir: Path
+        self, tmp_path: Path, schema_file: Path
     ) -> None:
         """YAML files with keys not in any schema are rejected."""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "config.yaml").write_text("config:\n  debug: true\n")
         with pytest.raises(FileValidationError):
-            check(src, build_contents_schema(schemas_dir))
+            check(src, build_contents_schema(schema_file))
 
     def test_collects_errors_across_files(
-        self, tmp_path: Path, schemas_dir: Path
+        self, tmp_path: Path, schema_file: Path
     ) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "entities.yaml").write_text("entities:\n  - id: 123\n    name: ok\n")
-        (schemas_dir / "relations.yaml").write_text(
-            "schemas:\n"
-            "  relations:\n"
-            "    type: array\n"
-            "    items:\n"
-            "      type: object\n"
-            "      required: [from, to]\n"
-        )
-        (src / "relations.yaml").write_text(
-            "relations:\n  - description: missing required\n"
-        )
+        (src / "more.yaml").write_text("entities:\n  - id: ok\n  # missing name\n")
         with pytest.raises(FileValidationError) as exc_info:
-            check(src, build_contents_schema(schemas_dir))
+            check(src, build_contents_schema(schema_file))
         files = {str(d.file) for d in exc_info.value.diagnostics}
         assert len(files) == 2
 
@@ -199,13 +195,13 @@ class TestCheck:
 
 
 class TestBuildContentsSchema:
-    """build_contents_schema: merge built-in prose + user schemas."""
+    """build_contents_schema: merge built-in prose + user schema."""
 
-    def test_merges_builtin_and_user_schemas(self, tmp_path: Path) -> None:
-        schemas_dir = tmp_path / "schemas"
-        schemas_dir.mkdir()
-        (schemas_dir / "entities.yaml").write_text(
-            "schemas:\n"
+    def test_merges_builtin_and_user_schema(self, tmp_path: Path) -> None:
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
             "  entities:\n"
             "    type: array\n"
             "    items:\n"
@@ -213,14 +209,15 @@ class TestBuildContentsSchema:
             "      properties:\n"
             "        id: { type: string }\n"
             "      required: [id]\n"
+            "additionalProperties: false\n"
         )
-        schema = build_contents_schema(schemas_dir)
-        validator_schema = schema
+        schema = build_contents_schema(schema_file)
 
-        # User schema: entities validated
         from another_mood.components.preprocess.validator import Validator
 
-        validator = Validator(validator_schema)
+        validator = Validator(schema)
+
+        # User schema: entities validated
         errors = validator.validate({"entities": [{"id": 123}]}, Path("test.yaml"))
         assert len(errors) >= 1
 
@@ -238,8 +235,8 @@ class TestBuildContentsSchema:
         )
         assert errors == []
 
-    def test_nonexistent_schemas_dir_uses_builtin_only(self) -> None:
-        schema = build_contents_schema(Path("/nonexistent"))
+    def test_missing_schema_file_uses_builtin_only(self, tmp_path: Path) -> None:
+        schema = build_contents_schema(tmp_path / "missing.yaml")
 
         from another_mood.components.preprocess.validator import Validator
 
@@ -310,14 +307,19 @@ class TestNormalizeContents:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "data.yaml").write_text("items:\n  - name: a\n")
-        schemas_dir = tmp_path / "schemas"
-        schemas_dir.mkdir()
-        (schemas_dir / "test.yaml").write_text(
-            "schemas:\n  items:\n    type: array\n    items:\n      type: object\n"
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
+            "  items:\n"
+            "    type: array\n"
+            "    items:\n"
+            "      type: object\n"
+            "additionalProperties: false\n"
         )
 
         out = tmp_path / "normalized"
-        normalize_contents(src_dir=src, out_dir=out, schemas_dir=schemas_dir)
+        normalize_contents(src_dir=src, out_dir=out, schema_file=schema_file)
 
         assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
             "items": [{"name": "a"}]

@@ -18,18 +18,6 @@
 (no entities defined yet)
 {%- endif %}
 
-### References
-
-{% if __definition.references -%}
-| From | To |
-|------|-----|
-{% for ref in __definition.references -%}
-| {{ ref.from }} | {{ ref.to }} |
-{% endfor -%}
-{%- else -%}
-(no references defined yet)
-{%- endif %}
-
 ### Queries
 
 {% if __definition.queries -%}

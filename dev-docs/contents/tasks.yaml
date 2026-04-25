@@ -141,8 +141,8 @@ categories:
         note: |
           definition/schema.yaml 1 ファイル (素の JSON Schema) に切り替える。
           詳細は schema-spec.md。references の実装は同時に削除 (仕様書には将来仕様として残す)。
-          破壊的変更のため CHANGELOG / 移行メモが必要。
         phase: 8
+        done: true
 
   E:
     title: YAML DSL クエリ評価拡充

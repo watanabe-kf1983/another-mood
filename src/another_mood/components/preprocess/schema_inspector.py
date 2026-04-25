@@ -1,11 +1,12 @@
-"""SchemaInspector — validate and extract metadata from user schema files.
+"""SchemaInspector — validate and extract metadata from the user schema file.
 
-Reads all YAML files from schemas_dir, validates each against the
-built-in SchemaSchema, extracts a data catalog (entities + fields),
-and writes the result to data_catalog_dir.
+Reads `schema_file`, validates it against the built-in SchemaSchema,
+extracts a data catalog (entities + fields), and writes the result to
+`out_dir`.  Built-in content schemas (e.g. prose) are emitted under
+`out_dir/__builtin/` so their entities also surface in meta-docs.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
@@ -18,7 +19,6 @@ from another_mood.components.preprocess.validator import Validator
 from another_mood.components.shared import yaml_dumper
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
-from another_mood.components.shared.file_type import FileType
 from another_mood.components.shared.json_data_model import load_model
 
 _SCHEMA_SCHEMA_FILE = Path(
@@ -31,14 +31,10 @@ _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
 
 
 @Component(out_dir="out_dir")
-def inspect_schema(schemas_dir: Path, *, out_dir: Path) -> None:
-    """Validate schema files and extract data catalog per file."""
-    schema_files = _list_yaml_files(schemas_dir)
-    check_schema(schema_files)
-
-    for schema_file in schema_files:
-        rel = schema_file.relative_to(schemas_dir)
-        _emit_catalog_file(schema_file, out_dir / rel)
+def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
+    """Validate the user schema file and extract a data catalog."""
+    check_schema(schema_file)
+    _emit_catalog_file(schema_file, out_dir / schema_file.name)
 
     # Emit the built-in contents schema (prose) so its entities
     # appear in meta-documentation alongside user-defined schemas.
@@ -47,10 +43,6 @@ def inspect_schema(schemas_dir: Path, *, out_dir: Path) -> None:
         out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name,
         builtin=True,
     )
-
-
-def _list_yaml_files(src_dir: Path) -> Sequence[Path]:
-    return [f for f in sorted(src_dir.rglob("*")) if FileType.YAML.match(f)]
 
 
 def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
@@ -64,13 +56,15 @@ def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -
         yaml_dumper.dump({"__definition": catalog}, f)
 
 
-def check_schema(schema_files: Sequence[Path]) -> None:
-    """Validate schema files against SchemaSchema.
+def check_schema(schema_file: Path) -> None:
+    """Validate the user schema file against SchemaSchema.
 
-    Raises FileValidationError if any file has diagnostics.
+    Raises FileValidationError if the file has diagnostics.
     """
+    if not schema_file.is_file():
+        raise FileNotFoundError(f"Schema file not found: {schema_file}")
     validator = build_schema_validator()
-    diagnostics = [d for f in schema_files for d in validator.validate_yaml(f)]
+    diagnostics = list(validator.validate_yaml(schema_file))
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
@@ -78,19 +72,15 @@ def check_schema(schema_files: Sequence[Path]) -> None:
 def extract_data_catalog(
     schema: Mapping[str, object], *, builtin: bool = False
 ) -> dict[str, Any]:
-    """Extract data catalog (entities + references) from merged schema data."""
+    """Extract data catalog (entities) from a root JSON Schema."""
     result: dict[str, Any] = {}
 
-    schemas = schema.get("schemas")
-    if isinstance(schemas, Mapping) and schemas:
+    properties = schema.get("properties")
+    if isinstance(properties, Mapping) and properties:
         entities = extract_entities(
-            cast(Mapping[str, object], schemas), builtin=builtin
+            cast(Mapping[str, object], properties), builtin=builtin
         )
         result["entities"] = [_strip_nones(asdict(e)) for e in entities]
-
-    references = schema.get("references")
-    if references:
-        result["references"] = references
 
     return result
 
@@ -109,5 +99,5 @@ def _strip_nones(d: Any) -> Any:  # noqa: ANN401
 
 
 def build_schema_validator() -> Validator:
-    """Build a Validator for user schema files (against built-in SchemaSchema)."""
+    """Build a Validator for the user schema file (against built-in SchemaSchema)."""
     return Validator(load_model(_SCHEMA_SCHEMA_FILE))

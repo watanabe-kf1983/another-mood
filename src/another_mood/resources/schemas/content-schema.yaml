@@ -1,12 +1,13 @@
 # Built-in prose schema — validates the structure produced by Markdown parsing.
 #
 # Markdown files in contents_dir are converted to this structure by the
-# Normalizer's prose parser.  This schema is merged with user-defined
-# schemas so that all content files are validated uniformly.
+# Normalizer's prose parser.  This schema is merged with the user's
+# schema.yaml so that all content files are validated uniformly.
 #
 # See: dev-docs/contents/design/normalizer/markdown-parser-spec.md
 
-schemas:
+type: object
+properties:
   prose:
     type: array
     items:
