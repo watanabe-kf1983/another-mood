@@ -82,13 +82,6 @@ def extract_data_catalog(
         )
         result["entities"] = [_strip_nones(asdict(e)) for e in entities]
 
-    # `references` is no longer accepted by SchemaSchema; the branch is
-    # kept until the references-related implementation is removed
-    # wholesale (see D10 follow-up step).
-    references = schema.get("references")
-    if references:
-        result["references"] = references
-
     return result
 
 

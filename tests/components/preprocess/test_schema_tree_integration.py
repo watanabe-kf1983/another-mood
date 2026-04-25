@@ -285,38 +285,6 @@ _CASES = [
         """,
         id="field metadata and validation keywords",
     ),
-    pytest.param(
-        """
-        type: object
-        properties:
-          recipes:
-            type: object
-            additionalProperties:
-              type: object
-              properties:
-                title: { type: string }
-              additionalProperties: false
-        references:
-          - from: recipes.ingredients.name
-            to: ingredients
-          - from: recipes.category
-            to: categories
-        """,
-        """
-        entities:
-          - id: recipes
-            builtin: false
-            fields:
-              - { id: id, type: string, required: true }
-              - { id: title, type: string, required: false }
-        references:
-          - from: recipes.ingredients.name
-            to: ingredients
-          - from: recipes.category
-            to: categories
-        """,
-        id="references passthrough",
-    ),
 ]
 
 

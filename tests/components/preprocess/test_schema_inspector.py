@@ -239,18 +239,6 @@ _REJECTED_SCHEMA_CASES = [
         """
         type: object
         properties:
-          users: { type: object, additionalProperties: { type: string } }
-        additionalProperties: false
-        references:
-          - from: orders.customer
-            to: users
-        """,
-        id="references at root rejected",
-    ),
-    pytest.param(
-        """
-        type: object
-        properties:
           my-schema:
             type: object
             additionalProperties:
@@ -382,52 +370,10 @@ class TestCheckSchema:
 
 
 class TestExtractDataCatalog:
-    """extract_data_catalog: orchestrates entity extraction + references."""
-
-    def test_references_passthrough(self) -> None:
-        schema = yaml.safe_load("""
-            type: object
-            properties:
-              recipes:
-                type: object
-                additionalProperties:
-                  type: object
-                  properties:
-                    title: { type: string }
-                  additionalProperties: false
-            references:
-              - from: recipes.ingredients.name
-                to: ingredients
-              - from: recipes.category
-                to: categories
-        """)
-        result = extract_data_catalog(schema)
-        assert result["references"] == [
-            {"from": "recipes.ingredients.name", "to": "ingredients"},
-            {"from": "recipes.category", "to": "categories"},
-        ]
-
-    def test_no_references(self) -> None:
-        schema = yaml.safe_load("""
-            type: object
-            properties:
-              recipes:
-                type: object
-                additionalProperties:
-                  type: object
-                  properties:
-                    title: { type: string }
-                  additionalProperties: false
-        """)
-        result = extract_data_catalog(schema)
-        assert "references" not in result
+    """extract_data_catalog: extract entity catalog from a root JSON Schema."""
 
     def test_no_properties(self) -> None:
-        schema = yaml.safe_load("""
-            references:
-              - from: recipes.category
-                to: categories
-        """)
+        schema = yaml.safe_load("type: object")
         result = extract_data_catalog(schema)
         assert "entities" not in result
 
