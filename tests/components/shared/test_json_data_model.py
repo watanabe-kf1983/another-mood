@@ -142,3 +142,38 @@ class TestLoadYamls:
 
     def test_no_directories_returns_empty(self) -> None:
         assert load_model() == {}
+
+    def test_single_file_path(self, tmp_path: Path) -> None:
+        f = tmp_path / "schema.yaml"
+        _write_yaml(f, {"properties": {"users": {"type": "object"}}})
+
+        assert load_model(f) == {"properties": {"users": {"type": "object"}}}
+
+    def test_file_and_directory_merged(self, tmp_path: Path) -> None:
+        d = tmp_path / "builtin"
+        d.mkdir()
+        _write_yaml(d / "prose.yaml", {"properties": {"prose": {"type": "array"}}})
+        f = tmp_path / "schema.yaml"
+        _write_yaml(f, {"properties": {"users": {"type": "object"}}})
+
+        result = load_model(d, f)
+        assert result == {
+            "properties": {
+                "prose": {"type": "array"},
+                "users": {"type": "object"},
+            }
+        }
+
+    def test_nonexistent_file_skipped(self, tmp_path: Path) -> None:
+        d = tmp_path / "dir"
+        d.mkdir()
+        _write_yaml(d / "data.yaml", {"key": "value"})
+        missing = tmp_path / "missing.yaml"
+
+        assert load_model(d, missing) == {"key": "value"}
+
+    def test_non_yaml_file_path_ignored(self, tmp_path: Path) -> None:
+        f = tmp_path / "notes.md"
+        f.write_text("# Not YAML")
+
+        assert load_model(f) == {}

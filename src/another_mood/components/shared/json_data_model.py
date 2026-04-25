@@ -4,7 +4,6 @@ See: dev-docs/contents/internal/json-data-model.md
 """
 
 from functools import reduce
-from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -15,13 +14,20 @@ from another_mood.components.shared.file_type import FileType
 type JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 
 
-def load_model(*directories: Path) -> dict[str, Any]:
-    """Load all YAML files from directories and deep-merge into a single dict."""
-    mappings = (
-        _load_mapping(f)
-        for f in sorted(chain.from_iterable(d.rglob("*") for d in directories))
-    )
-    return reduce(deep_merge, mappings, {})
+def load_model(*paths: Path) -> dict[str, Any]:
+    """Load YAML files from each path and deep-merge into a single dict.
+
+    Each path may be a YAML file (loaded directly), a directory
+    (recursively scanned for YAML files), or a missing path (treated as
+    the merge identity).
+    """
+    files: list[Path] = []
+    for p in paths:
+        if p.is_file():
+            files.append(p)
+        elif p.is_dir():
+            files.extend(p.rglob("*"))
+    return reduce(deep_merge, (_load_mapping(f) for f in sorted(files)), {})
 
 
 def _load_mapping(path: Path) -> dict[str, Any]:
