@@ -91,11 +91,13 @@ categories:
         phase: 10
 
   D:
-    title: 参照整合性チェック + Unique 制約
+    title: ユーザコンテンツバリデーション
     impl_paths:
       - src/another_mood/components/preprocess/normalizer.py
+      - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/preprocess/
       - src/another_mood/resources/schemas/schemas/schema-schema.yaml
+      - src/another_mood/config.py
       - src/another_mood/cli.py
     spec: design/normalizer/schema-spec.md
     tasks:
@@ -134,6 +136,13 @@ categories:
         title: Unique 制約の実装 + チェック
         note: --strict 連動（旧 I2）
         phase: 10
+      D10:
+        title: schema.yaml への一本化 (`schemas:` ラッパー除去)
+        note: |
+          definition/schema.yaml 1 ファイル (素の JSON Schema) に切り替える。
+          詳細は schema-spec.md。references の実装は同時に削除 (仕様書には将来仕様として残す)。
+          破壊的変更のため CHANGELOG / 移行メモが必要。
+        phase: 8
 
   E:
     title: YAML DSL クエリ評価拡充
