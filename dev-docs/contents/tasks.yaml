@@ -351,6 +351,10 @@ categories:
           Entity を path-based の Entity ID と `title:` 由来の Entity Name で識別する。
           詳細は schema-spec.md / meta-documentation.md。
         phase: 8
+      M3:
+        title: CatalogField を CatalogAttribute にリネーム
+        note: Entity-Attribute の container-member pair に揃える (データカタログは ER 文脈)。
+        phase: 8
 
   N:
     title: レンダリング / 出力形式
