@@ -1,32 +1,30 @@
-"""Data catalog model — output of SchemaInspector.
-
-Flat representation of entities and their attributes, extracted from
-user-defined schemas.  Consumed downstream by Composer / Generator
-for meta-documentation (Phase 7).
-"""
+"""Data catalog model — output of SchemaInspector."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class CatalogAttribute:
-    """A single attribute within an entity."""
-
+class Attribute:
     id: str
     type: str
     required: bool
     metadata: Mapping[str, object] | None = None
     validation: Mapping[str, object] | None = None
-    child_entity: str | None = None
+    entity: str | None = None  # referenced Entity.id (= access_path)
+    item_type: str | None = None  # referenced ObjectType.id
 
 
 @dataclass(frozen=True)
-class CatalogEntity:
-    """An entity (table-like structure) with its attributes."""
-
+class ObjectType:
     id: str
-    attributes: Sequence[CatalogAttribute]
+    attributes: Sequence[Attribute]
     metadata: Mapping[str, object] | None = None
+
+
+@dataclass(frozen=True)
+class Entity:
+    id: str
+    item_type: ObjectType
     parent_entity: str | None = None
     builtin: bool = False

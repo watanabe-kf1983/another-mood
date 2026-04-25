@@ -10,10 +10,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-from another_mood.components.preprocess.data_catalog import (
-    CatalogAttribute,
-    CatalogEntity,
-)
+from another_mood.components.preprocess import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────
 
@@ -183,9 +180,9 @@ def extract_entities(
     schemas: Mapping[str, object],
     *,
     builtin: bool = False,
-) -> list[CatalogEntity]:
-    """Convert a schemas dict into a flat list of CatalogEntity."""
-    entities: list[CatalogEntity] = []
+) -> list[dc.Entity]:
+    """Convert a schemas dict into a flat list of Entity."""
+    entities: list[dc.Entity] = []
     for name, schema in schemas.items():
         tree = build_schema_tree(cast(SchemaDict, schema))
         collect_entities(name, tree, entities, builtin=builtin)
@@ -195,7 +192,7 @@ def extract_entities(
 def collect_entities(
     name: str,
     node: Node,
-    entities: list[CatalogEntity],
+    entities: list[dc.Entity],
     *,
     builtin: bool = False,
 ) -> None:
@@ -207,8 +204,17 @@ def collect_entities(
     obj = _unwrap_to_object(node)
     if obj is None:
         return
+    is_collection = isinstance(node, ArrayNode)
+    item_type_id = f"{name}.item" if is_collection else name
     metadata = node.metadata if isinstance(node, ArrayNode) else None
-    _emit_object_entity(name, obj, entities, metadata=metadata, builtin=builtin)
+    _emit_object_entity(
+        access_path=name,
+        item_type_id=item_type_id,
+        obj=obj,
+        entities=entities,
+        metadata=metadata,
+        builtin=builtin,
+    )
 
 
 def _unwrap_to_object(node: Node) -> ObjectNode | None:
@@ -218,70 +224,92 @@ def _unwrap_to_object(node: Node) -> ObjectNode | None:
     return node if isinstance(node, ObjectNode) else None
 
 
-def _to_catalog_attribute(
+def _to_attribute(
     attribute_id: str,
     prop: SchemaProperty,
     *,
-    child_entity: str | None = None,
-) -> CatalogAttribute:
-    """Convert a SchemaProperty to a CatalogAttribute."""
-    return CatalogAttribute(
+    entity: str | None = None,
+    item_type: str | None = None,
+) -> dc.Attribute:
+    """Convert a SchemaProperty to an Attribute."""
+    return dc.Attribute(
         id=attribute_id,
         type=_resolve_type(prop.node),
         required=prop.required,
         metadata=prop.node.metadata,
         validation=(prop.node.validation if isinstance(prop.node, ValueNode) else None),
-        child_entity=child_entity,
+        entity=entity,
+        item_type=item_type,
     )
 
 
 def _emit_object_entity(
-    name: str,
-    obj: ObjectNode,
-    entities: list[CatalogEntity],
     *,
+    access_path: str,
+    item_type_id: str,
+    obj: ObjectNode,
+    entities: list[dc.Entity],
     metadata: Mapping[str, object] | None = None,
     parent_entity: str | None = None,
     builtin: bool = False,
 ) -> None:
-    """Emit a CatalogEntity from an ObjectNode, recursing into children."""
-    catalog_attributes: list[CatalogAttribute] = []
-    child_entities: list[tuple[str, ObjectNode]] = []
+    """Emit an Entity (with its ObjectType) and recurse into children.
+
+    Children are always collections (ArrayNode-wrapped object schemas);
+    inline singleton object properties are flattened into dotted attribute
+    names on the parent entity.
+    """
+    attributes: list[dc.Attribute] = []
+    child_specs: list[tuple[str, str, ObjectNode]] = []
 
     for prop in obj.properties:
-        child_entity_id: str | None = None
+        ref_entity: str | None = None
+        ref_item_type: str | None = None
         if isinstance(prop.node, ArrayNode):
             child_obj = _unwrap_to_object(prop.node)
             if child_obj is not None:
-                child_entity_id = f"{name}.{prop.name}"
-                child_entities.append((child_entity_id, child_obj))
+                ref_entity = f"{access_path}.{prop.name}"
+                ref_item_type = f"{item_type_id}.{prop.name}.item"
+                child_specs.append((ref_entity, ref_item_type, child_obj))
 
-        catalog_attributes.append(
-            _to_catalog_attribute(prop.name, prop, child_entity=child_entity_id)
+        attributes.append(
+            _to_attribute(
+                prop.name,
+                prop,
+                entity=ref_entity,
+                item_type=ref_item_type,
+            )
         )
 
         if isinstance(prop.node, ObjectNode):
             for sub in prop.node.properties:
-                catalog_attributes.append(
-                    _to_catalog_attribute(f"{prop.name}.{sub.name}", sub)
-                )
+                attributes.append(_to_attribute(f"{prop.name}.{sub.name}", sub))
 
     # ArrayNode metadata takes precedence: the outer dict-pattern schema owns
-    # the entity-level metadata (title, description, etc.), while the inner
+    # the type-level metadata (title, description, etc.), while the inner
     # ObjectNode describes the structure only.
+    item_type = dc.ObjectType(
+        id=item_type_id,
+        attributes=attributes,
+        metadata=metadata or obj.metadata,
+    )
     entities.append(
-        CatalogEntity(
-            id=name,
-            attributes=catalog_attributes,
-            metadata=metadata or obj.metadata,
+        dc.Entity(
+            id=access_path,
+            item_type=item_type,
             parent_entity=parent_entity,
             builtin=builtin,
         )
     )
 
-    for child_name, child_obj in child_entities:
+    for child_access_path, child_item_type_id, child_obj in child_specs:
         _emit_object_entity(
-            child_name, child_obj, entities, parent_entity=name, builtin=builtin
+            access_path=child_access_path,
+            item_type_id=child_item_type_id,
+            obj=child_obj,
+            entities=entities,
+            parent_entity=access_path,
+            builtin=builtin,
         )
 
 

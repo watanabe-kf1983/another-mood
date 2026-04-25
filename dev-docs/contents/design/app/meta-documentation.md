@@ -7,12 +7,14 @@
 
 データカタログのエントリは 2 階層で表現される:
 
-- **Entity**: データツリー上の到達経路 `access_path` (例: `categories.tasks`)。クエリ DSL の `from:`、URL/anchor、ファイルパス、表示見出しに使う
-- **ObjectType**: row 型そのものの識別子 `id` (例: `categories.item.tasks.item`)。コレクションを 1 段降りるごとに `.item` を付加。FK 参照や型レベルの cross-reference に使う
+- **Entity**: データツリー上の到達経路を表す identifier `id` (例: `categories.tasks`)。クエリ DSL の `from:`、URL/anchor、ファイルパス、表示見出しに使う
+- **ObjectType**: Entity の中の 1 つの item の型 `id` (例: `categories.item.tasks.item`)。コレクションを 1 段降りるごとに `.item` を付加。FK 参照や型レベルの cross-reference に使う
+
+Entity は自身の `item_type` フィールドを通じて ObjectType を保持する。
 
 詳細は [schema-spec.md](../normalizer/schema-spec.md)「Entity 名」節を参照。
 
-ObjectType の表示名 (例: `Category`) を `title:` キーワードから供給する仕組みは別タスク (M4) で導入予定。それまでは access_path をそのまま表示する。
+ObjectType の表示名 (例: `Category`) を `title:` キーワードから供給する仕組みは別タスク (M4) で導入予定。それまでは Entity.id をそのまま表示する。
 
 ## 自動生成される内容
 

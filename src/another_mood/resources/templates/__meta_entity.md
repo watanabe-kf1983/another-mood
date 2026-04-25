@@ -5,19 +5,19 @@
 {% if parent_entity -%}
 Parent: [{{ parent_entity }}]({{ parent_entity }}.md)
 {% endif -%}
-{% if metadata.title %}
-**{{ metadata.title }}**
+{% if item_type.metadata.title %}
+**{{ item_type.metadata.title }}**
 {% endif -%}
-{% if metadata.description %}
-{{ metadata.description }}
+{% if item_type.metadata.description %}
+{{ item_type.metadata.description }}
 {% endif %}
 ## Attributes
 
-{% if attributes -%}
+{% if item_type.attributes -%}
 | ID | Type | Required | Title | Description |
 |----|------|----------|-------|-------------|
-{% for attribute in attributes -%}
-{%- set type_cell = "[" ~ attribute.type ~ "](" ~ attribute.child_entity ~ ".md)" if attribute.child_entity else attribute.type -%}
+{% for attribute in item_type.attributes -%}
+{%- set type_cell = "[" ~ attribute.type ~ "](" ~ attribute.entity ~ ".md)" if attribute.entity else attribute.type -%}
 {%- set required_cell = "yes" if attribute.required else "" -%}
 | {{ attribute.id }} | {{ type_cell }} | {{ required_cell }} | {{ attribute.metadata.title }} | {{ attribute.metadata.description }} |
 {% endfor -%}
