@@ -12,7 +12,6 @@ from functools import reduce
 from pathlib import Path
 from typing import Any
 
-import yaml
 from ruamel.yaml import YAML
 from ruamel.yaml.representer import RoundTripRepresenter
 
@@ -50,9 +49,14 @@ def collect_files(*paths: Path) -> list[Path]:
 
 
 def _load_mapping(path: Path) -> dict[str, Any]:
-    """Parse path as a YAML mapping; return {} (merge identity) for non-YAML files."""
+    """Parse path as a YAML 1.2 mapping; return {} for non-YAML files.
+
+    A fresh YAML instance is created per call (see ``save_model`` for
+    the thread-safety rationale).  ``typ='safe'`` returns plain Python
+    types (dict / list / scalar) — round-trip mode is not needed here.
+    """
     if FileType.YAML.match(path):
-        loaded: object = yaml.safe_load(path.read_text())
+        loaded: object = YAML(typ="safe").load(path.read_text())  # type: ignore[no-untyped-call]
         if not isinstance(loaded, dict):
             raise ValueError(
                 f"Expected a YAML mapping in {path}, got {type(loaded).__name__}"
