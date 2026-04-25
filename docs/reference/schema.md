@@ -191,6 +191,7 @@ JSON Schema draft 2020-12 にあるが、このツールでは拒否されるキ
 
 - `type` は単一文字列のみ（`type: [string, "null"]` のような配列形式や `null` 型は不可）
 - スキーマ名およびプロパティ名は識別子（Unicode 文字・数字・アンダースコア、先頭は数字不可）
+- ルートは `type: object` 固定で `properties:` を必ず持つ。ルート直下に辞書パターン（`additionalProperties: <スキーマ>`）は書けない（エンティティ列挙モデルと整合しないため）
 
 ## schema-schema 全文
 
@@ -209,9 +210,25 @@ JSON Schema draft 2020-12 にあるが、このツールでは拒否されるキ
 # go through normalization and visualization pipelines that cannot handle
 # $ref; this built-in schema is only consumed by the jsonschema validator.
 
-$ref: "#/$defs/jsonSchemaSubset"
+$ref: "#/$defs/rootSchema"
 
 $defs:
+  # The root user schema is a jsonSchemaSubset with two extra constraints:
+  # type must be `object` and `properties:` must be present.  This rules
+  # out a dict-pattern root (`additionalProperties: <schema>` without
+  # `properties:`), which would otherwise pass validation but degrade
+  # silently downstream — extract_data_catalog yields no entities and
+  # the normalizer ignores the root additionalProperties because
+  # _build_object_from_properties is preferred once the user schema is
+  # merged with the built-in prose schema (which contributes properties).
+  rootSchema:
+    allOf:
+      - $ref: "#/$defs/jsonSchemaSubset"
+      - required: [type, properties]
+        properties:
+          type:
+            const: object
+
   jsonSchemaSubset:
     type: object
     properties:

@@ -238,6 +238,35 @@ _REJECTED_SCHEMA_CASES = [
     pytest.param(
         """
         type: object
+        additionalProperties:
+          type: object
+          properties:
+            name: { type: string }
+          additionalProperties: false
+        """,
+        id="root dict pattern (additionalProperties as schema) rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        additionalProperties: false
+        """,
+        id="root without properties rejected",
+    ),
+    pytest.param(
+        """
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: string }
+          additionalProperties: false
+        """,
+        id="root non-object type rejected",
+    ),
+    pytest.param(
+        """
+        type: object
         properties:
           my-schema:
             type: object

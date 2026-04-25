@@ -33,6 +33,8 @@ properties:
 
 ファイルは 1 本固定。複数ファイルへの分割や外部 schema の `$ref` 参照はサポートしない。
 
+ルートは `type: object` 固定で `properties:` 必須。ルート直下に辞書パターン (`additionalProperties: <schema>`) を書く形は SchemaSchema が拒否する。書けてもエンティティ列挙モデルと整合せず、データカタログが空になる・ルート正規化が無視されるなど沈黙劣化を招くため、メタスキーマで明示的に弾く。
+
 ### コンテンツ YAML との関係
 
 コンテンツ YAML は `contents_dir/` 配下に配置し、各ファイルのトップレベルキーが schema.yaml の `properties` のエントリ名に対応する:
