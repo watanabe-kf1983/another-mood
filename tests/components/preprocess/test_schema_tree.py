@@ -9,7 +9,7 @@ from another_mood.components.preprocess.data_catalog import (
 from another_mood.components.preprocess.schema_tree import (
     ArrayNode,
     ObjectNode,
-    SchemaField,
+    SchemaProperty,
     ValueNode,
     build_schema_tree,
     collect_entities,
@@ -36,9 +36,9 @@ class TestBuildSchemaTree:
             additionalProperties: false
             required: [name]
         """))
-        assert tree == ObjectNode(fields=[
-            SchemaField("name", True,  ValueNode(type="string")),
-            SchemaField("age",  False, ValueNode(type="integer")),
+        assert tree == ObjectNode(properties=[
+            SchemaProperty("name", True,  ValueNode(type="string")),
+            SchemaProperty("age",  False, ValueNode(type="integer")),
         ])
 
     def test_additional_properties_object(self) -> None:
@@ -52,9 +52,9 @@ class TestBuildSchemaTree:
               additionalProperties: false
               required: [title]
         """))
-        assert tree == ArrayNode(child=ObjectNode(fields=[
-            SchemaField("id",    True, ValueNode(type="string")),
-            SchemaField("title", True, ValueNode(type="string")),
+        assert tree == ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("id",    True, ValueNode(type="string")),
+            SchemaProperty("title", True, ValueNode(type="string")),
         ]))
 
     def test_additional_properties_scalar(self) -> None:
@@ -63,9 +63,9 @@ class TestBuildSchemaTree:
             type: object
             additionalProperties: { type: number }
         """))
-        assert tree == ArrayNode(child=ObjectNode(fields=[
-            SchemaField("id",    True, ValueNode(type="string")),
-            SchemaField("value", True, ValueNode(type="number")),
+        assert tree == ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("id",    True, ValueNode(type="string")),
+            SchemaProperty("value", True, ValueNode(type="number")),
         ]))
 
     def test_array_items(self) -> None:
@@ -78,8 +78,8 @@ class TestBuildSchemaTree:
                 x: { type: integer }
               additionalProperties: false
         """))
-        assert tree == ArrayNode(child=ObjectNode(fields=[
-            SchemaField("x", False, ValueNode(type="integer")),
+        assert tree == ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("x", False, ValueNode(type="integer")),
         ]))
 
     def test_array_scalar_items(self) -> None:
@@ -134,7 +134,7 @@ class TestBuildSchemaTree:
             required: [a, c]
         """))
         assert isinstance(tree, ObjectNode)
-        assert [(f.name, f.required) for f in tree.fields] == [
+        assert [(f.name, f.required) for f in tree.properties] == [
             ("a", True), ("b", False), ("c", True),
         ]
 
@@ -150,9 +150,9 @@ class TestBuildSchemaTree:
                 additionalProperties: false
             additionalProperties: false
         """))
-        assert tree == ObjectNode(fields=[
-            SchemaField("address", False, ObjectNode(fields=[
-                SchemaField("city", False, ValueNode(type="string")),
+        assert tree == ObjectNode(properties=[
+            SchemaProperty("address", False, ObjectNode(properties=[
+                SchemaProperty("city", False, ValueNode(type="string")),
             ])),
         ])
 
@@ -166,8 +166,8 @@ class TestBuildSchemaTree:
                 items: { type: integer }
             additionalProperties: false
         """))
-        assert tree == ObjectNode(fields=[
-            SchemaField("scores", False, ArrayNode(child=ValueNode(type="integer"))),
+        assert tree == ObjectNode(properties=[
+            SchemaProperty("scores", False, ArrayNode(child=ValueNode(type="integer"))),
         ])
 
     def test_object_mixed_children(self) -> None:
@@ -186,11 +186,11 @@ class TestBuildSchemaTree:
                 additionalProperties: false
             additionalProperties: false
         """))
-        assert tree == ObjectNode(fields=[
-            SchemaField("name", False, ValueNode(type="string")),
-            SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
-            SchemaField("address", False, ObjectNode(fields=[
-                SchemaField("city", False, ValueNode(type="string")),
+        assert tree == ObjectNode(properties=[
+            SchemaProperty("name", False, ValueNode(type="string")),
+            SchemaProperty("tags", False, ArrayNode(child=ValueNode(type="string"))),
+            SchemaProperty("address", False, ObjectNode(properties=[
+                SchemaProperty("city", False, ValueNode(type="string")),
             ])),
         ])
 
@@ -215,9 +215,9 @@ class TestCollectEntities:
 
     def test_top_level_object(self) -> None:
         """Top-level ObjectNode → single entity."""
-        tree = ObjectNode(fields=[
-            SchemaField("name", True,  ValueNode(type="string")),
-            SchemaField("age",  False, ValueNode(type="integer")),
+        tree = ObjectNode(properties=[
+            SchemaProperty("name", True,  ValueNode(type="string")),
+            SchemaProperty("age",  False, ValueNode(type="integer")),
         ])
         entities: list[CatalogEntity] = []
         collect_entities("person", tree, entities)
@@ -228,8 +228,8 @@ class TestCollectEntities:
 
     def test_top_level_array_of_objects(self) -> None:
         """Top-level ArrayNode → ObjectNode → entity."""
-        tree = ArrayNode(child=ObjectNode(fields=[
-            SchemaField("x", True, ValueNode(type="number")),
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("x", True, ValueNode(type="number")),
         ]))
         entities: list[CatalogEntity] = []
         collect_entities("points", tree, entities)
@@ -239,10 +239,10 @@ class TestCollectEntities:
 
     def test_nested_object_prefix_flattened(self) -> None:
         """ObjectNode inside properties → prefix.name flat attributes."""
-        tree = ObjectNode(fields=[
-            SchemaField("address", True, ObjectNode(fields=[
-                SchemaField("city",    True,  ValueNode(type="string")),
-                SchemaField("zipcode", False, ValueNode(type="string")),
+        tree = ObjectNode(properties=[
+            SchemaProperty("address", True, ObjectNode(properties=[
+                SchemaProperty("city",    True,  ValueNode(type="string")),
+                SchemaProperty("zipcode", False, ValueNode(type="string")),
             ])),
         ])
         entities: list[CatalogEntity] = []
@@ -255,9 +255,9 @@ class TestCollectEntities:
 
     def test_array_object_creates_child_entity(self) -> None:
         """ArrayNode → ObjectNode inside properties → object[] attribute + linked child entity."""
-        tree = ObjectNode(fields=[
-            SchemaField("items", False, ArrayNode(child=ObjectNode(fields=[
-                SchemaField("name", True, ValueNode(type="string")),
+        tree = ObjectNode(properties=[
+            SchemaProperty("items", False, ArrayNode(child=ObjectNode(properties=[
+                SchemaProperty("name", True, ValueNode(type="string")),
             ]))),
         ])
         entities: list[CatalogEntity] = []
@@ -275,8 +275,8 @@ class TestCollectEntities:
 
     def test_array_value_type_bracket(self) -> None:
         """ArrayNode → ValueNode → type[] attribute."""
-        tree = ObjectNode(fields=[
-            SchemaField("tags", False, ArrayNode(child=ValueNode(type="string"))),
+        tree = ObjectNode(properties=[
+            SchemaProperty("tags", False, ArrayNode(child=ValueNode(type="string"))),
         ])
         entities: list[CatalogEntity] = []
         collect_entities("article", tree, entities)
@@ -286,8 +286,8 @@ class TestCollectEntities:
 
     def test_nested_array_type_brackets(self) -> None:
         """ArrayNode → ArrayNode → type[][] attribute."""
-        tree = ObjectNode(fields=[
-            SchemaField("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
+        tree = ObjectNode(properties=[
+            SchemaProperty("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
         ])
         entities: list[CatalogEntity] = []
         collect_entities("sheet", tree, entities)
@@ -297,9 +297,9 @@ class TestCollectEntities:
 
     def test_nested_array_of_objects_creates_child_entity(self) -> None:
         """ArrayNode → ArrayNode → ObjectNode inside properties → object[][] attribute + child entity."""
-        tree = ObjectNode(fields=[
-            SchemaField("grid", False, ArrayNode(child=ArrayNode(child=ObjectNode(fields=[
-                SchemaField("v", True, ValueNode(type="number")),
+        tree = ObjectNode(properties=[
+            SchemaProperty("grid", False, ArrayNode(child=ArrayNode(child=ObjectNode(properties=[
+                SchemaProperty("v", True, ValueNode(type="number")),
             ])))),
         ])
         entities: list[CatalogEntity] = []
@@ -318,8 +318,8 @@ class TestCollectEntities:
     def test_entity_metadata_from_array_node(self) -> None:
         """ArrayNode.metadata → CatalogEntity.metadata (not ObjectNode's)."""
         tree = ArrayNode(
-            child=ObjectNode(fields=[
-                SchemaField("x", True, ValueNode(type="string")),
+            child=ObjectNode(properties=[
+                SchemaProperty("x", True, ValueNode(type="string")),
             ]),
             metadata={"title": "My Collection"},
         )
@@ -329,8 +329,8 @@ class TestCollectEntities:
 
     def test_attribute_metadata_and_validation(self) -> None:
         """ValueNode metadata/validation → CatalogAttribute metadata/validation."""
-        tree = ObjectNode(fields=[
-            SchemaField("score", True, ValueNode(
+        tree = ObjectNode(properties=[
+            SchemaProperty("score", True, ValueNode(
                 type="integer",
                 metadata={"description": "Player score"},
                 validation={"minimum": 0, "maximum": 100},
@@ -345,10 +345,10 @@ class TestCollectEntities:
         )
 
     def test_required_transferred(self) -> None:
-        """SchemaField.required → CatalogAttribute.required."""
-        tree = ObjectNode(fields=[
-            SchemaField("a", True,  ValueNode(type="string")),
-            SchemaField("b", False, ValueNode(type="string")),
+        """SchemaProperty.required → CatalogAttribute.required."""
+        tree = ObjectNode(properties=[
+            SchemaProperty("a", True,  ValueNode(type="string")),
+            SchemaProperty("b", False, ValueNode(type="string")),
         ])
         entities: list[CatalogEntity] = []
         collect_entities("t", tree, entities)

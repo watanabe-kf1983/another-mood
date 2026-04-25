@@ -39,7 +39,7 @@ class ArrayNode:
 
 
 @dataclass(frozen=True)
-class SchemaField:
+class SchemaProperty:
     """Edge between parent ObjectNode and child Node."""
 
     name: str
@@ -49,9 +49,9 @@ class SchemaField:
 
 @dataclass(frozen=True)
 class ObjectNode:
-    """Object node — holds named fields (properties)."""
+    """Object node — holds named properties."""
 
-    fields: Sequence[SchemaField]
+    properties: Sequence[SchemaProperty]
     metadata: Mapping[str, object] | None = None
 
 
@@ -120,15 +120,15 @@ def _build_object_from_properties(
     required_list = cast(list[str] | None, schema.get("required"))
     required_set = frozenset(required_list or [])
 
-    fields = [
-        SchemaField(
+    schema_properties = [
+        SchemaProperty(
             name=prop_name,
             required=prop_name in required_set,
             node=build_schema_tree(prop_schema),
         )
         for prop_name, prop_schema in properties.items()
     ]
-    return ObjectNode(fields=fields, metadata=metadata)
+    return ObjectNode(properties=schema_properties, metadata=metadata)
 
 
 def _build_array_from_additional(
@@ -141,17 +141,19 @@ def _build_array_from_additional(
 
     if additional_type == "object" and "properties" in additional:
         inner = _build_object_from_properties(additional, _extract_metadata(additional))
-        id_field = SchemaField(name="id", required=True, node=ValueNode(type="string"))
+        id_property = SchemaProperty(
+            name="id", required=True, node=ValueNode(type="string")
+        )
         child = ObjectNode(
-            fields=[id_field, *inner.fields],
+            properties=[id_property, *inner.properties],
             metadata=inner.metadata,
         )
     else:
         value_node = build_schema_tree(additional)
         child = ObjectNode(
-            fields=[
-                SchemaField(name="id", required=True, node=ValueNode(type="string")),
-                SchemaField(name="value", required=True, node=value_node),
+            properties=[
+                SchemaProperty(name="id", required=True, node=ValueNode(type="string")),
+                SchemaProperty(name="value", required=True, node=value_node),
             ]
         )
 
@@ -218,19 +220,17 @@ def _unwrap_to_object(node: Node) -> ObjectNode | None:
 
 def _to_catalog_attribute(
     attribute_id: str,
-    field: SchemaField,
+    prop: SchemaProperty,
     *,
     child_entity: str | None = None,
 ) -> CatalogAttribute:
-    """Convert a SchemaField to a CatalogAttribute."""
+    """Convert a SchemaProperty to a CatalogAttribute."""
     return CatalogAttribute(
         id=attribute_id,
-        type=_resolve_type(field.node),
-        required=field.required,
-        metadata=field.node.metadata,
-        validation=(
-            field.node.validation if isinstance(field.node, ValueNode) else None
-        ),
+        type=_resolve_type(prop.node),
+        required=prop.required,
+        metadata=prop.node.metadata,
+        validation=(prop.node.validation if isinstance(prop.node, ValueNode) else None),
         child_entity=child_entity,
     )
 
@@ -248,22 +248,22 @@ def _emit_object_entity(
     catalog_attributes: list[CatalogAttribute] = []
     child_entities: list[tuple[str, ObjectNode]] = []
 
-    for field in obj.fields:
+    for prop in obj.properties:
         child_entity_id: str | None = None
-        if isinstance(field.node, ArrayNode):
-            child_obj = _unwrap_to_object(field.node)
+        if isinstance(prop.node, ArrayNode):
+            child_obj = _unwrap_to_object(prop.node)
             if child_obj is not None:
-                child_entity_id = f"{name}.{field.name}"
+                child_entity_id = f"{name}.{prop.name}"
                 child_entities.append((child_entity_id, child_obj))
 
         catalog_attributes.append(
-            _to_catalog_attribute(field.name, field, child_entity=child_entity_id)
+            _to_catalog_attribute(prop.name, prop, child_entity=child_entity_id)
         )
 
-        if isinstance(field.node, ObjectNode):
-            for sub in field.node.fields:
+        if isinstance(prop.node, ObjectNode):
+            for sub in prop.node.properties:
                 catalog_attributes.append(
-                    _to_catalog_attribute(f"{field.name}.{sub.name}", sub)
+                    _to_catalog_attribute(f"{prop.name}.{sub.name}", sub)
                 )
 
     # ArrayNode metadata takes precedence: the outer dict-pattern schema owns
