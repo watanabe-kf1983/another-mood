@@ -21,7 +21,8 @@ _DUMMY_FILE = Path("test.yaml")
 _VALID_SCHEMA_CASES = [
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             additionalProperties:
@@ -31,12 +32,14 @@ _VALID_SCHEMA_CASES = [
                 email: { type: string }
               additionalProperties: false
               required: [name]
+        additionalProperties: false
         """,
         id="dict pattern",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           config:
             type: object
             properties:
@@ -44,12 +47,14 @@ _VALID_SCHEMA_CASES = [
               debug: { type: boolean }
             additionalProperties: false
             required: [version]
+        additionalProperties: false
         """,
         id="fixed structure",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           items:
             type: array
             items:
@@ -57,36 +62,14 @@ _VALID_SCHEMA_CASES = [
               properties:
                 id: { type: string }
               additionalProperties: false
+        additionalProperties: false
         """,
         id="array schema",
     ),
     pytest.param(
         """
-        references:
-          - from: orders.customer
-            to: users
-        """,
-        id="references only",
-    ),
-    pytest.param(
-        """
-        schemas:
-          users:
-            type: object
-            additionalProperties:
-              type: object
-              properties:
-                name: { type: string }
-              additionalProperties: false
-        references:
-          - from: orders.customer
-            to: users
-        """,
-        id="schemas and references",
-    ),
-    pytest.param(
-        """
-        schemas:
+        type: object
+        properties:
           products:
             type: object
             additionalProperties:
@@ -102,12 +85,14 @@ _VALID_SCHEMA_CASES = [
                   uniqueItems: true
               additionalProperties: false
               required: [name, price]
+        additionalProperties: false
         """,
         id="validation keywords passthrough",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             title: User schema
@@ -121,12 +106,14 @@ _VALID_SCHEMA_CASES = [
                   default: anonymous
                   examples: [Alice, Bob]
               additionalProperties: false
+        additionalProperties: false
         """,
         id="metadata keywords",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           エンティティ:
             type: object
             additionalProperties:
@@ -134,6 +121,7 @@ _VALID_SCHEMA_CASES = [
               properties:
                 名前: { type: string }
               additionalProperties: false
+        additionalProperties: false
         """,
         id="unicode schema and property names",
     ),
@@ -142,63 +130,76 @@ _VALID_SCHEMA_CASES = [
 _REJECTED_SCHEMA_CASES = [
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             $ref: "#/$defs/user"
+        additionalProperties: false
         """,
         id="$ref rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             $defs:
               name: { type: string }
             type: object
+        additionalProperties: false
         """,
         id="$defs rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             allOf:
               - type: object
+        additionalProperties: false
         """,
         id="allOf rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             anyOf:
               - type: string
               - type: number
+        additionalProperties: false
         """,
         id="anyOf rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             if: { type: string }
             then: { minLength: 1 }
+        additionalProperties: false
         """,
         id="if/then/else rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             patternProperties:
               "^S_": { type: string }
+        additionalProperties: false
         """,
         id="patternProperties rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             properties:
@@ -208,37 +209,48 @@ _REJECTED_SCHEMA_CASES = [
               properties:
                 name: { type: string }
               additionalProperties: false
+        additionalProperties: false
         """,
         id="properties + additionalProperties as schema rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             properties:
               version: { type: string }
+        additionalProperties: false
         """,
         id="properties without additionalProperties: false rejected",
     ),
     pytest.param(
         """
-        schemas:
-          users: { type: object }
+        type: object
+        properties:
+          users: { type: object, additionalProperties: { type: string } }
+        additionalProperties: false
         unknown_key: something
         """,
         id="unknown top-level key rejected",
     ),
     pytest.param(
         """
+        type: object
+        properties:
+          users: { type: object, additionalProperties: { type: string } }
+        additionalProperties: false
         references:
           - from: orders.customer
+            to: users
         """,
-        id="references missing required field",
+        id="references at root rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           my-schema:
             type: object
             additionalProperties:
@@ -246,23 +258,27 @@ _REJECTED_SCHEMA_CASES = [
               properties:
                 name: { type: string }
               additionalProperties: false
+        additionalProperties: false
         """,
         id="hyphenated schema name rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             properties:
               first-name: { type: string }
             additionalProperties: false
+        additionalProperties: false
         """,
         id="hyphenated property name rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             additionalProperties:
@@ -270,12 +286,14 @@ _REJECTED_SCHEMA_CASES = [
               properties:
                 name: { type: [string, "null"] }
               additionalProperties: false
+        additionalProperties: false
         """,
         id="array type rejected",
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           users:
             type: object
             additionalProperties:
@@ -283,6 +301,7 @@ _REJECTED_SCHEMA_CASES = [
               properties:
                 placeholder: { type: "null" }
               additionalProperties: false
+        additionalProperties: false
         """,
         id="null type rejected",
     ),
@@ -306,70 +325,53 @@ class TestBuildSchemaValidator:
 # ── check_schema ────────────────────────────────────────────────────
 
 
+def _write_schema(path: Path, body: str) -> Path:
+    path.write_text(body)
+    return path
+
+
+_VALID_SCHEMA_BODY = """\
+type: object
+properties:
+  users:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        name: { type: string }
+      additionalProperties: false
+additionalProperties: false
+"""
+
+_INVALID_SCHEMA_BODY = """\
+type: object
+properties:
+  items:
+    type: object
+    properties:
+      name: { type: string }
+    additionalProperties:
+      type: object
+additionalProperties: false
+"""
+
+
 class TestCheckSchema:
     """check_schema: validate schema files directly."""
 
-    def test_valid_schemas_pass(self, tmp_path: Path) -> None:
-        f = tmp_path / "entities.yaml"
-        f.write_text(
-            "schemas:\n"
-            "  users:\n"
-            "    type: object\n"
-            "    additionalProperties:\n"
-            "      type: object\n"
-            "      properties:\n"
-            "        name: { type: string }\n"
-            "      additionalProperties: false\n"
-        )
+    def test_valid_schema_passes(self, tmp_path: Path) -> None:
+        f = _write_schema(tmp_path / "schema.yaml", _VALID_SCHEMA_BODY)
         check_schema([f])
 
     def test_invalid_schema_raises(self, tmp_path: Path) -> None:
-        f = tmp_path / "bad.yaml"
-        f.write_text(
-            "schemas:\n"
-            "  items:\n"
-            "    type: object\n"
-            "    properties:\n"
-            "      name: { type: string }\n"
-            "    additionalProperties:\n"
-            "      type: object\n"
-        )
+        f = _write_schema(tmp_path / "schema.yaml", _INVALID_SCHEMA_BODY)
         with pytest.raises(FileValidationError) as exc_info:
             check_schema([f])
         assert len(exc_info.value.diagnostics) >= 1
         assert exc_info.value.diagnostics[0].file == f
 
-    def test_collects_errors_across_files(self, tmp_path: Path) -> None:
-        good = tmp_path / "good.yaml"
-        good.write_text(
-            "schemas:\n"
-            "  users:\n"
-            "    type: array\n"
-            "    items:\n"
-            "      type: object\n"
-            "      properties:\n"
-            "        name: { type: string }\n"
-            "      additionalProperties: false\n"
-        )
-        bad = tmp_path / "bad.yaml"
-        bad.write_text(
-            "schemas:\n"
-            "  items:\n"
-            "    type: object\n"
-            "    properties:\n"
-            "      name: { type: string }\n"
-            "    additionalProperties:\n"
-            "      type: object\n"
-        )
-        with pytest.raises(FileValidationError) as exc_info:
-            check_schema([good, bad])
-        files_with_errors = {d.file for d in exc_info.value.diagnostics}
-        assert bad in files_with_errors
-        assert good not in files_with_errors
-
     def test_broken_yaml_collected_as_diagnostic(self, tmp_path: Path) -> None:
-        f = tmp_path / "broken.yaml"
-        f.write_text("a: [unterminated\n")
+        f = _write_schema(tmp_path / "schema.yaml", "a: [unterminated\n")
         with pytest.raises(FileValidationError) as exc_info:
             check_schema([f])
         assert exc_info.value.diagnostics[0].file == f
@@ -384,7 +386,8 @@ class TestExtractDataCatalog:
 
     def test_references_passthrough(self) -> None:
         schema = yaml.safe_load("""
-            schemas:
+            type: object
+            properties:
               recipes:
                 type: object
                 additionalProperties:
@@ -406,7 +409,8 @@ class TestExtractDataCatalog:
 
     def test_no_references(self) -> None:
         schema = yaml.safe_load("""
-            schemas:
+            type: object
+            properties:
               recipes:
                 type: object
                 additionalProperties:
@@ -418,7 +422,7 @@ class TestExtractDataCatalog:
         result = extract_data_catalog(schema)
         assert "references" not in result
 
-    def test_no_schemas(self) -> None:
+    def test_no_properties(self) -> None:
         schema = yaml.safe_load("""
             references:
               - from: recipes.category
@@ -432,13 +436,13 @@ class TestExtractDataCatalog:
 
 
 class TestInspectSchema:
-    """inspect_schema: pipeline component writes per-file data catalog."""
+    """inspect_schema: pipeline component writes the data catalog."""
 
-    def test_writes_per_file(self, tmp_path: Path) -> None:
-        schemas_dir = tmp_path / "schemas"
-        schemas_dir.mkdir()
-        (schemas_dir / "recipes.yaml").write_text(
-            "schemas:\n"
+    def test_writes_user_schema_catalog(self, tmp_path: Path) -> None:
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
             "  recipes:\n"
             "    type: object\n"
             "    additionalProperties:\n"
@@ -446,27 +450,26 @@ class TestInspectSchema:
             "      properties:\n"
             "        title: { type: string }\n"
             "      additionalProperties: false\n"
+            "additionalProperties: false\n"
         )
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
-        inspect_schema.fn(schemas_dir, out_dir=out_dir)
+        inspect_schema.fn(schema_file, out_dir=out_dir)
 
-        out_file = out_dir / "recipes.yaml"
+        out_file = out_dir / "schema.yaml"
         assert out_file.exists()
         data = yaml.safe_load(out_file.read_text())
-        assert "__definition" in data
         entities = data["__definition"]["entities"]
         assert entities[0]["id"] == "recipes"
 
     def test_emits_builtin_prose_catalog(self, tmp_path: Path) -> None:
         """Built-in prose schema is emitted under __builtin/ so it shows up in meta-docs."""
-        schemas_dir = tmp_path / "schemas"
-        schemas_dir.mkdir()
+        schema_file = tmp_path / "schema.yaml"  # missing on purpose
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
-        inspect_schema.fn(schemas_dir, out_dir=out_dir)
+        inspect_schema.fn(schema_file, out_dir=out_dir)
 
         out_file = out_dir / "__builtin" / "content-schema.yaml"
         assert out_file.exists()

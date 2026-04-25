@@ -8,7 +8,8 @@ from another_mood.components.preprocess.schema_inspector import extract_data_cat
 _CASES = [
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipes:
             type: object
             additionalProperties:
@@ -32,7 +33,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           kitchen:
             type: object
             properties:
@@ -53,7 +55,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           steps:
             type: array
             items:
@@ -76,7 +79,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipe:
             type: object
             properties:
@@ -96,7 +100,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipes:
             type: object
             additionalProperties:
@@ -135,7 +140,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipe:
             type: object
             properties:
@@ -162,7 +168,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipe:
             type: object
             properties:
@@ -194,7 +201,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipes:
             type: object
             title: Recipe collection
@@ -220,7 +228,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipes:
             type: object
             additionalProperties:
@@ -278,7 +287,8 @@ _CASES = [
     ),
     pytest.param(
         """
-        schemas:
+        type: object
+        properties:
           recipes:
             type: object
             additionalProperties:
