@@ -349,6 +349,7 @@ categories:
         title: Entity と ObjectType の分離
         note: CatalogEntity を access_path ベースの Entity と path+`.item` ベースの ObjectType に分割。Catalog プレフィックスも除去。
         phase: 8
+        done: true
       M3:
         title: CatalogField を CatalogAttribute にリネーム
         note: Entity-Attribute の container-member pair に揃える (データカタログは ER 文脈)。
