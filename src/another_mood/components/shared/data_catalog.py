@@ -2,12 +2,12 @@
 
 Composite-type references (``Attribute.entity``, ``Entity.parent_entity``)
 are kept as plain string ids on both the in-memory and serialized sides,
-so YAML round-tripping is straightforward: ``dataclasses.asdict`` for
-write, ``Entity.from_dict`` for read.
+so YAML round-tripping is straightforward: each class exposes
+``to_dict`` / ``from_dict`` for its own conversion.
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 
@@ -21,6 +21,9 @@ class Attribute:
     entity: str | None = None  # referenced Entity.id (= access_path)
     item_type: str | None = None  # referenced ObjectType.id
 
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "Attribute":
         return cls(**d)
@@ -31,6 +34,9 @@ class ObjectType:
     id: str
     attributes: Sequence[Attribute]
     metadata: Mapping[str, object] | None = None
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "ObjectType":
@@ -46,6 +52,9 @@ class Entity:
     item_type: ObjectType
     parent_entity: str | None = None
     builtin: bool = False
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "Entity":

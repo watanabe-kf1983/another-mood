@@ -1,7 +1,5 @@
 """Tests for data_catalog — Entity / ObjectType / Attribute round-trip."""
 
-from dataclasses import asdict
-
 from another_mood.components.shared.data_catalog import (
     Attribute,
     Entity,
@@ -18,7 +16,7 @@ class TestRoundTrip:
                 attributes=[Attribute(id="name", type="string", required=True)],
             ),
         )
-        assert Entity.from_dict(asdict(entity)) == entity
+        assert Entity.from_dict(entity.to_dict()) == entity
 
     def test_full_tree(self) -> None:
         entity = Entity(
@@ -45,4 +43,4 @@ class TestRoundTrip:
             parent_entity=None,
             builtin=True,
         )
-        assert Entity.from_dict(asdict(entity)) == entity
+        assert Entity.from_dict(entity.to_dict()) == entity

@@ -1,9 +1,12 @@
 """Integration tests for SchemaTree — schema YAML → catalog YAML."""
 
+from io import StringIO
+
 import pytest
 import yaml
 
 from another_mood.components.preprocess.schema_inspector import extract_data_catalog
+from another_mood.components.shared import yaml_dumper
 
 _CASES = [
     pytest.param(
@@ -325,4 +328,6 @@ class TestSchemaToDataCatalog:
     def test_end_to_end(self, src: str, expected_src: str) -> None:
         schema = yaml.safe_load(src)
         expected = yaml.safe_load(expected_src)
-        assert extract_data_catalog(schema) == expected
+        buf = StringIO()
+        yaml_dumper.dump(extract_data_catalog(schema), buf)
+        assert yaml.safe_load(buf.getvalue()) == expected

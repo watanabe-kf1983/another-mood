@@ -7,7 +7,6 @@ extracts a data catalog (entities + fields), and writes the result to
 """
 
 from collections.abc import Mapping
-from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
 from typing import Any, cast
@@ -80,22 +79,9 @@ def extract_data_catalog(
         entities = extract_entities(
             cast(Mapping[str, object], properties), builtin=builtin
         )
-        result["entities"] = [_strip_nones(asdict(e)) for e in entities]
+        result["entities"] = [e.to_dict() for e in entities]
 
     return result
-
-
-def _strip_nones(d: Any) -> Any:  # noqa: ANN401
-    """Recursively remove keys with None values from dicts."""
-    if isinstance(d, dict):
-        return {
-            k: _strip_nones(v)
-            for k, v in cast(dict[str, Any], d).items()
-            if v is not None
-        }
-    if isinstance(d, list):
-        return [_strip_nones(item) for item in cast(list[Any], d)]
-    return d
 
 
 def build_schema_validator() -> Validator:
