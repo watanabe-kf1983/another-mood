@@ -1,25 +1,31 @@
-# {{ id }}{% if builtin %} (built-in){% endif %}
-
-[→ Data](../__table_view/{{ id }}.md)
+# Definition: {{ id }}{% if builtin %} (built-in){% endif %}
 
 {% if parent_entity -%}
-Parent: [{{ parent_entity }}]({{ parent_entity }}.md)
+**parent:** [`{{ parent_entity }}`](../__meta_entity/{{ parent_entity }}.md)
+
+---
+
 {% endif -%}
-{% if item_type.metadata.title %}
-**{{ item_type.metadata.title }}**
+[→ Data](../__table_view/{{ id }}.md)
+
+## Item Type: {{ item_type.id }}
+
+{% if item_type.metadata -%}
+### metadata
+
+```yaml
+{{ item_type.metadata | to_yaml }}
+```
+
 {% endif -%}
-{% if item_type.metadata.description %}
-{{ item_type.metadata.description }}
-{% endif %}
-## Attributes
+### attributes
 
 {% if item_type.attributes -%}
-| ID | Type | Required | Title | Description |
-|----|------|----------|-------|-------------|
+| id | type | required | metadata | validation |
+|----|------|----------|----------|------------|
 {% for attribute in item_type.attributes -%}
-{%- set type_cell = "[" ~ attribute.type ~ "](" ~ attribute.entity ~ ".md)" if attribute.entity else attribute.type -%}
-{%- set required_cell = "yes" if attribute.required else "" -%}
-| {{ attribute.id }} | {{ type_cell }} | {{ required_cell }} | {{ attribute.metadata.title }} | {{ attribute.metadata.description }} |
+{%- set type_cell = "[`" ~ attribute.entity ~ "`](../__meta_entity/" ~ attribute.entity ~ ".md)" if attribute.entity else "`" ~ attribute.type ~ "`" -%}
+| `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} |
 {% endfor -%}
 {%- else -%}
 (no attributes defined yet)

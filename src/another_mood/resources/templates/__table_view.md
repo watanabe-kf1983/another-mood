@@ -1,6 +1,6 @@
-# {{ id }} — Data
+# Data: {{ id }}
 
-[← Schema](../__meta_entity/{{ id }}.md)
+[← Definition](../__meta_entity/{{ id }}.md)
 
 {% if rows -%}
 | {% for attribute in attributes %}{{ attribute.id }} | {% endfor %}

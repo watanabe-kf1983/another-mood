@@ -15,9 +15,9 @@ properties:
               required:
                 type: boolean
             additionalProperties: false
-            required: [type, required]
+            required: [ type, required ]
       additionalProperties: false
-      required: [attributes]
+      required: [ attributes ]
 
   references:
     type: array
@@ -29,7 +29,7 @@ properties:
         to:
           type: string
       additionalProperties: false
-      required: [from, to]
+      required: [ from, to ]
 
   categories:
     type: object
@@ -58,7 +58,7 @@ properties:
               done:
                 type: boolean
             additionalProperties: false
-            required: [title, phase]
+            required: [ title, phase ]
       additionalProperties: false
-      required: [title, impl_paths, tasks]
+      required: [ title, impl_paths, tasks ]
 additionalProperties: false
