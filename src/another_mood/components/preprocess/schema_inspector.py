@@ -33,9 +33,8 @@ _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
 @Component(out_dir="out_dir")
 def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     """Validate the user schema file and extract a data catalog."""
-    if schema_file.is_file():
-        check_schema(schema_file)
-        _emit_catalog_file(schema_file, out_dir / schema_file.name)
+    check_schema(schema_file)
+    _emit_catalog_file(schema_file, out_dir / schema_file.name)
 
     # Emit the built-in contents schema (prose) so its entities
     # appear in meta-documentation alongside user-defined schemas.
@@ -62,6 +61,8 @@ def check_schema(schema_file: Path) -> None:
 
     Raises FileValidationError if the file has diagnostics.
     """
+    if not schema_file.is_file():
+        raise FileNotFoundError(f"Schema file not found: {schema_file}")
     validator = build_schema_validator()
     diagnostics = list(validator.validate_yaml(schema_file))
     if diagnostics:

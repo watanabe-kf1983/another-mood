@@ -465,7 +465,7 @@ class TestInspectSchema:
 
     def test_emits_builtin_prose_catalog(self, tmp_path: Path) -> None:
         """Built-in prose schema is emitted under __builtin/ so it shows up in meta-docs."""
-        schema_file = tmp_path / "schema.yaml"  # missing on purpose
+        schema_file = _write_schema(tmp_path / "schema.yaml", _VALID_SCHEMA_BODY)
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
