@@ -3,14 +3,16 @@
 ユーザが書いたスキーマ定義とクエリ定義を、ツールが内蔵のテンプレートで自動的に
 可視化する機能。
 
-## Entity ID と Entity Name
+## Entity と ObjectType
 
-Entity は 2 つの識別子で参照される:
+データカタログのエントリは 2 階層で表現される:
 
-- **Entity ID**: path-based identifier (例: `categories.item`)。anchor / ファイルパス / コード内識別子に使う
-- **Entity Name**: 表示ラベル (例: `Category`)。UI ヘッダや見出しに使う
+- **Entity**: データツリー上の到達経路 `access_path` (例: `categories.tasks`)。クエリ DSL の `from:`、URL/anchor、ファイルパス、表示見出しに使う
+- **ObjectType**: row 型そのものの識別子 `id` (例: `categories.item.tasks.item`)。コレクションを 1 段降りるごとに `.item` を付加。FK 参照や型レベルの cross-reference に使う
 
-Entity Name は schema の `title:` キーワード (element schema) で author が指定する ([schema-spec.md](../normalizer/schema-spec.md))。未指定なら Entity ID をそのまま表示する。
+詳細は [schema-spec.md](../normalizer/schema-spec.md)「Entity 名」節を参照。
+
+ObjectType の表示名 (例: `Category`) を `title:` キーワードから供給する仕組みは別タスク (M4) で導入予定。それまでは access_path をそのまま表示する。
 
 ## 自動生成される内容
 

@@ -346,8 +346,8 @@ categories:
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
         phase: 10
       M2:
-        title: Entity ID の path-based 化
-        note: コレクション entity に `.item` サフィックスを付加 (spec 準拠)。
+        title: Entity と ObjectType の分離
+        note: CatalogEntity を access_path ベースの Entity と path+`.item` ベースの ObjectType に分割。Catalog プレフィックスも除去。
         phase: 8
       M3:
         title: CatalogField を CatalogAttribute にリネーム
