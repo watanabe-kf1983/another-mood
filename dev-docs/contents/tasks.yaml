@@ -334,15 +334,23 @@ categories:
         phase: 8
 
   M:
-    title: JSON データモデル
+    title: JSON データモデル と データカタログ
     impl_paths:
       - src/another_mood/components/shared/json_data_model.py
+      - src/another_mood/components/preprocess/schema_inspector.py
+      - src/another_mood/components/preprocess/data_catalog.py
     spec: internal/json-data-model.md
     tasks:
       M1:
         title: _parent 参照の付与
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
         phase: 10
+      M2:
+        title: Entity ID と Entity Name の分離
+        note: |
+          Entity を path-based の Entity ID と `title:` 由来の Entity Name で識別する。
+          詳細は schema-spec.md / meta-documentation.md。
+        phase: 8
 
   N:
     title: レンダリング / 出力形式
