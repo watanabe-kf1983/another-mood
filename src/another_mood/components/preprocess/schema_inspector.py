@@ -1,8 +1,9 @@
-"""SchemaInspector — validate and extract metadata from user schema files.
+"""SchemaInspector — validate and extract metadata from the user schema file.
 
-Reads all YAML files from schemas_dir, validates each against the
-built-in SchemaSchema, extracts a data catalog (entities + fields),
-and writes the result to data_catalog_dir.
+Reads `schema_file`, validates it against the built-in SchemaSchema,
+extracts a data catalog (entities + fields), and writes the result to
+`out_dir`.  Built-in content schemas (e.g. prose) are emitted under
+`out_dir/__builtin/` so their entities also surface in meta-docs.
 """
 
 from collections.abc import Mapping, Sequence
@@ -18,7 +19,6 @@ from another_mood.components.preprocess.validator import Validator
 from another_mood.components.shared import yaml_dumper
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
-from another_mood.components.shared.file_type import FileType
 from another_mood.components.shared.json_data_model import load_model
 
 _SCHEMA_SCHEMA_FILE = Path(
@@ -31,14 +31,11 @@ _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
 
 
 @Component(out_dir="out_dir")
-def inspect_schema(schemas_dir: Path, *, out_dir: Path) -> None:
-    """Validate schema files and extract data catalog per file."""
-    schema_files = _list_yaml_files(schemas_dir)
-    check_schema(schema_files)
-
-    for schema_file in schema_files:
-        rel = schema_file.relative_to(schemas_dir)
-        _emit_catalog_file(schema_file, out_dir / rel)
+def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
+    """Validate the user schema file and extract a data catalog."""
+    if schema_file.is_file():
+        check_schema([schema_file])
+        _emit_catalog_file(schema_file, out_dir / schema_file.name)
 
     # Emit the built-in contents schema (prose) so its entities
     # appear in meta-documentation alongside user-defined schemas.
@@ -47,10 +44,6 @@ def inspect_schema(schemas_dir: Path, *, out_dir: Path) -> None:
         out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name,
         builtin=True,
     )
-
-
-def _list_yaml_files(src_dir: Path) -> Sequence[Path]:
-    return [f for f in sorted(src_dir.rglob("*")) if FileType.YAML.match(f)]
 
 
 def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
@@ -78,16 +71,19 @@ def check_schema(schema_files: Sequence[Path]) -> None:
 def extract_data_catalog(
     schema: Mapping[str, object], *, builtin: bool = False
 ) -> dict[str, Any]:
-    """Extract data catalog (entities + references) from merged schema data."""
+    """Extract data catalog (entities) from a root JSON Schema."""
     result: dict[str, Any] = {}
 
-    schemas = schema.get("schemas")
-    if isinstance(schemas, Mapping) and schemas:
+    properties = schema.get("properties")
+    if isinstance(properties, Mapping) and properties:
         entities = extract_entities(
-            cast(Mapping[str, object], schemas), builtin=builtin
+            cast(Mapping[str, object], properties), builtin=builtin
         )
         result["entities"] = [_strip_nones(asdict(e)) for e in entities]
 
+    # `references` is no longer accepted by SchemaSchema; the branch is
+    # kept until the references-related implementation is removed
+    # wholesale (see D10 follow-up step).
     references = schema.get("references")
     if references:
         result["references"] = references
@@ -109,5 +105,5 @@ def _strip_nones(d: Any) -> Any:  # noqa: ANN401
 
 
 def build_schema_validator() -> Validator:
-    """Build a Validator for user schema files (against built-in SchemaSchema)."""
+    """Build a Validator for the user schema file (against built-in SchemaSchema)."""
     return Validator(load_model(_SCHEMA_SCHEMA_FILE))
