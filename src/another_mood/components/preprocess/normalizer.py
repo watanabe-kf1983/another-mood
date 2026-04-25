@@ -19,12 +19,12 @@ from another_mood.components.shared.diagnostic import Diagnostic, FileValidation
 from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.file_type import FileType
 
-_BUILTIN_CONTENTS_SCHEMA_DIR = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "contents")
+_BUILTIN_CONTENTS_SCHEMA_FILE = Path(
+    str(resources.files("another_mood.resources") / "schemas" / "content-schema.yaml")
 )
 
-_QUERY_SCHEMA_DIR = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "queries")
+_QUERY_SCHEMA_FILE = Path(
+    str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
 )
 
 
@@ -66,14 +66,14 @@ def build_contents_schema(
     schemas_dir, then wraps them as JSON Schema properties so that
     each top-level key in a content file is validated against its schema.
     """
-    merged = load_model(_BUILTIN_CONTENTS_SCHEMA_DIR, schemas_dir)
+    merged = load_model(_BUILTIN_CONTENTS_SCHEMA_FILE, schemas_dir)
     schemas = merged.get("schemas", {})
     return {"type": "object", "properties": schemas, "additionalProperties": False}
 
 
 def build_query_schema() -> Mapping[str, object]:
     """Build a validation/normalization schema for query files."""
-    return load_model(_QUERY_SCHEMA_DIR)
+    return load_model(_QUERY_SCHEMA_FILE)
 
 
 # ── shared core ────────────────────────────────────────────────────

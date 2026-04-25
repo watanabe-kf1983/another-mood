@@ -96,7 +96,7 @@ categories:
       - src/another_mood/components/preprocess/normalizer.py
       - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/preprocess/
-      - src/another_mood/resources/schemas/schemas/schema-schema.yaml
+      - src/another_mood/resources/schemas/schema-schema.yaml
       - src/another_mood/config.py
       - src/another_mood/cli.py
     spec: design/normalizer/schema-spec.md
