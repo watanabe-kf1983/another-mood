@@ -3,15 +3,15 @@
 SchemaInspector が `inspect_schemas_dir` に出力するデータカタログの形状。
 入力例: showcase/examples/ecommerce の entities / relations スキーマ。
 
-## フィールド一覧
+## 属性一覧
 
 {% for entity in entities %}
 ### {{ entity.id }}
 
 | Id | Type | Required |
 |----|------|----------|
-{% for field in entity.fields -%}
-| {{ field.id }} | {{ field.type }} | {{ "yes" if field.required else "no" }} |
+{% for attribute in entity.attributes -%}
+| {{ attribute.id }} | {{ attribute.type }} | {{ "yes" if attribute.required else "no" }} |
 {% endfor %}
 {% endfor %}
 
@@ -22,8 +22,8 @@ classDiagram
 {%- for entity in entities %}
     class {{ entity.id }} {
         <<entity>>
-{%- for field in entity.fields %}
-        {{ field.type }} {{ field.id }}{% if field.required %}*{% endif %}
+{%- for attribute in entity.attributes %}
+        {{ attribute.type }} {{ attribute.id }}{% if attribute.required %}*{% endif %}
 {%- endfor %}
     }
 {%- endfor %}
@@ -38,8 +38,8 @@ classDiagram
 erDiagram
 {%- for entity in entities %}
     {{ entity.id }} {
-{%- for field in entity.fields %}
-        {{ field.type }} {{ field.id | replace(".", "_") }}
+{%- for attribute in entity.attributes %}
+        {{ attribute.type }} {{ attribute.id | replace(".", "_") }}
 {%- endfor %}
     }
 {%- endfor %}
