@@ -4,7 +4,7 @@
 
 ## normalizer
 
-- [schema-spec.md](normalizer/schema-spec.md) — スキーマ定義（JSON Schema + references.yaml + 正規化ルール）
+- [schema-spec.md](normalizer/schema-spec.md) — スキーマ定義（schema.yaml = 単一の root JSON Schema、正規化ルール）
 - [markdown-parser-spec.md](normalizer/markdown-parser-spec.md) — Markdown パーサー（データソースとしての Markdown）
 
 ## composer

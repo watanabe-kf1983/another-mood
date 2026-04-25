@@ -2,7 +2,33 @@
 
 **スキーマ**（schema）は、プロジェクトで扱うデータの型宣言。扱いたいエンティティ（ユーザ、注文、画面など、データの種類）ごとに、どんなフィールドを持ちどんな構造を取るかを書く。コンテンツはこの宣言に照らして検証され、辞書で書かれたデータは配列に正規化される（後述）。
 
-スキーマは `{project}/definition/schemas/` 配下の YAML ファイル（`.yaml` / `.yml`、大小文字不問）に書く。トップレベルキー `schemas:` の下に、スキーマ名をキーとしてエントリを並べる。ファイル名や分割の仕方は自由で、ビルド時にすべて 1 つにマージされる。
+スキーマは `{project}/definition/schema.yaml` 1 ファイルに、JSON Schema (draft 2020-12) のサブセットを書く。ルートは `type: object` で、`properties:` 配下の各エントリがコンテンツ全体における 1 つのエンティティ（コレクション）に対応する。
+
+```yaml
+# definition/schema.yaml
+type: object
+properties:
+  users:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+      required: [name]
+      additionalProperties: false
+  orders:
+    type: array
+    items:
+      type: object
+      properties:
+        title: { type: string }
+        customer: { type: string }
+      additionalProperties: false
+additionalProperties: false
+```
+
+ファイルは 1 本固定。複数ファイルへの分割や外部スキーマの `$ref` 参照はサポートしない。コンテンツ YAML はこのスキーマの**部分インスタンス** (`properties` の一部のキーのみを持つオブジェクト) として valid である必要がある。1 ファイルに複数のトップレベルキーを同居させてもよい。
 
 本章は、付録の [schema-schema 全文](#schema-schema-全文)（スキーマ定義の形を縛る内蔵メタスキーマ）を散文で解説したもの。厳密な仕様は付録の YAML が正典となる。
 
@@ -28,7 +54,8 @@ JSON Schema draft 2020-12 のサブセット。ここに挙げたキーワード
 同型エントリの集まりを表すスキーマ。`additionalProperties` に**スキーマオブジェクト**（`false` ではなく）を書く。
 
 ```yaml
-schemas:
+type: object
+properties:
   users:
     type: object
     additionalProperties:
@@ -38,6 +65,7 @@ schemas:
         email: { type: string }
       required: [name]
       additionalProperties: false
+additionalProperties: false
 ```
 
 コンテンツ側は辞書で書く:
@@ -67,7 +95,8 @@ users:
 **ネスト**: `additionalProperties` の中に入れ子で `additionalProperties` を書けば、各階層が再帰的に配列化される。
 
 ```yaml
-schemas:
+type: object
+properties:
   screens:
     type: object
     additionalProperties:
@@ -82,6 +111,7 @@ schemas:
               label: { type: string }
             additionalProperties: false
       additionalProperties: false
+additionalProperties: false
 ```
 
 #### 固定構造パターン（properties）
@@ -89,7 +119,8 @@ schemas:
 キーと型が事前に決まっているオブジェクト。`properties` でキーを列挙する。正規化の対象外で、書いた形のままパススルーされる。
 
 ```yaml
-schemas:
+type: object
+properties:
   site_config:
     type: object
     properties:
@@ -97,6 +128,7 @@ schemas:
       base_url: { type: string }
     required: [title]
     additionalProperties: false
+additionalProperties: false
 ```
 
 **排他制約**: 同じオブジェクト内で `properties` と `additionalProperties: <スキーマ>` は併用できない。`properties` を書く場合は `additionalProperties: false` が必須で、schema-schema の `if/then` で強制される。
@@ -106,7 +138,8 @@ schemas:
 配列型のトップレベルスキーマ。要素スキーマは `items` で指定する。コンテンツ側は配列を直接書く。
 
 ```yaml
-schemas:
+type: object
+properties:
   tags:
     type: array
     items:
@@ -114,6 +147,7 @@ schemas:
       properties:
         name: { type: string }
       additionalProperties: false
+additionalProperties: false
 ```
 
 辞書パターンと違い、配列型は**暗黙の `id` を持たない**。
@@ -163,43 +197,19 @@ JSON Schema draft 2020-12 にあるが、このツールでは拒否されるキ
 スキーマ定義の形を縛る内蔵メタスキーマ。本章の正典。
 
 ```yaml
-# SchemaSchema — built-in meta-schema that validates user-defined schema files.
+# SchemaSchema — built-in meta-schema that validates the user's schema.yaml.
 #
-# Schema files have two top-level keys:
-#   schemas:    name -> JSON Schema subset (additionalProperties pattern)
-#   references: array of referential integrity constraints
+# The user's schema.yaml is a JSON Schema (draft 2020-12) subset whose
+# root is `type: object` with `properties:` listing each top-level
+# entity collection.  See dev-docs schema-spec.md for the full list of
+# supported keywords.
 #
 # This meta-schema uses $ref/$defs for recursion, which is NOT available
 # to user-defined schemas.  The restriction is intentional: user schemas
 # go through normalization and visualization pipelines that cannot handle
 # $ref; this built-in schema is only consumed by the jsonschema validator.
 
-type: object
-properties:
-  schemas:
-    type: object
-    propertyNames:
-      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
-    additionalProperties:
-      $ref: "#/$defs/jsonSchemaSubset"
-
-  # NOTE: `references` declarations are currently parsed and surfaced to
-  # downstream tools (composer / templates) but the referential integrity
-  # check itself is not implemented yet.  The syntax below is therefore
-  # minimal; the `.property` dotted form and the `.id` shorthand of `to:`
-  # will be pinned down once the --strict validator lands.
-  references:
-    type: array
-    items:
-      type: object
-      properties:
-        from:
-          type: string
-        to:
-          type: string
-      required: [from, to]
-
-additionalProperties: false
+$ref: "#/$defs/jsonSchemaSubset"
 
 $defs:
   jsonSchemaSubset:
