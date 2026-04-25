@@ -1,4 +1,5 @@
-schemas:
+type: object
+properties:
   members:
     type: object
     additionalProperties:
@@ -12,3 +13,4 @@ schemas:
           type: string
       additionalProperties: false
       required: [name, role]
+additionalProperties: false
