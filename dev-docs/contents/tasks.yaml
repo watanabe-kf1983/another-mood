@@ -355,6 +355,7 @@ categories:
         title: CatalogField を CatalogAttribute にリネーム
         note: Entity-Attribute の container-member pair に揃える (データカタログは ER 文脈)。
         phase: 8
+        done: true
 
   N:
     title: レンダリング / 出力形式

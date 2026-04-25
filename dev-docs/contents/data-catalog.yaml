@@ -1,11 +1,11 @@
 # SchemaInspector の出力形状自体をデータカタログで表現
 entities:
   entities:
-    fields:
+    attributes:
       id:
         type: string
         required: true
-      fields:
+      attributes:
         type: array
         required: true
       metadata:
@@ -36,8 +36,8 @@ entities:
         type: string
         required: false
 
-  fields:
-    fields:
+  attributes:
+    attributes:
       id:
         type: string
         required: true
@@ -118,7 +118,7 @@ entities:
         required: false
 
 references:
-  - from: entities.fields
-    to: fields
-  - from: fields.type
+  - from: entities.attributes
+    to: attributes
+  - from: attributes.type
     to: entities

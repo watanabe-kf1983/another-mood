@@ -12,7 +12,7 @@
 {% section "__meta_entity" with entity %}
 {%- endfor %}
 {% for entity in __definition.entities -%}
-{% section "__table_view" with {"id": entity.id, "fields": entity.fields, "rows": __views | query_from(entity.id)} %}
+{% section "__table_view" with {"id": entity.id, "attributes": entity.attributes, "rows": __views | query_from(entity.id)} %}
 {%- endfor %}
 {%- else -%}
 (no entities defined yet)

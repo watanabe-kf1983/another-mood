@@ -33,8 +33,8 @@ Query オブジェクトは同じ DSL (from / grouped / select / 将来の where
 から導かれる **2 つの変換**を定義している:
 
 1. **raw Data の結合・加工**: 入力データ行の集合 → 結果データ行の集合 (現行の `Query.apply`)
-2. **raw DataCatalog の結合・加工**: 入力スキーマ (`__definition.entities[].fields`)
-   → 結果スキーマ (`__definition.queries[id].fields` + 合成 child entities を
+2. **raw DataCatalog の結合・加工**: 入力スキーマ (`__definition.entities[].attributes`)
+   → 結果スキーマ (`__definition.queries[id].attributes` + 合成 child entities を
    `__definition.entities` に追記)
 
 この 2 つは同じ DSL から派生するペア変換であり、同一の Query オブジェクトが
@@ -43,7 +43,7 @@ Query オブジェクトは同じ DSL (from / grouped / select / 将来の where
 ```python
 class Query:
     def apply(self, sources) -> Records: ...              # 既存
-    def apply_to_catalog(self, catalog) -> Fields: ...    # E7 で追加
+    def apply_to_catalog(self, catalog) -> Attributes: ...    # E7 で追加
 ```
 
 ### 合成 child entity
@@ -51,7 +51,7 @@ class Query:
 composite フィールド (`object[]` / child_entity 持ち) を query 出力に含む場合、
 child_entity は source entity をそのまま指すのではなく、**query 側で自分の子を
 合成して `__definition.entities` に追記**する。命名は raw entity と揃えた
-`{query_id}.{field_id}` 形式 (例: `tasks_by_phase.tasks`)。
+`{query_id}.{attribute_id}` 形式 (例: `tasks_by_phase.tasks`)。
 
 合成 entity が `__definition.entities` に乗ると、既存 `__root.md` のループが
 `__meta_entity` / `__table_view` を自動生成し、navigation は raw entity と

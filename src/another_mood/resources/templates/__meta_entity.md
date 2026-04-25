@@ -11,16 +11,16 @@ Parent: [{{ parent_entity }}]({{ parent_entity }}.md)
 {% if metadata.description %}
 {{ metadata.description }}
 {% endif %}
-## Fields
+## Attributes
 
-{% if fields -%}
+{% if attributes -%}
 | ID | Type | Required | Title | Description |
 |----|------|----------|-------|-------------|
-{% for field in fields -%}
-{%- set type_cell = "[" ~ field.type ~ "](" ~ field.child_entity ~ ".md)" if field.child_entity else field.type -%}
-{%- set required_cell = "yes" if field.required else "" -%}
-| {{ field.id }} | {{ type_cell }} | {{ required_cell }} | {{ field.metadata.title }} | {{ field.metadata.description }} |
+{% for attribute in attributes -%}
+{%- set type_cell = "[" ~ attribute.type ~ "](" ~ attribute.child_entity ~ ".md)" if attribute.child_entity else attribute.type -%}
+{%- set required_cell = "yes" if attribute.required else "" -%}
+| {{ attribute.id }} | {{ type_cell }} | {{ required_cell }} | {{ attribute.metadata.title }} | {{ attribute.metadata.description }} |
 {% endfor -%}
 {%- else -%}
-(no fields defined yet)
+(no attributes defined yet)
 {%- endif %}

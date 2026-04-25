@@ -10,16 +10,16 @@
 
 ```jinja2
 {# templates/index.md #}
-# システム設計ドキュメント
+# 商品カタログ
 
-## エンティティ一覧
+## 商品一覧
 
-{%- for entity in entities %}
-- [{{ entity.name }}](entity-detail/{{ entity.id }}.md)
+{%- for product in products %}
+- [{{ product.name }}](product-detail/{{ product.id }}.md)
 {%- endfor %}
 
-{%- for entity in entities -%}
-{% section "entity-detail" with entity %}
+{%- for product in products -%}
+{% section "product-detail" with product %}
 {%- endfor %}
 ```
 
@@ -34,12 +34,12 @@
 - prose view: `contents/` 配下の Markdown ファイルから自動生成される（[Content Formats](content-formats.md#散文データ) 参照）
 
 ```jinja2
-{# entities は正規化済みデータ、erds はクエリ view #}
-{% for entity in entities %}
+{# products は正規化済みデータ、bestsellers はクエリ view #}
+{% for product in products %}
   ...
 {% endfor %}
 
-{% for entry in erds %}
+{% for entry in bestsellers %}
   ...
 {% endfor %}
 ```
@@ -75,12 +75,12 @@
 親ページからサブページへのリンクを張りたい場合は、`{% section %}` の外側に Markdown のリンク記法を別途書く:
 
 ```jinja2
-{%- for entity in entities %}
-- [{{ entity.name }}](entity-detail/{{ entity.id }}.md)
+{%- for product in products %}
+- [{{ product.name }}](product-detail/{{ product.id }}.md)
 {%- endfor %}
 
-{%- for entity in entities -%}
-{% section "entity-detail" with entity %}
+{%- for product in products -%}
+{% section "product-detail" with product %}
 {%- endfor %}
 ```
 
@@ -89,27 +89,27 @@
 サブテンプレート内では、`with` で渡した辞書のフィールドがトップレベル変数として参照できる。
 
 ```jinja2
-{# templates/entity-detail.md #}
+{# templates/product-detail.md #}
 # {{ name }}
 
 {{ description }}
 
-| フィールド | 型 | 備考 |
-|-----------|-----|------|
-{% for field in fields -%}
-| {{ field.name }} | {{ field.type }} | |
+| 項目 | 値 |
+|------|-----|
+{% for spec in specs -%}
+| {{ spec.label }} | {{ spec.value }} |
 {% endfor %}
 ```
 
 ## Undefined アクセスの扱い
 
-テンプレート内で未定義の変数・属性にアクセスしてもエラーにはならず、空文字列としてレンダリングされる。属性のチェインアクセス（例: `field.metadata.title`）も、途中のキーが存在しなくても空文字列になる。
+テンプレート内で未定義の変数・属性にアクセスしてもエラーにはならず、空文字列としてレンダリングされる。属性のチェインアクセス（例: `spec.metadata.title`）も、途中のキーが存在しなくても空文字列になる。
 
-したがって optional なフィールドを参照する際、`if metadata is defined` のようなガードは不要:
+したがって optional な属性を参照する際、`if metadata is defined` のようなガードは不要:
 
 ```jinja2
 {# metadata や metadata.title が存在しなくても安全 #}
-| {{ field.id }} | {{ field.metadata.title }} |
+| {{ spec.id }} | {{ spec.metadata.title }} |
 ```
 
 ## Typed Value の取り扱い
