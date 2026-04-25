@@ -3,9 +3,14 @@
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 
-from another_mood.components.shared.json_data_model import deep_merge, load_model
+from another_mood.components.shared.json_data_model import (
+    collect_files,
+    deep_merge,
+    load_model,
+)
 
 
 class TestDeepMerge:
@@ -62,83 +67,75 @@ def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(data, allow_unicode=True))
 
 
-class TestLoadYamls:
-    def test_single_file(self, tmp_path: Path) -> None:
-        d = tmp_path / "views"
-        d.mkdir()
-        _write_yaml(d / "entities.yaml", {"entities": [{"id": "user", "name": "User"}]})
+class TestCollectFiles:
+    """collect_files: expand path arguments into a list of files (order unspecified)."""
 
-        assert load_model(d) == {
-            "entities": [{"id": "user", "name": "User"}],
+    def test_no_args_returns_empty(self) -> None:
+        assert collect_files() == []
+
+    def test_file_path_included(self, tmp_path: Path) -> None:
+        f = tmp_path / "schema.yaml"
+        f.write_text("a: 1")
+
+        assert collect_files(f) == [f]
+
+    def test_directory_recursively_scanned(self, tmp_path: Path) -> None:
+        d = tmp_path / "d"
+        a = d / "a.yaml"
+        b = d / "sub" / "b.yaml"
+        _write_yaml(a, {"a": 1})
+        _write_yaml(b, {"b": 2})
+
+        assert set(collect_files(d)) == {a, b}
+
+    def test_missing_path_skipped(self, tmp_path: Path) -> None:
+        present = tmp_path / "schema.yaml"
+        present.write_text("a: 1")
+        missing = tmp_path / "missing.yaml"
+
+        assert collect_files(present, missing) == [present]
+
+    def test_files_and_dirs_combined(self, tmp_path: Path) -> None:
+        d = tmp_path / "d"
+        d.mkdir()
+        in_dir = d / "in_dir.yaml"
+        _write_yaml(in_dir, {"a": 1})
+        f = tmp_path / "alone.yaml"
+        _write_yaml(f, {"b": 2})
+
+        assert set(collect_files(d, f)) == {in_dir, f}
+
+
+class TestLoadModel:
+    """load_model: read each YAML mapping and deep-merge them into a single dict."""
+
+    def test_no_paths_returns_empty(self) -> None:
+        assert load_model() == {}
+
+    def test_loads_and_merges_yaml_files(self, tmp_path: Path) -> None:
+        f1 = tmp_path / "builtin.yaml"
+        f2 = tmp_path / "user.yaml"
+        _write_yaml(f1, {"properties": {"prose": {"type": "array"}}})
+        _write_yaml(f2, {"properties": {"users": {"type": "object"}}})
+
+        assert load_model(f1, f2) == {
+            "properties": {
+                "prose": {"type": "array"},
+                "users": {"type": "object"},
+            }
         }
 
-    def test_merges_multiple_files(self, tmp_path: Path) -> None:
-        d = tmp_path / "views"
-        d.mkdir()
-        _write_yaml(d / "entities.yaml", {"entities": [{"id": "user"}]})
-        _write_yaml(
-            d / "relations.yaml",
-            {"relations": [{"from": "user", "to": "role"}]},
-        )
-
-        result = load_model(d)
-        assert list(result.keys()) == ["entities", "relations"]
-
-    def test_empty_dir_returns_empty_dict(self, tmp_path: Path) -> None:
-        d = tmp_path / "views"
-        d.mkdir()
-
-        assert load_model(d) == {}
-
     def test_non_yaml_files_ignored(self, tmp_path: Path) -> None:
-        d = tmp_path / "views"
+        d = tmp_path / "d"
         d.mkdir()
-        (d / "readme.md").write_text("# Not YAML")
         _write_yaml(d / "data.yaml", {"key": "value"})
+        (d / "readme.md").write_text("# md")
 
         assert load_model(d) == {"key": "value"}
 
-    def test_loads_subdirectory_yaml(self, tmp_path: Path) -> None:
-        d = tmp_path / "views"
-        d.mkdir()
-        _write_yaml(d / "top.yaml", {"prose": [{"id": "top"}]})
-        _write_yaml(d / "sub" / "nested.yaml", {"prose": [{"id": "sub/nested"}]})
+    def test_non_mapping_yaml_raises(self, tmp_path: Path) -> None:
+        f = tmp_path / "list.yaml"
+        f.write_text("- a\n- b\n")
 
-        result = load_model(d)
-        assert result == {"prose": [{"id": "sub/nested"}, {"id": "top"}]}
-
-    def test_multiple_directories(self, tmp_path: Path) -> None:
-        d1 = tmp_path / "contents"
-        d2 = tmp_path / "queries"
-        d1.mkdir()
-        d2.mkdir()
-        _write_yaml(d1 / "entities.yaml", {"entities": [{"id": "user"}]})
-        _write_yaml(d2 / "query.yaml", {"queries": [{"name": "q1"}]})
-
-        result = load_model(d1, d2)
-        assert result == {
-            "entities": [{"id": "user"}],
-            "queries": [{"name": "q1"}],
-        }
-
-    def test_multiple_directories_deep_merged(self, tmp_path: Path) -> None:
-        d1 = tmp_path / "a"
-        d2 = tmp_path / "b"
-        d1.mkdir()
-        d2.mkdir()
-        _write_yaml(d1 / "data.yaml", {"items": [{"id": "x"}]})
-        _write_yaml(d2 / "data.yaml", {"items": [{"id": "y"}]})
-
-        result = load_model(d1, d2)
-        assert result == {"items": [{"id": "x"}, {"id": "y"}]}
-
-    def test_nonexistent_directory_skipped(self, tmp_path: Path) -> None:
-        d1 = tmp_path / "exists"
-        d2 = tmp_path / "missing"
-        d1.mkdir()
-        _write_yaml(d1 / "data.yaml", {"key": "value"})
-
-        assert load_model(d1, d2) == {"key": "value"}
-
-    def test_no_directories_returns_empty(self) -> None:
-        assert load_model() == {}
+        with pytest.raises(ValueError, match="Expected a YAML mapping"):
+            load_model(f)

@@ -468,7 +468,7 @@ class TestInspectSchema:
 
         inspect_schema.fn(schemas_dir, out_dir=out_dir)
 
-        out_file = out_dir / "__builtin" / "prose.yaml"
+        out_file = out_dir / "__builtin" / "content-schema.yaml"
         assert out_file.exists()
         data = yaml.safe_load(out_file.read_text())
         prose = next(e for e in data["__definition"]["entities"] if e["id"] == "prose")

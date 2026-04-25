@@ -21,12 +21,12 @@ from another_mood.components.shared.diagnostic import FileValidationError
 from another_mood.components.shared.file_type import FileType
 from another_mood.components.shared.json_data_model import load_model
 
-_SCHEMA_SCHEMA_DIR = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "schemas")
+_SCHEMA_SCHEMA_FILE = Path(
+    str(resources.files("another_mood.resources") / "schemas" / "schema-schema.yaml")
 )
 
-_BUILTIN_CONTENTS_SCHEMA_DIR = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "contents")
+_BUILTIN_CONTENTS_SCHEMA_FILE = Path(
+    str(resources.files("another_mood.resources") / "schemas" / "content-schema.yaml")
 )
 
 
@@ -40,14 +40,13 @@ def inspect_schema(schemas_dir: Path, *, out_dir: Path) -> None:
         rel = schema_file.relative_to(schemas_dir)
         _emit_catalog_file(schema_file, out_dir / rel)
 
-    # Emit built-in contents schemas (e.g. prose) so that their entities
+    # Emit the built-in contents schema (prose) so its entities
     # appear in meta-documentation alongside user-defined schemas.
-    for schema_file in _list_yaml_files(_BUILTIN_CONTENTS_SCHEMA_DIR):
-        _emit_catalog_file(
-            schema_file,
-            out_dir / "__builtin" / schema_file.name,
-            builtin=True,
-        )
+    _emit_catalog_file(
+        _BUILTIN_CONTENTS_SCHEMA_FILE,
+        out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name,
+        builtin=True,
+    )
 
 
 def _list_yaml_files(src_dir: Path) -> Sequence[Path]:
@@ -111,4 +110,4 @@ def _strip_nones(d: Any) -> Any:  # noqa: ANN401
 
 def build_schema_validator() -> Validator:
     """Build a Validator for user schema files (against built-in SchemaSchema)."""
-    return Validator(load_model(_SCHEMA_SCHEMA_DIR))
+    return Validator(load_model(_SCHEMA_SCHEMA_FILE))
