@@ -6,7 +6,7 @@ extracts a data catalog (entities + fields), and writes the result to
 `out_dir/__builtin/` so their entities also surface in meta-docs.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
@@ -34,7 +34,7 @@ _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
 def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     """Validate the user schema file and extract a data catalog."""
     if schema_file.is_file():
-        check_schema([schema_file])
+        check_schema(schema_file)
         _emit_catalog_file(schema_file, out_dir / schema_file.name)
 
     # Emit the built-in contents schema (prose) so its entities
@@ -57,13 +57,13 @@ def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -
         yaml_dumper.dump({"__definition": catalog}, f)
 
 
-def check_schema(schema_files: Sequence[Path]) -> None:
-    """Validate schema files against SchemaSchema.
+def check_schema(schema_file: Path) -> None:
+    """Validate the user schema file against SchemaSchema.
 
-    Raises FileValidationError if any file has diagnostics.
+    Raises FileValidationError if the file has diagnostics.
     """
     validator = build_schema_validator()
-    diagnostics = [d for f in schema_files for d in validator.validate_yaml(f)]
+    diagnostics = list(validator.validate_yaml(schema_file))
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 

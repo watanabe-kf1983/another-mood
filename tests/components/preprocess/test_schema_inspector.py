@@ -361,19 +361,19 @@ class TestCheckSchema:
 
     def test_valid_schema_passes(self, tmp_path: Path) -> None:
         f = _write_schema(tmp_path / "schema.yaml", _VALID_SCHEMA_BODY)
-        check_schema([f])
+        check_schema(f)
 
     def test_invalid_schema_raises(self, tmp_path: Path) -> None:
         f = _write_schema(tmp_path / "schema.yaml", _INVALID_SCHEMA_BODY)
         with pytest.raises(FileValidationError) as exc_info:
-            check_schema([f])
+            check_schema(f)
         assert len(exc_info.value.diagnostics) >= 1
         assert exc_info.value.diagnostics[0].file == f
 
     def test_broken_yaml_collected_as_diagnostic(self, tmp_path: Path) -> None:
         f = _write_schema(tmp_path / "schema.yaml", "a: [unterminated\n")
         with pytest.raises(FileValidationError) as exc_info:
-            check_schema([f])
+            check_schema(f)
         assert exc_info.value.diagnostics[0].file == f
         assert exc_info.value.diagnostics[0].source == "ruamel.yaml"
 
