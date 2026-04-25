@@ -202,5 +202,5 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 ## 実装方針
 
 - Markdown AST: markdown-it-py（CommonMark 準拠、AST 走査でセクション分割・リンク検出）
-- YAML 出力: ruamel.yaml（YAML 1.1、literal block scalar で Markdown 本文を可読に保持）
+- YAML 出力: ruamel.yaml（YAML 1.2、literal block scalar で Markdown 本文を可読に保持）
 - 見出しレベル正規化: 自前実装

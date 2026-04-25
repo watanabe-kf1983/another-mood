@@ -23,6 +23,8 @@ class TestDump:
         result = _dump_to_str({"title": "Hello"})
         assert "|\n" not in result
 
-    def test_yaml_11_directive(self) -> None:
+    def test_no_yaml_directive(self) -> None:
+        # YAML 1.2 is ruamel.yaml's default; emitting a %YAML directive is
+        # unnecessary and would just clutter pipeline-internal files.
         result = _dump_to_str({"x": 1})
-        assert "%YAML 1.1" in result
+        assert "%YAML" not in result

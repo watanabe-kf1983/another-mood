@@ -1,10 +1,11 @@
 """YAML dumper — shared YAML serialization for all components.
 
-Uses YAML 1.1 per json-data-model.md serialization spec.
-Multiline strings are automatically rendered as literal block scalars (|).
-None-valued keys are dropped recursively before emission per the
-"nullable は項目自体を省略する" rule (json-data-model.md): leaving
-nulls in the output makes Jinja2 templates render the string "None".
+Uses YAML 1.2 per json-data-model.md serialization spec (ruamel.yaml's
+default version).  Multiline strings are automatically rendered as
+literal block scalars (|).  None-valued keys are dropped recursively
+before emission per the "nullable は項目自体を省略する" rule
+(json-data-model.md): leaving nulls in the output makes Jinja2
+templates render the string "None".
 
 Usage:
     from another_mood.components.shared.yaml_dumper import dump
@@ -30,7 +31,7 @@ _LiteralStrRepresenter.add_representer(str, _LiteralStrRepresenter.represent_str
 
 
 def dump(data: object, stream: IO[str]) -> None:
-    """Serialize `data` as YAML 1.1 into `stream`.
+    """Serialize `data` as YAML 1.2 into `stream`.
 
     A fresh YAML instance is created per call because ruamel.yaml's
     YAML() is not thread-safe: its emitter/serializer internal state
@@ -39,7 +40,6 @@ def dump(data: object, stream: IO[str]) -> None:
     "ValueError: I/O operation on closed file").
     """
     yaml = YAML()
-    yaml.version = (1, 1)
     yaml.Representer = _LiteralStrRepresenter
     yaml.dump(_drop_nones(data), stream)  # type: ignore[reportUnknownMemberType]
 
