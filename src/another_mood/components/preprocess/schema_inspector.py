@@ -15,10 +15,9 @@ import yaml
 
 from another_mood.components.preprocess.schema_tree import extract_entities
 from another_mood.components.preprocess.validator import Validator
-from another_mood.components.shared import yaml_dumper
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_model, save_model
 
 _SCHEMA_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "schema-schema.yaml")
@@ -51,8 +50,7 @@ def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -
     if not catalog:
         return
     dst.parent.mkdir(parents=True, exist_ok=True)
-    with dst.open("w", encoding="utf-8") as f:
-        yaml_dumper.dump({"__definition": catalog}, f)
+    save_model(dst, {"__definition": catalog})
 
 
 def check_schema(schema_file: Path) -> None:

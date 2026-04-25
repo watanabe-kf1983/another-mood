@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from another_mood.components.shared import yaml_dumper
+from another_mood.components.shared.json_data_model import save_model
 from another_mood.components.shared.json_data_model import deep_merge, load_model
 
 _REPORT_KEY = "__build_report"
@@ -73,8 +73,7 @@ class BuildReport:
         if self.is_empty():
             return
         out_dir.mkdir(parents=True, exist_ok=True)
-        with (out_dir / _REPORT_FILENAME).open("w") as f:
-            yaml_dumper.dump({_REPORT_KEY: self._data}, f)
+        save_model(out_dir / _REPORT_FILENAME, {_REPORT_KEY: self._data})
 
 
 # Arrays that may be propagated through multiple DAG paths and need

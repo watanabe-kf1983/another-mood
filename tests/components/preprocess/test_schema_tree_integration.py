@@ -1,12 +1,12 @@
 """Integration tests for SchemaTree — schema YAML → catalog YAML."""
 
-from io import StringIO
+from pathlib import Path
 
 import pytest
 import yaml
 
 from another_mood.components.preprocess.schema_inspector import extract_data_catalog
-from another_mood.components.shared import yaml_dumper
+from another_mood.components.shared.json_data_model import save_model
 
 _CASES = [
     pytest.param(
@@ -325,9 +325,9 @@ class TestSchemaToDataCatalog:
     """schema YAML → catalog YAML (end-to-end via extract_data_catalog)."""
 
     @pytest.mark.parametrize(("src", "expected_src"), _CASES)
-    def test_end_to_end(self, src: str, expected_src: str) -> None:
+    def test_end_to_end(self, src: str, expected_src: str, tmp_path: Path) -> None:
         schema = yaml.safe_load(src)
         expected = yaml.safe_load(expected_src)
-        buf = StringIO()
-        yaml_dumper.dump(extract_data_catalog(schema), buf)
-        assert yaml.safe_load(buf.getvalue()) == expected
+        out = tmp_path / "catalog.yaml"
+        save_model(out, extract_data_catalog(schema))
+        assert yaml.safe_load(out.read_text()) == expected
