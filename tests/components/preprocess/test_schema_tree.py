@@ -2,7 +2,7 @@
 
 import yaml
 
-from another_mood.components.preprocess import data_catalog as dc
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.preprocess.schema_tree import (
     ArrayNode,
     ObjectNode,

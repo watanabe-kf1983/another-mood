@@ -10,6 +10,7 @@ from another_mood.components.shared.json_data_model import (
     collect_files,
     deep_merge,
     load_model,
+    save_model,
 )
 
 
@@ -139,3 +140,34 @@ class TestLoadModel:
 
         with pytest.raises(ValueError, match="Expected a YAML mapping"):
             load_model(f)
+
+
+class TestSaveModel:
+    """save_model: write a YAML 1.2 file with project serialization conventions."""
+
+    def test_multiline_string_uses_literal_block(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.yaml"
+        save_model(out, {"body": "line1\nline2\n"})
+        text = out.read_text()
+        assert "|\n" in text
+        assert yaml.safe_load(text)["body"] == "line1\nline2\n"
+
+    def test_single_line_string_not_block(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.yaml"
+        save_model(out, {"title": "Hello"})
+        assert "|\n" not in out.read_text()
+
+    def test_no_yaml_directive(self, tmp_path: Path) -> None:
+        # YAML 1.2 is ruamel.yaml's default; emitting a %YAML directive is
+        # unnecessary and would just clutter pipeline-internal files.
+        out = tmp_path / "out.yaml"
+        save_model(out, {"x": 1})
+        assert "%YAML" not in out.read_text()
+
+    def test_drops_none_keys_recursively(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.yaml"
+        save_model(out, {"keep": 1, "drop": None, "nested": {"keep": 2, "drop": None}})
+        assert yaml.safe_load(out.read_text()) == {
+            "keep": 1,
+            "nested": {"keep": 2},
+        }

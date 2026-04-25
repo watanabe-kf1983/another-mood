@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-from another_mood.components.preprocess import data_catalog as dc
+from another_mood.components.shared import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────
 

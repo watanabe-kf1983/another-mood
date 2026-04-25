@@ -9,8 +9,6 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from another_mood.components.composer.query import (
     From,
     Grouped,
@@ -19,7 +17,7 @@ from another_mood.components.composer.query import (
     SelectItem,
 )
 from another_mood.components.shared.component import Component
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_model, save_model
 
 
 @Component(
@@ -53,11 +51,7 @@ def compose(
     query_results_out.mkdir(parents=True, exist_ok=True)
     for name, query in parsed_queries.items():
         sources[name] = query.apply([sources])
-        (query_results_out / f"{name}.yaml").write_text(
-            yaml.safe_dump(
-                {name: sources[name]}, allow_unicode=True, default_flow_style=False
-            )
-        )
+        save_model(query_results_out / f"{name}.yaml", {name: sources[name]})
 
 
 def parse_query(raw: Any) -> Query:

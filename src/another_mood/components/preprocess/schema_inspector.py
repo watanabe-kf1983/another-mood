@@ -7,7 +7,6 @@ extracts a data catalog (entities + fields), and writes the result to
 """
 
 from collections.abc import Mapping
-from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
 from typing import Any, cast
@@ -16,10 +15,9 @@ import yaml
 
 from another_mood.components.preprocess.schema_tree import extract_entities
 from another_mood.components.preprocess.validator import Validator
-from another_mood.components.shared import yaml_dumper
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_model, save_model
 
 _SCHEMA_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "schema-schema.yaml")
@@ -52,8 +50,7 @@ def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -
     if not catalog:
         return
     dst.parent.mkdir(parents=True, exist_ok=True)
-    with dst.open("w", encoding="utf-8") as f:
-        yaml_dumper.dump({"__definition": catalog}, f)
+    save_model(dst, {"__definition": catalog})
 
 
 def check_schema(schema_file: Path) -> None:
@@ -80,22 +77,9 @@ def extract_data_catalog(
         entities = extract_entities(
             cast(Mapping[str, object], properties), builtin=builtin
         )
-        result["entities"] = [_strip_nones(asdict(e)) for e in entities]
+        result["entities"] = [e.to_dict() for e in entities]
 
     return result
-
-
-def _strip_nones(d: Any) -> Any:  # noqa: ANN401
-    """Recursively remove keys with None values from dicts."""
-    if isinstance(d, dict):
-        return {
-            k: _strip_nones(v)
-            for k, v in cast(dict[str, Any], d).items()
-            if v is not None
-        }
-    if isinstance(d, list):
-        return [_strip_nones(item) for item in cast(list[Any], d)]
-    return d
 
 
 def build_schema_validator() -> Validator:

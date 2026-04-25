@@ -28,7 +28,7 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
     containing line/column from the YAML error mark.
 
     Uses a fresh YAML instance per call because ruamel.yaml's YAML()
-    is not thread-safe (see components/shared/yaml_dumper.py).
+    is not thread-safe (see components/shared/json_data_model.py).
     """
     try:
         data: Mapping[str, object] = YAML().load(  # type: ignore[no-untyped-call]
