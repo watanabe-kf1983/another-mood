@@ -1,6 +1,6 @@
 """Data catalog model — output of SchemaInspector.
 
-Flat representation of entities and their fields, extracted from
+Flat representation of entities and their attributes, extracted from
 user-defined schemas.  Consumed downstream by Composer / Generator
 for meta-documentation (Phase 7).
 """
@@ -10,8 +10,8 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class CatalogField:
-    """A single field within an entity."""
+class CatalogAttribute:
+    """A single attribute within an entity."""
 
     id: str
     type: str
@@ -23,10 +23,10 @@ class CatalogField:
 
 @dataclass(frozen=True)
 class CatalogEntity:
-    """An entity (table-like structure) with its fields."""
+    """An entity (table-like structure) with its attributes."""
 
     id: str
-    fields: Sequence[CatalogField]
+    attributes: Sequence[CatalogAttribute]
     metadata: Mapping[str, object] | None = None
     parent_entity: str | None = None
     builtin: bool = False

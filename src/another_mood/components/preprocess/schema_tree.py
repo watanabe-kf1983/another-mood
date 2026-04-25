@@ -3,7 +3,7 @@
 Converts JSON Schema subset into a simple 3-node tree (ObjectNode,
 ArrayNode, ValueNode), absorbing structural patterns like
 additionalProperties and nested items.  The tree is then flattened
-into a DataCatalog (entities + fields) for downstream consumption.
+into a DataCatalog (entities + attributes) for downstream consumption.
 """
 
 from collections.abc import Mapping, Sequence
@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from another_mood.components.preprocess.data_catalog import (
+    CatalogAttribute,
     CatalogEntity,
-    CatalogField,
 )
 
 # ── Node definitions ─────────────────────────────────────────────────
@@ -216,15 +216,15 @@ def _unwrap_to_object(node: Node) -> ObjectNode | None:
     return node if isinstance(node, ObjectNode) else None
 
 
-def _to_catalog_field(
-    field_id: str,
+def _to_catalog_attribute(
+    attribute_id: str,
     field: SchemaField,
     *,
     child_entity: str | None = None,
-) -> CatalogField:
-    """Convert a SchemaField to a CatalogField."""
-    return CatalogField(
-        id=field_id,
+) -> CatalogAttribute:
+    """Convert a SchemaField to a CatalogAttribute."""
+    return CatalogAttribute(
+        id=attribute_id,
         type=_resolve_type(field.node),
         required=field.required,
         metadata=field.node.metadata,
@@ -245,7 +245,7 @@ def _emit_object_entity(
     builtin: bool = False,
 ) -> None:
     """Emit a CatalogEntity from an ObjectNode, recursing into children."""
-    catalog_fields: list[CatalogField] = []
+    catalog_attributes: list[CatalogAttribute] = []
     child_entities: list[tuple[str, ObjectNode]] = []
 
     for field in obj.fields:
@@ -256,14 +256,14 @@ def _emit_object_entity(
                 child_entity_id = f"{name}.{field.name}"
                 child_entities.append((child_entity_id, child_obj))
 
-        catalog_fields.append(
-            _to_catalog_field(field.name, field, child_entity=child_entity_id)
+        catalog_attributes.append(
+            _to_catalog_attribute(field.name, field, child_entity=child_entity_id)
         )
 
         if isinstance(field.node, ObjectNode):
             for sub in field.node.fields:
-                catalog_fields.append(
-                    _to_catalog_field(f"{field.name}.{sub.name}", sub)
+                catalog_attributes.append(
+                    _to_catalog_attribute(f"{field.name}.{sub.name}", sub)
                 )
 
     # ArrayNode metadata takes precedence: the outer dict-pattern schema owns
@@ -272,7 +272,7 @@ def _emit_object_entity(
     entities.append(
         CatalogEntity(
             id=name,
-            fields=catalog_fields,
+            attributes=catalog_attributes,
             metadata=metadata or obj.metadata,
             parent_entity=parent_entity,
             builtin=builtin,

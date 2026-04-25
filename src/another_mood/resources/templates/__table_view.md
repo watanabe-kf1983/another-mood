@@ -3,14 +3,14 @@
 [← Schema](../__meta_entity/{{ id }}.md)
 
 {% if rows -%}
-| {% for field in fields %}{{ field.id }} | {% endfor %}
-|{% for field in fields %}---|{% endfor %}
+| {% for attribute in attributes %}{{ attribute.id }} | {% endfor %}
+|{% for attribute in attributes %}---|{% endfor %}
 {% for row in rows -%}
-| {% for field in fields -%}
-{%- if field.child_entity -%}
-[{{ (row[field.id] or []) | length }} items](../__table_view/{{ field.child_entity }}.md)
+| {% for attribute in attributes -%}
+{%- if attribute.child_entity -%}
+[{{ (row[attribute.id] or []) | length }} items](../__table_view/{{ attribute.child_entity }}.md)
 {%- else -%}
-{{ row | at(field.id) | replace("|", "\|") | replace("\n", "<br>") }}
+{{ row | at(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}
 {%- endif %} | {% endfor %}
 {% endfor -%}
 {%- else -%}
