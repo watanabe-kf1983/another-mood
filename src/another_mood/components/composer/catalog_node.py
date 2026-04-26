@@ -41,6 +41,10 @@ class CatalogNode:
         """
         return bool(self.children)
 
+    def child(self, name: str) -> "CatalogNode":
+        """Return the child node keyed by ``name``."""
+        return next(c for n, c in self.children if n == name)
+
     @classmethod
     def build_from_catalog(cls, catalog: Sequence[dc.Entity]) -> "CatalogNode":
         """Build a virtual-root tree from a flat catalog list.

@@ -13,11 +13,6 @@ def _catalog(yaml_text: str) -> list[dc.Entity]:
     return [dc.Entity.from_dict(e) for e in loaded]
 
 
-def _child(node: CatalogNode, name: str) -> CatalogNode:
-    """Pick the child node of ``node`` keyed by ``name``."""
-    return next(c for n, c in node.children if n == name)
-
-
 class TestRoundTrip:
     @pytest.mark.parametrize(
         "root_name,yaml_text",
@@ -95,7 +90,7 @@ class TestRoundTrip:
     ) -> None:
         catalog = _catalog(yaml_text)
         root = CatalogNode.build_from_catalog(catalog)
-        assert _child(root, root_name).to_catalog_list(root_name) == catalog
+        assert root.child(root_name).to_catalog_list(root_name) == catalog
 
 
 class TestRenameOnFlatten:
@@ -143,4 +138,4 @@ class TestRenameOnFlatten:
             """
         )
         root = CatalogNode.build_from_catalog(catalog)
-        assert _child(root, "categories").to_catalog_list("tasks_by_phase") == expected
+        assert root.child("categories").to_catalog_list("tasks_by_phase") == expected
