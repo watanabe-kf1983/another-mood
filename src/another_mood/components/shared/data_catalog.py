@@ -52,6 +52,7 @@ class Entity:
     item_type: ObjectType
     parent_entity: str | None = None
     builtin: bool = False
+    view: bool = False  # synthesized from a query (composer-set)
 
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
