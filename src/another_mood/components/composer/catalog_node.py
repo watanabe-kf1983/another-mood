@@ -46,7 +46,6 @@ class CatalogEdge:
 class CatalogNode:
     metadata: Mapping[str, object] | None = None
     children: Sequence[tuple[CatalogEdge, "CatalogNode"]] = ()
-    builtin: bool = False
 
     @property
     def is_entity(self) -> bool:
@@ -98,7 +97,13 @@ def _build_entity_node(
     entity: dc.Entity,
     catalog: Sequence[dc.Entity],
 ) -> CatalogNode:
-    """Build a CatalogNode body for ``entity`` (intrinsic fields only)."""
+    """Build a CatalogNode body for ``entity`` (intrinsic fields only).
+
+    ``entity.builtin`` is intentionally not carried into the tree: the
+    catalog tree is a query-side intermediate, and a query view is never
+    built-in by definition.  Composer marks query outputs as views after
+    flattening; the built-in flag stays a flat-catalog concept.
+    """
     sub_by_name = {e.id.rsplit(".", 1)[-1]: e for e in _children_of(entity.id, catalog)}
     return CatalogNode(
         metadata=entity.item_type.metadata,
@@ -111,7 +116,6 @@ def _build_entity_node(
             )
             for attr in entity.item_type.attributes
         ],
-        builtin=entity.builtin,
     )
 
 
@@ -149,7 +153,6 @@ def _flatten_entity(
         id=access_path,
         item_type=_to_object_type(node, access_path=access_path),
         parent_entity=parent_entity_id,
-        builtin=node.builtin,
     )
     descendants = [
         descendant
