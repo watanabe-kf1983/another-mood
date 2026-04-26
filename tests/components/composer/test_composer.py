@@ -41,7 +41,14 @@ class TestCompose:
         data_catalog = tmp_path / "data-catalog" / "data"
         _write(
             data_catalog / "schema.yaml",
-            "__definition:\n  entities:\n    - {id: items, fields: []}\n",
+            "__definition:\n"
+            "  entities:\n"
+            "    - id: items\n"
+            "      item_type:\n"
+            "        id: items.item\n"
+            "        attributes:\n"
+            "          - {id: name, type: string, required: true}\n"
+            "          - {id: value, type: integer, required: true}\n",
         )
 
         out = tmp_path / "views"
@@ -63,10 +70,23 @@ class TestCompose:
                 dst = data_out / sub / f.relative_to(src)
                 assert dst.read_text() == f.read_text()
 
-        # Query result.
+        # Query result: records + synthesized view entities.
         assert yaml.safe_load(
             (data_out / "query-results" / "names.yaml").read_text()
-        ) == yaml.safe_load("names:\n  - {name: a}\n  - {name: b}\n")
+        ) == yaml.safe_load(
+            "__definition:\n"
+            "  entities:\n"
+            "    - id: names\n"
+            "      item_type:\n"
+            "        id: names.item\n"
+            "        attributes:\n"
+            "          - {id: name, type: string, required: true}\n"
+            "      builtin: false\n"
+            "      view: true\n"
+            "names:\n"
+            "  - {name: a}\n"
+            "  - {name: b}\n"
+        )
 
     def test_empty_queries_dir(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents" / "data"

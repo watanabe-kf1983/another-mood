@@ -2,13 +2,16 @@
 
 Passthrough-copies normalized contents and the `__definition` namespace
 (data catalog + query definitions) to views, then evaluates query
-definitions (YAML DSL) and writes additional view files.
+definitions (YAML DSL) and writes additional view files alongside the
+catalog entities those queries synthesize.
 """
 
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from another_mood.components.composer.catalog_node import CatalogNode
 from another_mood.components.composer.query import (
     From,
     Grouped,
@@ -16,6 +19,7 @@ from another_mood.components.composer.query import (
     Select,
     SelectItem,
 )
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 
@@ -42,6 +46,7 @@ def compose(
     shutil.copytree(queries_dir, queries_out)
 
     sources = load_model(contents_out)
+    catalog_node = CatalogNode.build_from_catalog(_load_catalog(data_catalog_out))
 
     merged = load_model(queries_out)
     definition: dict[str, Any] = merged.get("__definition", {})
@@ -51,7 +56,24 @@ def compose(
     query_results_out.mkdir(parents=True, exist_ok=True)
     for name, query in parsed_queries.items():
         sources[name] = query.apply([sources])
-        save_model(query_results_out / f"{name}.yaml", {name: sources[name]})
+        synthesized = [
+            replace(e, view=True)
+            for e in query.derive(catalog_node).to_catalog_list(name)
+        ]
+        save_model(
+            query_results_out / f"{name}.yaml",
+            {
+                "__definition": {"entities": [e.to_dict() for e in synthesized]},
+                name: sources[name],
+            },
+        )
+
+
+def _load_catalog(data_catalog_dir: Path) -> list[dc.Entity]:
+    """Load the merged ``__definition.entities`` list as typed Entity records."""
+    merged = load_model(data_catalog_dir)
+    raw: list[dict[str, Any]] = merged.get("__definition", {}).get("entities", [])
+    return [dc.Entity.from_dict(e) for e in raw]
 
 
 def parse_query(raw: Any) -> Query:
