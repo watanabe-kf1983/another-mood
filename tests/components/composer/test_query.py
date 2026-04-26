@@ -1,7 +1,9 @@
 """Tests for Query DSL — object model and evaluation."""
 
 import pytest
+from ruamel.yaml import YAML
 
+from another_mood.components.composer.catalog_node import CatalogNode
 from another_mood.components.composer.query import (
     From,
     Grouped,
@@ -10,6 +12,13 @@ from another_mood.components.composer.query import (
     SelectItem,
     flatten_children,
 )
+from another_mood.components.shared import data_catalog as dc
+
+
+def _catalog(yaml_text: str) -> list[dc.Entity]:
+    """Parse a YAML list of entity dicts into a flat dc.Entity catalog."""
+    loaded: list[dict[str, object]] = YAML(typ="safe").load(yaml_text)  # type: ignore[no-untyped-call]
+    return [dc.Entity.from_dict(e) for e in loaded]
 
 
 class TestFlattenChildren:
@@ -204,3 +213,159 @@ class TestQuery:
             {"id": "A1", "phase": 8},
             {"id": "B1", "phase": 10},
         ]
+
+
+_TASKS_CATALOG_YAML = """
+- id: categories
+  item_type:
+    id: categories.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: title, type: string, required: true }
+      - id: tasks
+        type: object[]
+        required: true
+        entity: categories.tasks
+        item_type: categories.item.tasks.item
+- id: categories.tasks
+  item_type:
+    id: categories.item.tasks.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: title, type: string, required: true }
+      - { id: phase, type: integer, required: true }
+  parent_entity: categories
+"""
+
+
+class TestFromDerive:
+    def test_walks_dot_path_to_leaf(self) -> None:
+        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path=["categories", "tasks"]).derive(root)
+        assert leaf.to_catalog_list("tasks") == _catalog(
+            """
+            - id: tasks
+              item_type:
+                id: tasks.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - { id: title, type: string, required: true }
+                  - { id: phase, type: integer, required: true }
+            """
+        )
+
+
+class TestGroupedDerive:
+    def test_wraps_with_by_and_as_name(self) -> None:
+        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path=["categories", "tasks"]).derive(root)
+        wrapped = Grouped(by="phase", as_name="tasks").derive(leaf)
+        assert wrapped.to_catalog_list("groups") == _catalog(
+            """
+            - id: groups
+              item_type:
+                id: groups.item
+                attributes:
+                  - { id: phase, type: integer, required: true }
+                  - id: tasks
+                    type: object[]
+                    required: true
+                    entity: groups.tasks
+                    item_type: groups.item.tasks.item
+            - id: groups.tasks
+              item_type:
+                id: groups.item.tasks.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - { id: title, type: string, required: true }
+                  - { id: phase, type: integer, required: true }
+              parent_entity: groups
+            """
+        )
+
+
+class TestSelectDerive:
+    def test_projects_and_renames(self) -> None:
+        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path=["categories", "tasks"]).derive(root)
+        projected = Select(
+            items=[
+                SelectItem(item="phase", as_name="id"),
+                SelectItem(item="title", as_name="title"),
+            ]
+        ).derive(leaf)
+        assert projected.to_catalog_list("projection") == _catalog(
+            """
+            - id: projection
+              item_type:
+                id: projection.item
+                attributes:
+                  - { id: id, type: integer, required: true }
+                  - { id: title, type: string, required: true }
+            """
+        )
+
+
+class TestQueryDerive:
+    def test_tasks_by_phase(self) -> None:
+        """End-to-end: from → grouped → select → flatten produces the expected catalog."""
+        query = Query(
+            from_clause=From(path=["categories", "tasks"]),
+            grouped=Grouped(by="phase", as_name="tasks"),
+            select=Select(
+                items=[
+                    SelectItem(item="phase", as_name="id"),
+                    SelectItem(item="phase", as_name="phase"),
+                    SelectItem(item="tasks", as_name="tasks"),
+                ]
+            ),
+        )
+        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        result = query.derive(root).to_catalog_list("tasks_by_phase")
+        assert result == _catalog(
+            """
+            - id: tasks_by_phase
+              item_type:
+                id: tasks_by_phase.item
+                attributes:
+                  - { id: id, type: integer, required: true }
+                  - { id: phase, type: integer, required: true }
+                  - id: tasks
+                    type: object[]
+                    required: true
+                    entity: tasks_by_phase.tasks
+                    item_type: tasks_by_phase.item.tasks.item
+            - id: tasks_by_phase.tasks
+              item_type:
+                id: tasks_by_phase.item.tasks.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - { id: title, type: string, required: true }
+                  - { id: phase, type: integer, required: true }
+              parent_entity: tasks_by_phase
+            """
+        )
+
+    def test_without_grouped(self) -> None:
+        query = Query(
+            from_clause=From(path=["categories", "tasks"]),
+            grouped=None,
+            select=Select(
+                items=[
+                    SelectItem(item="id", as_name="id"),
+                    SelectItem(item="title", as_name="title"),
+                ]
+            ),
+        )
+        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        result = query.derive(root).to_catalog_list("task_titles")
+        assert result == _catalog(
+            """
+            - id: task_titles
+              item_type:
+                id: task_titles.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - { id: title, type: string, required: true }
+            """
+        )

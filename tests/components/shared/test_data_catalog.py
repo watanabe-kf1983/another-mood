@@ -44,3 +44,14 @@ class TestRoundTrip:
             builtin=True,
         )
         assert Entity.from_dict(entity.to_dict()) == entity
+
+    def test_view_flag(self) -> None:
+        entity = Entity(
+            id="tasks_by_phase",
+            item_type=ObjectType(
+                id="tasks_by_phase.item",
+                attributes=[Attribute(id="phase", type="integer", required=True)],
+            ),
+            view=True,
+        )
+        assert Entity.from_dict(entity.to_dict()) == entity
