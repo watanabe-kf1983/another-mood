@@ -2,14 +2,16 @@
 
 Converts JSON Schema subset into a simple 3-node tree (ObjectNode,
 ArrayNode, ValueNode), absorbing structural patterns like
-additionalProperties and nested items.  The tree is then flattened
-into a DataCatalog (entities + attributes) for downstream consumption.
+additionalProperties and nested items.  The tree is then converted to
+a CatalogNode and flattened into a DataCatalog (entities + attributes)
+for downstream consumption.
 """
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
+from another_mood.components.composer.catalog_node import CatalogEdge, CatalogNode
 from another_mood.components.shared import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────
@@ -173,7 +175,7 @@ def _extract_validation(
     return val or None
 
 
-# ── SchemaTree → DataCatalog ─────────────────────────────────────────
+# ── SchemaTree → DataCatalog (via CatalogNode) ───────────────────────
 
 
 def extract_entities(
@@ -181,7 +183,12 @@ def extract_entities(
     *,
     builtin: bool = False,
 ) -> list[dc.Entity]:
-    """Convert a schemas dict into a flat list of Entity."""
+    """Convert a schemas dict into a flat list of Entity.
+
+    Each top-level entry must be a collection (ArrayNode-wrapped
+    ObjectNode in tree form); top-level non-collections are silently
+    dropped.  ``builtin=True`` post-marks every emitted entity.
+    """
     entities: list[dc.Entity] = []
     for name, schema in schemas.items():
         tree = build_schema_tree(cast(SchemaDict, schema))
@@ -196,24 +203,73 @@ def collect_entities(
     *,
     builtin: bool = False,
 ) -> None:
-    """Walk tree and collect entities from ObjectNodes.
+    """Append entities for one named SchemaTree to ``entities``.
 
-    Any depth of ArrayNode wrapping is peeled off so that nested array
-    schemas (e.g. `object[][]`) still yield an entity.
+    Builds a CatalogNode for the tree and uses ``to_catalog_list`` to
+    flatten — id naming, parent_entity links, and dotted-attribute
+    handling for nested singletons all live in the CatalogNode layer.
+    Non-collection top levels yield nothing.
+    """
+    catalog_node = _to_catalog_node(node)
+    if not catalog_node.is_entity:
+        return
+    flat = catalog_node.to_catalog_list(name)
+    entities.extend(
+        replace(e, builtin=True) for e in flat
+    ) if builtin else entities.extend(flat)
+
+
+def _to_catalog_node(node: Node) -> CatalogNode:
+    """Convert a SchemaTree node (entity-shaped) into a CatalogNode body.
+
+    Returns an empty CatalogNode for nodes that don't materialize as
+    entities (scalars, arrays of scalars), so the caller can filter
+    them via ``CatalogNode.is_entity``.
+
+    For ArrayNode-wrapped objects, the outer ArrayNode's metadata wins
+    over the inner ObjectNode's — the dict-pattern schema owns the
+    type-level metadata, the inner shape describes structure only.
     """
     obj = _unwrap_to_object(node)
     if obj is None:
-        return
-    is_collection = isinstance(node, ArrayNode)
-    item_type_id = f"{name}.item" if is_collection else name
+        return CatalogNode()
     metadata = node.metadata if isinstance(node, ArrayNode) else None
-    _emit_object_entity(
-        access_path=name,
-        item_type_id=item_type_id,
-        obj=obj,
-        entities=entities,
-        metadata=metadata,
-        builtin=builtin,
+    return CatalogNode(
+        metadata=metadata or obj.metadata,
+        children=list(_collect_edges(obj)),
+    )
+
+
+def _collect_edges(
+    obj: ObjectNode,
+) -> Iterable[tuple[CatalogEdge, CatalogNode]]:
+    """Yield ``(edge, child)`` entries for an ObjectNode's properties.
+
+    Singleton ObjectNode properties surface as the singleton attribute
+    itself (``type='object'``) plus its sub-properties flattened one
+    level deep into dotted-name scalar children, mirroring
+    SchemaInspector's "no nested-object entities" convention.
+    """
+    for prop in obj.properties:
+        if isinstance(prop.node, ObjectNode):
+            yield (_property_to_edge(prop), CatalogNode())
+            for sub in prop.node.properties:
+                yield (
+                    _property_to_edge(sub, name=f"{prop.name}.{sub.name}"),
+                    CatalogNode(),
+                )
+        else:
+            yield (_property_to_edge(prop), _to_catalog_node(prop.node))
+
+
+def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> CatalogEdge:
+    """Build a CatalogEdge from a SchemaProperty (optionally renaming it)."""
+    return CatalogEdge(
+        name=name if name is not None else prop.name,
+        type=_resolve_type(prop.node),
+        required=prop.required,
+        metadata=prop.node.metadata,
+        validation=prop.node.validation if isinstance(prop.node, ValueNode) else None,
     )
 
 
@@ -222,95 +278,6 @@ def _unwrap_to_object(node: Node) -> ObjectNode | None:
     while isinstance(node, ArrayNode):
         node = node.child
     return node if isinstance(node, ObjectNode) else None
-
-
-def _to_attribute(
-    attribute_id: str,
-    prop: SchemaProperty,
-    *,
-    entity: str | None = None,
-    item_type: str | None = None,
-) -> dc.Attribute:
-    """Convert a SchemaProperty to an Attribute."""
-    return dc.Attribute(
-        id=attribute_id,
-        type=_resolve_type(prop.node),
-        required=prop.required,
-        metadata=prop.node.metadata,
-        validation=(prop.node.validation if isinstance(prop.node, ValueNode) else None),
-        entity=entity,
-        item_type=item_type,
-    )
-
-
-def _emit_object_entity(
-    *,
-    access_path: str,
-    item_type_id: str,
-    obj: ObjectNode,
-    entities: list[dc.Entity],
-    metadata: Mapping[str, object] | None = None,
-    parent_entity: str | None = None,
-    builtin: bool = False,
-) -> None:
-    """Emit an Entity (with its ObjectType) and recurse into children.
-
-    Children are always collections (ArrayNode-wrapped object schemas);
-    inline singleton object properties are flattened into dotted attribute
-    names on the parent entity.
-    """
-    attributes: list[dc.Attribute] = []
-    child_specs: list[tuple[str, str, ObjectNode]] = []
-
-    for prop in obj.properties:
-        ref_entity: str | None = None
-        ref_item_type: str | None = None
-        if isinstance(prop.node, ArrayNode):
-            child_obj = _unwrap_to_object(prop.node)
-            if child_obj is not None:
-                ref_entity = f"{access_path}.{prop.name}"
-                ref_item_type = f"{item_type_id}.{prop.name}.item"
-                child_specs.append((ref_entity, ref_item_type, child_obj))
-
-        attributes.append(
-            _to_attribute(
-                prop.name,
-                prop,
-                entity=ref_entity,
-                item_type=ref_item_type,
-            )
-        )
-
-        if isinstance(prop.node, ObjectNode):
-            for sub in prop.node.properties:
-                attributes.append(_to_attribute(f"{prop.name}.{sub.name}", sub))
-
-    # ArrayNode metadata takes precedence: the outer dict-pattern schema owns
-    # the type-level metadata (title, description, etc.), while the inner
-    # ObjectNode describes the structure only.
-    item_type = dc.ObjectType(
-        id=item_type_id,
-        attributes=attributes,
-        metadata=metadata or obj.metadata,
-    )
-    entities.append(
-        dc.Entity(
-            id=access_path,
-            item_type=item_type,
-            parent_entity=parent_entity,
-            builtin=builtin,
-        )
-    )
-
-    for child_access_path, child_item_type_id, child_obj in child_specs:
-        _emit_object_entity(
-            access_path=child_access_path,
-            item_type_id=child_item_type_id,
-            obj=child_obj,
-            entities=entities,
-            parent_entity=access_path,
-            builtin=builtin,
-        )
 
 
 def _resolve_type(node: Node) -> str:

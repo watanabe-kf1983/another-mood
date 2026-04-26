@@ -41,31 +41,6 @@ _CASES = [
         """
         type: object
         properties:
-          kitchen:
-            type: object
-            properties:
-              name: { type: string }
-              capacity: { type: integer }
-            additionalProperties: false
-            required: [name]
-        """,
-        """
-        entities:
-          - id: kitchen
-            builtin: false
-            view: false
-            item_type:
-              id: kitchen
-              attributes:
-                - { id: name, type: string, required: true }
-                - { id: capacity, type: integer, required: false }
-        """,
-        id="properties — flat fields (singleton, no .item)",
-    ),
-    pytest.param(
-        """
-        type: object
-        properties:
           steps:
             type: array
             items:
@@ -93,22 +68,25 @@ _CASES = [
         """
         type: object
         properties:
-          recipe:
+          recipes:
             type: object
-            properties:
-              tags:
-                type: array
-                items: { type: string }
-            additionalProperties: false
+            additionalProperties:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items: { type: string }
+              additionalProperties: false
         """,
         """
         entities:
-          - id: recipe
+          - id: recipes
             builtin: false
             view: false
             item_type:
-              id: recipe
+              id: recipes.item
               attributes:
+                - { id: id, type: string, required: true }
                 - { id: tags, type: "string[]", required: false }
         """,
         id="array of scalars — type[]",
@@ -167,27 +145,30 @@ _CASES = [
         """
         type: object
         properties:
-          recipe:
+          recipes:
             type: object
-            properties:
-              nutrition:
-                type: object
-                properties:
-                  calories: { type: number }
-                  protein: { type: number }
-                additionalProperties: false
-                required: [calories]
-            additionalProperties: false
-            required: [nutrition]
+            additionalProperties:
+              type: object
+              properties:
+                nutrition:
+                  type: object
+                  properties:
+                    calories: { type: number }
+                    protein: { type: number }
+                  additionalProperties: false
+                  required: [calories]
+              additionalProperties: false
+              required: [nutrition]
         """,
         """
         entities:
-          - id: recipe
+          - id: recipes
             builtin: false
             view: false
             item_type:
-              id: recipe
+              id: recipes.item
               attributes:
+                - { id: id, type: string, required: true }
                 - { id: nutrition, type: object, required: true }
                 - { id: nutrition.calories, type: number, required: true }
                 - { id: nutrition.protein, type: number, required: false }
@@ -198,39 +179,42 @@ _CASES = [
         """
         type: object
         properties:
-          recipe:
+          recipes:
             type: object
-            properties:
-              steps:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    instruction: { type: string }
-                    duration_min: { type: integer }
-                  additionalProperties: false
-                  required: [instruction]
-            additionalProperties: false
+            additionalProperties:
+              type: object
+              properties:
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      instruction: { type: string }
+                      duration_min: { type: integer }
+                    additionalProperties: false
+                    required: [instruction]
+              additionalProperties: false
         """,
         """
         entities:
-          - id: recipe
+          - id: recipes
             builtin: false
             view: false
             item_type:
-              id: recipe
+              id: recipes.item
               attributes:
+                - { id: id, type: string, required: true }
                 - id: steps
                   type: "object[]"
                   required: false
-                  entity: recipe.steps
-                  item_type: recipe.steps.item
-          - id: recipe.steps
+                  entity: recipes.steps
+                  item_type: recipes.item.steps.item
+          - id: recipes.steps
             builtin: false
             view: false
-            parent_entity: recipe
+            parent_entity: recipes
             item_type:
-              id: recipe.steps.item
+              id: recipes.item.steps.item
               attributes:
                 - { id: instruction, type: string, required: true }
                 - { id: duration_min, type: integer, required: false }
