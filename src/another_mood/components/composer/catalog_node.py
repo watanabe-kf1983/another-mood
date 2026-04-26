@@ -57,9 +57,13 @@ class CatalogNode:
         """
         return bool(self.children)
 
+    def child_entry(self, name: str) -> tuple[CatalogEdge, "CatalogNode"]:
+        """Return the (edge, child) entry reached by the edge named ``name``."""
+        return next((e, c) for e, c in self.children if e.name == name)
+
     def child(self, name: str) -> "CatalogNode":
         """Return the child node reached by the edge named ``name``."""
-        return next(c for e, c in self.children if e.name == name)
+        return self.child_entry(name)[1]
 
     @classmethod
     def build_from_catalog(cls, catalog: Sequence[dc.Entity]) -> "CatalogNode":
