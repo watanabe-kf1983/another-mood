@@ -27,6 +27,7 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
+            view: false
             item_type:
               id: recipes.item
               attributes:
@@ -52,6 +53,7 @@ _CASES = [
         entities:
           - id: kitchen
             builtin: false
+            view: false
             item_type:
               id: kitchen
               attributes:
@@ -78,6 +80,7 @@ _CASES = [
         entities:
           - id: steps
             builtin: false
+            view: false
             item_type:
               id: steps.item
               attributes:
@@ -102,6 +105,7 @@ _CASES = [
         entities:
           - id: recipe
             builtin: false
+            view: false
             item_type:
               id: recipe
               attributes:
@@ -135,6 +139,7 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
+            view: false
             item_type:
               id: recipes.item
               attributes:
@@ -147,6 +152,7 @@ _CASES = [
                   item_type: recipes.item.ingredients.item
           - id: recipes.ingredients
             builtin: false
+            view: false
             parent_entity: recipes
             item_type:
               id: recipes.item.ingredients.item
@@ -178,6 +184,7 @@ _CASES = [
         entities:
           - id: recipe
             builtin: false
+            view: false
             item_type:
               id: recipe
               attributes:
@@ -209,6 +216,7 @@ _CASES = [
         entities:
           - id: recipe
             builtin: false
+            view: false
             item_type:
               id: recipe
               attributes:
@@ -219,6 +227,7 @@ _CASES = [
                   item_type: recipe.steps.item
           - id: recipe.steps
             builtin: false
+            view: false
             parent_entity: recipe
             item_type:
               id: recipe.steps.item
@@ -246,6 +255,7 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
+            view: false
             item_type:
               id: recipes.item
               metadata:
@@ -289,6 +299,7 @@ _CASES = [
         entities:
           - id: recipes
             builtin: false
+            view: false
             item_type:
               id: recipes.item
               attributes:

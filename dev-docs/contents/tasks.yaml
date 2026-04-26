@@ -184,6 +184,7 @@ categories:
           クエリ定義から静的に出力スキーマを推論 + 合成 child entity を
           __definition.entities に emit。F3 の前提。
         phase: 8
+        done: true
 
   F:
     title: メタドキュメンテーション拡張
