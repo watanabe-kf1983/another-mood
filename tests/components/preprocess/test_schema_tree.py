@@ -220,11 +220,11 @@ class TestCollectEntities:
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("x", True, ValueNode(type="number")),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("points", tree, entities)
-        assert entities == [dc.Entity("points", item_type=dc.ObjectType("points.item", attributes=[
-            dc.Attribute("x", "number", True),
-        ]))]
+        assert collect_entities("points", tree) == [
+            dc.Entity("points", item_type=dc.ObjectType("points.item", attributes=[
+                dc.Attribute("x", "number", True),
+            ])),
+        ]
 
     def test_nested_object_prefix_flattened(self) -> None:
         """ObjectNode inside properties → prefix.name flat attributes."""
@@ -234,13 +234,13 @@ class TestCollectEntities:
                 SchemaProperty("zipcode", False, ValueNode(type="string")),
             ])),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("persons", tree, entities)
-        assert entities == [dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
-            dc.Attribute("address",         "object", True),
-            dc.Attribute("address.city",    "string", True),
-            dc.Attribute("address.zipcode", "string", False),
-        ]))]
+        assert collect_entities("persons", tree) == [
+            dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
+                dc.Attribute("address",         "object", True),
+                dc.Attribute("address.city",    "string", True),
+                dc.Attribute("address.zipcode", "string", False),
+            ])),
+        ]
 
     def test_array_object_creates_child_entity(self) -> None:
         """ArrayNode → ObjectNode child → object[] attribute + linked child entity (with .item)."""
@@ -249,9 +249,7 @@ class TestCollectEntities:
                 SchemaProperty("name", True, ValueNode(type="string")),
             ]))),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("orders", tree, entities)
-        assert entities == [
+        assert collect_entities("orders", tree) == [
             dc.Entity("orders", item_type=dc.ObjectType("orders.item", attributes=[
                 dc.Attribute("items", "object[]", False,
                              entity="orders.items",
@@ -271,22 +269,22 @@ class TestCollectEntities:
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("tags", False, ArrayNode(child=ValueNode(type="string"))),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("articles", tree, entities)
-        assert entities == [dc.Entity("articles", item_type=dc.ObjectType("articles.item", attributes=[
-            dc.Attribute("tags", "string[]", False),
-        ]))]
+        assert collect_entities("articles", tree) == [
+            dc.Entity("articles", item_type=dc.ObjectType("articles.item", attributes=[
+                dc.Attribute("tags", "string[]", False),
+            ])),
+        ]
 
     def test_nested_array_type_brackets(self) -> None:
         """ArrayNode → ArrayNode → type[][] attribute."""
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("sheets", tree, entities)
-        assert entities == [dc.Entity("sheets", item_type=dc.ObjectType("sheets.item", attributes=[
-            dc.Attribute("matrix", "number[][]", False),
-        ]))]
+        assert collect_entities("sheets", tree) == [
+            dc.Entity("sheets", item_type=dc.ObjectType("sheets.item", attributes=[
+                dc.Attribute("matrix", "number[][]", False),
+            ])),
+        ]
 
     def test_nested_array_of_objects_creates_child_entity(self) -> None:
         """ArrayNode → ArrayNode → ObjectNode → object[][] attribute + child entity (with .item)."""
@@ -295,9 +293,7 @@ class TestCollectEntities:
                 SchemaProperty("v", True, ValueNode(type="number")),
             ])))),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("boards", tree, entities)
-        assert entities == [
+        assert collect_entities("boards", tree) == [
             dc.Entity("boards", item_type=dc.ObjectType("boards.item", attributes=[
                 dc.Attribute("grid", "object[][]", False,
                              entity="boards.grid",
@@ -320,9 +316,7 @@ class TestCollectEntities:
             ]),
             metadata={"title": "My Collection"},
         )
-        entities: list[dc.Entity] = []
-        collect_entities("things", tree, entities)
-        assert entities[0].item_type.metadata == {"title": "My Collection"}
+        assert collect_entities("things", tree)[0].item_type.metadata == {"title": "My Collection"}
 
     def test_attribute_metadata_and_validation(self) -> None:
         """ValueNode metadata/validation → Attribute metadata/validation."""
@@ -333,9 +327,7 @@ class TestCollectEntities:
                 validation={"minimum": 0, "maximum": 100},
             )),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("games", tree, entities)
-        assert entities[0].item_type.attributes[0] == dc.Attribute(
+        assert collect_entities("games", tree)[0].item_type.attributes[0] == dc.Attribute(
             "score", "integer", True,
             metadata={"description": "Player score"},
             validation={"minimum": 0, "maximum": 100},
@@ -347,9 +339,7 @@ class TestCollectEntities:
             SchemaProperty("a", True,  ValueNode(type="string")),
             SchemaProperty("b", False, ValueNode(type="string")),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("ts", tree, entities)
-        assert [(a.id, a.required) for a in entities[0].item_type.attributes] == [
+        assert [(a.id, a.required) for a in collect_entities("ts", tree)[0].item_type.attributes] == [
             ("a", True), ("b", False),
         ]
 

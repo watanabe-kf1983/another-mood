@@ -189,34 +189,33 @@ def extract_entities(
     ObjectNode in tree form); top-level non-collections are silently
     dropped.  ``builtin=True`` post-marks every emitted entity.
     """
-    entities: list[dc.Entity] = []
-    for name, schema in schemas.items():
-        tree = build_schema_tree(cast(SchemaDict, schema))
-        collect_entities(name, tree, entities, builtin=builtin)
-    return entities
+    return [
+        entity
+        for name, schema in schemas.items()
+        for entity in collect_entities(
+            name, build_schema_tree(cast(SchemaDict, schema)), builtin=builtin
+        )
+    ]
 
 
 def collect_entities(
     name: str,
     node: Node,
-    entities: list[dc.Entity],
     *,
     builtin: bool = False,
-) -> None:
-    """Append entities for one named SchemaTree to ``entities``.
+) -> list[dc.Entity]:
+    """Return the entities one named SchemaTree contributes.
 
     Builds a CatalogNode for the tree and uses ``to_catalog_list`` to
     flatten — id naming, parent_entity links, and dotted-attribute
     handling for nested singletons all live in the CatalogNode layer.
-    Non-collection top levels yield nothing.
+    Non-collection top levels yield an empty list.
     """
     catalog_node = _to_catalog_node(node)
     if not catalog_node.is_entity:
-        return
+        return []
     flat = catalog_node.to_catalog_list(name)
-    entities.extend(
-        replace(e, builtin=True) for e in flat
-    ) if builtin else entities.extend(flat)
+    return [replace(e, builtin=True) for e in flat] if builtin else flat
 
 
 def _to_catalog_node(node: Node) -> CatalogNode:
