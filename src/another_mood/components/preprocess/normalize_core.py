@@ -3,7 +3,7 @@
 Walks a source directory, parses Markdown / YAML inputs, validates them
 against a schema, applies dict-to-array normalization, and writes the
 result to an output directory. Used by both ``content_normalizer`` and
-``query_normalizer``.
+``query_deriver``.
 
 Includes the Markdown → ProseRecord parser and the schema-guided
 dict-to-array transformer that the pipeline composes.

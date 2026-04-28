@@ -5,10 +5,10 @@ from datetime import datetime
 
 from another_mood.components import (
     compose,
+    derive_queries,
     generate,
     inspect_schema,
     normalize_contents,
-    normalize_queries,
     publish,
     reconcile,
 )
@@ -47,20 +47,26 @@ def normalize_contents_stage(config: ProjectConfig) -> Task:
     )
 
 
-def normalize_queries_stage(config: ProjectConfig) -> Task:
-    """Validate and normalize query files."""
-    out = config.component_output(normalize_queries)
-    call = normalize_queries.bind(
+def derive_queries_stage(config: ProjectConfig) -> Task:
+    """Validate query files and derive view entities."""
+    inspect_out = config.component_output(inspect_schema)
+    out = config.component_output(derive_queries)
+    call = derive_queries.bind(
         queries_dir=config.queries_dir,
+        data_catalog_dir=inspect_out.dir,
         out_dir=out.dir,
     )
-    return Stage(run_fn=call, watch_paths=[config.queries_dir])
+    return Stage(
+        run_fn=call,
+        watch_paths=[config.queries_dir],
+        upstreams=[inspect_out],
+    )
 
 
 def compose_stage(config: ProjectConfig) -> Task:
     """Compose views from normalized contents + query evaluation."""
     contents_out = config.component_output(normalize_contents)
-    queries_out = config.component_output(normalize_queries)
+    queries_out = config.component_output(derive_queries)
     inspect_out = config.component_output(inspect_schema)
     out = config.component_output(compose)
     call = compose.bind(
@@ -168,7 +174,7 @@ def pipeline(config: ProjectConfig) -> Pipeline:
     stages: list[Task] = [
         inspect_schema_stage(config),
         normalize_contents_stage(config),
-        normalize_queries_stage(config),
+        derive_queries_stage(config),
         compose_stage(config),
         generator_stage(config),
         reconcile_stage(config),

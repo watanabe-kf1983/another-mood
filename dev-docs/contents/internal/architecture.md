@@ -9,17 +9,22 @@
 IN: `schema_file`
 OUT: `inspect_schemas_dir`
 
-**Normalizer**
-入力ディレクトリを検証し、辞書形式を配列形式に正規化する。
-contents / queries の2種類の入力に対してそれぞれ独立したステージとして実行される。
+**Content Normalizer**
+contents 入力を検証し、辞書形式を配列形式に正規化する。
 Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../design/normalizer/markdown-parser-spec.md) 参照）。
-contents の Normalize では `--strict` モードで参照整合性もチェックする。
-IN: `contents_dir`、`queries_dir`（各ステージで異なる。詳細は [pipeline.md](pipeline/pipeline.md) 参照）
-OUT: `normalize_contents_dir`、`normalize_queries_dir`
+`--strict` モードで参照整合性もチェックする。
+IN: `contents_dir`、`inspect_schemas_dir`
+OUT: `normalize_contents_dir`
+
+**Query Deriver**
+queries 入力を検証・正規化し、各クエリをパースして派生エンティティ（`view: true`）をデータカタログから生成する。
+出力 YAML には `__definition.queries` と `__definition.entities` の両方を書き出す。
+IN: `queries_dir`、`inspect_schemas_dir`
+OUT: `derive_queries_dir`
 
 **Composer**
-正規化済みデータを自動的にビューとしてパススルーし、さらに正規化済みクエリがあれば評価して追加のビューを生成する。
-IN: `inspect_schemas_dir`、`normalize_contents_dir`、`normalize_queries_dir`
+正規化済みデータを自動的にビューとしてパススルーし、さらにクエリ定義があれば contents に対して適用して結果を出力する。派生エンティティは Query Deriver で生成済みのため Composer は queries の passthrough として伝搬させる。
+IN: `inspect_schemas_dir`、`normalize_contents_dir`、`derive_queries_dir`
 OUT: `compose_dir`
 
 **Document Generator**

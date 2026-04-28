@@ -6,8 +6,8 @@
 |---|---|---|---|
 | inspect_schema | schema_file | — | inspect_schemas_dir |
 | normalize_contents | contents_dir, schema_file ※1 | inspect_schemas_dir | normalize_contents_dir |
-| normalize_queries | queries_dir | inspect_schemas_dir | normalize_queries_dir |
-| compose | — | inspect_schemas_dir ※2, normalize_contents_dir, normalize_queries_dir | compose_dir |
+| derive_queries | queries_dir | inspect_schemas_dir | derive_queries_dir |
+| compose | — | inspect_schemas_dir ※2, normalize_contents_dir, derive_queries_dir | compose_dir |
 | generate | templates_dir | compose_dir | generate_dir |
 | reconcile | — | generate_dir | reconcile_dir |
 | render | — | reconcile_dir ※3 | render_dir |

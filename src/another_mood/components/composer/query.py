@@ -159,3 +159,31 @@ class Query:
         if self.grouped:
             node = self.grouped.derive(node)
         return self.select.derive(node)
+
+
+def parse_query(raw: Mapping[str, object]) -> Query:
+    """Parse a YAML-loaded query record into a typed Query object.
+
+    This is the Any-to-typed boundary: raw YAML data comes in,
+    validated Query objects come out.
+    """
+    from_raw = cast(str, raw["from"])
+    from_clause = From(path=from_raw.split("."))
+
+    grouped: Grouped | None = None
+    if "grouped" in raw:
+        grouped_raw = cast(Mapping[str, str], raw["grouped"])
+        grouped = Grouped(
+            by=grouped_raw["by"],
+            as_name=grouped_raw.get("as", from_clause.path[-1]),
+        )
+
+    select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
+    select = Select(
+        items=[
+            SelectItem(item=entry["item"], as_name=entry.get("as", entry["item"]))
+            for entry in select_raw
+        ]
+    )
+
+    return Query(select=select, from_clause=from_clause, grouped=grouped)
