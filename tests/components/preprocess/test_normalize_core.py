@@ -1,20 +1,12 @@
-"""Tests for Normalizer."""
+"""Tests for normalize core (normalize, check)."""
 
 from pathlib import Path
-
-from collections.abc import Mapping
 
 import pytest
 import yaml
 
-from another_mood.components.preprocess.normalizer import (
-    build_contents_schema,
-    build_query_schema,
-    check,
-    normalize,
-    normalize_contents,
-    normalize_queries,
-)
+from another_mood.components.preprocess.content_normalizer import build_contents_schema
+from another_mood.components.preprocess.normalize_core import check, normalize
 from another_mood.components.shared.diagnostic import FileValidationError
 
 
@@ -116,9 +108,6 @@ class TestNormalize:
         assert not (out / "README.yaml").exists()
 
 
-# ── check ─────────────────────────────────────────────────────────
-
-
 class TestCheck:
     """check: parse + validate all files in src_dir."""
 
@@ -189,164 +178,3 @@ class TestCheck:
             check(src, build_contents_schema(schema_file))
         files = {str(d.file) for d in exc_info.value.diagnostics}
         assert len(files) == 2
-
-
-# ── build_contents_schema ─────────────────────────────────────────
-
-
-class TestBuildContentsSchema:
-    """build_contents_schema: merge built-in prose + user schema."""
-
-    def test_merges_builtin_and_user_schema(self, tmp_path: Path) -> None:
-        schema_file = tmp_path / "schema.yaml"
-        schema_file.write_text(
-            "type: object\n"
-            "properties:\n"
-            "  entities:\n"
-            "    type: array\n"
-            "    items:\n"
-            "      type: object\n"
-            "      properties:\n"
-            "        id: { type: string }\n"
-            "      required: [id]\n"
-            "additionalProperties: false\n"
-        )
-        schema = build_contents_schema(schema_file)
-
-        from another_mood.components.preprocess.validator import Validator
-
-        validator = Validator(schema)
-
-        # User schema: entities validated
-        errors = validator.validate({"entities": [{"id": 123}]}, Path("test.yaml"))
-        assert len(errors) >= 1
-
-        # Built-in prose schema: prose validated
-        errors = validator.validate(
-            {
-                "prose": [
-                    {
-                        "id": "doc",
-                        "body": {"mime_type": "text/markdown", "content": "x"},
-                    }
-                ]
-            },
-            Path("test.yaml"),
-        )
-        assert errors == []
-
-    def test_missing_schema_file_uses_builtin_only(self, tmp_path: Path) -> None:
-        schema = build_contents_schema(tmp_path / "missing.yaml")
-
-        from another_mood.components.preprocess.validator import Validator
-
-        validator = Validator(schema)
-        # prose still validated
-        errors = validator.validate(
-            {
-                "prose": [
-                    {
-                        "id": "doc",
-                        "body": {"mime_type": "text/markdown", "content": "x"},
-                    }
-                ]
-            },
-            Path("test.yaml"),
-        )
-        assert errors == []
-
-
-# ── build_query_schema ───────────────────────────────────────────
-
-
-class TestBuildQuerySchema:
-    """build_query_schema: validate against built-in QuerySchema."""
-
-    def _validate(self, data: Mapping[str, object]) -> list[object]:
-        from another_mood.components.preprocess.validator import Validator
-
-        validator = Validator(build_query_schema())
-        return list(validator.validate(data, Path("test.yaml")))
-
-    def test_valid_query_accepted(self) -> None:
-        data = {"q": {"from": "items", "select": [{"item": "name"}]}}
-        assert self._validate(data) == []
-
-    def test_from_only_accepted(self) -> None:
-        data = {"q": {"from": "items"}}
-        assert self._validate(data) == []
-
-    def test_missing_from_rejected(self) -> None:
-        data = {"q": {"select": [{"item": "name"}]}}
-        assert len(self._validate(data)) >= 1
-
-    def test_unknown_key_rejected(self) -> None:
-        data = {"q": {"from": "items", "unknown": "value"}}
-        assert len(self._validate(data)) >= 1
-
-    def test_select_missing_item_rejected(self) -> None:
-        data = {"q": {"from": "items", "select": [{"as": "alias"}]}}
-        assert len(self._validate(data)) >= 1
-
-    def test_unicode_query_name_accepted(self) -> None:
-        data = {"クエリ": {"from": "items"}}
-        assert self._validate(data) == []
-
-    def test_hyphenated_query_name_rejected(self) -> None:
-        data = {"my-query": {"from": "items"}}
-        assert len(self._validate(data)) >= 1
-
-
-# ── normalize_contents ────────────────────────────────────────────
-
-
-class TestNormalizeContents:
-    """normalize_contents: component smoke test."""
-
-    def test_validates_and_writes(self, tmp_path: Path) -> None:
-        src = tmp_path / "contents"
-        src.mkdir()
-        (src / "data.yaml").write_text("items:\n  - name: a\n")
-        schema_file = tmp_path / "schema.yaml"
-        schema_file.write_text(
-            "type: object\n"
-            "properties:\n"
-            "  items:\n"
-            "    type: array\n"
-            "    items:\n"
-            "      type: object\n"
-            "additionalProperties: false\n"
-        )
-
-        out = tmp_path / "normalized"
-        normalize_contents(src_dir=src, out_dir=out, schema_file=schema_file)
-
-        assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
-            "items": [{"name": "a"}]
-        }
-
-
-# ── normalize_queries ─────────────────────────────────────────────
-
-
-class TestNormalizeQueries:
-    """normalize_queries: component smoke test."""
-
-    def test_validates_and_writes(self, tmp_path: Path) -> None:
-        queries = tmp_path / "queries"
-        queries.mkdir()
-        (queries / "erds.yaml").write_text(
-            "erds:\n  from: entities\n  select:\n    - item: name\n"
-        )
-
-        out = tmp_path / "normalized"
-        normalize_queries(queries_dir=queries, out_dir=out)
-
-        data = yaml.safe_load((out / "data" / "erds.yaml.yaml").read_text())
-        assert data == {
-            "__definition": {
-                "queries": [
-                    {"id": "erds", "from": "entities", "select": [{"item": "name"}]}
-                ]
-            }
-        }
