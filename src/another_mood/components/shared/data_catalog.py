@@ -131,7 +131,7 @@ class Node:
         return self.child_entry(name)[1]
 
     @classmethod
-    def build_from_catalog(cls, catalog: Sequence[Entity]) -> "Node":
+    def from_flat(cls, catalog: Sequence[Entity]) -> "Node":
         """Build a virtual-root tree from a flat catalog list.
 
         The virtual root mirrors the records-side ``Sequence[Record]``
@@ -149,7 +149,7 @@ class Node:
             ],
         )
 
-    def to_catalog_list(self, root_name: str) -> list[Entity]:
+    def to_flat(self, root_name: str) -> Sequence[Entity]:
         """Flatten this node into a list of Entity records.
 
         The top entity gets ``root_name`` as its id; descendant ids are
@@ -206,7 +206,7 @@ def _flatten_entity(
     *,
     access_path: str,
     parent_entity_id: str | None,
-) -> list[Entity]:
+) -> Sequence[Entity]:
     """Flatten ``node`` into a list of Entity (parent first, descendants after).
 
     Caller's precondition: ``node.is_entity`` is True.  Scalar children

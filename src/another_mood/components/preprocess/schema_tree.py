@@ -181,7 +181,7 @@ def extract_entities(
     schemas: Mapping[str, object],
     *,
     builtin: bool = False,
-) -> list[dc.Entity]:
+) -> Sequence[dc.Entity]:
     """Convert a schemas dict into a flat list of Entity.
 
     Each top-level entry must be a collection (ArrayNode-wrapped
@@ -202,12 +202,12 @@ def collect_entities(
     node: Node,
     *,
     builtin: bool = False,
-) -> list[dc.Entity]:
+) -> Sequence[dc.Entity]:
     """Return the entities one named SchemaTree contributes (empty if non-collection)."""
     catalog_node = _to_catalog_node(node)
     if not catalog_node.is_entity:
         return []
-    flat = catalog_node.to_catalog_list(name)
+    flat = catalog_node.to_flat(name)
     return [replace(e, builtin=True) for e in flat] if builtin else flat
 
 

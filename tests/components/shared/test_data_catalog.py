@@ -138,12 +138,12 @@ class TestBuildAndFlatten:
         self, root_name: str, yaml_text: str
     ) -> None:
         flat = _catalog(yaml_text)
-        root = dc.Node.build_from_catalog(flat)
-        assert root.child(root_name).to_catalog_list(root_name) == flat
+        root = dc.Node.from_flat(flat)
+        assert root.child(root_name).to_flat(root_name) == flat
 
 
 class TestRenameOnFlatten:
-    def test_to_catalog_list_renames_root_and_propagates(self) -> None:
+    def test_to_flat_renames_root_and_propagates(self) -> None:
         flat = _catalog(
             """
             - id: categories
@@ -186,5 +186,5 @@ class TestRenameOnFlatten:
               parent_entity: tasks_by_phase
             """
         )
-        root = dc.Node.build_from_catalog(flat)
-        assert root.child("categories").to_catalog_list("tasks_by_phase") == expected
+        root = dc.Node.from_flat(flat)
+        assert root.child("categories").to_flat("tasks_by_phase") == expected
