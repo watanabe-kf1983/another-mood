@@ -11,7 +11,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from another_mood.components.composer.catalog_node import CatalogNode
 from another_mood.components.composer.query import (
     From,
     Grouped,
@@ -20,6 +19,7 @@ from another_mood.components.composer.query import (
     SelectItem,
 )
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.catalog_node import CatalogNode
 from another_mood.components.shared.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 
