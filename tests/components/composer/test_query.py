@@ -239,7 +239,7 @@ _TASKS_CATALOG_YAML = """
 
 class TestFromDerive:
     def test_walks_dot_path_to_leaf(self) -> None:
-        root = dc.CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path=["categories", "tasks"]).derive(root)
         assert leaf.to_catalog_list("tasks") == _catalog(
             """
@@ -256,7 +256,7 @@ class TestFromDerive:
 
 class TestGroupedDerive:
     def test_wraps_with_by_and_as_name(self) -> None:
-        root = dc.CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path=["categories", "tasks"]).derive(root)
         wrapped = Grouped(by="phase", as_name="tasks").derive(leaf)
         assert wrapped.to_catalog_list("groups") == _catalog(
@@ -285,7 +285,7 @@ class TestGroupedDerive:
 
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
-        root = dc.CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path=["categories", "tasks"]).derive(root)
         projected = Select(
             items=[
@@ -319,7 +319,7 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = dc.CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
         result = query.derive(root).to_catalog_list("tasks_by_phase")
         assert result == _catalog(
             """
@@ -356,7 +356,7 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = dc.CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
         result = query.derive(root).to_catalog_list("task_titles")
         assert result == _catalog(
             """

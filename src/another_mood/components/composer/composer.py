@@ -45,7 +45,7 @@ def compose(
     shutil.copytree(queries_dir, queries_out)
 
     sources = load_model(contents_out)
-    catalog_node = dc.CatalogNode.build_from_catalog(_load_catalog(data_catalog_out))
+    catalog_node = dc.Node.build_from_catalog(_load_catalog(data_catalog_out))
 
     merged = load_model(queries_out)
     definition: dict[str, Any] = merged.get("__definition", {})
