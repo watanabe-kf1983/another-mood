@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from another_mood.components.shared.component import ComponentCall
+from another_mood.components.shared.component.component import ComponentCall
 from another_mood.components.shared.component_output import ComponentOutput
 
 

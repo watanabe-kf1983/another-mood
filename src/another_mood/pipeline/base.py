@@ -7,7 +7,7 @@ from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from another_mood.components.shared.build_report import BuildReport
+from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component_output import ComponentOutput
 from another_mood.pipeline.adapters.watcher import Watcher
 

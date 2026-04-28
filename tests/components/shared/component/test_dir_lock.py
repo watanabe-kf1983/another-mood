@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from another_mood.components.shared.dir_lock import (
+from another_mood.components.shared.component.dir_lock import (
     VersionInfo,
     exclusive_write,
     dir_lock,

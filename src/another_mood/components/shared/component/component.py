@@ -24,8 +24,11 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.shared.dir_lock import exclusive_read, exclusive_write
-from another_mood.components.shared.errors import error_propagation
+from another_mood.components.shared.component.dir_lock import (
+    exclusive_read,
+    exclusive_write,
+)
+from another_mood.components.shared.component.errors import error_propagation
 
 _Action = Callable[..., None]
 

@@ -17,9 +17,9 @@ out_dir/reports where build_report_stage collects them.
 import shutil
 from pathlib import Path
 
-from another_mood.components.shared.component import Component
-from another_mood.components.shared.dir_lock import dir_lock
-from another_mood.components.shared.errors import error_propagation
+from another_mood.components.shared.component.component import Component
+from another_mood.components.shared.component.dir_lock import dir_lock
+from another_mood.components.shared.component.errors import error_propagation
 
 _DELETED_CONTENT = "[This page has been removed. Go to top page.](/)\n"
 

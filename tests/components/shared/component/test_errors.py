@@ -7,7 +7,7 @@ from unittest.mock import patch
 import yaml
 
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
-from another_mood.components.shared.errors import (
+from another_mood.components.shared.component.errors import (
     error_propagation,
 )
 
@@ -87,7 +87,7 @@ class TestErrorPropagation:
 
         out_dir = tmp_path / "output"
         with patch(
-            "another_mood.components.shared.build_report._now_iso",
+            "another_mood.components.shared.component.build_report._now_iso",
             return_value="2026-04-01T00:00:00+00:00",
         ):
             with error_propagation(
@@ -109,7 +109,7 @@ class TestErrorPropagation:
 
         out_dir = tmp_path / "output"
         with patch(
-            "another_mood.components.shared.build_report._now_iso",
+            "another_mood.components.shared.component.build_report._now_iso",
             return_value="2026-04-01T00:00:00+00:00",
         ):
             with error_propagation(

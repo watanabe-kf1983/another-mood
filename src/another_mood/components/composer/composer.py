@@ -20,7 +20,7 @@ from another_mood.components.composer.query import (
 )
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.catalog_node import CatalogNode
-from another_mood.components.shared.component import Component
+from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 
 

@@ -12,8 +12,8 @@ from another_mood.components import (
     publish,
     reconcile,
 )
-from another_mood.components.shared.build_report import BuildReport
-from another_mood.components.shared.dir_lock import dir_lock
+from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.dir_lock import dir_lock
 from another_mood.config import ProjectConfig
 from another_mood.pipeline.adapters.preparation import prepare_render
 from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from another_mood.components.shared.build_report import BuildReport
+from another_mood.components.shared.component.build_report import BuildReport
 
 
 def _write_report(dir_: Path, content: dict[str, object]) -> None:

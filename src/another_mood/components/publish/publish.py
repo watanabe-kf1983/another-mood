@@ -4,8 +4,8 @@ import shutil
 from collections.abc import Sequence
 from pathlib import Path
 
-from another_mood.components.shared.component import Component
-from another_mood.components.shared.dir_lock import dir_lock
+from another_mood.components.shared.component.component import Component
+from another_mood.components.shared.component.dir_lock import dir_lock
 
 
 @Component(out_dir="out_dir", upstream_dirs=["upstream"])
