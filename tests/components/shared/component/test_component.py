@@ -6,7 +6,7 @@ from typing import Any
 import yaml
 
 
-from another_mood.components.shared.component import Component, ComponentCall
+from another_mood.components.shared.component.component import Component, ComponentCall
 
 
 class TestComponent:

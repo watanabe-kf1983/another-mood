@@ -14,7 +14,7 @@ from pathlib import Path
 from another_mood.components.preprocess.dict_to_array import normalize_data
 from another_mood.components.preprocess.prose import parse_markdown
 from another_mood.components.preprocess.validator import Validator, parse_yaml
-from another_mood.components.shared.component import Component
+from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
 from another_mood.components.shared.file_type import FileType

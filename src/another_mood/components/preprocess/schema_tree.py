@@ -11,8 +11,8 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, assert_never, cast
 
-from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.catalog_node import CatalogEdge, CatalogNode
+from another_mood.components.shared.catalog import data_catalog as dc
+from another_mood.components.shared.catalog.catalog_node import CatalogEdge, CatalogNode
 
 # ── Node definitions ─────────────────────────────────────────────────
 

@@ -9,9 +9,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from another_mood.components.shared.component import Component
-from another_mood.components.shared.component_output import ComponentOutput
-from another_mood.components.shared.errors import error_propagation
+from another_mood.components.shared.component.component import Component
+from another_mood.pipeline.base import ComponentOutput
+from another_mood.components.shared.component.errors import error_propagation
 from another_mood.pipeline.adapters import renderer
 from another_mood.pipeline.adapters.preparation import prepare_render
 from another_mood.pipeline.base import MultiStageTask, Stage, Task

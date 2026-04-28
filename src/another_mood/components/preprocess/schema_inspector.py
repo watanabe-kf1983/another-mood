@@ -15,7 +15,7 @@ import yaml
 
 from another_mood.components.preprocess.schema_tree import extract_entities
 from another_mood.components.preprocess.validator import Validator
-from another_mood.components.shared.component import Component
+from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
 

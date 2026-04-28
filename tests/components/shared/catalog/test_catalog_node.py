@@ -3,8 +3,8 @@
 import pytest
 from ruamel.yaml import YAML
 
-from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.catalog_node import CatalogNode
+from another_mood.components.shared.catalog import data_catalog as dc
+from another_mood.components.shared.catalog.catalog_node import CatalogNode
 
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
