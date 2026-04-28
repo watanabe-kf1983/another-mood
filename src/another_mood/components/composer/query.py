@@ -12,7 +12,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Protocol, cast, runtime_checkable
 
-from another_mood.components.composer.catalog_node import CatalogEdge, CatalogNode
+from another_mood.components.shared.catalog_node import CatalogEdge, CatalogNode
 
 type Record = Mapping[str, object]
 

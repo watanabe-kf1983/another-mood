@@ -1,26 +1,24 @@
 """CatalogNode — in-memory tree representation of the data catalog.
 
-Used as the input/output of every ``QueryNode.derive`` stage.  The tree
-splits the persistence-layer dc.Entity / dc.ObjectType / dc.Attribute
+Splits the persistence-layer dc.Entity / dc.ObjectType / dc.Attribute
 into two roles:
 
 * ``CatalogNode`` carries an entity's intrinsic body — its own type
-  metadata, its children, and whether it comes from a built-in schema.
-* ``CatalogEdge`` carries the parent's view of the child — the attribute name,
-  type, required flag, and attribute-level metadata / validation.
+  metadata and its children.
+* ``CatalogEdge`` carries the parent's view of the child — the attribute
+  name, type, required flag, and attribute-level metadata / validation.
 
-Splitting these means From.derive can detach a leaf from its original
-parent without dragging stale "as parent saw me" fields along, and
-Grouped.derive can re-wire a node under a fresh CatalogEdge with appropriate
-parent-side values.
+Splitting these lets a node be detached from its original parent
+without dragging stale "as parent saw me" fields along, or re-wired
+under a fresh CatalogEdge with new parent-side values — a property the
+composer relies on when deriving query views.
 
 Catalog conventions exploited here:
 
 * Every catalog entity corresponds to an array-typed attribute
   (``object[]``).  Singleton object properties are flattened into dotted
-  attribute names by SchemaInspector and never become entities, so
-  composite nodes (those with children) are always reached via
-  ``object[]`` edges.
+  attribute names and never become entities, so composite nodes (those
+  with children) are always reached via ``object[]`` edges.
 * The root node is a virtual container whose children are the top-level
   entities; it is never emitted to the flat catalog.
 """
@@ -87,8 +85,8 @@ class CatalogNode:
         """Flatten this node into a list of dc.Entity records.
 
         The top entity gets ``root_name`` as its id; descendant ids are
-        built by joining the chain of child edge names with dots, matching
-        the access_path convention used by SchemaInspector.
+        built by joining the chain of child edge names with dots — the
+        access_path convention shared by every catalog producer.
         """
         return _flatten_entity(self, access_path=root_name, parent_entity_id=None)
 
@@ -197,7 +195,7 @@ def _to_attribute(
 def _item_type_id(access_path: str) -> str:
     """Compute the ObjectType id for an entity at ``access_path``.
 
-    Mirrors SchemaInspector's recursive ``{...}.{name}.item`` convention
-    by joining segments with ``.item.`` and appending a trailing ``.item``.
+    Joins segments with ``.item.`` and appends a trailing ``.item`` to
+    match the recursive ``{...}.{name}.item`` ObjectType-id convention.
     """
     return ".item.".join(access_path.split(".")) + ".item"

@@ -3,7 +3,6 @@
 import pytest
 from ruamel.yaml import YAML
 
-from another_mood.components.composer.catalog_node import CatalogNode
 from another_mood.components.composer.query import (
     From,
     Grouped,
@@ -13,6 +12,7 @@ from another_mood.components.composer.query import (
     flatten_children,
 )
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.catalog_node import CatalogNode
 
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
