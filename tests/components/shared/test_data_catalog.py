@@ -1,19 +1,68 @@
-"""Tests for CatalogNode — in-memory catalog tree."""
+"""Tests for catalog — persisted-record round-trip and tree build/flatten."""
 
 import pytest
 from ruamel.yaml import YAML
 
-from another_mood.components.shared.catalog import model as dc
-from another_mood.components.shared.catalog.tree import CatalogNode
+from another_mood.components.shared import data_catalog as dc
 
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
-    """Parse a YAML list of entity dicts into a flat dc.Entity catalog."""
+    """Parse a YAML list of entity dicts into a flat Entity catalog."""
     loaded: list[dict[str, object]] = YAML(typ="safe").load(yaml_text)  # type: ignore[no-untyped-call]
     return [dc.Entity.from_dict(e) for e in loaded]
 
 
-class TestRoundTrip:
+class TestDictRoundTrip:
+    def test_minimal_entity(self) -> None:
+        entity = dc.Entity(
+            id="users",
+            item_type=dc.ObjectType(
+                id="users.item",
+                attributes=[dc.Attribute(id="name", type="string", required=True)],
+            ),
+        )
+        assert dc.Entity.from_dict(entity.to_dict()) == entity
+
+    def test_full_tree(self) -> None:
+        entity = dc.Entity(
+            id="orders",
+            item_type=dc.ObjectType(
+                id="orders.item",
+                attributes=[
+                    dc.Attribute(
+                        id="total",
+                        type="number",
+                        required=True,
+                        validation={"minimum": 0},
+                    ),
+                    dc.Attribute(
+                        id="items",
+                        type="object[]",
+                        required=False,
+                        entity="orders.items",
+                        item_type="orders.items.item",
+                    ),
+                ],
+                metadata={"title": "Order"},
+            ),
+            parent_entity=None,
+            builtin=True,
+        )
+        assert dc.Entity.from_dict(entity.to_dict()) == entity
+
+    def test_view_flag(self) -> None:
+        entity = dc.Entity(
+            id="tasks_by_phase",
+            item_type=dc.ObjectType(
+                id="tasks_by_phase.item",
+                attributes=[dc.Attribute(id="phase", type="integer", required=True)],
+            ),
+            view=True,
+        )
+        assert dc.Entity.from_dict(entity.to_dict()) == entity
+
+
+class TestBuildAndFlatten:
     @pytest.mark.parametrize(
         "root_name,yaml_text",
         [
@@ -88,14 +137,14 @@ class TestRoundTrip:
     def test_build_then_flatten_is_identity(
         self, root_name: str, yaml_text: str
     ) -> None:
-        catalog = _catalog(yaml_text)
-        root = CatalogNode.build_from_catalog(catalog)
-        assert root.child(root_name).to_catalog_list(root_name) == catalog
+        flat = _catalog(yaml_text)
+        root = dc.CatalogNode.build_from_catalog(flat)
+        assert root.child(root_name).to_catalog_list(root_name) == flat
 
 
 class TestRenameOnFlatten:
     def test_to_catalog_list_renames_root_and_propagates(self) -> None:
-        catalog = _catalog(
+        flat = _catalog(
             """
             - id: categories
               item_type:
@@ -137,5 +186,5 @@ class TestRenameOnFlatten:
               parent_entity: tasks_by_phase
             """
         )
-        root = CatalogNode.build_from_catalog(catalog)
+        root = dc.CatalogNode.build_from_catalog(flat)
         assert root.child("categories").to_catalog_list("tasks_by_phase") == expected

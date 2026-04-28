@@ -18,8 +18,7 @@ from another_mood.components.composer.query import (
     Select,
     SelectItem,
 )
-from another_mood.components.shared.catalog import model as dc
-from another_mood.components.shared.catalog.tree import CatalogNode
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 
@@ -46,7 +45,7 @@ def compose(
     shutil.copytree(queries_dir, queries_out)
 
     sources = load_model(contents_out)
-    catalog_node = CatalogNode.build_from_catalog(_load_catalog(data_catalog_out))
+    catalog_node = dc.CatalogNode.build_from_catalog(_load_catalog(data_catalog_out))
 
     merged = load_model(queries_out)
     definition: dict[str, Any] = merged.get("__definition", {})

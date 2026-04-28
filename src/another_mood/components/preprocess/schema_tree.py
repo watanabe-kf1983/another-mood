@@ -11,8 +11,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, assert_never, cast
 
-from another_mood.components.shared.catalog import model as dc
-from another_mood.components.shared.catalog.tree import CatalogEdge, CatalogNode
+from another_mood.components.shared import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────
 
@@ -212,14 +211,14 @@ def collect_entities(
     return [replace(e, builtin=True) for e in flat] if builtin else flat
 
 
-def _to_catalog_node(node: Node) -> CatalogNode:
+def _to_catalog_node(node: Node) -> dc.CatalogNode:
     obj = _unwrap_to_object(node)
     if obj is None:
-        return CatalogNode()
+        return dc.CatalogNode()
     # ArrayNode metadata wins: the outer dict-pattern schema owns the
     # type-level metadata; the inner ObjectNode describes structure only.
     metadata = node.metadata if isinstance(node, ArrayNode) else None
-    return CatalogNode(
+    return dc.CatalogNode(
         metadata=metadata or obj.metadata,
         children=list(_collect_edges(obj)),
     )
@@ -227,25 +226,27 @@ def _to_catalog_node(node: Node) -> CatalogNode:
 
 def _collect_edges(
     obj: ObjectNode,
-) -> Iterable[tuple[CatalogEdge, CatalogNode]]:
+) -> Iterable[tuple[dc.CatalogEdge, dc.CatalogNode]]:
     # Singleton ObjectNode properties surface as the singleton attribute
     # itself (type='object') plus their sub-properties flattened one level
     # deep into dotted-name scalars, matching SchemaInspector's "no
     # nested-object entities" convention.
     for prop in obj.properties:
         if isinstance(prop.node, ObjectNode):
-            yield (_property_to_edge(prop), CatalogNode())
+            yield (_property_to_edge(prop), dc.CatalogNode())
             for sub in prop.node.properties:
                 yield (
                     _property_to_edge(sub, name=f"{prop.name}.{sub.name}"),
-                    CatalogNode(),
+                    dc.CatalogNode(),
                 )
         else:
             yield (_property_to_edge(prop), _to_catalog_node(prop.node))
 
 
-def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> CatalogEdge:
-    return CatalogEdge(
+def _property_to_edge(
+    prop: SchemaProperty, *, name: str | None = None
+) -> dc.CatalogEdge:
+    return dc.CatalogEdge(
         name=name if name is not None else prop.name,
         type=_resolve_type(prop.node),
         required=prop.required,
