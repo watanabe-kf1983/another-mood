@@ -205,118 +205,106 @@ class TestBuildSchemaTree:
 # ── B→C: collect_entities ────────────────────────────────────────────
 #
 # Spec: "SchemaTree → データカタログの変換ルール" (schema-inspector.md)
+#
+# Each test wraps its inner ObjectNode in an ArrayNode at the top to
+# match the spec's convention that every top-level entity is a
+# collection (the user schema must be ``additionalProperties`` or
+# ``array``-rooted; bare top-level ``properties`` is not supported).
 
 
 class TestCollectEntities:
     """collect_entities: SchemaTree → flat Entity list."""
-
-    def test_top_level_object(self) -> None:
-        """Top-level ObjectNode (singleton) → entity with item_type.id == name (no .item)."""
-        tree = ObjectNode(properties=[
-            SchemaProperty("name", True,  ValueNode(type="string")),
-            SchemaProperty("age",  False, ValueNode(type="integer")),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("person", tree, entities)
-        assert entities == [dc.Entity("person", item_type=dc.ObjectType("person", attributes=[
-            dc.Attribute("name", "string",  True),
-            dc.Attribute("age",  "integer", False),
-        ]))]
 
     def test_top_level_array_of_objects(self) -> None:
         """Top-level ArrayNode → ObjectNode → entity with item_type.id == name + .item."""
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("x", True, ValueNode(type="number")),
         ]))
-        entities: list[dc.Entity] = []
-        collect_entities("points", tree, entities)
-        assert entities == [dc.Entity("points", item_type=dc.ObjectType("points.item", attributes=[
-            dc.Attribute("x", "number", True),
-        ]))]
+        assert collect_entities("points", tree) == [
+            dc.Entity("points", item_type=dc.ObjectType("points.item", attributes=[
+                dc.Attribute("x", "number", True),
+            ])),
+        ]
 
     def test_nested_object_prefix_flattened(self) -> None:
         """ObjectNode inside properties → prefix.name flat attributes."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("address", True, ObjectNode(properties=[
                 SchemaProperty("city",    True,  ValueNode(type="string")),
                 SchemaProperty("zipcode", False, ValueNode(type="string")),
             ])),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("person", tree, entities)
-        assert entities == [dc.Entity("person", item_type=dc.ObjectType("person", attributes=[
-            dc.Attribute("address",         "object", True),
-            dc.Attribute("address.city",    "string", True),
-            dc.Attribute("address.zipcode", "string", False),
-        ]))]
+        ]))
+        assert collect_entities("persons", tree) == [
+            dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
+                dc.Attribute("address",         "object", True),
+                dc.Attribute("address.city",    "string", True),
+                dc.Attribute("address.zipcode", "string", False),
+            ])),
+        ]
 
     def test_array_object_creates_child_entity(self) -> None:
         """ArrayNode → ObjectNode child → object[] attribute + linked child entity (with .item)."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("items", False, ArrayNode(child=ObjectNode(properties=[
                 SchemaProperty("name", True, ValueNode(type="string")),
             ]))),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("order", tree, entities)
-        assert entities == [
-            dc.Entity("order", item_type=dc.ObjectType("order", attributes=[
+        ]))
+        assert collect_entities("orders", tree) == [
+            dc.Entity("orders", item_type=dc.ObjectType("orders.item", attributes=[
                 dc.Attribute("items", "object[]", False,
-                             entity="order.items",
-                             item_type="order.items.item"),
+                             entity="orders.items",
+                             item_type="orders.item.items.item"),
             ])),
             dc.Entity(
-                "order.items",
-                item_type=dc.ObjectType("order.items.item", attributes=[
+                "orders.items",
+                item_type=dc.ObjectType("orders.item.items.item", attributes=[
                     dc.Attribute("name", "string", True),
                 ]),
-                parent_entity="order",
+                parent_entity="orders",
             ),
         ]
 
     def test_array_value_type_bracket(self) -> None:
         """ArrayNode → ValueNode → type[] attribute."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("tags", False, ArrayNode(child=ValueNode(type="string"))),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("article", tree, entities)
-        assert entities == [dc.Entity("article", item_type=dc.ObjectType("article", attributes=[
-            dc.Attribute("tags", "string[]", False),
-        ]))]
+        ]))
+        assert collect_entities("articles", tree) == [
+            dc.Entity("articles", item_type=dc.ObjectType("articles.item", attributes=[
+                dc.Attribute("tags", "string[]", False),
+            ])),
+        ]
 
     def test_nested_array_type_brackets(self) -> None:
         """ArrayNode → ArrayNode → type[][] attribute."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("sheet", tree, entities)
-        assert entities == [dc.Entity("sheet", item_type=dc.ObjectType("sheet", attributes=[
-            dc.Attribute("matrix", "number[][]", False),
-        ]))]
+        ]))
+        assert collect_entities("sheets", tree) == [
+            dc.Entity("sheets", item_type=dc.ObjectType("sheets.item", attributes=[
+                dc.Attribute("matrix", "number[][]", False),
+            ])),
+        ]
 
     def test_nested_array_of_objects_creates_child_entity(self) -> None:
         """ArrayNode → ArrayNode → ObjectNode → object[][] attribute + child entity (with .item)."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("grid", False, ArrayNode(child=ArrayNode(child=ObjectNode(properties=[
                 SchemaProperty("v", True, ValueNode(type="number")),
             ])))),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("board", tree, entities)
-        assert entities == [
-            dc.Entity("board", item_type=dc.ObjectType("board", attributes=[
+        ]))
+        assert collect_entities("boards", tree) == [
+            dc.Entity("boards", item_type=dc.ObjectType("boards.item", attributes=[
                 dc.Attribute("grid", "object[][]", False,
-                             entity="board.grid",
-                             item_type="board.grid.item"),
+                             entity="boards.grid",
+                             item_type="boards.item.grid.item"),
             ])),
             dc.Entity(
-                "board.grid",
-                item_type=dc.ObjectType("board.grid.item", attributes=[
+                "boards.grid",
+                item_type=dc.ObjectType("boards.item.grid.item", attributes=[
                     dc.Attribute("v", "number", True),
                 ]),
-                parent_entity="board",
+                parent_entity="boards",
             ),
         ]
 
@@ -328,22 +316,18 @@ class TestCollectEntities:
             ]),
             metadata={"title": "My Collection"},
         )
-        entities: list[dc.Entity] = []
-        collect_entities("things", tree, entities)
-        assert entities[0].item_type.metadata == {"title": "My Collection"}
+        assert collect_entities("things", tree)[0].item_type.metadata == {"title": "My Collection"}
 
     def test_attribute_metadata_and_validation(self) -> None:
         """ValueNode metadata/validation → Attribute metadata/validation."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("score", True, ValueNode(
                 type="integer",
                 metadata={"description": "Player score"},
                 validation={"minimum": 0, "maximum": 100},
             )),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("game", tree, entities)
-        assert entities[0].item_type.attributes[0] == dc.Attribute(
+        ]))
+        assert collect_entities("games", tree)[0].item_type.attributes[0] == dc.Attribute(
             "score", "integer", True,
             metadata={"description": "Player score"},
             validation={"minimum": 0, "maximum": 100},
@@ -351,13 +335,11 @@ class TestCollectEntities:
 
     def test_required_transferred(self) -> None:
         """SchemaProperty.required → Attribute.required."""
-        tree = ObjectNode(properties=[
+        tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("a", True,  ValueNode(type="string")),
             SchemaProperty("b", False, ValueNode(type="string")),
-        ])
-        entities: list[dc.Entity] = []
-        collect_entities("t", tree, entities)
-        assert [(a.id, a.required) for a in entities[0].item_type.attributes] == [
+        ]))
+        assert [(a.id, a.required) for a in collect_entities("ts", tree)[0].item_type.attributes] == [
             ("a", True), ("b", False),
         ]
 
