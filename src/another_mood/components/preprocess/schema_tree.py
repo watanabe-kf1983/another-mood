@@ -204,13 +204,7 @@ def collect_entities(
     *,
     builtin: bool = False,
 ) -> list[dc.Entity]:
-    """Return the entities one named SchemaTree contributes.
-
-    Builds a CatalogNode for the tree and uses ``to_catalog_list`` to
-    flatten — id naming, parent_entity links, and dotted-attribute
-    handling for nested singletons all live in the CatalogNode layer.
-    Non-collection top levels yield an empty list.
-    """
+    """Return the entities one named SchemaTree contributes (empty if non-collection)."""
     catalog_node = _to_catalog_node(node)
     if not catalog_node.is_entity:
         return []
@@ -219,19 +213,11 @@ def collect_entities(
 
 
 def _to_catalog_node(node: Node) -> CatalogNode:
-    """Convert a SchemaTree node (entity-shaped) into a CatalogNode body.
-
-    Returns an empty CatalogNode for nodes that don't materialize as
-    entities (scalars, arrays of scalars), so the caller can filter
-    them via ``CatalogNode.is_entity``.
-
-    For ArrayNode-wrapped objects, the outer ArrayNode's metadata wins
-    over the inner ObjectNode's — the dict-pattern schema owns the
-    type-level metadata, the inner shape describes structure only.
-    """
     obj = _unwrap_to_object(node)
     if obj is None:
         return CatalogNode()
+    # ArrayNode metadata wins: the outer dict-pattern schema owns the
+    # type-level metadata; the inner ObjectNode describes structure only.
     metadata = node.metadata if isinstance(node, ArrayNode) else None
     return CatalogNode(
         metadata=metadata or obj.metadata,
@@ -242,13 +228,10 @@ def _to_catalog_node(node: Node) -> CatalogNode:
 def _collect_edges(
     obj: ObjectNode,
 ) -> Iterable[tuple[CatalogEdge, CatalogNode]]:
-    """Yield ``(edge, child)`` entries for an ObjectNode's properties.
-
-    Singleton ObjectNode properties surface as the singleton attribute
-    itself (``type='object'``) plus its sub-properties flattened one
-    level deep into dotted-name scalar children, mirroring
-    SchemaInspector's "no nested-object entities" convention.
-    """
+    # Singleton ObjectNode properties surface as the singleton attribute
+    # itself (type='object') plus their sub-properties flattened one level
+    # deep into dotted-name scalars, matching SchemaInspector's "no
+    # nested-object entities" convention.
     for prop in obj.properties:
         if isinstance(prop.node, ObjectNode):
             yield (_property_to_edge(prop), CatalogNode())
@@ -262,7 +245,6 @@ def _collect_edges(
 
 
 def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> CatalogEdge:
-    """Build a CatalogEdge from a SchemaProperty (optionally renaming it)."""
     return CatalogEdge(
         name=name if name is not None else prop.name,
         type=_resolve_type(prop.node),
