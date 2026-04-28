@@ -12,7 +12,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Protocol, cast, runtime_checkable
 
-from another_mood.components.shared.catalog.catalog_node import CatalogEdge, CatalogNode
+from another_mood.components.shared import data_catalog as dc
 
 type Record = Mapping[str, object]
 
@@ -29,7 +29,7 @@ class QueryNode(Protocol):
         """Transform input rows into output rows."""
         ...
 
-    def derive(self, catalog: CatalogNode) -> CatalogNode:
+    def derive(self, catalog: dc.Node) -> dc.Node:
         """Transform the input catalog node into the output catalog node.
 
         Mirrors ``apply`` on the schema side: takes the catalog tree the
@@ -49,7 +49,7 @@ class SelectItem:
     def apply(self, record: Record) -> tuple[str, object]:
         return (self.as_name, record[self.item])
 
-    def derive(self, catalog: CatalogNode) -> tuple[CatalogEdge, CatalogNode]:
+    def derive(self, catalog: dc.Node) -> tuple[dc.Edge, dc.Node]:
         edge, child = catalog.child_entry(self.item)
         return (replace(edge, name=self.as_name), child)
 
@@ -66,8 +66,8 @@ class Select:
             for record in records
         ]
 
-    def derive(self, catalog: CatalogNode) -> CatalogNode:
-        return CatalogNode(children=[item.derive(catalog) for item in self.items])
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        return dc.Node(children=[item.derive(catalog) for item in self.items])
 
 
 @dataclass(frozen=True)
@@ -82,7 +82,7 @@ class From:
             records = flatten_children(records, key)
         return records
 
-    def derive(self, catalog: CatalogNode) -> CatalogNode:
+    def derive(self, catalog: dc.Node) -> dc.Node:
         node = catalog
         for segment in self.path:
             node = node.child(segment)
@@ -128,12 +128,12 @@ class Grouped:
             groups.setdefault(record[self.by], []).append(record)
         return [{self.by: key, self.as_name: items} for key, items in groups.items()]
 
-    def derive(self, catalog: CatalogNode) -> CatalogNode:
-        return CatalogNode(
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        return dc.Node(
             children=[
                 catalog.child_entry(self.by),
                 (
-                    CatalogEdge(name=self.as_name, type="object[]", required=True),
+                    dc.Edge(name=self.as_name, type="object[]", required=True),
                     catalog,
                 ),
             ],
@@ -154,7 +154,7 @@ class Query:
             records = self.grouped.apply(records)
         return self.select.apply(records)
 
-    def derive(self, catalog: CatalogNode) -> CatalogNode:
+    def derive(self, catalog: dc.Node) -> dc.Node:
         node = self.from_clause.derive(catalog)
         if self.grouped:
             node = self.grouped.derive(node)

@@ -3,7 +3,7 @@
 Converts JSON Schema subset into a simple 3-node tree (ObjectNode,
 ArrayNode, ValueNode), absorbing structural patterns like
 additionalProperties and nested items.  The tree is then converted to
-a CatalogNode and flattened into a DataCatalog (entities + attributes)
+a ``dc.Node`` and flattened into a DataCatalog (entities + attributes)
 for downstream consumption.
 """
 
@@ -11,8 +11,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, assert_never, cast
 
-from another_mood.components.shared.catalog import data_catalog as dc
-from another_mood.components.shared.catalog.catalog_node import CatalogEdge, CatalogNode
+from another_mood.components.shared import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────
 
@@ -175,14 +174,14 @@ def _extract_validation(
     return val or None
 
 
-# ── SchemaTree → DataCatalog (via CatalogNode) ───────────────────────
+# ── SchemaTree → DataCatalog (via dc.Node) ───────────────────────
 
 
 def extract_entities(
     schemas: Mapping[str, object],
     *,
     builtin: bool = False,
-) -> list[dc.Entity]:
+) -> Sequence[dc.Entity]:
     """Convert a schemas dict into a flat list of Entity.
 
     Each top-level entry must be a collection (ArrayNode-wrapped
@@ -203,23 +202,23 @@ def collect_entities(
     node: Node,
     *,
     builtin: bool = False,
-) -> list[dc.Entity]:
+) -> Sequence[dc.Entity]:
     """Return the entities one named SchemaTree contributes (empty if non-collection)."""
     catalog_node = _to_catalog_node(node)
     if not catalog_node.is_entity:
         return []
-    flat = catalog_node.to_catalog_list(name)
+    flat = catalog_node.to_flat(name)
     return [replace(e, builtin=True) for e in flat] if builtin else flat
 
 
-def _to_catalog_node(node: Node) -> CatalogNode:
+def _to_catalog_node(node: Node) -> dc.Node:
     obj = _unwrap_to_object(node)
     if obj is None:
-        return CatalogNode()
+        return dc.Node()
     # ArrayNode metadata wins: the outer dict-pattern schema owns the
     # type-level metadata; the inner ObjectNode describes structure only.
     metadata = node.metadata if isinstance(node, ArrayNode) else None
-    return CatalogNode(
+    return dc.Node(
         metadata=metadata or obj.metadata,
         children=list(_collect_edges(obj)),
     )
@@ -227,25 +226,25 @@ def _to_catalog_node(node: Node) -> CatalogNode:
 
 def _collect_edges(
     obj: ObjectNode,
-) -> Iterable[tuple[CatalogEdge, CatalogNode]]:
+) -> Iterable[tuple[dc.Edge, dc.Node]]:
     # Singleton ObjectNode properties surface as the singleton attribute
     # itself (type='object') plus their sub-properties flattened one level
     # deep into dotted-name scalars, matching SchemaInspector's "no
     # nested-object entities" convention.
     for prop in obj.properties:
         if isinstance(prop.node, ObjectNode):
-            yield (_property_to_edge(prop), CatalogNode())
+            yield (_property_to_edge(prop), dc.Node())
             for sub in prop.node.properties:
                 yield (
                     _property_to_edge(sub, name=f"{prop.name}.{sub.name}"),
-                    CatalogNode(),
+                    dc.Node(),
                 )
         else:
             yield (_property_to_edge(prop), _to_catalog_node(prop.node))
 
 
-def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> CatalogEdge:
-    return CatalogEdge(
+def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> dc.Edge:
+    return dc.Edge(
         name=name if name is not None else prop.name,
         type=_resolve_type(prop.node),
         required=prop.required,

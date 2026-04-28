@@ -1,36 +1,104 @@
-"""CatalogNode — in-memory tree representation of the data catalog.
+"""Catalog model — persisted records and in-memory tree representation.
 
-Splits the persistence-layer dc.Entity / dc.ObjectType / dc.Attribute
-into two roles:
+The catalog has two co-existing forms:
 
-* ``CatalogNode`` carries an entity's intrinsic body — its own type
+* Persistence form — flat list of ``Entity`` records with parent-id pointers,
+  used for YAML round-tripping.  Each class exposes ``to_dict`` / ``from_dict``.
+* In-memory tree form — nested ``Node`` / ``Edge`` structure
+  used for path traversal and query view derivation.
+
+Node/Edge split:
+
+* ``Node`` carries an entity's intrinsic body — its own type
   metadata and its children.
-* ``CatalogEdge`` carries the parent's view of the child — the attribute
+* ``Edge`` carries the parent's view of the child — the attribute
   name, type, required flag, and attribute-level metadata / validation.
 
-Splitting these lets a node be detached from its original parent
-without dragging stale "as parent saw me" fields along, or re-wired
-under a fresh CatalogEdge with new parent-side values — a property the
-composer relies on when deriving query views.
+Splitting these lets a node be detached from its original parent without
+dragging stale "as parent saw me" fields along, or re-wired under a fresh
+Edge with new parent-side values — a property the composer relies
+on when deriving query views.
 
-Catalog conventions exploited here:
+Catalog conventions exploited by the tree form:
 
-* Every catalog entity corresponds to an array-typed attribute
-  (``object[]``).  Singleton object properties are flattened into dotted
-  attribute names and never become entities, so composite nodes (those
-  with children) are always reached via ``object[]`` edges.
+* Every catalog entity corresponds to an array-typed attribute (``object[]``).
+  Singleton object properties are flattened into dotted attribute names and
+  never become entities, so composite nodes (those with children) are always
+  reached via ``object[]`` edges.
 * The root node is a virtual container whose children are the top-level
   entities; it is never emitted to the flat catalog.
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Any
 
-from another_mood.components.shared.catalog import data_catalog as dc
+# ── Persisted form ────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)
-class CatalogEdge:
+class Attribute:
+    id: str
+    type: str
+    required: bool
+    metadata: Mapping[str, object] | None = None
+    validation: Mapping[str, object] | None = None
+    entity: str | None = None  # referenced Entity.id (= access_path)
+    item_type: str | None = None  # referenced ObjectType.id
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "Attribute":
+        return cls(**d)
+
+
+@dataclass(frozen=True)
+class ObjectType:
+    id: str
+    attributes: Sequence[Attribute]
+    metadata: Mapping[str, object] | None = None
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "ObjectType":
+        return cls(
+            **_without(d, "attributes"),
+            attributes=[Attribute.from_dict(a) for a in d["attributes"]],
+        )
+
+
+@dataclass(frozen=True)
+class Entity:
+    id: str
+    item_type: ObjectType
+    parent_entity: str | None = None
+    builtin: bool = False
+    view: bool = False  # synthesized from a query (composer-set)
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "Entity":
+        return cls(
+            **_without(d, "item_type"),
+            item_type=ObjectType.from_dict(d["item_type"]),
+        )
+
+
+def _without(d: Mapping[str, Any], *keys: str) -> dict[str, Any]:
+    return {k: v for k, v in d.items() if k not in keys}
+
+
+# ── In-memory tree form ───────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class Edge:
     """How a parent sees one of its children (the parent-side attribute view)."""
 
     name: str
@@ -41,29 +109,29 @@ class CatalogEdge:
 
 
 @dataclass(frozen=True)
-class CatalogNode:
+class Node:
     metadata: Mapping[str, object] | None = None
-    children: Sequence[tuple[CatalogEdge, "CatalogNode"]] = ()
+    children: Sequence[tuple[Edge, "Node"]] = ()
 
     @property
     def is_entity(self) -> bool:
-        """Whether this node materializes as a dc.Entity in the flat catalog.
+        """Whether this node materializes as an Entity in the flat catalog.
 
         Equivalent to having children: scalar nodes surface only as
         attributes on their parent and never become entities.
         """
         return bool(self.children)
 
-    def child_entry(self, name: str) -> tuple[CatalogEdge, "CatalogNode"]:
+    def child_entry(self, name: str) -> tuple[Edge, "Node"]:
         """Return the (edge, child) entry reached by the edge named ``name``."""
         return next((e, c) for e, c in self.children if e.name == name)
 
-    def child(self, name: str) -> "CatalogNode":
+    def child(self, name: str) -> "Node":
         """Return the child node reached by the edge named ``name``."""
         return self.child_entry(name)[1]
 
     @classmethod
-    def build_from_catalog(cls, catalog: Sequence[dc.Entity]) -> "CatalogNode":
+    def from_flat(cls, catalog: Sequence[Entity]) -> "Node":
         """Build a virtual-root tree from a flat catalog list.
 
         The virtual root mirrors the records-side ``Sequence[Record]``
@@ -74,15 +142,15 @@ class CatalogNode:
         return cls(
             children=[
                 (
-                    CatalogEdge(name=entity.id, type="object[]", required=True),
+                    Edge(name=entity.id, type="object[]", required=True),
                     _build_entity_node(entity, catalog),
                 )
                 for entity in _children_of(None, catalog)
             ],
         )
 
-    def to_catalog_list(self, root_name: str) -> list[dc.Entity]:
-        """Flatten this node into a list of dc.Entity records.
+    def to_flat(self, root_name: str) -> Sequence[Entity]:
+        """Flatten this node into a list of Entity records.
 
         The top entity gets ``root_name`` as its id; descendant ids are
         built by joining the chain of child edge names with dots — the
@@ -92,10 +160,10 @@ class CatalogNode:
 
 
 def _build_entity_node(
-    entity: dc.Entity,
-    catalog: Sequence[dc.Entity],
-) -> CatalogNode:
-    """Build a CatalogNode body for ``entity`` (intrinsic fields only).
+    entity: Entity,
+    catalog: Sequence[Entity],
+) -> Node:
+    """Build a Node body for ``entity`` (intrinsic fields only).
 
     ``entity.builtin`` is intentionally not carried into the tree: the
     catalog tree is a query-side intermediate, and a query view is never
@@ -103,23 +171,23 @@ def _build_entity_node(
     flattening; the built-in flag stays a flat-catalog concept.
     """
     sub_by_name = {e.id.rsplit(".", 1)[-1]: e for e in _children_of(entity.id, catalog)}
-    return CatalogNode(
+    return Node(
         metadata=entity.item_type.metadata,
         children=[
             (
                 _edge_from_attribute(attr),
                 _build_entity_node(sub_by_name[attr.id], catalog)
                 if attr.entity
-                else CatalogNode(),
+                else Node(),
             )
             for attr in entity.item_type.attributes
         ],
     )
 
 
-def _edge_from_attribute(attr: dc.Attribute) -> CatalogEdge:
-    """Build an CatalogEdge from a parent's dc.Attribute pointing at this child."""
-    return CatalogEdge(
+def _edge_from_attribute(attr: Attribute) -> Edge:
+    """Build a Edge from a parent's Attribute pointing at this child."""
+    return Edge(
         name=attr.id,
         type=attr.type,
         required=attr.required,
@@ -128,26 +196,24 @@ def _edge_from_attribute(attr: dc.Attribute) -> CatalogEdge:
     )
 
 
-def _children_of(
-    parent_id: str | None, catalog: Sequence[dc.Entity]
-) -> Sequence[dc.Entity]:
+def _children_of(parent_id: str | None, catalog: Sequence[Entity]) -> Sequence[Entity]:
     """Entities in ``catalog`` whose ``parent_entity`` equals ``parent_id``."""
     return [e for e in catalog if e.parent_entity == parent_id]
 
 
 def _flatten_entity(
-    node: CatalogNode,
+    node: Node,
     *,
     access_path: str,
     parent_entity_id: str | None,
-) -> list[dc.Entity]:
-    """Flatten ``node`` into a list of dc.Entity (parent first, descendants after).
+) -> Sequence[Entity]:
+    """Flatten ``node`` into a list of Entity (parent first, descendants after).
 
     Caller's precondition: ``node.is_entity`` is True.  Scalar children
     of ``node`` are filtered out before recursion, so this function is
     only ever invoked on composite nodes.
     """
-    self_entity = dc.Entity(
+    self_entity = Entity(
         id=access_path,
         item_type=_to_object_type(node, access_path=access_path),
         parent_entity=parent_entity_id,
@@ -165,9 +231,9 @@ def _flatten_entity(
     return [self_entity, *descendants]
 
 
-def _to_object_type(node: CatalogNode, *, access_path: str) -> dc.ObjectType:
-    """Build a dc.ObjectType for ``node`` reached at ``access_path``."""
-    return dc.ObjectType(
+def _to_object_type(node: Node, *, access_path: str) -> ObjectType:
+    """Build an ObjectType for ``node`` reached at ``access_path``."""
+    return ObjectType(
         id=_item_type_id(access_path),
         attributes=[
             _to_attribute(child, edge=edge, access_path=f"{access_path}.{edge.name}")
@@ -177,11 +243,9 @@ def _to_object_type(node: CatalogNode, *, access_path: str) -> dc.ObjectType:
     )
 
 
-def _to_attribute(
-    node: CatalogNode, *, edge: CatalogEdge, access_path: str
-) -> dc.Attribute:
-    """Build a dc.Attribute for the (edge → node) connection at ``access_path``."""
-    return dc.Attribute(
+def _to_attribute(node: Node, *, edge: Edge, access_path: str) -> Attribute:
+    """Build an Attribute for the (edge → node) connection at ``access_path``."""
+    return Attribute(
         id=edge.name,
         type=edge.type,
         required=edge.required,

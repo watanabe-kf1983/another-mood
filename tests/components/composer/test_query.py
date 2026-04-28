@@ -11,12 +11,11 @@ from another_mood.components.composer.query import (
     SelectItem,
     flatten_children,
 )
-from another_mood.components.shared.catalog import data_catalog as dc
-from another_mood.components.shared.catalog.catalog_node import CatalogNode
+from another_mood.components.shared import data_catalog as dc
 
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
-    """Parse a YAML list of entity dicts into a flat dc.Entity catalog."""
+    """Parse a YAML list of entity dicts into a flat Entity catalog."""
     loaded: list[dict[str, object]] = YAML(typ="safe").load(yaml_text)  # type: ignore[no-untyped-call]
     return [dc.Entity.from_dict(e) for e in loaded]
 
@@ -240,9 +239,9 @@ _TASKS_CATALOG_YAML = """
 
 class TestFromDerive:
     def test_walks_dot_path_to_leaf(self) -> None:
-        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path=["categories", "tasks"]).derive(root)
-        assert leaf.to_catalog_list("tasks") == _catalog(
+        assert leaf.to_flat("tasks") == _catalog(
             """
             - id: tasks
               item_type:
@@ -257,10 +256,10 @@ class TestFromDerive:
 
 class TestGroupedDerive:
     def test_wraps_with_by_and_as_name(self) -> None:
-        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path=["categories", "tasks"]).derive(root)
         wrapped = Grouped(by="phase", as_name="tasks").derive(leaf)
-        assert wrapped.to_catalog_list("groups") == _catalog(
+        assert wrapped.to_flat("groups") == _catalog(
             """
             - id: groups
               item_type:
@@ -286,7 +285,7 @@ class TestGroupedDerive:
 
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
-        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path=["categories", "tasks"]).derive(root)
         projected = Select(
             items=[
@@ -294,7 +293,7 @@ class TestSelectDerive:
                 SelectItem(item="title", as_name="title"),
             ]
         ).derive(leaf)
-        assert projected.to_catalog_list("projection") == _catalog(
+        assert projected.to_flat("projection") == _catalog(
             """
             - id: projection
               item_type:
@@ -320,8 +319,8 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
-        result = query.derive(root).to_catalog_list("tasks_by_phase")
+        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
+        result = query.derive(root).to_flat("tasks_by_phase")
         assert result == _catalog(
             """
             - id: tasks_by_phase
@@ -357,8 +356,8 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = CatalogNode.build_from_catalog(_catalog(_TASKS_CATALOG_YAML))
-        result = query.derive(root).to_catalog_list("task_titles")
+        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
+        result = query.derive(root).to_flat("task_titles")
         assert result == _catalog(
             """
             - id: task_titles

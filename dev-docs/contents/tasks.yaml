@@ -339,7 +339,7 @@ categories:
     impl_paths:
       - src/another_mood/components/shared/json_data_model.py
       - src/another_mood/components/preprocess/schema_inspector.py
-      - src/another_mood/components/preprocess/data_catalog.py
+      - src/another_mood/components/shared/data_catalog.py
     spec: internal/json-data-model.md
     tasks:
       M1:
