@@ -26,7 +26,7 @@ Catalog conventions exploited here:
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from another_mood.components.shared.catalog import data_catalog as dc
+from another_mood.components.shared.catalog import model as dc
 
 
 @dataclass(frozen=True)

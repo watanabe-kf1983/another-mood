@@ -1,6 +1,6 @@
-"""Tests for data_catalog — Entity / ObjectType / Attribute round-trip."""
+"""Tests for catalog.model — Entity / ObjectType / Attribute round-trip."""
 
-from another_mood.components.shared.catalog.data_catalog import (
+from another_mood.components.shared.catalog.model import (
     Attribute,
     Entity,
     ObjectType,
