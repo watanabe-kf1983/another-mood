@@ -5,7 +5,7 @@ from typing import cast
 
 from ruamel.yaml import YAML
 
-from another_mood.components.preprocess.dict_to_array import Schema, normalize_data
+from another_mood.components.preprocess.normalize_core import Schema, normalize_data
 
 _yaml = YAML()
 
