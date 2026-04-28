@@ -8,8 +8,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from another_mood.components.shared.component.build_report import BuildReport
-from another_mood.components.shared.component_output import ComponentOutput
 from another_mood.pipeline.adapters.watcher import Watcher
+
+
+@dataclass(frozen=True)
+class ComponentOutput:
+    """A component's output directory with derived paths."""
+
+    dir: Path
+
+    @property
+    def watch_target_path(self) -> Path:
+        """Path to watch for upstream changes."""
+        return self.dir
 
 
 class Task(ABC):
