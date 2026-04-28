@@ -10,7 +10,7 @@ import shutil
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.composer.query import parse_query
+from another_mood.components.shared.query import parse_query
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 

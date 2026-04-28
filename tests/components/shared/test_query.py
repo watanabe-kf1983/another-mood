@@ -3,7 +3,7 @@
 import pytest
 from ruamel.yaml import YAML
 
-from another_mood.components.composer.query import (
+from another_mood.components.shared.query import (
     From,
     Grouped,
     Query,
