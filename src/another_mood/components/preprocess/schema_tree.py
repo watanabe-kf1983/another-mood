@@ -9,7 +9,7 @@ for downstream consumption.
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Any, cast
+from typing import Any, assert_never, cast
 
 from another_mood.components.composer.catalog_node import CatalogEdge, CatalogNode
 from another_mood.components.shared import data_catalog as dc
@@ -263,9 +263,12 @@ def _unwrap_to_object(node: Node) -> ObjectNode | None:
 
 def _resolve_type(node: Node) -> str:
     """Resolve a node to its type string for the data catalog."""
-    if isinstance(node, ValueNode):
-        return node.type
-    if isinstance(node, ObjectNode):
-        return "object"
-    inner = _resolve_type(node.child)
-    return f"{inner}[]"
+    match node:
+        case ValueNode():
+            return node.type
+        case ObjectNode():
+            return "object"
+        case ArrayNode():
+            return f"{_resolve_type(node.child)}[]"
+        case _:
+            assert_never(node)
