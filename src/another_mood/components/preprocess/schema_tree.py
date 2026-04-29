@@ -8,7 +8,7 @@ for downstream consumption.
 """
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any, assert_never, cast
 
 from another_mood.components.shared import data_catalog as dc
@@ -177,41 +177,23 @@ def _extract_validation(
 # ── SchemaTree → DataCatalog (via dc.Node) ───────────────────────
 
 
-def extract_entities(
-    schemas: Mapping[str, object],
-    *,
-    builtin: bool = False,
-) -> Sequence[dc.Entity]:
-    """Convert a schemas dict into a flat list of Entity.
+def collect_entities(root: ObjectNode) -> Sequence[dc.Entity]:
+    """Walk a root tree's top-level properties and collect their entities.
 
-    Each top-level entry must be a collection (ArrayNode-wrapped
+    Each top-level property must be a collection (ArrayNode-wrapped
     ObjectNode in tree form); top-level non-collections are silently
-    dropped.  ``builtin=True`` post-marks every emitted entity.
+    dropped.
     """
+    catalog_node = to_catalog_node(root)
     return [
         entity
-        for name, schema in schemas.items()
-        for entity in collect_entities(
-            name, build_schema_tree(cast(SchemaDict, schema)), builtin=builtin
-        )
+        for edge, child in catalog_node.children
+        if child.is_entity
+        for entity in child.to_flat(edge.name)
     ]
 
 
-def collect_entities(
-    name: str,
-    node: Node,
-    *,
-    builtin: bool = False,
-) -> Sequence[dc.Entity]:
-    """Return the entities one named SchemaTree contributes (empty if non-collection)."""
-    catalog_node = _to_catalog_node(node)
-    if not catalog_node.is_entity:
-        return []
-    flat = catalog_node.to_flat(name)
-    return [replace(e, builtin=True) for e in flat] if builtin else flat
-
-
-def _to_catalog_node(node: Node) -> dc.Node:
+def to_catalog_node(node: Node) -> dc.Node:
     obj = _unwrap_to_object(node)
     if obj is None:
         return dc.Node()
@@ -240,7 +222,7 @@ def _collect_edges(
                     dc.Node(),
                 )
         else:
-            yield (_property_to_edge(prop), _to_catalog_node(prop.node))
+            yield (_property_to_edge(prop), to_catalog_node(prop.node))
 
 
 def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> dc.Edge:

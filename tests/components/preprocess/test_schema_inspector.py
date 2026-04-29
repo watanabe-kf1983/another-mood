@@ -8,7 +8,6 @@ import yaml
 from another_mood.components.preprocess.schema_inspector import (
     build_schema_validator,
     check_schema,
-    extract_data_catalog,
     inspect_schema,
 )
 from another_mood.components.shared.diagnostic import FileValidationError
@@ -393,18 +392,6 @@ class TestCheckSchema:
             check_schema(f)
         assert exc_info.value.diagnostics[0].file == f
         assert exc_info.value.diagnostics[0].source == "ruamel.yaml"
-
-
-# ── extract_data_catalog ─────────────────────────────────────────────
-
-
-class TestExtractDataCatalog:
-    """extract_data_catalog: extract entity catalog from a root JSON Schema."""
-
-    def test_no_properties(self) -> None:
-        schema = yaml.safe_load("type: object")
-        result = extract_data_catalog(schema)
-        assert "entities" not in result
 
 
 # ── inspect_schema (component) ───────────────────────────────────────

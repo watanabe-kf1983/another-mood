@@ -6,18 +6,24 @@ extracts a data catalog (entities + fields), and writes the result to
 `out_dir/__builtin/` so their entities also surface in meta-docs.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from importlib import resources
 from pathlib import Path
-from typing import Any, cast
 
 import yaml
 
-from another_mood.components.preprocess.schema_tree import extract_entities
+from another_mood.components.preprocess.schema_tree import (
+    ObjectNode,
+    build_schema_tree,
+    collect_entities,
+)
 from another_mood.components.preprocess.validator import Validator
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
+
 
 _SCHEMA_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "schema-schema.yaml")
@@ -45,11 +51,11 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
 
 def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
     """Extract data catalog from a single schema file and write it to dst."""
-    data = yaml.safe_load(schema_file.read_text(encoding="utf-8"))
-    catalog = extract_data_catalog(data, builtin=builtin)
-    if not catalog:
-        return
-    save_model(dst, {"__definition": catalog})
+    schema = yaml.safe_load(schema_file.read_text(encoding="utf-8"))
+    entities = extract_entities(schema, builtin=builtin)
+    if entities:
+        catalog = {"entities": [e.to_dict() for e in entities]}
+        save_model(dst, {"__definition": catalog})
 
 
 def check_schema(schema_file: Path) -> None:
@@ -65,20 +71,17 @@ def check_schema(schema_file: Path) -> None:
         raise FileValidationError(diagnostics=diagnostics)
 
 
-def extract_data_catalog(
+def extract_entities(
     schema: Mapping[str, object], *, builtin: bool = False
-) -> dict[str, Any]:
-    """Extract data catalog (entities) from a root JSON Schema."""
-    result: dict[str, Any] = {}
-
-    properties = schema.get("properties")
-    if isinstance(properties, Mapping) and properties:
-        entities = extract_entities(
-            cast(Mapping[str, object], properties), builtin=builtin
+) -> Sequence[dc.Entity]:
+    """Convert a root schema into a flat list of Entity."""
+    root = build_schema_tree(schema)
+    if not isinstance(root, ObjectNode):
+        raise ValueError(
+            f"Root schema must be an object with properties; got {type(root).__name__}"
         )
-        result["entities"] = [e.to_dict() for e in entities]
-
-    return result
+    entities = collect_entities(root)
+    return [replace(e, builtin=True) for e in entities] if builtin else entities
 
 
 def build_schema_validator() -> Validator:
