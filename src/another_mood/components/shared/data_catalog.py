@@ -122,6 +122,10 @@ class Node:
         """
         return bool(self.children)
 
+    def has_child(self, name: str) -> bool:
+        """Whether an edge named ``name`` exists among this node's children."""
+        return any(e.name == name for e, _ in self.children)
+
     def child_entry(self, name: str) -> tuple[Edge, "Node"]:
         """Return the (edge, child) entry reached by the edge named ``name``."""
         return next((e, c) for e, c in self.children if e.name == name)

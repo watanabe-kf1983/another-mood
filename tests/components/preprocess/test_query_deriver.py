@@ -3,11 +3,24 @@
 from collections.abc import Mapping
 from pathlib import Path
 
+import pytest
 import yaml
 
 from another_mood.components.preprocess.query_deriver import (
     build_query_schema,
     derive_queries,
+)
+from another_mood.components.shared.diagnostic import FileValidationError
+
+_CATALOG_YAML = (
+    "__definition:\n"
+    "  entities:\n"
+    "    - id: items\n"
+    "      item_type:\n"
+    "        id: items.item\n"
+    "        attributes:\n"
+    "          - {id: name, type: string, required: true}\n"
+    "          - {id: phase, type: string, required: true}\n"
 )
 
 
@@ -119,3 +132,96 @@ class TestDeriveQueries:
 
         # No source files produces no output files (data dir exists, but is empty).
         assert not list((out / "data").rglob("*.yaml"))
+
+
+class TestIdentifierDiagnostics:
+    """derive_queries reports identifier mismatches as Diagnostics pointing
+    back at the originating YAML position, and writes nothing on failure."""
+
+    def _run(self, tmp_path: Path, query_yaml: str) -> Path:
+        # Calls the underlying function directly to bypass the Component
+        # wrapper's error-propagation context, so FileValidationError
+        # surfaces to the test rather than being captured into a build
+        # report.
+        _write(tmp_path / "queries" / "q.yaml", query_yaml)
+        _write(tmp_path / "catalog" / "schema.yaml", _CATALOG_YAML)
+        out = tmp_path / "out"
+        derive_queries.fn(
+            queries_dir=tmp_path / "queries",
+            data_catalog_dir=tmp_path / "catalog",
+            out_dir=out,
+        )
+        return out
+
+    def test_unknown_from_points_at_the_from_value(self, tmp_path: Path) -> None:
+        query_yaml = (
+            "names:\n"  # line 1
+            "  from: missing\n"  # line 2, value column 9
+            "  select:\n"
+            "    - item: name\n"
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run(tmp_path, query_yaml)
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].file == tmp_path / "queries" / "q.yaml"
+        assert diags[0].line == 2
+        assert diags[0].column == 9
+        assert "missing" in diags[0].message
+
+    def test_unknown_grouped_by_points_at_the_by_value(self, tmp_path: Path) -> None:
+        query_yaml = (
+            "by_phase:\n"  # line 1
+            "  from: items\n"  # line 2
+            "  grouped:\n"  # line 3
+            "    by: nope\n"  # line 4, value column 9
+            "  select:\n"
+            "    - item: phase\n"
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run(tmp_path, query_yaml)
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].line == 4
+        assert diags[0].column == 9
+        assert "nope" in diags[0].message
+
+    def test_unknown_select_item_points_at_the_item_value(self, tmp_path: Path) -> None:
+        query_yaml = (
+            "names:\n"  # line 1
+            "  from: items\n"  # line 2
+            "  select:\n"  # line 3
+            "    - item: ghost\n"  # line 4, value column 13
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run(tmp_path, query_yaml)
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].line == 4
+        assert diags[0].column == 13
+        assert "ghost" in diags[0].message
+
+    def test_multiple_errors_across_queries_are_collected(self, tmp_path: Path) -> None:
+        query_yaml = (
+            "first:\n"
+            "  from: missing_a\n"
+            "  select:\n"
+            "    - item: name\n"
+            "second:\n"
+            "  from: missing_b\n"
+            "  select:\n"
+            "    - item: name\n"
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run(tmp_path, query_yaml)
+        messages = [d.message for d in exc_info.value.diagnostics]
+        assert len(messages) == 2
+        assert any("missing_a" in m for m in messages)
+        assert any("missing_b" in m for m in messages)
+
+    def test_no_output_written_when_diagnostics_present(self, tmp_path: Path) -> None:
+        query_yaml = "names:\n  from: missing\n  select:\n    - item: name\n"
+        with pytest.raises(FileValidationError):
+            self._run(tmp_path, query_yaml)
+        # The pipeline raises before any save_model call.
+        assert not list((tmp_path / "derived" / "data").rglob("*.yaml"))
