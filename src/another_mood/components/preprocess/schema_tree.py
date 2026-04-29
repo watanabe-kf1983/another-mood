@@ -182,38 +182,34 @@ def extract_entities(
     *,
     builtin: bool = False,
 ) -> Sequence[dc.Entity]:
-    """Convert a root schema into a flat list of Entity.
+    """Convert a root schema into a flat list of Entity."""
+    return collect_entities(build_schema_tree(schema), builtin=builtin)
+
+
+def collect_entities(
+    root: Node,
+    *,
+    builtin: bool = False,
+) -> Sequence[dc.Entity]:
+    """Walk a root tree's top-level properties and collect their entities.
 
     Each top-level property must be a collection (ArrayNode-wrapped
     ObjectNode in tree form); top-level non-collections are silently
     dropped.  ``builtin=True`` post-marks every emitted entity.
     """
-    root = build_schema_tree(schema)
-    if isinstance(root, ObjectNode):
-        return [
-            entity
-            for prop in root.properties
-            for entity in collect_entities(prop.name, prop.node, builtin=builtin)
-        ]
-    else:
+    if not isinstance(root, ObjectNode):
         return []
-
-
-def collect_entities(
-    name: str,
-    node: Node,
-    *,
-    builtin: bool = False,
-) -> Sequence[dc.Entity]:
-    """Return the entities one named SchemaTree contributes (empty if non-collection)."""
-    catalog_node = _to_catalog_node(node)
-    if not catalog_node.is_entity:
-        return []
-    flat = catalog_node.to_flat(name)
+    flat = [
+        entity
+        for prop in root.properties
+        for catalog_node in [to_catalog_node(prop.node)]
+        if catalog_node.is_entity
+        for entity in catalog_node.to_flat(prop.name)
+    ]
     return [replace(e, builtin=True) for e in flat] if builtin else flat
 
 
-def _to_catalog_node(node: Node) -> dc.Node:
+def to_catalog_node(node: Node) -> dc.Node:
     obj = _unwrap_to_object(node)
     if obj is None:
         return dc.Node()
@@ -242,7 +238,7 @@ def _collect_edges(
                     dc.Node(),
                 )
         else:
-            yield (_property_to_edge(prop), _to_catalog_node(prop.node))
+            yield (_property_to_edge(prop), to_catalog_node(prop.node))
 
 
 def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> dc.Edge:
