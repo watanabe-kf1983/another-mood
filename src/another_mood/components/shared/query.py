@@ -74,17 +74,21 @@ class Select:
 class From:
     """Walks a dot-path through nested object[] arrays to a leaf data source."""
 
-    path: Sequence[str]
+    path: str
+
+    @property
+    def segments(self) -> Sequence[str]:
+        return self.path.split(".")
 
     def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
         records = parents
-        for key in self.path:
+        for key in self.segments:
             records = flatten_children(records, key)
         return records
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         node = catalog
-        for segment in self.path:
+        for segment in self.segments:
             node = node.child(segment)
         return node
 
@@ -168,14 +172,14 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     validated Query objects come out.
     """
     from_raw = cast(str, raw["from"])
-    from_clause = From(path=from_raw.split("."))
+    from_clause = From(path=from_raw)
 
     grouped: Grouped | None = None
     if "grouped" in raw:
         grouped_raw = cast(Mapping[str, str], raw["grouped"])
         grouped = Grouped(
             by=grouped_raw["by"],
-            as_name=grouped_raw.get("as", from_clause.path[-1]),
+            as_name=grouped_raw.get("as", from_clause.segments[-1]),
         )
 
     select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))

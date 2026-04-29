@@ -72,7 +72,7 @@ def _query_from(parents: Sequence[Record], path: str) -> Sequence[Record]:
     Composer-side strict evaluation still treats such cases as errors.
     """
     try:
-        return From(path=path.split(".")).apply(parents)
+        return From(path=path).apply(parents)
     except KeyError:
         return []
 
