@@ -1,4 +1,4 @@
-"""Tests for normalize core (normalize, check)."""
+"""Tests for normalize core (check, iter_normalized, write_file)."""
 
 from pathlib import Path
 
@@ -6,12 +6,20 @@ import pytest
 import yaml
 
 from another_mood.components.preprocess.content_normalizer import build_contents_schema
-from another_mood.components.preprocess.normalize_core import check, normalize
+from another_mood.components.preprocess.normalize_core import check, iter_normalized
 from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.json_data_model import save_model
 
 
-class TestNormalize:
-    """normalize: parse → validate → normalize → write for all file types."""
+def _normalize(src: Path, out: Path, schema: dict[str, object]) -> None:
+    """Inline the same pipeline both callers use, for test brevity."""
+    for src_file, data in iter_normalized(src, schema):
+        rel = src_file.relative_to(src)
+        save_model(out / rel.with_name(rel.name + ".yaml"), data)
+
+
+class TestIterNormalizedAndWrite:
+    """iter_normalized + write_file: parse → normalize → write for all file types."""
 
     @pytest.fixture()
     def schema(self, tmp_path: Path) -> dict[str, object]:
@@ -36,7 +44,7 @@ class TestNormalize:
         (src / "notes.md").write_text("# Notes\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, schema)
+        _normalize(src, out, schema)
 
         # Output name is source name + ".yaml" (appended, not replaced)
         data = yaml.safe_load((out / "data.yaml.yaml").read_text())
@@ -53,7 +61,7 @@ class TestNormalize:
         (src / "guide.md").write_text("# Guide\n\nSteps.\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, schema)
+        _normalize(src, out, schema)
 
         data = yaml.safe_load((out / "guide.md.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
@@ -68,7 +76,7 @@ class TestNormalize:
         (src / "sub" / "doc.md").write_text("# Doc\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, schema)
+        _normalize(src, out, schema)
 
         data = yaml.safe_load((out / "sub" / "doc.md.yaml").read_text())
         assert data["prose"][0]["id"] == "sub/doc"
@@ -83,7 +91,7 @@ class TestNormalize:
         (src / "items.md").write_text("# Items\n")
 
         out = tmp_path / "normalized"
-        normalize(src, out, schema)
+        _normalize(src, out, schema)
 
         # Each source produces a distinct destination — nothing is overwritten.
         assert (out / "items.yaml.yaml").exists()
@@ -101,7 +109,7 @@ class TestNormalize:
         (src / "README").write_text("project readme")
 
         out = tmp_path / "normalized"
-        normalize(src, out, schema)
+        _normalize(src, out, schema)
 
         assert (out / "data.yaml.yaml").exists()
         assert not (out / "notes.txt.yaml").exists()

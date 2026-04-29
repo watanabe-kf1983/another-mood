@@ -3,13 +3,14 @@
 import pytest
 from ruamel.yaml import YAML
 
-from another_mood.components.composer.query import (
+from another_mood.components.shared.query import (
     From,
     Grouped,
     Query,
     Select,
     SelectItem,
     flatten_children,
+    parse_query,
 )
 from another_mood.components.shared import data_catalog as dc
 
@@ -367,4 +368,54 @@ class TestQueryDerive:
                   - { id: id, type: string, required: true }
                   - { id: title, type: string, required: true }
             """
+        )
+
+
+class TestParseQuery:
+    def test_full_query(self) -> None:
+        raw = {
+            "from": "entities",
+            "grouped": {"by": "category", "as": "items"},
+            "select": [
+                {"item": "category", "as": "id"},
+                {"item": "category"},
+            ],
+        }
+        assert parse_query(raw) == Query(
+            select=Select(
+                items=[
+                    SelectItem(item="category", as_name="id"),
+                    SelectItem(item="category", as_name="category"),
+                ]
+            ),
+            from_clause=From(path=["entities"]),
+            grouped=Grouped(by="category", as_name="items"),
+        )
+
+    def test_grouped_as_defaults_to_last_path_segment(self) -> None:
+        raw = {
+            "from": "entities",
+            "grouped": {"by": "category"},
+            "select": [{"item": "category"}],
+        }
+        assert parse_query(raw).grouped == Grouped(by="category", as_name="entities")
+
+    def test_from_dot_notation_splits_into_path(self) -> None:
+        raw = {"from": "categories.tasks", "select": [{"item": "id"}]}
+        assert parse_query(raw).from_clause == From(path=["categories", "tasks"])
+
+    def test_without_grouped(self) -> None:
+        raw = {
+            "from": "items",
+            "select": [{"item": "name"}],
+        }
+        assert parse_query(raw).grouped is None
+
+    def test_select_item_as_defaults_to_item(self) -> None:
+        raw = {
+            "from": "items",
+            "select": [{"item": "name"}],
+        }
+        assert parse_query(raw).select == Select(
+            items=[SelectItem(item="name", as_name="name")]
         )

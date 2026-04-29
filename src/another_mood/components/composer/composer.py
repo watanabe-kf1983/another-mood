@@ -1,24 +1,16 @@
 """Composer — combine normalized data into views.
 
 Passthrough-copies normalized contents and the `__definition` namespace
-(data catalog + query definitions) to views, then evaluates query
-definitions (YAML DSL) and writes additional view files alongside the
-catalog entities those queries synthesize.
+(data catalog + query definitions including derived entities) to views,
+then evaluates queries against contents and writes the per-query
+results.
 """
 
 import shutil
-from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import cast
 
-from another_mood.components.composer.query import (
-    From,
-    Grouped,
-    Query,
-    Select,
-    SelectItem,
-)
-from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.query import parse_query
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 
@@ -45,58 +37,14 @@ def compose(
     shutil.copytree(queries_dir, queries_out)
 
     sources = load_model(contents_out)
-    catalog_node = dc.Node.from_flat(_load_catalog(data_catalog_out))
-
     merged = load_model(queries_out)
-    definition: dict[str, Any] = merged.get("__definition", {})
-    raw_queries: list[dict[str, Any]] = definition.get("queries", [])
-    parsed_queries = {record["id"]: parse_query(record) for record in raw_queries}
-
-    query_results_out.mkdir(parents=True, exist_ok=True)
-    for name, query in parsed_queries.items():
-        sources[name] = query.apply([sources])
-        synthesized = [
-            replace(e, view=True) for e in query.derive(catalog_node).to_flat(name)
-        ]
-        save_model(
-            query_results_out / f"{name}.yaml",
-            {
-                "__definition": {"entities": [e.to_dict() for e in synthesized]},
-                name: sources[name],
-            },
-        )
-
-
-def _load_catalog(data_catalog_dir: Path) -> list[dc.Entity]:
-    """Load the merged ``__definition.entities`` list as typed Entity records."""
-    merged = load_model(data_catalog_dir)
-    raw: list[dict[str, Any]] = merged.get("__definition", {}).get("entities", [])
-    return [dc.Entity.from_dict(e) for e in raw]
-
-
-def parse_query(raw: Any) -> Query:
-    """Parse a YAML-loaded dict into a typed Query object.
-
-    This is the Any-to-typed boundary: raw YAML data comes in,
-    validated Query objects come out.
-    """
-    from_raw: str = raw["from"]
-    from_clause = From(path=from_raw.split("."))
-
-    grouped = None
-    if "grouped" in raw:
-        grouped_raw = raw["grouped"]
-        grouped = Grouped(
-            by=grouped_raw["by"],
-            as_name=grouped_raw.get("as", from_clause.path[-1]),
-        )
-
-    select_raw: list[dict[str, str]] = raw.get("select", [])
-    select = Select(
-        items=[
-            SelectItem(item=entry["item"], as_name=entry.get("as", entry["item"]))
-            for entry in select_raw
-        ]
+    raw_queries = cast(
+        list[dict[str, object]],
+        merged.get("__definition", {}).get("queries", []),
     )
 
-    return Query(select=select, from_clause=from_clause, grouped=grouped)
+    query_results_out.mkdir(parents=True, exist_ok=True)
+    for raw in raw_queries:
+        name = cast(str, raw["id"])
+        sources[name] = parse_query(raw).apply([sources])
+        save_model(query_results_out / f"{name}.yaml", {name: sources[name]})

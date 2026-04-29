@@ -18,8 +18,8 @@ my-project/                    # CWD = <projectDir>（mood build .）
   .another-mood/               # gitignore（生成物・中間生成物）
     tmp/                       # パイプライン中間出力（ステージ名ベース）
       inspect_schema/          #   SchemaInspector 出力
-      normalize_contents/      #   contents Normalizer 出力
-      normalize_queries/       #   queries Normalizer 出力
+      normalize_contents/      #   Content Normalizer 出力
+      derive_queries/          #   Query Deriver 出力（クエリ + 派生エンティティ）
       compose/                 #   Composer 出力
       generate/                #   Generator 出力
       reconcile/               #   Reconcile 出力

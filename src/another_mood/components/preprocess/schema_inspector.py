@@ -49,7 +49,6 @@ def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -
     catalog = extract_data_catalog(data, builtin=builtin)
     if not catalog:
         return
-    dst.parent.mkdir(parents=True, exist_ok=True)
     save_model(dst, {"__definition": catalog})
 
 

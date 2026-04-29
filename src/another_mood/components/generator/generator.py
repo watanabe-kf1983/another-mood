@@ -12,7 +12,7 @@ from typing import Any, cast
 import yaml
 from jinja2 import Undefined
 
-from another_mood.components.composer.query import From, Record
+from another_mood.components.shared.query import From, Record
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
