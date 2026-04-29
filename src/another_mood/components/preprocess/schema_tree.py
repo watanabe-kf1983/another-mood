@@ -178,23 +178,25 @@ def _extract_validation(
 
 
 def extract_entities(
-    schemas: Mapping[str, object],
+    schema: Mapping[str, object],
     *,
     builtin: bool = False,
 ) -> Sequence[dc.Entity]:
-    """Convert a schemas dict into a flat list of Entity.
+    """Convert a root schema into a flat list of Entity.
 
-    Each top-level entry must be a collection (ArrayNode-wrapped
+    Each top-level property must be a collection (ArrayNode-wrapped
     ObjectNode in tree form); top-level non-collections are silently
     dropped.  ``builtin=True`` post-marks every emitted entity.
     """
-    return [
-        entity
-        for name, schema in schemas.items()
-        for entity in collect_entities(
-            name, build_schema_tree(cast(SchemaDict, schema)), builtin=builtin
-        )
-    ]
+    root = build_schema_tree(schema)
+    if isinstance(root, ObjectNode):
+        return [
+            entity
+            for prop in root.properties
+            for entity in collect_entities(prop.name, prop.node, builtin=builtin)
+        ]
+    else:
+        return []
 
 
 def collect_entities(
