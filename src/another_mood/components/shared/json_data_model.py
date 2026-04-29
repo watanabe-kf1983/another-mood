@@ -126,7 +126,11 @@ class _LiteralStrRepresenter(RoundTripRepresenter):
         return super().represent_str(data)  # type: ignore[reportUnknownMemberType]
 
 
+# Exact-type registration overrides RoundTripRepresenter's default str
+# representer; multi-registration additionally covers str subclasses
+# (e.g. UserStr from preprocess.validator) via MRO lookup.
 _LiteralStrRepresenter.add_representer(str, _LiteralStrRepresenter.represent_str)  # type: ignore[reportUnknownMemberType]
+_LiteralStrRepresenter.add_multi_representer(str, _LiteralStrRepresenter.represent_str)  # type: ignore[reportUnknownMemberType]
 
 
 def _drop_nones(d: Any) -> Any:  # noqa: ANN401

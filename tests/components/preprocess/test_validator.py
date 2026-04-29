@@ -132,6 +132,33 @@ class TestParseYaml:
         assert diag.file == f
         assert diag.source == "ruamel.yaml"
 
+    def test_scalar_strings_become_user_str_with_location(self, tmp_path: Path) -> None:
+        f = tmp_path / "tagged.yaml"
+        f.write_text(
+            "top:\n"  # line 1
+            "  name: alice\n"  # line 2, value column 9
+            "  tags:\n"  # line 3
+            "    - red\n"  # line 4, value column 7
+        )
+        result = parse_yaml(f)
+        name = result["top"]["name"]  # type: ignore[index]
+        tag = result["top"]["tags"][0]  # type: ignore[index]
+        assert isinstance(name, UserStr)
+        assert name.location == Location(file=f, position=Position(line=2, column=9))
+        assert isinstance(tag, UserStr)
+        assert tag.location == Location(file=f, position=Position(line=4, column=7))
+
+    def test_dict_keys_and_non_string_scalars_left_untouched(
+        self, tmp_path: Path
+    ) -> None:
+        f = tmp_path / "untouched.yaml"
+        f.write_text("count: 3\nflag: true\n")
+        result = parse_yaml(f)
+        keys = list(result.keys())
+        assert all(type(k) is str for k in keys)  # plain str, not UserStr
+        assert result["count"] == 3
+        assert result["flag"] is True
+
 
 # ── UserStr / Location ─────────────────────────────────────────────
 
