@@ -9,9 +9,9 @@ from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
 
-from another_mood.components.preprocess.normalize_core import normalize
+from another_mood.components.preprocess.normalize_core import iter_normalized
 from another_mood.components.shared.component.component import Component
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_model, save_model
 
 _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "content-schema.yaml")
@@ -27,7 +27,12 @@ def normalize_contents(
     out_dir: Path,
 ) -> None:
     """Normalize src_dir contents into out_dir."""
-    normalize(src_dir, out_dir, build_contents_schema(schema_file))
+    schema = build_contents_schema(schema_file)
+    for src_file, data in iter_normalized(src_dir, schema):
+        # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
+        # never collide on the same destination.
+        rel = src_file.relative_to(src_dir)
+        save_model(out_dir / rel.with_name(rel.name + ".yaml"), data)
 
 
 def build_contents_schema(

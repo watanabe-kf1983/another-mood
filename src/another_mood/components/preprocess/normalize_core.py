@@ -9,7 +9,7 @@ Includes the Markdown → ProseRecord parser and the schema-guided
 dict-to-array transformer that the pipeline composes.
 """
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -20,7 +20,6 @@ from markdown_it.tree import SyntaxTreeNode
 from another_mood.components.preprocess.validator import Validator, parse_yaml
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 from another_mood.components.shared.file_type import FileType
-from another_mood.components.shared.json_data_model import save_model
 
 # JSON-like str-keyed mappings.
 type Schema = Mapping[str, object]
@@ -30,24 +29,21 @@ type DataMap = Mapping[str, object]
 # ── pipeline ───────────────────────────────────────────────────────
 
 
-def normalize(
-    src_dir: Path,
-    out_dir: Path,
-    schema: Mapping[str, object],
-    *,
-    wrapper: Callable[[object], object] = lambda x: x,
-) -> None:
-    """Validate all files, then parse, normalize, and write each to out_dir."""
+def iter_normalized(src_dir: Path, schema: Schema) -> Iterator[tuple[Path, object]]:
+    """Yield (src_file, normalized_data) for each recognized source file.
+
+    Runs ``check`` first so all validation errors surface together
+    before any output is produced. Files whose extension is neither
+    YAML nor Markdown are skipped.
+    """
     check(src_dir, schema)
     for src_file in _iter_files(src_dir):
         data = _parse(src_file, src_dir)
-        if data is None:
-            continue
-        normalized = normalize_data(data, schema)
-        _write(wrapper(normalized), src_file.relative_to(src_dir), out_dir)
+        if data is not None:
+            yield src_file, normalize_data(data, schema)
 
 
-def check(src_dir: Path, schema: Mapping[str, object]) -> None:
+def check(src_dir: Path, schema: Schema) -> None:
     """Validate all files in src_dir against the given schema.
 
     Raises FileValidationError if any file has diagnostics.
@@ -60,9 +56,8 @@ def check(src_dir: Path, schema: Mapping[str, object]) -> None:
         except FileValidationError as exc:
             diagnostics.extend(exc.diagnostics)
             continue
-        if data is None:
-            continue
-        diagnostics.extend(validator.validate(data, src_file))
+        if data is not None:
+            diagnostics.extend(validator.validate(data, src_file))
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
@@ -82,14 +77,6 @@ def _parse(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     if FileType.YAML.match(src):
         return parse_yaml(src)
     return None
-
-
-def _write(data: object, rel: Path, out_dir: Path) -> None:
-    # Append (not replace) so distinct source files (foo.yaml / foo.yml / foo.md)
-    # never collide on the same destination.
-    dst = out_dir / rel.with_name(rel.name + ".yaml")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    save_model(dst, data)
 
 
 # ── markdown → prose ──────────────────────────────────────────────

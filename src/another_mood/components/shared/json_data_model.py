@@ -112,6 +112,7 @@ def save_model(path: Path, data: object) -> None:
     """
     yaml_writer = YAML()
     yaml_writer.Representer = _LiteralStrRepresenter
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         yaml_writer.dump(_drop_nones(data), f)  # type: ignore[reportUnknownMemberType]
 
