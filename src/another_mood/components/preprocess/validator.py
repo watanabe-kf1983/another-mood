@@ -6,9 +6,12 @@ Provides shared building blocks used by both SchemaInspector and Normalizer:
   for line-accurate diagnostics.
 * ``Validator`` — validate data against a JSON Schema,
   returning Diagnostic objects with line/column positions.
+* ``UserStr`` / ``Location`` — user-input strings tagged with their source
+  location, used by downstream identifier-integrity checks.
 """
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +20,42 @@ import regex
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 
-from another_mood.components.preprocess.position_resolver import resolve_position
+from another_mood.components.preprocess.position_resolver import (
+    Position,
+    resolve_position,
+)
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+
+
+@dataclass(frozen=True)
+class Location:
+    """Source location of a user-input value, including its file."""
+
+    file: Path
+    position: Position
+
+
+class UserStr(str):
+    """A string from user input, tagged with its source ``Location``.
+
+    Drop-in for ``str`` (``isinstance``, equality, and hashing all behave
+    identically), so call sites that don't care about provenance can keep
+    treating it as a plain string.
+
+    ``str`` is immutable, so the value must be set in ``__new__``; ``str``
+    methods (``upper``, ``+``, slicing) return plain ``str`` and drop the
+    location, so callers that want to preserve provenance must avoid string
+    operations.  Identifier checks here only do ``==`` and dict lookup,
+    which leave the original ``UserStr`` instance intact.
+    """
+
+    __slots__ = ("location",)
+    location: Location
+
+    def __new__(cls, value: str, location: Location) -> "UserStr":
+        instance = super().__new__(cls, value)
+        instance.location = location
+        return instance
 
 
 def parse_yaml(src: Path) -> Mapping[str, object]:

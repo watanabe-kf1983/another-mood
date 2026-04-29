@@ -6,7 +6,13 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from another_mood.components.preprocess.validator import Validator, parse_yaml
+from another_mood.components.preprocess.position_resolver import Position
+from another_mood.components.preprocess.validator import (
+    Location,
+    UserStr,
+    Validator,
+    parse_yaml,
+)
 from another_mood.components.shared.diagnostic import FileValidationError
 
 _DUMMY_FILE = Path("test.yaml")
@@ -125,3 +131,13 @@ class TestParseYaml:
         diag = exc_info.value.diagnostics[0]
         assert diag.file == f
         assert diag.source == "ruamel.yaml"
+
+
+# ── UserStr / Location ─────────────────────────────────────────────
+
+
+def test_user_str_carries_location_and_behaves_as_str() -> None:
+    loc = Location(file=Path("foo.yaml"), position=Position(line=3, column=7))
+    s = UserStr("hello", loc)
+    assert s == "hello"
+    assert s.location is loc
