@@ -199,12 +199,12 @@ def collect_entities(
     """
     if not isinstance(root, ObjectNode):
         return []
+    catalog_node = to_catalog_node(root)
     flat = [
         entity
-        for prop in root.properties
-        for catalog_node in [to_catalog_node(prop.node)]
-        if catalog_node.is_entity
-        for entity in catalog_node.to_flat(prop.name)
+        for edge, child in catalog_node.children
+        if child.is_entity
+        for entity in child.to_flat(edge.name)
     ]
     return [replace(e, builtin=True) for e in flat] if builtin else flat
 
