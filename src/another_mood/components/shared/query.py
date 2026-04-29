@@ -17,6 +17,20 @@ from another_mood.components.shared import data_catalog as dc
 type Record = Mapping[str, object]
 
 
+class QueryDeriveError(Exception):
+    """Raised when a query references an identifier missing from the catalog.
+
+    The outer layer inspects ``offender`` (the user-input identifier value)
+    to build a user-facing diagnostic — when ``offender`` carries source
+    provenance (a ``UserStr`` from ``parse_yaml``), the diagnostic can
+    point back at the originating YAML position.
+    """
+
+    def __init__(self, message: str, *, offender: str) -> None:
+        super().__init__(message)
+        self.offender = offender
+
+
 @runtime_checkable
 class QueryNode(Protocol):
     """A query DSL element with a paired record transform and schema transform.
@@ -50,6 +64,10 @@ class SelectItem:
         return (self.as_name, record[self.item])
 
     def derive(self, catalog: dc.Node) -> tuple[dc.Edge, dc.Node]:
+        if not catalog.has_child(self.item):
+            raise QueryDeriveError(
+                f"unknown attribute '{self.item}'", offender=self.item
+            )
         edge, child = catalog.child_entry(self.item)
         return (replace(edge, name=self.as_name), child)
 
@@ -89,6 +107,10 @@ class From:
     def derive(self, catalog: dc.Node) -> dc.Node:
         node = catalog
         for segment in self.segments:
+            if not node.has_child(segment):
+                raise QueryDeriveError(
+                    f"unknown entity '{self.path}'", offender=self.path
+                )
             node = node.child(segment)
         return node
 
@@ -133,6 +155,8 @@ class Grouped:
         return [{self.by: key, self.as_name: items} for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
+        if not catalog.has_child(self.by):
+            raise QueryDeriveError(f"unknown attribute '{self.by}'", offender=self.by)
         return dc.Node(
             children=[
                 catalog.child_entry(self.by),
