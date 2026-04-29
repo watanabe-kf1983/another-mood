@@ -50,7 +50,7 @@ class TestFlattenChildren:
 class TestFrom:
     def test_single_segment(self) -> None:
         sources = {"entities": [{"id": "user"}, {"id": "role"}]}
-        assert list(From(path=["entities"]).apply([sources])) == [
+        assert list(From(path="entities").apply([sources])) == [
             {"id": "user"},
             {"id": "role"},
         ]
@@ -62,7 +62,7 @@ class TestFrom:
                 {"id": "B", "tasks": [{"id": "B1"}]},
             ]
         }
-        assert list(From(path=["categories", "tasks"]).apply([sources])) == [
+        assert list(From(path="categories.tasks").apply([sources])) == [
             {"id": "A1"},
             {"id": "A2"},
             {"id": "B1"},
@@ -161,7 +161,7 @@ class TestQuery:
                     SelectItem(item="entities", as_name="entities"),
                 ]
             ),
-            from_clause=From(path=["entities"]),
+            from_clause=From(path="entities"),
             grouped=Grouped(by="category", as_name="entities"),
         )
         expected = [
@@ -187,7 +187,7 @@ class TestQuery:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             select=Select(items=[SelectItem(item="name", as_name="name")]),
-            from_clause=From(path=["items"]),
+            from_clause=From(path="items"),
             grouped=None,
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
@@ -206,7 +206,7 @@ class TestQuery:
                     SelectItem(item="phase", as_name="phase"),
                 ]
             ),
-            from_clause=From(path=["categories", "tasks"]),
+            from_clause=From(path="categories.tasks"),
             grouped=None,
         )
         assert list(query.apply([sources])) == [
@@ -241,7 +241,7 @@ _TASKS_CATALOG_YAML = """
 class TestFromDerive:
     def test_walks_dot_path_to_leaf(self) -> None:
         root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path=["categories", "tasks"]).derive(root)
+        leaf = From(path="categories.tasks").derive(root)
         assert leaf.to_flat("tasks") == _catalog(
             """
             - id: tasks
@@ -258,7 +258,7 @@ class TestFromDerive:
 class TestGroupedDerive:
     def test_wraps_with_by_and_as_name(self) -> None:
         root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path=["categories", "tasks"]).derive(root)
+        leaf = From(path="categories.tasks").derive(root)
         wrapped = Grouped(by="phase", as_name="tasks").derive(leaf)
         assert wrapped.to_flat("groups") == _catalog(
             """
@@ -287,7 +287,7 @@ class TestGroupedDerive:
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
         root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path=["categories", "tasks"]).derive(root)
+        leaf = From(path="categories.tasks").derive(root)
         projected = Select(
             items=[
                 SelectItem(item="phase", as_name="id"),
@@ -310,7 +310,7 @@ class TestQueryDerive:
     def test_tasks_by_phase(self) -> None:
         """End-to-end: from → grouped → select → flatten produces the expected catalog."""
         query = Query(
-            from_clause=From(path=["categories", "tasks"]),
+            from_clause=From(path="categories.tasks"),
             grouped=Grouped(by="phase", as_name="tasks"),
             select=Select(
                 items=[
@@ -348,7 +348,7 @@ class TestQueryDerive:
 
     def test_without_grouped(self) -> None:
         query = Query(
-            from_clause=From(path=["categories", "tasks"]),
+            from_clause=From(path="categories.tasks"),
             grouped=None,
             select=Select(
                 items=[
@@ -388,7 +388,7 @@ class TestParseQuery:
                     SelectItem(item="category", as_name="category"),
                 ]
             ),
-            from_clause=From(path=["entities"]),
+            from_clause=From(path="entities"),
             grouped=Grouped(by="category", as_name="items"),
         )
 
@@ -402,7 +402,7 @@ class TestParseQuery:
 
     def test_from_dot_notation_splits_into_path(self) -> None:
         raw = {"from": "categories.tasks", "select": [{"item": "id"}]}
-        assert parse_query(raw).from_clause == From(path=["categories", "tasks"])
+        assert parse_query(raw).from_clause == From(path="categories.tasks")
 
     def test_without_grouped(self) -> None:
         raw = {
