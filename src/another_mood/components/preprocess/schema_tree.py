@@ -8,7 +8,7 @@ for downstream consumption.
 """
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any, assert_never, cast
 
 from another_mood.components.shared import data_catalog as dc
@@ -177,36 +177,20 @@ def _extract_validation(
 # ── SchemaTree → DataCatalog (via dc.Node) ───────────────────────
 
 
-def extract_entities(
-    schema: Mapping[str, object],
-    *,
-    builtin: bool = False,
-) -> Sequence[dc.Entity]:
-    """Convert a root schema into a flat list of Entity."""
-    return collect_entities(build_schema_tree(schema), builtin=builtin)
-
-
-def collect_entities(
-    root: Node,
-    *,
-    builtin: bool = False,
-) -> Sequence[dc.Entity]:
+def collect_entities(root: ObjectNode) -> Sequence[dc.Entity]:
     """Walk a root tree's top-level properties and collect their entities.
 
     Each top-level property must be a collection (ArrayNode-wrapped
     ObjectNode in tree form); top-level non-collections are silently
-    dropped.  ``builtin=True`` post-marks every emitted entity.
+    dropped.
     """
-    if not isinstance(root, ObjectNode):
-        return []
     catalog_node = to_catalog_node(root)
-    flat = [
+    return [
         entity
         for edge, child in catalog_node.children
         if child.is_entity
         for entity in child.to_flat(edge.name)
     ]
-    return [replace(e, builtin=True) for e in flat] if builtin else flat
 
 
 def to_catalog_node(node: Node) -> dc.Node:

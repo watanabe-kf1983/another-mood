@@ -6,13 +6,20 @@ extracts a data catalog (entities + fields), and writes the result to
 `out_dir/__builtin/` so their entities also surface in meta-docs.
 """
 
+from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 
 import yaml
 
-from another_mood.components.preprocess.schema_tree import extract_entities
+from another_mood.components.preprocess.schema_tree import (
+    ObjectNode,
+    build_schema_tree,
+    collect_entities,
+)
 from another_mood.components.preprocess.validator import Validator
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
@@ -62,6 +69,19 @@ def check_schema(schema_file: Path) -> None:
     diagnostics = list(validator.validate_yaml(schema_file))
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
+
+
+def extract_entities(
+    schema: Mapping[str, object], *, builtin: bool = False
+) -> Sequence[dc.Entity]:
+    """Convert a root schema into a flat list of Entity."""
+    root = build_schema_tree(schema)
+    if not isinstance(root, ObjectNode):
+        raise ValueError(
+            f"Root schema must be an object with properties; got {type(root).__name__}"
+        )
+    entities = collect_entities(root)
+    return [replace(e, builtin=True) for e in entities] if builtin else entities
 
 
 def build_schema_validator() -> Validator:

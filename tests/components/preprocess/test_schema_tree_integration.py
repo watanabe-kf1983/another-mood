@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from another_mood.components.preprocess.schema_tree import extract_entities
+from another_mood.components.preprocess.schema_inspector import extract_entities
 from another_mood.components.shared.json_data_model import save_model
 
 _CASES = [
