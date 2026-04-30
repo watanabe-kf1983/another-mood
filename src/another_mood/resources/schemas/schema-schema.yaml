@@ -24,13 +24,14 @@ $defs:
   rootSchema:
     allOf:
       - $ref: "#/$defs/jsonSchemaSubset"
-      - required: [type, properties]
+      - required: [properties]
         properties:
           type:
             const: object
 
   jsonSchemaSubset:
     type: object
+    required: [type]
     properties:
       # --- Structural keywords (interpreted by this project) ---
       type:

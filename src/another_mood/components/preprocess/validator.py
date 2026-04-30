@@ -8,10 +8,11 @@ to produce a ``Diagnostic``.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import jsonschema
 import regex
+from jsonschema.exceptions import best_match  # type: ignore[reportUnknownVariableType]
 
 from another_mood.components.preprocess.position_resolver import resolve_position
 from another_mood.components.shared.diagnostic import Diagnostic
@@ -86,6 +87,10 @@ class Validator:
 
 
 def _to_issue(err: jsonschema.ValidationError, data: object) -> ValidationIssue:
+    # For anyOf/oneOf failures, the top-level message degrades to
+    # "... not valid under any of the given schemas" with a full instance
+    # dump; descend err.context to surface the actual cause.
+    err = cast(jsonschema.ValidationError, best_match([err]))
     pos = resolve_position(
         err.absolute_path, data, identifier=_subject_identifier(err.message)
     )

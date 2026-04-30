@@ -319,6 +319,29 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="null type rejected",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                phase: { enum: [1, 2, 3] }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="missing type on sub-property rejected",
+    ),
+    pytest.param(
+        """
+        properties:
+          users: { type: object, additionalProperties: { type: string } }
+        additionalProperties: false
+        """,
+        id="missing type on root rejected",
+    ),
 ]
 
 

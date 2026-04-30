@@ -99,3 +99,39 @@ class TestQuotedIdentifierPosition:
         assert len(issues) == 1
         assert issues[0].line == 1
         assert issues[0].column == 6
+
+
+# ── anyOf / oneOf descent ───────────────────────────────────────────
+
+
+class TestAnyOfSubviolation:
+    """When validation fails inside an ``anyOf`` / ``oneOf`` branch, the
+    issue should surface the deepest branch error rather than the
+    top-level ``"... is not valid under any of the given schemas"``
+    wrapper with its full instance dump."""
+
+    def test_anyof_surfaces_deepest_subviolation(self) -> None:
+        validator = Validator(
+            {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "anyOf": [
+                            {"type": "object", "required": ["kind"]},
+                            {"const": False},
+                        ]
+                    }
+                },
+            }
+        )
+        data = _ruamel_load(
+            "value:\n"  # line 1
+            "  other: x\n"  # line 2
+        )
+        issues = validator.validate(data)
+        assert len(issues) == 1
+        assert "is not valid under any of the given schemas" not in issues[0].message
+        assert issues[0].message == "'kind' is a required property"
+        # Position points into the failing branch's path (the value mapping),
+        # not the outer anyOf wrapper.
+        assert issues[0].line is not None
