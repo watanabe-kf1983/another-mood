@@ -88,8 +88,12 @@ _VALIDATION_KEYS = frozenset(
 
 
 def build_schema_tree(schema: Mapping[str, object]) -> Node:
-    """Build a SchemaTree node from a JSON Schema subset definition."""
-    schema_type = schema.get("type")
+    """Build a SchemaTree node from a JSON Schema subset definition.
+
+    Assumes the input schema has already passed meta-validation, which
+    guarantees a ``type`` key on every node.
+    """
+    schema_type = cast(str, schema["type"])
     metadata = _extract_metadata(schema)
 
     if schema_type == "object":
@@ -103,7 +107,7 @@ def build_schema_tree(schema: Mapping[str, object]) -> Node:
         return ArrayNode(child=build_schema_tree(items), metadata=metadata)
 
     return ValueNode(
-        type=str(schema_type) if schema_type else "string",
+        type=schema_type,
         metadata=metadata,
         validation=_extract_validation(schema),
     )
