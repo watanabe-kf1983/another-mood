@@ -1,12 +1,12 @@
 # Template
 
-**テンプレート**（template）は views データを Markdown ドキュメントに変換する表現層。[Jinja2](https://jinja.palletsprojects.com/) をベースに、ファイル出力を司る `{% section %}` タグを独自に拡張している。
+**テンプレート**（template）は views データを Markdown ドキュメントに変換する表現層。[Jinja2](https://jinja.palletsprojects.com/) をベースに、ファイル出力を司る `{% mood_view %}` タグを独自に拡張している。
 
 テンプレートは `{project}/definition/templates/` 配下に `.md` 拡張子で置く。拡張子を `.md` にするのは、エディタのシンタックスハイライトに乗せて本文の編集体験を確保するため（テンプレート記法と Markdown 本文が混在するので、プレーンテキストとして扱うと視覚的に区別しづらい）。
 
 ## エントリポイント: `index.md`
 
-`index.md` がルートテンプレートになる。ドキュメント全体の TOC（目次）を `index.md` に書き、サブページは `{% section %}` で呼び出す構成にする。
+`index.md` がルートテンプレートになる。ドキュメント全体の TOC（目次）を `index.md` に書き、サブページは `{% mood_view %}` で呼び出す構成にする。
 
 ```jinja2
 {# templates/index.md #}
@@ -19,7 +19,7 @@
 {%- endfor %}
 
 {%- for product in products -%}
-{% section "product-detail" with product %}
+{% mood_view "product-detail" with product %}
 {%- endfor %}
 ```
 
@@ -44,12 +44,12 @@
 {% endfor %}
 ```
 
-## Jinja2 拡張: `{% section %}`
+## Jinja2 拡張: `{% mood_view %}`
 
-`{% section %}` はサブテンプレートをレンダリングして**別ファイルに書き出す**独自タグ。
+`{% mood_view %}` はサブテンプレートをレンダリングして**別ファイルに書き出す**独自タグ。
 
 ```jinja2
-{% section "NAME" with DATA %}
+{% mood_view "NAME" with DATA %}
 ```
 
 | 部分 | 説明 |
@@ -70,9 +70,9 @@
 
 ### タグの戻り値
 
-`{% section %}` タグ自体は空文字列を返す。出力ファイルは副作用として書き出されるので、親テンプレート内で `{% section %}` を置いた位置には何も現れない（空白のみ）。
+`{% mood_view %}` タグ自体は空文字列を返す。出力ファイルは副作用として書き出されるので、親テンプレート内で `{% mood_view %}` を置いた位置には何も現れない（空白のみ）。
 
-親ページからサブページへのリンクを張りたい場合は、`{% section %}` の外側に Markdown のリンク記法を別途書く:
+親ページからサブページへのリンクを張りたい場合は、`{% mood_view %}` の外側に Markdown のリンク記法を別途書く:
 
 ```jinja2
 {%- for product in products %}
@@ -80,7 +80,7 @@
 {%- endfor %}
 
 {%- for product in products -%}
-{% section "product-detail" with product %}
+{% mood_view "product-detail" with product %}
 {%- endfor %}
 ```
 

@@ -64,7 +64,7 @@ categories:
     title: ページ分割 (paging)
     impl_paths:
       - src/another_mood/components/generator/
-      - src/another_mood/components/generator/section_processor.py
+      - src/another_mood/components/generator/mood_view_processor.py
     spec: design/generator/paging-spec.md
     tasks:
       C1:
@@ -79,7 +79,7 @@ categories:
         note: リスト型 {class}/{id}.md / シングルトン {class}.md
         phase: 10
       C4:
-        title: "{% section %} の振る舞い分岐: 分割 vs インライン展開"
+        title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
         note: 現在は常に分割。インライン展開モードの新設になる
         phase: 10
       C5:
@@ -377,32 +377,33 @@ categories:
   P:
     title: テンプレートエンジン拡張
     impl_paths:
-      - src/another_mood/components/generator/section_processor.py
+      - src/another_mood/components/generator/mood_view_processor.py
       - src/another_mood/components/generator/template_engine.py
     spec: design/generator/template-spec.md
     tasks:
       P1:
-        title: "{% section %} タグの拡張文法"
+        title: "{% mood_view %} タグの拡張文法"
         note: |
-          現状は {% section EXPR with EXPR %} 形式のみ対応。
+          現状は {% mood_view EXPR with EXPR %} 形式のみ対応。
           template-spec.md の例示で使われている以下 2 形式を追加する。
-            - for 形式:    {% section "NAME" for SEQ %}
-            - filter 形式: {% section NAME[id="..."] %}
+            - for 形式:    {% mood_view "NAME" for SEQ %}
+            - filter 形式: {% mood_view NAME[id="..."] %}
         phase: 10
       P2:
-        title: "{% section %} に inline オプション"
+        title: "{% mood_view %} に inline オプション"
         note: |
           設計: design/generator/template-spec.md「inline オプション」節。
           強制インライン展開。F3 の Query View ページ内埋め込みで使う。
           C4 (paginate 自動判定) の先行版。
         phase: 8
       P3:
-        title: "{% section %} → mood_section タグリネーム"
+        title: "{% section %} → {% mood_view %} タグリネーム"
         note: |
           標準 Jinja2 タグと紛らわしい名前を独自タグ命名に寄せる。L6
           (英訳 + MCP 準備) 前に実施するのが望ましいが必須ではない。
           既存の組み込み / ユーザ / docs / reference の一括置換が必要。
         phase: 8
+        done: true
 
   O:
     title: バグ修正

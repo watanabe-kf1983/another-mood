@@ -7,7 +7,7 @@
 {%- endfor %}
 
 {%- for member in members -%}
-{% section "member" with member %}
+{% mood_view "member" with member %}
 {%- endfor %}
 
 ## By Role
@@ -17,5 +17,5 @@
 {%- endfor %}
 
 {%- for entry in by_role -%}
-{% section "by_role" with entry %}
+{% mood_view "by_role" with entry %}
 {%- endfor %}
