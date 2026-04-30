@@ -8,10 +8,11 @@ to produce a ``Diagnostic``.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import jsonschema
 import regex
+from jsonschema.exceptions import best_match  # type: ignore[reportUnknownVariableType]
 
 from another_mood.components.preprocess.position_resolver import resolve_position
 from another_mood.components.shared.diagnostic import Diagnostic
@@ -86,6 +87,7 @@ class Validator:
 
 
 def _to_issue(err: jsonschema.ValidationError, data: object) -> ValidationIssue:
+    err = _deepest_subviolation(err)
     pos = resolve_position(
         err.absolute_path, data, identifier=_subject_identifier(err.message)
     )
@@ -95,6 +97,21 @@ def _to_issue(err: jsonschema.ValidationError, data: object) -> ValidationIssue:
         message=err.message,
         source="jsonschema",
     )
+
+
+def _deepest_subviolation(
+    err: jsonschema.ValidationError,
+) -> jsonschema.ValidationError:
+    """Descend into ``err.context`` to surface the actual cause.
+
+    For ``anyOf`` / ``oneOf`` failures, jsonschema wraps the per-branch
+    sub-errors in ``.context`` and the top-level message degrades to
+    ``"... is not valid under any of the given schemas"`` with a full
+    instance dump.  ``best_match`` walks the tree to pick the branch
+    that came closest to validating, yielding a focused message
+    (e.g. ``"'type' is a required property"``) and a deeper path.
+    """
+    return cast(jsonschema.ValidationError, best_match([err]))
 
 
 _SUBJECT_PATTERN = regex.compile(r"'([^']+)'")
