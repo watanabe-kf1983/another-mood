@@ -87,7 +87,10 @@ class Validator:
 
 
 def _to_issue(err: jsonschema.ValidationError, data: object) -> ValidationIssue:
-    err = _deepest_subviolation(err)
+    # For anyOf/oneOf failures, the top-level message degrades to
+    # "... not valid under any of the given schemas" with a full instance
+    # dump; descend err.context to surface the actual cause.
+    err = cast(jsonschema.ValidationError, best_match([err]))
     pos = resolve_position(
         err.absolute_path, data, identifier=_subject_identifier(err.message)
     )
@@ -97,21 +100,6 @@ def _to_issue(err: jsonschema.ValidationError, data: object) -> ValidationIssue:
         message=err.message,
         source="jsonschema",
     )
-
-
-def _deepest_subviolation(
-    err: jsonschema.ValidationError,
-) -> jsonschema.ValidationError:
-    """Descend into ``err.context`` to surface the actual cause.
-
-    For ``anyOf`` / ``oneOf`` failures, jsonschema wraps the per-branch
-    sub-errors in ``.context`` and the top-level message degrades to
-    ``"... is not valid under any of the given schemas"`` with a full
-    instance dump.  ``best_match`` walks the tree to pick the branch
-    that came closest to validating, yielding a focused message
-    (e.g. ``"'type' is a required property"``) and a deeper path.
-    """
-    return cast(jsonschema.ValidationError, best_match([err]))
 
 
 _SUBJECT_PATTERN = regex.compile(r"'([^']+)'")
