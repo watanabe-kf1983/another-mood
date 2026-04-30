@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.preprocess.normalize_core import iter_normalized
-from another_mood.components.preprocess.validator import UserStr
+from another_mood.components.preprocess.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError

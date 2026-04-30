@@ -1,139 +1,44 @@
-"""Validation infrastructure — parse YAML and validate against JSON Schema.
+"""JSON Schema validator.
 
-Provides shared building blocks used by both SchemaInspector and Normalizer:
-
-* ``parse_yaml`` — parse YAML with ruamel.yaml, preserving source positions
-  for line-accurate diagnostics.
-* ``Validator`` — validate data against a JSON Schema,
-  returning Diagnostic objects with line/column positions.
-* ``UserStr`` / ``Location`` — user-input strings tagged with their source
-  location, used by downstream identifier-integrity checks.
+Returns ``ValidationIssue`` records — line/column/message/source without
+a file binding.  Callers attach the file via ``ValidationIssue.at_file``
+to produce a ``Diagnostic``.
 """
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import jsonschema
 import regex
-from ruamel.yaml import YAML  # type: ignore[attr-defined]
-from ruamel.yaml import YAMLError
-from ruamel.yaml.comments import CommentedMap, CommentedSeq  # type: ignore[attr-defined]
 
-from another_mood.components.preprocess.position_resolver import (
-    Position,
-    resolve_position,
-)
-from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.preprocess.position_resolver import resolve_position
+from another_mood.components.shared.diagnostic import Diagnostic
 
 
 @dataclass(frozen=True)
-class Location:
-    """Source location of a user-input value, including its file."""
+class ValidationIssue:
+    """A schema-validation finding, without a file binding.
 
-    file: Path
-    position: Position
-
-
-class UserStr(str):
-    """A string from user input, tagged with its source ``Location``.
-
-    Drop-in for ``str`` (``isinstance``, equality, and hashing all behave
-    identically), so call sites that don't care about provenance can keep
-    treating it as a plain string.
-
-    ``str`` is immutable, so the value must be set in ``__new__``; ``str``
-    methods (``upper``, ``+``, slicing) return plain ``str`` and drop the
-    location, so callers that want to preserve provenance must avoid string
-    operations.  Identifier checks here only do ``==`` and dict lookup,
-    which leave the original ``UserStr`` instance intact.
+    Validator does not know which file the data came from, so it cannot
+    build a full ``Diagnostic`` itself.  Callers turn an issue into a
+    Diagnostic by attaching the file via :meth:`at_file`.
     """
 
-    __slots__ = ("location",)
-    location: Location
+    line: int | None
+    column: int | None
+    message: str
+    source: str
 
-    def __new__(cls, value: str, location: Location) -> "UserStr":
-        instance = super().__new__(cls, value)
-        instance.location = location
-        return instance
-
-    def __reduce__(self) -> tuple[type["UserStr"], tuple[str, Location]]:
-        # Tells copy.deepcopy / pickle how to reconstruct, so UserStr
-        # round-trips through dataclasses.asdict() and similar.
-        return (UserStr, (str(self), self.location))
-
-
-def parse_yaml(src: Path) -> Mapping[str, object]:
-    """Parse a YAML file with ruamel.yaml, preserving source positions.
-
-    Scalar string values in the loaded tree are wrapped as ``UserStr``
-    carrying their source ``Location``, so downstream identifier-integrity
-    checks can point diagnostics back at the originating YAML position.
-    Dict keys are not wrapped (no current consumer needs them).
-
-    On parse error, raises FileValidationError with a Diagnostic
-    containing line/column from the YAML error mark.
-
-    Uses a fresh YAML instance per call because ruamel.yaml's YAML()
-    is not thread-safe (see components/shared/json_data_model.py).
-    """
-    try:
-        data: Mapping[str, object] = YAML().load(  # type: ignore[no-untyped-call]
-            src.read_text(encoding="utf-8")
+    def at_file(self, file: Path) -> Diagnostic:
+        return Diagnostic(
+            file=file,
+            line=self.line,
+            column=self.column,
+            message=self.message,
+            source=self.source,
         )
-    except YAMLError as exc:
-        mark = getattr(exc, "problem_mark", None)
-        raise FileValidationError(
-            diagnostics=[
-                Diagnostic(
-                    file=src,
-                    line=mark.line + 1 if mark else None,
-                    column=mark.column + 1 if mark else None,
-                    message=getattr(exc, "problem", None) or str(exc),
-                    source="ruamel.yaml",
-                )
-            ]
-        ) from exc
-    _tag_user_strings(data, src)
-    return data
-
-
-def _tag_user_strings(node: object, file: Path) -> None:
-    """Walk a ruamel tree, replacing scalar str values with ``UserStr`` in place.
-
-    Dict keys and non-string scalars are left untouched.
-    """
-    for container, key, value, lc_pos in _ruamel_children(node):
-        if isinstance(value, str) and not isinstance(value, UserStr):
-            container[key] = UserStr(value, _location(file, *lc_pos))
-        else:
-            _tag_user_strings(value, file)
-
-
-def _ruamel_children(
-    node: object,
-) -> Iterator[tuple[Any, Any, Any, tuple[Any, Any]]]:
-    """Yield (container, key_or_index, value, lc_position) for each child.
-
-    Concentrates the ruamel-specific introspection — ``.lc.value`` /
-    ``.lc.item`` are not in ruamel's type stubs, so the caller can stay
-    free of typing escape hatches.
-    """
-    if isinstance(node, CommentedMap):
-        lc = getattr(node, "lc")
-        for key in list(node):  # type: ignore[no-untyped-call]
-            yield node, key, node[key], lc.value(key)
-    elif isinstance(node, CommentedSeq):
-        lc = getattr(node, "lc")
-        for i in range(len(node)):
-            yield node, i, node[i], lc.item(i)
-
-
-def _location(file: Path, line: Any, col: Any) -> Location:
-    return Location(
-        file=file, position=Position(line=int(line) + 1, column=int(col) + 1)
-    )
 
 
 def _pattern_with_unicode(
@@ -161,45 +66,30 @@ class Validator:
     """JSON Schema validator that checks data against a JSON Schema object.
 
     Callers are responsible for loading/building the schema;
-    Validator only handles validation and diagnostic conversion.
+    Validator only handles validation and issue conversion.
     """
 
     def __init__(self, schema: Mapping[str, object]) -> None:
         self._validator = _UnicodeValidator(schema)
 
-    def validate(self, data: Any, file: Path) -> Sequence[Diagnostic]:
-        """Validate parsed data and return diagnostics.
+    def validate(self, data: Any) -> Sequence[ValidationIssue]:
+        """Validate parsed data and return issues.
 
         When *data* is a ruamel.yaml object (CommentedMap/CommentedSeq),
-        diagnostics include line/column positions.  For plain dicts/lists,
+        issues include line/column positions.  For plain dicts/lists,
         line and column are None.
         """
         return [
-            _to_diagnostic(err, data, file)
+            _to_issue(err, data)
             for err in self._validator.iter_errors(data)  # type: ignore[arg-type]
         ]
 
-    def validate_yaml(self, src: Path) -> Sequence[Diagnostic]:
-        """Parse a YAML file and validate against the schema.
 
-        Combines parse_yaml and validate in one call.
-        Returns parse error diagnostics instead of raising.
-        """
-        try:
-            data = parse_yaml(src)
-        except FileValidationError as exc:
-            return exc.diagnostics
-        return self.validate(data, src)
-
-
-def _to_diagnostic(
-    err: jsonschema.ValidationError, data: object, file: Path
-) -> Diagnostic:
+def _to_issue(err: jsonschema.ValidationError, data: object) -> ValidationIssue:
     pos = resolve_position(
         err.absolute_path, data, identifier=_subject_identifier(err.message)
     )
-    return Diagnostic(
-        file=file,
+    return ValidationIssue(
         line=pos.line if pos else None,
         column=pos.column if pos else None,
         message=err.message,

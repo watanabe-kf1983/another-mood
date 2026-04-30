@@ -12,8 +12,6 @@ from another_mood.components.preprocess.schema_inspector import (
 )
 from another_mood.components.shared.diagnostic import FileValidationError
 
-_DUMMY_FILE = Path("test.yaml")
-
 
 # ── build_schema_validator ──────────────────────────────────────────
 
@@ -330,12 +328,12 @@ class TestBuildSchemaValidator:
     @pytest.mark.parametrize("src", _VALID_SCHEMA_CASES)
     def test_accepted(self, src: str) -> None:
         data = yaml.safe_load(src)
-        assert self._validator.validate(data, _DUMMY_FILE) == []
+        assert self._validator.validate(data) == []
 
     @pytest.mark.parametrize("src", _REJECTED_SCHEMA_CASES)
     def test_rejected(self, src: str) -> None:
         data = yaml.safe_load(src)
-        assert len(self._validator.validate(data, _DUMMY_FILE)) > 0
+        assert len(self._validator.validate(data)) > 0
 
 
 # ── check_schema ────────────────────────────────────────────────────

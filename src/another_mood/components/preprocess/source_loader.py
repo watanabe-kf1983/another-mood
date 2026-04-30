@@ -1,0 +1,204 @@
+"""Source loader — parse user input files (YAML / Markdown) into data.
+
+Concentrates the "user file → data" responsibility shared by every
+preprocess pipeline:
+
+* ``parse_yaml`` — parse a YAML file with ruamel.yaml, tagging scalar
+  string values with a ``Location`` so downstream identifier-integrity
+  checks can point diagnostics back at the originating YAML position.
+* ``parse_markdown`` — parse a Markdown string into a ``ProseRecord``.
+* ``load_source`` — dispatch by file type and return data ready for
+  schema validation.
+* ``UserStr`` / ``Location`` — value type for user-input strings tagged
+  with their source location.
+"""
+
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from markdown_it import MarkdownIt
+from markdown_it.tree import SyntaxTreeNode
+from ruamel.yaml import YAML  # type: ignore[attr-defined]
+from ruamel.yaml import YAMLError
+from ruamel.yaml.comments import CommentedMap, CommentedSeq  # type: ignore[attr-defined]
+
+from another_mood.components.preprocess.position_resolver import Position
+from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.file_type import FileType
+
+
+@dataclass(frozen=True)
+class Location:
+    """Source location of a user-input value, including its file."""
+
+    file: Path
+    position: Position
+
+
+class UserStr(str):
+    """A string from user input, tagged with its source ``Location``.
+
+    Drop-in for ``str`` (``isinstance``, equality, and hashing all behave
+    identically), so call sites that don't care about provenance can keep
+    treating it as a plain string.
+
+    ``str`` is immutable, so the value must be set in ``__new__``; ``str``
+    methods (``upper``, ``+``, slicing) return plain ``str`` and drop the
+    location, so callers that want to preserve provenance must avoid string
+    operations.  Identifier checks here only do ``==`` and dict lookup,
+    which leave the original ``UserStr`` instance intact.
+    """
+
+    __slots__ = ("location",)
+    location: Location
+
+    def __new__(cls, value: str, location: Location) -> "UserStr":
+        instance = super().__new__(cls, value)
+        instance.location = location
+        return instance
+
+    def __reduce__(self) -> tuple[type["UserStr"], tuple[str, Location]]:
+        # Tells copy.deepcopy / pickle how to reconstruct, so UserStr
+        # round-trips through dataclasses.asdict() and similar.
+        return (UserStr, (str(self), self.location))
+
+
+def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
+    """Parse a source file into data, or None if the file type is not recognized."""
+    if FileType.MARKDOWN.match(src):
+        rel = src.relative_to(src_dir)
+        record = parse_markdown(
+            src.read_text(encoding="utf-8"), str(rel.with_suffix(""))
+        )
+        return {"prose": [record.to_data()]}
+    if FileType.YAML.match(src):
+        return parse_yaml(src)
+    return None
+
+
+# ── YAML ───────────────────────────────────────────────────────────
+
+
+def parse_yaml(src: Path) -> Mapping[str, object]:
+    """Parse a YAML file with ruamel.yaml, preserving source positions.
+
+    Scalar string values in the loaded tree are wrapped as ``UserStr``
+    carrying their source ``Location``, so downstream identifier-integrity
+    checks can point diagnostics back at the originating YAML position.
+    Dict keys are not wrapped (no current consumer needs them).
+
+    On parse error, raises FileValidationError with a Diagnostic
+    containing line/column from the YAML error mark.
+
+    Uses a fresh YAML instance per call because ruamel.yaml's YAML()
+    is not thread-safe (see components/shared/json_data_model.py).
+    """
+    try:
+        data: Mapping[str, object] = YAML().load(  # type: ignore[no-untyped-call]
+            src.read_text(encoding="utf-8")
+        )
+    except YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        raise FileValidationError(
+            diagnostics=[
+                Diagnostic(
+                    file=src,
+                    line=mark.line + 1 if mark else None,
+                    column=mark.column + 1 if mark else None,
+                    message=getattr(exc, "problem", None) or str(exc),
+                    source="ruamel.yaml",
+                )
+            ]
+        ) from exc
+    _tag_user_strings(data, src)
+    return data
+
+
+def _tag_user_strings(node: object, file: Path) -> None:
+    """Walk a ruamel tree, replacing scalar str values with ``UserStr`` in place.
+
+    Dict keys and non-string scalars are left untouched.
+    """
+    for container, key, value, lc_pos in _ruamel_children(node):
+        if isinstance(value, str) and not isinstance(value, UserStr):
+            container[key] = UserStr(value, _location(file, *lc_pos))
+        else:
+            _tag_user_strings(value, file)
+
+
+def _ruamel_children(
+    node: object,
+) -> Iterator[tuple[Any, Any, Any, tuple[Any, Any]]]:
+    """Yield (container, key_or_index, value, lc_position) for each child.
+
+    Concentrates the ruamel-specific introspection — ``.lc.value`` /
+    ``.lc.item`` are not in ruamel's type stubs, so the caller can stay
+    free of typing escape hatches.
+    """
+    if isinstance(node, CommentedMap):
+        lc = getattr(node, "lc")
+        for key in list(node):  # type: ignore[no-untyped-call]
+            yield node, key, node[key], lc.value(key)
+    elif isinstance(node, CommentedSeq):
+        lc = getattr(node, "lc")
+        for i in range(len(node)):
+            yield node, i, node[i], lc.item(i)
+
+
+def _location(file: Path, line: Any, col: Any) -> Location:
+    return Location(
+        file=file, position=Position(line=int(line) + 1, column=int(col) + 1)
+    )
+
+
+# ── Markdown ───────────────────────────────────────────────────────
+
+
+_MD = MarkdownIt()
+
+
+@dataclass(frozen=True)
+class ProseRecord:
+    id: str
+    title: str | None
+    body: str
+    mime_type: str
+
+    def to_data(self) -> Mapping[str, object]:
+        data: dict[str, object] = {
+            "id": self.id,
+            "body": {
+                "mime_type": self.mime_type,
+                "content": self.body,
+            },
+        }
+        if self.title is not None:
+            data["title"] = self.title
+        return data
+
+
+def parse_markdown(content: str, id: str) -> ProseRecord:
+    """Parse a Markdown string into a ProseRecord.
+
+    Extracts title from the first H1 heading (None if absent).
+    Body is the full file content.
+    """
+    title = _extract_h1_title(content)
+    return ProseRecord(
+        id=id,
+        title=title,
+        body=content,
+        mime_type="text/markdown",
+    )
+
+
+def _extract_h1_title(content: str) -> str | None:
+    """Extract text from the first H1 heading using Markdown AST."""
+    tokens = _MD.parse(content)
+    tree = SyntaxTreeNode(tokens)
+    for node in tree.walk():
+        if node.type == "heading" and node.tag == "h1":
+            return node.children[0].content if node.children else None
+    return None
