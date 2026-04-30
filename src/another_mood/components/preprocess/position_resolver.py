@@ -40,19 +40,17 @@ def resolve_position(
     root: parsed data — ruamel.yaml CommentedMap for positions, or plain
           dict/list (returns None).
 
-    identifier: optional refinement — when given, search the subtree at
-        *path* for a CommentedMap that has *identifier* as one of its
-        keys (DFS, first match wins) and prefer that key's position
-        over the path-based result.  Lets callers point a diagnostic
-        at a quoted name from an error message (e.g. an unexpected key)
-        instead of the less informative parent the data path resolves
-        to.  Falls back to the path-based position when the identifier
-        is not found in the subtree.
+    identifier: optional refinement — when given and the subtree at
+        *path* is a dict that has *identifier* as one of its keys,
+        return that key's position instead of the path-based one.
+        Lets callers point a diagnostic at a quoted name from an error
+        message (e.g. an unexpected key) instead of the less informative
+        parent the data path resolves to.  Falls back to the path-based
+        position when the subtree does not contain the identifier.
     """
     try:
         subtree, parent, last_step = _walk(path, root)
-        base = _path_position(subtree, parent, last_step)
-        return _refine_with_identifier(base, subtree, identifier)
+        return _path_position(subtree, parent, last_step, identifier)
     except (AttributeError, TypeError):
         return None
 
@@ -69,43 +67,29 @@ def _walk(path: Sequence[str | int], root: Any) -> tuple[Any, Any, object]:
     return subtree, parent, last_step
 
 
-def _path_position(subtree: Any, parent: Any, last_step: object) -> Position:
-    """Position of subtree itself (path empty) or of parent[last_step]."""
-    if parent is None:
-        lc = getattr(subtree, "lc")
-        return _position(lc.line, lc.col)
-    lc = getattr(parent, "lc")
-    if isinstance(parent, CommentedMap) and isinstance(last_step, str):
-        return _position(*lc.value(last_step))
-    if isinstance(parent, CommentedSeq) and isinstance(last_step, int):
-        return _position(*lc.item(last_step))
-    raise TypeError(f"unexpected node {type(parent)} at step {last_step!r}")
-
-
-def _refine_with_identifier(
-    base: Position, subtree: Any, identifier: str | None
+def _path_position(
+    subtree: Any, parent: Any, last_step: object, identifier: str | None = None
 ) -> Position:
-    if identifier is None:
-        return base
-    return _search_key(subtree, identifier) or base
-
-
-def _search_key(node: Any, identifier: str) -> Position | None:
-    """DFS for the first CommentedMap that has *identifier* as a key."""
-    if isinstance(node, CommentedMap):
-        if identifier in node:
-            lc = getattr(node, "lc")
-            return _position(*lc.key(identifier))
-        children: list[Any] = list(node.values())  # type: ignore[arg-type]
-    elif isinstance(node, CommentedSeq):
-        children = list(node)  # type: ignore[arg-type]
-    else:
-        return None
-    for child in children:
-        pos = _search_key(child, identifier)
-        if pos is not None:
-            return pos
-    return None
+    """Position of subtree itself (path empty), of parent[last_step], or
+    — when *identifier* is given and *subtree* is a map containing it —
+    of *identifier* as a key inside subtree."""
+    if (
+        identifier is not None
+        and isinstance(subtree, CommentedMap)
+        and identifier in subtree
+    ):
+        self_lc = getattr(subtree, "lc")
+        return _position(*self_lc.key(identifier))
+    if isinstance(parent, CommentedMap) and isinstance(last_step, str):
+        parent_lc = getattr(parent, "lc")
+        return _position(*parent_lc.value(last_step))
+    if isinstance(parent, CommentedSeq) and isinstance(last_step, int):
+        parent_lc = getattr(parent, "lc")
+        return _position(*parent_lc.item(last_step))
+    if isinstance(subtree, (CommentedMap, CommentedSeq)):
+        self_lc = getattr(subtree, "lc")
+        return _position(self_lc.line, self_lc.col)
+    raise TypeError(f"unexpected node {type(parent)} at step {last_step!r}")
 
 
 def _position(line: Any, col: Any) -> Position:

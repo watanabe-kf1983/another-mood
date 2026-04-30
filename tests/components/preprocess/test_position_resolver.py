@@ -86,17 +86,9 @@ class TestResolvePosition:
 
 
 class TestResolvePositionWithIdentifier:
-    """Identifier hint refines the path-based position via DFS search."""
-
-    def test_found_in_nested_descendant(self) -> None:
-        root = _load(
-            "items:\n"  # line 1
-            "  - from: a\n"  # line 2
-            "    extra: b\n"  # line 3, col 5
-        )
-        assert resolve_position(["items"], root, identifier="extra") == Position(
-            line=3, column=5
-        )
+    """Identifier hint points at the offending key when the subtree at
+    *path* is a map containing it; falls back to the path-based position
+    otherwise."""
 
     def test_not_found_falls_back_to_path_position(self) -> None:
         root = _load(
@@ -107,12 +99,10 @@ class TestResolvePositionWithIdentifier:
             line=2, column=5
         )
 
-    def test_picks_first_dfs_match(self) -> None:
+    def test_picks_direct_key(self) -> None:
         root = _load(
             "outer:\n"  # line 1
-            "  bad: first\n"  # line 2, col 3 — direct key
-            "  nested:\n"  # line 3
-            "    bad: second\n"  # line 4 — also matches
+            "  bad: value\n"  # line 2, col 3
         )
         assert resolve_position(["outer"], root, identifier="bad") == Position(
             line=2, column=3
