@@ -50,7 +50,9 @@ def check(src_dir: Path, schema: Schema) -> None:
             diagnostics.extend(exc.diagnostics)
             continue
         if data is not None:
-            diagnostics.extend(validator.validate(data, src_file))
+            diagnostics.extend(
+                issue.at_file(src_file) for issue in validator.validate(data)
+            )
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 

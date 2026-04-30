@@ -36,7 +36,7 @@ class TestBuildQuerySchema:
         from another_mood.components.preprocess.validator import Validator
 
         validator = Validator(build_query_schema())
-        return list(validator.validate(data, Path("test.yaml")))
+        return list(validator.validate(data))
 
     def test_valid_query_accepted(self) -> None:
         data = {"q": {"from": "items", "select": [{"item": "name"}]}}

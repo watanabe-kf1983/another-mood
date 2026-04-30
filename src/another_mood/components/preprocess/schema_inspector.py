@@ -68,7 +68,7 @@ def check_schema(schema_file: Path) -> None:
         raise FileNotFoundError(f"Schema file not found: {schema_file}")
     validator = build_schema_validator()
     data = parse_yaml(schema_file)
-    diagnostics = list(validator.validate(data, schema_file))
+    diagnostics = [issue.at_file(schema_file) for issue in validator.validate(data)]
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 

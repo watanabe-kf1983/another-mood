@@ -34,11 +34,11 @@ class TestBuildContentsSchema:
         validator = Validator(schema)
 
         # User schema: entities validated
-        errors = validator.validate({"entities": [{"id": 123}]}, Path("test.yaml"))
-        assert len(errors) >= 1
+        issues = validator.validate({"entities": [{"id": 123}]})
+        assert len(issues) >= 1
 
         # Built-in prose schema: prose validated
-        errors = validator.validate(
+        issues = validator.validate(
             {
                 "prose": [
                     {
@@ -46,10 +46,9 @@ class TestBuildContentsSchema:
                         "body": {"mime_type": "text/markdown", "content": "x"},
                     }
                 ]
-            },
-            Path("test.yaml"),
+            }
         )
-        assert errors == []
+        assert issues == []
 
     def test_missing_schema_file_uses_builtin_only(self, tmp_path: Path) -> None:
         schema = build_contents_schema(tmp_path / "missing.yaml")
@@ -58,7 +57,7 @@ class TestBuildContentsSchema:
 
         validator = Validator(schema)
         # prose still validated
-        errors = validator.validate(
+        issues = validator.validate(
             {
                 "prose": [
                     {
@@ -66,10 +65,9 @@ class TestBuildContentsSchema:
                         "body": {"mime_type": "text/markdown", "content": "x"},
                     }
                 ]
-            },
-            Path("test.yaml"),
+            }
         )
-        assert errors == []
+        assert issues == []
 
 
 class TestNormalizeContents:
