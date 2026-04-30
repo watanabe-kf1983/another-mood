@@ -18,6 +18,7 @@ from another_mood.components.preprocess.schema_tree import (
     build_schema_tree,
     collect_entities,
 )
+from another_mood.components.preprocess.source_loader import parse_yaml
 from another_mood.components.preprocess.validator import Validator
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
@@ -66,7 +67,8 @@ def check_schema(schema_file: Path) -> None:
     if not schema_file.is_file():
         raise FileNotFoundError(f"Schema file not found: {schema_file}")
     validator = build_schema_validator()
-    diagnostics = list(validator.validate_yaml(schema_file))
+    data = parse_yaml(schema_file)
+    diagnostics = list(validator.validate(data, schema_file))
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
