@@ -103,8 +103,8 @@ def _diagnostic_from(exc: QueryDeriveError) -> Diagnostic:
     location = exc.offender.location
     return Diagnostic(
         file=location.file,
-        line=location.position.line,
-        column=location.position.column,
+        line=location.line,
+        column=location.column,
         message=str(exc),
         source="query_deriver",
     )

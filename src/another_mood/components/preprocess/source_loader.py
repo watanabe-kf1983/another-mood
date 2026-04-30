@@ -24,17 +24,17 @@ from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedMap, CommentedSeq  # type: ignore[attr-defined]
 
-from another_mood.components.preprocess.position_resolver import Position
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 from another_mood.components.shared.file_type import FileType
 
 
 @dataclass(frozen=True)
 class Location:
-    """Source location of a user-input value, including its file."""
+    """Source location (file + 1-based line/column) of a user-input value."""
 
     file: Path
-    position: Position
+    line: int
+    column: int
 
 
 class UserStr(str):
@@ -148,9 +148,7 @@ def _ruamel_children(
 
 
 def _location(file: Path, line: Any, col: Any) -> Location:
-    return Location(
-        file=file, position=Position(line=int(line) + 1, column=int(col) + 1)
-    )
+    return Location(file=file, line=int(line) + 1, column=int(col) + 1)
 
 
 # ── Markdown ───────────────────────────────────────────────────────

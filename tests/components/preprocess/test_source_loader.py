@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from another_mood.components.preprocess.position_resolver import Position
 from another_mood.components.preprocess.source_loader import (
     Location,
     ProseRecord,
@@ -48,9 +47,9 @@ class TestParseYaml:
         name = result["top"]["name"]  # type: ignore[index]
         tag = result["top"]["tags"][0]  # type: ignore[index]
         assert isinstance(name, UserStr)
-        assert name.location == Location(file=f, position=Position(line=2, column=9))
+        assert name.location == Location(file=f, line=2, column=9)
         assert isinstance(tag, UserStr)
-        assert tag.location == Location(file=f, position=Position(line=4, column=7))
+        assert tag.location == Location(file=f, line=4, column=7)
 
     def test_dict_keys_and_non_string_scalars_left_untouched(
         self, tmp_path: Path
@@ -68,7 +67,7 @@ class TestParseYaml:
 
 
 def test_user_str_carries_location_and_behaves_as_str() -> None:
-    loc = Location(file=Path("foo.yaml"), position=Position(line=3, column=7))
+    loc = Location(file=Path("foo.yaml"), line=3, column=7)
     s = UserStr("hello", loc)
     assert s == "hello"
     assert s.location is loc
