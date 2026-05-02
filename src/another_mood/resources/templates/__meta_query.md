@@ -27,7 +27,7 @@
 ## Shape
 
 {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
-### {{ entity.item_type.id }}
+### Type: {{ entity.item_type.id }}
 
 {% if entity.item_type.attributes -%}
 | id | type | required | metadata | validation |
@@ -44,7 +44,7 @@
 ## Results
 
 {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
-### {{ entity.item_type.id }}
+### {{ entity.id }}
 
 {% set rows = __views | query_from(entity.id) -%}
 {% if rows -%}
