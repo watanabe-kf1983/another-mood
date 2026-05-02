@@ -23,13 +23,6 @@
   "__views": __views,
 } %}
 {%- endfor %}
-{% for entity in __definition.entities | selectattr('view') | selectattr('parent_entity') -%}
-{% mood_view "__table_view" with {
-  "id": entity.id,
-  "entities": __definition.entities,
-  "__views": __views,
-} %}
-{%- endfor %}
 {%- else -%}
 (no entities defined yet)
 {%- endif %}

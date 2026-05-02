@@ -1,10 +1,7 @@
 # Entity Data: {{ id }}
 
-{% set self_entity = entities | selectattr('id', 'equalto', id) | first -%}
-{% if not self_entity.view -%}
 [← Entity Definition](../__meta_entity/{{ id }}.md)
 
-{% endif -%}
 {% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") -%}
 ## {{ entity.id }}
 
