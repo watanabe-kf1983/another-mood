@@ -47,11 +47,12 @@
 ### {{ entity.id }}
 
 {% set rows = __views | query_from(entity.id) -%}
+{% set attributes = entity.item_type.attributes | rejectattr('type', 'equalto', 'object') | list -%}
 {% if rows -%}
-| {% for attribute in entity.item_type.attributes %}{{ attribute.id }} | {% endfor %}
-|{% for attribute in entity.item_type.attributes %}---|{% endfor %}
+| {% for attribute in attributes %}{{ attribute.id }} | {% endfor %}
+|{% for attribute in attributes %}---|{% endfor %}
 {% for row in rows -%}
-| {% for attribute in entity.item_type.attributes -%}
+| {% for attribute in attributes -%}
 {%- if attribute.entity -%}
 *{{ (row[attribute.id] or []) | length }} items*
 {%- else -%}
