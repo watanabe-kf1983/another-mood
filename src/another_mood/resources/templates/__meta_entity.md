@@ -1,4 +1,4 @@
-# Definition: {{ id }}{% if builtin %} (built-in){% endif %}
+# Entity Definition: {{ id }}{% if builtin %} (built-in){% endif %}
 
 {% if parent_entity -%}
 **parent:** [`{{ parent_entity }}`](../__meta_entity/{{ parent_entity }}.md)
@@ -6,7 +6,7 @@
 ---
 
 {% endif -%}
-[→ Data](../__table_view/{{ id }}.md)
+[→ Entity Data](../__table_view/{{ id }}.md)
 
 ## Item Type: {{ item_type.id }}
 

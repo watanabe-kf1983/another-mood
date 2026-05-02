@@ -1,10 +1,18 @@
-# {{ id }}
+# Query: {{ id }}
 
-**From:** {{ from }}
-{% if grouped %}
-**Grouped by:** {{ grouped.by }}{% if grouped.as %} (as {{ grouped.as }}){% endif %}
-{% endif %}
-## Select
+## Definition
+
+### From
+
+{{ from }}
+
+{% if grouped -%}
+### Grouped by
+
+{{ grouped.by }}{% if grouped.as %} (as {{ grouped.as }}){% endif %}
+
+{% endif -%}
+### Select
 
 {% if select -%}
 | Item | As |
@@ -15,3 +23,49 @@
 {%- else -%}
 (no select items defined)
 {%- endif %}
+
+## Shape
+
+{% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
+### {{ entity.id }}
+
+{% if entity.item_type.attributes -%}
+| id | type | required | metadata | validation |
+|----|------|----------|----------|------------|
+{% for attribute in entity.item_type.attributes -%}
+{%- if attribute.entity and attribute.entity.startswith(id ~ ".") -%}
+{%- set type_cell = "[`" ~ attribute.entity ~ "`](../__table_view/" ~ attribute.entity ~ ".md)" -%}
+{%- elif attribute.entity -%}
+{%- set type_cell = "[`" ~ attribute.entity ~ "`](../__meta_entity/" ~ attribute.entity ~ ".md)" -%}
+{%- else -%}
+{%- set type_cell = "`" ~ attribute.type ~ "`" -%}
+{%- endif -%}
+| `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} |
+{% endfor -%}
+{%- else -%}
+(no attributes)
+{%- endif %}
+
+{% endfor -%}
+## Results
+
+{% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
+### {{ entity.id }}
+
+{% set rows = __views | query_from(entity.id) -%}
+{% if rows -%}
+| {% for attribute in entity.item_type.attributes %}{{ attribute.id }} | {% endfor %}
+|{% for attribute in entity.item_type.attributes %}---|{% endfor %}
+{% for row in rows -%}
+| {% for attribute in entity.item_type.attributes -%}
+{%- if attribute.entity -%}
+[{{ (row[attribute.id] or []) | length }} items](../__table_view/{{ attribute.entity }}.md)
+{%- else -%}
+{{ row | at(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}
+{%- endif %} | {% endfor %}
+{% endfor -%}
+{%- else -%}
+(no records)
+{%- endif %}
+
+{% endfor -%}
