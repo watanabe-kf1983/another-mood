@@ -211,8 +211,9 @@ categories:
         note: |
           前提 F1, E7。
           設計: design/app/meta-documentation.md「Entity と Query のページ構成」節。
-          __meta_query.md に Definition / Output Schema / Results の 3 セクションを追加。
+          __meta_query.md に Definition / Shape / Results の 3 セクションを追加。
         phase: 8
+        done: true
       F4:
         title: ER 図テンプレート
         note: 前提 D, E3, Mermaid エスケープ
@@ -224,6 +225,19 @@ categories:
       F6:
         title: CRUD マトリクステンプレート
         note: 仕様未着手
+        phase: 10
+      F7:
+        title: メタドキュメンテーションテンプレートの Query 化リファクタ
+        note: |
+          前提 E1〜E4 (where / sort / join など) の DSL 拡張。F1〜F3 で
+          組み上げた __meta_entity / __table_view / __meta_query は
+          Jinja2 内に rejectattr('view'), startswith による子孫マッチ,
+          type == 'object' 除外といった集計ロジックを抱え複雑化している。
+          これらを Query DSL 側に移し (__definition.entities 自体を from
+          に取れるようにするのも含む)、テンプレートは Query 結果を
+          テーブルに流すだけの薄いラッパに退化させたい。同時に本ツール
+          自身のメタドキュメンテーションを自前の DSL で構築できるように
+          なり、dog-fooding の度合いが上がる。
         phase: 10
 
   G:
