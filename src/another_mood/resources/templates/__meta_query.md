@@ -27,19 +27,13 @@
 ## Shape
 
 {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
-### {{ entity.id }}
+### {{ entity.item_type.id }}
 
 {% if entity.item_type.attributes -%}
 | id | type | required | metadata | validation |
 |----|------|----------|----------|------------|
 {% for attribute in entity.item_type.attributes -%}
-{%- if attribute.entity and attribute.entity.startswith(id ~ ".") -%}
-{%- set type_cell = "[`" ~ attribute.entity ~ "`](../__table_view/" ~ attribute.entity ~ ".md)" -%}
-{%- elif attribute.entity -%}
-{%- set type_cell = "[`" ~ attribute.entity ~ "`](../__meta_entity/" ~ attribute.entity ~ ".md)" -%}
-{%- else -%}
-{%- set type_cell = "`" ~ attribute.type ~ "`" -%}
-{%- endif -%}
+{%- set type_cell = "`" ~ (attribute.item_type or attribute.type) ~ "`" -%}
 | `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} |
 {% endfor -%}
 {%- else -%}
@@ -50,7 +44,7 @@
 ## Results
 
 {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
-### {{ entity.id }}
+### {{ entity.item_type.id }}
 
 {% set rows = __views | query_from(entity.id) -%}
 {% if rows -%}
