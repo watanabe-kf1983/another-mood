@@ -29,8 +29,12 @@ class MoodViewProcessorImpl:
     env: Environment
     out_dir: Path
 
-    def __call__(self, template_name: str, data: dict[str, Any]) -> str:
+    def __call__(
+        self, template_name: str, data: dict[str, Any], *, inline: bool = False
+    ) -> str:
         rendered = self.env.get_template(f"{template_name}.md").render(data)
+        if inline:
+            return rendered
         if "id" in data:
             out_file = self.out_dir / template_name / f"{data['id']}.md"
         else:
@@ -41,7 +45,7 @@ class MoodViewProcessorImpl:
 
 
 class MoodViewExtension(Extension):
-    """Jinja2 extension for {% mood_view "template" with data %} tag."""
+    """Jinja2 extension for {% mood_view "template" with data [inline] %} tag."""
 
     tags = {"mood_view"}
 
@@ -50,19 +54,26 @@ class MoodViewExtension(Extension):
         template_name = parser.parse_expression()
         parser.stream.expect("name:with")
         data = parser.parse_expression()
+        inline = parser.stream.skip_if("name:inline")
 
         return nodes.CallBlock(
-            self.call_method("_render", [template_name, data]),
+            self.call_method("_render", [template_name, data, nodes.Const(inline)]),
             [],
             [],
             [],
         ).set_lineno(lineno)
 
-    def _render(self, template_name: str, data: dict[str, Any], caller: Any) -> str:
+    def _render(
+        self,
+        template_name: str,
+        data: dict[str, Any],
+        inline: bool,
+        caller: Any,
+    ) -> str:
         if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(
                 f'{{% mood_view "{template_name}" with ... %}} requires a dict, '
                 f"got: {type(data).__name__}"
             )
         processor = self.environment.globals[PROCESSOR_KEY]
-        return processor(template_name, data)  # type: ignore[return-value]
+        return processor(template_name, data, inline=inline)  # type: ignore[return-value]

@@ -21,11 +21,13 @@ from another_mood.components.generator.mood_view_processor import (
 class MockProcessor:
     """Records calls and returns a fixed string."""
 
-    calls: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
+    calls: list[tuple[str, dict[str, Any], bool]] = field(default_factory=lambda: [])
     return_value: str = ""
 
-    def __call__(self, template_name: str, data: dict[str, Any]) -> str:
-        self.calls.append((template_name, data))
+    def __call__(
+        self, template_name: str, data: dict[str, Any], *, inline: bool = False
+    ) -> str:
+        self.calls.append((template_name, data, inline))
         return self.return_value
 
 
@@ -82,6 +84,34 @@ class TestMoodViewParsing:
 
         assert len(mock.calls) == 3
         assert [c[1]["id"] for c in mock.calls] == ["a", "b", "c"]
+
+
+class TestMoodViewInlineKeyword:
+    """The optional `inline` keyword forces the processor into inline mode."""
+
+    def test_default_is_not_inline(self) -> None:
+        mock = MockProcessor()
+        env = _make_extension_env(mock)
+        template = env.from_string('{% mood_view "profile" with user %}')
+        template.render(user={"id": "alice"})
+
+        assert mock.calls[0][2] is False
+
+    def test_inline_keyword_sets_flag(self) -> None:
+        mock = MockProcessor()
+        env = _make_extension_env(mock)
+        template = env.from_string('{% mood_view "profile" with user inline %}')
+        template.render(user={"id": "alice"})
+
+        assert mock.calls[0][2] is True
+
+    def test_inline_return_value_appears_in_output(self) -> None:
+        mock = MockProcessor(return_value="INLINED")
+        env = _make_extension_env(mock)
+        template = env.from_string('before{% mood_view "x" with d inline %}after')
+        result = template.render(d={"id": "1"})
+
+        assert result == "beforeINLINEDafter"
 
 
 class TestMoodViewOutput:
@@ -192,3 +222,20 @@ class TestMoodViewProcessorImpl:
 
         assert (tmp_path / "report.md").exists()
         assert not (tmp_path / "report").exists()
+
+    def test_inline_returns_rendered_content(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
+        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
+        result = processor("profile", {"id": "alice"}, inline=True)
+
+        assert result == "hi alice"
+
+    def test_inline_does_not_write_file(self, tmp_path: Path) -> None:
+        env = Environment(keep_trailing_newline=True)
+        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
+        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
+        processor("profile", {"id": "alice"}, inline=True)
+
+        assert not (tmp_path / "profile" / "alice.md").exists()
+        assert not (tmp_path / "profile").exists()
