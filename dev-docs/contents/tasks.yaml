@@ -396,6 +396,7 @@ categories:
           強制インライン展開。F3 の Query View ページ内埋め込みで使う。
           C4 (paginate 自動判定) の先行版。
         phase: 8
+        done: true
       P3:
         title: "{% section %} → {% mood_view %} タグリネーム"
         note: |
