@@ -1,9 +1,7 @@
 # Another Mood
 
 {% set entity_roots = __definition.entities | rejectattr('view') | rejectattr('parent_entity') | list %}
-## Definitions
-
-### Entities
+## Entities
 
 {% if entity_roots -%}
 {% for entity in entity_roots | sort(attribute='builtin') -%}
@@ -27,7 +25,7 @@
 (no entities defined yet)
 {%- endif %}
 
-### Queries
+## Queries
 
 {% if __definition.queries -%}
 {% for query in __definition.queries -%}
