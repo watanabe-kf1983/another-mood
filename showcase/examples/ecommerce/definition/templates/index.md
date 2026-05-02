@@ -7,7 +7,7 @@
 {%- endfor %}
 
 {%- for entity in entities -%}
-{% section "entity-detail" with entity %}
+{% mood_view "entity-detail" with entity %}
 {%- endfor %}
 
 ## ER図（カテゴリ別）
@@ -17,11 +17,11 @@
 {%- endfor %}
 
 {%- for entry in erds -%}
-{% section "erd" with entry %}
+{% mood_view "erd" with entry %}
 {%- endfor %}
 
 {%- for record in prose -%}
-{% section "prose" with record %}
+{% mood_view "prose" with record %}
 {%- endfor %}
 
 ## リレーション一覧

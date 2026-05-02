@@ -12,9 +12,9 @@ from jinja2 import (
     TemplateSyntaxError,
 )
 
-from another_mood.components.generator.section_processor import (
-    SectionExtension,
-    install as install_section_processor,
+from another_mood.components.generator.mood_view_processor import (
+    MoodViewExtension,
+    install as install_mood_view_processor,
 )
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 
@@ -30,7 +30,7 @@ class TemplateEngine:
         filters: Mapping[str, Callable[..., Any]] | None = None,
     ) -> None:
         self._env = Environment(
-            extensions=[SectionExtension],
+            extensions=[MoodViewExtension],
             keep_trailing_newline=True,
             undefined=ChainableUndefined,
         )
@@ -41,7 +41,7 @@ class TemplateEngine:
         if filters is not None:
             for name, func in filters.items():
                 self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
-        install_section_processor(self._env, out_dir)
+        install_mood_view_processor(self._env, out_dir)
 
     def render(self, template_name: str, data: Mapping[str, object]) -> str:
         try:

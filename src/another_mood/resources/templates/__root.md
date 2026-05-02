@@ -9,10 +9,10 @@
 - [{{ entity.id }}](__meta_entity/{{ entity.id }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
 {% endfor %}
 {% for entity in __definition.entities -%}
-{% section "__meta_entity" with entity %}
+{% mood_view "__meta_entity" with entity %}
 {%- endfor %}
 {% for entity in __definition.entities -%}
-{% section "__table_view" with {"id": entity.id, "attributes": entity.item_type.attributes, "rows": __views | query_from(entity.id)} %}
+{% mood_view "__table_view" with {"id": entity.id, "attributes": entity.item_type.attributes, "rows": __views | query_from(entity.id)} %}
 {%- endfor %}
 {%- else -%}
 (no entities defined yet)
@@ -25,7 +25,7 @@
 - [{{ query.id }}](__meta_query/{{ query.id }}.md) — from {{ query.from }}
 {% endfor %}
 {% for query in __definition.queries -%}
-{% section "__meta_query" with query %}
+{% mood_view "__meta_query" with query %}
 {%- endfor %}
 {%- else -%}
 (no queries defined yet)

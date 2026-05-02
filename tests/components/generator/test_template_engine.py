@@ -42,7 +42,7 @@ class TestTemplateSyntaxErrorConversion:
     def test_raises_file_validation_error(self, tmp_path: Path) -> None:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        (templates_dir / "bad.md").write_text("{% section bad %}")
+        (templates_dir / "bad.md").write_text("{% mood_view bad %}")
 
         engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
         with pytest.raises(FileValidationError) as exc_info:

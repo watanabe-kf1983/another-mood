@@ -1,6 +1,6 @@
-"""Section processor — {% section %} tag and page writing.
+"""Mood-view processor — {% mood_view %} tag and page writing.
 
-Owns the entire "section" concept: Jinja2 tag parsing, data validation,
+Owns the entire mood_view concept: Jinja2 tag parsing, data validation,
 template rendering, and file output.
 """
 
@@ -12,20 +12,20 @@ from jinja2 import Environment, nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
 
-PROCESSOR_KEY = "_section_processor"
+PROCESSOR_KEY = "_mood_view_processor"
 
 
 def install(env: Environment, out_dir: Path) -> None:
-    """Wire section processing into a Jinja2 Environment.
+    """Wire mood_view processing into a Jinja2 Environment.
 
     Must be called after env.loader is set, since the processor
     uses the environment to render sub-templates.
     """
-    env.globals[PROCESSOR_KEY] = SectionProcessorImpl(env=env, out_dir=out_dir)  # type: ignore[assignment]
+    env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(env=env, out_dir=out_dir)  # type: ignore[assignment]
 
 
 @dataclass(frozen=True)
-class SectionProcessorImpl:
+class MoodViewProcessorImpl:
     env: Environment
     out_dir: Path
 
@@ -40,10 +40,10 @@ class SectionProcessorImpl:
         return ""
 
 
-class SectionExtension(Extension):
-    """Jinja2 extension for {% section "template" with data %} tag."""
+class MoodViewExtension(Extension):
+    """Jinja2 extension for {% mood_view "template" with data %} tag."""
 
-    tags = {"section"}
+    tags = {"mood_view"}
 
     def parse(self, parser: Parser) -> nodes.Node:
         lineno = next(parser.stream).lineno
@@ -61,7 +61,7 @@ class SectionExtension(Extension):
     def _render(self, template_name: str, data: dict[str, Any], caller: Any) -> str:
         if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(
-                f'{{% section "{template_name}" with ... %}} requires a dict, '
+                f'{{% mood_view "{template_name}" with ... %}} requires a dict, '
                 f"got: {type(data).__name__}"
             )
         processor = self.environment.globals[PROCESSOR_KEY]
