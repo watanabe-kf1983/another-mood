@@ -89,7 +89,7 @@ mood watch my-project
 - **クエリ** — 構造化データを加工した結果に名前を付けるビュー。SQL のビューに相当。
 - **テンプレート** — 最終出力ページの形を書いたファイル。データやクエリを参照する。
 
-詳しくは [コンテンツとスキーマ](#コンテンツとスキーマ)・[クエリ](#クエリ)・[テンプレート](#テンプレート) で。書く順番と確認の仕方は次節 [ワークフロー](#ワークフロー)。
+詳しくは [スキーマとコンテンツ](#スキーマとコンテンツ)・[クエリ](#クエリ)・[テンプレート](#テンプレート) で。書く順番と確認の仕方は次節 [ワークフロー](#ワークフロー)。
 
 ## ワークフロー
 
@@ -115,17 +115,15 @@ mood watch my-project
 
 使い分けの基準は、エラーを人間が見るか、機械が拾うか。`watch` は人間がコンソール・ブラウザでエラーを見ながら直すためのもの。`build` は完了して結果（成功かエラーか）を返すので、CI やエージェントがそれを判定して次の処理に進める。
 
-## コンテンツとスキーマ
-
-書き手が手で書くコンテンツは、構造化データ（YAML）と散文（Markdown）の 2 種。書き方が違うので別々に説明する。
+## スキーマとコンテンツ
 
 ### 構造化データ — スキーマを先に宣言する
 
 メンバー一覧、商品一覧、画面定義、注文履歴 — 「同じ形のレコードが何件もある」種類のデータは、`contents/*.yaml` に書く。ただし、書く前に `definition/schema.yaml` でその「形」を宣言しておく。
 
-先にスキーマを宣言する理由は 2 つ。(1) 書き間違い（必須フィールド漏れ、型違い、未定義フィールド）がビルド時にエラーになる。(2) クエリやテンプレートが「何が来るか」を前提に書ける。
+スキーマ宣言のないデータはビルドエラーになる。同じく、書き間違い（必須フィールド漏れ、型違い、未定義フィールド）もビルド時にエラーで止める。書き手が気付かないまま壊れたデータが下流（クエリ・テンプレート）に流れていくのを、ツール側で防ぐ意図。
 
-サンプルの `schema.yaml`:
+スキーマは **JSON Schema** で書く（使える語彙・本家との細かい違いは [Schema](reference/schema.md) を参照）。サンプルの `schema.yaml`:
 
 ```yaml
 type: object
@@ -142,11 +140,7 @@ properties:
 additionalProperties: false
 ```
 
-ルートは `type: object` 固定で、`properties:` の各エントリ（上の例では `members`）が「全コンテンツに登場する 1 種類のエンティティ」になる。ここでの `members` という名前は、コンテンツ側の YAML のトップレベルキーと一致させる。
-
-#### 辞書で書くか、リストで書くか
-
-「同じ形のレコードが何件もある」用途では、ほぼ常に **辞書パターン** で書く。スキーマの `additionalProperties` の下に値の型を書き、コンテンツ側は辞書で書く。サンプルの `members.yaml` がその例:
+このスキーマが期待する `contents/members.yaml`:
 
 ```yaml
 members:
@@ -158,7 +152,45 @@ members:
     role: engineer
 ```
 
-ビルド時にこれは配列に正規化され、辞書のキー（`alice`, `bob`）が各レコードの `id` フィールドとして付与される。テンプレートからは
+ルート構造は固定で、必ず次の 3 点を満たす:
+
+- 最外側は `type: object`
+- `properties:` の各エントリが 1 種類の **エンティティ**（同じ形のレコードの集まり）を表す（上の例では `members`）
+- 末尾の `additionalProperties: false` で、宣言していないトップレベルキーをエラーにする
+
+エンティティ名（`members`）は、コンテンツ側 YAML のトップレベルキーと一致させる。
+
+各エンティティの中身（`properties` の値）には、定型のパターンが 3 つある — 複数レコードを辞書で書く / 複数レコードをリストで書く / 単一レコードを `properties` で列挙。順に見ていく。
+
+#### 複数レコード — 辞書で書く
+
+メンバー名簿がそのパターン。スキーマの `additionalProperties` の下に値の型を書き、コンテンツ側は辞書で書く。「同じ形のレコードが何件もある」用途では、ほぼ常にこの **辞書パターン** で書く。スキーマの抜粋とコンテンツを再掲:
+
+```yaml
+# definition/schema.yaml — エンティティ部分の抜粋
+members:
+  type: object
+  additionalProperties:
+    type: object
+    properties:
+      name: { type: string }
+      role: { type: string }
+    required: [name, role]
+    additionalProperties: false
+```
+
+```yaml
+# contents/members.yaml
+members:
+  alice:
+    name: Alice
+    role: engineer
+  bob:
+    name: Bob
+    role: engineer
+```
+
+ビルド時にこれは配列に **正規化** され（書いた辞書が配列に変換される）、辞書のキー（`alice`, `bob`）が各レコードの `id` フィールドとして付与される。テンプレートからは
 
 ```yaml
 members:
@@ -166,11 +198,37 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-の形に見える。
+の形に見える。`id` フィールドはテンプレートからもクエリからも参照でき、ワークフロー表で見たとおり `output/__meta_entity/<entity>.md`（宣言した型がツールにどう解釈されたか）と `output/__table_view/<entity>.md`（データが期待通り読み込まれているか）で確認できる。
 
-辞書で書かせている理由は、ID の一意性が YAML パースの段階で保証されるため。同じキーがあれば即パースエラーになるので、後から「ID が衝突していました」と気付かされない。リスト形式（`type: array`）も書けるが、ID の重複を自分で防ぐ必要が出てくるので、ID を持たせたい場合は辞書パターンを使う。
+辞書で書く理由は 2 つ。第一に、レコード数が増えても YAML データの視認性がリスト形式より素直（各レコードの先頭に ID が来て見出しのように働く）。第二に、ID の一意性が YAML パースの段階で保証されるため、同じキーがあれば即パースエラーになり、後から「ID が衝突していました」と気付かされない。
 
-#### 1 つきりのデータ
+#### 複数レコード — リストで書く
+
+逆に、上の 2 つの利点（視認性・ID 一意性）が要らないなら、`type: array` でリストとして書いてもよい。たとえば順序だけが意味を持つ手順、外部から個別参照されない注釈の列、ID を考えるのが面倒なほど些末なレコードの羅列、など。
+
+```yaml
+# definition/schema.yaml — エンティティ部分
+steps:
+  type: array
+  items:
+    type: object
+    properties:
+      label: { type: string }
+    required: [label]
+    additionalProperties: false
+```
+
+```yaml
+# contents/steps.yaml
+steps:
+  - label: Boil water
+  - label: Add tea leaves
+  - label: Wait 3 minutes
+```
+
+辞書パターンと違って正規化はされず、書いた配列がそのままテンプレートに渡る。
+
+#### 単一レコード — `properties` で列挙
 
 サイト設定のように「キーが事前に決まっていて、レコード数が 1 つ」のものは、`additionalProperties` の代わりに `properties` でキーを列挙する:
 
@@ -184,16 +242,15 @@ site_config:
   additionalProperties: false
 ```
 
+このスキーマが期待する `contents/site_config.yaml`:
+
 ```yaml
-# contents/site_config.yaml
 site_config:
   title: My Site
   base_url: https://example.com
 ```
 
 このパターンは正規化されず、書いた形のままテンプレートに渡る。
-
-スキーマで使えるキーワードの全量・型システムの細かい挙動は [Schema](reference/schema.md) を参照。
 
 ### 散文 — Markdown でそのまま書く
 
