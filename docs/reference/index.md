@@ -8,5 +8,5 @@
 
 - [CLI](cli.md) — `mood` コマンドリファレンス（`init` / `build` / `watch`）
 - [Schema](schema.md) — スキーマ定義（JSON Schema サブセット + 内蔵 prose スキーマ）
-- [Query](query-dsl.md) — クエリ DSL（`from` / `grouped` / `select`）
+- [Query](query.md) — クエリ構文（`from` / `grouped` / `select`）
 - [Template](template.md) — テンプレート構文（`{% mood_view %}` / Typed Value）

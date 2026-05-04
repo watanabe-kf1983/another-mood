@@ -353,7 +353,7 @@ by_role:
 
 `definition/queries/` 配下のファイル名・分割はコンテンツファイル同様、自由（1 ファイルに複数ビュー可、サブディレクトリ可）。
 
-全構文・例は [Query](reference/query-dsl.md) を参照。
+全構文・例は [Query](reference/query.md) を参照。
 
 ## テンプレート
 

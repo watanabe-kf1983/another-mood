@@ -27,7 +27,7 @@
 
 ## テンプレートへのデータ入力
 
-テンプレートからは、[Schema](schema.md) で宣言したエンティティのデータと、[Query](query-dsl.md) で定義したビューを **同じ名前空間** で参照できる。
+テンプレートからは、[Schema](schema.md) で宣言したエンティティのデータと、[Query](query.md) で定義したビューを **同じ名前空間** で参照できる。
 
 - エンティティ: schema.yaml の `properties` のキー
 - クエリビュー: `definition/queries/` 配下のファイル内トップレベルキー
