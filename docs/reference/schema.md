@@ -1,8 +1,6 @@
 # Schema
 
-**スキーマ**（schema）は、プロジェクトで扱うデータの型宣言。扱いたいエンティティ（ユーザ、注文、画面など、データの種類）ごとに、どんなフィールドを持ちどんな構造を取るかを書く。コンテンツはこの宣言に照らして検証され、辞書で書かれたデータは配列に正規化される（後述）。
-
-スキーマは `{project}/definition/schema.yaml` 1 ファイルに、JSON Schema (draft 2020-12) のサブセットを書く。ルートは `type: object` で、`properties:` 配下の各エントリがコンテンツ全体における 1 つのエンティティ（コレクション）に対応する。
+**スキーマ**は、プロジェクトで扱うデータの型を宣言するファイル。`{project}/definition/schema.yaml` 1 ファイルに、JSON Schema (draft 2020-12) のサブセットを書く。コンテンツファイルはこの宣言に照らして検証され、マップで書かれたデータは正規化（後述）で配列に変換される。
 
 ```yaml
 # definition/schema.yaml
@@ -28,47 +26,41 @@ properties:
 additionalProperties: false
 ```
 
-ファイルは 1 本固定。複数ファイルへの分割や外部スキーマの `$ref` 参照はサポートしない。コンテンツ YAML はこのスキーマの**部分インスタンス** (`properties` の一部のキーのみを持つオブジェクト) として valid である必要がある。1 ファイルに複数のトップレベルキーを同居させてもよい。
+## ルートの制約
 
-本章は、付録の [schema-schema 全文](#schema-schema-全文)（スキーマ定義の形を縛る内蔵メタスキーマ）を散文で解説したもの。厳密な仕様は付録の YAML が正典となる。
+スキーマファイルのルートは次を満たす:
 
-## サポートするキーワード
+- `type: object` 固定
+- `properties` 必須。各エントリが 1 つの **エンティティ**（同じ形のレコードの集まり）を表す
+- 末尾に `additionalProperties: false`（宣言していないトップレベルキーをエラーにする）
 
-JSON Schema draft 2020-12 のサブセット。ここに挙げたキーワードのみ許容される。
+ルート直下に [マップパターン](#マップパターン)（`properties` を伴わない `additionalProperties: <スキーマ>`）は書けない。エンティティ列挙モデルと整合せず、検証や正規化が黙って劣化するため、内蔵メタスキーマで明示的に弾く。
 
-### 構造キーワード（辞書→配列変換に関与）
+ファイルは 1 本固定。複数ファイルへの分割や外部スキーマの `$ref` 参照はサポートしない。
 
-このツールが独自に解釈し、データの形と正規化挙動を決定するキーワード:
+## エンティティの 3 パターン
 
-| キーワード | 役割 |
-|---|---|
-| `type` | 値の型（`object` / `array` / `string` / `number` / `integer` / `boolean` のいずれか） |
-| `properties` | 固定構造のキー列挙 |
-| `additionalProperties` | 辞書パターンのシグナル、または `false` |
-| `items` | 配列要素のスキーマ |
+各エンティティ（`properties` の 1 エントリ）の型として、次の 3 パターンを使い分ける。
 
-これらを組み合わせて、データの 3 つの形を表現する: **辞書パターン**・**固定構造パターン**・**type: array**。
+### マップパターン
 
-#### 辞書パターン（additionalProperties）
+同じ形のレコードを **マップ**（キーと値のペア）で書くパターン。同型エントリの集まりを表すスキーマで、ほぼ常にこのパターンが第一選択になる。
 
-同型エントリの集まりを表すスキーマ。`additionalProperties` に**スキーマオブジェクト**（`false` ではなく）を書く。
+`additionalProperties` の値に **スキーマオブジェクト**（`false` ではなく）を書く:
 
 ```yaml
-type: object
-properties:
-  users:
+users:
+  type: object
+  additionalProperties:                  # ← マップパターンのシグナル
     type: object
-    additionalProperties:
-      type: object
-      properties:
-        name: { type: string }
-        email: { type: string }
-      required: [name]
-      additionalProperties: false
-additionalProperties: false
+    properties:
+      name: { type: string }
+      email: { type: string }
+    required: [name]
+    additionalProperties: false
 ```
 
-コンテンツ側は辞書で書く:
+コンテンツファイル側はマップで書く:
 
 ```yaml
 # contents/users.yaml
@@ -80,81 +72,107 @@ users:
     name: 鈴木花子
 ```
 
-正規化で配列にフラット化され、辞書キーが `id` フィールドとして現れる:
+ビルド時に **正規化** され、マップキーが各レコードの `id` フィールドに昇格して配列になる:
 
 ```yaml
 users:
-  items:
-    - id: tanaka
-      name: 田中太郎
-      email: tanaka@example.com
-    - id: suzuki
-      name: 鈴木花子
+  - id: tanaka
+    name: 田中太郎
+    email: tanaka@example.com
+  - id: suzuki
+    name: 鈴木花子
 ```
 
-**ネスト**: `additionalProperties` の中に入れ子で `additionalProperties` を書けば、各階層が再帰的に配列化される。
+クエリやテンプレートが参照するのはこの正規化後の形。
+
+**ネスト**: `additionalProperties` の中にさらに `additionalProperties` を入れると、各階層が再帰的に配列化される。
 
 ```yaml
-type: object
-properties:
-  screens:
-    type: object
-    additionalProperties:
-      type: object
-      properties:
-        title: { type: string }
-        buttons:                    # 入れ子の辞書パターン
-          type: object
-          additionalProperties:
-            type: object
-            properties:
-              label: { type: string }
-            additionalProperties: false
-      additionalProperties: false
-additionalProperties: false
-```
-
-#### 固定構造パターン（properties）
-
-キーと型が事前に決まっているオブジェクト。`properties` でキーを列挙する。正規化の対象外で、書いた形のままパススルーされる。
-
-```yaml
-type: object
-properties:
-  site_config:
+screens:
+  type: object
+  additionalProperties:
     type: object
     properties:
       title: { type: string }
-      base_url: { type: string }
-    required: [title]
+      buttons:                           # 入れ子のマップパターン
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            label: { type: string }
+          additionalProperties: false
     additionalProperties: false
-additionalProperties: false
 ```
 
-**排他制約**: 同じオブジェクト内で `properties` と `additionalProperties: <スキーマ>` は併用できない。`properties` を書く場合は `additionalProperties: false` が必須で、schema-schema の `if/then` で強制される。
+**非オブジェクト値**: `additionalProperties` がオブジェクト以外（`type: string` など）の場合、各エントリは `{ id: <キー>, value: <値> }` の形に正規化される。
 
-#### type: array
+### 配列パターン
 
-配列型のトップレベルスキーマ。要素スキーマは `items` で指定する。コンテンツ側は配列を直接書く。
+順序のある並びを表すパターン。`type: array` で、要素スキーマを `items` に書く。
 
 ```yaml
-type: object
-properties:
-  tags:
-    type: array
-    items:
-      type: object
-      properties:
-        name: { type: string }
-      additionalProperties: false
-additionalProperties: false
+tags:
+  type: array
+  items:
+    type: object
+    properties:
+      name: { type: string }
+    additionalProperties: false
 ```
 
-辞書パターンと違い、配列型は**暗黙の `id` を持たない**。
+コンテンツファイル側は配列を直接書く:
+
+```yaml
+tags:
+  - name: important
+  - name: draft
+```
+
+正規化はかからず、書いた配列がそのままテンプレートに渡る。マップパターンと違い **暗黙の `id` を持たない**。
+
+レコード数が増えたとき視認性で劣る・キー一意性が YAML 段階で保証されないため、外部から個別参照されない要素列（順序だけが意味を持つ手順、ID を考えるのが面倒なほど些末なレコードの羅列など）に向く。
+
+### 単一レコードパターン
+
+キーが事前に決まっていて、レコード数が 1 つのオブジェクト（サイト設定など）に使うパターン。`additionalProperties` ではなく `properties` でキーを列挙する。
+
+```yaml
+site_config:
+  type: object
+  properties:
+    title: { type: string }
+    base_url: { type: string }
+  additionalProperties: false
+```
+
+```yaml
+site_config:
+  title: My Site
+  base_url: https://example.com
+```
+
+正規化はかからず、書いた形のままテンプレートに渡る。
+
+**排他制約**: 同じオブジェクト内で `properties` と `additionalProperties: <スキーマ>` は併用できない。`properties` を書く場合は `additionalProperties: false` が必須で、内蔵メタスキーマの `if/then` で強制される。
+
+## サポートするキーワード
+
+JSON Schema draft 2020-12 のサブセット。下記に挙げたキーワードのみ許容される（未知キーワードは内蔵メタスキーマの `additionalProperties: false` で一律エラー）。
+
+### 構造キーワード（正規化に関与）
+
+このツールが解釈し、データの形と正規化挙動を決定するキーワード:
+
+| キーワード | 役割 |
+|---|---|
+| `type` | 値の型（`object` / `array` / `string` / `number` / `integer` / `boolean` のいずれか） |
+| `properties` | 単一レコードパターンのキー列挙 |
+| `additionalProperties` | マップパターンのシグナル、または `false` |
+| `items` | 配列要素のスキーマ |
 
 ### バリデーションキーワード
 
-値の制約を表現するキーワード。プロジェクトは解釈せず、jsonschema ライブラリにそのままスルーパスする:
+値の制約を表現するキーワード。ツール側は解釈せず、jsonschema ライブラリにスルーパスする:
 
 - **必須フィールド**: `required`
 - **列挙・定数**: `enum`, `const`
@@ -174,24 +192,21 @@ additionalProperties: false
 
 - `format`（`email`, `uri` など）。アノテーションとして保持されるが、値の検証は行わない
 
-## 制約事項
+## サポートしないキーワード
 
-### サポートしないキーワード
+JSON Schema draft 2020-12 にあるが、内蔵メタスキーマが拒否するキーワード:
 
-JSON Schema draft 2020-12 にあるが、このツールでは拒否されるキーワード（schema-schema の `additionalProperties: false` により未知キーワードは一律エラー）:
-
-- **Core 系**: `$id`, `$schema`, `$ref`, `$defs`, `$anchor`, `$comment`
+- **Core 系**: `$id`, `$schema`, `$ref`, `$defs`, `$anchor`, `$comment` 等
 - **合成・条件**: `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`
 - **高度なアプリケーター**: `patternProperties`, `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`
 - **unevaluated**: `unevaluatedProperties`, `unevaluatedItems`
 - **その他の validation**: `minProperties`, `maxProperties`
 - **content**: `contentMediaType`, `contentEncoding`, `contentSchema`
 
-また以下のルールがある:
+## その他の制約
 
-- `type` は単一文字列のみ（`type: [string, "null"]` のような配列形式や `null` 型は不可）
-- スキーマ名およびプロパティ名は識別子（Unicode 文字・数字・アンダースコア、先頭は数字不可）
-- ルートは `type: object` 固定で `properties:` を必ず持つ。ルート直下に辞書パターン（`additionalProperties: <スキーマ>`）は書けない（エンティティ列挙モデルと整合しないため）
+- `type` は単一文字列のみ。`type: [string, "null"]` のような配列形式や `null` 型は不可
+- `properties` のキー（プロパティ名）は識別子（Unicode 文字・数字・アンダースコア、先頭は数字不可）
 
 ## 内蔵スキーマ: 散文 (prose)
 
@@ -249,13 +264,14 @@ $defs:
   rootSchema:
     allOf:
       - $ref: "#/$defs/jsonSchemaSubset"
-      - required: [type, properties]
+      - required: [properties]
         properties:
           type:
             const: object
 
   jsonSchemaSubset:
     type: object
+    required: [type]
     properties:
       # --- Structural keywords (interpreted by this project) ---
       type:
