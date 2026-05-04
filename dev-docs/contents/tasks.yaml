@@ -357,6 +357,7 @@ categories:
         title: メタスキーマへの説明メタデータ埋め込み
         note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K4 の効果を高める
         phase: 8
+        done: true
 
   M:
     title: JSON データモデル と データカタログ
