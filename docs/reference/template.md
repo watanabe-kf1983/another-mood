@@ -31,7 +31,7 @@
 
 - 正規化済みデータ: `contents/` のトップレベルキー（= スキーマ名）
 - クエリ view: `queries/` のファイル内トップレベルキー
-- prose view: `contents/` 配下の Markdown ファイルから自動生成される（[Content Formats](content-formats.md#散文データ) 参照）
+- prose view: `contents/` 配下の Markdown ファイルから自動生成される（[Schema — 内蔵スキーマ: 散文](schema.md#内蔵スキーマ-散文-prose) 参照）
 
 ```jinja2
 {# products は正規化済みデータ、bestsellers はクエリ view #}
@@ -114,11 +114,27 @@
 
 ## Typed Value の取り扱い
 
-Markdown データソースの本文（`body`）のような Typed Value（`{ mime_type, content }` 形式のオブジェクト）は、`.content` を参照して埋め込む。
+値は素の string（デフォルト）または **Typed Value** オブジェクトのいずれかで表現される。Typed Value は `mime_type` と `content` の 2 フィールドを持つオブジェクトで、テンプレートエンジンの auto-escape を制御する。
+
+| 値の形 | テンプレートでの扱い |
+|---|---|
+| 素の string | デフォルトでエスケープされる |
+| Typed Value（`mime_type: text/markdown` 等） | `mime_type` に応じてエスケープをバイパス |
+
+`mime_type` は [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838) に準拠。想定値: `text/markdown` / `text/html` / `text/plain` 等。
+
+Markdown データソースの本文（`body`）のような Typed Value は、`.content` を参照して埋め込む。Typed Value のままレンダリングすれば HTML エスケープされず、Markdown として解釈される。
 
 ```jinja2
 {# Markdown から変換された prose.body を埋め込む #}
 {{ body.content }}
 ```
 
-Typed Value の詳細は [Content Formats](content-formats.md#typed-value) を参照。
+YAML で直接 Typed Value を書くこともできる（スキーマ側でフィールドの型をオブジェクトとして定義しておく）:
+
+```yaml
+description:
+  mime_type: text/markdown
+  content: |
+    **重要**: ここは Markdown として解釈される
+```

@@ -435,7 +435,7 @@ Role: {{ role }}
 {{ body.content }}
 ```
 
-詳細は [Content Formats — Typed Value](reference/content-formats.md#typed-value)。
+詳細は [Template — Typed Value の取り扱い](reference/template.md#typed-value-の取り扱い)。
 
 ### 未定義フィールドは空文字列になる
 

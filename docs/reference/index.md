@@ -7,7 +7,6 @@
 ## 構成
 
 - [CLI](cli.md) — `mood` コマンドリファレンス（`init` / `build` / `watch`）
-- [Schema](schema.md) — スキーマ定義（JSON Schema サブセット + references.yaml）
-- [Query DSL](query-dsl.md) — クエリ記法（`from` / `where` / `sort` / `join` 等）
-- [Template](template.md) — テンプレート構文（root / section / Jinja2 拡張）
-- [Content Formats](content-formats.md) — コンテンツファイル形式（YAML / Markdown）
+- [Schema](schema.md) — スキーマ定義（JSON Schema サブセット + 内蔵 prose スキーマ）
+- [Query DSL](query-dsl.md) — クエリ記法（`from` / `grouped` / `select`）
+- [Template](template.md) — テンプレート構文（ルート / サブテンプレート / Jinja2 拡張）

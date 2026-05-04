@@ -193,6 +193,31 @@ JSON Schema draft 2020-12 にあるが、このツールでは拒否されるキ
 - スキーマ名およびプロパティ名は識別子（Unicode 文字・数字・アンダースコア、先頭は数字不可）
 - ルートは `type: object` 固定で `properties:` を必ず持つ。ルート直下に辞書パターン（`additionalProperties: <スキーマ>`）は書けない（エンティティ列挙モデルと整合しないため）
 
+## 内蔵スキーマ: 散文 (prose)
+
+`contents/` 配下の Markdown ファイル（`.md`、大小文字不問）は、ユーザがスキーマを宣言しなくても **内蔵 prose スキーマ** に従って自動的に正規化される。1 ファイル = 1 レコードで、`prose` エンティティに集約される。
+
+レコードの形:
+
+```yaml
+prose:
+  - id: "guides/ordering"              # contents_dir からの相対パス（拡張子なし）
+    title: "注文の流れ"                  # 最初の H1 見出しテキスト
+    body:
+      mime_type: text/markdown
+      content: |
+        # 注文の流れ
+        ...                             # ファイル全体（H1 含む）
+```
+
+| フィールド | 値 |
+|---|---|
+| `id` | `contents_dir` からの相対パス（拡張子を除く） |
+| `title` | 最初の H1 見出しテキスト。H1 がなければ省略 |
+| `body` | Typed Value（`mime_type: text/markdown` と `content`）。テンプレートからの埋め込みは [Template — Typed Value](template.md#typed-value-の取り扱い) を参照 |
+
+ソース Markdown は変換されずそのまま保たれるため、GitHub 上や IDE でそのまま閲覧・リンク遷移できる。
+
 ## schema-schema 全文
 
 スキーマ定義の形を縛る内蔵メタスキーマ。本章の正典。
