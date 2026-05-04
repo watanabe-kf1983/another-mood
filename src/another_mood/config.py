@@ -15,7 +15,7 @@ class ConfigValidationError(Exception):
 
 
 class ProjectConfig(BaseSettings):
-    """Project configuration for another-mood.
+    """Project configuration for Another Mood.
 
     Default values use `project_dir` as base for input paths
     and `.another-mood/<project_dir>/` for output paths.

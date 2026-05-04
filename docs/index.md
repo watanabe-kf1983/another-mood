@@ -1,6 +1,6 @@
-# another-mood ユーザガイド
+# Another Mood ユーザガイド
 
-another-mood の使い方を、利用者の視点で解説する。Implemented 機能のみを扱う。
+Another Mood の使い方を、利用者の視点で解説する。Implemented 機能のみを扱う。
 
 ## 構成
 
