@@ -34,6 +34,7 @@
 - [setup.md](dev/setup.md) — セットアップ手順
 - [environment.md](dev/environment.md) — 開発環境定義（DevContainer・VSCode・MCP・.gitignore）
 - [checks.md](dev/checks.md) — 開発チェック（IDE・Git hook・CI）
+- [style-guide.md](dev/style-guide.md) — 命名・自己定義の表記規約
 
 ## 開発規約
 
