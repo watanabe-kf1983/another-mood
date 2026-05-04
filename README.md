@@ -19,6 +19,6 @@ For design decisions and background, see [background/product.md](dev-docs/conten
 
 ## Documentation
 
-- [docs/](docs/) — User guide *(work in progress)*
+- [docs/guides.md](docs/guides.md) — User guide *(work in progress)*
 - [DEVELOPMENT.md](DEVELOPMENT.md) — Developer guide
 - [showcase/examples/ecommerce/](showcase/examples/ecommerce/) — Example project
