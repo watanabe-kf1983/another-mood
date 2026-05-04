@@ -236,23 +236,27 @@ prose:
 ここまでの本文は、内蔵メタスキーマ（schema-schema）を散文で解説したもの。厳密な仕様の正典は以下の YAML 本体。
 
 ```yaml
-# Built-in meta-schema for the user's schema.yaml.
-#
-# Defines the JSON Schema (draft 2020-12) subset accepted by Another Mood:
-# the root is type: object with `properties:` listing each top-level
-# entity, and only the keywords whitelisted below are allowed.
-#
 # $ref / $defs are used here for recursion, but are not available to
-# user-defined schemas (only the keywords listed under jsonSchemaSubset
-# are).
+# user-defined schemas (only the keywords listed under jsonSchemaSubset are).
+
+title: SchemaSchema
+description: >-
+  Meta-schema validating the user's definition/schema.yaml. The accepted
+  language is a curated subset of JSON Schema draft 2020-12: the root must
+  be an object with `properties:` enumerating each top-level entity, and
+  only the keywords listed under jsonSchemaSubset are permitted. See
+  docs/reference/schema.md for the prose specification.
 
 $ref: "#/$defs/rootSchema"
 
 $defs:
-  # The root must be type: object with `properties:` defined.  This
-  # excludes a dict-pattern root (additionalProperties without
-  # properties), which would not produce any entity to normalize.
   rootSchema:
+    title: Root schema constraints
+    description: >-
+      Constraints applied only at the root of the user's schema.yaml: it
+      must be `type: object` and define `properties:`. A map-pattern root
+      (additionalProperties without properties) is rejected because it
+      would yield no entity to normalize.
     allOf:
       - $ref: "#/$defs/jsonSchemaSubset"
       - required: [properties]
@@ -261,24 +265,50 @@ $defs:
             const: object
 
   jsonSchemaSubset:
+    title: Accepted JSON Schema subset
+    description: >-
+      Recursive subset of JSON Schema draft 2020-12 keywords accepted at
+      every level of the user's schema. Structural keywords (type,
+      properties, additionalProperties, items) are interpreted by the
+      normalizer; validation, meta-data, and format keywords are passed
+      through to the jsonschema library unchanged.
     type: object
     required: [type]
     properties:
       # --- Structural keywords (interpreted by this project) ---
       type:
+        description: >-
+          Single primitive type only. JSON Schema's array form
+          (e.g. `[string, "null"]`) and the `null` type are rejected by
+          design.
         type: string
         enum: [object, array, string, number, integer, boolean]
       properties:
+        description: >-
+          Fixed-structure object definition. When present at the same
+          level, `additionalProperties: false` is required (see the
+          `if`/`then` clause at the bottom); the map pattern
+          (`additionalProperties: <schema>`) cannot be combined here.
         type: object
         propertyNames:
+          description: >-
+            Identifier pattern for property names: starts with a Unicode
+            letter or underscore, followed by Unicode letters, digits, or
+            underscores.
           pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
         additionalProperties:
           $ref: "#/$defs/jsonSchemaSubset"
       additionalProperties:
+        description: >-
+          Map-pattern signal. When set to a schema object, the value is
+          a homogeneous map that the normalizer converts into an array.
+          When set to `false`, no extra keys are allowed (required when
+          `properties:` is present at the same level).
         anyOf:
           - $ref: "#/$defs/jsonSchemaSubset"
           - const: false
       items:
+        description: Schema applied to each element of an array.
         $ref: "#/$defs/jsonSchemaSubset"
 
       # --- Validation keywords (pass-through to jsonschema) ---
@@ -315,9 +345,9 @@ $defs:
 
     additionalProperties: false
 
-    # When properties is defined, additionalProperties: false is required.
-    # When properties is absent, additionalProperties can be a schema object
-    # (dict pattern for dict-to-array normalization).
+    # When `properties:` is present at the same level, `additionalProperties: false`
+    # becomes required. Without `properties:`, `additionalProperties` may be a schema
+    # object (the map pattern that drives map-to-array normalization).
     if:
       required: [properties]
     then:
@@ -332,29 +362,54 @@ $defs:
 [内蔵スキーマ: 散文](#内蔵スキーマ-散文-prose) で説明した prose エンティティの構造を定める内蔵スキーマ。本節の散文記述に対する正典。
 
 ```yaml
-# Built-in schema for the prose entity.
-#
-# Markdown files in contents_dir become prose records (id + title + body).
 # Merged with the user's schema.yaml at validation time so that all
 # content files are validated uniformly.
+
+title: ContentSchema
+description: >-
+  Built-in schema that defines the `prose` entity. Markdown files under
+  contents_dir are parsed into prose records (id, title, body) and
+  validated alongside the user's schema.yaml.
 
 type: object
 properties:
   prose:
+    title: Prose collection
+    description: >-
+      Collection of prose records, one per Markdown file in contents_dir.
+      Each record carries the file's id, optional title, and parsed body.
     type: array
     items:
+      title: Prose record
+      description: One Markdown file parsed into an id / title / body triple.
       type: object
       properties:
         id:
+          title: Prose id
+          description: >-
+            Stable identifier derived from the Markdown file's path
+            (without extension).
           type: string
         title:
+          title: Prose title
+          description: >-
+            Display title taken from the first H1 heading of the Markdown
+            source. Absent when the source has no H1.
           type: string
         body:
+          title: Prose body
+          description: >-
+            Body of the Markdown file, carrying its MIME type and the raw
+            source text.
           type: object
           properties:
             mime_type:
+              title: Body MIME type
+              description: MIME type of the body content (currently always `text/markdown`).
               type: string
             content:
+              title: Body content
+              description: Raw Markdown source as a string.
               type: string
           required: [mime_type, content]
       required: [id, body]
