@@ -9,4 +9,4 @@
 - [CLI](cli.md) — `mood` コマンドリファレンス（`init` / `build` / `watch`）
 - [Schema](schema.md) — スキーマ定義（JSON Schema サブセット + 内蔵 prose スキーマ）
 - [Query](query.md) — クエリ構文（`from` / `grouped` / `select`）
-- [Template](template.md) — テンプレート構文（`{% mood_view %}` / Typed Value）
+- [Template](template.md) — テンプレート構文（Jinja2 + `{% mood_view %}` 拡張）

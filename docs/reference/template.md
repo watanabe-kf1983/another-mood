@@ -123,30 +123,3 @@
 ```
 
 スペルミスのときも同じくエラーにならず黙って空になる点に注意。書きながら `__table_view/` でデータの実体を、`__meta_query/` でクエリの結果形を確認しながら進める。
-
-## Typed Value の取り扱い
-
-値は素の string（デフォルト）または **Typed Value** オブジェクトのいずれかで表現される。Typed Value は `mime_type` と `content` の 2 フィールドを持つオブジェクトで、テンプレートエンジンの auto-escape を制御する。
-
-| 値の形 | テンプレートでの扱い |
-|---|---|
-| 素の string | デフォルトでエスケープされる |
-| Typed Value（`mime_type: text/markdown` 等） | `mime_type` に応じてエスケープをバイパス |
-
-`mime_type` は [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838) に準拠。想定値: `text/markdown` / `text/html` / `text/plain` 等。
-
-Markdown データソースの本文（`body`）のような Typed Value は、`.content` を参照して埋め込む。Typed Value のままレンダリングすれば HTML エスケープされず、Markdown として解釈される。
-
-```jinja2
-{# Markdown から変換された prose.body を埋め込む #}
-{{ body.content }}
-```
-
-YAML で直接 Typed Value を書くこともできる（スキーマ側でフィールドの型をオブジェクトとして定義しておく）:
-
-```yaml
-description:
-  mime_type: text/markdown
-  content: |
-    **重要**: ここは Markdown として解釈される
-```

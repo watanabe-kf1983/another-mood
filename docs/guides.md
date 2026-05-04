@@ -290,7 +290,7 @@ prose:
         カートに商品を入れて、レジに進むと…
 ```
 
-1 ファイル = 1 レコードで、`id` / `title` / `body` の 3 フィールドが内蔵スキーマで定義されている。`body` が `mime_type` と `content` の入れ子になっているのは Typed Value の形式（[テンプレート](#テンプレート) 章で詳述）。
+1 ファイル = 1 レコードで、`id` / `title` / `body` の 3 フィールドが内蔵スキーマで定義されている。`body` の `content` を埋め込む方法は [テンプレート](#テンプレート) 章で詳述。
 
 ## クエリ
 
@@ -426,16 +426,16 @@ by_role:
 Role: {{ role }}
 ```
 
-### Markdown 本文を埋め込む（Typed Value）
+### Markdown 本文を埋め込む
 
-散文の `body` フィールドは、`mime_type` と `content` を持つマップ（**Typed Value**）になっている。テンプレートで本文を埋め込むときは `.content` を参照する:
+散文の `body` フィールドは、`mime_type` と `content` を持つマップになっている。テンプレートで本文を埋め込むときは `.content` を参照する:
 
 ```jinja2
 {# 散文の本文を埋め込む #}
 {{ body.content }}
 ```
 
-詳細は [Template — Typed Value の取り扱い](reference/template.md#typed-value-の取り扱い)。
+詳細は [Schema — 内蔵スキーマ: 散文](reference/schema.md#内蔵スキーマ-散文-prose)。
 
 ### 未定義フィールドは空文字列になる
 

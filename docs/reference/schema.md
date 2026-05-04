@@ -229,7 +229,7 @@ prose:
 |---|---|
 | `id` | `contents_dir` からの相対パス（拡張子を除く） |
 | `title` | 最初の H1 見出しテキスト。H1 がなければ省略 |
-| `body` | Typed Value（`mime_type: text/markdown` と `content`）。テンプレートからの埋め込みは [Template — Typed Value](template.md#typed-value-の取り扱い) を参照 |
+| `body` | `mime_type` と `content` を持つマップ。本文を埋め込むときはテンプレートから `.content` を参照する（例: `{{ body.content }}`） |
 
 ソース Markdown は変換されずそのまま保たれるため、GitHub 上や IDE でそのまま閲覧・リンク遷移できる。
 
