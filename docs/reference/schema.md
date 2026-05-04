@@ -34,7 +34,7 @@ additionalProperties: false
 - `properties` 必須。各エントリが 1 つの **エンティティ**（同じ形のレコードの集まり）を表す
 - 末尾に `additionalProperties: false`（宣言していないトップレベルキーをエラーにする）
 
-ルート直下に [マップパターン](#マップパターン)（`properties` を伴わない `additionalProperties: <スキーマ>`）は書けない。エンティティ列挙モデルと整合せず、検証や正規化が黙って劣化するため、内蔵メタスキーマで明示的に弾く。
+ルート直下に [マップパターン](#マップパターン)（`properties` を伴わない `additionalProperties: <スキーマ>`）は書けない（メタスキーマが拒否する）。
 
 ファイルは 1 本固定。複数ファイルへの分割や外部スキーマの `$ref` 参照はサポートしない。
 
@@ -130,8 +130,6 @@ tags:
 
 正規化はかからず、書いた配列がそのままテンプレートに渡る。マップパターンと違い **暗黙の `id` を持たない**。
 
-レコード数が増えたとき視認性で劣る・キー一意性が YAML 段階で保証されないため、外部から個別参照されない要素列（順序だけが意味を持つ手順、ID を考えるのが面倒なほど些末なレコードの羅列など）に向く。
-
 ### 単一レコードパターン
 
 キーが事前に決まっていて、レコード数が 1 つのオブジェクト（サイト設定など）に使うパターン。`additionalProperties` ではなく `properties` でキーを列挙する。
@@ -153,7 +151,7 @@ site_config:
 
 正規化はかからず、書いた形のままテンプレートに渡る。
 
-**排他制約**: 同じオブジェクト内で `properties` と `additionalProperties: <スキーマ>` は併用できない。`properties` を書く場合は `additionalProperties: false` が必須で、内蔵メタスキーマの `if/then` で強制される。
+**排他制約**: 同じオブジェクト内で `properties` と `additionalProperties: <スキーマ>` は併用できない。`properties` を書く場合は `additionalProperties: false` が必須（メタスキーマがエラーにする）。
 
 ## サポートするキーワード
 
@@ -235,32 +233,25 @@ prose:
 
 ## schema-schema 全文
 
-スキーマ定義の形を縛る内蔵メタスキーマ。本章の正典。
+ここまでの本文は、内蔵メタスキーマ（schema-schema）を散文で解説したもの。厳密な仕様の正典は以下の YAML 本体。
 
 ```yaml
-# SchemaSchema — built-in meta-schema that validates the user's schema.yaml.
+# Built-in meta-schema for the user's schema.yaml.
 #
-# The user's schema.yaml is a JSON Schema (draft 2020-12) subset whose
-# root is `type: object` with `properties:` listing each top-level
-# entity collection.  See dev-docs schema-spec.md for the full list of
-# supported keywords.
+# Defines the JSON Schema (draft 2020-12) subset accepted by Another Mood:
+# the root is type: object with `properties:` listing each top-level
+# entity, and only the keywords whitelisted below are allowed.
 #
-# This meta-schema uses $ref/$defs for recursion, which is NOT available
-# to user-defined schemas.  The restriction is intentional: user schemas
-# go through normalization and visualization pipelines that cannot handle
-# $ref; this built-in schema is only consumed by the jsonschema validator.
+# $ref / $defs are used here for recursion, but are not available to
+# user-defined schemas (only the keywords listed under jsonSchemaSubset
+# are).
 
 $ref: "#/$defs/rootSchema"
 
 $defs:
-  # The root user schema is a jsonSchemaSubset with two extra constraints:
-  # type must be `object` and `properties:` must be present.  This rules
-  # out a dict-pattern root (`additionalProperties: <schema>` without
-  # `properties:`), which would otherwise pass validation but degrade
-  # silently downstream — extract_data_catalog yields no entities and
-  # the normalizer ignores the root additionalProperties because
-  # _build_object_from_properties is preferred once the user schema is
-  # merged with the built-in prose schema (which contributes properties).
+  # The root must be type: object with `properties:` defined.  This
+  # excludes a dict-pattern root (additionalProperties without
+  # properties), which would not produce any entity to normalize.
   rootSchema:
     allOf:
       - $ref: "#/$defs/jsonSchemaSubset"
