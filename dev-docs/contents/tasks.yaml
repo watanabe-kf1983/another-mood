@@ -302,6 +302,16 @@ categories:
       H2:
         title: 実装
         phase: 10
+      H3:
+        title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
+        note: |
+          内蔵スキーマ {id, title, body} は body が Typed Value のため設計上は
+          既に媒体非依存。バイナリファイル取り扱い (H1/H2) を機に、
+          エンティティ名 `prose` を媒体非依存な名前に改名する。
+          下位互換のため、旧名 `prose` は内蔵クエリとして残し、
+          mime_type が text/markdown のレコードのみを供給する案がある。
+          詳細仕様は H1/H2 の進捗に合わせて確定。
+        phase: 10
 
   J:
     title: プラグインシステム
