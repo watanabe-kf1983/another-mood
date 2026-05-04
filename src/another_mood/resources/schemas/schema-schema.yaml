@@ -1,26 +1,19 @@
-# SchemaSchema — built-in meta-schema that validates the user's schema.yaml.
+# Built-in meta-schema for the user's schema.yaml.
 #
-# The user's schema.yaml is a JSON Schema (draft 2020-12) subset whose
-# root is `type: object` with `properties:` listing each top-level
-# entity collection.  See dev-docs schema-spec.md for the full list of
-# supported keywords.
+# Defines the JSON Schema (draft 2020-12) subset accepted by Another Mood:
+# the root is type: object with `properties:` listing each top-level
+# entity, and only the keywords whitelisted below are allowed.
 #
-# This meta-schema uses $ref/$defs for recursion, which is NOT available
-# to user-defined schemas.  The restriction is intentional: user schemas
-# go through normalization and visualization pipelines that cannot handle
-# $ref; this built-in schema is only consumed by the jsonschema validator.
+# $ref / $defs are used here for recursion, but are not available to
+# user-defined schemas (only the keywords listed under jsonSchemaSubset
+# are).
 
 $ref: "#/$defs/rootSchema"
 
 $defs:
-  # The root user schema is a jsonSchemaSubset with two extra constraints:
-  # type must be `object` and `properties:` must be present.  This rules
-  # out a dict-pattern root (`additionalProperties: <schema>` without
-  # `properties:`), which would otherwise pass validation but degrade
-  # silently downstream — extract_data_catalog yields no entities and
-  # the normalizer ignores the root additionalProperties because
-  # _build_object_from_properties is preferred once the user schema is
-  # merged with the built-in prose schema (which contributes properties).
+  # The root must be type: object with `properties:` defined.  This
+  # excludes a dict-pattern root (additionalProperties without
+  # properties), which would not produce any entity to normalize.
   rootSchema:
     allOf:
       - $ref: "#/$defs/jsonSchemaSubset"

@@ -525,6 +525,7 @@ categories:
           語彙・例・書き味に揃える最終調整。
           用語定義の重複整理、cross-reference の見直し、文体の統一が主。
         phase: 8
+        done: true
       L6:
         title: README + docs/ の英訳 + 執筆言語の英語切替
         note: |
