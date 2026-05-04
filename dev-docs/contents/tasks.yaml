@@ -517,6 +517,7 @@ categories:
           前提: F1〜F3 実装後に着手する。テンプレート章を最後に回す構成は、
           F2/F3 のメタビューでスキーマ/コンテンツ/クエリを育てられることに依存する。
         phase: 8
+        done: true
       L5e:
         title: Reference polish
         note: |
