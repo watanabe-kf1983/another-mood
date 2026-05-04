@@ -24,7 +24,7 @@
 書き分けのルール:
 
 - pyproject.toml description / `mood --help` / README 冒頭などの tagline は **Means + 現 Effect** の形で書く
-  - 例: `A source-based database processor for keeping related documents in sync.`
+  - 例: `A processor of source-based databases, keeping related documents in sync.`
 - Effect 側は**未来の拡張を匂わせない**（"and other ..." 等を入れない）。誠実さを優先
 - 一方で Vision を Effect に固定して書くのは避ける（"documentation build tool" は Means の解釈を狭めるので NG）
 - product.md の Vision は Effect レイヤーの抽象化として別管理。tagline と Vision の整合は時間とともにずれてよい

@@ -14,7 +14,7 @@ app = typer.Typer()
 
 @app.callback()
 def callback() -> None:
-    """Another Mood: a source-based database processor for keeping related documents in sync."""
+    """Another Mood: a processor of source-based databases, keeping related documents in sync."""
 
 
 def _load_config(**kwargs: object) -> ProjectConfig:
