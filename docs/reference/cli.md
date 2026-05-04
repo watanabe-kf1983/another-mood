@@ -2,7 +2,7 @@
 
 `mood` は Another Mood のエントリポイントとなるコマンドラインツール。プロジェクトの初期化（`init`）、一括ビルド（`build`）、ファイル監視 + ライブプレビュー（`watch`）の 3 サブコマンドを提供する。
 
-すべてのサブコマンドは第一位置パラメータ `<project_dir>` で処理対象ディレクトリを受け取る。典型的な使い方は、プロジェクトディレクトリで `.` を指定する形:
+すべてのサブコマンドは第一位置パラメータ `<project_dir>` で処理対象ディレクトリを受け取る。典型的にはプロジェクトディレクトリで `.` を指定する形:
 
 ```bash
 mood init .
@@ -24,7 +24,7 @@ mood watch .
 
 ### 入力パスの解決
 
-入力パス（schema ファイル / contents・queries・templates の各ディレクトリ）は `<project_dir>` を基準に解決される。デフォルト配置は次の通り:
+入力パス（schema ファイル / contents・queries・templates の各ディレクトリ）は `<project_dir>` を基準に解決される。デフォルト配置:
 
 | 種類 | デフォルト | 環境変数 |
 |---|---|---|
@@ -42,8 +42,8 @@ mood watch .
 | 種類 | デフォルト | 環境変数 |
 |---|---|---|
 | 中間出力（ステージごと） | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` |
-| Generator 出力（最終 Markdown） | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
-| Renderer 出力（最終 HTML） | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
+| Markdown 出力 | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
+| HTML 出力 | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
 
 異なる `<project_dir>` を別プロセスで同時に処理しても出力先が衝突しないよう、入力パスに対応するサブディレクトリが自動的に作られる。
 
@@ -57,10 +57,17 @@ mood init <project_dir>
 
 `<project_dir>` 配下に、内蔵の starter テンプレート（schema / contents / queries / templates の最小サンプル一式）をコピーする。`<project_dir>` が存在しない場合は親ディレクトリごと作成される。
 
-**既存ファイルの上書き**: 同名のファイルが既にある場合、上書きはせず警告を表示してスキップする。
+新規作成したファイルは `created:`、既存で上書きスキップしたファイルは `warning:` で標準エラー出力に列挙される:
 
 ```
-warning: skipped (already exists): ./definition/schema.yaml
+Initializing project in my-project/
+  created: my-project/definition/schema.yaml
+  created: my-project/contents/members.yaml
+  ...
+```
+
+```
+warning: skipped (already exists): my-project/definition/schema.yaml
 ```
 
 すべてのファイルが新規作成された場合は終了コード 0、いずれか 1 つでもスキップされた場合は終了コード 1 で終了する。これは「初回実行時に空ディレクトリへ書き込めたか」を CI 等から判定できるようにするためで、既存プロジェクトに対して `init` を再実行しても破壊的な変更は起きない。
@@ -76,16 +83,11 @@ mood build <project_dir>
 実行内容:
 
 1. `<project_dir>/definition/schema.yaml` を読み込み、`<project_dir>/contents` を正規化
-2. `<project_dir>/definition/queries` のクエリを評価して view を構築
+2. `<project_dir>/definition/queries` のクエリを評価してビューを構築
 3. `<project_dir>/definition/templates` を使って Markdown を `output/` に書き出す
 4. `output/` を Hugo に渡して HTML を `render/` に書き出す
 
 すべてのステージが成功すれば終了コード 0、いずれかのステージでエラーが発生すれば終了コード 1 で終了する。
-
-**用途**:
-
-- CI / リリースでの一括生成
-- コーディングエージェントとの協業。エージェントがファイルを編集した後に `mood build` を実行し、終了コードで成否を判定する。ブラウザ側は VS Code Live Server 等で `render/` を常時配信し、人がリロードで確認するワークフローに合う
 
 ## watch
 
