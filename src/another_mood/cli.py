@@ -14,7 +14,7 @@ app = typer.Typer()
 
 @app.callback()
 def callback() -> None:
-    """another-mood: a documentation build tool."""
+    """Another Mood: a documentation build tool."""
 
 
 def _load_config(**kwargs: object) -> ProjectConfig:

@@ -1,4 +1,4 @@
-"""FileType — the kinds of source files another-mood can ingest.
+"""FileType — the kinds of source files Another Mood can ingest.
 
 Matching is case-insensitive so that .YAML / .MD / .Yml all work the
 same as their lowercase forms.  This mirrors the behavior of common

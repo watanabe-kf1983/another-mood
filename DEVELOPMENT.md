@@ -17,7 +17,7 @@
 
 ツールの動作には [uv](https://docs.astral.sh/uv/) が必要。インストール後 `uv sync` で依存を解決する。
 
-このプロジェクト自身が another-mood でドキュメントを管理している。開発者向け設計書は `dev-docs/`、利用者向けサンプルプロジェクト群は `showcase/`（user-guide / starter / examples）にある。それぞれを以下のコマンドでビルドする:
+このプロジェクト自身が Another Mood でドキュメントを管理している。開発者向け設計書は `dev-docs/`、利用者向けサンプルプロジェクト群は `showcase/`（user-guide / starter / examples）にある。それぞれを以下のコマンドでビルドする:
 
 ```bash
 mood build dev-docs
@@ -26,7 +26,7 @@ mood build showcase/examples/ecommerce
 
 出力は `.another-mood/{project}/output/` に書き出される。起点は [.another-mood/dev-docs/output/reports/prose/index.md](.another-mood/dev-docs/output/reports/prose/index.md)。
 
-ソース編集中は `mood watch dev-docs` で自動リビルドできる。ただし another-mood 本体（Python コード）を変更する場合は古いコードで watch が動き続けるため、つど `mood build dev-docs` を再実行する。
+ソース編集中は `mood watch dev-docs` で自動リビルドできる。ただし Another Mood 本体（Python コード）を変更する場合は古いコードで watch が動き続けるため、つど `mood build dev-docs` を再実行する。
 
 タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。
 

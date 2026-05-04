@@ -1,4 +1,4 @@
-# another-mood
+# Another Mood
 
 ドキュメントビルドツール。関連するオブジェクト群（YAML / Markdown）とテンプレートから、整合性の取れた構造的ドキュメントを生成する。
 

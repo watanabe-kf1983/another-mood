@@ -1,6 +1,6 @@
 """Hugo content preparation — Component that syncs reconcile output to a Hugo-ready form.
 
-Adapts another-mood output to Hugo conventions:
+Adapts Another Mood output to Hugo conventions:
 - Renames index.md → _index.md (Hugo branch bundle requirement)
 - Replaces deleted .md files with a placeholder so Hugo's dev server
   reflects the removal (Hugo keeps deleted pages in memory otherwise)
