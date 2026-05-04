@@ -326,3 +326,36 @@ $defs:
           const: false
       required: [additionalProperties]
 ```
+
+## content-schema 全文
+
+[内蔵スキーマ: 散文](#内蔵スキーマ-散文-prose) で説明した prose エンティティの構造を定める内蔵スキーマ。本節の散文記述に対する正典。
+
+```yaml
+# Built-in schema for the prose entity.
+#
+# Markdown files in contents_dir become prose records (id + title + body).
+# Merged with the user's schema.yaml at validation time so that all
+# content files are validated uniformly.
+
+type: object
+properties:
+  prose:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: object
+          properties:
+            mime_type:
+              type: string
+            content:
+              type: string
+          required: [mime_type, content]
+      required: [id, body]
+```

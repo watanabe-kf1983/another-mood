@@ -119,3 +119,45 @@ select:
 ## ビューの確認
 
 各クエリの結果は `output/__meta_query/<query>.md` に自動生成されるメタページで確認できる。クエリを書きながら期待通りの結果になっているかを `mood watch` 上で見ながら進められる。
+
+## query-schema 全文
+
+クエリファイルの形を縛る内蔵スキーマ。本章の正典。
+
+```yaml
+# QuerySchema — built-in schema that validates user-defined query files.
+#
+# Query files have one or more top-level keys, each mapping to a query
+# definition with from (required), grouped (optional), and select (optional).
+
+type: object
+propertyNames:
+  pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
+additionalProperties:
+  type: object
+  properties:
+    from:
+      type: string
+    grouped:
+      type: object
+      properties:
+        by:
+          type: string
+        as:
+          type: string
+      required: [by]
+      additionalProperties: false
+    select:
+      type: array
+      items:
+        type: object
+        properties:
+          item:
+            type: string
+          as:
+            type: string
+        required: [item]
+        additionalProperties: false
+  required: [from]
+  additionalProperties: false
+```
