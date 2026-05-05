@@ -286,6 +286,18 @@ categories:
           データシート UI 追加と認知負荷を集約できるので、同時期の実施が望ましい。
         phase: 8
         done: true
+      G5:
+        title: "mood watch --host: preview server の bind アドレス指定"
+        note: |
+          現状 `mood watch` は 127.0.0.1 のみで listen するため、LAN 上の
+          他端末から開発プレビューを参照できない。要件定義 / 設計会議で
+          1 人がソースを更新・出席者全員が即座にブラウザで参照する
+          collaborative authoring を支える機能として `--host` を追加する。
+          仕様: cli-spec.md (mood watch 節) / config-spec.md (host キー)。
+
+          UX オプション: `--host 0.0.0.0` 起動時、コンソールに表示する URL を
+          localhost ではなく自機 LAN IP にすると親切（出席者にコピペで配れる）。
+        phase: 10
 
   H:
     title: バイナリファイルの取り扱い
