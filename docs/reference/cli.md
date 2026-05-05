@@ -1,4 +1,4 @@
-# CLI
+# CLI Reference
 
 `mood` is the command-line entry point for Another Mood. It provides three subcommands: project initialization (`init`), one-shot build (`build`), and file watching with live preview (`watch`).
 
@@ -20,7 +20,7 @@ mood watch .
 
 ## Shared argument: `<project_dir>`
 
-`<project_dir>` is given as a path relative to the CWD. Input paths are resolved against this directory, and output is written to `.another-mood/<project_dir>/` directly under the CWD.
+`<project_dir>` is given as a path relative to the current directory. Input paths are resolved against this directory, and output is written to `.another-mood/<project_dir>/` directly under the current directory.
 
 ### Input path resolution
 
@@ -37,7 +37,7 @@ If any of these paths is missing when `build` or `watch` starts, the command fai
 
 ### Output path resolution
 
-Output directories are placed under `.another-mood/<project_dir>/`, relative to the CWD:
+Output directories are placed under `.another-mood/<project_dir>/`, relative to the current directory:
 
 | Kind | Default | Env var |
 |---|---|---|
