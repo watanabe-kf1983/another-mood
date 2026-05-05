@@ -1,6 +1,6 @@
 # Reference
 
-Per-feature reference for syntax, full options, reserved names, and similar lookups. Covers only Implemented features.
+Per-feature reference for syntax, full options, reserved names, and similar lookups.
 
 For a guided walkthrough, see [Guides](../guides.md); this side is for targeted lookup.
 

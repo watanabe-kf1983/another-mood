@@ -13,12 +13,12 @@ Output is written to `.another-mood/showcase/examples/ecommerce/output/`.
 
 ## Status
 
-Under development (private). Phase 8 in progress — see [dev-docs/contents/tasks.yaml](dev-docs/contents/tasks.yaml). Public release is planned after Phase 10 completes.
+Under development (private).
 
 For design decisions and background, see [background/product.md](dev-docs/contents/background/product.md).
 
 ## Documentation
 
-- [docs/guides.md](docs/guides.md) — User guide *(work in progress)*
+- [docs/guides.md](docs/guides.md) — User guide
 - [DEVELOPMENT.md](DEVELOPMENT.md) — Developer guide
 - [showcase/examples/ecommerce/](showcase/examples/ecommerce/) — Example project
