@@ -298,6 +298,15 @@ categories:
           UX オプション: `--host 0.0.0.0` 起動時、コンソールに表示する URL を
           localhost ではなく自機 LAN IP にすると親切（出席者にコピペで配れる）。
         phase: 10
+      G6:
+        title: "mood watch --detach + PID file 対応"
+        note: |
+          watch server をバックグラウンド起動するための CLI 機能。
+          subprocess 起動 / PID 管理 / 既存プロセス検知 / 停止コマンド。
+          設計原則「MCP と CLI の論理的機能は一致すべき」に従い、detach + PID
+          ロジックは CLI 側に置き、MCP の start / stop ツール (K7) は薄い wrapper
+          にする。同セッション / 同 PR で K7 とまとめて実施可能。
+        phase: 9
 
   H:
     title: バイナリファイルの取り扱い
@@ -346,30 +355,59 @@ categories:
     spec: design/app/mcp-design.md
     tasks:
       K1:
-        title: MCP サーバの骨格
-        note: FastMCP + build / dev start / dev stop ツール登録
+        title: FastMCP 骨格
+        note: |
+          MCP サーバの infra のみ。FastMCP server boilerplate, entry point
+          (mood mcp サブコマンド形式の決定もここ), モジュール構成, 統合テスト足場
+          (FastMCP test client での疎通確認 fixture)。ツール / Resources / Instructions
+          は含まない。
+          出口: サーバが起動して MCP protocol handshake が通る。
+          K2 と同セッション / 同 PR で実施することも検討可 (K1 単独だと PR が thin)。
         phase: 9
       K2:
-        title: build ツール
-        note: CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す
+        title: Resources 公開
+        note: |
+          設計書のコア機能の片方。.another-mood/{project}/output/ 全量を MCP Resources
+          として公開。URI スキーム設計 / 走査 / resources/list + resources/read 実装 /
+          ファイル → Resource (mimeType, name, description) の mapping。
+          出口: agent が resources/list で目次取得、resources/read で個別読み。
+          K1 と同 PR にまとめる選択肢あり (合わせて「ナビゲーター MVP」)。
         phase: 9
       K3:
-        title: dev start / dev stop ツール
-        note: dev server のバックグラウンド起動・停止。PID 管理・二重起動防止
+        title: Server Instructions
+        note: |
+          設計書のコア機能のもう片方。200 語以内の誘導文 + FastMCP の initialize
+          レスポンスに乗せる注入機構。K2 の URI スキームを参照するため K2 後に着手。
+          ツールが追加される度に Instructions に追記する運用 (K4 / K5 / K7 の各タスクで)。
+          出口: agent が接続時に Instructions を受け取り、Resources へ誘導される。
         phase: 9
       K4:
-        title: Resources として output 全量を公開
-        note: resources/list + resources/read で AI がドキュメントをオンデマンド取得
+        title: build ツール
+        note: |
+          CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す。
+          docstring は Tool description としてそのまま自動生成される (K3 の方針)。
+          実装と同時に Instructions (K3) に build フィードバックループの行動指針を追記。
         phase: 9
       K5:
-        title: Server Instructions + Tool description の整備
-        note: Instructions は 200 語以内の誘導文。Tool description は docstring から自動生成
+        title: init ツール
+        note: |
+          G1 (mood init) の MCP 露出。CLI の mood init と同一の動作。
+          docstring + Instructions 追記をセットで実施。
         phase: 9
       K6:
         title: メタスキーマへの説明メタデータ埋め込み
-        note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K4 の効果を高める
+        note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K2 の効果を高める
         phase: 8
         done: true
+      K7:
+        title: MCP start / stop ツール
+        note: |
+          G6 (mood watch --detach + PID file) の薄い wrapper。watch server の
+          バックグラウンド起動・停止を agent から制御できるようにする。
+          watch は人間のブラウザプレビュー用であり agent 自身は使わないため、
+          MCP サーバとしての必須度は低い。phase 9 末尾に置く。
+          G6 と同セッション / 同 PR で実施可能。
+        phase: 9
 
   M:
     title: JSON データモデル と データカタログ
@@ -550,3 +588,10 @@ categories:
           翻訳対象: README.md, docs/ 配下全て。
         phase: 8
         done: true
+      L7:
+        title: docs/ への MCP セクション追加 + 配布手順
+        note: |
+          利用者向け MCP ドキュメント。インストール手順 (uvx 等)、
+          claude_desktop_config.json への登録例、提供ツール一覧。
+          K1〜K5 完了後に着手。
+        phase: 9
