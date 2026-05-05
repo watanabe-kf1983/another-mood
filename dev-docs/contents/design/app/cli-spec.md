@@ -28,8 +28,12 @@ mood init <projectDir>
 常駐モード。ファイル変更を監視して自動再処理し、Hugo server でプレビューを配信する。
 
 ```
-mood watch <projectDir> [--port <port>]
+mood watch <projectDir> [--host <addr>] [--port <port>]
 ```
+
+`--host` は preview server の bind アドレス。デフォルト `127.0.0.1`（localhost のみ）。`0.0.0.0` 等を指定すると LAN 上の他端末から preview server に接続可能になる。preview server には認証がないため、信頼できるネットワーク内でのみ使うこと。
+
+想定ユースケース: 要件定義 / 設計会議で 1 人がソースを更新、出席者全員が即座にブラウザでドキュメントを参照する collaborative authoring。同一 LAN 上のメンバーに対して `--host 0.0.0.0` で開く。
 
 複数ディレクトリを同時に監視したい場合は、複数プロセスで起動する。出力先は `<projectDir>` ごとに自動分離されるため衝突しない。ただしポートが競合するため、2つ目以降は `--port` で別ポートを指定する必要がある。
 
