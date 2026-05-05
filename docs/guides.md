@@ -115,22 +115,22 @@ With `mood watch` running, the output of each stage updates in the browser as yo
 
 The deciding factor: whether errors are read by a human or picked up by a machine. `watch` is for humans to see errors in the console or browser and fix them inline. `build` finishes and returns a result (success or failure), so automated pipelines or agents can act on the result and continue.
 
-## スキーマとコンテンツ
+## Schema and content
 
-### 構造化データ — スキーマを先に宣言する
+### Structured data — declare the schema first
 
-メンバー一覧、商品一覧、画面定義、注文履歴 — 「同じ形のレコードが何件もある」種類のデータは、**コンテンツファイル** (`contents/*.yaml`) に書く。ただし、書く前に **スキーマファイル** (`definition/schema.yaml`) でその「形」を宣言しておく。
+Member lists, product lists, screen definitions, order histories — kinds of data where many records share the same shape go in **content files** (`contents/*.yaml`). Before writing them, declare the shape in the **schema file** (`definition/schema.yaml`).
 
-スキーマ宣言のないデータはビルドエラーになる。同じく、書き間違い（必須フィールド漏れ、型違い、未定義フィールド）もビルド時にエラーで止める。書き手が気付かないまま壊れたデータが下流（クエリ・テンプレート）に流れていくのを、ツール側で防ぐ意図。
+Data without a schema declaration causes a build error. Likewise, writing mistakes (missing required fields, type mismatches, undeclared fields) are caught at build time and stop the build. The intent is to prevent broken data from flowing downstream (to queries and templates) without the writer noticing.
 
-スキーマは **JSON Schema** で書く（使える語彙・本家との細かい違いは [Schema](reference/schema.md) を参照）。サンプルのスキーマファイル:
+Schemas are written in **JSON Schema** (for the supported vocabulary and minor differences from the original spec, see [Schema](reference/schema.md)). A sample schema file:
 
 ```yaml
 type: object
 properties:
   members:
     type: object
-    additionalProperties:        # ← 「同型エントリのマップ」を意味する
+    additionalProperties:        # ← means "map of same-shaped entries"
       type: object
       properties:
         name: { type: string }
@@ -140,7 +140,7 @@ properties:
 additionalProperties: false
 ```
 
-このスキーマが期待するコンテンツファイルの一例（実際のファイル名は任意）:
+A content file matching this schema (the file name is up to you):
 
 ```yaml
 members:
@@ -152,22 +152,22 @@ members:
     role: engineer
 ```
 
-ルート構造は固定で、必ず次の 3 点を満たす:
+The root structure is fixed and always satisfies these three rules:
 
-- 最外側は `type: object`
-- `properties:` の各エントリが 1 種類の **エンティティ**（同じ形のレコードの集まり）を表す（上の例では `members`）
-- 末尾の `additionalProperties: false` で、宣言していないトップレベルキーをエラーにする
+- The outermost type is `type: object`
+- Each entry under `properties:` represents one **entity** (a collection of records of the same shape) — `members` in the example above
+- The trailing `additionalProperties: false` makes any undeclared top-level key an error
 
-エンティティ名（`members`）は、コンテンツファイルのトップレベルキーと一致させる。
+The entity name (`members`) must match the top-level key in the content file.
 
-各エンティティの中身（`properties` の値）には、定型のパターンが 3 つある — 複数レコードをマップで書く / 複数レコードを配列で書く / 単一レコードを `properties` で列挙。順に見ていく。
+There are three standard patterns for the body of each entity (the value under `properties`): multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
 
-#### 複数レコード — マップで書く
+#### Multiple records — write as a map
 
-メンバー名簿がそのパターン。スキーマの `additionalProperties` の下に値の型を書き、コンテンツファイルはマップ（キーと値のペア）で書く。「同じ形のレコードが何件もある」用途では、ほぼ常にこの **マップパターン** で書く。スキーマファイル抜粋とコンテンツファイルを再掲:
+The `members` example above uses this pattern. Put the value type under `additionalProperties` in the schema, and write the content file as a map (key-value pairs). When you have many records of the same shape, this **map pattern** is almost always the right choice. Repeating the schema excerpt and content file:
 
 ```yaml
-# definition/schema.yaml — エンティティ部分の抜粋
+# definition/schema.yaml — entity excerpt
 members:
   type: object
   additionalProperties:
@@ -180,7 +180,7 @@ members:
 ```
 
 ```yaml
-# コンテンツファイル
+# content file
 members:
   alice:
     name: Alice
@@ -190,7 +190,7 @@ members:
     role: engineer
 ```
 
-ビルド時にこれは配列に **正規化** され（書いたマップが配列に変換される）、マップのキー（`alice`, `bob`）が各レコードの `id` フィールドとして付与される。テンプレートからは
+At build time this is **normalized** to an array (the map you wrote becomes an array), and the map keys (`alice`, `bob`) are added to each record as an `id` field. From templates it appears as:
 
 ```yaml
 members:
@@ -198,16 +198,16 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-の形に見える。`id` フィールドはテンプレートからもクエリからも参照でき、ワークフロー表で見たとおり `output/__meta_entity/<entity>.md`（宣言した型がツールにどう解釈されたか）と `output/__table_view/<entity>.md`（データが期待通り読み込まれているか）で確認できる。
+The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via `output/__meta_entity/<entity>.md` (how the tool interpreted the declared type) and `output/__table_view/<entity>.md` (whether the data is being loaded as expected).
 
-マップで書く理由は 2 つ。第一に、レコード数が増えても YAML データの視認性が配列形式より素直（各レコードの先頭に `id` が来て見出しのように働く）。第二に、`id` の一意性が YAML パースの段階で保証されるため、同じキーがあれば即パースエラーになり、後から「`id` が衝突していました」と気付かされない。
+There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
 
-#### 複数レコード — 配列で書く
+#### Multiple records — write as an array
 
-逆に、上の 2 つの利点（視認性・ID 一意性）が要らないなら、`type: array` で配列（順序のある並び）として書いてもよい。たとえば順序だけが意味を持つ手順、外部から個別参照されない注釈の列、ID を考えるのが面倒なほど些末なレコードの羅列、など。
+Conversely, if you don't need those two advantages (readability and ID uniqueness), you can write the entity as an array (an ordered sequence) using `type: array`. Examples: procedures where only the order matters, a sequence of annotations not referenced individually from elsewhere, or a stream of records too trivial to bother assigning IDs.
 
 ```yaml
-# definition/schema.yaml — エンティティ部分
+# definition/schema.yaml — entity excerpt
 steps:
   type: array
   items:
@@ -219,21 +219,21 @@ steps:
 ```
 
 ```yaml
-# コンテンツファイル
+# content file
 steps:
   - label: Boil water
   - label: Add tea leaves
   - label: Wait 3 minutes
 ```
 
-マップパターンと違って正規化はされず、書いた配列がそのままテンプレートに渡る。
+Unlike the map pattern, no normalization happens; the array you wrote is passed to templates as-is.
 
-#### 単一レコード — `properties` で列挙
+#### Single record — enumerate keys via `properties`
 
-サイト設定のように「キーが事前に決まっていて、レコード数が 1 つ」のものは、`additionalProperties` の代わりに `properties` でキーを列挙する:
+For things like site config — where the keys are known up front and there is exactly one record — list the keys under `properties` rather than `additionalProperties`:
 
 ```yaml
-# definition/schema.yaml に追加
+# add to definition/schema.yaml
 site_config:
   type: object
   properties:
@@ -243,54 +243,54 @@ site_config:
 ```
 
 ```yaml
-# コンテンツファイル
+# content file
 site_config:
   title: My Site
   base_url: https://example.com
 ```
 
-配列同様、正規化されず、書いた形のままテンプレートに渡る。
+Like the array form, no normalization happens; the value is passed to templates as written.
 
-#### コンテンツファイル — 名前と分割は自由
+#### Content files — naming and layout are up to you
 
-これまで説明したとおり、データの内容はスキーマファイルで定義した JSON Schema の制約に従う。しかし、コンテンツファイル自体の整理（ファイル名・ディレクトリ構成・ファイル数）には制約がない。ドメイン別・章別・レビュー単位別など、プロジェクトに合った粒度で整理してよい:
+As we've seen, the data contents must follow the JSON Schema constraints from the schema file. The organization of the content files themselves (filenames, directory structure, number of files), however, has no such constraints. Organize at whatever granularity fits the project — by domain, by chapter, by review unit, and so on:
 
-- サブディレクトリに置いてよい
-- ファイル名・ディレクトリ名はエンティティ名と一致させなくてよい
-- 1 ファイルに複数のエンティティのデータを書いてよい
-- 1 つのエンティティのデータを複数ファイルに分割してよい
+- Subdirectories are fine
+- Filenames and directory names need not match entity names
+- A single file may contain data for multiple entities
+- Data for a single entity may be split across multiple files
 
-ビルド時にすべての YAML がマージされ、各ファイルの **トップレベルキー** でエンティティに紐付けられる。
+At build time all YAML files are merged.
 
-### 散文 — Markdown でそのまま書く
+### Prose — write directly in Markdown
 
-「同じ形のレコードが何件もある」種類のデータは構造化データとして YAML で書く一方、**定型の枠に収まらない長めの散文** は YAML には収まりにくい。説明文・背景・補足、FAQ、ガイド、ヘルプ記事など、Markdown でそのまま書きたい類のものがそれ。
+While data with many records of the same shape is written as structured data in YAML, **longer-form prose that doesn't fit a fixed shape** is awkward to express in YAML. Explanatory text, background, supplementary notes, FAQs, guides, help articles — content you'd rather just write directly in Markdown.
 
-こうした散文を書くときは、ユーザはスキーマを宣言せず、`contents/` 配下に `.md` で置くだけでよい。**ツール内蔵のスキーマ** が暗黙に適用される（次の YAML 例で具体形を示す）。
+For this kind of prose, you don't declare a schema — just place a `.md` file under `contents/`. The **tool's built-in schema** is applied implicitly (the YAML example below shows the concrete shape).
 
-たとえば `contents/guides/ordering.md` をこう書いたとする:
+For example, say you write `contents/guides/ordering.md` like this:
 
 ```markdown
-# 注文の流れ
+# Ordering flow
 
-カートに商品を入れて、レジに進むと…
+Add items to your cart and proceed to checkout...
 ```
 
-テンプレートからは、**予約名 `prose`** の配列にレコードが現れる:
+From templates, records appear in an array under the **reserved name `prose`**:
 
 ```yaml
 prose:
-  - id: guides/ordering          # ファイルの相対パス（拡張子なし）
-    title: 注文の流れ              # 最初の H1
-    body:                        # ファイル全体の Markdown
+  - id: guides/ordering          # file's relative path (without extension)
+    title: Ordering flow         # the first H1
+    body:                        # the file's full Markdown
       mime_type: text/markdown
       content: |
-        # 注文の流れ
+        # Ordering flow
 
-        カートに商品を入れて、レジに進むと…
+        Add items to your cart and proceed to checkout...
 ```
 
-1 ファイル = 1 レコードで、`id` / `title` / `body` の 3 フィールドが内蔵スキーマで定義されている。`body` の `content` を埋め込む方法は [テンプレート](#テンプレート) 章で詳述。
+One file = one record, and the three fields `id` / `title` / `body` are defined by the built-in schema. How to embed `body.content` is covered in detail in the [Templates](#templates) chapter.
 
 ## クエリ
 
