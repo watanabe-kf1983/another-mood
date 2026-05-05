@@ -78,18 +78,18 @@ mood watch my-project
 
 The rest of this guide builds on this sample, walking through the pieces needed to write sources for your own project.
 
-## ソースの構成
+## Source structure
 
-ソースは 4 種類で構成される。
+There are four kinds of sources.
 
-- **スキーマ** — 構造化データの型を宣言する 1 ファイル。
-- **コンテンツ** — 実データ。次の 2 種:
-  - **構造化データ** — スキーマに沿って書く YAML。同じ形のレコードの集まり（メンバー一覧、商品一覧、画面定義 …）。
-  - **散文** — Markdown でそのまま書く文章。ユーザによるスキーマ宣言は不要（ツール内蔵スキーマで構造化）。
-- **クエリ** — 構造化データを加工した結果に名前を付けるビュー。SQL のビューに相当。
-- **テンプレート** — 最終出力ページの形を書いたファイル。データやクエリの結果を参照する。
+- **Schema** — A single file that declares the types of structured data.
+- **Content** — The actual data. Two kinds:
+  - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...).
+  - **Prose** — Text written directly in Markdown. No user-defined schema needed (structured by the tool's built-in schema).
+- **Query** — Creates a view that reshapes structured data into a more convenient form for reference.
+- **Template** — A file describing the shape of the final output page. References data or query results.
 
-詳しくは [スキーマとコンテンツ](#スキーマとコンテンツ)・[クエリ](#クエリ)・[テンプレート](#テンプレート) で。書く順番と確認の仕方は次節 [ワークフロー](#ワークフロー)。
+Details on each in [Schema and content](#schema-and-content), [Queries](#queries), and [Templates](#templates). For the order of writing and how to verify, see the next chapter, [Workflow](#workflow).
 
 ## ワークフロー
 
