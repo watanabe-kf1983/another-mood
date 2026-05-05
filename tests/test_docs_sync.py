@@ -20,7 +20,7 @@ _SCHEMAS_DIR = _REPO_ROOT / "src" / "another_mood" / "resources" / "schemas"
 _CASES = [
     ("schema.md", "## Full schema-schema", "schema-schema.yaml"),
     ("schema.md", "## Full content-schema", "content-schema.yaml"),
-    ("query.md", "## query-schema 全文", "query-schema.yaml"),
+    ("query.md", "## Full query-schema", "query-schema.yaml"),
 ]
 
 
