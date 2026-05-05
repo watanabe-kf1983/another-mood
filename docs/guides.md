@@ -353,26 +353,26 @@ File names and splitting under `definition/queries/` are as flexible as for cont
 
 For full syntax and examples, see [Query](reference/query.md).
 
-## テンプレート
+## Templates
 
-テンプレートは、データやビューをユーザがページとしてカスタマイズして整形出力する仕組み。記法は、このツールが利用しているテンプレートエンジン [Jinja2](https://jinja.palletsprojects.com/) の記法と、このツールの独自記法（ファイル分割のためのタグ `{% mood_view %}`）からなる。
+Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template engine this tool builds on — with the tool's own additions (the `{% mood_view %}` tag for splitting output across files).
 
-### Jinja2 の基本記法
+### Jinja2 basics
 
-最低限以下を押さえておく:
+At minimum, know these:
 
-- `{{ x }}` — 値を埋め込む
-- `{% for x in xs %}...{% endfor %}` — 繰り返し
-- `{% if x %}...{% endif %}` — 条件分岐
-- `{# ... #}` — コメント
+- `{{ x }}` — embed a value
+- `{% for x in xs %}...{% endfor %}` — loop
+- `{% if x %}...{% endif %}` — branch
+- `{# ... #}` — comment
 
-全構文は [Jinja2 公式ドキュメント](https://jinja.palletsprojects.com/) を参照。
+For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/).
 
-### ルートテンプレート
+### Root template
 
-`definition/templates/index.md` がサイトの入口（ルートテンプレート）。テンプレートエンジンはここから評価を始める。トップページの本文と、サブページを生成するための `{% mood_view %}` 呼び出しを書く。
+`definition/templates/index.md` is the site's entry point — the root template. The template engine begins evaluation here. Write the body of the home page along with the `{% mood_view %}` calls that generate subpages.
 
-サンプルの `definition/templates/index.md`:
+Sample `definition/templates/index.md`:
 
 ```jinja2
 # Project Members
@@ -398,24 +398,24 @@ For full syntax and examples, see [Query](reference/query.md).
 {%- endfor %}
 ```
 
-各セクションに `for` ループが 2 回出てくる。前半は **目次のリンクを出す** ループ、後半は **サブページ本体を書き出す** ループ。
+Each section has two `for` loops. The first **emits index links**; the second **writes the subpage bodies**.
 
-これは `{% mood_view %}` の動作によるもの。`{% mood_view "TEMPLATE_NAME" with DATA %}` は、`definition/templates/<TEMPLATE_NAME>.md` を `DATA` で評価して別ファイルに書き出すタグで、タグ自体は **空文字列を返す**（書き出しは副作用）。親ページの目次リンクは別途 Markdown のリンク記法で書く必要があるため、リンク用と本文生成用にループが分かれる。
+This split comes from how `{% mood_view %}` behaves. `{% mood_view "TEMPLATE_NAME" with DATA %}` is a tag that evaluates `definition/templates/<TEMPLATE_NAME>.md` against `DATA` and writes the result to a separate file; the tag itself **returns the empty string** (the write is a side effect). Because the parent page's index links must be written separately in Markdown link syntax, the loops split into one for links and one for body generation.
 
-出力ファイル名は `DATA` に `id` フィールドがあるかで決まる:
+The output filename depends on whether `DATA` has an `id` field:
 
-| `DATA` の中身 | 出力先 |
+| `DATA` contents | Output |
 |---|---|
-| `id` を含むマップ | `<TEMPLATE_NAME>/<id>.md` |
-| `id` がないマップ | `<TEMPLATE_NAME>.md` |
+| Map with `id` | `<TEMPLATE_NAME>/<id>.md` |
+| Map without `id` | `<TEMPLATE_NAME>.md` |
 
-サンプルの `{% mood_view "member" with member %}` は、`member.id` が `alice` なら `member/alice.md` に書き出される。クエリで `as: id` を付けて id を作っておくと、`mood_view` の結果がロール別に 1 ファイルに分かれる、という流れがここで完結する。
+In the sample, `{% mood_view "member" with member %}` writes to `member/alice.md` when `member.id` is `alice`. The `as: id` trick from the queries chapter — synthesizing an `id` so that `mood_view` splits its output one file per role — comes together here.
 
-`{% mood_view %}` はサブテンプレートからも呼び出せる（サブページの中でさらにサブページを生成できる）。タグの全仕様は [Template — Jinja2 拡張](reference/template.md#jinja2-拡張-mood_view)。
+`{% mood_view %}` can also be called from subtemplates (subpages can generate further subpages within them). For the full tag specification, see [Template — Jinja2 extensions](reference/template.md#jinja2-extension-mood_view).
 
-### サブテンプレート
+### Subtemplates
 
-`{% mood_view %}` から呼び出される側のテンプレート。`with` で渡したマップのフィールドがそのままトップレベル変数として使える:
+Templates called by `{% mood_view %}`. The fields of the map passed in via `with` are available directly as top-level variables:
 
 ```jinja2
 {# definition/templates/member.md #}
@@ -424,28 +424,28 @@ For full syntax and examples, see [Query](reference/query.md).
 Role: {{ role }}
 ```
 
-### Markdown 本文を埋め込む
+### Embedding a Markdown body
 
-散文の `body` フィールドは、`mime_type` と `content` を持つマップになっている。テンプレートで本文を埋め込むときは `.content` を参照する:
+The `body` field of a prose record is a map with `mime_type` and `content`. To embed the body in a template, reference `.content`:
 
 ```jinja2
-{# 散文の本文を埋め込む #}
+{# embed the prose body #}
 {{ body.content }}
 ```
 
-詳細は [Schema — 内蔵スキーマ: 散文](reference/schema.md#内蔵スキーマ-散文-prose)。
+For details, see [Schema — Built-in schema: prose](reference/schema.md#built-in-schema-prose).
 
-### 未定義フィールドは空文字列になる
+### Undefined fields become the empty string
 
 ```jinja2
 | {{ member.id }} | {{ member.metadata.title }} |
 ```
 
-`metadata` が無い場合も、あっても `title` が無い場合も、エラーにならず **空文字列** になる。
+If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-ただし、スペルミスのときも同じくエラーにならず黙って空になる点に注意。書きながら `__table_view/` でデータの実体を、`__meta_query/` でクエリの結果形を確認しながら進める（[ワークフロー](#ワークフロー)）。
+Be aware that misspellings silently produce empty strings the same way — no error fires either way. While writing, check the actual data in `__table_view/` and the shape of query results in `__meta_query/` ([Workflow](#workflow)).
 
-## 次に読むもの
+## Further reading
 
-- [リファレンス](reference/index.md) — 各機能の構文・全オプション・予約語
-- [showcase/examples/ecommerce/](../showcase/examples/ecommerce/) — メンバー名簿より複雑な動くサンプル（EC サイト想定で entities / relations / 散文 / クエリ / テンプレートを一通り使う）
+- [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
+- [showcase/examples/ecommerce/](../showcase/examples/ecommerce/) — a more complex working sample than the member list, modeling an e-commerce site that exercises entities, relations, prose, queries, and templates end-to-end.
