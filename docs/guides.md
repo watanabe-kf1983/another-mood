@@ -292,15 +292,15 @@ prose:
 
 One file = one record, and the three fields `id` / `title` / `body` are defined by the built-in schema. How to embed `body.content` is covered in detail in the [Templates](#templates) chapter.
 
-## クエリ
+## Queries
 
-クエリは、構造化データを参照しやすい形に加工する仕組み。加工結果は **ビュー** として名前が付き、構造化データと同じようにテンプレートから参照できる。必要に応じて追加する。
+A query is a mechanism that reshapes structured data into a more convenient form for reference. The result becomes a named **view** that templates can reference the same way as structured data. Add queries as needed.
 
-クエリを書く場面は、グループ化（カテゴリ別 / ロール別 …）、フィールドの絞り込み・リネーム、同じ加工結果を複数のテンプレートで使い回す、といったところ。
+Typical situations for writing a query: grouping (by category, by role, ...), narrowing or renaming fields, or reusing the same transformed result across multiple templates.
 
-### 例: ロール別グループ化
+### Example: grouping by role
 
-メンバー名簿サンプルに含まれているクエリの例。元データ（[スキーマとコンテンツ](#スキーマとコンテンツ) 章で正規化された `members`）は次の形:
+An example query from the member-list sample. The source data (the `members` array normalized in the [Schema and content](#schema-and-content) chapter) looks like this:
 
 ```yaml
 members:
@@ -309,22 +309,22 @@ members:
   - { id: carol, name: Carol, role: designer }
 ```
 
-これを `role` でグループ化するクエリ:
+A query that groups it by `role`:
 
 ```yaml
 # definition/queries/by_role.yaml
-by_role:                  # ← ファイルのトップレベルキーがビュー名になる
-  from: members           # 元データ
+by_role:                  # ← the file's top-level key becomes the view name
+  from: members           # source data
   grouped:
-    by: role              # グループ化のキー
+    by: role              # grouping key
   select:
     - item: role
-      as: id              # role を id フィールドにする
+      as: id              # output role as the id field
     - item: role
     - item: members
 ```
 
-これでビュー `by_role` ができる。テンプレートからは
+This produces the view `by_role`. From templates it appears as:
 
 ```yaml
 by_role:
@@ -339,21 +339,19 @@ by_role:
       - { id: carol, name: Carol, role: designer }
 ```
 
-の形に見える。
+### Anatomy of a query
 
-### クエリで使われる語彙の全体像
+A query has three blocks: `from` → `grouped` (optional) → `select` (optional).
 
-クエリは `from` → `grouped`（任意）→ `select`（任意）の 3 ブロック構成。
-
-| ブロック | 役割 |
+| Block | Role |
 |---|---|
-| `from` | 元データを指定する。ドット記法で入れ子データを取り出すこともできる（詳細はリファレンス） |
-| `grouped` | `by` で指定したフィールド値が同じレコードを 1 つにまとめる |
-| `select` | 出力に含めるフィールドを列挙。`as` でリネームできる |
+| `from` | Specifies the source data. Dot notation can drill into nested data (see reference for details). |
+| `grouped` | Combines records that share the same value for the field named by `by`. |
+| `select` | Lists fields to include in the output. Use `as` to rename. |
 
-`definition/queries/` 配下のファイル名・分割はコンテンツファイル同様、自由（1 ファイルに複数ビュー可、サブディレクトリ可）。
+File names and splitting under `definition/queries/` are as flexible as for content files: multiple views per file and subdirectories are both allowed.
 
-全構文・例は [Query](reference/query.md) を参照。
+For full syntax and examples, see [Query](reference/query.md).
 
 ## テンプレート
 
