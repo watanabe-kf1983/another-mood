@@ -6,9 +6,9 @@ Requirements specifications, product catalogs, maintenance manuals, training mat
 
 **Another Mood** is a processor of source-based databases — a tool that keeps document sets like these in sync. Edit the data in one place, and every linked output regenerates in a consistent state — no chasing fixes through many files.
 
-A **source-based database** is a database made of files that the user creates, updates, and deletes — these files are referred to as **sources** in the rest of this guide. Sources are written in formats like YAML and Markdown (the specific layout is covered in [Source structure](#source-structure)). Editing sources directly in an editor is the only way to operate on the DB.
+A **source-based database** is a database made of files that you create, update, and delete — these files are referred to as **sources** in the rest of this guide. Sources are written in formats like YAML and Markdown (the specific layout is covered in [Source structure](#source-structure)). Editing sources directly in an editor is the only way to interact with the database.
 
-Another Mood reads the sources and produces query results, data tables, and template-based documents. The user reviews these outputs and keeps editing the sources accordingly.
+Another Mood reads the sources and produces query results, data tables, and template-based documents. You review these outputs and keep editing the sources accordingly.
 
 ### Prerequisites
 
@@ -110,7 +110,7 @@ With `mood watch` running, the output of each stage updates in the browser as yo
 
 ### When to use `mood build` vs `mood watch`
 
-- `mood watch` — Start it and leave it running when you want to edit and watch results live in the browser (i.e., during continuous human authoring).
+- `mood watch` — Start it and leave it running when you want to edit and watch results live in the browser (i.e., while a human is actively writing).
 - `mood build` — Use this for one-shot generation in automated build pipelines, or when an agent (Claude Code, etc.) is running an "edit → check build status → next edit" loop.
 
 The deciding factor: whether errors are read by a human or picked up by a machine. `watch` is for humans to see errors in the console or browser and fix them inline. `build` finishes and returns a result (success or failure), so automated pipelines or agents can act on the result and continue.
@@ -296,7 +296,7 @@ One file = one record, and the three fields `id` / `title` / `body` are defined 
 
 A query is a mechanism that reshapes structured data into a more convenient form for reference. The result becomes a named **view** that templates can reference the same way as structured data. Add queries as needed.
 
-Typical situations for writing a query: grouping (by category, by role, ...), narrowing or renaming fields, or reusing the same transformed result across multiple templates.
+Typical situations for writing a query: grouping (by category, by role, ...), selecting or renaming fields, or reusing the same transformed result across multiple templates.
 
 ### Example: grouping by role
 
@@ -359,7 +359,7 @@ Templates are the mechanism for shaping data and views into custom-formatted pag
 
 ### Jinja2 basics
 
-At minimum, know these:
+At a minimum, know these:
 
 - `{{ x }}` — embed a value
 - `{% for x in xs %}...{% endfor %}` — loop
@@ -443,7 +443,7 @@ For details, see [Schema — Built-in schema: prose](reference/schema.md#built-i
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings the same way — no error fires either way. While writing, check the actual data in `__table_view/` and the shape of query results in `__meta_query/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__table_view/` and the shape of query results in `__meta_query/` ([Workflow](#workflow)).
 
 ## Further reading
 
