@@ -1,18 +1,18 @@
 # Guides
 
-## Another Mood とは
+## What is Another Mood?
 
-要件定義書、製品カタログ、保守マニュアル、教材 — これらのドキュメントには「ユーザ」「商品」「手順」といった同じ登場人物が、形を変えて何度も出てくる。新しい登場人物を一つ加えるたびに、何か所も直して回り、どこかで直し漏れて、いつの間にか食い違っている。
+Requirements specifications, product catalogs, maintenance manuals, training materials — in documents like these, you keep meeting the same characters — "users", "products", "procedures" — appearing in different shapes again and again. Each time you introduce a new one, you end up revising it in several places, missing one somewhere, and the documents drift out of sync before you notice.
 
-**Another Mood** は、ソースベース DB のプロセッサで、そういうドキュメント群の整合維持を担うツール。DB のデータを 1 か所直せば、紐付くすべての出力が整合した状態で再生成される — 何か所も直して回らずに済む。
+**Another Mood** is a processor of source-based databases — a tool that keeps document sets like these in sync. Edit the data in one place, and every linked output regenerates in a consistent state — no chasing fixes through many files.
 
-ここでいう **ソースベース DB** とは、ユーザ自身が作成・更新・削除するファイル群 — 以下「**ソース**」と呼ぶ — からなるデータベース。ソースは YAML や Markdown 等の形式で書く（具体的な構成は [ソースの構成](#ソースの構成) で後述）。ユーザがエディタ等でソースを直接書き換えるのが唯一の DB 操作の手段。
+A **source-based database** is a database made of files that the user creates, updates, and deletes — these files are referred to as **sources** in the rest of this guide. Sources are written in formats like YAML and Markdown (the specific layout is covered in [Source structure](#source-structure)). Editing sources directly in an editor is the only way to operate on the DB.
 
-Another Mood はそれを読み込み、クエリの実行結果・データの一覧・テンプレートに基づくドキュメントなどを出力する。ユーザはそれらを確認しながら、ソースを書き直し続けることができる。
+Another Mood reads the sources and produces query results, data tables, and template-based documents. The user reviews these outputs and keeps editing the sources accordingly.
 
-### 必要なもの
+### Prerequisites
 
-- [uv](https://docs.astral.sh/uv/) — Python パッケージ・プロジェクトマネージャ。
+- [uv](https://docs.astral.sh/uv/) — Python package and project manager.
 
 ## Quick Start
 
