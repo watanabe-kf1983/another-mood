@@ -42,7 +42,7 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 {% endfor %}
 ```
 
-## Jinja2 extension: `{% mood_view %}`
+## Jinja2 extension: `mood_view`
 
 `{% mood_view %}` is a custom tag that renders a subtemplate and **writes the result to a separate file**.
 
