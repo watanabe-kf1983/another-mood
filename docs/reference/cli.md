@@ -16,7 +16,7 @@ mood watch .
 |---|---|
 | [`mood init <project_dir>`](#init) | Scaffold a project skeleton with a sample. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
-| [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview through the Hugo server. |
+| [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
 
 ## Shared argument: `<project_dir>`
 
@@ -70,7 +70,7 @@ Initializing project in my-project/
 warning: skipped (already exists): my-project/definition/schema.yaml
 ```
 
-The exit code is 0 if all files are newly created, or 1 if any file is skipped. This lets CI scripts detect whether the first run wrote into an empty directory; re-running `init` on an existing project never causes destructive changes.
+The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `init` on an existing project never causes destructive changes.
 
 ## build
 
@@ -85,19 +85,19 @@ Steps:
 1. Loads `<project_dir>/definition/schema.yaml` and normalizes `<project_dir>/contents`.
 2. Evaluates the queries under `<project_dir>/definition/queries` to build views.
 3. Renders Markdown to `output/` using the templates in `<project_dir>/definition/templates`.
-4. Passes `output/` to Hugo to write HTML to `render/`.
+4. Renders the Markdown in `output/` into HTML in `render/`.
 
 Exits with code 0 if all stages succeed, or 1 if any stage fails.
 
 ## watch
 
-Watch files for changes, rebuild automatically, and serve a live preview through the Hugo server.
+Watch files for changes, rebuild automatically, and serve a live preview.
 
 ```bash
 mood watch <project_dir> [--port <port>]
 ```
 
-When a change is detected on an input path (the schema file or the contents / queries / templates directories), only the affected stages re-run. The Hugo server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
+When a change is detected on an input path (the schema file or the contents / queries / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
 
 ```
 $ mood watch .
@@ -106,7 +106,7 @@ Press Ctrl+C to stop.
 
 ### `--port`
 
-Specifies the port the Hugo server listens on. Defaults to `1313` (also overridable via the environment variable `RB_PORT`).
+Specifies the port the preview server listens on. Defaults to `1313` (also overridable via the environment variable `RB_PORT`).
 
 ```bash
 mood watch . --port 8080
