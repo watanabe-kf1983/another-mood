@@ -286,6 +286,36 @@ categories:
           データシート UI 追加と認知負荷を集約できるので、同時期の実施が望ましい。
         phase: 8
         done: true
+      G5:
+        title: "mood watch --host: preview server の bind アドレス指定"
+        note: |
+          現状 `mood watch` は 127.0.0.1 のみで listen するため、LAN 上の
+          他端末から開発プレビューを参照できない。`--host <addr>` フラグと
+          `RB_HOST` 環境変数を追加し、Hugo の `--bind` に pass-through する。
+
+          想定ユースケース: 要件定義 / 設計会議で 1 人がソースを更新、
+          出席者全員が即座にブラウザでドキュメントを参照する collaborative
+          authoring。Another Mood の「1 か所直せば紐付く全出力が整合した
+          状態で再生成される」バリューと噛み合う。
+
+          仕様:
+            - フラグ名: `--host`（uvicorn / Vite / Flask の慣例。Hugo は
+              `--bind` だが docs では Hugo 実装詳細を既に隠しているので
+              user-facing は modern dev tool 慣例に寄せる）
+            - 環境変数: `RB_HOST`
+            - デフォルト: `127.0.0.1`（現状維持、セキュア）
+            - `0.0.0.0` 等で全インターフェイス公開可
+            - 内部的には Hugo `--bind` に pass-through
+
+          ドキュメント:
+            - docs/reference/cli.md: `--host` の説明 + セキュリティ note
+              （preview server に認証なし、信頼できるネットワークでのみ使用）
+            - docs/guides.md: collaborative meeting 用途の追記検討
+            - dev-docs/contents/design/app/config-spec.md: 新キー追加
+
+          UX オプション: `--host 0.0.0.0` 起動時、コンソールに表示する URL を
+          localhost ではなく自機 LAN IP にすると親切（出席者にコピペで配れる）。
+        phase: 10
 
   H:
     title: バイナリファイルの取り扱い
