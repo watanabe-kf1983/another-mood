@@ -346,24 +346,39 @@ categories:
     spec: design/app/mcp-design.md
     tasks:
       K1:
-        title: MCP サーバの骨格
-        note: FastMCP + build / dev start / dev stop ツール登録
+        title: MCP サーバの骨格 + 最小垂直スライス
+        note: |
+          FastMCP server, entry point, init ツール (G1 の MCP 露出)。
+          init は副作用が局所的で end-to-end 疎通確認に最適。
+          統合テストの足場もここで用意。
+          (たたき台 — K0 完了後に再見直し)
         phase: 9
       K2:
         title: build ツール
-        note: CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す
+        note: |
+          CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す。
+          (たたき台 — K0 完了後に再見直し)
         phase: 9
       K3:
-        title: dev start / dev stop ツール
-        note: dev server のバックグラウンド起動・停止。PID 管理・二重起動防止
+        title: start / stop ツール
+        note: |
+          watch server のバックグラウンド起動・停止。K0 で決定したライフサイクル方式
+          (subprocess vs in-process) に従う。同時実行の冪等性は設計書既出のため、
+          ここで防ぐのは MCP ツール側の start 連打のみ。
+          (たたき台 — K0 完了後に再見直し)
         phase: 9
       K4:
         title: Resources として output 全量を公開
-        note: resources/list + resources/read で AI がドキュメントをオンデマンド取得
+        note: |
+          resources/list + resources/read で AI がドキュメントをオンデマンド取得。
+          (たたき台 — K0 完了後に再見直し)
         phase: 9
       K5:
         title: Server Instructions + Tool description の整備
-        note: Instructions は 200 語以内の誘導文。Tool description は docstring から自動生成
+        note: |
+          Instructions は 200 語以内の誘導文。Tool description は docstring から自動生成。
+          K1〜K4 の docstring が出揃ってから最終調整。
+          (たたき台 — K0 完了後に再見直し)
         phase: 9
       K6:
         title: メタスキーマへの説明メタデータ埋め込み
@@ -550,3 +565,10 @@ categories:
           翻訳対象: README.md, docs/ 配下全て。
         phase: 8
         done: true
+      L7:
+        title: docs/ への MCP セクション追加 + 配布手順
+        note: |
+          利用者向け MCP ドキュメント。インストール手順 (uvx 等)、
+          claude_desktop_config.json への登録例、提供ツール一覧。
+          K0 で確定する配布方式に従う。K1〜K5 完了後に着手。
+        phase: 9
