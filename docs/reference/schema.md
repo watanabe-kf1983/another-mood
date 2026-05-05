@@ -1,6 +1,6 @@
 # Schema
 
-**スキーマ**は、プロジェクトで扱うデータの型を宣言するファイル。`{project}/definition/schema.yaml` 1 ファイルに、JSON Schema (draft 2020-12) のサブセットを書く。コンテンツファイルはこの宣言に照らして検証され、マップで書かれたデータは正規化（後述）で配列に変換される。
+The **schema** is the file that declares the types of data the project handles. A subset of JSON Schema (draft 2020-12) is written into a single file at `{project}/definition/schema.yaml`. Content files are validated against this declaration, and data written as maps is converted into arrays by **normalization** (covered below).
 
 ```yaml
 # definition/schema.yaml
@@ -26,32 +26,32 @@ properties:
 additionalProperties: false
 ```
 
-## ルートの制約
+## Root constraints
 
-スキーマファイルのルートは次を満たす:
+The root of the schema file must satisfy:
 
-- `type: object` 固定
-- `properties` 必須。各エントリが 1 つの **エンティティ**（同じ形のレコードの集まり）を表す
-- 末尾に `additionalProperties: false`（宣言していないトップレベルキーをエラーにする）
+- `type: object` is required.
+- `properties` is required. Each entry represents one **entity** (a collection of records of the same shape).
+- `additionalProperties: false` at the end (any undeclared top-level key becomes an error).
 
-ルート直下に [マップパターン](#マップパターン)（`properties` を伴わない `additionalProperties: <スキーマ>`）は書けない（メタスキーマが拒否する）。
+A [map pattern](#map-pattern) (`additionalProperties: <schema>` without accompanying `properties`) is not allowed at the root level (the meta-schema rejects it).
 
-ファイルは 1 本固定。複数ファイルへの分割や外部スキーマの `$ref` 参照はサポートしない。
+A single fixed file. Splitting into multiple files or `$ref`-based references to external schemas is not supported.
 
-## エンティティの 3 パターン
+## Three entity patterns
 
-各エンティティ（`properties` の 1 エントリ）の型として、次の 3 パターンを使い分ける。
+For the type of each entity (one entry under `properties`), choose from the following three patterns.
 
-### マップパターン
+### Map pattern
 
-同じ形のレコードを **マップ**（キーと値のペア）で書くパターン。同型エントリの集まりを表すスキーマで、ほぼ常にこのパターンが第一選択になる。
+Pattern for writing same-shaped records as a **map** (key-value pairs). When the schema describes a collection of homogeneous entries, this pattern is almost always the first choice.
 
-`additionalProperties` の値に **スキーマオブジェクト**（`false` ではなく）を書く:
+Write a **schema object** (not `false`) as the value of `additionalProperties`:
 
 ```yaml
 users:
   type: object
-  additionalProperties:                  # ← マップパターンのシグナル
+  additionalProperties:                  # ← map-pattern signal
     type: object
     properties:
       name: { type: string }
@@ -60,32 +60,32 @@ users:
     additionalProperties: false
 ```
 
-コンテンツファイル側はマップで書く:
+On the content file side, write a map:
 
 ```yaml
 # contents/users.yaml
 users:
   tanaka:
-    name: 田中太郎
+    name: Tanaka Taro
     email: tanaka@example.com
   suzuki:
-    name: 鈴木花子
+    name: Suzuki Hanako
 ```
 
-ビルド時に **正規化** され、マップキーが各レコードの `id` フィールドに昇格して配列になる:
+At build time this is **normalized**: the map keys are promoted to each record's `id` field, and the result becomes an array:
 
 ```yaml
 users:
   - id: tanaka
-    name: 田中太郎
+    name: Tanaka Taro
     email: tanaka@example.com
   - id: suzuki
-    name: 鈴木花子
+    name: Suzuki Hanako
 ```
 
-クエリやテンプレートが参照するのはこの正規化後の形。
+What queries and templates reference is this normalized form.
 
-**ネスト**: `additionalProperties` の中にさらに `additionalProperties` を入れると、各階層が再帰的に配列化される。
+**Nesting**: when an `additionalProperties` contains another `additionalProperties`, each level is recursively turned into an array.
 
 ```yaml
 screens:
@@ -94,7 +94,7 @@ screens:
     type: object
     properties:
       title: { type: string }
-      buttons:                           # 入れ子のマップパターン
+      buttons:                           # nested map pattern
         type: object
         additionalProperties:
           type: object
@@ -104,11 +104,11 @@ screens:
     additionalProperties: false
 ```
 
-**非オブジェクト値**: `additionalProperties` がオブジェクト以外（`type: string` など）の場合、各エントリは `{ id: <キー>, value: <値> }` の形に正規化される。
+**Non-object values**: when `additionalProperties` is something other than an object (e.g., `type: string`), each entry is normalized to `{ id: <key>, value: <value> }`.
 
-### 配列パターン
+### Array pattern
 
-順序のある並びを表すパターン。`type: array` で、要素スキーマを `items` に書く。
+Pattern for an ordered sequence. Use `type: array` and write the element schema under `items`.
 
 ```yaml
 tags:
@@ -120,7 +120,7 @@ tags:
     additionalProperties: false
 ```
 
-コンテンツファイル側は配列を直接書く:
+On the content file side, write an array directly:
 
 ```yaml
 tags:
@@ -128,11 +128,11 @@ tags:
   - name: draft
 ```
 
-正規化はかからず、書いた配列がそのままテンプレートに渡る。マップパターンと違い **暗黙の `id` を持たない**。
+No normalization happens; the array you wrote is passed to templates as-is. Unlike the map pattern, **there is no implicit `id`**.
 
-### 単一レコードパターン
+### Single-record pattern
 
-キーが事前に決まっていて、レコード数が 1 つのオブジェクト（サイト設定など）に使うパターン。`additionalProperties` ではなく `properties` でキーを列挙する。
+Pattern for an object with predetermined keys and exactly one record (e.g., site settings). Enumerate the keys under `properties` rather than `additionalProperties`.
 
 ```yaml
 site_config:
@@ -149,91 +149,91 @@ site_config:
   base_url: https://example.com
 ```
 
-正規化はかからず、書いた形のままテンプレートに渡る。
+No normalization happens; the value is passed to templates as written.
 
-**排他制約**: 同じオブジェクト内で `properties` と `additionalProperties: <スキーマ>` は併用できない。`properties` を書く場合は `additionalProperties: false` が必須（メタスキーマがエラーにする）。
+**Exclusivity**: within the same object, `properties` and `additionalProperties: <schema>` cannot be combined. When `properties` is present, `additionalProperties: false` is required (the meta-schema raises an error otherwise).
 
-## サポートするキーワード
+## Supported keywords
 
-JSON Schema draft 2020-12 のサブセット。下記に挙げたキーワードのみ許容される（未知キーワードは内蔵メタスキーマの `additionalProperties: false` で一律エラー）。
+A subset of JSON Schema draft 2020-12. Only the keywords listed below are accepted (unknown keywords are rejected uniformly by the built-in meta-schema's `additionalProperties: false`).
 
-### 構造キーワード（正規化に関与）
+### Structural keywords (involved in normalization)
 
-このツールが解釈し、データの形と正規化挙動を決定するキーワード:
+Keywords this tool interprets to determine the shape of data and the normalization behavior:
 
-| キーワード | 役割 |
+| Keyword | Role |
 |---|---|
-| `type` | 値の型（`object` / `array` / `string` / `number` / `integer` / `boolean` のいずれか） |
-| `properties` | 単一レコードパターンのキー列挙 |
-| `additionalProperties` | マップパターンのシグナル、または `false` |
-| `items` | 配列要素のスキーマ |
+| `type` | The value's type (one of `object`, `array`, `string`, `number`, `integer`, `boolean`). |
+| `properties` | Enumerated keys for the single-record pattern. |
+| `additionalProperties` | Map-pattern signal, or `false`. |
+| `items` | Schema for array elements. |
 
-### バリデーションキーワード
+### Validation keywords
 
-値の制約を表現するキーワード。ツール側は解釈せず、jsonschema ライブラリにスルーパスする:
+Keywords that express constraints on values. The tool does not interpret these; they are passed through to the jsonschema library:
 
-- **必須フィールド**: `required`
-- **列挙・定数**: `enum`, `const`
-- **数値**: `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`
-- **文字列**: `minLength`, `maxLength`, `pattern`
-- **配列**: `minItems`, `maxItems`, `uniqueItems`
+- **Required fields**: `required`
+- **Enumeration / constant**: `enum`, `const`
+- **Numbers**: `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`
+- **Strings**: `minLength`, `maxLength`, `pattern`
+- **Arrays**: `minItems`, `maxItems`, `uniqueItems`
 
-### メタデータキーワード
+### Metadata keywords
 
-検証・正規化には影響しない、注釈用のキーワード:
+Annotation keywords that do not affect validation or normalization:
 
-- **説明**: `title`, `description`
-- **例示**: `default`, `examples`
-- **ライフサイクル**: `deprecated`, `readOnly`, `writeOnly`
+- **Descriptions**: `title`, `description`
+- **Examples**: `default`, `examples`
+- **Lifecycle**: `deprecated`, `readOnly`, `writeOnly`
 
-### フォーマット
+### Format
 
-- `format`（`email`, `uri` など）。アノテーションとして保持されるが、値の検証は行わない
+- `format` (e.g., `email`, `uri`). Retained as an annotation, but values are not validated against it.
 
-## サポートしないキーワード
+## Unsupported keywords
 
-JSON Schema draft 2020-12 にあるが、内蔵メタスキーマが拒否するキーワード:
+Keywords that exist in JSON Schema draft 2020-12 but are rejected by the built-in meta-schema:
 
-- **Core 系**: `$id`, `$schema`, `$ref`, `$defs`, `$anchor`, `$comment` 等
-- **合成・条件**: `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`
-- **高度なアプリケーター**: `patternProperties`, `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`
-- **unevaluated**: `unevaluatedProperties`, `unevaluatedItems`
-- **その他の validation**: `minProperties`, `maxProperties`
-- **content**: `contentMediaType`, `contentEncoding`, `contentSchema`
+- **Core**: `$id`, `$schema`, `$ref`, `$defs`, `$anchor`, `$comment`, etc.
+- **Composition and conditions**: `allOf`, `anyOf`, `oneOf`, `not`, `if` / `then` / `else`
+- **Advanced applicators**: `patternProperties`, `prefixItems`, `contains`, `propertyNames`, `dependentSchemas`
+- **Unevaluated**: `unevaluatedProperties`, `unevaluatedItems`
+- **Other validation**: `minProperties`, `maxProperties`
+- **Content**: `contentMediaType`, `contentEncoding`, `contentSchema`
 
-## その他の制約
+## Other constraints
 
-- `type` は単一文字列のみ。`type: [string, "null"]` のような配列形式や `null` 型は不可
-- `properties` のキー（プロパティ名）は識別子（Unicode 文字・数字・アンダースコア、先頭は数字不可）
+- `type` accepts a single string only. The array form such as `type: [string, "null"]` and the `null` type are not allowed.
+- Property names under `properties` must be identifiers (Unicode letters, digits, underscores; no leading digit).
 
-## 内蔵スキーマ: 散文 (prose)
+## Built-in schema: prose
 
-`contents/` 配下の Markdown ファイル（`.md`、大小文字不問）は、ユーザがスキーマを宣言しなくても **内蔵 prose スキーマ** に従って自動的に正規化される。1 ファイル = 1 レコードで、`prose` エンティティに集約される。
+Markdown files under `contents/` (`.md`, case-insensitive) are automatically normalized according to the **built-in prose schema**, without requiring a user-declared schema. One file = one record, all collected into the `prose` entity.
 
-レコードの形:
+Record shape:
 
 ```yaml
 prose:
-  - id: "guides/ordering"              # contents_dir からの相対パス（拡張子なし）
-    title: "注文の流れ"                  # 最初の H1 見出しテキスト
+  - id: "guides/ordering"              # relative path from contents_dir (without extension)
+    title: "Ordering flow"             # text of the first H1 heading
     body:
       mime_type: text/markdown
       content: |
-        # 注文の流れ
-        ...                             # ファイル全体（H1 含む）
+        # Ordering flow
+        ...                             # the entire file (including the H1)
 ```
 
-| フィールド | 値 |
+| Field | Value |
 |---|---|
-| `id` | `contents_dir` からの相対パス（拡張子を除く） |
-| `title` | 最初の H1 見出しテキスト。H1 がなければ省略 |
-| `body` | `mime_type` と `content` を持つマップ。本文を埋め込むときはテンプレートから `.content` を参照する（例: `{{ body.content }}`） |
+| `id` | Relative path from `contents_dir` (without extension). |
+| `title` | Text of the first H1 heading. Omitted when there is no H1. |
+| `body` | A map with `mime_type` and `content`. To embed the body, reference `.content` from a template (e.g., `{{ body.content }}`). |
 
-ソース Markdown は変換されずそのまま保たれるため、GitHub 上や IDE でそのまま閲覧・リンク遷移できる。
+The source Markdown is preserved verbatim, so it can be browsed and traversed directly on GitHub or in your IDE.
 
-## schema-schema 全文
+## Full schema-schema
 
-ここまでの本文は、内蔵メタスキーマ（schema-schema）を散文で解説したもの。厳密な仕様の正典は以下の YAML 本体。
+Everything above is a prose explanation of the built-in meta-schema (schema-schema). The strict specification is the YAML below.
 
 ```yaml
 # $ref / $defs are used here for recursion, but are not available to
@@ -357,9 +357,9 @@ $defs:
       required: [additionalProperties]
 ```
 
-## content-schema 全文
+## Full content-schema
 
-[内蔵スキーマ: 散文](#内蔵スキーマ-散文-prose) で説明した prose エンティティの構造を定める内蔵スキーマ。本節の散文記述に対する正典。
+The built-in schema that defines the structure of the prose entity introduced in [Built-in schema: prose](#built-in-schema-prose). This is the canonical specification for the prose discussion above.
 
 ```yaml
 # Merged with the user's schema.yaml at validation time so that all
