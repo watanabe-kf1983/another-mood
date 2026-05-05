@@ -106,7 +106,7 @@ Press Ctrl+C to stop.
 
 ### `--port`
 
-Specifies the port the preview server listens on. Defaults to `1313` (also overridable via the environment variable `RB_PORT`).
+Specifies the port the preview server listens on. Defaults to `5077` (also overridable via the environment variable `RB_PORT`).
 
 ```bash
 mood watch . --port 8080
@@ -139,4 +139,4 @@ RB_PORT=8080 mood watch .
 | `tmp_dir` | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` | — |
 | `out_dir` | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` | — |
 | `render_dir` | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` | — |
-| `port` | `1313` | `RB_PORT` | `--port` (only on `watch`) |
+| `port` | `5077` | `RB_PORT` | `--port` (only on `watch`) |

@@ -49,9 +49,9 @@ def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
 @app.command()
 def watch(
     project_dir: str = typer.Argument(help="Project directory"),
-    port: int = typer.Option(1313, help="Hugo server port"),
+    port: int = typer.Option(5077, help="Preview server port"),
 ) -> None:
-    """Watch for changes and rebuild automatically with Hugo live preview."""
+    """Watch for changes and rebuild automatically with live preview."""
     config = _load_config(project_dir=Path(project_dir), port=port)
     with pipeline(config).start_watching() as shutdown:
         try:
