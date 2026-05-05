@@ -1,6 +1,6 @@
 # Template
 
-A **template** is the presentation layer that turns views into Markdown documents. It builds on [Jinja2](https://jinja.palletsprojects.com/) and adds the custom `{% mood_view %}` tag that controls file output.
+A **template** is the presentation layer that turns data and views into Markdown documents. It builds on [Jinja2](https://jinja.palletsprojects.com/) and adds the custom `{% mood_view %}` tag that controls file output.
 
 Templates are placed under `{project}/definition/templates/` with the `.md` extension. The `.md` extension is chosen so editors apply Markdown syntax highlighting to the body — template syntax and Markdown body are mixed, and treating files as plain text makes them visually hard to distinguish.
 

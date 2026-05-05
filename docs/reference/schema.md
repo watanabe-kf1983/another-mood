@@ -1,6 +1,6 @@
 # Schema
 
-The **schema** is the file that declares the types of data the project handles. A subset of JSON Schema (draft 2020-12) is written into a single file at `{project}/definition/schema.yaml`. Content files are validated against this declaration, and data written as maps is converted into arrays by **normalization** (covered below).
+The **schema** is the file that declares the types of structured data the project handles. A subset of JSON Schema (draft 2020-12) is written into a single file at `{project}/definition/schema.yaml`. Content files are validated against this declaration, and data written as maps is converted into arrays by **normalization** (covered below).
 
 ```yaml
 # definition/schema.yaml
