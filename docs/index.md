@@ -1,4 +1,4 @@
-# Another Mood ユーザガイド
+# Another Mood User Guide
 
-- **[Guides](guides.md)** — 通しで読む用。コンセプトから Quick Start、執筆フロー、コンテンツとスキーマ、クエリ、テンプレートまでを 1 ファイルで解説
-- **[Reference](reference/index.md)** — 引く用。CLI コマンド・スキーマ・クエリ・テンプレート等の機能別リファレンス
+- **[Guides](guides.md)** — Walks through concepts, Quick Start, workflow, schema and content, queries, and templates in a single file.
+- **[Reference](reference/index.md)** — Per-feature reference for CLI commands, schemas, queries, templates, and more.
