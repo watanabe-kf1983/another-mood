@@ -1,8 +1,8 @@
-# CLI
+# CLI Reference
 
-`mood` は Another Mood のエントリポイントとなるコマンドラインツール。プロジェクトの初期化（`init`）、一括ビルド（`build`）、ファイル監視 + ライブプレビュー（`watch`）の 3 サブコマンドを提供する。
+`mood` is the command-line entry point for Another Mood. It provides three subcommands: project initialization (`init`), one-shot build (`build`), and file watching with live preview (`watch`).
 
-すべてのサブコマンドは第一位置パラメータ `<project_dir>` で処理対象ディレクトリを受け取る。典型的にはプロジェクトディレクトリで `.` を指定する形:
+All subcommands take the target directory as the first positional argument `<project_dir>`. Typically you run them from inside the project directory and pass `.`:
 
 ```bash
 mood init .
@@ -10,54 +10,54 @@ mood build .
 mood watch .
 ```
 
-## コマンド一覧
+## Commands
 
-| コマンド | 用途 |
+| Command | Purpose |
 |---|---|
-| [`mood init <project_dir>`](#init) | サンプル付きのプロジェクト雛形を生成する |
-| [`mood build <project_dir>`](#build) | 全段を 1 度実行し、Markdown と HTML を生成する |
-| [`mood watch <project_dir> [--port <port>]`](#watch) | ファイル変更を監視して再ビルドし、Hugo server でプレビューを配信する |
+| [`mood init <project_dir>`](#init) | Scaffold a project skeleton with a sample. |
+| [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
+| [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
 
-## 共通引数: `<project_dir>`
+## Shared argument: `<project_dir>`
 
-`<project_dir>` は CWD からの相対パスで指定する。指定したパスを起点に入力パスを解決し、CWD 直下の `.another-mood/<project_dir>/` に出力する。
+`<project_dir>` is given as a path relative to the current directory. Input paths are resolved against this directory, and output is written to `.another-mood/<project_dir>/` directly under the current directory.
 
-### 入力パスの解決
+### Input path resolution
 
-入力パス（schema ファイル / contents・queries・templates の各ディレクトリ）は `<project_dir>` を基準に解決される。デフォルト配置:
+Input paths (the schema file and the contents / queries / templates directories) are resolved relative to `<project_dir>`. Defaults:
 
-| 種類 | デフォルト | 環境変数 |
+| Kind | Default | Env var |
 |---|---|---|
-| スキーマ | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` |
-| コンテンツ | `<project_dir>/contents` | `RB_CONTENTS_DIR` |
-| クエリ | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` |
-| テンプレート | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` |
+| Schema | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` |
+| Content | `<project_dir>/contents` | `RB_CONTENTS_DIR` |
+| Queries | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` |
+| Templates | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` |
 
-`build` / `watch` 起動時にこれらのパスが存在しないとエラーになり、終了コード 1 で停止する。
+If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
 
-### 出力パスの解決
+### Output path resolution
 
-出力ディレクトリは `<project_dir>` を基準に展開し、CWD 直下の `.another-mood/<project_dir>/` 配下に配置される:
+Output directories are placed under `.another-mood/<project_dir>/`, relative to the current directory:
 
-| 種類 | デフォルト | 環境変数 |
+| Kind | Default | Env var |
 |---|---|---|
-| 中間出力（ステージごと） | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` |
-| Markdown 出力 | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
-| HTML 出力 | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
+| Intermediate output (per stage) | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` |
+| Markdown output | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
+| HTML output | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
 
-異なる `<project_dir>` を別プロセスで同時に処理しても出力先が衝突しないよう、入力パスに対応するサブディレクトリが自動的に作られる。
+Subdirectories matching the input path are created automatically, so that running different `<project_dir>` values in parallel processes does not cause output collisions.
 
 ## init
 
-プロジェクトの雛形を生成する。
+Scaffold a project skeleton.
 
 ```bash
 mood init <project_dir>
 ```
 
-`<project_dir>` 配下に、内蔵の starter テンプレート（schema / contents / queries / templates の最小サンプル一式）をコピーする。`<project_dir>` が存在しない場合は親ディレクトリごと作成される。
+Copies the built-in starter template (a minimal sample set of schema, contents, queries, and templates) into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories.
 
-新規作成したファイルは `created:`、既存で上書きスキップしたファイルは `warning:` で標準エラー出力に列挙される:
+Newly created files are listed with the `created:` prefix on stderr; files that already exist (and are therefore skipped) are listed with `warning:`:
 
 ```
 Initializing project in my-project/
@@ -70,34 +70,34 @@ Initializing project in my-project/
 warning: skipped (already exists): my-project/definition/schema.yaml
 ```
 
-すべてのファイルが新規作成された場合は終了コード 0、いずれか 1 つでもスキップされた場合は終了コード 1 で終了する。これは「初回実行時に空ディレクトリへ書き込めたか」を CI 等から判定できるようにするためで、既存プロジェクトに対して `init` を再実行しても破壊的な変更は起きない。
+The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `init` on an existing project never causes destructive changes.
 
 ## build
 
-全段を 1 度実行して、Markdown と HTML を生成する。
+Run all stages once to generate Markdown and HTML.
 
 ```bash
 mood build <project_dir>
 ```
 
-実行内容:
+Steps:
 
-1. `<project_dir>/definition/schema.yaml` を読み込み、`<project_dir>/contents` を正規化
-2. `<project_dir>/definition/queries` のクエリを評価してビューを構築
-3. `<project_dir>/definition/templates` を使って Markdown を `output/` に書き出す
-4. `output/` を Hugo に渡して HTML を `render/` に書き出す
+1. Loads `<project_dir>/definition/schema.yaml` and normalizes `<project_dir>/contents`.
+2. Evaluates the queries under `<project_dir>/definition/queries` to build views.
+3. Renders Markdown to `output/` using the templates in `<project_dir>/definition/templates`.
+4. Renders the Markdown in `output/` into HTML in `render/`.
 
-すべてのステージが成功すれば終了コード 0、いずれかのステージでエラーが発生すれば終了コード 1 で終了する。
+Exits with code 0 if all stages succeed, or 1 if any stage fails.
 
 ## watch
 
-ファイル変更を監視して自動再ビルドし、Hugo server でライブプレビューを配信する。
+Watch files for changes, rebuild automatically, and serve a live preview.
 
 ```bash
 mood watch <project_dir> [--port <port>]
 ```
 
-入力パス（schema ファイル / contents・queries・templates の各ディレクトリ）の変更を検知すると、影響のあるステージのみを再実行する。Hugo server はファイル更新を検知してブラウザ側を自動リロードする。`Ctrl+C` で停止する。
+When a change is detected on an input path (the schema file or the contents / queries / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
 
 ```
 $ mood watch .
@@ -106,32 +106,32 @@ Press Ctrl+C to stop.
 
 ### `--port`
 
-Hugo server が listen するポートを指定する。デフォルトは `1313`（環境変数 `RB_PORT` でも上書き可能）。
+Specifies the port the preview server listens on. Defaults to `1313` (also overridable via the environment variable `RB_PORT`).
 
 ```bash
 mood watch . --port 8080
 ```
 
-複数の `<project_dir>` を同時に watch したい場合は、複数プロセスを起動する。出力ディレクトリは `<project_dir>` ごとに自動的に分離されるため衝突しないが、ポートは競合するので 2 つ目以降は `--port` で別ポートを指定する必要がある。
+To watch multiple `<project_dir>` values at the same time, start one process per project. Output directories are separated per `<project_dir>` and do not collide, but ports do — any process after the first needs `--port` to pick a different port.
 
-## 設定の上書き
+## Configuration overrides
 
-設定キーはすべてデフォルト値を持つが、環境変数で個別に上書きできる。
+Every configuration key has a default; each can be overridden individually via an environment variable.
 
-### 環境変数 (`RB_*`)
+### Environment variables (`RB_*`)
 
-各設定キーは `RB_` プレフィックス + 大文字スネークケースの環境変数で上書きできる。環境変数で指定した値はそのままパスとして使われ、`<project_dir>` を基準とした既定値の組み立てロジックは適用されない。
+Each configuration key can be overridden by an environment variable: prefix the key name with `RB_` and uppercase it as snake case. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
 
 ```bash
 RB_CONTENTS_DIR=/abs/path/to/contents mood build .
 RB_PORT=8080 mood watch .
 ```
 
-### 主要キーと既定値
+### Keys and defaults
 
-| キー | 既定値 | 環境変数 | CLI |
+| Key | Default | Env var | CLI |
 |---|---|---|---|
-| `project_dir` | （引数で必須） | — | 第一位置パラメータ |
+| `project_dir` | (required, given as argument) | — | first positional argument |
 | `schema_file` | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` | — |
 | `contents_dir` | `<project_dir>/contents` | `RB_CONTENTS_DIR` | — |
 | `queries_dir` | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` | — |
@@ -139,4 +139,4 @@ RB_PORT=8080 mood watch .
 | `tmp_dir` | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` | — |
 | `out_dir` | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` | — |
 | `render_dir` | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` | — |
-| `port` | `1313` | `RB_PORT` | `--port`（`watch` のみ） |
+| `port` | `1313` | `RB_PORT` | `--port` (only on `watch`) |

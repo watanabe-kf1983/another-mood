@@ -1,7 +1,7 @@
 [project]
 name = "another-mood"
 version = "0.1.0"
-description = "A source-based database processor for keeping related documents in sync."
+description = "A processor of source-based databases, keeping related documents in sync."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

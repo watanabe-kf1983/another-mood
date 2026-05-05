@@ -34,8 +34,6 @@ mood build showcase/examples/ecommerce
 
 - ドキュメント: **日本語**
 - 設計ソース: `dev-docs/contents/` 配下の 3 カテゴリ（background / design / internal）
-- 利用者向けドキュメント: `docs/`（素 Markdown。Implemented 機能のみ記載。L5 で起筆）。B/C/E3 完了後に `showcase/user-guide/` へ構造化移植予定
-  - 執筆スタイル: L6（英訳ゲート）後に英語版へ書き直す前提で、文体は簡潔な日本語と placeholder 中心で進める。ただし「簡潔さ」は装飾・冗長表現を削ぐ意味であり、説明の正確さ・網羅性・分かりやすさは妥協しない（MCP 経由で LLM が docs/ を読む際の UX に直結するため）
 
 設計ドキュメントの変更は、必ず `dev-docs/contents/` 配下のソースに対して行い、変更後は `mood build dev-docs` を実行して `.another-mood/dev-docs/output/` の出力を確認する。
 
@@ -111,6 +109,12 @@ another_mood/
 #### internal/ ドキュメントの整理
 
 internal/ ドキュメントは実装中は参照するため残し、全テスト green 後の最終整理として行う。コードから読み取れる内容（フロー、データ構造等）は削除し、設計判断の背景（Why）はコードの docstring やコミットメッセージに移す。
+
+#### 利用者向けドキュメント
+
+`docs/`（素 Markdown、英語）。実装が完了した機能から書く。`docs/` には Implemented 機能のみ記載する方針に従う。B/C/E3 完了後に `showcase/user-guide/` へ構造化移植予定。
+
+執筆スタイル: 文体は簡潔な英語。ただし「簡潔さ」は装飾・冗長表現を削ぐ意味であり、説明の正確さ・網羅性・分かりやすさは妥協しない（MCP 経由で LLM が docs/ を読む際の UX に直結するため）。
 
 #### タスクの進め方
 

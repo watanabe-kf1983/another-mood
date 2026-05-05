@@ -1,12 +1,12 @@
 # Reference
 
-機能別のリファレンス。構文・全オプション・予約語等を引く用。Implemented 機能のみを扱う。
+Per-feature reference for syntax, full options, reserved names, and similar lookups.
 
-通読は [Guides](../guides.md) 側、ピンポイントで引くのはこちら、という分担。
+For a guided walkthrough, see [Guides](../guides.md); this side is for targeted lookup.
 
-## 構成
+## Contents
 
-- [CLI](cli.md) — `mood` コマンドリファレンス（`init` / `build` / `watch`）
-- [Schema](schema.md) — スキーマ定義（JSON Schema サブセット + 内蔵 prose スキーマ）
-- [Query](query.md) — クエリ構文（`from` / `grouped` / `select`）
-- [Template](template.md) — テンプレート構文（Jinja2 + `{% mood_view %}` 拡張）
+- [CLI](cli.md) — `mood` command reference (`init` / `build` / `watch`)
+- [Schema](schema.md) — schema definition (a JSON Schema subset plus the built-in prose schema)
+- [Query](query.md) — query syntax (`from` / `grouped` / `select`)
+- [Template](template.md) — template syntax (Jinja2 plus the `{% mood_view %}` extension)

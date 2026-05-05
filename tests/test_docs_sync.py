@@ -18,9 +18,9 @@ _SCHEMAS_DIR = _REPO_ROOT / "src" / "another_mood" / "resources" / "schemas"
 
 # (markdown file, appendix heading, source yaml filename)
 _CASES = [
-    ("schema.md", "## schema-schema 全文", "schema-schema.yaml"),
-    ("schema.md", "## content-schema 全文", "content-schema.yaml"),
-    ("query.md", "## query-schema 全文", "query-schema.yaml"),
+    ("schema.md", "## Full schema-schema", "schema-schema.yaml"),
+    ("schema.md", "## Full content-schema", "content-schema.yaml"),
+    ("query.md", "## Full query-schema", "query-schema.yaml"),
 ]
 
 

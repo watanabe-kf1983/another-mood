@@ -1,82 +1,82 @@
 # Query
 
-**クエリ**は、構造化データを参照しやすい形に加工して **ビュー** を定義する YAML ファイル。グループ化・フィールドの射影などを書ける。
+A **query** is a mechanism that reshapes structured data into a more convenient form for reference, producing a named **view**. Queries can express grouping, field projection, and similar transformations.
 
-クエリは `{project}/definition/queries/` 配下の YAML ファイル（`.yaml` / `.yml`、大小文字不問）に書く。ファイル数や分割の仕方・サブディレクトリ配置は自由で、ビルド時にまとめて評価される。1 ファイルに複数のクエリを書いてもよい — ファイルのトップレベルキーがビュー名になる。
+Queries live in YAML files under `{project}/definition/queries/` (`.yaml` or `.yml`, case-insensitive). The number of files, how they are split, and any subdirectory layout are flexible; all queries are evaluated together at build time. A single file can hold multiple queries — each top-level key becomes a view name.
 
-## クエリの基本構造
+## Basic query structure
 
-ビュー定義の構造:
+Structure of a view definition:
 
 ```yaml
 # queries/by_role.yaml
-by_role:                     # ← ファイルのトップレベルキーがビュー名
-  from: members              # 必須
-  grouped:                   # 任意
+by_role:                     # ← top-level key of the file becomes the view name
+  from: members              # required
+  grouped:                   # optional
     by: role
-  select:                    # 任意
+  select:                    # optional
     - item: role
       as: id
     - item: role
     - item: members
 ```
 
-| 句 | 必須 | 役割 |
+| Clause | Required | Role |
 |---|---|---|
-| `from` | 必須 | 元データ（何を材料にするか） |
-| `grouped` | 任意 | レコードのグループ化 |
-| `select` | 任意 | 出力フィールドの射影。省略時は空オブジェクトの配列 |
+| `from` | Required | Source data (what to operate on). |
+| `grouped` | Optional | Grouping of records. |
+| `select` | Optional | Projection of output fields. When omitted, the result is an array of empty objects. |
 
-評価順は `from` → `grouped` → `select`。
+Evaluation order: `from` → `grouped` → `select`.
 
-## 自動パススルー
+## Automatic pass-through
 
-[Schema](schema.md) で宣言したエンティティのデータは、クエリを書かなくてもテンプレートからエンティティ名でそのまま参照できる（自動パススルー）。クエリは追加のビュー（グループ化、射影など）を定義する場合にのみ書く。
+Data for entities declared in [Schema](schema.md) is automatically passed through and can be referenced from templates by entity name without writing any query. Queries are only needed when you want an additional view (grouping, projection, and so on).
 
 ## from
 
-元データとなるエンティティを指定する。エンティティ名は schema.yaml の `properties` のキー（= コンテンツファイルのトップレベルキー）と一致する。
+Specifies the entity to read from. The entity name matches a key under `properties` in schema.yaml (= the top-level key in content files).
 
 ```yaml
-from: members    # エンティティ members を元データとする
+from: members    # read from the members entity
 ```
 
-### 子エンティティのドット記法
+### Dot notation for child entities
 
-`from` にはドット記法でネストされた子エンティティを指定できる。親から取り外し、フラットな配列として取り出す。
+`from` can use dot notation to reach a nested child entity. The result is detached from the parent and returned as a flat array.
 
 ```yaml
-from: categories.tasks   # categories 配下の tasks をフラットに展開
+from: categories.tasks   # flatten tasks nested under categories
 ```
 
-任意の深さまで連結可能:
+Any depth can be chained:
 
 ```yaml
-from: a.b.c.d   # a → b → c → d の順に段階的にフラット化
+from: a.b.c.d   # flattens stepwise from a → b → c → d
 ```
 
-各セグメントの値は **オブジェクトまたはオブジェクト配列**（任意段数のネスト配列で包まれていても可）。単一オブジェクトは 1 要素として、配列は深さに関わらず平坦化・連結される。
+Each segment's value must be **an object or an array of objects** (optionally wrapped in any depth of nested arrays). A single object counts as one element; arrays are flattened and concatenated regardless of depth.
 
 ## grouped
 
-オブジェクト配列を指定フィールドでグループ化する。結果は配列で、各要素はグループキーの値とグループ内の要素配列を持つ。
+Groups an array of objects by a specified field. The result is an array; each element holds the group key's value and an inner array of the group's members.
 
 ```yaml
 grouped:
-  by: role               # グループ化のキー
-  as: members            # グループ内配列の名前（省略時は from の末尾セグメント）
+  by: role               # field used to group
+  as: members            # name of the inner array (defaults to the last segment of from)
 ```
 
-| キー | 必須 | 役割 |
+| Key | Required | Role |
 |---|---|---|
-| `by` | 必須 | グループ化のキーとなるフィールド名 |
-| `as` | 任意 | グループ内の要素配列に付ける名前。省略時は `from` の末尾セグメント（ドット記法なら最後のキー） |
+| `by` | Required | Name of the field used as the grouping key. |
+| `as` | Optional | Name given to the inner array of group members. Defaults to the last segment of `from` (the trailing key when using dot notation). |
 
-グループの出現順は元データの出現順に従う（最初に現れたキーの順）。グループ内のレコードは元データの形そのまま（グループキーのフィールドも保持される）。
+Group order follows the source data's order (the order in which each key first appears). Records within a group keep the source's shape, including the grouping field.
 
-### 出力形式
+### Output shape
 
-`from: members` + `grouped: { by: role }` の場合、入力:
+For `from: members` + `grouped: { by: role }`, given input:
 
 ```yaml
 members:
@@ -85,11 +85,11 @@ members:
   - { id: carol, name: Carol, role: designer }
 ```
 
-に対する `grouped` 適用後（`select` 適用前）の中間結果:
+the intermediate result after `grouped` (before `select`):
 
 ```yaml
 - role: engineer
-  members:                             # as 省略のため from の末尾 "members"
+  members:                             # `as` omitted, so the inner-array name is the last segment of from: "members"
     - { id: alice, name: Alice, role: engineer }
     - { id: bob,   name: Bob,   role: engineer }
 - role: designer
@@ -99,30 +99,30 @@ members:
 
 ## select
 
-出力に含めるフィールドを列挙する。省略した場合は空オブジェクトの配列が出力される。
+Lists the fields to include in the output. When omitted, the result is an array of empty objects.
 
 ```yaml
 select:
   - item: role
-    as: id              # role の値を id という名前で出力
-  - item: role          # role をそのまま出力
-  - item: members       # grouped.as の配列を出力
+    as: id              # emit the role value under the field name id
+  - item: role          # emit role as-is
+  - item: members       # emit the array named by grouped.as
 ```
 
-| キー | 必須 | 役割 |
+| Key | Required | Role |
 |---|---|---|
-| `item` | 必須 | 入力レコードから取り出すフィールド名 |
-| `as` | 任意 | 出力時のフィールド名。省略時は `item` の値がそのまま使われる |
+| `item` | Required | Name of the field to read from the input record. |
+| `as` | Optional | Field name in the output. Defaults to the value of `item` when omitted. |
 
-`select` に列挙しないフィールドは出力に含まれない。`grouped` で生成されるキーフィールドやグループ配列も、`select` で明示しなければ出力されない。
+Fields not listed in `select` are excluded from the output. The grouping field and the inner array generated by `grouped` are also omitted unless explicitly listed in `select`.
 
-## ビューの確認
+## Inspecting a view
 
-各クエリの結果は `output/__meta_query/<query>.md` に自動生成されるメタページで確認できる。クエリを書きながら期待通りの結果になっているかを `mood watch` 上で見ながら進められる。
+Each query's result is exposed via an auto-generated meta page at `output/__meta_query/<query>.md`. While writing a query, you can verify the result in real time on `mood watch`.
 
-## query-schema 全文
+## Full query-schema
 
-クエリファイルの形を縛る内蔵スキーマ。本章の正典。
+The built-in schema that constrains the form of query files. The canonical specification for this chapter.
 
 ```yaml
 title: QuerySchema
