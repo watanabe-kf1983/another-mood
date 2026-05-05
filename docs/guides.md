@@ -91,29 +91,29 @@ There are four kinds of sources.
 
 Details on each in [Schema and content](#schema-and-content), [Queries](#queries), and [Templates](#templates). For the order of writing and how to verify, see the next chapter, [Workflow](#workflow).
 
-## ワークフロー
+## Workflow
 
-このツールは「テンプレートが完成するまで何も見えない」わけではない。スキーマだけ書いた段階、コンテンツだけ書いた段階、クエリだけ書いた段階、それぞれで「いま自分が書いた分」を確認するページが、ビルドのたび自動で生成される。Quick Start で `__` で始まるディレクトリが出ていたのがそれ。
+You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the queries are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
-「どこに書く」のパスはプロジェクトディレクトリ（`<project>/`）からの相対、「どこを確認」のパスは出力先（`.another-mood/<project>/`）からの相対。
+In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" paths are relative to the output directory (`.another-mood/<project>/`).
 
-| 段階 | 何を書く | どこに書く | どこを確認 |
+| Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | スキーマ | `definition/schema.yaml` | `output/__meta_entity/<entity>.md` |
-| 2 | コンテンツ | `contents/**/*.yaml` (構造化データ)<br>`contents/**/*.md` (散文) | `output/__table_view/<entity>.md` |
-| 3 | クエリ | `definition/queries/**/*.yaml` | `output/__meta_query/<query>.md` |
-| 4 | テンプレート | `definition/templates/**/*.md` | `output/index.md` 以下 |
+| 1 | Schema | `definition/schema.yaml` | `output/__meta_entity/<entity>.md` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__table_view/<entity>.md` |
+| 3 | Query | `definition/queries/**/*.yaml` | `output/__meta_query/<query>.md` |
+| 4 | Template | `definition/templates/**/*.md` | `output/index.md` and below |
 
-スキーマとコンテンツは必須、クエリは省略可、テンプレートは最終出力に必要。`schema.yaml` だけは 1 ファイル固定で、それ以外は複数ファイル・サブディレクトリに自由に分割できる。パスを変更する方法は [CLI](reference/cli.md) を参照。
+Schema and content are required; queries are optional; templates are required for the final output. `schema.yaml` is the only fixed single file — everything else can be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
 
-`mood watch` を回したまま編集すれば、各段の成果が即座にブラウザに出る。テンプレートを書き始める段階では、参照するデータやクエリ結果の形が既に確定しているので、テンプレートに集中できる。ユーザが編集したソースの文法エラーなども同じ仕組みでブラウザに反映されるので、書き手はそれを見ながら直す — この「書く・確認する・直す」ループがワークフローの実際の姿。
+With `mood watch` running, the output of each stage updates in the browser as you edit. By the time you start writing templates, the shapes of the data and query results they reference are already settled, so you can focus on the templates. Syntax errors in your sources show up in the browser through the same mechanism, and you watch and fix them as you go — this "write, check, fix" loop is what the workflow looks like in practice.
 
-### `mood build` と `mood watch` の使い分け
+### When to use `mood build` vs `mood watch`
 
-- `mood watch` — エディタで書きながらブラウザで結果を確認したいとき（人間が継続的に書いているとき）に起動して放置する。
-- `mood build` — CI で生成だけしたいときや、エージェント（Claude Code 等）が「編集 → ビルド成否を確認 → 次の編集」を回したいときに使う。
+- `mood watch` — Start it and leave it running when you want to edit and watch results live in the browser (i.e., during continuous human authoring).
+- `mood build` — Use this for one-shot generation in automated build pipelines, or when an agent (Claude Code, etc.) is running an "edit → check build status → next edit" loop.
 
-使い分けの基準は、エラーを人間が見るか、機械が拾うか。`watch` は人間がコンソール・ブラウザでエラーを見ながら直すためのもの。`build` は完了して結果（成功かエラーか）を返すので、CI やエージェントがそれを判定して次の処理に進める。
+The deciding factor: whether errors are read by a human or picked up by a machine. `watch` is for humans to see errors in the console or browser and fix them inline. `build` finishes and returns a result (success or failure), so automated pipelines or agents can act on the result and continue.
 
 ## スキーマとコンテンツ
 
