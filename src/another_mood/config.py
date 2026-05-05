@@ -38,7 +38,7 @@ class ProjectConfig(BaseSettings):
     render_dir: Path = Field(default=Path(""))
 
     # Server
-    port: int = Field(default=1313)
+    port: int = Field(default=5077)
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:
         """Return ComponentOutput for the given component under tmp_dir."""
