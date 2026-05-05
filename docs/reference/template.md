@@ -1,18 +1,18 @@
 # Template
 
-**テンプレート**は、ビューを Markdown ドキュメントに変換する表現層。[Jinja2](https://jinja.palletsprojects.com/) をベースに、ファイル出力を司る `{% mood_view %}` タグを独自に拡張している。
+A **template** is the presentation layer that turns views into Markdown documents. It builds on [Jinja2](https://jinja.palletsprojects.com/) and adds the custom `{% mood_view %}` tag that controls file output.
 
-テンプレートは `{project}/definition/templates/` 配下に `.md` 拡張子で置く。拡張子を `.md` にするのは、エディタのシンタックスハイライトに乗せて本文の編集体験を確保するため（テンプレート記法と Markdown 本文が混在するので、プレーンテキストとして扱うと視覚的に区別しづらい）。
+Templates are placed under `{project}/definition/templates/` with the `.md` extension. The `.md` extension is chosen so editors apply Markdown syntax highlighting to the body — template syntax and Markdown body are mixed, and treating files as plain text makes them visually hard to distinguish.
 
-## エントリポイント: `index.md`
+## Entry point: `index.md`
 
-`definition/templates/index.md` がルートテンプレート。テンプレートエンジンはここから評価を始める。ドキュメント全体の TOC（目次）を `index.md` に書き、サブページは `{% mood_view %}` で呼び出す構成にする。
+`definition/templates/index.md` is the root template. The template engine begins evaluation here. Put the document-wide TOC (table of contents) in `index.md` and call subpages via `{% mood_view %}`.
 
 ```jinja2
 {# templates/index.md #}
-# 商品カタログ
+# Product Catalog
 
-## 商品一覧
+## Products
 
 {%- for product in products %}
 - [{{ product.name }}](product-detail/{{ product.id }}.md)
@@ -23,16 +23,16 @@
 {%- endfor %}
 ```
 
-## テンプレートへのデータ入力
+## Data exposed to templates
 
-テンプレートからは、[Schema](schema.md) で宣言したエンティティのデータと、[Query](query.md) で定義したビューを **同じ名前空間** で参照できる。
+From templates, you can reference both entity data declared in [Schema](schema.md) and views defined by [Query](query.md) in the **same namespace**.
 
-- エンティティ: schema.yaml の `properties` のキー
-- クエリビュー: `definition/queries/` 配下のファイル内トップレベルキー
-- 散文ビュー (`prose`): `contents/` 配下の Markdown ファイルから自動生成（[Schema — 内蔵スキーマ: 散文](schema.md#内蔵スキーマ-散文-prose) 参照）
+- Entities: keys under `properties` in schema.yaml
+- Query views: top-level keys within files under `definition/queries/`
+- Prose view (`prose`): auto-generated from Markdown files under `contents/` (see [Schema — Built-in schema: prose](schema.md#built-in-schema-prose))
 
 ```jinja2
-{# products は構造化データのエンティティ、bestsellers はクエリビュー #}
+{# `products` is a structured-data entity, `bestsellers` is a query view #}
 {% for product in products %}
   ...
 {% endfor %}
@@ -42,35 +42,35 @@
 {% endfor %}
 ```
 
-## Jinja2 拡張: `{% mood_view %}`
+## Jinja2 extension: `{% mood_view %}`
 
-`{% mood_view %}` はサブテンプレートをレンダリングして **別ファイルに書き出す** 独自タグ。
+`{% mood_view %}` is a custom tag that renders a subtemplate and **writes the result to a separate file**.
 
 ```jinja2
 {% mood_view "NAME" with DATA %}
 ```
 
-| 部分 | 説明 |
+| Part | Description |
 |---|---|
-| `NAME` | サブテンプレートのベース名（拡張子 `.md` を除いた名前を文字列で） |
-| `DATA` | サブテンプレートに渡すデータ（マップオブジェクト） |
+| `NAME` | The subtemplate's base name (the filename without the `.md` extension, given as a string). |
+| `DATA` | The data passed to the subtemplate (a map object). |
 
-`DATA` がマップでない場合はエラー。
+An error is raised if `DATA` is not a map.
 
-### 出力先の自動決定
+### Automatic output path
 
-`DATA` に `id` フィールドがあるかどうかで出力先パスが決まる。
+The output path is determined by whether `DATA` has an `id` field.
 
-| `DATA` | 出力先 |
+| `DATA` | Output |
 |---|---|
-| `{ id: "foo", ... }` を含む | `{outDir}/NAME/foo.md` |
-| `id` フィールドなし | `{outDir}/NAME.md` |
+| Includes `{ id: "foo", ... }` | `{outDir}/NAME/foo.md` |
+| No `id` field | `{outDir}/NAME.md` |
 
-### タグの戻り値
+### Return value of the tag
 
-`{% mood_view %}` タグ自体は **空文字列を返す**。出力ファイルは副作用として書き出されるので、親テンプレート内で `{% mood_view %}` を置いた位置には何も現れない（空白のみ）。
+The `{% mood_view %}` tag itself **returns the empty string**. The output file is written as a side effect, so nothing appears at the position where `{% mood_view %}` was placed in the parent template (just whitespace).
 
-親ページからサブページへのリンクを張りたい場合は、`{% mood_view %}` の外側に Markdown のリンク記法を別途書く:
+To link from a parent page to a subpage, write Markdown link syntax separately, outside the `{% mood_view %}` call:
 
 ```jinja2
 {%- for product in products %}
@@ -82,9 +82,9 @@
 {%- endfor %}
 ```
 
-### サブテンプレート側
+### Subtemplate side
 
-サブテンプレート内では、`with` で渡したマップのフィールドがトップレベル変数として参照できる。
+Inside a subtemplate, the fields of the map passed via `with` are accessible as top-level variables.
 
 ```jinja2
 {# templates/product-detail.md #}
@@ -92,32 +92,32 @@
 
 {{ description }}
 
-| 項目 | 値 |
+| Field | Value |
 |------|-----|
 {% for spec in specs -%}
 | {{ spec.label }} | {{ spec.value }} |
 {% endfor %}
 ```
 
-### `inline` オプション
+### The `inline` option
 
-`with DATA` の後ろに `inline` を付けると、サブテンプレートの結果を **別ファイルに書き出さず**、そのまま呼び出し位置に展開する（`{% include %}` に近い動作）。
+Adding `inline` after `with DATA` causes the subtemplate's result to **not be written to a separate file**; instead it expands inline at the call site (similar to `{% include %}`).
 
 ```jinja2
 {% mood_view "NAME" with DATA inline %}
 ```
 
-`{% mood_view %}` のデフォルト挙動（別ファイル出力）では複数のセクションが別々のページに散ってしまうケースで、それらを 1 ページに集約したいときに使う。
+Use this when the default `{% mood_view %}` behavior (separate-file output) would scatter multiple sections across separate pages, but you want them collected into a single page.
 
-## Undefined アクセスの扱い
+## Handling undefined access
 
-テンプレート内で未定義の変数・属性にアクセスしてもエラーにはならず、空文字列としてレンダリングされる。属性のチェインアクセス（例: `spec.metadata.title`）も、途中のキーが存在しなくても空文字列になる。
+Accessing an undefined variable or attribute inside a template does not raise an error; it renders as the empty string. Chained attribute access (e.g., `spec.metadata.title`) also yields the empty string when any intermediate key is missing.
 
-したがって optional な属性を参照する際、`if metadata is defined` のようなガードは不要:
+So, when referencing optional attributes, guards like `if metadata is defined` are unnecessary:
 
 ```jinja2
-{# metadata や metadata.title が存在しなくても安全 #}
+{# safe even when metadata or metadata.title is absent #}
 | {{ spec.id }} | {{ spec.metadata.title }} |
 ```
 
-スペルミスのときも同じくエラーにならず黙って空になる点に注意。書きながら `__table_view/` でデータの実体を、`__meta_query/` でクエリの結果形を確認しながら進める。
+Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__table_view/` and the shape of query results via `__meta_query/`.
