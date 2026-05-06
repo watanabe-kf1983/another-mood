@@ -364,6 +364,7 @@ categories:
           出口: サーバが起動して MCP protocol handshake が通る。
           K2 と同セッション / 同 PR で実施することも検討可 (K1 単独だと PR が thin)。
         phase: 9
+        done: true
       K2:
         title: Resources 公開
         note: |

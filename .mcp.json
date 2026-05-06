@@ -18,6 +18,10 @@
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "another-mood": {
+      "command": "uv",
+      "args": ["run", "mood-mcp"]
     }
   }
 }
