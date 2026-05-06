@@ -307,6 +307,26 @@ categories:
           ロジックは CLI 側に置き、MCP の start / stop ツール (K7) は薄い wrapper
           にする。同セッション / 同 PR で K7 とまとめて実施可能。
         phase: 9
+      G7:
+        title: "mood init --template: テンプレート選択対応"
+        note: |
+          現状 init は showcase/starter を一択でハードコード
+          (src/another_mood/components/scaffold/init.py)。MCP の K2 で
+          showcase/ を Resources として同梱せず「`mood init --template xxx`
+          でエージェントが体験する」方針に揃えるため、テンプレート選択を
+          可能にする。
+
+          範囲:
+            - `--template <name>` オプション追加 (省略時 starter)
+            - showcase/{starter, examples/*} の走査・列挙
+            - 不正なテンプレート名のエラー表示
+            - K5 (MCP init ツール) で同じテンプレート群を扱える形に
+              init_project シグネチャを整える
+            - cli-spec.md / docs/reference/cli.md の更新
+
+          K2 (Resources 公開) の設計根拠として、`mood init --template`
+          が複数テンプレートを扱える状態を前提にしているため、K2 の前に着手する。
+        phase: 9
 
   H:
     title: バイナリファイルの取り扱い
@@ -595,4 +615,28 @@ categories:
           利用者向け MCP ドキュメント。インストール手順 (uvx 等)、
           claude_desktop_config.json への登録例、提供ツール一覧。
           K1〜K5 完了後に着手。
+        phase: 9
+      L8:
+        title: schemas を docs/reference/ にミラー
+        note: |
+          現状 docs/reference/{schema,query}.md は「## Full xxx-schema」appendix
+          で src/another_mood/resources/schemas/*.yaml を逐語コピーしており、
+          tests/test_docs_sync.py で drift を検出している。K2 (Resources 公開)
+          で docs/ ツリーを MCP に出すと、同じスキーマ全文が二箇所
+          (md inline + yaml 本体) で配信される。
+
+          方針:
+            - canonical は src/another_mood/resources/schemas/ のまま据え置き
+              (behavioral artifact なのでコード側に留める)
+            - docs/reference/schemas/*.yaml を mirror として git にコミット
+              (sync 方向は src/ → docs/、一方向の build artifact 扱い)
+
+          範囲:
+            - sync 機構: make target もしくは pre-commit / hatch hook
+            - docs/reference/{schema,query}.md の appendix を削除し、
+              ./schemas/xxx-schema.yaml への相対リンクに置き換え
+            - tests/test_docs_sync.py を「ファイル vs ファイル」に簡素化
+
+          K2 の前提 (resources 公開対象を docs/ ツリーのみに収斂させるため)
+          として K2 の前に着手する。
         phase: 9
