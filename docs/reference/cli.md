@@ -1,8 +1,8 @@
 # CLI Reference
 
-`mood` is the command-line entry point for Another Mood. It provides three subcommands: project initialization (`init`), one-shot build (`build`), and file watching with live preview (`watch`).
+`mood` is the command-line entry point for Another Mood. The day-to-day workflow uses `init` (first time), `build` (one-shot rebuild), and `watch` (live preview). `mood blueprint` is a separate command group for managing the built-in sample projects that `init` is built on top of.
 
-All subcommands take the target directory as the first positional argument `<project_dir>`. Typically you run them from inside the project directory and pass `.`:
+`init`, `build`, and `watch` take the target directory as the first positional argument `<project_dir>`. Typically you run them from inside the project directory and pass `.`:
 
 ```bash
 mood init .
@@ -14,9 +14,11 @@ mood watch .
 
 | Command | Purpose |
 |---|---|
-| [`mood init <project_dir> [--template <name>]`](#init) | Scaffold a project skeleton from a built-in template. |
+| [`mood init <project_dir>`](#init) | Shortcut for `mood blueprint apply starter <project_dir>`. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
 | [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
+| [`mood blueprint list`](#blueprint-list) | List the available blueprints. |
+| [`mood blueprint apply <name> <project_dir>`](#blueprint-apply) | Apply a blueprint into a project directory. |
 
 ## Shared argument: `<project_dir>`
 
@@ -49,39 +51,13 @@ Subdirectories matching the input path are created automatically, so that runnin
 
 ## init
 
-Scaffold a project skeleton from a built-in template.
+Shortcut for the most common case: applying the `starter` blueprint.
 
 ```bash
-mood init <project_dir> [--template <name>]
+mood init <project_dir>
 ```
 
-Copies a built-in template into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories.
-
-### `--template`
-
-Selects which built-in template to copy. Defaults to `starter`.
-
-| Name | Description |
-|---|---|
-| `starter` | Minimal sample set of schema, contents, queries, and templates. |
-| `ecommerce` | Worked example modelling an e-commerce catalog. |
-
-Additional templates may be available — they correspond to the subdirectories of `showcase/` in the source tree. Passing an unknown name prints the list of available templates on stderr and exits with code 1.
-
-Newly created files are listed with the `created:` prefix on stderr; files that already exist (and are therefore skipped) are listed with `warning:`:
-
-```
-Initializing project in my-project/ (template: starter)
-  created: my-project/definition/schema.yaml
-  created: my-project/contents/members.yaml
-  ...
-```
-
-```
-warning: skipped (already exists): my-project/definition/schema.yaml
-```
-
-The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `init` on an existing project never causes destructive changes.
+Equivalent to `mood blueprint apply starter <project_dir>`. Use `mood blueprint apply` directly to pick a different blueprint.
 
 ## build
 
@@ -124,6 +100,28 @@ mood watch . --port 8080
 ```
 
 To watch multiple `<project_dir>` values at the same time, start one process per project. Output directories are separated per `<project_dir>` and do not collide, but ports do — any process after the first needs `--port` to pick a different port.
+
+## blueprint
+
+A *blueprint* is a working sample project (schema, contents, queries, templates) bundled with Another Mood. The `blueprint` command group lists them and applies them to a target directory.
+
+### blueprint list
+
+```bash
+mood blueprint list
+```
+
+Prints the available blueprints to stdout in a man-page style: each blueprint takes two lines — the name on the first, the description (indented) on the second.
+
+### blueprint apply
+
+```bash
+mood blueprint apply <name> <project_dir>
+```
+
+Copies the named blueprint into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name prints the available list on stderr and exits with code 1.
+
+For each file, prints `  created: <path>` to stderr, or `warning: skipped (already exists): <path>` if the destination already exists. The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `apply` on an existing project never causes destructive changes.
 
 ## Configuration overrides
 

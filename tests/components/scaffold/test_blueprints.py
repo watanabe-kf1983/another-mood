@@ -1,13 +1,13 @@
-"""Tests for mood init — project scaffolding."""
+"""Tests for the scaffold component (blueprints + project copying)."""
 
 from pathlib import Path
 
 import pytest
 
-from another_mood.components.scaffold.init import (
-    UnknownTemplateError,
-    available_templates,
-    init_project,
+from another_mood.components.scaffold.blueprints import (
+    apply_blueprint,
+    available_blueprints,
+    load_blueprints,
     scaffold_project,
 )
 
@@ -56,41 +56,34 @@ def test_scaffold_partial_conflict(template: Path, tmp_path: Path) -> None:
     assert (target / "dir_b" / "file2.txt").read_text() == "content2"
 
 
-def test_available_templates_lists_starter_and_examples() -> None:
-    templates = available_templates()
-
-    # starter is always present; examples/* are exposed under their dir name.
-    assert "starter" in templates
-    assert "ecommerce" in templates
-    assert templates["starter"].is_dir()
-    assert templates["ecommerce"].is_dir()
-
-
-def test_init_project_default_uses_starter(tmp_path: Path) -> None:
+def test_apply_blueprint_copies_named_blueprint(tmp_path: Path) -> None:
     target = tmp_path / "proj"
 
-    result = init_project(target)
-
-    assert result is True
-    # starter ships a definition/schema.yaml.
+    assert apply_blueprint("starter", target) is True
     assert (target / "definition" / "schema.yaml").is_file()
 
 
-def test_init_project_with_named_template(tmp_path: Path) -> None:
-    target = tmp_path / "proj"
+def test_available_blueprints_lists_starter_and_ecommerce() -> None:
+    blueprints = available_blueprints()
 
-    result = init_project(target, template="ecommerce")
+    # Manifest order is preserved; starter must come first.
+    names = list(blueprints)
+    assert names[0] == "starter"
+    assert "ecommerce" in names
+    assert blueprints["starter"]
+    assert blueprints["ecommerce"]
 
-    assert result is True
-    assert (target / "definition" / "schema.yaml").is_file()
 
+def test_load_blueprints_preserves_manifest_order(tmp_path: Path) -> None:
+    (tmp_path / "index.yaml").write_text(
+        "gamma: g.\nalpha: a.\nbeta: b.\n",
+        encoding="utf-8",
+    )
 
-def test_init_project_unknown_template_raises(tmp_path: Path) -> None:
-    target = tmp_path / "proj"
+    blueprints = load_blueprints(tmp_path)
 
-    with pytest.raises(UnknownTemplateError) as excinfo:
-        init_project(target, template="does-not-exist")
-
-    assert excinfo.value.name == "does-not-exist"
-    assert "starter" in excinfo.value.available
-    assert not target.exists()
+    assert list(blueprints.items()) == [
+        ("gamma", "g."),
+        ("alpha", "a."),
+        ("beta", "b."),
+    ]
