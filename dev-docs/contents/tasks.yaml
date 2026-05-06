@@ -368,8 +368,8 @@ categories:
       K2:
         title: Resources 公開
         note: |
-          設計書のコア機能の片方。.another-mood/{project}/output/ 全量を MCP Resources
-          として公開。URI スキーム設計 / 走査 / resources/list + resources/read 実装 /
+          設計書のコア機能の片方。MCP Resources の公開。
+          URI スキーム設計 / 走査 / resources/list + resources/read 実装 /
           ファイル → Resource (mimeType, name, description) の mapping。
           出口: agent が resources/list で目次取得、resources/read で個別読み。
           K1 と同 PR にまとめる選択肢あり (合わせて「ナビゲーター MVP」)。
