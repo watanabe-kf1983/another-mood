@@ -1,0 +1,51 @@
+# Merged with the user's schema.yaml at validation time so that all
+# content files are validated uniformly.
+
+title: ContentSchema
+description: >-
+  Built-in schema that defines the `prose` entity. Markdown files under
+  contents_dir are parsed into prose records (id, title, body) and
+  validated alongside the user's schema.yaml.
+
+type: object
+properties:
+  prose:
+    title: Prose collection
+    description: >-
+      Collection of prose records, one per Markdown file in contents_dir.
+      Each record carries the file's id, optional title, and parsed body.
+    type: array
+    items:
+      title: Prose record
+      description: One Markdown file parsed into an id / title / body triple.
+      type: object
+      properties:
+        id:
+          title: Prose id
+          description: >-
+            Stable identifier derived from the Markdown file's path
+            (without extension).
+          type: string
+        title:
+          title: Prose title
+          description: >-
+            Display title taken from the first H1 heading of the Markdown
+            source. Absent when the source has no H1.
+          type: string
+        body:
+          title: Prose body
+          description: >-
+            Body of the Markdown file, carrying its MIME type and the raw
+            source text.
+          type: object
+          properties:
+            mime_type:
+              title: Body MIME type
+              description: MIME type of the body content (currently always `text/markdown`).
+              type: string
+            content:
+              title: Body content
+              description: Raw Markdown source as a string.
+              type: string
+          required: [mime_type, content]
+      required: [id, body]

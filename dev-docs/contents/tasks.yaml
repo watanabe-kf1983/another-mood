@@ -640,3 +640,4 @@ categories:
           K2 の前提 (resources 公開対象を docs/ ツリーのみに収斂させるため)
           として K2 の前に着手する。
         phase: 9
+        done: true

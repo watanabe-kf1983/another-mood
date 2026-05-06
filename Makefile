@@ -1,4 +1,4 @@
-.PHONY: ci format-check lint typecheck test secrets build-projects format
+.PHONY: ci format-check lint typecheck test secrets build-projects format mirror-schemas
 
 ci: format-check lint typecheck test secrets build-projects
 
@@ -24,3 +24,6 @@ build-projects:
 
 format:
 	uv run ruff format .
+
+mirror-schemas:
+	cp src/another_mood/resources/schemas/*.yaml docs/reference/schemas/
