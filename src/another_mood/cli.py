@@ -6,10 +6,12 @@ from pathlib import Path
 import typer
 
 from another_mood.config import ConfigValidationError, ProjectConfig
-from another_mood.components.scaffold.init import init_project
+from another_mood.components.scaffold import blueprints as bp
 from another_mood.pipeline.stages import pipeline
 
 app = typer.Typer()
+blueprint_app = typer.Typer(help="Manage built-in blueprints (sample projects).")
+app.add_typer(blueprint_app, name="blueprint")
 
 
 @app.callback()
@@ -28,13 +30,37 @@ def _load_config(**kwargs: object) -> ProjectConfig:
     return config
 
 
+@blueprint_app.command("list")
+def list_blueprints() -> None:
+    """List available blueprints."""
+    for name, description in bp.available_blueprints().items():
+        print(name)
+        print(f"  {description}")
+
+
+@blueprint_app.command("apply")
+def apply_blueprint(
+    name: str = typer.Argument(help="Blueprint name."),
+    project_dir: str = typer.Argument(help="Project directory."),
+) -> None:
+    """Apply a blueprint into a project directory."""
+    blueprints = bp.available_blueprints()
+    if name not in blueprints:
+        print(
+            f"unknown blueprint: {name!r} (available: {', '.join(blueprints)})",
+            file=sys.stderr,
+        )
+        raise typer.Exit(1)
+    target = Path(project_dir)
+    print(f"Scaffolding {target}/ from blueprint: {name}", file=sys.stderr)
+    if not bp.apply_blueprint(name, target):
+        raise typer.Exit(1)
+
+
 @app.command()
 def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
-    """Initialize a new project with sample directories and data."""
-    target = Path(project_dir)
-    print(f"Initializing project in {target}/", file=sys.stderr)
-    if not init_project(target):
-        raise typer.Exit(1)
+    """Initialize a new project. Shortcut for `mood blueprint apply starter`."""
+    apply_blueprint(bp.DEFAULT_BLUEPRINT, project_dir)
 
 
 @app.command()

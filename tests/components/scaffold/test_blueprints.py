@@ -1,10 +1,15 @@
-"""Tests for mood init — project scaffolding."""
+"""Tests for the scaffold component (blueprints + project copying)."""
 
 from pathlib import Path
 
 import pytest
 
-from another_mood.components.scaffold.init import scaffold_project
+from another_mood.components.scaffold.blueprints import (
+    apply_blueprint,
+    available_blueprints,
+    load_blueprints,
+    scaffold_project,
+)
 
 
 @pytest.fixture()
@@ -49,3 +54,36 @@ def test_scaffold_partial_conflict(template: Path, tmp_path: Path) -> None:
     assert result is False
     assert conflict.read_text() == "original"
     assert (target / "dir_b" / "file2.txt").read_text() == "content2"
+
+
+def test_apply_blueprint_copies_named_blueprint(tmp_path: Path) -> None:
+    target = tmp_path / "proj"
+
+    assert apply_blueprint("starter", target) is True
+    assert (target / "definition" / "schema.yaml").is_file()
+
+
+def test_available_blueprints_lists_starter_and_ecommerce() -> None:
+    blueprints = available_blueprints()
+
+    # Manifest order is preserved; starter must come first.
+    names = list(blueprints)
+    assert names[0] == "starter"
+    assert "ecommerce" in names
+    assert blueprints["starter"]
+    assert blueprints["ecommerce"]
+
+
+def test_load_blueprints_preserves_manifest_order(tmp_path: Path) -> None:
+    (tmp_path / "index.yaml").write_text(
+        "gamma: g.\nalpha: a.\nbeta: b.\n",
+        encoding="utf-8",
+    )
+
+    blueprints = load_blueprints(tmp_path)
+
+    assert list(blueprints.items()) == [
+        ("gamma", "g."),
+        ("alpha", "a."),
+        ("beta", "b."),
+    ]
