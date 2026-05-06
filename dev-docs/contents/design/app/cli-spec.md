@@ -18,10 +18,15 @@ Another Mood のコマンドラインインターフェース。
 プロジェクトの初期化。`<projectDir>` に [project-structure.md](project-structure.md) に準拠したディレクトリ構成とサンプルデータを生成する。
 
 ```
-mood init <projectDir>
+mood init <projectDir> [--template <name>]
 ```
 
+- `--template <name>` で同梱テンプレートを選択する。省略時は `starter`
+- 利用可能なテンプレート: `showcase/` 直下の各サブディレクトリ名（例: `starter`, `ecommerce`）
+- 不正なテンプレート名を渡した場合はエラーメッセージ（利用可能テンプレート一覧を含む）を表示し exit code 1 で終了
 - 既存ファイルがある場合は上書きしない（競合時は警告を表示してスキップ）
+
+MCP の init ツール（[mcp-design.md](mcp-design.md)）は同じテンプレート群を扱う。AI が showcase の具体例を体験する経路を CLI と MCP で揃えるため、テンプレート列挙ロジックは scaffold コンポーネントに集約する。
 
 ### mood watch
 

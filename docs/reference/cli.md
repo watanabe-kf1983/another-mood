@@ -14,7 +14,7 @@ mood watch .
 
 | Command | Purpose |
 |---|---|
-| [`mood init <project_dir>`](#init) | Scaffold a project skeleton with a sample. |
+| [`mood init <project_dir> [--template <name>]`](#init) | Scaffold a project skeleton from a built-in template. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
 | [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
 
@@ -49,18 +49,29 @@ Subdirectories matching the input path are created automatically, so that runnin
 
 ## init
 
-Scaffold a project skeleton.
+Scaffold a project skeleton from a built-in template.
 
 ```bash
-mood init <project_dir>
+mood init <project_dir> [--template <name>]
 ```
 
-Copies the built-in starter template (a minimal sample set of schema, contents, queries, and templates) into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories.
+Copies a built-in template into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories.
+
+### `--template`
+
+Selects which built-in template to copy. Defaults to `starter`.
+
+| Name | Description |
+|---|---|
+| `starter` | Minimal sample set of schema, contents, queries, and templates. |
+| `ecommerce` | Worked example modelling an e-commerce catalog. |
+
+Additional templates may be available — they correspond to the subdirectories of `showcase/` in the source tree. Passing an unknown name prints the list of available templates on stderr and exits with code 1.
 
 Newly created files are listed with the `created:` prefix on stderr; files that already exist (and are therefore skipped) are listed with `warning:`:
 
 ```
-Initializing project in my-project/
+Initializing project in my-project/ (template: starter)
   created: my-project/definition/schema.yaml
   created: my-project/contents/members.yaml
   ...

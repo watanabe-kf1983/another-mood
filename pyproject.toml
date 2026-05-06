@@ -39,8 +39,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
-"showcase/starter" = "another_mood/_showcase/starter"
-"showcase/examples" = "another_mood/_showcase/examples"
+"showcase" = "another_mood/_showcase"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

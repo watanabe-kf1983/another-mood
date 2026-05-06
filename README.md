@@ -6,10 +6,10 @@ A processor of source-based databases, keeping related documents in sync. Genera
 
 ```bash
 uv sync
-uv run mood build showcase/examples/ecommerce
+uv run mood build showcase/ecommerce
 ```
 
-Output is written to `.another-mood/showcase/examples/ecommerce/output/`.
+Output is written to `.another-mood/showcase/ecommerce/output/`.
 
 ## Status
 
@@ -21,4 +21,4 @@ For design decisions and background, see [background/product.md](dev-docs/conten
 
 - [docs/guides.md](docs/guides.md) — User guide
 - [DEVELOPMENT.md](DEVELOPMENT.md) — Developer guide
-- [showcase/examples/ecommerce/](showcase/examples/ecommerce/) — Example project
+- [showcase/ecommerce/](showcase/ecommerce/) — Example project

@@ -6,7 +6,11 @@ from pathlib import Path
 import typer
 
 from another_mood.config import ConfigValidationError, ProjectConfig
-from another_mood.components.scaffold.init import init_project
+from another_mood.components.scaffold.init import (
+    DEFAULT_TEMPLATE,
+    UnknownTemplateError,
+    init_project,
+)
 from another_mood.pipeline.stages import pipeline
 
 app = typer.Typer()
@@ -29,11 +33,23 @@ def _load_config(**kwargs: object) -> ProjectConfig:
 
 
 @app.command()
-def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
+def init(
+    project_dir: str = typer.Argument(help="Project directory"),
+    template: str = typer.Option(
+        DEFAULT_TEMPLATE,
+        "--template",
+        help="Built-in template name (e.g. 'starter', 'ecommerce').",
+    ),
+) -> None:
     """Initialize a new project with sample directories and data."""
     target = Path(project_dir)
-    print(f"Initializing project in {target}/", file=sys.stderr)
-    if not init_project(target):
+    print(f"Initializing project in {target}/ (template: {template})", file=sys.stderr)
+    try:
+        ok = init_project(target, template)
+    except UnknownTemplateError as exc:
+        print(str(exc), file=sys.stderr)
+        raise typer.Exit(1) from exc
+    if not ok:
         raise typer.Exit(1)
 
 

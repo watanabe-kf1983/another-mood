@@ -20,7 +20,7 @@ secrets:
 build-projects:
 	uv run mood build dev-docs
 	uv run mood build showcase/starter
-	uv run mood build showcase/examples/ecommerce
+	uv run mood build showcase/ecommerce
 
 format:
 	uv run ruff format .

@@ -448,4 +448,4 @@ Be aware that misspellings silently produce empty strings — no error is raised
 ## Further reading
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
-- [showcase/examples/ecommerce/](../showcase/examples/ecommerce/) — a more complex working sample than the member list, modeling an e-commerce site that exercises entities, relations, prose, queries, and templates end-to-end.
+- [showcase/ecommerce/](../showcase/ecommerce/) — a more complex working sample than the member list, modeling an e-commerce site that exercises entities, relations, prose, queries, and templates end-to-end.
