@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "another-mood": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "mood-mcp"]
+    }
+  }
+}
