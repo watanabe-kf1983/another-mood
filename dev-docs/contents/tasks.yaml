@@ -327,6 +327,7 @@ categories:
           K2 (Resources 公開) の設計根拠として、`mood init --template`
           が複数テンプレートを扱える状態を前提にしているため、K2 の前に着手する。
         phase: 9
+        done: true
 
   H:
     title: バイナリファイルの取り扱い
