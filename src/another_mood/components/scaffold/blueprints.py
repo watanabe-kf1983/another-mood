@@ -2,20 +2,29 @@
 
 A *blueprint* is a built-in sample project that ``mood blueprint apply``
 copies into a target directory.  Blueprints are declared in
-``showcase/index.yaml`` (the manifest) as ``<name>: <description>``
-entries; the directory of each blueprint lives at ``showcase/<name>/``.
+``showcase/index.yaml`` (the manifest) under a top-level ``blueprints:``
+list of ``{name, description}`` records; the directory of each blueprint
+lives at ``showcase/<name>/``.
 """
 
 import shutil
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
-from typing import Mapping, Sequence, cast
+from typing import Sequence, cast
 
 import yaml
 
 DEFAULT_BLUEPRINT = "starter"
 INDEX_FILE = "index.yaml"
+
+
+@dataclass(frozen=True)
+class Blueprint:
+    """A bundled sample project entry from the manifest."""
+
+    name: str
+    description: str
 
 
 @dataclass(frozen=True)
@@ -40,20 +49,21 @@ def _showcase_root() -> Path:
     return pkg_root.parent.parent / "showcase"
 
 
-def available_blueprints() -> Mapping[str, str]:
-    """Return the bundled blueprint manifest as name → description."""
+def available_blueprints() -> Sequence[Blueprint]:
+    """Return the bundled blueprint manifest in declared order."""
     return load_blueprints(_showcase_root())
 
 
-def load_blueprints(root: Path) -> Mapping[str, str]:
+def load_blueprints(root: Path) -> Sequence[Blueprint]:
     """Read ``<root>/index.yaml`` and return its blueprint entries.
 
     Trusts the file's shape since the manifest is shipped with the
     package; relies on ``read_text`` / ``yaml.safe_load`` to raise on a
     missing or syntactically broken file.
     """
-    raw: object = yaml.safe_load((root / INDEX_FILE).read_text(encoding="utf-8"))
-    return cast(Mapping[str, str], raw)
+    raw = yaml.safe_load((root / INDEX_FILE).read_text(encoding="utf-8"))
+    entries = cast(Sequence[dict[str, str]], raw["blueprints"])
+    return [Blueprint(name=e["name"], description=e["description"]) for e in entries]
 
 
 def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:

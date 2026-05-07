@@ -2,7 +2,7 @@
 
 MCP サーバの内部設計。利用者視点の振る舞い仕様（What）は [design/app/mcp-design.md](../design/app/mcp-design.md) を参照。本ドキュメントは How を扱う。
 
-> **一部実装** — タスク [K1〜K7](../../tasks.md)（Phase 9）。K1（FastMCP 骨格）と K2（Resources 公開）が実装済み。K3 以降は順次追記する。
+> **一部実装** — タスク [K1〜K7](../../tasks.md)（Phase 9）。K1（FastMCP 骨格）、K2（Resources 公開）、K5（init / blueprint ツール）が実装済み。K3 / K4 / K7 は順次追記する。
 
 ## 位置づけ
 
@@ -144,7 +144,7 @@ mcp_server 層の保証は **MCP クライアントからの E2E 動作確認** 
 2. **Claude Code** からの呼び出し — リポジトリ直下の `.mcp.json` に登録して使う（`mcp__another-mood__*` ツールとして見える）
 3. （任意）**MCP Inspector** — `npx @modelcontextprotocol/inspector mood-mcp` で MCP プロトコルを直接叩く軽量 UI。デバッグ時に有用
 
-K1 では (1) と (2) を完了基準とし、PR 説明に動作確認の証跡（呼び出し画面のスクリーンショットまたは応答ログ）を残す。E2E が通らない実装は完了とみなさない。型チェック（pyright）と既存テストが通るだけでは、書いたコードが実際に MCP サーバとして稼働するかは何一つ確認されないため。
+各タスクの完了時、PR 説明に動作確認の証跡（呼び出し画面のスクリーンショットまたは応答ログ）を残す。E2E が通らない実装は完了とみなさない。型チェック（pyright）と既存テストが通るだけでは、書いたコードが実際に MCP サーバとして稼働するかは何一つ確認されないため。
 
 ## 背景: ライブラリは MCP Python SDK 内 FastMCP を採用
 

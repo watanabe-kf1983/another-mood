@@ -6,6 +6,7 @@ subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 
 import sys
 from logging import INFO, basicConfig
+from pathlib import Path
 from typing import Sequence
 
 from mcp.server.fastmcp import FastMCP
@@ -14,6 +15,7 @@ from mcp.types import ResourceLink
 from pydantic import AnyUrl
 
 from another_mood import command
+from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
 
 mcp = FastMCP("another-mood")
 
@@ -65,6 +67,49 @@ def read_doc(uri: str) -> str:
     `docs://reference/cli.md`).  Returns the raw file contents as text.
     """
     return command.read_doc(uri)
+
+
+@mcp.tool()
+def init(project_dir: str) -> ScaffoldResult:
+    """Scaffold a new Another Mood project at `project_dir` from the default
+    blueprint (a minimal starter).
+
+    The directory is created if it does not exist.  Existing files are never
+    overwritten; their paths are returned in `skipped`.  Run `build` next to
+    produce output from the scaffolded sources.
+
+    To choose a different blueprint, use `list_blueprints` + `apply_blueprint`
+    instead; `init` is a shortcut for `apply_blueprint("starter", ...)`.
+    """
+    return command.init(Path(project_dir))
+
+
+@mcp.tool()
+def list_blueprints() -> Sequence[Blueprint]:
+    """List bundled blueprints (sample projects) as `{name, description}` records.
+
+    Each blueprint is a self-contained Another Mood project that demonstrates
+    a particular shape of source.  Pass any returned `name` to `apply_blueprint`
+    to copy that blueprint into a target directory.
+    """
+    return command.list_blueprints()
+
+
+@mcp.tool()
+def apply_blueprint(name: str, project_dir: str) -> ScaffoldResult:
+    """Copy the named blueprint into `project_dir`.
+
+    `name` must be one of the names returned by `list_blueprints()`; an unknown
+    name raises `ValueError`.  The directory is created if it does not exist.
+    Existing files are never overwritten; their paths are returned in
+    `skipped`.  Run `build` next to produce output from the copied sources.
+    """
+    available = [b.name for b in command.list_blueprints()]
+    if name not in available:
+        raise ValueError(
+            f"unknown blueprint: {name!r} (available: {', '.join(available)})"
+        )
+    return command.apply_blueprint(name, Path(project_dir))
 
 
 def main() -> None:

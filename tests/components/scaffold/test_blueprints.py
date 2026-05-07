@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from another_mood.components.scaffold.blueprints import (
+    Blueprint,
     apply_blueprint,
     available_blueprints,
     load_blueprints,
@@ -82,23 +83,25 @@ def test_available_blueprints_lists_starter_and_ecommerce() -> None:
     blueprints = available_blueprints()
 
     # Manifest order is preserved; starter must come first.
-    names = list(blueprints)
+    names = [b.name for b in blueprints]
     assert names[0] == "starter"
     assert "ecommerce" in names
-    assert blueprints["starter"]
-    assert blueprints["ecommerce"]
+    assert all(b.description for b in blueprints)
 
 
 def test_load_blueprints_preserves_manifest_order(tmp_path: Path) -> None:
     (tmp_path / "index.yaml").write_text(
-        "gamma: g.\nalpha: a.\nbeta: b.\n",
+        "blueprints:\n"
+        "  - name: gamma\n    description: g.\n"
+        "  - name: alpha\n    description: a.\n"
+        "  - name: beta\n    description: b.\n",
         encoding="utf-8",
     )
 
     blueprints = load_blueprints(tmp_path)
 
-    assert list(blueprints.items()) == [
-        ("gamma", "g."),
-        ("alpha", "a."),
-        ("beta", "b."),
+    assert list(blueprints) == [
+        Blueprint(name="gamma", description="g."),
+        Blueprint(name="alpha", description="a."),
+        Blueprint(name="beta", description="b."),
     ]
