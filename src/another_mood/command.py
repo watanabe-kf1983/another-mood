@@ -9,7 +9,7 @@ example, per-rebuild reports during watch) is delivered via callback
 arguments (e.g. ``watch(..., on_report=...)``) — never via ``print``.
 """
 
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Event
@@ -21,6 +21,7 @@ from another_mood.components.docs_catalog.catalog import (
 )
 from another_mood.components.scaffold.blueprints import (
     DEFAULT_BLUEPRINT,
+    Blueprint,
     ScaffoldResult,
     apply_blueprint as _apply_blueprint,
     available_blueprints as _available_blueprints,
@@ -44,8 +45,8 @@ def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
     return _apply_blueprint(name, project_dir)
 
 
-def list_blueprints() -> Mapping[str, str]:
-    """Return the bundled blueprint manifest as ``name -> description``."""
+def list_blueprints() -> Sequence[Blueprint]:
+    """Return the bundled blueprint manifest in declared order."""
     return _available_blueprints()
 
 

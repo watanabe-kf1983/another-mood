@@ -39,9 +39,9 @@ def _load_config(**kwargs: object) -> ProjectConfig:
 @blueprint_app.command("list")
 def list_blueprints() -> None:
     """List available blueprints."""
-    for name, description in command.list_blueprints().items():
-        print(name)
-        print(f"  {description}")
+    for blueprint in command.list_blueprints():
+        print(blueprint.name)
+        print(f"  {blueprint.description}")
 
 
 def _render_scaffold(result: ScaffoldResult) -> None:
@@ -58,10 +58,10 @@ def apply_blueprint(
     project_dir: str = typer.Argument(help="Project directory."),
 ) -> None:
     """Apply a blueprint into a project directory."""
-    blueprints = command.list_blueprints()
-    if name not in blueprints:
+    available = [b.name for b in command.list_blueprints()]
+    if name not in available:
         print(
-            f"unknown blueprint: {name!r} (available: {', '.join(blueprints)})",
+            f"unknown blueprint: {name!r} (available: {', '.join(available)})",
             file=sys.stderr,
         )
         raise typer.Exit(1)

@@ -1,2 +1,5 @@
-starter: Minimal sample with members and roles, the easiest entry point.
-ecommerce: Worked example modelling an e-commerce catalog with entities, relations, prose, queries, and templates.
+blueprints:
+  - name: starter
+    description: Minimal sample with members and roles, the easiest entry point.
+  - name: ecommerce
+    description: Worked example modelling an e-commerce catalog with entities, relations, prose, queries, and templates.
