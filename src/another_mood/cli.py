@@ -131,9 +131,22 @@ def _build_listener() -> Callable[[BuildResult], None]:
 
 
 @app.command()
-def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
+def build(
+    project_dir: str = typer.Argument(help="Project directory"),
+    out_dir: str | None = typer.Option(
+        None, "--out-dir", help="Published output directory."
+    ),
+    render_dir: str | None = typer.Option(
+        None, "--render-dir", help="Hugo render directory."
+    ),
+) -> None:
     """Build the project to Markdown and rendered HTML."""
-    config = _load_config(project_dir=Path(project_dir))
+    overrides: dict[str, Path] = {}
+    if out_dir is not None:
+        overrides["out_dir"] = Path(out_dir)
+    if render_dir is not None:
+        overrides["render_dir"] = Path(render_dir)
+    config = _load_config(project_dir=Path(project_dir), **overrides)
     result = command.build(config, on_report=_build_listener())
     if result.has_errors():
         raise SystemExit(1)

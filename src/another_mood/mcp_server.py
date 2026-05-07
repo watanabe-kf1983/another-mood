@@ -66,7 +66,11 @@ def read_doc(uri: str) -> str:
 
 
 @mcp.tool()
-def build(project_dir: str) -> BuildResult:
+def build(
+    project_dir: str,
+    out_dir: str | None = None,
+    render_dir: str | None = None,
+) -> BuildResult:
     """Run the Another Mood build pipeline once over `project_dir` and return
     the build result. Equivalent to `mood build <project_dir>`.
 
@@ -75,9 +79,17 @@ def build(project_dir: str) -> BuildResult:
     `project_dir`; the rendered output directory is reported back in
     `out_dir`.
 
+    `out_dir` and `render_dir` are optional; leave them unset to use the
+    defaults under `.another-mood/<project_dir>/`.
+
     For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
     """
-    config = ProjectConfig(project_dir=Path(project_dir))
+    overrides: dict[str, object] = {"project_dir": Path(project_dir)}
+    if out_dir is not None:
+        overrides["out_dir"] = Path(out_dir)
+    if render_dir is not None:
+        overrides["render_dir"] = Path(render_dir)
+    config = ProjectConfig(**overrides)  # type: ignore[arg-type]
     config.verify()
     return command.build(config)
 
