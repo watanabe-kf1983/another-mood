@@ -5,9 +5,9 @@ subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 """
 
 import sys
+from collections.abc import Sequence
 from logging import INFO, basicConfig
 from pathlib import Path
-from typing import Sequence
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import FileResource
@@ -15,7 +15,9 @@ from mcp.types import ResourceLink
 from pydantic import AnyUrl
 
 from another_mood import command
+from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
+from another_mood.config import ProjectConfig
 
 mcp = FastMCP("another-mood")
 
@@ -31,12 +33,6 @@ for _entry in command.list_docs():
             path=_entry.path,
         )
     )
-
-
-@mcp.tool()
-def ping() -> str:
-    """Connectivity check. Returns a unique signature string to verify the MCP server is reachable."""
-    return "ping-pong-song"
 
 
 @mcp.tool()
@@ -67,6 +63,35 @@ def read_doc(uri: str) -> str:
     `docs://reference/cli.md`).  Returns the raw file contents as text.
     """
     return command.read_doc(uri)
+
+
+@mcp.tool()
+def build(
+    project_dir: str,
+    out_dir: str | None = None,
+    render_dir: str | None = None,
+) -> BuildResult:
+    """Run the Another Mood build pipeline once over `project_dir` and return
+    the build result. Equivalent to `mood build <project_dir>`.
+
+    Use this in an edit-build-inspect feedback loop after editing source
+    files. The pipeline reads `definition/` and `contents/` under
+    `project_dir`; the rendered output directory is reported back in
+    `out_dir`.
+
+    `out_dir` and `render_dir` are optional; leave them unset to use the
+    defaults under `.another-mood/<project_dir>/`.
+
+    For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
+    """
+    overrides: dict[str, object] = {"project_dir": Path(project_dir)}
+    if out_dir is not None:
+        overrides["out_dir"] = Path(out_dir)
+    if render_dir is not None:
+        overrides["render_dir"] = Path(render_dir)
+    config = ProjectConfig(**overrides)  # type: ignore[arg-type]
+    config.verify()
+    return command.build(config)
 
 
 @mcp.tool()

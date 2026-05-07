@@ -5,6 +5,10 @@ from textwrap import dedent
 
 import pytest
 
+from another_mood.components.shared.component.build_report import (
+    DiagnosticEntry,
+    ErrorEntry,
+)
 from another_mood.components.shared.diagnostic import (
     Diagnostic,
     DiagnosticSeverity,
@@ -21,30 +25,30 @@ class TestDiagnostic:
         assert d.severity == DiagnosticSeverity.error
         assert d.source == ""
 
-    def test_to_data(self) -> None:
+    def test_to_entry(self) -> None:
         rel = Path("sub/a.yaml")
         d = Diagnostic(file=rel, line=10, column=3, message="oops", source="normalizer")
-        assert d.to_data() == {
-            "file": str(rel.resolve()),
-            "line": 10,
-            "column": 3,
-            "message": "oops",
-            "severity": "error",
-            "source": "normalizer",
-            "snippet": "",
-        }
+        assert d.to_entry() == DiagnosticEntry(
+            file=str(rel.resolve()),
+            line=10,
+            column=3,
+            message="oops",
+            severity="error",
+            source="normalizer",
+            snippet="",
+        )
 
-    def test_to_data_with_none_line_column(self) -> None:
+    def test_to_entry_with_none_line_column(self) -> None:
         d = Diagnostic(file=Path("a.yaml"), line=None, column=None, message="msg")
-        assert d.to_data() == {
-            "file": str(Path("a.yaml").resolve()),
-            "line": None,
-            "column": None,
-            "message": "msg",
-            "severity": "error",
-            "source": "",
-            "snippet": "",
-        }
+        assert d.to_entry() == DiagnosticEntry(
+            file=str(Path("a.yaml").resolve()),
+            line=None,
+            column=None,
+            message="msg",
+            severity="error",
+            source="",
+            snippet="",
+        )
 
 
 class TestSnippet:
@@ -84,26 +88,32 @@ class TestFileValidationError:
         )
         assert str(exc) == "2 validation errors"
 
-    def test_report_data(self) -> None:
+    def test_error_entries(self) -> None:
+        diags = [
+            Diagnostic(file=Path("a.yaml"), line=5, column=2, message="bad"),
+        ]
+        exc = FileValidationError(diags)
+        assert list(exc.error_entries) == [
+            ErrorEntry(message="FileValidationError: 1 validation error"),
+        ]
+
+    def test_diagnostic_entries(self) -> None:
         rel = Path("a.yaml")
         diags = [
             Diagnostic(file=rel, line=5, column=2, message="bad", source="test"),
         ]
         exc = FileValidationError(diags)
-        assert exc.report_data == {
-            "errors": [{"message": "FileValidationError: 1 validation error"}],
-            "diagnostics": [
-                {
-                    "file": str(rel.resolve()),
-                    "line": 5,
-                    "column": 2,
-                    "message": "bad",
-                    "severity": "error",
-                    "source": "test",
-                    "snippet": "",
-                }
-            ],
-        }
+        assert list(exc.diagnostic_entries) == [
+            DiagnosticEntry(
+                file=str(rel.resolve()),
+                line=5,
+                column=2,
+                message="bad",
+                severity="error",
+                source="test",
+                snippet="",
+            ),
+        ]
 
 
 class TestFormatPointed:

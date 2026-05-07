@@ -10,6 +10,11 @@ from enum import Enum
 from logging import getLogger
 from pathlib import Path
 
+from another_mood.components.shared.component.build_report import (
+    DiagnosticEntry,
+    ErrorEntry,
+)
+
 _logger = getLogger(__name__)
 
 
@@ -42,17 +47,17 @@ class Diagnostic:
             return f"  {path}:{self.line}: {self.message}"
         return f"  {path}: {self.message}"
 
-    def to_data(self) -> dict[str, object]:
-        """Serialize to a plain dict for YAML output."""
-        return {
-            "file": str(self.file.resolve()),
-            "line": self.line,
-            "column": self.column,
-            "message": self.message,
-            "severity": self.severity.value,
-            "source": self.source,
-            "snippet": self.snippet(),
-        }
+    def to_entry(self) -> DiagnosticEntry:
+        """Convert to the report-time DiagnosticEntry, baking in the snippet."""
+        return DiagnosticEntry(
+            file=str(self.file.resolve()),
+            line=self.line,
+            column=self.column,
+            message=self.message,
+            severity=self.severity.value,
+            source=self.source,
+            snippet=self.snippet(),
+        )
 
     def snippet(self) -> str:
         """Code-frame snippet around (line, column).
@@ -91,12 +96,14 @@ class FileValidationError(Exception):
         return f"Found {self}:\n" + "\n".join(details)
 
     @property
-    def report_data(self) -> dict[str, list[dict[str, object]]]:
-        """Build report content for pipeline error propagation."""
-        return {
-            "errors": [{"message": f"FileValidationError: {self}"}],
-            "diagnostics": [d.to_data() for d in self.diagnostics],
-        }
+    def error_entries(self) -> Sequence[ErrorEntry]:
+        """Typed errors for pipeline report propagation."""
+        return [ErrorEntry(message=f"FileValidationError: {self}")]
+
+    @property
+    def diagnostic_entries(self) -> Sequence[DiagnosticEntry]:
+        """Typed diagnostics for pipeline report propagation."""
+        return [d.to_entry() for d in self.diagnostics]
 
 
 def format_pointed(

@@ -77,7 +77,7 @@ class ProjectConfig(BaseSettings):
     @classmethod
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         pd = Path(values.get("project_dir", ""))
-        rb = Path(".another-mood") / pd
+        rb = _another_mood_root(pd)
         if not values.get("schema_file"):
             values["schema_file"] = pd / "definition" / "schema.yaml"
         if not values.get("contents_dir"):
@@ -93,3 +93,21 @@ class ProjectConfig(BaseSettings):
         if not values.get("render_dir"):
             values["render_dir"] = rb / "render"
         return values
+
+
+def _another_mood_root(project_dir: Path) -> Path:
+    """Resolve the `.another-mood/<project_dir>/` base directory.
+
+    Pathlib's ``/`` swallows the LHS when the RHS is absolute, so a naive
+    ``Path(".another-mood") / project_dir`` would silently land tmp / output
+    inside the project itself when an absolute ``project_dir`` is passed
+    (e.g. from an MCP agent). Project a relative tail off CWD when possible;
+    fall back to the basename for paths that lie outside CWD.
+    """
+    if not project_dir.is_absolute():
+        return Path(".another-mood") / project_dir
+    try:
+        tail = project_dir.relative_to(Path.cwd())
+    except ValueError:
+        tail = Path(project_dir.name)
+    return Path(".another-mood") / tail

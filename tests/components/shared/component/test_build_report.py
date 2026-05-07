@@ -21,7 +21,15 @@ class TestCollect:
         # Same upstream error reaches the collector via two different
         # propagation paths (e.g. compose's upstreams contents + inspect).
         err = {"message": "boom"}
-        diag = {"file": "a.yaml", "line": 1, "message": "bad"}
+        diag = {
+            "file": "a.yaml",
+            "line": 1,
+            "column": None,
+            "message": "bad",
+            "severity": "error",
+            "source": "",
+            "snippet": "",
+        }
         _write_report(tmp_path / "a", {"errors": [err], "diagnostics": [diag]})
         _write_report(tmp_path / "b", {"errors": [err], "diagnostics": [diag]})
 

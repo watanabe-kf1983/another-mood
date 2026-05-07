@@ -9,8 +9,8 @@ from pathlib import Path
 import typer
 
 from another_mood import command
+from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import ScaffoldResult
-from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.config import ConfigValidationError, ProjectConfig
 
 app = typer.Typer()
@@ -117,13 +117,13 @@ _BUILD_MESSAGES = {
 }
 
 
-def _build_listener() -> Callable[[BuildReport], None]:
+def _build_listener() -> Callable[[BuildResult], None]:
     """Return an on_report listener that prints the iteration result to stderr."""
     first = True
 
-    def on_report(report: BuildReport) -> None:
+    def on_report(result: BuildResult) -> None:
         nonlocal first
-        msg = _BUILD_MESSAGES[first, not report.has_errors()]
+        msg = _BUILD_MESSAGES[first, not result.has_errors()]
         first = False
         print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
 
@@ -131,11 +131,24 @@ def _build_listener() -> Callable[[BuildReport], None]:
 
 
 @app.command()
-def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
+def build(
+    project_dir: str = typer.Argument(help="Project directory"),
+    out_dir: str | None = typer.Option(
+        None, "--out-dir", help="Published output directory."
+    ),
+    render_dir: str | None = typer.Option(
+        None, "--render-dir", help="Hugo render directory."
+    ),
+) -> None:
     """Build the project to Markdown and rendered HTML."""
-    config = _load_config(project_dir=Path(project_dir))
-    report = command.build(config, on_report=_build_listener())
-    if report.has_errors():
+    overrides: dict[str, Path] = {}
+    if out_dir is not None:
+        overrides["out_dir"] = Path(out_dir)
+    if render_dir is not None:
+        overrides["render_dir"] = Path(render_dir)
+    config = _load_config(project_dir=Path(project_dir), **overrides)
+    result = command.build(config, on_report=_build_listener())
+    if result.has_errors():
         raise SystemExit(1)
 
 

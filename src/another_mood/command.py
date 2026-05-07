@@ -11,6 +11,7 @@ arguments (e.g. ``watch(..., on_report=...)``) — never via ``print``.
 
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
 
@@ -26,9 +27,66 @@ from another_mood.components.scaffold.blueprints import (
     apply_blueprint as _apply_blueprint,
     available_blueprints as _available_blueprints,
 )
-from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.build_report import (
+    BuildReport,
+    DiagnosticEntry,
+    ErrorEntry,
+)
 from another_mood.config import ProjectConfig
 from another_mood.pipeline.stages import pipeline
+
+
+# -- Boundary types ----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ResultDiagnostic:
+    """Slim diagnostic for the agent boundary: DiagnosticEntry sans snippet.
+
+    The snippet is a code-frame intended for human readers (`__build_failure`
+    Markdown page).  Agents read source files directly and have no use for it.
+    """
+
+    file: str
+    line: int | None
+    column: int | None
+    message: str
+    severity: str = "error"
+    source: str = ""
+
+    @classmethod
+    def from_entry(cls, e: DiagnosticEntry) -> "ResultDiagnostic":
+        return cls(
+            file=e.file,
+            line=e.line,
+            column=e.column,
+            message=e.message,
+            severity=e.severity,
+            source=e.source,
+        )
+
+
+@dataclass(frozen=True)
+class BuildResult:
+    """Outcome of a build, as exposed across the command-layer boundary.
+
+    Slim view of a :class:`BuildReport` for CLI / MCP consumers.  Per-stage
+    results and per-diagnostic snippets — both useful only for human debugging
+    of the on-disk ``__build_report.yaml`` — are stripped here.
+
+    ``out_dir`` is the resolved directory where rendered output landed
+    (typically ``.another-mood/<project_dir>/output/``).
+    """
+
+    out_dir: str
+    errors: Sequence[ErrorEntry] = ()
+    diagnostics: Sequence[ResultDiagnostic] = ()
+
+    def has_errors(self) -> bool:
+        return bool(self.errors)
+
+
+# -- Commands ----------------------------------------------------------------
 
 
 def init(project_dir: Path) -> ScaffoldResult:
@@ -66,27 +124,54 @@ def read_doc(uri: str) -> str:
 
 def build(
     config: ProjectConfig,
-    on_report: Callable[[BuildReport], None] | None = None,
-) -> BuildReport:
-    """Run the build pipeline once and return the resulting BuildReport.
+    on_report: Callable[[BuildResult], None] | None = None,
+) -> BuildResult:
+    """Run the build pipeline once and return the resulting BuildResult.
 
-    ``on_report`` fires once during the run, just before the report is
+    ``on_report`` fires once during the run, just before the result is
     returned.  Provided for symmetry with :func:`watch`; one-shot callers
     that only need the final value can omit it and use the return value.
     """
-    return pipeline(config, on_report=on_report).run()
+    out_dir = str(config.out_dir)
+    report = pipeline(config, on_report=_lift(on_report, out_dir)).run()
+    return _to_result(report, out_dir)
 
 
 @contextmanager
 def watch(
     config: ProjectConfig,
-    on_report: Callable[[BuildReport], None],
+    on_report: Callable[[BuildResult], None],
 ) -> Iterator[Event]:
     """Start the pipeline in watch mode.
 
     Yields a shutdown :class:`Event`.  ``on_report`` fires after each rebuild
-    with the iteration's BuildReport.  Cleans up watchers and the preview
+    with the iteration's BuildResult.  Cleans up watchers and the preview
     server on context exit.
     """
-    with pipeline(config, on_report=on_report).start_watching() as shutdown:
+    out_dir = str(config.out_dir)
+    with pipeline(
+        config, on_report=_lift(on_report, out_dir)
+    ).start_watching() as shutdown:
         yield shutdown
+
+
+# -- Helpers -----------------------------------------------------------------
+
+
+def _to_result(report: BuildReport, out_dir: str) -> BuildResult:
+    """Project a pipeline-internal BuildReport to a BuildResult."""
+    return BuildResult(
+        out_dir=out_dir,
+        errors=tuple(report.errors),
+        diagnostics=tuple(ResultDiagnostic.from_entry(d) for d in report.diagnostics),
+    )
+
+
+def _lift(
+    on_report: Callable[[BuildResult], None] | None,
+    out_dir: str,
+) -> Callable[[BuildReport], None] | None:
+    """Adapt a BuildResult listener to the pipeline's BuildReport callback."""
+    if on_report is None:
+        return None
+    return lambda report: on_report(_to_result(report, out_dir))
