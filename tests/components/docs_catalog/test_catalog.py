@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from another_mood.components.docs_catalog.catalog import docs_root, load_catalog
+from another_mood.components.docs_catalog.catalog import (
+    list_docs,
+    load_catalog,
+    read_doc,
+)
 
 
 @pytest.fixture()
@@ -41,9 +45,20 @@ def test_load_catalog_parses_manifest(synthetic_docs: Path) -> None:
     assert baz.mime_type == "application/yaml"
 
 
-def test_load_catalog_against_bundled_docs() -> None:
-    """Smoke test: the real shipped catalog loads without error."""
-    catalog = load_catalog(docs_root())
+def test_list_docs_returns_bundled_catalog() -> None:
+    """Smoke test against the real bundled docs."""
+    uris = {entry.uri for entry in list_docs()}
 
-    assert "docs://reference/cli.md" in catalog
-    assert catalog["docs://reference/cli.md"].path.is_file()
+    assert "docs://reference/cli.md" in uris
+
+
+def test_read_doc_returns_content() -> None:
+    """Smoke test against the real bundled docs."""
+    text = read_doc("docs://reference/cli.md")
+
+    assert "# CLI Reference" in text
+
+
+def test_read_doc_unknown_uri_raises() -> None:
+    with pytest.raises(ValueError, match="Unknown doc URI"):
+        read_doc("docs://nonexistent")

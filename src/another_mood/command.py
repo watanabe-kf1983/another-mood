@@ -16,8 +16,8 @@ from threading import Event
 
 from another_mood.components.docs_catalog.catalog import (
     DocEntry,
-    docs_root,
-    load_catalog,
+    list_docs as _list_docs,
+    read_doc as _read_doc,
 )
 from another_mood.components.scaffold.blueprints import (
     DEFAULT_BLUEPRINT,
@@ -51,7 +51,7 @@ def list_blueprints() -> Mapping[str, str]:
 
 def list_docs() -> Sequence[DocEntry]:
     """Return the bundled documentation catalog."""
-    return list(load_catalog(docs_root()).values())
+    return _list_docs()
 
 
 def read_doc(uri: str) -> str:
@@ -60,13 +60,7 @@ def read_doc(uri: str) -> str:
     Raises ``ValueError`` if ``uri`` is not in the catalog (catalog-external
     paths are rejected).
     """
-    catalog = load_catalog(docs_root())
-    entry = catalog.get(uri)
-    if entry is None:
-        raise ValueError(
-            f"Unknown doc URI: {uri!r}. Call list_docs() to see available URIs."
-        )
-    return entry.path.read_text(encoding="utf-8")
+    return _read_doc(uri)
 
 
 def build(
