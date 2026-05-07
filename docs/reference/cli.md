@@ -19,6 +19,8 @@ mood watch .
 | [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
 | [`mood blueprint list`](#blueprint-list) | List the available blueprints. |
 | [`mood blueprint apply <name> <project_dir>`](#blueprint-apply) | Apply a blueprint into a project directory. |
+| [`mood docs list`](#docs-list) | List bundled documentation entries with their `docs://` URIs. |
+| [`mood docs read <uri>`](#docs-read) | Print the contents of a bundled doc by its `docs://` URI. |
 
 ## Shared argument: `<project_dir>`
 
@@ -122,6 +124,26 @@ mood blueprint apply <name> <project_dir>
 Copies the named blueprint into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name prints the available list on stderr and exits with code 1.
 
 For each file, prints `  created: <path>` to stderr, or `warning: skipped (already exists): <path>` if the destination already exists. The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `apply` on an existing project never causes destructive changes.
+
+## docs
+
+Inspect the documentation that ships with Another Mood. The same catalog is exposed to AI agents as MCP Resources and Tools (see `docs/mcp-resources.yaml`); these CLI commands give you the same view from the terminal.
+
+### docs list
+
+```bash
+mood docs list
+```
+
+Prints each bundled doc's `docs://` URI and description on two lines (URI on the first, indented description on the second), in the order defined by the catalog manifest.
+
+### docs read
+
+```bash
+mood docs read <uri>
+```
+
+Prints the contents of the bundled doc identified by `<uri>` to stdout. `<uri>` must be one of the values printed by `mood docs list` (e.g. `docs://reference/cli.md`). Passing an unknown URI prints an error to stderr and exits with code 1.
 
 ## Configuration overrides
 

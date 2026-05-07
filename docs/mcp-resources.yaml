@@ -18,7 +18,7 @@ resources:
       queries, and templates in a single file.
   - path: reference/cli.md
     description: >-
-      `mood` command reference (`init` / `build` / `watch` / `blueprint`).
+      `mood` command reference (`init` / `build` / `watch` / `blueprint` / `docs`).
   - path: reference/schema.md
     description: >-
       Schema definition reference — a JSON Schema subset plus the built-in

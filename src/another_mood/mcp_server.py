@@ -5,36 +5,30 @@ subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 """
 
 import sys
-from dataclasses import dataclass
-from importlib import resources
 from logging import INFO, basicConfig
-from pathlib import Path
-from typing import Mapping, Sequence, cast
+from typing import Sequence
 
-import yaml
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import FileResource
 from mcp.types import ResourceLink
 from pydantic import AnyUrl
 
-CATALOG_FILE = "mcp-resources.yaml"
-
-MIME_TYPES: Mapping[str, str] = {
-    ".md": "text/markdown",
-    ".yaml": "application/yaml",
-}
-
-
-@dataclass(frozen=True)
-class _DocEntry:
-    uri: str
-    name: str
-    description: str
-    mime_type: str
-    path: Path
-
+from another_mood import command
 
 mcp = FastMCP("another-mood")
+
+# Bundled docs are exposed via Resources (canonical) and via list_docs /
+# read_doc Tools below (mirror, for clients that don't surface Resources).
+for _entry in command.list_docs():
+    mcp.add_resource(
+        FileResource(
+            uri=AnyUrl(_entry.uri),
+            name=_entry.name,
+            description=_entry.description,
+            mime_type=_entry.mime_type,
+            path=_entry.path,
+        )
+    )
 
 
 @mcp.tool()
@@ -59,7 +53,7 @@ def list_docs() -> Sequence[ResourceLink]:
             description=e.description,
             mimeType=e.mime_type,
         )
-        for e in _ENTRIES.values()
+        for e in command.list_docs()
     ]
 
 
@@ -70,58 +64,7 @@ def read_doc(uri: str) -> str:
     `uri` must be one of the values returned by `list_docs()` (e.g.
     `docs://reference/cli.md`).  Returns the raw file contents as text.
     """
-    entry = _ENTRIES.get(uri)
-    if entry is None:
-        raise ValueError(
-            f"Unknown doc URI: {uri!r}. Call list_docs() to see available URIs."
-        )
-    return entry.path.read_text(encoding="utf-8")
-
-
-def _docs_root() -> Path:
-    """Return the directory containing the bundled docs/ tree."""
-    pkg_root = Path(str(resources.files("another_mood")))
-    packaged = pkg_root / "_docs"
-    if packaged.is_dir():
-        return packaged
-    # Editable install: docs/ lives in the repo, not inside the package.
-    return pkg_root.parent.parent / "docs"
-
-
-def _load_entries(docs_root: Path) -> Mapping[str, _DocEntry]:
-    raw = cast(
-        Mapping[str, list[Mapping[str, str]]],
-        yaml.safe_load((docs_root / CATALOG_FILE).read_text(encoding="utf-8")),
-    )
-    entries: dict[str, _DocEntry] = {}
-    for e in raw["resources"]:
-        rel = e["path"]
-        uri = f"docs://{rel}"
-        entries[uri] = _DocEntry(
-            uri=uri,
-            name=rel,
-            description=e["description"].strip(),
-            mime_type=MIME_TYPES[Path(rel).suffix],
-            path=(docs_root / rel).resolve(),
-        )
-    return entries
-
-
-def _register_resources() -> None:
-    for entry in _ENTRIES.values():
-        mcp.add_resource(
-            FileResource(
-                uri=AnyUrl(entry.uri),
-                name=entry.name,
-                description=entry.description,
-                mime_type=entry.mime_type,
-                path=entry.path,
-            )
-        )
-
-
-_ENTRIES = _load_entries(_docs_root())
-_register_resources()
+    return command.read_doc(uri)
 
 
 def main() -> None:
