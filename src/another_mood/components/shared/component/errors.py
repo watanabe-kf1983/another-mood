@@ -1,14 +1,15 @@
 """Error propagation — context manager for pipeline error handling."""
 
-import sys
 import traceback
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
+from logging import getLogger
 from pathlib import Path
 from typing import NamedTuple
 
 from another_mood.components.shared.component.build_report import BuildReport
 
+_logger = getLogger(__name__)
 _ERRORS_KEY = "errors"
 
 
@@ -69,13 +70,13 @@ def _error_data(exc: Exception) -> Mapping[str, object]:
 
 
 def _print_error(exc: Exception) -> None:
-    """Print error to stderr.
+    """Log a stage error.
 
     Uses user_error_message if the exception provides one,
     otherwise falls back to the full traceback.
     """
     msg = getattr(exc, "user_error_message", None)
     if msg is not None:
-        print(msg, file=sys.stderr)
+        _logger.error("%s", msg)
     else:
-        traceback.print_exc(file=sys.stderr)
+        _logger.error("%s", traceback.format_exc())

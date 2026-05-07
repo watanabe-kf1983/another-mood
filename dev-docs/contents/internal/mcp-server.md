@@ -6,14 +6,14 @@ MCP サーバの内部設計。利用者視点の振る舞い仕様（What）は
 
 ## 位置づけ
 
-MCP サーバは CLI と並ぶ独立したエントリポイント。CLI / MCP の双方が `pipeline` を組み立てて呼び出す並列の関係であり、両者を連結しない。依存ルールは:
+MCP サーバは CLI と並ぶ独立したエントリポイント。CLI / MCP の双方が共通の `command` 層を経由して `pipeline` / `components/scaffold` を呼び出す。依存ルールは:
 
 ```
-cli         → pipeline → components/* → components/shared
-mcp_server  → pipeline → components/* → components/shared
+cli         → command → pipeline / components/scaffold → components/shared
+mcp_server  → command → pipeline / components/scaffold → components/shared
 ```
 
-CLI と MCP のエントリは別バイナリとして公開する（後述「## 背景: CLI と MCP のエントリは分離する」）。共通ロジック（`ProjectConfig` 構築等）の抽出層（command 層）を間に挟むかは K1 / K2 段階では判断保留。実 Tools が登場する K4 / K5 着手時に再検討する。
+CLI と MCP のエントリは別バイナリとして公開する（後述「## 背景: CLI と MCP のエントリは分離する」）。共通コマンド層 (`src/another_mood/command.py`) は K8 で導入済み。各関数は戻り値で結果を表し、stderr / stdout に何も書かない。CLI が戻り値・callback を整形して人間向け表示を担当する。詳細は [io-boundaries.md](io-boundaries.md) を参照。
 
 ## モジュール配置
 

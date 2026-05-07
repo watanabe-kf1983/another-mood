@@ -1,7 +1,6 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
-import sys
-from datetime import datetime
+from collections.abc import Callable
 
 from another_mood.components import (
     compose,
@@ -142,34 +141,28 @@ def publish_stage(config: ProjectConfig) -> Task:
     return Stage(run_fn=call, watch_paths=[], upstreams=[hugo_out])
 
 
-def build_report_stage(config: ProjectConfig) -> ReportingStage:
+def build_report_stage(
+    config: ProjectConfig,
+    on_report: Callable[[BuildReport], None] | None = None,
+) -> ReportingStage:
     """Report build result to user. Exposes BuildReport for CLI."""
     publish_out = config.component_output(publish)
-    first = True
 
     def report() -> BuildReport:
-        nonlocal first
         with dir_lock(publish_out.dir):
-            result = BuildReport.collect(publish_out.dir / "reports")
-        succeeded = not result.has_errors()
-        messages = {
-            (True, True): "Build successfully completed",
-            (True, False): "Build failed",
-            (False, True): "Files updated, and re-build successfully completed",
-            (False, False): "Files updated, but re-build failed",
-        }
-        msg = messages[first, succeeded]
-        first = False
-        print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
-        return result
+            return BuildReport.collect(publish_out.dir / "reports")
 
     return ReportingStage(
         report_fn=report,
+        on_report=on_report,
         upstreams=[publish_out],
     )
 
 
-def pipeline(config: ProjectConfig) -> Pipeline:
+def pipeline(
+    config: ProjectConfig,
+    on_report: Callable[[BuildReport], None] | None = None,
+) -> Pipeline:
     """Create the full pipeline."""
     stages: list[Task] = [
         inspect_schema_stage(config),
@@ -181,4 +174,4 @@ def pipeline(config: ProjectConfig) -> Pipeline:
         render_stage(config),
         publish_stage(config),
     ]
-    return Pipeline(stages, reporting=build_report_stage(config))
+    return Pipeline(stages, reporting=build_report_stage(config, on_report))

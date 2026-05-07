@@ -28,7 +28,12 @@ def test_scaffold_creates_all_files(template: Path, tmp_path: Path) -> None:
 
     result = scaffold_project(template, target)
 
-    assert result is True
+    assert result.all_written is True
+    assert set(result.created) == {
+        target / "dir_a" / "file1.txt",
+        target / "dir_b" / "file2.txt",
+    }
+    assert list(result.skipped) == []
     assert (target / "dir_a" / "file1.txt").read_text() == "content1"
     assert (target / "dir_b" / "file2.txt").read_text() == "content2"
 
@@ -39,7 +44,12 @@ def test_scaffold_skips_existing_files(template: Path, tmp_path: Path) -> None:
 
     result = scaffold_project(template, target)
 
-    assert result is False
+    assert result.all_written is False
+    assert list(result.created) == []
+    assert set(result.skipped) == {
+        target / "dir_a" / "file1.txt",
+        target / "dir_b" / "file2.txt",
+    }
 
 
 def test_scaffold_partial_conflict(template: Path, tmp_path: Path) -> None:
@@ -51,7 +61,9 @@ def test_scaffold_partial_conflict(template: Path, tmp_path: Path) -> None:
 
     result = scaffold_project(template, target)
 
-    assert result is False
+    assert result.all_written is False
+    assert list(result.created) == [target / "dir_b" / "file2.txt"]
+    assert list(result.skipped) == [conflict]
     assert conflict.read_text() == "original"
     assert (target / "dir_b" / "file2.txt").read_text() == "content2"
 
@@ -59,8 +71,11 @@ def test_scaffold_partial_conflict(template: Path, tmp_path: Path) -> None:
 def test_apply_blueprint_copies_named_blueprint(tmp_path: Path) -> None:
     target = tmp_path / "proj"
 
-    assert apply_blueprint("starter", target) is True
+    result = apply_blueprint("starter", target)
+
+    assert result.all_written is True
     assert (target / "definition" / "schema.yaml").is_file()
+    assert (target / "definition" / "schema.yaml") in result.created
 
 
 def test_available_blueprints_lists_starter_and_ecommerce() -> None:

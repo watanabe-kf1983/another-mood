@@ -4,11 +4,13 @@ Based on the Diagnostic model from Language Server Protocol Specification 3.17:
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
 """
 
-import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
+from logging import getLogger
 from pathlib import Path
+
+_logger = getLogger(__name__)
 
 
 class DiagnosticSeverity(Enum):
@@ -67,10 +69,7 @@ class Diagnostic:
                 self.line, self.column, text, lines_above=3, lines_below=1
             )
         except Exception as exc:
-            print(
-                f"warning: snippet generation failed for {self.file}: {exc}",
-                file=sys.stderr,
-            )
+            _logger.warning("snippet generation failed for %s: %s", self.file, exc)
             return ""
 
 

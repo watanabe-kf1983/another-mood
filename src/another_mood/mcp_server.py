@@ -4,8 +4,10 @@ Started by MCP clients (e.g. VSCode Copilot Chat, Claude Code) as a stdio
 subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 """
 
+import sys
 from dataclasses import dataclass
 from importlib import resources
+from logging import INFO, basicConfig
 from pathlib import Path
 from typing import Mapping, Sequence, cast
 
@@ -123,4 +125,5 @@ _register_resources()
 
 
 def main() -> None:
+    basicConfig(stream=sys.stderr, format="%(message)s", level=INFO)
     mcp.run()

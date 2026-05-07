@@ -403,22 +403,32 @@ categories:
         title: Server Instructions
         note: |
           設計書のコア機能のもう片方。200 語以内の誘導文 + FastMCP の initialize
-          レスポンスに乗せる注入機構。K2 の URI スキームを参照するため K2 後に着手。
-          ツールが追加される度に Instructions に追記する運用 (K4 / K5 / K7 の各タスクで)。
-          出口: agent が接続時に Instructions を受け取り、Resources へ誘導される。
+          レスポンスに乗せる注入機構。K2 の URI スキームと K4 / K5 / K7 のツール群を
+          参照するため、当該タスクがすべて揃ってから一括起草する (各タスクで
+          iterative に追記する運用は採らない: 200 語制限下で首尾一貫した文面を
+          得るため、また各ツールでの agent 失敗モードを実観察してから書く方が
+          指針として効くため)。注入機構自体は FastMCP("name", instructions=text)
+          の 1 行追加で済むので分割しない。
+          出口: agent が接続時に Instructions を受け取り、Resources / Tools へ
+          誘導される。
         phase: 9
       K4:
         title: build ツール
         note: |
           CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す。
-          docstring は Tool description としてそのまま自動生成される (K3 の方針)。
-          実装と同時に Instructions (K3) に build フィードバックループの行動指針を追記。
+          docstring は FastMCP が Tool description として自動利用する。
+          K3 (Instructions) が後続するまで agent はこれだけが頼りなので丁寧に書く。
+          K8 (出力境界整理) を前提とする: pipeline 内で stderr に出ているエラー /
+          進捗ログを agent に届けるため、MCP tool 着手時には buffer log handler を
+          install して戻り値に同梱する。
         phase: 9
       K5:
         title: init ツール
         note: |
           G1 (mood init) の MCP 露出。CLI の mood init と同一の動作。
-          docstring + Instructions 追記をセットで実施。
+          docstring を丁寧に書く (K3 が後続するまで agent はこれだけが頼り)。
+          K8 (出力境界整理) を前提とする: scaffold が ScaffoldResult を返す前提で
+          実装する。
         phase: 9
       K6:
         title: メタスキーマへの説明メタデータ埋め込み
@@ -433,7 +443,19 @@ categories:
           watch は人間のブラウザプレビュー用であり agent 自身は使わないため、
           MCP サーバとしての必須度は低い。phase 9 末尾に置く。
           G6 と同セッション / 同 PR で実施可能。
+          K8 (出力境界整理) を前提とする (watch 自体のストリーム出力は agent に
+          届けないが、start/stop の異常時診断は logging 経由で取得する)。
         phase: 9
+      K8:
+        title: ユーザ向け出力の境界整理 (値 + logging への集約)
+        note: |
+          K4 / K5 / K7 の前提。components / pipeline からの直接印字を排し、
+          user-visible な結果は値 (BuildReport / ScaffoldResult) と
+          on_report callback、live フィードバックは logging に統一。
+          CLI / MCP の双方が呼ぶ command.py を新設し、print は cli.py のみ
+          (ruff T201 で機械的強制)。設計原則は internal/io-boundaries.md。
+        phase: 9
+        done: true
 
   M:
     title: JSON データモデル と データカタログ

@@ -2,11 +2,11 @@
 
 import signal
 import subprocess
-import sys
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 
 from another_mood.components.shared.component.component import Component
@@ -15,6 +15,8 @@ from another_mood.components.shared.component.errors import error_propagation
 from another_mood.pipeline.adapters import renderer
 from another_mood.pipeline.adapters.preparation import prepare_render
 from another_mood.pipeline.base import MultiStageTask, Stage, Task
+
+_logger = getLogger(__name__)
 
 
 @Component(
@@ -66,12 +68,6 @@ class _HugoServeTask(Task):
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
         process = renderer.serve(self.content_dir, self.port)
-        print(
-            f"Server running at http://localhost:{self.port}/\n"
-            f"  Reports: http://localhost:{self.port}/reports/",
-            file=sys.stderr,
-            flush=True,
-        )
 
         monitor = threading.Thread(
             target=_wait_for_exit, args=(process, shutdown), daemon=True
@@ -100,9 +96,5 @@ def _wait_for_exit(process: subprocess.Popen[bytes], shutdown: threading.Event) 
     if process.returncode in _NORMAL_EXIT_CODES:
         pass  # Normal shutdown (Ctrl+C or our terminate() call).
     else:
-        print(
-            f"Hugo server exited (exit code {process.returncode}).",
-            file=sys.stderr,
-            flush=True,
-        )
+        _logger.error("Hugo server exited (exit code %d).", process.returncode)
         shutdown.set()
