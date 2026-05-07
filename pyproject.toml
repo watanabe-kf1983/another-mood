@@ -51,3 +51,13 @@ branch = true
 
 [tool.pyright]
 typeCheckingMode = "strict"
+
+[tool.ruff.lint]
+extend-select = ["T20"]  # flake8-print: forbid print() / pprint()
+
+# CLI is the boundary that turns business-logic return values into terminal
+# output, so it is the only production module allowed to call print().
+# Tests may print for ad-hoc debugging.
+[tool.ruff.lint.per-file-ignores]
+"src/another_mood/cli.py" = ["T201"]
+"tests/**/*.py" = ["T201"]
