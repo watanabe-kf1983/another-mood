@@ -65,15 +65,21 @@ class Stage(Task):
 
 
 class ReportingStage(Stage):
-    """Like Stage, but report_fn returns a BuildReport exposed via .report."""
+    """Like Stage, but report_fn returns a BuildReport exposed via .report.
+
+    If on_report is provided, it fires after each report computation — once for
+    a one-shot run, once per rebuild during watch.
+    """
 
     def __init__(
         self,
         report_fn: Callable[[], BuildReport],
+        on_report: Callable[[BuildReport], None] | None = None,
         watch_paths: Sequence[Path] = (),
         upstreams: Sequence[ComponentOutput] = (),
     ) -> None:
         self._report_fn = report_fn
+        self._on_report: Callable[[BuildReport], None] = on_report or _noop_report
         self.report: BuildReport = BuildReport()
         super().__init__(
             run_fn=self._collect, watch_paths=watch_paths, upstreams=upstreams
@@ -81,6 +87,11 @@ class ReportingStage(Stage):
 
     def _collect(self) -> None:
         self.report = self._report_fn()
+        self._on_report(self.report)
+
+
+def _noop_report(_: BuildReport) -> None:
+    """Default on_report listener: do nothing."""
 
 
 class MultiStageTask(Task):

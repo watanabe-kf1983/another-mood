@@ -1,10 +1,13 @@
 """CLI entry point."""
 
 import sys
+from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 import typer
 
+from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.config import ConfigValidationError, ProjectConfig
 from another_mood.components.scaffold import blueprints as bp
 from another_mood.pipeline.stages import pipeline
@@ -68,11 +71,32 @@ def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
     apply_blueprint(bp.DEFAULT_BLUEPRINT, project_dir)
 
 
+_BUILD_MESSAGES = {
+    (True, True): "Build successfully completed",
+    (True, False): "Build failed",
+    (False, True): "Files updated, and re-build successfully completed",
+    (False, False): "Files updated, but re-build failed",
+}
+
+
+def _build_listener() -> Callable[[BuildReport], None]:
+    """Return an on_report listener that prints the iteration result to stderr."""
+    first = True
+
+    def on_report(report: BuildReport) -> None:
+        nonlocal first
+        msg = _BUILD_MESSAGES[first, not report.has_errors()]
+        first = False
+        print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
+
+    return on_report
+
+
 @app.command()
 def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project to Markdown and rendered HTML."""
     config = _load_config(project_dir=Path(project_dir))
-    report = pipeline(config).run()
+    report = pipeline(config, on_report=_build_listener()).run()
     if report.has_errors():
         raise SystemExit(1)
 
@@ -84,8 +108,14 @@ def watch(
 ) -> None:
     """Watch for changes and rebuild automatically with live preview."""
     config = _load_config(project_dir=Path(project_dir), port=port)
-    with pipeline(config).start_watching() as shutdown:
+    with pipeline(config, on_report=_build_listener()).start_watching() as shutdown:
         try:
+            print(
+                f"Server running at http://localhost:{config.port}/\n"
+                f"  Reports: http://localhost:{config.port}/reports/",
+                file=sys.stderr,
+                flush=True,
+            )
             print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
             shutdown.wait()
         except KeyboardInterrupt:

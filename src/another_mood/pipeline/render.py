@@ -66,12 +66,6 @@ class _HugoServeTask(Task):
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
         process = renderer.serve(self.content_dir, self.port)
-        print(
-            f"Server running at http://localhost:{self.port}/\n"
-            f"  Reports: http://localhost:{self.port}/reports/",
-            file=sys.stderr,
-            flush=True,
-        )
 
         monitor = threading.Thread(
             target=_wait_for_exit, args=(process, shutdown), daemon=True
