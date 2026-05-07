@@ -15,8 +15,8 @@ from mcp.types import ResourceLink
 from pydantic import AnyUrl
 
 from another_mood import command
+from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
-from another_mood.components.shared.component.build_report import BuildResult
 from another_mood.config import ProjectConfig
 
 mcp = FastMCP("another-mood")
@@ -72,12 +72,8 @@ def build(project_dir: str) -> BuildResult:
 
     Use this in an edit-build-inspect feedback loop after editing source
     files. The pipeline reads `definition/` and `contents/` under
-    `project_dir` and emits Markdown + rendered HTML to
-    `.another-mood/<project_dir>/output/`.
-
-    Raises `ConfigValidationError` if `project_dir` or required source paths
-    are missing. Pipeline-internal failures do not raise — they appear as
-    entries in the returned result's `errors` and `diagnostics` fields.
+    `project_dir`; the rendered output directory is reported back in
+    `out_dir`.
 
     For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
     """

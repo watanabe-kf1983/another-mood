@@ -9,8 +9,8 @@ from pathlib import Path
 import typer
 
 from another_mood import command
+from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import ScaffoldResult
-from another_mood.components.shared.component.build_report import BuildResult
 from another_mood.config import ConfigValidationError, ProjectConfig
 
 app = typer.Typer()
