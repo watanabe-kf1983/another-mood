@@ -1,0 +1,43 @@
+# Catalog of files in this docs/ tree that are exposed as MCP Resources.
+#
+# Each entry registers one resource at the URI `docs://<path>`.  Markdown
+# relative links between resources resolve correctly under that scheme
+# per RFC 3986 (e.g. `[query](query.md)` on `docs://reference/cli.md`
+# points to `docs://reference/query.md`).
+#
+# `description` is shown to AI agents in `resources/list` responses, so
+# it must be self-contained — keep it in sync with the Guides / Reference
+# link descriptions in docs/index.md and docs/reference/index.md.
+#
+# index.md files are deliberately omitted: agents browse via this catalog,
+# not by reading hand-written index pages.
+resources:
+  - path: guides.md
+    description: >-
+      Walks through concepts, Quick Start, workflow, schema and content,
+      queries, and templates in a single file.
+  - path: reference/cli.md
+    description: >-
+      `mood` command reference (`init` / `build` / `watch` / `blueprint`).
+  - path: reference/schema.md
+    description: >-
+      Schema definition reference — a JSON Schema subset plus the built-in
+      prose schema.
+  - path: reference/query.md
+    description: >-
+      Query syntax reference — `from` / `grouped` / `select`.
+  - path: reference/template.md
+    description: >-
+      Template syntax reference — Jinja2 plus the `{% mood_view %}` extension.
+  - path: reference/schemas/content-schema.yaml
+    description: >-
+      Built-in meta-schema merged with the user's schema.yaml at validation
+      time so all content files are validated uniformly.
+  - path: reference/schemas/query-schema.yaml
+    description: >-
+      Built-in meta-schema validating user-defined query files under
+      queries_dir.
+  - path: reference/schemas/schema-schema.yaml
+    description: >-
+      Built-in meta-schema validating the user's schema.yaml — defines the
+      JSON Schema subset that user schemas may use.

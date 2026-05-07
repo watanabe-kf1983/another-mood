@@ -387,14 +387,18 @@ categories:
         phase: 9
         done: true
       K2:
-        title: Resources 公開
+        title: Resources 公開 + Tools 並行公開
         note: |
-          設計書のコア機能の片方。MCP Resources の公開。
+          設計書のコア機能の片方。MCP Resources の公開と、それを
+          Tool としても並行公開する仕組み。
           URI スキーム設計 / 走査 / resources/list + resources/read 実装 /
           ファイル → Resource (mimeType, name, description) の mapping。
-          出口: agent が resources/list で目次取得、resources/read で個別読み。
+          並行して list_docs / read_doc Tool を露出 (クライアント差吸収)。
+          出口: 全主要クライアントで agent が docs を自律的に引ける
+          (Claude Code: Resources 経路、Copilot Chat: Tools 経路)。
           K1 と同 PR にまとめる選択肢あり (合わせて「ナビゲーター MVP」)。
         phase: 9
+        done: true
       K3:
         title: Server Instructions
         note: |
