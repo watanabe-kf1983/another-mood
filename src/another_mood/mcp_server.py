@@ -5,7 +5,7 @@ subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 """
 
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from logging import INFO, basicConfig
 from pathlib import Path
 
@@ -16,6 +16,7 @@ from pydantic import AnyUrl
 
 from another_mood import command
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
+from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.config import ProjectConfig
 
 mcp = FastMCP("another-mood")
@@ -65,7 +66,7 @@ def read_doc(uri: str) -> str:
 
 
 @mcp.tool()
-def build(project_dir: str) -> Mapping[str, object]:
+def build(project_dir: str) -> BuildReport:
     """Run the Another Mood build pipeline once over `project_dir` and return
     the build report. Equivalent to `mood build <project_dir>`.
 
@@ -74,19 +75,15 @@ def build(project_dir: str) -> Mapping[str, object]:
     `project_dir` and emits Markdown + rendered HTML to
     `.another-mood/<project_dir>/output/`.
 
-    The returned mapping is the `__build_report`: per-stage entries
-    `{<component_name>: {result, timestamp}}` (`result` is `ok` / `ng` /
-    `skipped`), plus `errors` and `diagnostics` arrays when problems occur.
-    A clean build has no `errors` key.
-
     Raises `ConfigValidationError` if `project_dir` or required source paths
-    are missing. Pipeline-internal failures do not raise.
+    are missing. Pipeline-internal failures do not raise — they appear as
+    entries in the returned report's `errors` and `diagnostics` fields.
 
     For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
     """
     config = ProjectConfig(project_dir=Path(project_dir))
     config.verify()
-    return dict(command.build(config).to_data())
+    return command.build(config)
 
 
 @mcp.tool()

@@ -98,10 +98,13 @@ class TestErrorPropagation:
                     (data_dirs.out / "result.yaml").write_text("ok")
 
         data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
-        assert data["__build_report"]["normalize_contents"] == {
-            "result": "ok",
-            "timestamp": "2026-04-01T00:00:00+00:00",
-        }
+        assert data["__build_report"]["stages"] == [
+            {
+                "component": "normalize_contents",
+                "result": "ok",
+                "timestamp": "2026-04-01T00:00:00+00:00",
+            }
+        ]
 
     def test_writes_ng_report_with_component_on_error(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
@@ -119,10 +122,13 @@ class TestErrorPropagation:
                     raise ValueError("boom")
 
         data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
-        assert data["__build_report"]["normalize_contents"] == {
-            "result": "ng",
-            "timestamp": "2026-04-01T00:00:00+00:00",
-        }
+        assert data["__build_report"]["stages"] == [
+            {
+                "component": "normalize_contents",
+                "result": "ng",
+                "timestamp": "2026-04-01T00:00:00+00:00",
+            }
+        ]
         assert "boom" in data["__build_report"]["errors"][0]["message"]
 
     def test_catches_file_validation_error(self, tmp_path: Path) -> None:

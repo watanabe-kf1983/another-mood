@@ -1,7 +1,7 @@
 """Error propagation — context manager for pipeline error handling."""
 
 import traceback
-from collections.abc import Generator, Mapping, Sequence
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from logging import getLogger
 from pathlib import Path
@@ -10,7 +10,6 @@ from typing import NamedTuple
 from another_mood.components.shared.component.build_report import BuildReport
 
 _logger = getLogger(__name__)
-_ERRORS_KEY = "errors"
 
 
 class DataDirs(NamedTuple):
@@ -45,31 +44,16 @@ def error_propagation(
             yield DataDirs(out=data_dir, upstreams=upstream_data_dirs)
         except Exception as exc:
             result = "ng"
-            _print_error(exc)
-            report.add_data(_error_data(exc))
+            _log_error(exc)
+            report = report.with_exception(exc)
         else:
             result = "ok"
     if component:
-        report.add_component_result(component, result)
+        report = report.with_component_result(component, result)
     report.write(report_dir)
 
 
-def _error_data(exc: Exception) -> Mapping[str, object]:
-    """Convert an exception to error report data."""
-    report_data = getattr(exc, "report_data", None)
-    if report_data is not None:
-        return report_data
-    return {
-        _ERRORS_KEY: [
-            {
-                "message": f"{type(exc).__name__}: {exc}",
-                "traceback": traceback.format_exc(),
-            }
-        ]
-    }
-
-
-def _print_error(exc: Exception) -> None:
+def _log_error(exc: Exception) -> None:
     """Log a stage error.
 
     Uses user_error_message if the exception provides one,

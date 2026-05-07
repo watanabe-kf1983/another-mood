@@ -14,7 +14,10 @@ from another_mood.components.generator.generator import (
     generate,
     reconcile,
 )
-from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.build_report import (
+    BuildReport,
+    ErrorEntry,
+)
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
@@ -85,7 +88,8 @@ class TestGenerate:
         report = yaml.safe_load(
             (out_dir / "reports" / "__build_report.yaml").read_text()
         )
-        assert report["__build_report"]["generate"]["result"] == "ng"
+        stages = report["__build_report"]["stages"]
+        assert any(s["component"] == "generate" and s["result"] == "ng" for s in stages)
         assert report["__build_report"]["errors"]
 
 
@@ -197,7 +201,7 @@ class TestReconcile:
         (upstream / "data").mkdir(parents=True)
         # Stale data left over from a previous successful run.
         (upstream / "data" / "stale.md").write_text("stale\n")
-        report = BuildReport({"errors": [{"message": "boom"}]})
+        report = BuildReport(errors=(ErrorEntry(message="boom"),))
         report.write(upstream / "reports")
 
         out_dir = tmp_path / "reconcile"
