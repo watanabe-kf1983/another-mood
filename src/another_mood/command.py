@@ -9,11 +9,16 @@ example, per-rebuild reports during watch) is delivered via callback
 arguments (e.g. ``watch(..., on_report=...)``) — never via ``print``.
 """
 
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Event
 
+from another_mood.components.docs_catalog.catalog import (
+    DocEntry,
+    docs_root,
+    load_catalog,
+)
 from another_mood.components.scaffold.blueprints import (
     DEFAULT_BLUEPRINT,
     ScaffoldResult,
@@ -42,6 +47,26 @@ def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
 def list_blueprints() -> Mapping[str, str]:
     """Return the bundled blueprint manifest as ``name -> description``."""
     return _available_blueprints()
+
+
+def list_docs() -> Sequence[DocEntry]:
+    """Return the bundled documentation catalog."""
+    return list(load_catalog(docs_root()).values())
+
+
+def read_doc(uri: str) -> str:
+    """Read a bundled doc by its ``docs://`` URI.
+
+    Raises ``ValueError`` if ``uri`` is not in the catalog (catalog-external
+    paths are rejected).
+    """
+    catalog = load_catalog(docs_root())
+    entry = catalog.get(uri)
+    if entry is None:
+        raise ValueError(
+            f"Unknown doc URI: {uri!r}. Call list_docs() to see available URIs."
+        )
+    return entry.path.read_text(encoding="utf-8")
 
 
 def build(

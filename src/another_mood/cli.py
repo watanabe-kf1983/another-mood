@@ -16,6 +16,8 @@ from another_mood.config import ConfigValidationError, ProjectConfig
 app = typer.Typer()
 blueprint_app = typer.Typer(help="Manage built-in blueprints (sample projects).")
 app.add_typer(blueprint_app, name="blueprint")
+docs_app = typer.Typer(help="Inspect bundled documentation (also exposed via MCP).")
+app.add_typer(docs_app, name="docs")
 
 
 @app.callback()
@@ -69,6 +71,31 @@ def apply_blueprint(
     _render_scaffold(result)
     if not result.all_written:
         raise typer.Exit(1)
+
+
+@docs_app.command("list")
+def list_docs() -> None:
+    """List bundled documentation entries with their `docs://` URIs."""
+    for entry in command.list_docs():
+        print(entry.uri)
+        print(f"  {entry.description}")
+
+
+@docs_app.command("read")
+def read_doc(
+    uri: str = typer.Argument(
+        help="Doc URI from `mood docs list`, e.g. docs://reference/cli.md"
+    ),
+) -> None:
+    """Print the contents of a bundled doc by its `docs://` URI."""
+    known_uris = {entry.uri for entry in command.list_docs()}
+    if uri not in known_uris:
+        print(
+            f"unknown doc URI: {uri!r} (run `mood docs list` to see available URIs)",
+            file=sys.stderr,
+        )
+        raise typer.Exit(1)
+    print(command.read_doc(uri))
 
 
 @app.command()
