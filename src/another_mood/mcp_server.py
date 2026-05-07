@@ -48,9 +48,6 @@ def list_docs() -> list[ResourceLink]:
     The catalog covers Another Mood's CLI commands, schema language, query
     syntax, template syntax, and built-in meta-schemas.  Pass any returned
     `uri` to `read_doc()` to fetch its contents.
-
-    Mirror of the MCP Resources channel for clients whose agent loop cannot
-    enumerate Resources directly (Copilot Chat, Zed, ...).
     """
     return [
         ResourceLink(
