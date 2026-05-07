@@ -166,6 +166,16 @@ class TestToYamlFilter:
             "{enum: [easy, medium]}"
         )
 
+    def test_flow_style_no_soft_wrap_for_long_values(self) -> None:
+        # PyYAML wraps flow output at width=80 by default; that newline would
+        # break the Markdown table row this filter is rendered into.
+        long_description = (
+            "Stable identifier derived from the Markdown file's path "
+            "(without extension)."
+        )
+        result = _to_yaml({"description": long_description, "title": "Prose id"}, True)
+        assert "\n" not in result
+
 
 class TestReconcile:
     def test_passes_through_normal_output(self, tmp_path: Path) -> None:

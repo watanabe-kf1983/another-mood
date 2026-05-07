@@ -4,6 +4,7 @@ and reconcile the output with the propagated BuildReport.
 See: dev-docs/contents/internal/components/generator.md
 """
 
+import math
 import shutil
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -108,8 +109,15 @@ def _to_yaml(value: object, flow: bool = False) -> str:
     """
     if value is None or isinstance(value, Undefined):
         return ""
+    # Disable PyYAML's soft line-wrap in flow mode — wrapping inserts
+    # newlines that break the surrounding Markdown table row.
+    width = math.inf if flow else 80
     return yaml.safe_dump(
-        value, allow_unicode=True, default_flow_style=flow, sort_keys=False
+        value,
+        allow_unicode=True,
+        default_flow_style=flow,
+        sort_keys=False,
+        width=width,
     ).rstrip()
 
 
