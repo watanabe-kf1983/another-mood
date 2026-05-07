@@ -5,9 +5,9 @@ subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 """
 
 import sys
+from collections.abc import Mapping, Sequence
 from logging import INFO, basicConfig
 from pathlib import Path
-from typing import Sequence
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import FileResource
@@ -16,6 +16,7 @@ from pydantic import AnyUrl
 
 from another_mood import command
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
+from another_mood.config import ProjectConfig
 
 mcp = FastMCP("another-mood")
 
@@ -31,12 +32,6 @@ for _entry in command.list_docs():
             path=_entry.path,
         )
     )
-
-
-@mcp.tool()
-def ping() -> str:
-    """Connectivity check. Returns a unique signature string to verify the MCP server is reachable."""
-    return "ping-pong-song"
 
 
 @mcp.tool()
@@ -67,6 +62,31 @@ def read_doc(uri: str) -> str:
     `docs://reference/cli.md`).  Returns the raw file contents as text.
     """
     return command.read_doc(uri)
+
+
+@mcp.tool()
+def build(project_dir: str) -> Mapping[str, object]:
+    """Run the Another Mood build pipeline once over `project_dir` and return
+    the build report. Equivalent to `mood build <project_dir>`.
+
+    Use this in an edit-build-inspect feedback loop after editing source
+    files. The pipeline reads `definition/` and `contents/` under
+    `project_dir` and emits Markdown + rendered HTML to
+    `.another-mood/<project_dir>/output/`.
+
+    The returned mapping is the `__build_report`: per-stage entries
+    `{<component_name>: {result, timestamp}}` (`result` is `ok` / `ng` /
+    `skipped`), plus `errors` and `diagnostics` arrays when problems occur.
+    A clean build has no `errors` key.
+
+    Raises `ConfigValidationError` if `project_dir` or required source paths
+    are missing. Pipeline-internal failures do not raise.
+
+    For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
+    """
+    config = ProjectConfig(project_dir=Path(project_dir))
+    config.verify()
+    return dict(command.build(config).to_data())
 
 
 @mcp.tool()

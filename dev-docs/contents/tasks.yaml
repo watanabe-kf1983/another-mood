@@ -418,10 +418,8 @@ categories:
           CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す。
           docstring は FastMCP が Tool description として自動利用する。
           K3 (Instructions) が後続するまで agent はこれだけが頼りなので丁寧に書く。
-          K8 (出力境界整理) を前提とする: pipeline 内で stderr に出ているエラー /
-          進捗ログを agent に届けるため、MCP tool 着手時には buffer log handler を
-          install して戻り値に同梱する。
         phase: 9
+        done: true
       K5:
         title: init ツール
         note: |
@@ -430,6 +428,7 @@ categories:
           K8 (出力境界整理) を前提とする: scaffold が ScaffoldResult を返す前提で
           実装する。
         phase: 9
+        done: true
       K6:
         title: メタスキーマへの説明メタデータ埋め込み
         note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K2 の効果を高める
