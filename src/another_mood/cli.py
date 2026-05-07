@@ -53,7 +53,12 @@ def apply_blueprint(
         raise typer.Exit(1)
     target = Path(project_dir)
     print(f"Scaffolding {target}/ from blueprint: {name}", file=sys.stderr)
-    if not bp.apply_blueprint(name, target):
+    result = bp.apply_blueprint(name, target)
+    for path in result.created:
+        print(f"  created: {path}", file=sys.stderr)
+    for path in result.skipped:
+        print(f"warning: skipped (already exists): {path}", file=sys.stderr)
+    if not result.all_written:
         raise typer.Exit(1)
 
 

@@ -7,7 +7,7 @@ entries; the directory of each blueprint lives at ``showcase/<name>/``.
 """
 
 import shutil
-import sys
+from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 from typing import Mapping, Sequence, cast
@@ -16,6 +16,18 @@ import yaml
 
 DEFAULT_BLUEPRINT = "starter"
 INDEX_FILE = "index.yaml"
+
+
+@dataclass(frozen=True)
+class ScaffoldResult:
+    """Outcome of a scaffolding pass: which files were created vs. skipped."""
+
+    created: Sequence[Path]
+    skipped: Sequence[Path]
+
+    @property
+    def all_written(self) -> bool:
+        return not self.skipped
 
 
 def _showcase_root() -> Path:
@@ -44,7 +56,7 @@ def load_blueprints(root: Path) -> Mapping[str, str]:
     return cast(Mapping[str, str], raw)
 
 
-def apply_blueprint(name: str, project_dir: Path) -> bool:
+def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
     """Copy the named blueprint's directory into *project_dir*.
 
     The caller is responsible for validating *name* against
@@ -53,27 +65,24 @@ def apply_blueprint(name: str, project_dir: Path) -> bool:
     return scaffold_project(_showcase_root() / name, project_dir)
 
 
-def scaffold_project(template_root: Path, project_dir: Path) -> bool:
+def scaffold_project(template_root: Path, project_dir: Path) -> ScaffoldResult:
     """Copy *template_root* into *project_dir*, skipping existing files.
 
-    Existing files are never overwritten — a warning is printed and the
-    file is skipped.  Returns ``True`` when every file was written
-    successfully (no skips).
+    Existing files are never overwritten.  Returns a :class:`ScaffoldResult`
+    listing both the destinations that were created and those that were
+    skipped because the file already existed.
     """
-    files = _collect_template_files(template_root)
-
-    all_written = True
-    for rel in files:
+    created: list[Path] = []
+    skipped: list[Path] = []
+    for rel in _collect_template_files(template_root):
         dest = project_dir / rel
         if dest.exists():
-            print(f"warning: skipped (already exists): {dest}", file=sys.stderr)
-            all_written = False
+            skipped.append(dest)
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(template_root / rel, dest)
-        print(f"  created: {dest}", file=sys.stderr)
-
-    return all_written
+        created.append(dest)
+    return ScaffoldResult(created=created, skipped=skipped)
 
 
 def _collect_template_files(template_root: Path) -> Sequence[Path]:
