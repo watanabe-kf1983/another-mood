@@ -4,14 +4,20 @@ import subprocess
 from importlib.resources import files
 from pathlib import Path
 
+from hugo.cli import HUGO_EXECUTABLE  # pyright: ignore[reportMissingTypeStubs]
+
 _HUGO_SOURCE_DIR = files("another_mood.resources") / "hugo"
+# Resolve the bundled Hugo binary directly. `uv tool install` exposes only
+# entry-point shims on PATH, so a bare `["hugo", ...]` would not find the
+# bin/ inside the tool's isolated environment.
+_HUGO = str(HUGO_EXECUTABLE)
 
 
 def build(content_dir: Path, out_dir: Path) -> None:
     """Run renderer build to generate static HTML."""
     subprocess.run(
         [
-            "hugo",
+            _HUGO,
             "--source",
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
@@ -30,7 +36,7 @@ def serve(content_dir: Path, port: int) -> subprocess.Popen[bytes]:
     """Start renderer dev server for live preview. Returns the Popen process."""
     return subprocess.Popen(
         [
-            "hugo",
+            _HUGO,
             "server",
             "--source",
             str(_HUGO_SOURCE_DIR),
