@@ -418,12 +418,17 @@ categories:
           CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す。
           docstring は FastMCP が Tool description として自動利用する。
           K3 (Instructions) が後続するまで agent はこれだけが頼りなので丁寧に書く。
+          K8 (出力境界整理) を前提とする: pipeline 内で stderr に出ているエラー /
+          進捗ログを agent に届けるため、MCP tool 着手時には buffer log handler を
+          install して戻り値に同梱する。
         phase: 9
       K5:
         title: init ツール
         note: |
           G1 (mood init) の MCP 露出。CLI の mood init と同一の動作。
           docstring を丁寧に書く (K3 が後続するまで agent はこれだけが頼り)。
+          K8 (出力境界整理) を前提とする: scaffold が ScaffoldResult を返す前提で
+          実装する。
         phase: 9
       K6:
         title: メタスキーマへの説明メタデータ埋め込み
@@ -438,6 +443,38 @@ categories:
           watch は人間のブラウザプレビュー用であり agent 自身は使わないため、
           MCP サーバとしての必須度は低い。phase 9 末尾に置く。
           G6 と同セッション / 同 PR で実施可能。
+          K8 (出力境界整理) を前提とする (watch 自体のストリーム出力は agent に
+          届けないが、start/stop の異常時診断は logging 経由で取得する)。
+        phase: 9
+      K8:
+        title: ユーザ向け出力の境界整理 (値 + logging への集約)
+        note: |
+          K4 / K5 / K7 の前提。components / pipeline から直接 stderr に
+          印字している箇所 (現状) を整理し、user-visible な結果は値で、
+          live フィードバック (エラー / 進捗) は logging モジュールで表現する
+          形に揃える。CLI は StreamHandler を install して既存の表示を保つ。
+          MCP server 側の buffer handler は K8 では入れない (K4/K5 着手時に追加。
+          思惑的抽象を避ける)。
+
+          動機: MCP tool は stdout/stderr ではなく戻り値で agent に結果を
+          届けるため、components/pipeline 内の直接印字は agent に届かない。
+          単に stderr を redirect で捕捉する案もあるが、process-global で
+          MCP server 自体や FastMCP framework の出力と干渉するため、構造的に
+          分離する。
+
+          スコープ:
+          - Cat 1 (UX 進捗 / 成功通知): scaffold/blueprints.py の created /
+            skipped 印字、build_report_stage の "Build successfully completed"、
+            render の "Server running at..." → 値 (ScaffoldResult, BuildReport)
+            か CLI が呼び出し前後で印字する形に置き換え
+          - Cat 2 (エラー / 異常の live tap): error_propagation の例外印字、
+            Hugo 異常終了、watcher thread 例外 traceback → logging へ
+          - Cat 3 (best-effort warning): diagnostic.py の snippet 失敗 → logging へ
+
+          出口: components / pipeline 内の `print(..., file=sys.stderr)` /
+          `traceback.print_exc(file=sys.stderr)` がゼロ。CLI 経由の振る舞いは
+          既存と同一 (人間向け表示は維持)。internal/ に IO 境界の設計原則を
+          インラインで残す。
         phase: 9
 
   M:
