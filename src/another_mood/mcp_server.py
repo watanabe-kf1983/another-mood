@@ -16,7 +16,7 @@ from pydantic import AnyUrl
 
 from another_mood import command
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
-from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.build_report import BuildResult
 from another_mood.config import ProjectConfig
 
 mcp = FastMCP("another-mood")
@@ -66,9 +66,9 @@ def read_doc(uri: str) -> str:
 
 
 @mcp.tool()
-def build(project_dir: str) -> BuildReport:
+def build(project_dir: str) -> BuildResult:
     """Run the Another Mood build pipeline once over `project_dir` and return
-    the build report. Equivalent to `mood build <project_dir>`.
+    the build result. Equivalent to `mood build <project_dir>`.
 
     Use this in an edit-build-inspect feedback loop after editing source
     files. The pipeline reads `definition/` and `contents/` under
@@ -77,7 +77,7 @@ def build(project_dir: str) -> BuildReport:
 
     Raises `ConfigValidationError` if `project_dir` or required source paths
     are missing. Pipeline-internal failures do not raise — they appear as
-    entries in the returned report's `errors` and `diagnostics` fields.
+    entries in the returned result's `errors` and `diagnostics` fields.
 
     For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
     """

@@ -106,6 +106,33 @@ class DiagnosticEntry:
             "snippet": self.snippet,
         }
 
+    def to_result(self) -> "ResultDiagnostic":
+        """Project to the agent-facing slim view (drops snippet)."""
+        return ResultDiagnostic(
+            file=self.file,
+            line=self.line,
+            column=self.column,
+            message=self.message,
+            severity=self.severity,
+            source=self.source,
+        )
+
+
+@dataclass(frozen=True)
+class ResultDiagnostic:
+    """Slim diagnostic for the agent boundary: DiagnosticEntry sans snippet.
+
+    The snippet is a code-frame intended for human readers (`__build_failure`
+    Markdown page).  Agents read source files directly and have no use for it.
+    """
+
+    file: str
+    line: int | None
+    column: int | None
+    message: str
+    severity: str = "error"
+    source: str = ""
+
 
 # -- Build report ------------------------------------------------------------
 
@@ -180,6 +207,36 @@ class BuildReport:
             return
         out_dir.mkdir(parents=True, exist_ok=True)
         save_model(out_dir / _REPORT_FILENAME, {_REPORT_KEY: self.to_data()})
+
+    def to_result(self) -> "BuildResult":
+        """Project to the agent-facing slim view.
+
+        Drops per-stage results (debug-only) and per-diagnostic snippets
+        (human-only).  Errors and the rest of each diagnostic are preserved.
+        """
+        return BuildResult(
+            errors=tuple(self.errors),
+            diagnostics=tuple(d.to_result() for d in self.diagnostics),
+        )
+
+
+# -- Boundary types ----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BuildResult:
+    """Outcome of a build, as exposed across the command-layer boundary.
+
+    Slim view of a :class:`BuildReport` for CLI / MCP consumers.  Per-stage
+    results and per-diagnostic snippets — both useful only for human debugging
+    of the on-disk ``__build_report.yaml`` — are stripped here.
+    """
+
+    errors: Sequence[ErrorEntry] = ()
+    diagnostics: Sequence[ResultDiagnostic] = ()
+
+    def has_errors(self) -> bool:
+        return bool(self.errors)
 
 
 # -- Helpers -----------------------------------------------------------------

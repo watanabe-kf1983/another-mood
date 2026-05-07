@@ -10,7 +10,7 @@ import typer
 
 from another_mood import command
 from another_mood.components.scaffold.blueprints import ScaffoldResult
-from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.build_report import BuildResult
 from another_mood.config import ConfigValidationError, ProjectConfig
 
 app = typer.Typer()
@@ -117,13 +117,13 @@ _BUILD_MESSAGES = {
 }
 
 
-def _build_listener() -> Callable[[BuildReport], None]:
+def _build_listener() -> Callable[[BuildResult], None]:
     """Return an on_report listener that prints the iteration result to stderr."""
     first = True
 
-    def on_report(report: BuildReport) -> None:
+    def on_report(result: BuildResult) -> None:
         nonlocal first
-        msg = _BUILD_MESSAGES[first, not report.has_errors()]
+        msg = _BUILD_MESSAGES[first, not result.has_errors()]
         first = False
         print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
 
@@ -134,8 +134,8 @@ def _build_listener() -> Callable[[BuildReport], None]:
 def build(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Build the project to Markdown and rendered HTML."""
     config = _load_config(project_dir=Path(project_dir))
-    report = command.build(config, on_report=_build_listener())
-    if report.has_errors():
+    result = command.build(config, on_report=_build_listener())
+    if result.has_errors():
         raise SystemExit(1)
 
 
