@@ -5,14 +5,15 @@ single callback fire after `debounce` milliseconds of silence. See
 internal/pipeline/pipeline.md for library-selection rationale.
 """
 
-import sys
 import threading
-import traceback
 from collections.abc import Callable, Sequence
+from logging import getLogger
 from pathlib import Path
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
+
+_logger = getLogger(__name__)
 
 
 class Watcher:
@@ -72,4 +73,4 @@ class Watcher:
             try:
                 self._on_change()
             except Exception:
-                traceback.print_exc(file=sys.stderr)
+                _logger.exception("Watcher on_change handler raised")

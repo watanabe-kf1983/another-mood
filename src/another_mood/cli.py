@@ -3,6 +3,7 @@
 import sys
 from collections.abc import Callable
 from datetime import datetime
+from logging import INFO, basicConfig
 from pathlib import Path
 
 import typer
@@ -123,4 +124,5 @@ def watch(
 
 
 def main() -> None:
+    basicConfig(stream=sys.stderr, format="%(message)s", level=INFO)
     app()
