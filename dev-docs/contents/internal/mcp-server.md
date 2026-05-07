@@ -101,6 +101,35 @@ K2 完了時点で `mcp_server.py` は ~70 行。Tools (K4/K5) と Server Instru
 
 Claude Code（または MCP Inspector）から `mood-mcp` に接続し、`resources/list` で 8 件の Resource が返ること、`resources/read` で各 Resource の内容が取得できることを目視確認する。pytest 単体テストは書かない（テスト方針節を参照）。
 
+### Tools 並行公開: `list_docs` / `read_doc`
+
+[design/app/mcp-design.md](../design/app/mcp-design.md) の「## 背景: クライアント差の問題」節で論じたとおり、Resources のエージェントアクセスをサポートしないクライアント（Copilot Chat agent mode、Zed 等）でもエージェントが docs を引けるよう、同じ素材を Tool としても並行公開する。
+
+```python
+@mcp.tool()
+def list_docs() -> list[ResourceLink]: ...
+
+@mcp.tool()
+def read_doc(uri: str) -> str: ...
+```
+
+実装方針:
+
+- **データの単一ソース化**: catalog (`docs/mcp-resources.yaml`) を 1 度だけ読み、`_DocEntry` の dict (URI → entry) としてモジュール状態に保持する。Resources 登録 (`add_resource`) と Tool 実装の双方が同じ dict を参照する。catalog と Resources / Tools の間で drift が起きない
+- **`list_docs` の戻り値は `ResourceLink` 配列**: 仕様 ([Tools spec 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)) の `resource_link` content block を返すことで、capable なクライアント (Claude Code) は Tool 経由で得た目次から native Resources 経路にリンクをたどれる。Tools 経路と Resources 経路を仕様サポート範囲で繋ぐ
+- **`read_doc(uri)` の引数は `docs://` URI**: `list_docs` の応答に出る `uri` をそのまま渡せるため、エージェントから見て round-trip がストレート。catalog 上に存在しない URI は `ValueError` で拒否（catalog 外のファイル読み出し防止）
+- **Tool 名の選定**: `list_docs` / `read_doc` は filesystem / AWS Documentation MCP / Notion 等で踏み固められた `list_<domain>` + `read_<domain>(path)` 系統の牛道に乗る。MCP プロトコルメソッド名 (`list_resources` / `read_resource`) を Tool 名に流用するサーバは皆無（"そのままタダ乗りできるデファクト" は存在せず、命名は自前で決める必要があった）
+
+### 動作確認 (K2 完了基準)
+
+K2 完了基準は「全主要クライアントでエージェントが自律的に docs を引ける」こと。クライアント別に確認する:
+
+1. **Claude Code (Resources 経路)** — `ListMcpResourcesTool(server="another-mood")` で 8 件、`ReadMcpResourceTool(uri="docs://reference/cli.md")` で本文取得
+2. **VSCode Copilot Chat (Tools 経路)** — エージェントが `list_docs` を呼び目次取得、`read_doc(uri)` で本文取得し、ユーザの質問（例「マップパターンで複数レコードを書く方法」）に回答できる
+3. **公式 MCP Python SDK stdio client (両経路)** — `tools/list` で 3 件 (ping / list_docs / read_doc)、`call_tool("list_docs")` で 8 件の `resource_link`、`call_tool("read_doc", uri=...)` で本文。`resources/list` も継続して 8 件返ること
+
+(2) のテストケースは「ユーザが Another Mood の機能について質問 → エージェントが該当 doc を特定して本文を読み回答」というエンドツーエンドのナビゲーション挙動であり、Server Instructions (K3) なしで成立すれば導入効果が確認できる。Instructions による誘導が必要なら K3 で追加する。
+
 ## テスト方針
 
 mcp_server 層に対する pytest 単体テストは書かない。理由:
