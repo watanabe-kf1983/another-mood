@@ -9,8 +9,8 @@ MCP サーバの内部設計。利用者視点の振る舞い仕様（What）は
 MCP サーバは CLI と並ぶ独立したエントリポイント。CLI / MCP の双方が共通の `command` 層を経由して `pipeline` / `components/scaffold` を呼び出す。依存ルールは:
 
 ```
-cli         → command → pipeline / components/scaffold → components/shared
-mcp_server  → command → pipeline / components/scaffold → components/shared
+cli         → command → pipeline / components/scaffold / components/docs_catalog → components/shared
+mcp_server  → command → pipeline / components/scaffold / components/docs_catalog → components/shared
 ```
 
 CLI と MCP のエントリは別バイナリとして公開する（後述「## 背景: CLI と MCP のエントリは分離する」）。共通コマンド層 (`src/another_mood/command.py`) は K8 で導入済み。各関数は戻り値で結果を表し、stderr / stdout に何も書かない。CLI が戻り値・callback を整形して人間向け表示を担当する。詳細は [io-boundaries.md](io-boundaries.md) を参照。
@@ -115,7 +115,7 @@ def read_doc(uri: str) -> str: ...
 
 実装方針:
 
-- **データの単一ソース化**: catalog (`docs/mcp-resources.yaml`) を 1 度だけ読み、`_DocEntry` の dict (URI → entry) としてモジュール状態に保持する。Resources 登録 (`add_resource`) と Tool 実装の双方が同じ dict を参照する。catalog と Resources / Tools の間で drift が起きない
+- **データの単一ソース化**: Resources 登録と Tool 実装は同じ catalog を共有する。drift しない
 - **`list_docs` の戻り値は `ResourceLink` 配列**: 仕様 ([Tools spec 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)) の `resource_link` content block を返すことで、capable なクライアント (Claude Code) は Tool 経由で得た目次から native Resources 経路にリンクをたどれる。Tools 経路と Resources 経路を仕様サポート範囲で繋ぐ
 - **`read_doc(uri)` の引数は `docs://` URI**: `list_docs` の応答に出る `uri` をそのまま渡せるため、エージェントから見て round-trip がストレート。catalog 上に存在しない URI は `ValueError` で拒否（catalog 外のファイル読み出し防止）
 - **Tool 名の選定**: `list_docs` / `read_doc` は filesystem / AWS Documentation MCP / Notion 等で踏み固められた `list_<domain>` + `read_<domain>(path)` 系統の牛道に乗る。MCP プロトコルメソッド名 (`list_resources` / `read_resource`) を Tool 名に流用するサーバは皆無（"そのままタダ乗りできるデファクト" は存在せず、命名は自前で決める必要があった）

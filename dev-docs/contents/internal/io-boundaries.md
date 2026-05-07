@@ -30,8 +30,8 @@ watch の per-rebuild 通知は `Pipeline` factory が受ける `on_report: Call
 CLI / MCP の双方が呼ぶ「コマンド本体」を `src/another_mood/command.py` に集約:
 
 ```
-cli.py        → command → pipeline / components/scaffold
-mcp_server.py → command → pipeline / components/scaffold
+cli.py        → command → pipeline / components/scaffold / components/docs_catalog
+mcp_server.py → command → pipeline / components/scaffold / components/docs_catalog
 ```
 
 各関数は戻り値で結果を表す。watch だけは `on_report` 必須 (per-rebuild 通知の届け先)。`ProjectConfig` の構築・検証は CLI 内で完結する (`typer.Exit` 依存)。

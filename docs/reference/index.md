@@ -6,7 +6,7 @@ For a guided walkthrough, see [Guides](../guides.md); this side is for targeted 
 
 ## Contents
 
-- [CLI](cli.md) — `mood` command reference (`init` / `build` / `watch`)
+- [CLI](cli.md) — `mood` command reference (`init` / `build` / `watch` / `blueprint` / `docs`)
 - [Schema](schema.md) — schema definition (a JSON Schema subset plus the built-in prose schema)
 - [Query](query.md) — query syntax (`from` / `grouped` / `select`)
 - [Template](template.md) — template syntax (Jinja2 plus the `{% mood_view %}` extension)
