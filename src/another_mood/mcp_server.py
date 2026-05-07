@@ -7,7 +7,7 @@ subprocess. Not for direct human use; the `mood` CLI is the human-facing entry.
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
-from typing import Mapping, cast
+from typing import Mapping, Sequence, cast
 
 import yaml
 from mcp.server.fastmcp import FastMCP
@@ -42,7 +42,7 @@ def ping() -> str:
 
 
 @mcp.tool()
-def list_docs() -> list[ResourceLink]:
+def list_docs() -> Sequence[ResourceLink]:
     """List bundled Another Mood documentation as MCP resource links.
 
     The catalog covers Another Mood's CLI commands, schema language, query
