@@ -449,33 +449,13 @@ categories:
       K8:
         title: ユーザ向け出力の境界整理 (値 + logging への集約)
         note: |
-          K4 / K5 / K7 の前提。components / pipeline から直接 stderr に
-          印字している箇所 (現状) を整理し、user-visible な結果は値で、
-          live フィードバック (エラー / 進捗) は logging モジュールで表現する
-          形に揃える。CLI は StreamHandler を install して既存の表示を保つ。
-          MCP server 側の buffer handler は K8 では入れない (K4/K5 着手時に追加。
-          思惑的抽象を避ける)。
-
-          動機: MCP tool は stdout/stderr ではなく戻り値で agent に結果を
-          届けるため、components/pipeline 内の直接印字は agent に届かない。
-          単に stderr を redirect で捕捉する案もあるが、process-global で
-          MCP server 自体や FastMCP framework の出力と干渉するため、構造的に
-          分離する。
-
-          スコープ:
-          - Cat 1 (UX 進捗 / 成功通知): scaffold/blueprints.py の created /
-            skipped 印字、build_report_stage の "Build successfully completed"、
-            render の "Server running at..." → 値 (ScaffoldResult, BuildReport)
-            か CLI が呼び出し前後で印字する形に置き換え
-          - Cat 2 (エラー / 異常の live tap): error_propagation の例外印字、
-            Hugo 異常終了、watcher thread 例外 traceback → logging へ
-          - Cat 3 (best-effort warning): diagnostic.py の snippet 失敗 → logging へ
-
-          出口: components / pipeline 内の `print(..., file=sys.stderr)` /
-          `traceback.print_exc(file=sys.stderr)` がゼロ。CLI 経由の振る舞いは
-          既存と同一 (人間向け表示は維持)。internal/ に IO 境界の設計原則を
-          インラインで残す。
+          K4 / K5 / K7 の前提。components / pipeline からの直接印字を排し、
+          user-visible な結果は値 (BuildReport / ScaffoldResult) と
+          on_report callback、live フィードバックは logging に統一。
+          CLI / MCP の双方が呼ぶ command.py を新設し、print は cli.py のみ
+          (ruff T201 で機械的強制)。設計原則は internal/io-boundaries.md。
         phase: 9
+        done: true
 
   M:
     title: JSON データモデル と データカタログ
