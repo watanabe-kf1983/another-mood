@@ -544,6 +544,13 @@ categories:
         note: "現状は error_propagation + watch 再 fire で最終状態に収束するが、transient な traceback と ng 状態が dev 体験を汚す。読み取り側で upstream の exclusive_write FileLock を共有・取得するなどで race 発生自体を防ぎたい"
         phase: 8
         done: true
+      O3:
+        title: Windows での動作確認
+        note: |
+          Windows でも動作確認する。現時点で判明している POSIX 依存は
+          `_NORMAL_EXIT_CODES` (src/another_mood/pipeline/render.py) の件のみ。
+          詳細は internal/architecture.md「動作環境」節を参照。
+        phase: 10
 
   L:
     title: dog-fooding リファクタ
