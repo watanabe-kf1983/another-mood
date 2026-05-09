@@ -18,6 +18,19 @@ from another_mood.pipeline.base import MultiStageTask, Stage, Task
 
 _logger = getLogger(__name__)
 
+_STARTUP_PROBE_TIMEOUT = 0.5
+
+
+class HugoServerStartupError(RuntimeError):
+    """Hugo dev server died before reaching ready state (e.g. port in use)."""
+
+    def __init__(self, port: int, returncode: int) -> None:
+        super().__init__(
+            f"Hugo server failed to start on port {port} (exit code {returncode})."
+        )
+        self.port = port
+        self.returncode = returncode
+
 
 @Component(
     out_dir="out_dir",
@@ -68,6 +81,15 @@ class _HugoServeTask(Task):
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
         process = renderer.serve(self.content_dir, self.port)
+
+        # Surface fast-fail startup errors (e.g. port already in use) before
+        # signalling readiness; Hugo binds the port synchronously at startup.
+        try:
+            process.wait(timeout=_STARTUP_PROBE_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            pass  # Still running — startup succeeded.
+        else:
+            raise HugoServerStartupError(self.port, process.returncode)
 
         monitor = threading.Thread(
             target=_wait_for_exit, args=(process, shutdown), daemon=True

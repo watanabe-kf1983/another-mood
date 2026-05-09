@@ -159,18 +159,20 @@ def watch(
 ) -> None:
     """Watch for changes and rebuild automatically with live preview."""
     config = _load_config(project_dir=Path(project_dir), port=port)
-    with command.watch(config, on_report=_build_listener()) as shutdown:
-        try:
+    try:
+        with command.watch(config, on_report=_build_listener()) as session:
             print(
-                f"Server running at http://localhost:{config.port}/\n"
-                f"  Reports: http://localhost:{config.port}/reports/",
+                f"Server running at {session.server_url}\n"
+                f"  Reports: {session.reports_url}",
                 file=sys.stderr,
                 flush=True,
             )
             print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
-            shutdown.wait()
-        except KeyboardInterrupt:
-            pass
+            session.shutdown.wait()
+    except command.WatchStartupError as exc:
+        raise typer.Exit(1) from exc
+    except KeyboardInterrupt:
+        pass
 
 
 def main() -> None:

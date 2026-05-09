@@ -33,7 +33,24 @@ from another_mood.components.shared.component.build_report import (
     ErrorEntry,
 )
 from another_mood.config import ProjectConfig
+from another_mood.pipeline.render import (
+    HugoServerStartupError as WatchStartupError,
+)
 from another_mood.pipeline.stages import pipeline
+
+__all__ = [
+    "BuildResult",
+    "ResultDiagnostic",
+    "WatchSession",
+    "WatchStartupError",
+    "apply_blueprint",
+    "build",
+    "init",
+    "list_blueprints",
+    "list_docs",
+    "read_doc",
+    "watch",
+]
 
 
 # -- Boundary types ----------------------------------------------------------
@@ -64,6 +81,21 @@ class ResultDiagnostic:
             severity=e.severity,
             source=e.source,
         )
+
+
+@dataclass(frozen=True)
+class WatchSession:
+    """Live preview session details, yielded by :func:`watch`.
+
+    ``server_url`` / ``reports_url`` are formed once the dev server is
+    confirmed up; consumers can render them without reaching back into config.
+    ``shutdown`` fires when the dev server exits unexpectedly during the
+    session — block on it to keep the session alive.
+    """
+
+    server_url: str
+    reports_url: str
+    shutdown: Event
 
 
 @dataclass(frozen=True)
@@ -141,18 +173,26 @@ def build(
 def watch(
     config: ProjectConfig,
     on_report: Callable[[BuildResult], None],
-) -> Iterator[Event]:
+) -> Iterator[WatchSession]:
     """Start the pipeline in watch mode.
 
-    Yields a shutdown :class:`Event`.  ``on_report`` fires after each rebuild
-    with the iteration's BuildResult.  Cleans up watchers and the preview
-    server on context exit.
+    Yields a :class:`WatchSession` once the live preview server is confirmed
+    up.  Raises :class:`WatchStartupError` (before the ``with`` body runs) if
+    the server fails to start — for example, when the port is already in use.
+
+    ``on_report`` fires after each rebuild with the iteration's BuildResult.
+    Cleans up watchers and the preview server on context exit.
     """
     out_dir = str(config.out_dir)
     with pipeline(
         config, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
-        yield shutdown
+        base = f"http://localhost:{config.port}"
+        yield WatchSession(
+            server_url=f"{base}/",
+            reports_url=f"{base}/reports/",
+            shutdown=shutdown,
+        )
 
 
 # -- Helpers -----------------------------------------------------------------
