@@ -38,7 +38,7 @@ def _load_config(**kwargs: object) -> ProjectConfig:
 
 @blueprint_app.command("list")
 def list_blueprints() -> None:
-    """List available blueprints."""
+    """List the bundled blueprints (sample projects)."""
     for blueprint in command.list_blueprints():
         print(blueprint.name)
         print(f"  {blueprint.description}")
@@ -54,8 +54,8 @@ def _render_scaffold(result: ScaffoldResult) -> None:
 
 @blueprint_app.command("apply")
 def apply_blueprint(
-    name: str = typer.Argument(help="Blueprint name."),
-    project_dir: str = typer.Argument(help="Project directory."),
+    name: str = typer.Argument(help="Blueprint name"),
+    project_dir: str = typer.Argument(help="Project directory"),
 ) -> None:
     """Apply a blueprint into a project directory."""
     available = [b.name for b in command.list_blueprints()]
@@ -134,10 +134,10 @@ def _build_listener() -> Callable[[BuildResult], None]:
 def build(
     project_dir: str = typer.Argument(help="Project directory"),
     out_dir: str | None = typer.Option(
-        None, "--out-dir", help="Published output directory."
+        None, "--out-dir", help="Published output directory"
     ),
     render_dir: str | None = typer.Option(
-        None, "--render-dir", help="Hugo render directory."
+        None, "--render-dir", help="Hugo render directory"
     ),
 ) -> None:
     """Build the project to Markdown and rendered HTML."""
@@ -157,7 +157,7 @@ def watch(
     project_dir: str = typer.Argument(help="Project directory"),
     port: int = typer.Option(5077, help="Preview server port"),
 ) -> None:
-    """Watch for changes and rebuild automatically with live preview."""
+    """Watch for file changes, rebuild incrementally, and serve a live preview."""
     config = _load_config(project_dir=Path(project_dir), port=port)
     try:
         with command.watch(config, on_report=_build_listener()) as session:
