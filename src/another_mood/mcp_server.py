@@ -118,7 +118,7 @@ def build(
 
 @mcp.tool()
 def init(project_dir: str) -> ScaffoldResult:
-    """Scaffold a project at `project_dir` from the `starter` blueprint.
+    """Initialize a project at `project_dir` from the `starter` blueprint.
     Equivalent to `mood init <project_dir>`.
 
     The directory is created if missing. Existing files are never
@@ -137,7 +137,7 @@ def list_blueprints() -> Sequence[Blueprint]:
 
 @mcp.tool()
 def apply_blueprint(name: str, project_dir: str) -> ScaffoldResult:
-    """Scaffold a project at `project_dir` from the named blueprint.
+    """Apply the named blueprint by copying its sources into `project_dir`.
     Equivalent to `mood blueprint apply <name> <project_dir>`.
 
     `name` must be one of the names returned by `list_blueprints()`; an
