@@ -415,6 +415,7 @@ categories:
           出口: agent が接続時に Instructions を受け取り、Resources / Tools へ
           誘導される。
         phase: 9
+        done: true
       K4:
         title: build ツール
         note: |

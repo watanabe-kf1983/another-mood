@@ -53,7 +53,7 @@ Subdirectories matching the input path are created automatically, so that runnin
 
 ## init
 
-Shortcut for the most common case: applying the `starter` blueprint.
+Shortcut for the most common case: scaffolding from the `starter` blueprint.
 
 ```bash
 mood init <project_dir>
@@ -121,7 +121,7 @@ Prints the available blueprints to stdout in a man-page style: each blueprint ta
 mood blueprint apply <name> <project_dir>
 ```
 
-Copies the named blueprint into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name prints the available list on stderr and exits with code 1.
+Scaffolds a project at `<project_dir>` from the named blueprint. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name prints the available list on stderr and exits with code 1.
 
 For each file, prints `  created: <path>` to stderr, or `warning: skipped (already exists): <path>` if the destination already exists. The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `apply` on an existing project never causes destructive changes.
 

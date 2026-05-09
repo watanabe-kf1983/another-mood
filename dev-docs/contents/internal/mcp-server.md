@@ -2,8 +2,6 @@
 
 MCP サーバの内部設計。利用者視点の振る舞い仕様（What）は [design/app/mcp-design.md](../design/app/mcp-design.md) を参照。本ドキュメントは How を扱う。
 
-> **一部実装** — タスク [K1〜K7](../../tasks.md)（Phase 9）。K1（FastMCP 骨格）、K2（Resources 公開）、K4（build ツール）、K5（init / blueprint ツール）が実装済み。K3 / K7 は順次追記する。
-
 ## 位置づけ
 
 MCP サーバは CLI と並ぶ独立したエントリポイント。CLI / MCP の双方が共通の `command` 層を経由して `pipeline` / `components/scaffold` を呼び出す。依存ルールは:
@@ -13,36 +11,18 @@ cli         → command → pipeline / components/scaffold / components/docs_cat
 mcp_server  → command → pipeline / components/scaffold / components/docs_catalog → components/shared
 ```
 
-CLI と MCP のエントリは別バイナリとして公開する（後述「## 背景: CLI と MCP のエントリは分離する」）。共通コマンド層 (`src/another_mood/command.py`) は K8 で導入済み。各関数は戻り値で結果を表し、stderr / stdout に何も書かない。CLI が戻り値・callback を整形して人間向け表示を担当する。詳細は [io-boundaries.md](io-boundaries.md) を参照。
+CLI と MCP のエントリは別バイナリとして公開する（後述「## 背景: CLI と MCP のエントリは分離する」）。共通コマンド層 (`src/another_mood/command.py`) の I/O 規約は [io-boundaries.md](io-boundaries.md) を参照。
 
 ## モジュール配置
 
-- `src/another_mood/cli.py` — 人間向け CLI エントリ。Typer app（build / watch / init）。MCP 関連は含めない
-- `src/another_mood/mcp_server.py` — MCP サーバエントリ。`mcp.server.fastmcp.FastMCP` インスタンスの構築と stdio での起動。Tools / Resources / Instructions の配線もここから始める
-- `pyproject.toml [project.scripts]`:
-  - `mood = "another_mood.cli:main"` — 人間向け CLI
-  - `mood-mcp = "another_mood.mcp_server:main"` — MCP サーバ起動専用
+- `src/another_mood/cli.py` — 人間向け CLI（Typer）
+- `src/another_mood/mcp_server.py` — MCP サーバ（FastMCP）
 
 ファイル名を `mcp.py` ではなく `mcp_server.py` としたのは、MCP 公式 Python SDK のパッケージ名 `mcp` との import 名衝突を避けるため。
 
-K2 以降でファイルが肥大化したら `mcp_server/` パッケージに昇格させる（Tools / Resources / Instructions の各モジュール分割）。当面は単一ファイルで開始する。
+`pyproject.toml [project.scripts]` で `mood` と `mood-mcp` を別バイナリとして公開する（後述「## 背景: CLI と MCP のエントリは分離する」）。
 
-## K1 のスコープ
-
-骨格のみを通す。具体的には:
-
-- `mcp.server.fastmcp.FastMCP` インスタンスの生成と `mcp.run()` 経由の stdio 起動
-- `pyproject.toml` への `mood-mcp` エントリ追加
-- 動作確認用のダミー Tool（`ping() -> "pong"` 程度）を 1 つ登録
-- 本リポジトリ自身の MCP クライアント設定（`.vscode/mcp.json`、`.mcp.json`）に `another-mood` を登録
-
-含めないもの: 実 Tools（build / init 等）、Resources、Server Instructions（K2 以降）。
-
-ダミー Tool は K4 / K5 で実 Tool が入るタイミングで削除する（K1〜K3 期間中の動作確認手段として保持）。K4 / K5 完了済みのため削除済み。
-
-出口: VSCode Copilot Chat および Claude Code から `mood-mcp` 経由で `ping` を呼び出し、`pong` が返ってくることを目視確認する。
-
-## K2 のスコープ — Resources 公開
+## Resources 公開
 
 公開対象は [design/app/mcp-design.md](../design/app/mcp-design.md) で確定したとおり `docs/` ツリー一式（人間向け GitHub プレビューと AI 向け MCP Resources の素材を一元化）。
 
@@ -93,14 +73,6 @@ resources:
 
 `docs/` はリポジトリルート直下に置かれているため、wheel に含めるよう [pyproject.toml](../../../pyproject.toml) の `[tool.hatch.build.targets.wheel.force-include]` で `docs → another_mood/_docs` をマップする。`mcp_server.py` の `_docs_root()` は `importlib.resources` 経由で `_docs` を検索し、editable install ではリポジトリ直下の `docs/` にフォールバックする（`components/scaffold/blueprints.py:_showcase_root` と同パターン）。
 
-### モジュール配置
-
-K2 完了時点で `mcp_server.py` は ~70 行。Tools (K4/K5) と Server Instructions (K3) を追加した時点でファイルが肥大化するようなら `mcp_server/` パッケージへ昇格する。それまでは単一ファイルを維持する。
-
-### 出口
-
-Claude Code（または MCP Inspector）から `mood-mcp` に接続し、`resources/list` で 8 件の Resource が返ること、`resources/read` で各 Resource の内容が取得できることを目視確認する。pytest 単体テストは書かない（テスト方針節を参照）。
-
 ### Tools 並行公開: `list_docs` / `read_doc`
 
 [design/app/mcp-design.md](../design/app/mcp-design.md) の「## 背景: クライアント差の問題」節で論じたとおり、Resources のエージェントアクセスをサポートしないクライアント（Copilot Chat agent mode、Zed 等）でもエージェントが docs を引けるよう、同じ素材を Tool としても並行公開する。
@@ -119,16 +91,6 @@ def read_doc(uri: str) -> str: ...
 - **`list_docs` の戻り値は `ResourceLink` 配列**: 仕様 ([Tools spec 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)) の `resource_link` content block を返すことで、capable なクライアント (Claude Code) は Tool 経由で得た目次から native Resources 経路にリンクをたどれる。Tools 経路と Resources 経路を仕様サポート範囲で繋ぐ
 - **`read_doc(uri)` の引数は `docs://` URI**: `list_docs` の応答に出る `uri` をそのまま渡せるため、エージェントから見て round-trip がストレート。catalog 上に存在しない URI は `ValueError` で拒否（catalog 外のファイル読み出し防止）
 - **Tool 名の選定**: `list_docs` / `read_doc` は filesystem / AWS Documentation MCP / Notion 等で踏み固められた `list_<domain>` + `read_<domain>(path)` 系統の牛道に乗る。MCP プロトコルメソッド名 (`list_resources` / `read_resource`) を Tool 名に流用するサーバは皆無（"そのままタダ乗りできるデファクト" は存在せず、命名は自前で決める必要があった）
-
-### 動作確認 (K2 完了基準)
-
-K2 完了基準は「全主要クライアントでエージェントが自律的に docs を引ける」こと。クライアント別に確認する:
-
-1. **Claude Code (Resources 経路)** — `ListMcpResourcesTool(server="another-mood")` で 8 件、`ReadMcpResourceTool(uri="docs://reference/cli.md")` で本文取得
-2. **VSCode Copilot Chat (Tools 経路)** — エージェントが `list_docs` を呼び目次取得、`read_doc(uri)` で本文取得し、ユーザの質問（例「マップパターンで複数レコードを書く方法」）に回答できる
-3. **公式 MCP Python SDK stdio client (両経路)** — `tools/list` で 3 件 (ping / list_docs / read_doc)、`call_tool("list_docs")` で 8 件の `resource_link`、`call_tool("read_doc", uri=...)` で本文。`resources/list` も継続して 8 件返ること
-
-(2) のテストケースは「ユーザが Another Mood の機能について質問 → エージェントが該当 doc を特定して本文を読み回答」というエンドツーエンドのナビゲーション挙動であり、Server Instructions (K3) なしで成立すれば導入効果が確認できる。Instructions による誘導が必要なら K3 で追加する。
 
 ## テスト方針
 
