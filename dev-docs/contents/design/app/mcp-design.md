@@ -1,6 +1,6 @@
 # MCP Server Design
 
-> **一部実装** — タスク [K1〜K6](../../../tasks.md)（K1〜K5 は Phase 9、K6 は Phase 8）。K1 / K2 / K4 / K5 / K6 が実装済み。K3 は未着手。
+> **一部実装** — タスク [K1〜K7](../../../tasks.md)（K1〜K5 は Phase 9、K6 は Phase 8）。K1 / K2 / K4 / K5 / K6 が実装済み、K3 は未着手、K7 は punt（後述「## 背景: watch をバックグラウンド化しない理由」）。
 
 MCP サーバの設計。AI へのコンテキスト提供として機能する。
 
@@ -32,7 +32,9 @@ AI エージェントのフィードバックループ向け: edit → build →
 
 ### start / stop
 
-watch server（ファイル監視 + パイプライン自動再実行 + Hugo プレビューサーバ）をバックグラウンドで起動・停止する。CLI の `mood watch` と同一の機能。人間がブラウザでドキュメントを閲覧するためのもの。エージェントが人間の指示に応じて制御する。
+提供しない（後述「## 背景: watch をバックグラウンド化しない理由」参照）。
+
+watch server（ファイル監視 + パイプライン自動再実行 + Hugo プレビューサーバ）は、エージェントではなく人間が visible terminal で `mood watch <dir>` を foreground 起動する運用とする。Server Instructions（K3）でその案内をエージェントに渡す。
 
 ### list_docs / read_doc
 
@@ -131,7 +133,27 @@ build（エージェントのワンショット実行）と watch（バックグ
 
 AI エージェントのツール実行モデルは同期的なリクエスト→レスポンスである。常駐プロセスのログストリームから特定の変更に対する結果を抽出するのは困難であり、ワンショットの build で結果を同期取得する方がフィードバックループに適している。
 
-ただし watch server はエージェントの背後にいる人間のために必要である。人間はブラウザでリアルタイムにドキュメントを確認したく、その仕組みは人間の直接編集・エージェント経由の編集のいずれでも機能する必要がある。そのためエージェントが watch server の起動・停止を制御できるようにする。
+ただし watch server はエージェントの背後にいる人間のために必要である。人間はブラウザでリアルタイムにドキュメントを確認したく、その仕組みは人間の直接編集・エージェント経由の編集のいずれでも機能する必要がある。
+
+## 背景: watch をバックグラウンド化しない理由
+
+当初は `mood watch --detach` (CLI G6) + `start_watch` / `stop_watch` (MCP K7) を提供し、エージェントから watch server をバックグラウンド起動・停止できるようにする想定だった。設計議論の結果 punt し、人間が visible terminal で `mood watch <dir>` を foreground 起動する運用に倒した。
+
+**判断根拠**
+
+- **価値核が小さい**: エージェントが watch を制御できることの実利は「session 開始時の 1 コマンド省略」止まり。watch は session を跨いで長時間使う性質のもので、session ごとに start/stop するわけではない
+- **保守負債が割に合わない**: 推定 +200 LOC（codebase ~5% 増）、subprocess / signal / cross-platform 分岐が必要。subprocess 系は歴史的に bug の温床で、特に Windows を含む cross-platform では動作確認コストが高い（CI が `ubuntu-latest` 限定なので Windows での回帰検出は困難）
+- **UX が逆に劣化する**: watch を hidden daemon にすると build / validation エラーをユーザがその場で観察する経路が断たれる。live フィードバック性は visible terminal での foreground 起動に勝てない
+- **本質的に人間用機能**: 「## 背景: watch モードが AI エージェント向けに不要な理由」の通り、watch はエージェントが消費するものではない。それを「人間に代わってエージェントが起動する」薄いラッパに過ぎない start/stop は、設計上の必須度が低い
+
+**採用する運用**
+
+エージェントは user に「`mood watch <dir>` を別ターミナル（Windows コマンドプロンプト等）で実行してください」と案内する。Server Instructions（K3）にツール横断のガイダンスとして含める。
+
+**将来再検討の入口**
+
+- **正攻法路線**: mood をサービス常駐化、watch をその子、MCP は HTTP で常駐サーバと話す（Bazel daemon / Docker Desktop 流）。小ツール域を超える規模感になったら再検討
+- **軽量実装路線**: 既存依存の filelock + `subprocess.creationflags` の platform 分岐で cross-platform PID file daemon は ~125 LOC で実現可能。Arch A（CLI の `mood watch` 自身が PID file lock を握る、`mood start` は `mood watch` を subprocess として spawn する）採用なら process 枚数も増えない。詳細は punt 決定時の議論履歴を参照
 
 ## 導入効果
 

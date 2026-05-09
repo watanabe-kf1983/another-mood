@@ -301,12 +301,10 @@ categories:
       G6:
         title: "mood watch --detach + PID file 対応"
         note: |
-          watch server をバックグラウンド起動するための CLI 機能。
-          subprocess 起動 / PID 管理 / 既存プロセス検知 / 停止コマンド。
-          設計原則「MCP と CLI の論理的機能は一致すべき」に従い、detach + PID
-          ロジックは CLI 側に置き、MCP の start / stop ツール (K7) は薄い wrapper
-          にする。同セッション / 同 PR で K7 とまとめて実施可能。
-        phase: 9
+          設計議論の結果 punt（K7 と運命を共に）。判断根拠と将来再検討の入口は
+          design/app/mcp-design.md「## 背景: watch をバックグラウンド化しない
+          理由」を参照。
+        phase: 999  # punt: not scheduled
       G7:
         title: "mood init --template: テンプレート選択対応"
         note: |
@@ -403,12 +401,17 @@ categories:
         title: Server Instructions
         note: |
           設計書のコア機能のもう片方。200 語以内の誘導文 + FastMCP の initialize
-          レスポンスに乗せる注入機構。K2 の URI スキームと K4 / K5 / K7 のツール群を
+          レスポンスに乗せる注入機構。K2 の URI スキームと K4 / K5 のツール群を
           参照するため、当該タスクがすべて揃ってから一括起草する (各タスクで
           iterative に追記する運用は採らない: 200 語制限下で首尾一貫した文面を
           得るため、また各ツールでの agent 失敗モードを実観察してから書く方が
           指針として効くため)。注入機構自体は FastMCP("name", instructions=text)
           の 1 行追加で済むので分割しない。
+
+          watch を MCP 制御しない方針 (design/app/mcp-design.md 参照) に伴い、
+          「user に `mood watch <dir>` の foreground 起動を案内する」guidance
+          を Instructions に含める検討事項として残す。
+
           出口: agent が接続時に Instructions を受け取り、Resources / Tools へ
           誘導される。
         phase: 9
@@ -437,14 +440,10 @@ categories:
       K7:
         title: MCP start / stop ツール
         note: |
-          G6 (mood watch --detach + PID file) の薄い wrapper。watch server の
-          バックグラウンド起動・停止を agent から制御できるようにする。
-          watch は人間のブラウザプレビュー用であり agent 自身は使わないため、
-          MCP サーバとしての必須度は低い。phase 9 末尾に置く。
-          G6 と同セッション / 同 PR で実施可能。
-          K8 (出力境界整理) を前提とする (watch 自体のストリーム出力は agent に
-          届けないが、start/stop の異常時診断は logging 経由で取得する)。
-        phase: 9
+          設計議論の結果 punt。判断根拠と将来再検討の入口は
+          design/app/mcp-design.md「## 背景: watch をバックグラウンド化しない
+          理由」を参照。
+        phase: 999  # punt: not scheduled
       K8:
         title: ユーザ向け出力の境界整理 (値 + logging への集約)
         note: |
