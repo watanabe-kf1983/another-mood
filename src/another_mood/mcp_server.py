@@ -19,7 +19,38 @@ from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
 from another_mood.config import ProjectConfig
 
-mcp = FastMCP("another-mood")
+_INSTRUCTIONS = """\
+Another Mood manages a source-based database: a set of YAML and Markdown
+files that, when built, generates a synchronized set of Markdown and HTML
+documents. Editing a source file in one place keeps every page derived
+from it consistent.
+
+The source files live under `<project_dir>/` and fall into four kinds:
+
+- `definition/schema.yaml` declares data types
+- `contents/` holds data (YAML records or Markdown prose)
+- `definition/queries/` (optional) reshapes data into views
+- `definition/templates/` describes output pages
+
+Workflow:
+
+- Start a project: call `list_blueprints` then `apply_blueprint(name,
+  project_dir)`. `init(project_dir)` is a shortcut for the default
+  starter.
+- After editing sources: call `build(project_dir)` and inspect the result.
+  The `output/__meta_entity/`, `__table_view/`, and `__meta_query/`
+  subdirectories under the build output are auto-generated diagnostic
+  views — read them mid-edit to verify how schema, data, and queries
+  resolved.
+- Before editing schema, query, or template files, consult the reference:
+  call `list_docs()` for the catalog, then `read_doc(uri)` with a
+  `docs://` URI from the listing.
+
+Another Mood also provides live preview, but not as an MCP tool. Ask the
+user to run `mood watch <project_dir>` in a separate terminal.
+"""
+
+mcp = FastMCP("another-mood", instructions=_INSTRUCTIONS)
 
 # Bundled docs are exposed via Resources (canonical) and via list_docs /
 # read_doc Tools below (mirror, for clients that don't surface Resources).
