@@ -73,3 +73,9 @@ OUT: `render_dir`
 5. **スキーマは JSON Schema** - 独自形式を避け、additionalProperties で辞書→配列の正規化を行う
 6. **コンポーネント間はファイルを介して連携** - 各段階の結果を YAML ファイルとして目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる
 
+## 動作環境
+
+Linux / macOS / Windows のいずれでも動作する cross-platform を維持する。Windows 利用者も主要ターゲットに含む。
+
+判明している runtime の POSIX 依存（要修正）: `src/another_mood/pipeline/render.py` の `_NORMAL_EXIT_CODES` で signal 値の負値（`-SIGTERM` / `-SIGINT`）をマッチしている箇所。Windows の `TerminateProcess` は負の signal 値で exit しないため、Windows 環境では「正常終了」が「異常終了」とログされる。タスク O3 (Phase 10) で対処予定。
+
