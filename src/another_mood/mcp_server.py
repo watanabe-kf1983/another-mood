@@ -68,11 +68,8 @@ for _entry in command.list_docs():
 
 @mcp.tool()
 def list_docs() -> Sequence[ResourceLink]:
-    """List bundled Another Mood documentation as MCP resource links.
-
-    The catalog covers Another Mood's CLI commands, schema language, query
-    syntax, template syntax, and built-in meta-schemas.  Pass any returned
-    `uri` to `read_doc()` to fetch its contents.
+    """List bundled documentation as MCP resource links.
+    Equivalent to `mood docs list`.
     """
     return [
         ResourceLink(
@@ -88,10 +85,11 @@ def list_docs() -> Sequence[ResourceLink]:
 
 @mcp.tool()
 def read_doc(uri: str) -> str:
-    """Read a bundled Another Mood document by its `docs://` URI.
+    """Read a bundled document by its `docs://` URI.
+    Equivalent to `mood docs read <uri>`.
 
     `uri` must be one of the values returned by `list_docs()` (e.g.
-    `docs://reference/cli.md`).  Returns the raw file contents as text.
+    `docs://reference/cli.md`).
     """
     return command.read_doc(uri)
 
@@ -102,18 +100,11 @@ def build(
     out_dir: str | None = None,
     render_dir: str | None = None,
 ) -> BuildResult:
-    """Run the Another Mood build pipeline once over `project_dir` and return
-    the build result. Equivalent to `mood build <project_dir>`.
-
-    Use this in an edit-build-inspect feedback loop after editing source
-    files. The pipeline reads `definition/` and `contents/` under
-    `project_dir`; the rendered output directory is reported back in
-    `out_dir`.
+    """Run a one-shot build of `project_dir`, generating Markdown and HTML
+    and returning the result. Equivalent to `mood build <project_dir>`.
 
     `out_dir` and `render_dir` are optional; leave them unset to use the
     defaults under `.another-mood/<project_dir>/`.
-
-    For DSL syntax, see `read_doc()` (catalog via `list_docs()`).
     """
     overrides: dict[str, object] = {"project_dir": Path(project_dir)}
     if out_dir is not None:
@@ -127,38 +118,32 @@ def build(
 
 @mcp.tool()
 def init(project_dir: str) -> ScaffoldResult:
-    """Scaffold a new Another Mood project at `project_dir` from the default
-    blueprint (a minimal starter).
+    """Scaffold a project at `project_dir` from the `starter` blueprint.
+    Equivalent to `mood init <project_dir>`.
 
-    The directory is created if it does not exist.  Existing files are never
-    overwritten; their paths are returned in `skipped`.  Run `build` next to
-    produce output from the scaffolded sources.
-
-    To choose a different blueprint, use `list_blueprints` + `apply_blueprint`
-    instead; `init` is a shortcut for `apply_blueprint("starter", ...)`.
+    The directory is created if missing. Existing files are never
+    overwritten; their paths are returned in `skipped`.
     """
     return command.init(Path(project_dir))
 
 
 @mcp.tool()
 def list_blueprints() -> Sequence[Blueprint]:
-    """List bundled blueprints (sample projects) as `{name, description}` records.
-
-    Each blueprint is a self-contained Another Mood project that demonstrates
-    a particular shape of source.  Pass any returned `name` to `apply_blueprint`
-    to copy that blueprint into a target directory.
+    """List the bundled blueprints (sample projects).
+    Equivalent to `mood blueprint list`.
     """
     return command.list_blueprints()
 
 
 @mcp.tool()
 def apply_blueprint(name: str, project_dir: str) -> ScaffoldResult:
-    """Copy the named blueprint into `project_dir`.
+    """Scaffold a project at `project_dir` from the named blueprint.
+    Equivalent to `mood blueprint apply <name> <project_dir>`.
 
-    `name` must be one of the names returned by `list_blueprints()`; an unknown
-    name raises `ValueError`.  The directory is created if it does not exist.
+    `name` must be one of the names returned by `list_blueprints()`; an
+    unknown name raises `ValueError`. The directory is created if missing.
     Existing files are never overwritten; their paths are returned in
-    `skipped`.  Run `build` next to produce output from the copied sources.
+    `skipped`.
     """
     available = [b.name for b in command.list_blueprints()]
     if name not in available:
