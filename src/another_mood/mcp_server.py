@@ -34,9 +34,9 @@ The source files live under `<project_dir>/` and fall into four kinds:
 
 Workflow:
 
-- Start a project: call `list_blueprints` then `apply_blueprint(name,
-  project_dir)`. `init(project_dir)` is a shortcut for the default
-  starter.
+- Start a project: call `init(project_dir)` for the default starter, or
+  `list_blueprints` + `apply_blueprint(name, project_dir)` to pick a
+  specific blueprint.
 - After editing sources: call `build(project_dir)` and inspect the result.
   The `output/__meta_entity/`, `__table_view/`, and `__meta_query/`
   subdirectories under the build output are auto-generated diagnostic
