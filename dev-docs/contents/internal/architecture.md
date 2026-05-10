@@ -54,7 +54,6 @@ OUT: `render_dir`
 - [components/schema-inspector.md](components/schema-inspector.md)
 - [components/normalizer.md](components/normalizer.md)
 - [components/generator.md](components/generator.md)
-- [components/renderer.md](components/renderer.md)
 
 ## ユーザプロジェクト構成
 

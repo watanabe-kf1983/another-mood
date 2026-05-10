@@ -13,7 +13,7 @@
 
 ## generator
 
-- [template-spec.md](generator/template-spec.md) — テンプレート（root、section タグ、パーシャル、エスケープ）
+- [template-spec.md](generator/template-spec.md) — テンプレートの設計判断（ChainableUndefined）と未実装機能（C4）
 - [anchor-spec.md](generator/anchor-spec.md) — アンカー（key/ID 体系、フラットマップ、リンク解決）
 - [paging-spec.md](generator/paging-spec.md) — ページ分割（paging.yaml、プロファイル、分割ルール）
 

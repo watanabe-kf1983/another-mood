@@ -25,7 +25,7 @@
 - [architecture.md](internal/architecture.md) — アーキテクチャ概要
 - [json-data-model.md](internal/json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
 - [pipeline.md](internal/pipeline/pipeline.md) — パイプライン構成、プロセス連携、AtomicDirWriter
-- [SchemaInspector](internal/components/schema-inspector.md)、[Normalizer](internal/components/normalizer.md)、[Generator](internal/components/generator.md)、[Renderer](internal/components/renderer.md)
+- [SchemaInspector](internal/components/schema-inspector.md)、[Normalizer](internal/components/normalizer.md)、[Generator](internal/components/generator.md)
 - [mcp-server.md](internal/mcp-server.md) — MCP サーバ内部設計（FastMCP 採用理由）
 
 ## dev
