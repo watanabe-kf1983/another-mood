@@ -181,7 +181,13 @@ def watch(
                 flush=True,
             )
             print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
-            session.shutdown.wait()
+            # Loop with a short timeout: on Windows, threading.Event.wait()
+            # without a timeout is not interruptible by Ctrl+C, so the main
+            # thread would block indefinitely. The timeout returns control
+            # to the interpreter periodically so pending KeyboardInterrupt
+            # can be raised.
+            while not session.shutdown.wait(timeout=0.1):
+                pass
     except command.WatchStartupError as exc:
         raise typer.Exit(1) from exc
     except KeyboardInterrupt:
