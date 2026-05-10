@@ -290,6 +290,22 @@ categories:
         note: 例 — ファンクションポイント算出
         phase: 13
 
+  L:
+    title: dog-fooding リファクタ
+    impl_paths:
+      - dev-docs/contents/
+      - dev-docs/definition/
+    tasks:
+      L1:
+        title: 構造化データに振り替えられる箇所の棚卸し
+        phase: 13
+      L2:
+        title: スキーマ + クエリ + テンプレート群の構築
+        phase: 13
+      L3:
+        title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
+        phase: 13
+
   M:
     title: JSON データモデル と データカタログ
     impl_paths:
@@ -322,22 +338,6 @@ categories:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
         phase: 13
 
-  P:
-    title: テンプレートエンジン拡張
-    impl_paths:
-      - src/another_mood/components/generator/mood_view_processor.py
-      - src/another_mood/components/generator/template_engine.py
-    spec: design/generator/template-spec.md
-    tasks:
-      P1:
-        title: "{% mood_view %} タグの拡張文法"
-        note: |
-          現状は {% mood_view EXPR with EXPR %} 形式のみ対応。
-          template-spec.md の例示で使われている以下 2 形式を追加する。
-            - for 形式:    {% mood_view "NAME" for SEQ %}
-            - filter 形式: {% mood_view NAME[id="..."] %}
-        phase: 13
-
   O:
     title: バグ修正
     impl_paths:
@@ -365,20 +365,20 @@ categories:
         phase: 13
         proposal: design/generator/generator.md#インラインコードのフェンス長-o4
 
-  L:
-    title: dog-fooding リファクタ
+  P:
+    title: テンプレートエンジン拡張
     impl_paths:
-      - dev-docs/contents/
-      - dev-docs/definition/
+      - src/another_mood/components/generator/mood_view_processor.py
+      - src/another_mood/components/generator/template_engine.py
+    spec: design/generator/template-spec.md
     tasks:
-      L1:
-        title: 構造化データに振り替えられる箇所の棚卸し
-        phase: 13
-      L2:
-        title: スキーマ + クエリ + テンプレート群の構築
-        phase: 13
-      L3:
-        title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
+      P1:
+        title: "{% mood_view %} タグの拡張文法"
+        note: |
+          現状は {% mood_view EXPR with EXPR %} 形式のみ対応。
+          template-spec.md の例示で使われている以下 2 形式を追加する。
+            - for 形式:    {% mood_view "NAME" for SEQ %}
+            - filter 形式: {% mood_view NAME[id="..."] %}
         phase: 13
 
   Q:
