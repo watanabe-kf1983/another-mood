@@ -1,6 +1,6 @@
 # タスクカタログ
 
-Phase 8 以降の残タスクを機能カテゴリ別に整理したもの。各タスクは実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は [roadmap.md](roadmap.md) を参照。
+残タスクを機能カテゴリ別に整理したもの。各タスクは実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は [roadmap.md](roadmap.md) を参照。完了済みタスクは記載しない（git log を参照）。
 
 {% for category in categories %}
 ## {{ category.id }}. {{ category.title }}
