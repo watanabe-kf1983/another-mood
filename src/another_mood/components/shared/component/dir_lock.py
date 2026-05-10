@@ -83,7 +83,7 @@ def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:
         shutil.copytree(tmp_dir, out_dir, dirs_exist_ok=True)
 
         version_info = VersionInfo(start_time=start_time)
-        version_path.write_text(version_info.to_json())
+        version_path.write_text(version_info.to_json(), encoding="utf-8")
 
 
 @contextmanager
@@ -123,4 +123,4 @@ class VersionInfo:
     def from_file(path: Path) -> VersionInfo | None:
         if not path.exists():
             return None
-        return VersionInfo.from_json(path.read_text())
+        return VersionInfo.from_json(path.read_text(encoding="utf-8"))

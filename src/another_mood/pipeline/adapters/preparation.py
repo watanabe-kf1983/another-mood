@@ -39,7 +39,9 @@ def prepare_render(data_dir: Path, *, out_dir: Path) -> None:
             sync(data_dirs.upstreams[0], data_dirs.out)
         else:
             page = data_dir / "data" / "index.md"
-            content = page.read_text() if page.is_file() else _DELETED_CONTENT
+            content = (
+                page.read_text(encoding="utf-8") if page.is_file() else _DELETED_CONTENT
+            )
             sync(data_dir / "data", out_dir / "data", deleted_content=content)
 
 
@@ -63,7 +65,7 @@ def sync(
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_file, dst)
         for deleted in old_files - src_files:
-            (out_dir / deleted).write_text(deleted_content)
+            (out_dir / deleted).write_text(deleted_content, encoding="utf-8")
 
 
 def _hugo_name(rel: Path) -> Path:
