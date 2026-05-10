@@ -16,6 +16,11 @@ resources:
     description: >-
       Walks through concepts, Quick Start, workflow, schema and content,
       queries, and templates in a single file.
+  - path: mcp.md
+    description: >-
+      Install and configure the Another Mood MCP server in coding
+      agents (Claude Code, VS Code Copilot Chat); lists the MCP tools
+      mirroring the `mood` CLI.
   - path: reference/cli.md
     description: >-
       `mood` command reference (`init` / `build` / `watch` / `blueprint` / `docs`).

@@ -649,6 +649,7 @@ categories:
           claude_desktop_config.json への登録例、提供ツール一覧。
           K1〜K5 完了後に着手。
         phase: 9
+        done: true
       L8:
         title: schemas を docs/reference/ にミラー
         note: |

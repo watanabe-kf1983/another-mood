@@ -20,5 +20,6 @@ For design decisions and background, see [background/product.md](dev-docs/conten
 ## Documentation
 
 - [docs/guides.md](docs/guides.md) — User guide
+- [docs/mcp.md](docs/mcp.md) — Using Another Mood with AI agents (MCP)
 - [DEVELOPMENT.md](DEVELOPMENT.md) — Developer guide
 - [showcase/ecommerce/](showcase/ecommerce/) — Example project

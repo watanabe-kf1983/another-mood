@@ -24,7 +24,7 @@ With uv installed:
 uv tool install git+https://github.com/watanabe-kf1983/another-mood.git
 ```
 
-This puts the `mood` command on your PATH.
+This puts the `mood` command on your PATH (along with `mood-mcp` — see [Using with AI agents](mcp.md)).
 
 ### Scaffold a sample and build
 
