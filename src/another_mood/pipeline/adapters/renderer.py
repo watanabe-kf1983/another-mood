@@ -32,7 +32,7 @@ def build(content_dir: Path, out_dir: Path) -> None:
     )
 
 
-def serve(content_dir: Path, port: int) -> subprocess.Popen[bytes]:
+def serve(content_dir: Path, host: str, port: int) -> subprocess.Popen[bytes]:
     """Start renderer dev server for live preview. Returns the Popen process."""
     return subprocess.Popen(
         [
@@ -42,6 +42,8 @@ def serve(content_dir: Path, port: int) -> subprocess.Popen[bytes]:
             str(_HUGO_SOURCE_DIR),
             "--contentDir",
             str(content_dir.resolve()),
+            "--bind",
+            host,
             "--port",
             str(port),
             "--renderToMemory",

@@ -118,6 +118,7 @@ def render_stage(config: ProjectConfig) -> Task:
         upstream=config.component_output(reconcile),
         prep_dir=config.component_output(prepare_render).dir,
         hugo_build_dir=config.component_output(hugo_build).dir,
+        host=config.host,
         port=config.port,
     )
 

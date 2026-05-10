@@ -246,10 +246,10 @@ categories:
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         note: |
-          詳細は design/app/cli-spec.md「mood watch --host (G5)」、
+          詳細は design/app/cli-spec.md「mood watch --host」、
           config キーは design/app/config-spec.md。
         phase: 10
-        proposal: design/app/cli-spec.md#mood-watch-host-g5
+        done: true
 
   H:
     title: バイナリファイルの取り扱い

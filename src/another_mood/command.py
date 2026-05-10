@@ -87,14 +87,15 @@ class ResultDiagnostic:
 class WatchSession:
     """Live preview session details, yielded by :func:`watch`.
 
-    ``server_url`` / ``reports_url`` are formed once the dev server is
-    confirmed up; consumers can render them without reaching back into config.
+    Carries the raw bind ``host`` / ``port`` the dev server is listening on;
+    URL formatting (including LAN-IP substitution for wildcard binds) is left
+    to the caller, since that's a presentation choice that varies per consumer.
     ``shutdown`` fires when the dev server exits unexpectedly during the
     session — block on it to keep the session alive.
     """
 
-    server_url: str
-    reports_url: str
+    host: str
+    port: int
     shutdown: Event
 
 
@@ -187,10 +188,9 @@ def watch(
     with pipeline(
         config, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
-        base = f"http://localhost:{config.port}"
         yield WatchSession(
-            server_url=f"{base}/",
-            reports_url=f"{base}/reports/",
+            host=config.host,
+            port=config.port,
             shutdown=shutdown,
         )
 

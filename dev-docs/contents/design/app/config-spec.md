@@ -30,5 +30,4 @@
 | キー | 型 | デフォルト | 環境変数 | CLI | タスク | 説明 |
 |------|-----|---------|----------|-----|------|------|
 | `profilesFile` | string | `<projectDir>/definition/profiles.yaml` | `RB_PROFILES_FILE` | — | C1〜C6 | プロファイル設定ファイル（ページ分割戦略） |
-| `host` | string | `127.0.0.1` | `RB_HOST` | `--host` | G5 | preview server の bind アドレス。`0.0.0.0` 等で LAN 公開可 |
 | `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | — | G3 | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用 |
