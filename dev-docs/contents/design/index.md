@@ -32,7 +32,6 @@
 ## app
 
 - [project-structure.md](app/project-structure.md) — プロジェクト構成の設計判断（MS-Access アナロジー、`.another-mood/` 配置等）
-- [cli-spec.md](app/cli-spec.md) — CLI の設計判断と未実装機能
-- [config-spec.md](app/config-spec.md) — 設定システムの設計判断と未実装 config キー
+- [config-spec.md](app/config-spec.md) — 設定システムの設計判断と未実装 config キー（CLI / 環境変数 / 設定ファイル / パス制約）
 - [mcp-design.md](app/mcp-design.md) — MCP の設計判断（External + Internal、各種背景）
 - [meta-documentation.md](app/meta-documentation.md) — メタドキュメンテーション（ツール自身の可視化）

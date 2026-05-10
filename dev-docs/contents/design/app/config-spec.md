@@ -25,6 +25,14 @@
 
 カスタムレンダリングサーバのコマンドを設定すると、Hugo の代わりに使用される。詳細は下表。
 
+### 処理対象ディレクトリの CWD 配下制約 (G8)
+
+> **未実装** — タスク [G8](../../../tasks.md)。
+
+`<projectDir>` 引数および `RB_*` で渡されるパスは、CWD 配下のみを許可する。CWD 外のパス（`../other-repo/docs` や絶対パス `/some/elsewhere/docs` 等）はエラーとして拒否する。
+
+現状は `_another_mood_root` ([config.py](../../../../src/another_mood/config.py)) が CWD 外の絶対パスを受けた場合に basename を採用してフォールバックする実装になっており、エラーにはしない。
+
 ### 未実装の config キー
 
 | キー | 型 | デフォルト | 環境変数 | CLI | タスク | 説明 |
