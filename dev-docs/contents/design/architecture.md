@@ -1,6 +1,27 @@
 # Architecture
 
-## アーキテクチャ概要
+## External Design
+
+### ユーザプロジェクト構成
+
+[project-structure.md](app/project-structure.md) を参照。
+
+### 設計判断
+
+1. **スキーマ定義は言語非依存な資産** - YAML/JSON Schema として Git 管理
+2. **周辺ツールは差し替え可能に** - 出力形式、レンダリングツール等は疎結合に
+3. **クエリは YAML DSL** - クエリ自体が構造化データ、ツール自身で管理・可視化可能
+4. **CUD は AI 直接編集** - ツールは YAML を読むだけ、CRUD API は提供しない
+5. **スキーマは JSON Schema** - 独自形式を避け、additionalProperties で辞書→配列の正規化を行う
+6. **コンポーネント間はファイルを介して連携** - 各段階の結果を YAML ファイルとして目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる
+
+### 動作環境
+
+Linux / macOS / Windows のいずれでも動作する cross-platform を維持する。Windows 利用者も主要ターゲットに含む。
+
+## Internal Design
+
+### アーキテクチャ概要
 
 以下のコンポーネント構成:
 
@@ -54,26 +75,8 @@ OUT: `render_dir`
 - [normalizer.md](normalizer/normalizer.md)
 - [generator.md](generator/generator.md)
 
-## ユーザプロジェクト構成
-
-[project-structure.md](app/project-structure.md) を参照。
-
-## 設計判断
-
-1. **スキーマ定義は言語非依存な資産** - YAML/JSON Schema として Git 管理
-2. **周辺ツールは差し替え可能に** - 出力形式、レンダリングツール等は疎結合に
-3. **クエリは YAML DSL** - クエリ自体が構造化データ、ツール自身で管理・可視化可能
-4. **CUD は AI 直接編集** - ツールは YAML を読むだけ、CRUD API は提供しない
-5. **スキーマは JSON Schema** - 独自形式を避け、additionalProperties で辞書→配列の正規化を行う
-6. **コンポーネント間はファイルを介して連携** - 各段階の結果を YAML ファイルとして目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる
-
-## 動作環境
-
-Linux / macOS / Windows のいずれでも動作する cross-platform を維持する。Windows 利用者も主要ターゲットに含む。
-
-## proposal
+## Proposals
 
 ### Windows POSIX 依存の修正 (O3)
 
 判明している runtime の POSIX 依存: `src/another_mood/pipeline/render.py` の `_NORMAL_EXIT_CODES` で signal 値の負値（`-SIGTERM` / `-SIGINT`）をマッチしている箇所。Windows の `TerminateProcess` は負の signal 値で exit しないため、Windows 環境では「正常終了」が「異常終了」とログされる。Phase 10 タスク [O3](../../tasks.md)。
-

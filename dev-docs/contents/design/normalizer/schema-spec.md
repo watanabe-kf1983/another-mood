@@ -1,31 +1,8 @@
 # Schema Specification
 
-## Entity 名
+## External Design
 
-スキーマから抽出される各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
-
-- **Entity**: データツリー上の到達経路を表す identifier (`id` = access path)。クエリ DSL の `from:` や URL/anchor、ファイルパス、表示見出しに使う。例: `categories`, `categories.tasks`
-- **ObjectType**: Entity の中の 1 つの item の型 (`id`)。コレクションを 1 段降りるたびに `.item` を付加する path-based 名。FK 参照や型レベルの cross-reference に使う。例: `categories.item`, `categories.item.tasks.item`
-
-Entity は自身の `item_type` フィールドを通じて ObjectType を保持する。
-
-```yaml
-properties:
-  categories:                # Entity.id: "categories"
-    type: object             # Entity.item_type.id: "categories.item"
-    additionalProperties:
-      type: object
-      properties:
-        tasks:               # Entity.id: "categories.tasks"
-          type: object       # Entity.item_type.id: "categories.item.tasks.item"
-          additionalProperties: { type: object, properties: { ... } }
-```
-
-シングルトン (`type: object` + `properties` のみ、`additionalProperties` なし) は現状 entity 化されない (親の attribute としてインライン化される)。entity 化されるのは collection (`additionalProperties` / `items`) のみ。
-
-データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../app/meta-documentation.md) 参照。
-
-## コンポジション vs 集約
+### コンポジション vs 集約
 
 YAML はツリー構造を持てるため、1:N の子オブジェクトを必ずしも別スキーマに切り出す必要はない。判断基準は「親を消したら子も消えるか」:
 
@@ -52,20 +29,47 @@ order-001:
 
 コンポジションの関係にあるオブジェクトは FK として被参照されない。したがって references の参照先はトップレベルスキーマのみで十分。
 
-## 背景: OpenAPI のスキーマモデルとの違い
+### 背景: OpenAPI のスキーマモデルとの違い
 
 OpenAPI は API 通信プロトコルを記述するため、エンドポイントを流れる**色々な切れ端**それぞれに対応する名前付き型を `components.schemas` に並べる（各エンドポイントから `$ref` で参照する形）。
 
 本ツールが扱うのは API を流れる切れ端ではなく、`contents_dir/` に蓄積された **1 つのデータ総体**である。総体は 1 つのオブジェクトとして表現できるので、それ全体を 1 つの JSON Schema として書く形が自然になる。トップレベルキー (entity 名) は別個の型エントリではなく、ルートオブジェクトの `properties` として並ぶ。
 
-## 背景: なぜサブセットに制限するか
+### 背景: なぜサブセットに制限するか
 
 - **`$ref`/`$defs`**: スキーマの再利用が必要な場合、このプロジェクトでは別スキーマに切り出してキー参照する（RDB 的な正規化）。スキーマ内の参照機構は不要
 - **合成・条件（`allOf` 等）**: 型のバリエーションはテンプレート記述を複雑にする。バリエーションがあるならスキーマ（= テーブル）を分けるのがこのプロジェクトの方針
 - **`$comment`**: YAML のコメント構文（`#`）で代替可能
 - **core の残り**: 本ツールは `definition/schema.yaml` を単一の root schema として扱い、外部 schema 参照も想定しないため、`$id` 等の識別機構は不要
 
-## proposal
+## Internal Design
+
+### Entity 名
+
+スキーマから抽出される各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
+
+- **Entity**: データツリー上の到達経路を表す identifier (`id` = access path)。クエリ DSL の `from:` や URL/anchor、ファイルパス、表示見出しに使う。例: `categories`, `categories.tasks`
+- **ObjectType**: Entity の中の 1 つの item の型 (`id`)。コレクションを 1 段降りるたびに `.item` を付加する path-based 名。FK 参照や型レベルの cross-reference に使う。例: `categories.item`, `categories.item.tasks.item`
+
+Entity は自身の `item_type` フィールドを通じて ObjectType を保持する。
+
+```yaml
+properties:
+  categories:                # Entity.id: "categories"
+    type: object             # Entity.item_type.id: "categories.item"
+    additionalProperties:
+      type: object
+      properties:
+        tasks:               # Entity.id: "categories.tasks"
+          type: object       # Entity.item_type.id: "categories.item.tasks.item"
+          additionalProperties: { type: object, properties: { ... } }
+```
+
+シングルトン (`type: object` + `properties` のみ、`additionalProperties` なし) は現状 entity 化されない (親の attribute としてインライン化される)。entity 化されるのは collection (`additionalProperties` / `items`) のみ。
+
+データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../app/meta-documentation.md) 参照。
+
+## Proposals
 
 ### `title:` キーワード (M4)
 

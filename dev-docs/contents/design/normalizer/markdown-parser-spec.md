@@ -1,6 +1,8 @@
 # Markdown Parser Specification
 
-## 背景: Typed Value と auto-escape
+## External Design
+
+### 背景: Typed Value と auto-escape
 
 パイプライン内の値は素の string（デフォルト）または Typed Value オブジェクトのいずれか。テンプレートエンジンはデフォルトで全ての素の string をエスケープする。
 
@@ -22,13 +24,15 @@ title: "Architecture"
 
 MIME types は [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838) に準拠する。想定される型: `text/markdown`, `text/html`, `text/plain` 等。
 
-## 実装方針
+## Internal Design
+
+### 実装方針
 
 - Markdown AST: markdown-it-py（CommonMark 準拠、AST 走査でセクション分割・リンク検出）
 - YAML 出力: ruamel.yaml（YAML 1.2、literal block scalar で Markdown 本文を可読に保持）
 - 見出しレベル正規化: 自前実装
 
-## proposal
+## Proposals
 
 ### セクション単位抽出 (A1-A4, A6)
 

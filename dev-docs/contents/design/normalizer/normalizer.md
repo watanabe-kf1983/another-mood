@@ -1,6 +1,6 @@
 # Normalizer
 
-## proposal
+## Proposals
 
 ### バイナリファイルの正規化 (H1, H2)
 
