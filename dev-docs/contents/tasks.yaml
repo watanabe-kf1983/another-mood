@@ -9,32 +9,32 @@ categories:
       A1:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
-        phase: 10
+        phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
-        phase: 10
+        phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
-        phase: 10
+        phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
-        phase: 10
+        phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
         note: contents_dir 基点パス解決が必要 (B2 と連携)
-        phase: 10
+        phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
         title: shiftHeadings(n) Jinja2 フィルタ
         note: テンプレート側で使用
-        phase: 10
+        phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
 
   B:
@@ -46,30 +46,30 @@ categories:
       B1:
         title: views データのラッパーツリー構築
         note: data / parent / class_name フィールド
-        phase: 10
+        phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B2:
         title: アンカー ID 生成規則
         note: リスト型 {class}.item.{id} / シングルトン {class}
-        phase: 10
+        phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B3:
         title: アンカー → ラッパーのオンデマンド走査 + キャッシュ
-        phase: 10
+        phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B4:
         title: link_md Jinja2 フィルタ
-        phase: 10
+        phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B5:
         title: レンダリング後の toc:id 文字列のリンク URL 置換
         note: prose body 内も含む
-        phase: 10
+        phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B6:
         title: ラッパーの get_page_url() 実装
         note: C3 と連携
-        phase: 10
+        phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
 
   C:
@@ -81,31 +81,31 @@ categories:
     tasks:
       C1:
         title: profilesFile の読み込み・パース
-        phase: 10
+        phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C2:
         title: paginate 設定の評価
         note: クラスが分割対象か判定
-        phase: 10
+        phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C3:
         title: パス自動導出
         note: リスト型 {class}/{id}.md / シングルトン {class}.md
-        phase: 10
+        phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C4:
         title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
         note: 現在は常に分割。インライン展開モードの新設になる
-        phase: 10
+        phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
-        phase: 10
+        phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C6:
         title: 複数プロファイルの並列ビルド
-        phase: 10
+        phase: 11
         proposal: design/generator/paging-spec.md#proposals
 
   D:
@@ -156,12 +156,12 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 10
+        phase: 13
         proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 10
+        phase: 13
         proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
 
   E:
@@ -195,7 +195,7 @@ categories:
           queries-spec.md「同名禁止」。現状は composer.py が sources[name] を
           silent に上書きするため、著者が気付かずにパススルーデータを
           上書きする事故が起きる。重複を検知してエラーにする。
-        phase: 10
+        phase: 13
         proposal: design/composer/queries-spec.md#同名禁止-e6
 
   F:
@@ -213,11 +213,11 @@ categories:
       F5:
         title: DFD テンプレート
         note: 仕様未着手
-        phase: 10
+        phase: 13
       F6:
         title: CRUD マトリクステンプレート
         note: 仕様未着手
-        phase: 10
+        phase: 13
       F7:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
@@ -236,12 +236,12 @@ categories:
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
-        phase: 10
+        phase: 13
         proposal: design/app/config-spec.md#設定ファイル-g2
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
-        phase: 10
+        phase: 13
         proposal: design/app/config-spec.md#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
@@ -262,18 +262,18 @@ categories:
       H1:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
-        phase: 10
+        phase: 13
         proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
       H2:
         title: 実装
-        phase: 10
+        phase: 13
         proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
       H3:
         title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
         note: |
           詳細は design/normalizer/normalizer.md「散文サブシステムの一般化 (H3)」。
           前提 H1, H2。
-        phase: 10
+        phase: 13
         proposal: design/normalizer/normalizer.md#散文サブシステムの一般化-h3
 
   J:
@@ -284,11 +284,27 @@ categories:
       J1:
         title: 計算機能プラグインの I/F 仕様検討
         note: 入出力 / 登録方法 / Composer か Generator のどこに挿すか
-        phase: 10
+        phase: 13
       J2:
         title: サンプル実装で I/F 検証
         note: 例 — ファンクションポイント算出
-        phase: 10
+        phase: 13
+
+  L:
+    title: dog-fooding リファクタ
+    impl_paths:
+      - dev-docs/contents/
+      - dev-docs/definition/
+    tasks:
+      L1:
+        title: 構造化データに振り替えられる箇所の棚卸し
+        phase: 13
+      L2:
+        title: スキーマ + クエリ + テンプレート群の構築
+        phase: 13
+      L3:
+        title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
+        phase: 13
 
   M:
     title: JSON データモデル と データカタログ
@@ -301,12 +317,12 @@ categories:
       M1:
         title: _parent 参照の付与
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
-        phase: 10
+        phase: 11
         proposal: design/json-data-model.md#親参照-_parent-m1
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
-        phase: 10
+        phase: 13
         proposal: design/normalizer/schema-spec.md#title-キーワード-m4
 
   N:
@@ -317,26 +333,10 @@ categories:
     tasks:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
-        phase: 10
+        phase: 13
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 10
-
-  P:
-    title: テンプレートエンジン拡張
-    impl_paths:
-      - src/another_mood/components/generator/mood_view_processor.py
-      - src/another_mood/components/generator/template_engine.py
-    spec: design/generator/template-spec.md
-    tasks:
-      P1:
-        title: "{% mood_view %} タグの拡張文法"
-        note: |
-          現状は {% mood_view EXPR with EXPR %} 形式のみ対応。
-          template-spec.md の例示で使われている以下 2 形式を追加する。
-            - for 形式:    {% mood_view "NAME" for SEQ %}
-            - filter 形式: {% mood_view NAME[id="..."] %}
-        phase: 10
+        phase: 13
 
   O:
     title: バグ修正
@@ -362,21 +362,31 @@ categories:
           クォートが含まれるとフェンスが内側で早期終了してセルが崩れる。
           詳細仕様は design/generator/generator.md「インラインコードの
           フェンス長 (O4)」。
-        phase: 10
+        phase: 13
         proposal: design/generator/generator.md#インラインコードのフェンス長-o4
 
-  L:
-    title: dog-fooding リファクタ
+  P:
+    title: テンプレートエンジン拡張
     impl_paths:
-      - dev-docs/contents/
-      - dev-docs/definition/
+      - src/another_mood/components/generator/mood_view_processor.py
+      - src/another_mood/components/generator/template_engine.py
+    spec: design/generator/template-spec.md
     tasks:
-      L1:
-        title: 構造化データに振り替えられる箇所の棚卸し
-        phase: 10
-      L2:
-        title: スキーマ + クエリ + テンプレート群の構築
-        phase: 10
-      L3:
-        title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
-        phase: 10
+      P1:
+        title: "{% mood_view %} タグの拡張文法"
+        note: |
+          現状は {% mood_view EXPR with EXPR %} 形式のみ対応。
+          template-spec.md の例示で使われている以下 2 形式を追加する。
+            - for 形式:    {% mood_view "NAME" for SEQ %}
+            - filter 形式: {% mood_view NAME[id="..."] %}
+        phase: 13
+
+  Q:
+    title: 公開
+    impl_paths:
+      - pyproject.toml
+    tasks:
+      Q1:
+        title: PyPI 公開
+        note: 詳細タスクは別途切り出す（ライセンス / README / メタデータ整備など）
+        phase: 12
