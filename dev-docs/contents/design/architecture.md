@@ -11,7 +11,7 @@ OUT: `inspect_schemas_dir`
 
 **Content Normalizer**
 contents 入力を検証し、辞書形式を配列形式に正規化する。
-Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](../design/normalizer/markdown-parser-spec.md) 参照）。
+Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](normalizer/markdown-parser-spec.md) 参照）。
 `--strict` モードで参照整合性もチェックする。
 IN: `contents_dir`、`inspect_schemas_dir`
 OUT: `normalize_contents_dir`
@@ -33,7 +33,7 @@ IN: `compose_dir`、`templates_dir`、`profilesFile`
 OUT: `generate_dir`
 
 **Reconcile**
-Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_failure` ページに差し替える。詳細は [components/generator.md](components/generator.md) 参照。
+Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_failure` ページに差し替える。詳細は [generator.md](generator/generator.md) 参照。
 IN: `generate_dir`
 OUT: `reconcile_dir`
 
@@ -45,18 +45,18 @@ OUT: `render_dir`
 各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。入力データを変更すると normalized → views → documents とカスケードで更新される。
 
 パイプライン構成:
-- [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成
+- [pipeline.md](pipeline.md) — パイプライン構成
 
 コンポーネント間通信:
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
 
 各コンポーネントの処理フローと技術選定:
-- [components/normalizer.md](components/normalizer.md)
-- [components/generator.md](components/generator.md)
+- [normalizer.md](normalizer/normalizer.md)
+- [generator.md](generator/generator.md)
 
 ## ユーザプロジェクト構成
 
-[project-structure.md](../design/app/project-structure.md) を参照。
+[project-structure.md](app/project-structure.md) を参照。
 
 ## 設計判断
 
