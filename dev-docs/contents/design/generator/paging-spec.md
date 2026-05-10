@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 8 タスク [C1〜C6](../../../tasks.md)。現在の `{% mood_view %}` は常に分割で、`paginate` 設定は読まれない。
+> **未実装** — Phase 10 タスク [C1〜C6](../../../tasks.md)。現在の `{% mood_view %}` は常に分割で、`paginate` 設定は読まれない。
 
 ### プロファイル設定
 

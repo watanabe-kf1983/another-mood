@@ -10,26 +10,32 @@ categories:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
         note: contents_dir 基点パス解決が必要 (B2 と連携)
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
         title: shiftHeadings(n) Jinja2 フィルタ
         note: テンプレート側で使用
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
 
   B:
     title: アンカー / リンク解決
@@ -41,24 +47,30 @@ categories:
         title: views データのラッパーツリー構築
         note: data / parent / class_name フィールド
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B2:
         title: アンカー ID 生成規則
         note: リスト型 {class}.item.{id} / シングルトン {class}
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B3:
         title: アンカー → ラッパーのオンデマンド走査 + キャッシュ
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B4:
         title: link_md Jinja2 フィルタ
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B5:
         title: レンダリング後の toc:id 文字列のリンク URL 置換
         note: prose body 内も含む
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B6:
         title: ラッパーの get_page_url() 実装
         note: C3 と連携
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
 
   C:
     title: ページ分割 (paging)
@@ -70,25 +82,31 @@ categories:
       C1:
         title: profilesFile の読み込み・パース
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C2:
         title: paginate 設定の評価
         note: クラスが分割対象か判定
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C3:
         title: パス自動導出
         note: リスト型 {class}/{id}.md / シングルトン {class}.md
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C4:
         title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
         note: 現在は常に分割。インライン展開モードの新設になる
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C6:
         title: 複数プロファイルの並列ビルド
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
 
   D:
     title: ユーザコンテンツバリデーション
@@ -105,44 +123,46 @@ categories:
         title: --strict CLI フラグの配線
         note: pipeline 全体に伝播
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D2:
         title: "FK チェック: to: schema_name"
         note: additionalProperties パターンの .id 省略形
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D3:
         title: "FK チェック: to: schema_name.property_name"
         note: 明示プロパティ
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D4:
         title: "FK チェック: from がプロパティ名なし"
         note: 辞書キー自体が FK
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D5:
         title: "type: array スキーマ参照時のプロパティ名必須チェック"
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D6:
         title: 参照先がトップレベルスキーマのみであることの検証
         note: ネストパス禁止
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D7:
         title: 警告レポートを BuildReport に乗せる
         note: エラーではなく warning レベル
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D8:
         title: Unique 制約の仕様確定
-        note: 宣言場所 / 複合キー対応の有無（旧 I1）
+        note: 宣言場所 / 複合キー対応の有無
         phase: 10
+        proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
-        note: --strict 連動（旧 I2）
+        note: --strict 連動
         phase: 10
-      D10:
-        title: schema.yaml への一本化 (`schemas:` ラッパー除去)
-        note: |
-          definition/schema.yaml 1 ファイル (素の JSON Schema) に切り替える。
-          詳細は schema-spec.md。references の実装は同時に削除 (仕様書には将来仕様として残す)。
-        phase: 8
-        done: true
+        proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
 
   E:
     title: YAML DSL クエリ評価拡充
@@ -155,21 +175,20 @@ categories:
         title: where 句の仕様詰め + 実装
         note: 式言語にするか、単純な eq のみか
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E2:
         title: sort 句の仕様詰め + 実装
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E3:
         title: join 句の仕様詰め + 実装
         note: 参照整合性 (D) との関係整理
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E4:
         title: QuerySchema を E1〜E3 に合わせて拡張
         phase: 10
-      E5:
-        title: from 句の子エンティティ対応
-        note: "from: parent.child ドット記法で任意の深さまでフラット化"
-        phase: 8
-        done: true
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E6:
         title: クエリ名と正規化済みデータ名の同名禁止チェック
         note: |
@@ -177,13 +196,7 @@ categories:
           silent に上書きするため、著者が気付かずにパススルーデータを
           上書きする事故が起きる。重複を検知してエラーにする。
         phase: 10
-      E7:
-        title: "Query Object の apply_to_catalog 実装"
-        note: |
-          クエリ定義から静的に出力スキーマを推論 + 合成 child entity を
-          __definition.entities に emit。F3 の前提。
-        phase: 8
-        done: true
+        proposal: design/composer/queries-spec.md#同名禁止-e6
 
   F:
     title: メタドキュメンテーション拡張
@@ -192,31 +205,11 @@ categories:
       - src/another_mood/components/generator/
     spec: design/app/meta-documentation.md
     tasks:
-      F1:
-        title: Generator の動的名前引き拡張
-        note: 変数で view 名を参照できるようにする (F2/F3 の前提)
-        phase: 8
-        done: true
-      F2:
-        title: Table View (実データのテーブル表示)
-        note: |
-          前提 F1。L5d (Guides 執筆) の検討過程で、テンプレートを書く前に
-          スキーマ / コンテンツを育てるフィードバックチャネルとして不可欠と判明し、
-          phase 10 から phase 8 に昇格。F3 と実装の大半が共通化できる見込み。
-        phase: 8
-        done: true
-      F3:
-        title: Query View (クエリ結果の表示)
-        note: |
-          前提 F1, E7。
-          設計: design/app/meta-documentation.md「Entity と Query のページ構成」節。
-          __meta_query.md に Definition / Shape / Results の 3 セクションを追加。
-        phase: 8
-        done: true
       F4:
         title: ER 図テンプレート
         note: 前提 D, E3, Mermaid エスケープ
         phase: 10
+        proposal: design/app/meta-documentation.md#er-図-f4
       F5:
         title: DFD テンプレート
         note: 仕様未着手
@@ -228,16 +221,10 @@ categories:
       F7:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
-          前提 E1〜E4 (where / sort / join など) の DSL 拡張。F1〜F3 で
-          組み上げた __meta_entity / __table_view / __meta_query は
-          Jinja2 内に rejectattr('view'), startswith による子孫マッチ,
-          type == 'object' 除外といった集計ロジックを抱え複雑化している。
-          これらを Query DSL 側に移し (__definition.entities 自体を from
-          に取れるようにするのも含む)、テンプレートは Query 結果を
-          テーブルに流すだけの薄いラッパに退化させたい。同時に本ツール
-          自身のメタドキュメンテーションを自前の DSL で構築できるように
-          なり、dog-fooding の度合いが上がる。
+          詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
+          前提 E1〜E4 (where / sort / join) の DSL 拡張。
         phase: 10
+        proposal: design/app/meta-documentation.md#query-化リファクタ-f7
 
   G:
     title: CLI / 設定システム
@@ -246,85 +233,23 @@ categories:
       - src/another_mood/config.py
     spec: design/app/cli-spec.md
     tasks:
-      G1:
-        title: mood init コマンド (プロジェクト初期化)
-        note: cli-spec.md。MCP ツールとしても提供する
-        phase: 8
-        done: true
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
         phase: 10
+        proposal: design/app/config-spec.md#設定ファイル-g2
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
         phase: 10
-      G4:
-        title: schema_dir の単複統一 (schema/ → schemas/)
-        note: |
-          ディレクトリ名が schema/ のみ単数で queries/ / templates/ と
-          揃わない問題を解消。2 層概念（ユーザが書く「schema」=
-          JSON Schema 由来 vs 内部で抽出される「entity」=
-          browsable ノード）は正当な区別として維持する方針のため、
-          以下は据え置き:
-            - YAML キー `schemas:` (OpenAPI の components.schemas 流)
-            - UI 見出し `Entities` (ネスト展開済みノード群を指す)
-            - 内部コード変数 `entity` (schema_tree / data_catalog 他)
-
-          リネーム対象 (破壊的):
-            - <project>/definition/schema/ → definition/schemas/
-            - ProjectConfig.schema_dir → schemas_dir (src/another_mood/config.py)
-            - 環境変数 RB_SCHEMA_DIR → RB_SCHEMAS_DIR
-            - src/another_mood/resources/schemas/schema/ →
-              src/another_mood/resources/schemas/schemas/
-            - showcase/examples/*/definition/schema/ 配下の移動
-            - dev-docs/definition/schema/ 配下の移動
-            - docs/ 内の schema/ 言及箇所の更新
-
-          CHANGELOG / 移行メモが必要。F1-F3 (Table / Query View) による
-          データシート UI 追加と認知負荷を集約できるので、同時期の実施が望ましい。
-        phase: 8
-        done: true
+        proposal: design/app/config-spec.md#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         note: |
-          現状 `mood watch` は 127.0.0.1 のみで listen するため、LAN 上の
-          他端末から開発プレビューを参照できない。要件定義 / 設計会議で
-          1 人がソースを更新・出席者全員が即座にブラウザで参照する
-          collaborative authoring を支える機能として `--host` を追加する。
-          仕様: cli-spec.md (mood watch 節) / config-spec.md (host キー)。
-
-          UX オプション: `--host 0.0.0.0` 起動時、コンソールに表示する URL を
-          localhost ではなく自機 LAN IP にすると親切（出席者にコピペで配れる）。
+          詳細は design/app/cli-spec.md「mood watch --host (G5)」、
+          config キーは design/app/config-spec.md。
         phase: 10
-      G6:
-        title: "mood watch --detach + PID file 対応"
-        note: |
-          設計議論の結果 punt（K7 と運命を共に）。判断根拠と将来再検討の入口は
-          design/app/mcp-design.md「## 背景: watch をバックグラウンド化しない
-          理由」を参照。
-        phase: 999  # punt: not scheduled
-      G7:
-        title: "mood init --template: テンプレート選択対応"
-        note: |
-          現状 init は showcase/starter を一択でハードコード
-          (src/another_mood/components/scaffold/init.py)。MCP の K2 で
-          showcase/ を Resources として同梱せず「`mood init --template xxx`
-          でエージェントが体験する」方針に揃えるため、テンプレート選択を
-          可能にする。
-
-          範囲:
-            - `--template <name>` オプション追加 (省略時 starter)
-            - showcase/{starter, examples/*} の走査・列挙
-            - 不正なテンプレート名のエラー表示
-            - K5 (MCP init ツール) で同じテンプレート群を扱える形に
-              init_project シグネチャを整える
-            - cli-spec.md / docs/reference/cli.md の更新
-
-          K2 (Resources 公開) の設計根拠として、`mood init --template`
-          が複数テンプレートを扱える状態を前提にしているため、K2 の前に着手する。
-        phase: 9
-        done: true
+        proposal: design/app/cli-spec.md#mood-watch-host-g5
 
   H:
     title: バイナリファイルの取り扱い
@@ -338,19 +263,18 @@ categories:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 10
+        proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
       H2:
         title: 実装
         phase: 10
+        proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
       H3:
         title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
         note: |
-          内蔵スキーマ {id, title, body} は body が Typed Value のため設計上は
-          既に媒体非依存。バイナリファイル取り扱い (H1/H2) を機に、
-          エンティティ名 `prose` を媒体非依存な名前に改名する。
-          下位互換のため、旧名 `prose` は内蔵クエリとして残し、
-          mime_type が text/markdown のレコードのみを供給する案がある。
-          詳細仕様は H1/H2 の進捗に合わせて確定。
+          詳細は design/normalizer/normalizer.md「散文サブシステムの一般化 (H3)」。
+          前提 H1, H2。
         phase: 10
+        proposal: design/normalizer/normalizer.md#散文サブシステムの一般化-h3
 
   J:
     title: プラグインシステム
@@ -366,95 +290,6 @@ categories:
         note: 例 — ファンクションポイント算出
         phase: 10
 
-  K:
-    title: MCP サーバ
-    impl_paths:
-      - src/another_mood/mcp/
-    spec: design/app/mcp-design.md
-    tasks:
-      K1:
-        title: FastMCP 骨格
-        note: |
-          MCP サーバの infra のみ。FastMCP server boilerplate, entry point
-          (mood mcp サブコマンド形式の決定もここ), モジュール構成, 統合テスト足場
-          (FastMCP test client での疎通確認 fixture)。ツール / Resources / Instructions
-          は含まない。
-          出口: サーバが起動して MCP protocol handshake が通る。
-          K2 と同セッション / 同 PR で実施することも検討可 (K1 単独だと PR が thin)。
-        phase: 9
-        done: true
-      K2:
-        title: Resources 公開 + Tools 並行公開
-        note: |
-          設計書のコア機能の片方。MCP Resources の公開と、それを
-          Tool としても並行公開する仕組み。
-          URI スキーム設計 / 走査 / resources/list + resources/read 実装 /
-          ファイル → Resource (mimeType, name, description) の mapping。
-          並行して list_docs / read_doc Tool を露出 (クライアント差吸収)。
-          出口: 全主要クライアントで agent が docs を自律的に引ける
-          (Claude Code: Resources 経路、Copilot Chat: Tools 経路)。
-          K1 と同 PR にまとめる選択肢あり (合わせて「ナビゲーター MVP」)。
-        phase: 9
-        done: true
-      K3:
-        title: Server Instructions
-        note: |
-          設計書のコア機能のもう片方。200 語以内の誘導文 + FastMCP の initialize
-          レスポンスに乗せる注入機構。K2 の URI スキームと K4 / K5 のツール群を
-          参照するため、当該タスクがすべて揃ってから一括起草する (各タスクで
-          iterative に追記する運用は採らない: 200 語制限下で首尾一貫した文面を
-          得るため、また各ツールでの agent 失敗モードを実観察してから書く方が
-          指針として効くため)。注入機構自体は FastMCP("name", instructions=text)
-          の 1 行追加で済むので分割しない。
-
-          watch を MCP 制御しない方針 (design/app/mcp-design.md 参照) に伴い、
-          「user に `mood watch <dir>` の foreground 起動を案内する」guidance
-          を Instructions に含める検討事項として残す。
-
-          出口: agent が接続時に Instructions を受け取り、Resources / Tools へ
-          誘導される。
-        phase: 9
-        done: true
-      K4:
-        title: build ツール
-        note: |
-          CLI の mood build と同一パイプラインをワンショット同期実行し結果を返す。
-          docstring は FastMCP が Tool description として自動利用する。
-          K3 (Instructions) が後続するまで agent はこれだけが頼りなので丁寧に書く。
-        phase: 9
-        done: true
-      K5:
-        title: init ツール
-        note: |
-          G1 (mood init) の MCP 露出。CLI の mood init と同一の動作。
-          docstring を丁寧に書く (K3 が後続するまで agent はこれだけが頼り)。
-          K8 (出力境界整理) を前提とする: scaffold が ScaffoldResult を返す前提で
-          実装する。
-        phase: 9
-        done: true
-      K6:
-        title: メタスキーマへの説明メタデータ埋め込み
-        note: query-schema.yaml / schema-schema.yaml に title / description を追加。MCP 前提ではないが K2 の効果を高める
-        phase: 8
-        done: true
-      K7:
-        title: MCP start / stop ツール
-        note: |
-          設計議論の結果 punt。判断根拠と将来再検討の入口は
-          design/app/mcp-design.md「## 背景: watch をバックグラウンド化しない
-          理由」を参照。
-        phase: 999  # punt: not scheduled
-      K8:
-        title: ユーザ向け出力の境界整理 (値 + logging への集約)
-        note: |
-          K4 / K5 / K7 の前提。components / pipeline からの直接印字を排し、
-          user-visible な結果は値 (BuildReport / ScaffoldResult) と
-          on_report callback、live フィードバックは logging に統一。
-          CLI / MCP の双方が呼ぶ command.py を新設し、print は cli.py のみ
-          (ruff T201 で機械的強制)。
-        phase: 9
-        done: true
-
   M:
     title: JSON データモデル と データカタログ
     impl_paths:
@@ -467,20 +302,12 @@ categories:
         title: _parent 参照の付与
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
         phase: 10
-      M2:
-        title: Entity と ObjectType の分離
-        note: CatalogEntity を access_path ベースの Entity と path+`.item` ベースの ObjectType に分割。Catalog プレフィックスも除去。
-        phase: 8
-        done: true
-      M3:
-        title: CatalogField を CatalogAttribute にリネーム
-        note: Entity-Attribute の container-member pair に揃える (データカタログは ER 文脈)。
-        phase: 8
-        done: true
+        proposal: design/json-data-model.md#親参照-_parent-m1
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
         phase: 10
+        proposal: design/normalizer/schema-spec.md#title-キーワード-m4
 
   N:
     title: レンダリング / 出力形式
@@ -510,39 +337,15 @@ categories:
             - for 形式:    {% mood_view "NAME" for SEQ %}
             - filter 形式: {% mood_view NAME[id="..."] %}
         phase: 10
-      P2:
-        title: "{% mood_view %} に inline オプション"
-        note: |
-          設計: design/generator/template-spec.md「inline オプション」節。
-          強制インライン展開。F3 の Query View ページ内埋め込みで使う。
-          C4 (paginate 自動判定) の先行版。
-        phase: 8
-        done: true
-      P3:
-        title: "{% section %} → {% mood_view %} タグリネーム"
-        note: |
-          標準 Jinja2 タグと紛らわしい名前を独自タグ命名に寄せる。L6
-          (英訳 + MCP 準備) 前に実施するのが望ましいが必須ではない。
-          既存の組み込み / ユーザ / docs / reference の一括置換が必要。
-        phase: 8
-        done: true
 
   O:
     title: バグ修正
     impl_paths:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/shared/
+      - src/another_mood/components/generator/
       - src/another_mood/pipeline/
     tasks:
-      O1:
-        title: スキーマチェックエラーの行番号ズレ修正
-        phase: 8
-        done: true
-      O2:
-        title: カスケード handler の upstream 読み取りと上流書き込みの race 抑止
-        note: "現状は error_propagation + watch 再 fire で最終状態に収束するが、transient な traceback と ng 状態が dev 体験を汚す。読み取り側で upstream の exclusive_write FileLock を共有・取得するなどで race 発生自体を防ぎたい"
-        phase: 8
-        done: true
       O3:
         title: Windows での動作確認
         note: |
@@ -550,6 +353,17 @@ categories:
           `_NORMAL_EXIT_CODES` (src/another_mood/pipeline/render.py) の件のみ。
           詳細は design/architecture.md「動作環境」節を参照。
         phase: 10
+        proposal: design/architecture.md#windows-posix-依存の修正-o3
+      O4:
+        title: インラインコードのフェンス長を動的に決める code_fence フィルタ
+        note: |
+          内蔵テンプレート (__meta_entity の attributes 表など) が任意
+          Mapping を Markdown テーブルセルにダンプしているが、値にバック
+          クォートが含まれるとフェンスが内側で早期終了してセルが崩れる。
+          詳細仕様は design/generator/generator.md「インラインコードの
+          フェンス長 (O4)」。
+        phase: 10
+        proposal: design/generator/generator.md#インラインコードのフェンス長-o4
 
   L:
     title: dog-fooding リファクタ
@@ -564,113 +378,5 @@ categories:
         title: スキーマ + クエリ + テンプレート群の構築
         phase: 10
       L3:
-        title: 実施過程で見つかったツールの不足を A〜K にフィードバック
+        title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
         phase: 10
-      L4:
-        title: tasks のフェーズ別ビュー作成
-        note: "E5 で from: parent.child は完了。クエリ + テンプレートで実現"
-        phase: 8
-        done: true
-
-  LII:
-    title: 利用者ドキュメント
-    impl_paths:
-      - docs/
-      - README.md
-    tasks:
-      L5a:
-        title: "Reference: Schema + Content Formats 執筆"
-        note: |
-          docs/reference/schema.md と docs/reference/content-formats.md の本文を埋める。
-          dev-docs/design/normalizer/ を参照元とし、Implemented 機能のみ記載。
-        phase: 8
-        done: true
-      L5b:
-        title: "Reference: Query DSL + Template 執筆"
-        note: |
-          docs/reference/query-dsl.md と docs/reference/template.md の本文を埋める。
-          dev-docs/design/composer/ と design/generator/ を参照元とし、
-          Implemented 機能のみ。
-          実装ベースで全量書き、ユーザレビューは TOC のみ。
-          文体・用語の最終磨きは L5e（Reference polish）に委ねる。
-        phase: 8
-        done: true
-      L5c:
-        title: "Reference: CLI 執筆"
-        note: |
-          docs/reference/cli.md の本文を埋める。
-          dev-docs/design/app/cli-spec.md を参照元とし、init / build / watch の Implemented
-          サブコマンドのみ記載。
-          実装ベースで全量書き、ユーザレビューは TOC のみ（L5b と同じ運用）。
-          最終磨きは L5e。
-        phase: 8
-        done: true
-      L5d:
-        title: Guides 執筆
-        note: |
-          docs/guides.md の本文を埋める。Intro / Quick Start / 執筆フロー /
-          コンテンツとスキーマ / クエリ / テンプレート を 1 ファイルに集約する。
-          見出し骨格は既に配置済み。
-
-          章構成は「Another Mood とは → Quick Start → 執筆フロー →
-          コンテンツとスキーマ → クエリ → テンプレート」。出力側から
-          内側へ peel back する流れ。独立 how-to + 「なぜこう書くか」で構成し、
-          メンタルモデル節は置かない（利用者がワークフローを追ううちに
-          自然に獲得する構成）。用語はインライン定義で済ませる。
-
-          前提: F1〜F3 実装後に着手する。テンプレート章を最後に回す構成は、
-          F2/F3 のメタビューでスキーマ/コンテンツ/クエリを育てられることに依存する。
-        phase: 8
-        done: true
-      L5e:
-        title: Reference polish
-        note: |
-          L5a〜L5c で TOC 優先に書いた Reference を、L5d (Guides) で確定した
-          語彙・例・書き味に揃える最終調整。
-          用語定義の重複整理、cross-reference の見直し、文体の統一が主。
-        phase: 8
-        done: true
-      L6:
-        title: README + docs/ の英訳 + 執筆言語の英語切替
-        note: |
-          phase 8 の最終タスク。phase 9 の MCP 実装が開始する前に英語化を完了し、
-          MCP 経由で読まれる際のトークン効率を確保する。
-          このタスクは単発の翻訳作業であると同時に「執筆言語の切替点」でもあり、
-          以降の docs/ 追記は英語直接で書く運用に移行する（bilingual 維持はしない）。
-          dev-docs/ は内部資料のため日本語のまま維持する。
-          翻訳対象: README.md, docs/ 配下全て。
-        phase: 8
-        done: true
-      L7:
-        title: docs/ への MCP セクション追加 + 配布手順
-        note: |
-          利用者向け MCP ドキュメント。インストール手順 (uvx 等)、
-          claude_desktop_config.json への登録例、提供ツール一覧。
-          K1〜K5 完了後に着手。
-        phase: 9
-        done: true
-      L8:
-        title: schemas を docs/reference/ にミラー
-        note: |
-          現状 docs/reference/{schema,query}.md は「## Full xxx-schema」appendix
-          で src/another_mood/resources/schemas/*.yaml を逐語コピーしており、
-          tests/test_docs_sync.py で drift を検出している。K2 (Resources 公開)
-          で docs/ ツリーを MCP に出すと、同じスキーマ全文が二箇所
-          (md inline + yaml 本体) で配信される。
-
-          方針:
-            - canonical は src/another_mood/resources/schemas/ のまま据え置き
-              (behavioral artifact なのでコード側に留める)
-            - docs/reference/schemas/*.yaml を mirror として git にコミット
-              (sync 方向は src/ → docs/、一方向の build artifact 扱い)
-
-          範囲:
-            - sync 機構: make target もしくは pre-commit / hatch hook
-            - docs/reference/{schema,query}.md の appendix を削除し、
-              ./schemas/xxx-schema.yaml への相対リンクに置き換え
-            - tests/test_docs_sync.py を「ファイル vs ファイル」に簡素化
-
-          K2 の前提 (resources 公開対象を docs/ ツリーのみに収斂させるため)
-          として K2 の前に着手する。
-        phase: 9
-        done: true

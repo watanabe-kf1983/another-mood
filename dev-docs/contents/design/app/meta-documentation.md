@@ -27,7 +27,7 @@ Entity と Query でページ分け方が異なる:
 **Query** は Definition / Shape / Results が 1 つの recipe 由来の束:
 
 - Definition: user が書いた DSL
-- Shape: Definition から deterministic に推論 (E7 の `apply_to_catalog`)
+- Shape: Definition から deterministic に推論 (`apply_to_catalog`)
 - Results: Definition + 上流データから生成
 - どれも単独では不完全: Definition は抽象 recipe、Shape は「結果の形」単独で
   意味が薄く、Results は Definition 無しに「何のクエリか」分からない
@@ -57,7 +57,7 @@ Shape セクションで各出力フィールドの型 + entity ref を明示す
 programmatic に伝わる。SQL クライアントが (全カラムスカラ前提で) 型表示を
 省略できるのと対照的。
 
-Shape は E7 の `apply_to_catalog` が生成する。
+Shape は Query Object の `apply_to_catalog` が生成する。
 
 ## Internal Design
 
@@ -76,4 +76,12 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### ER 図 (F4)
 
-Phase 8 タスク [F4](../../../tasks.md)。
+Phase 10 タスク [F4](../../../tasks.md)。前提 D, E3, Mermaid エスケープ。
+
+### Query 化リファクタ (F7)
+
+> **未実装** — Phase 10 タスク [F7](../../../tasks.md)。前提 E1〜E4 (where / sort / join) の DSL 拡張。
+
+現在の `__meta_entity` / `__table_view` / `__meta_query` テンプレートは Jinja2 内に `rejectattr('view')`, `startswith` による子孫マッチ, `type == 'object'` 除外といった集計ロジックを抱え複雑化している。
+
+これらを Query DSL 側に移し (`__definition.entities` 自体を `from` に取れるようにするのも含む)、テンプレートは Query 結果をテーブルに流すだけの薄いラッパに退化させたい。同時に本ツール自身のメタドキュメンテーションを自前の DSL で構築できるようになり、dog-fooding の度合いが上がる。
