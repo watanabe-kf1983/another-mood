@@ -53,7 +53,6 @@ OUT: `render_dir`
 各コンポーネントの処理フローと技術選定:
 - [components/schema-inspector.md](components/schema-inspector.md)
 - [components/normalizer.md](components/normalizer.md)
-- [components/composer.md](components/composer.md)
 - [components/generator.md](components/generator.md)
 - [components/renderer.md](components/renderer.md)
 

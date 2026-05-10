@@ -9,7 +9,7 @@
 
 ## composer
 
-- [queries-spec.md](composer/queries-spec.md) — クエリ定義（YAML DSL）
+- [queries-spec.md](composer/queries-spec.md) — クエリ DSL の設計判断と未実装機能（E1〜E6, M1）
 
 ## generator
 

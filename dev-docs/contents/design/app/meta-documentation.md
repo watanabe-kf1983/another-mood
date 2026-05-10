@@ -81,9 +81,7 @@ Shape セクションで各出力フィールドの型 + entity ref を明示す
 programmatic に伝わる。SQL クライアントが (全カラムスカラ前提で) 型表示を
 省略できるのと対照的。
 
-Shape は E7 の `apply_to_catalog` が生成する (詳細は
-[composer.md](../../internal/components/composer.md) の「Query Object の双対性」
-節を参照)。
+Shape は E7 の `apply_to_catalog` が生成する。
 
 ## Results の drill-in は B1-B6 + C3 完成まで暫定
 

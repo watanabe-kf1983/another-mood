@@ -180,7 +180,6 @@ categories:
       E7:
         title: "Query Object の apply_to_catalog 実装"
         note: |
-          設計: internal/components/composer.md「Query Object の双対性」節。
           クエリ定義から静的に出力スキーマを推論 + 合成 child entity を
           __definition.entities に emit。F3 の前提。
         phase: 8
