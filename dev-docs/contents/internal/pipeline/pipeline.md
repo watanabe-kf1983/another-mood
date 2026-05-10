@@ -5,20 +5,14 @@
 | ステージ | User Input | Upstream | Output |
 |---|---|---|---|
 | inspect_schema | schema_file | — | inspect_schemas_dir |
-| normalize_contents | contents_dir, schema_file ※1 | inspect_schemas_dir | normalize_contents_dir |
+| normalize_contents | contents_dir | inspect_schemas_dir | normalize_contents_dir |
 | derive_queries | queries_dir | inspect_schemas_dir | derive_queries_dir |
-| compose | — | inspect_schemas_dir ※2, normalize_contents_dir, derive_queries_dir | compose_dir |
+| compose | — | normalize_contents_dir, derive_queries_dir | compose_dir |
 | generate | templates_dir | compose_dir | generate_dir |
 | reconcile | — | generate_dir | reconcile_dir |
-| render | — | reconcile_dir ※3 | render_dir |
+| render | — | reconcile_dir | render_dir |
 
-dev モードでは User Input / Upstream ディレクトリの変更を Watch してステージを自動再実行する（`pipeline/base.py` 参照）。build モードでは依存順に直列実行する。※印は Watch 対象外の Input:
-
-Upstream は前段ステージの Output であり、`BuildReport`（エラー伝播）の収集対象。User Input はユーザが直接編集するディレクトリで、`BuildReport` の収集対象外。
-
-- ※1 schema_file: バリデーションルールの読み込みに使うが、変更は SchemaInspector → inspect_schemas_dir の経路で伝播するため Watch 不要
-- ※2 inspect_schemas_dir: 変更は SchemaInspector → inspect_schemas_dir → Normalizer(contents) → normalize_contents_dir とカスケードし、normalize_contents_dir の変更で Composer が Kick されるため Watch 不要
-- ※3 render は内部で Hugo 向け preparation Component を呼び出し、`reconcile_dir` → `prepare_dir` → Hugo に content を流す。preparation は Hugo 固有の adapter のため `pipeline/adapters/preparation.py` に置き、独立ステージとして expose しない
+dev モードでは User Input / Upstream の変更を Watch してステージを自動再実行する（`pipeline/base.py` 参照）。build モードでは依存順に直列実行する。Upstream は前段ステージの Output であり、`BuildReport`（エラー伝播）の収集対象。
 
 ## 背景: Watch ライブラリは watchdog を採用
 

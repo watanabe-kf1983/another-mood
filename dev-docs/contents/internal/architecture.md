@@ -2,7 +2,7 @@
 
 ## アーキテクチャ概要
 
-5コンポーネント + レンダラー構成:
+以下のコンポーネント構成:
 
 **SchemaInspector**
 スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
@@ -51,7 +51,6 @@ OUT: `render_dir`
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
 
 各コンポーネントの処理フローと技術選定:
-- [components/schema-inspector.md](components/schema-inspector.md)
 - [components/normalizer.md](components/normalizer.md)
 - [components/generator.md](components/generator.md)
 
@@ -72,5 +71,9 @@ OUT: `render_dir`
 
 Linux / macOS / Windows のいずれでも動作する cross-platform を維持する。Windows 利用者も主要ターゲットに含む。
 
-判明している runtime の POSIX 依存（要修正）: `src/another_mood/pipeline/render.py` の `_NORMAL_EXIT_CODES` で signal 値の負値（`-SIGTERM` / `-SIGINT`）をマッチしている箇所。Windows の `TerminateProcess` は負の signal 値で exit しないため、Windows 環境では「正常終了」が「異常終了」とログされる。タスク O3 (Phase 10) で対処予定。
+## proposal
+
+### Windows POSIX 依存の修正 (O3)
+
+判明している runtime の POSIX 依存: `src/another_mood/pipeline/render.py` の `_NORMAL_EXIT_CODES` で signal 値の負値（`-SIGTERM` / `-SIGINT`）をマッチしている箇所。Windows の `TerminateProcess` は負の signal 値で exit しないため、Windows 環境では「正常終了」が「異常終了」とログされる。Phase 10 タスク [O3](../../tasks.md)。
 
