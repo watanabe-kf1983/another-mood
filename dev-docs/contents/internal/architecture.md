@@ -47,9 +47,6 @@ OUT: `render_dir`
 パイプライン構成:
 - [pipeline/pipeline.md](pipeline/pipeline.md) — パイプライン構成
 
-エントリポイント間の境界:
-- [io-boundaries.md](io-boundaries.md) — CLI / MCP / 共通コマンド層 (`command.py`) の責務分担と、stderr / logging / 戻り値の扱い
-
 コンポーネント間通信:
 - [json-data-model.md](json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
 

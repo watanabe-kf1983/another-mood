@@ -90,6 +90,20 @@ Resources を残す理由:
 
 将来クライアント差が解消したら Tools 経路を撤去する判断は容易（`list_docs` / `read_doc` の利用者はエージェントのみのため）。
 
+## 背景: `docs://` URI スキーム
+
+MCP Resources の URI スキームに `docs://` カスタムスキーム + `docs/` 直下からの相対パスを採用する。例:
+
+- `docs://guides.md`
+- `docs://reference/cli.md`
+- `docs://reference/schemas/content-schema.yaml`
+
+選定理由:
+
+- **Markdown 内の相対リンクが RFC 3986 の URI 解決規則で正しく結合される**。`docs://reference/cli.md` 上の `[query](query.md)` は `docs://reference/query.md` に解決される。docs/ の Markdown は GitHub 直閲覧用に書かれた相対リンクをそのまま AI 向けにも使える
+- MCP の resource URI は仕様上「サーバ内で識別子として機能すればよく、外部リゾルバブルである必要はない」。`<scheme>://<path>` パターンは公式サンプル（`file://` / `git://` / `screen://` 等）に倣う慣習的な書式
+- 別案 `file://` は不採用。実ファイルパスと誤解されうる（クライアントがホスト OS のファイルパスとしてリゾルブを試みる挙動を誘発しうる）
+
 ## 背景: build と watch の同時実行
 
 build（エージェントのワンショット実行）と watch（バックグラウンドのファイル監視）は同時に動作しうる。エージェントがファイルを編集すると watch が検知してパイプラインを起動し、その後エージェントが build を呼ぶケースがある。

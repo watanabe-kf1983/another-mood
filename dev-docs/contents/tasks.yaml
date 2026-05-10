@@ -452,7 +452,7 @@ categories:
           user-visible な結果は値 (BuildReport / ScaffoldResult) と
           on_report callback、live フィードバックは logging に統一。
           CLI / MCP の双方が呼ぶ command.py を新設し、print は cli.py のみ
-          (ruff T201 で機械的強制)。設計原則は internal/io-boundaries.md。
+          (ruff T201 で機械的強制)。
         phase: 9
         done: true
 
