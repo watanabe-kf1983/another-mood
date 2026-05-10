@@ -10,7 +10,7 @@
 
 ### 配列（リスト型）
 
-Normalizer の正規化により各要素に `id` フィールドが付与される（[schema-spec: 正規化ルール](../normalizer/schema-spec.md#正規化ルール) 参照）。
+Normalizer の正規化により各要素に `id` フィールドが付与される。
 
 - class = ラッパーキーのドット区切りパスに `.item` を付加
 - アンカー ID = `{class}.{id}`
