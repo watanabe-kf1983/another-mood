@@ -1,36 +1,5 @@
 # プロジェクト構成
 
-ユーザプロジェクトのディレクトリ構成。設定キーとデフォルトパスの詳細は [config-spec.md](config-spec.md) を参照。
-
-## ディレクトリ構成
-
-CLI の第一位置パラメータ `<projectDir>` で処理対象ディレクトリを指定する（[cli-spec.md](cli-spec.md) 参照）。典型的にはプロジェクトディレクトリで `mood build .` のように `.` を指定する。
-
-```
-my-project/                    # CWD = <projectDir>（mood build .）
-  index.md                     # ビルドコマンド + 生成物へのリンク
-  definition/                  # リーダが管理する定義類
-    schema.yaml                # schema_file: スキーマ定義（JSON Schema）
-    queries/                   # queries_dir: Query 定義（YAML DSL、Composer が評価）
-    templates/                 # templates_dir: ドキュメントテンプレート
-    profiles.yaml              # profilesFile: プロファイル設定（ページ分割戦略）
-  contents/                    # contents_dir: 実データ（YAML + Markdown。人間が書く、AI が直接編集）
-  .another-mood/               # gitignore（生成物・中間生成物）
-    tmp/                       # パイプライン中間出力（ステージ名ベース）
-      inspect_schema/          #   SchemaInspector 出力
-      normalize_contents/      #   Content Normalizer 出力
-      derive_queries/          #   Query Deriver 出力（クエリ + 派生エンティティ）
-      compose/                 #   Composer 出力
-      generate/                #   Generator 出力
-      reconcile/               #   Reconcile 出力
-      prepare_render/          #   Hugo 向け content 準備 (RenderStage 内部 Component)
-      hugo_build/              #   Hugo ビルド結果 (RenderStage 内部 Component)
-    output/                    # out_dir: Document Generator 出力（最終）
-    render/                    # render_dir: Document Renderer 出力（最終）
-```
-
-`<projectDir>` にサブディレクトリを指定した場合（例: `mood build docs/`）、出力は `.another-mood/docs/` 配下に配置される。
-
 ## 背景: MS-Access アナロジー
 
 contents / queries / templates の三層構造は MS-Access の Table / Query / Form・Report に対応する:

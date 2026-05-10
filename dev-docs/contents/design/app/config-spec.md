@@ -1,71 +1,26 @@
 # 設定システム仕様
 
-Another Mood の設定システムの振る舞いを定義する。
-
-## パス解決ルール
-
-CLI の第一位置パラメータ `<projectDir>` を基準にパスが解決される（[cli-spec.md](cli-spec.md) 参照）。
-
-- **入力パス**: `<projectDir>` を基準に解決される（例: `<projectDir>/contents`）
-- **出力パス**: CWD を基準に、`.another-mood/<projectDir>/` 配下に配置される（例: `.another-mood/<projectDir>/output`）
-
-環境変数や設定ファイルで明示指定した場合はそのパスがそのまま使われる。
-
-## 設定の読み込み
-
-### 優先順位
+## 設定の読み込み優先順位
 
 設定は以下の順序でマージされる（後のものが優先）:
 
 1. デフォルト値
-2. 設定ファイル
+2. 設定ファイル（未実装 — [G2](../../../tasks.md)）
 3. 環境変数
 4. CLI 引数
 
-### 設定ファイル（未実装）
+## proposal
 
-> **未実装** — Phase 8 タスク [G2](../../../tasks.md)
+### 設定ファイル (G2)
 
 - ファイル名: `another-mood.config.json`
 - 配置場所: プロジェクトルート
 - 対応フォーマット: JSON
 
-> **Note**: 現在はデフォルト値と環境変数のみ対応。設定ファイル読み込みは未実装。
+### 未実装の config キー
 
-### 環境変数
-
-各設定項目に対応する環境変数は、設定スキーマの「環境変数」列を参照。
-
-## 設定スキーマ
-
-以下のデフォルト値における `<projectDir>` は CLI の第一位置パラメータを表す。
-
-### 入力（ユーザ編集）
-
-| キー | 型 | デフォルト | 環境変数 | 説明 |
-|------|-----|---------|----------|------|
-| `schema_file` | string | `<projectDir>/definition/schema.yaml` | `RB_SCHEMA_FILE` | スキーマ定義ファイル（JSON Schema） |
-| `contents_dir` | string | `<projectDir>/contents` | `RB_CONTENTS_DIR` | ソースデータディレクトリ（YAML + Markdown） |
-| `queries_dir` | string | `<projectDir>/definition/queries` | `RB_QUERIES_DIR` | クエリ定義ディレクトリ |
-| `templates_dir` | string | `<projectDir>/definition/templates` | `RB_TEMPLATES_DIR` | テンプレートディレクトリ |
-| `profilesFile` | string | `<projectDir>/definition/profiles.yaml` | `RB_PROFILES_FILE` | プロファイル設定ファイル（ページ分割戦略） |
-
-### 出力（ユーザパイプライン）
-
-| キー | 型 | デフォルト | 環境変数 | 説明 |
-|------|-----|---------|----------|------|
-| `out_dir` | string | `.another-mood/<projectDir>/output` | `RB_OUT_DIR` | Document Generator の出力先 |
-| `render_dir` | string | `.another-mood/<projectDir>/render` | `RB_RENDER_DIR` | Document Renderer の出力先 |
-
-### サーバ
-
-| キー | 型 | デフォルト | 環境変数 | CLI | 説明 |
-|------|-----|---------|----------|-----|------|
-| `host` | string | `127.0.0.1` | `RB_HOST` | `--host` | Hugo サーバの bind アドレス（dev コマンドのみ）。`0.0.0.0` 等で LAN 公開可（未実装 — Phase 10 タスク [G5](../../../tasks.md)） |
-| `port` | int | `5077` | `RB_PORT` | `--port` | Hugo サーバのポート番号（dev コマンドのみ） |
-
-### その他
-
-| キー | 型 | デフォルト | 環境変数 | 説明 |
-|------|-----|---------|----------|------|
-| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用（未実装 — Phase 8 タスク [G3](../../../tasks.md)） |
+| キー | 型 | デフォルト | 環境変数 | CLI | タスク | 説明 |
+|------|-----|---------|----------|-----|------|------|
+| `profilesFile` | string | `<projectDir>/definition/profiles.yaml` | `RB_PROFILES_FILE` | — | (paging) | プロファイル設定ファイル（ページ分割戦略） |
+| `host` | string | `127.0.0.1` | `RB_HOST` | `--host` | G5 | preview server の bind アドレス。`0.0.0.0` 等で LAN 公開可 |
+| `render.customServer.command` | string | (なし) | `RB_RENDER_CUSTOM_SERVER_COMMAND` | — | G3 | カスタムレンダリングサーバのコマンド。設定時は Hugo の代わりに使用 |
