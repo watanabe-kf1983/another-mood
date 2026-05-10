@@ -11,22 +11,7 @@
 
 ## design
 
-利用者視点の振る舞い仕様（What）。TOBE を含む設計工程の作業場。詳細は [design/index.md](design/index.md) を参照。
-
-- normalizer — スキーマ定義、Markdownパーサー
-- composer — YAML DSL クエリ仕様
-- generator — テンプレート、アンカー、ページ分割
-- app — CLI、設定、MCP、メタドキュメンテーション
-
-## internal
-
-内部設計・実装仕様。
-
-- [architecture.md](internal/architecture.md) — アーキテクチャ概要
-- [json-data-model.md](internal/json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
-- [pipeline.md](internal/pipeline/pipeline.md) — パイプライン構成、プロセス連携、AtomicDirWriter
-- [SchemaInspector](internal/components/schema-inspector.md)、[Normalizer](internal/components/normalizer.md)、[Composer](internal/components/composer.md)、[Generator](internal/components/generator.md)、[Renderer](internal/components/renderer.md)
-- [mcp-server.md](internal/mcp-server.md) — MCP サーバ内部設計（ライブラリ選定・モジュール配置・テスト方針）
+設計仕様（External Design / Internal Design / Proposals）。詳細は [design/index.md](design/index.md) を参照。
 
 ## dev
 

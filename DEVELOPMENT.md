@@ -4,135 +4,102 @@
 
 ### 開発ワークフロー
 
-各タスクは「1タスク・1 Git ブランチ・1 Claude Code セッション」で進める。
-
-タスク開始時に `make ci` を実行し、開発環境・既存コード双方が正常な状態であることを確認する。失敗する場合は、環境の問題であればセットアップの節を、コードの問題であればタスク着手前に修正する。
-
-#### Git
-
-- コミットメッセージ: **英語**
-- プルリクエスト タイトル / 本文: **英語**
+- 各タスクは「1タスク・1 Git ブランチ・1 Claude Code セッション」で進める
+- タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する。失敗する場合は、環境の問題ならセットアップ節を、コードの問題ならタスク着手前に修正する
+- コミットメッセージ・プルリクエストは **英語**
 
 ### セットアップ
 
 ツールの動作には [uv](https://docs.astral.sh/uv/) が必要。インストール後 `uv sync` で依存を解決する。
 
-このプロジェクト自身が Another Mood でドキュメントを管理している。開発者向け設計書は `dev-docs/`、利用者向けサンプルプロジェクト群は `showcase/`（`starter` / `ecommerce` 等の各テンプレート）にある。それぞれを以下のコマンドでビルドする:
+このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/reports/prose/index.md](.another-mood/dev-docs/output/reports/prose/index.md)。
 
-```bash
-mood build dev-docs
-mood build showcase/ecommerce
-```
+利用者向けサンプルプロジェクト群は `showcase/`（`starter` / `ecommerce` 等の各テンプレート）にある。`mood build showcase/{name}` でビルドできる。
 
-出力は `.another-mood/{project}/output/` に書き出される。起点は [.another-mood/dev-docs/output/reports/prose/index.md](.another-mood/dev-docs/output/reports/prose/index.md)。
+### ドキュメント
 
-ソース編集中は `mood watch dev-docs` で自動リビルドできる。ただし Another Mood 本体（Python コード）を変更する場合は古いコードで watch が動き続けるため、つど `mood build dev-docs` を再実行する。
+ドキュメントは以下の三系統で管理する:
 
-タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。
+- **`docs/`** — 利用者向けリファレンス（外部仕様の正本）。素 Markdown、英語。実装済み機能のみ。文体は簡潔だが、正確さ・網羅性は妥協しない（MCP 経由で LLM が読む UX に直結するため）
+- **`dev-docs/background/`** — 製品ビジョン、ロードマップ、タスクカタログ等の開発判断の根拠。日本語。Another Mood で管理
+- **`dev-docs/design/`** — 設計仕様。日本語。各ファイルは以下の 3 セクション構造（該当があるもののみ）:
+    - `## External Design` — 利用者から見える振る舞いの設計判断
+    - `## Internal Design` — 内部実装の設計判断
+    - `## Proposals` — 未実装機能（task に対応）
 
-### 設計工程
+`Proposals` の検討メモは、実装完了時に削除する（部分実装なら残る検討事項のみに絞る）。維持価値のある設計判断は External / Internal Design 節に移すか、code docstring やコミットメッセージで残す。
 
-- ドキュメント: **日本語**
-- 設計ソース: `dev-docs/contents/` 配下の 3 カテゴリ（background / design / internal）
+設計判断の背景・理由は、判断が書かれている場所に直接書く（ADR のように別ファイルに分離しない）。`design/` 内では「## 背景: ...」セクションとして該当箇所の近傍に書き、実装済み機能ではコードの docstring かコミットメッセージで残す。
 
-設計ドキュメントの変更は、必ず `dev-docs/contents/` 配下のソースに対して行い、変更後は `mood build dev-docs` を実行して `.another-mood/dev-docs/output/` の出力を確認する。
-
-#### background/ — Why
-
-製品ビジョン、経緯、ロードマップ。読者は開発チーム。
-
-#### design/ — What
-
-利用者視点の振る舞い仕様。設計工程の作業場として TOBE や検討中の方針も書き残す。実装済みのものは `docs/` 側に利用者向けリファレンスとして整理する（将来 `showcase/user-guide/` へ構造化移植予定）。
-
-#### internal/ — How
-
-内部設計・実装仕様。読者は開発者。コンポーネントの処理フロー、プロセス間連携、技術選定等。設計フェーズの作業場であり、実装完了後は実装工程の規約に従い整理する。
-
-設計フェーズの作業場という性質上、まだ実装されていない検討中の方針や TOBE 像が場当たり的に書き残されていることがある。実装方針を検討する際は、現在のコード（How）と internal/（Why / TOBE）をペアで参照すること。コードだけ見ると過去の議論で既に到達済みの結論を再発明する恐れがある。
-
-#### 設計判断の理由はインラインで残す
-
-設計判断の背景・理由は、判断が書かれている仕様書に「## 背景: ...」セクションとして直接書く。ADR（Architecture Decision Record）のように別ファイルに分離しない。
-
-理由: 仕様と理由が同じファイルにあれば、仕様の変更時に理由も自然に目に入り、更新漏れが起きにくい。別ファイルに分離すると同期コストが発生し、仕様変更で不要になった ADR の削除・更新が漏れやすい。判断数が増えて仕様書が肥大化した場合に ADR 分離を再検討する。
-
-#### ドキュメントの追加・削除時のアクセスパス確認
+理由: 仕様と理由が同じ場所にあれば、仕様の変更時に理由も自然に目に入り、更新漏れが起きにくい。別ファイルに分離すると同期コストが発生し、仕様変更で不要になった ADR の削除・更新が漏れやすい。
 
 ドキュメントを追加・削除・移動した場合、プルリクを上げる前に以下のインデックスからのリンクを確認・更新する:
 
-- [index.md](.another-mood/dev-docs/output/reports/prose/index.md) — 全体インデックス
-- [design/index.md](.another-mood/dev-docs/output/reports/prose/design/index.md) — 設計仕様インデックス
+- [index.md](.another-mood/dev-docs/output/reports/prose/index.md) — dev-docs 全体インデックス
+- [docs/index.md](docs/index.md) — 利用者向けトップ
+- [docs/catalog.yaml](docs/catalog.yaml) — MCP 公開対象のカタログ
 - [DEVELOPMENT.md](DEVELOPMENT.md) — 開発者向けポインタ
 
-### 実装工程
+### 実装
 
-- コード内コメント: **英語**
-
-#### ライブラリ選定
-
-ライブラリ導入は、常にその時点での有力なものを比較検討したうえで決定する。**選定理由は、そのライブラリを使っているコンポーネントの internal/ 設計書に「## 背景: ...」セクションとしてインラインで残す**。コミットメッセージだけでは将来の再検討時に発掘コストが高い。
+- コード内コメントは **英語**
+- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使うコンポーネントの近傍（`dev-docs/design/` の対応ファイル、実装済みならコードの docstring）に残す**
 
 #### パッケージ構成と依存ルール
 
 ```
 another_mood/
-├── cli.py                  # Main: エントリポイント、依存の組み立て
+├── cli.py                  # CLI エントリポイント
+├── mcp_server.py           # MCP サーバエントリポイント
+├── command.py              # CLI / MCP 共通の操作層（BuildResult 等を返す）
 ├── config.py               # 設定
 ├── components/             # ビジネスロジック
-│   ├── shared/             #   共通基盤（json_data_model, yaml_dumper）
-│   ├── normalizer/         #   正規化: Markdown → YAML
-│   ├── composer/            #   合成: 正規化データ + クエリ → ビュー
-│   └── generator/          #   生成: ビュー + テンプレート → Markdown
-├── pipeline/               # オーケストレーション: ステージ実行・監視
+│   ├── shared/             #   共通基盤
+│   ├── preprocess/         #   入力の正規化・スキーマ解釈・クエリ導出
+│   ├── composer/           #   合成: データ + クエリ → ビュー
+│   ├── generator/          #   生成: ビュー + テンプレート → Markdown
+│   ├── publish/            #   出力の書き出し
+│   ├── scaffold/           #   プロジェクト初期化・ブループリント
+│   └── docs_catalog/       #   バンドル済みドキュメントの目録
+├── pipeline/               # オーケストレーション: ステージ実行
 │   └── adapters/           #   外部ツール連携（Hugo, watchfiles）
 └── resources/              # 静的リソース
 ```
 
-依存ルール:
-
-- `cli` → `pipeline` → `components/*` → `components/shared`
+依存方向: `{cli, mcp_server}` → `command` → `pipeline` → `components/*` → `components/shared`
 
 #### コードスタイル
 
-- **関数型スタイルを優先**: `for` ループより内包表記、`map/filter` 等を使う。関数の引数・戻り値はイミュータブルな型を使う（`dict` → `Mapping`、`list` → `Sequence` 等）
+- **関数型スタイルを優先**: `for` ループより内包表記、`map/filter` 等。引数・戻り値はイミュータブル型（`dict` → `Mapping`、`list` → `Sequence` 等）
 - **`Any` はなるべく使わない**: `object` 等で型安全性を保つ
 - **命名はモジュール名に合わせる**: `source` モジュールなら `is_source_file`, `build_source`
-- **関数の並び順（Newspaper style）**: 公開API を先頭に、ヘルパー関数を後に配置。ヘルパーはパイプラインの順序に沿って配置
-- **`@dataclass` は `frozen=True` で使う**: `__init__` ボイラープレートの削減が目的。immutable がデフォルト
+- **関数の並び順（Newspaper style）**: 公開 API を先頭、ヘルパーを後ろ。ヘルパーはパイプライン順
+- **`@dataclass` は `frozen=True`**: `__init__` ボイラープレート削減目的、immutable がデフォルト
 
 #### テスト
 
-- **カバレッジ計測対象**: `components/`。目標は Statements + Branches トータルで 90%以上
+- **カバレッジ計測対象**: `components/`。Statements + Branches トータルで 90% 以上
 - **フィクスチャ**: ファイルベース、モジュール隣接型。期待値はテストコード内に記述
-
-#### internal/ ドキュメントの整理
-
-internal/ ドキュメントは実装中は参照するため残し、全テスト green 後の最終整理として行う。コードから読み取れる内容（フロー、データ構造等）は削除し、設計判断の背景（Why）はコードの docstring やコミットメッセージに移す。
-
-#### 利用者向けドキュメント
-
-`docs/`（素 Markdown、英語）。実装が完了した機能から書く。`docs/` には Implemented 機能のみ記載する方針に従う。B/C/E3 完了後に `showcase/user-guide/` へ構造化移植予定。
-
-執筆スタイル: 文体は簡潔な英語。ただし「簡潔さ」は装飾・冗長表現を削ぐ意味であり、説明の正確さ・網羅性・分かりやすさは妥協しない（MCP 経由で LLM が docs/ を読む際の UX に直結するため）。
 
 #### タスクの進め方
 
-1. **showcase/ のいずれかのテンプレートに入出力例を作成** - 具体的な入力と期待出力で仕様を合意
-2. **単体テストを記述** - 期待する振る舞いをテストコードで表現
-3. **実装してテストをパス**
-4. **showcase/ のサンプルで動作確認**
-5. **ユーザに見える挙動が変わった場合は `docs/` を同期** - CLI / スキーマ / クエリ / テンプレートの仕様や挙動を変えた、機能を追加・削除した、内蔵リソース（`src/another_mood/resources/schemas/*.yaml` 等）を改変した場合は、対応する `docs/reference/` 各章および必要に応じて `docs/guides.md` を更新する。`docs/` は Implemented 機能のみを記載するという方針に従う
-6. `make ci` を実行してからコミット
-7. 完了したらチェックを入れてプルリクを作成
+非自明な機能追加・変更では、まず `dev-docs/design/` の対応ファイル `## Proposals` セクション（必要なら新規ファイル）に検討メモを書いて方針を合意してから着手する。以降の手順:
+
+1. 以下をタスクに応じた順序で進める:
+    - **showcase/ のテンプレートに入出力例を作成**
+    - **単体テストを記述**
+    - **実装**
+2. **showcase/ で動作確認**
+3. **`docs/` を同期** — ユーザに見える挙動（CLI / スキーマ / クエリ / テンプレートの仕様、内蔵リソース等）が変わった場合に `docs/reference/` 各章および必要に応じて `docs/guides.md` を更新
+4. **`Proposals` の整理** — 対応ファイルの `## Proposals` から該当の検討メモを削除（部分実装の場合は残る検討事項のみに絞る）。維持価値のある設計判断は External / Internal Design 節に移すか、コードの docstring に残す
+5. `make ci` を通してコミット → プルリク作成
 
 ## Documentation (Reference)
 
-ドキュメントの閲覧先は `.another-mood/dev-docs/output/`（ビルド方法はセットアップの節を参照）。
+ドキュメントの閲覧先は `.another-mood/dev-docs/output/`。
 
 - [index.md](.another-mood/dev-docs/output/reports/prose/index.md) — 仕様・設計
 - [background/product.md](.another-mood/dev-docs/output/reports/prose/background/product.md) — 製品ビジョン
-- [internal/architecture.md](.another-mood/dev-docs/output/reports/prose/internal/architecture.md) — アーキテクチャ
-- [roadmap.md](.another-mood/dev-docs/output/reports/roadmap.md) — ロードマップ（Phase 8 以降）
-- [tasks.md](.another-mood/dev-docs/output/reports/tasks.md) — タスクカタログ（機能カテゴリ別）
+- [roadmap.md](.another-mood/dev-docs/output/reports/roadmap.md) — ロードマップ
+- [tasks.md](.another-mood/dev-docs/output/reports/tasks.md) — タスクカタログ
 - [dev/style-guide.md](.another-mood/dev-docs/output/reports/prose/dev/style-guide.md) — 命名・自己定義の表記規約

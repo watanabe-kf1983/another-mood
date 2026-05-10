@@ -1,10 +1,12 @@
 # Paging Specification
 
-> **未実装** — Phase 8 タスク [C1〜C6](../../../tasks.md)。現在の `{% mood_view %}` は常に分割で、`paginate` 設定は読まれない。
-
 ファイル分割戦略の仕様。ドキュメントのページ分割とプロファイル切り替えを定義する。
 
-## プロファイル設定
+## Proposals
+
+> **未実装** — Phase 8 タスク [C1〜C6](../../../tasks.md)。現在の `{% mood_view %}` は常に分割で、`paginate` 設定は読まれない。
+
+### プロファイル設定
 
 `profilesFile`（デフォルト: `docs/definition/profiles.yaml`）にプロファイルごとの設定を定義する。`paginate` にはページとして切り出す対象クラスを列挙する:
 
@@ -18,25 +20,25 @@ pdf:
   paginate: []               # 分割なし → 全部 index.md にインライン
 ```
 
-## ルートページ
+### ルートページ
 
 ルートテンプレートの出力先は常に `index.md`（規約、設定不要）。出力ディレクトリはプロファイル名から自動導出される:
 
 - `{outDir}/{profile_name}/index.md`
 
-## パス自動導出
+### パス自動導出
 
 分割対象クラスのページパスは class とアンカー ID から自動導出される（[anchor-spec](anchor-spec.md) 参照）:
 
 - リスト型: `{class}/{id}.md`（例: `erds.item/user-management.md`）
 - シングルトン型: `{class}.md`（例: `overview.md`）
 
-## 分割ルール
+### 分割ルール
 
 - `paginate` に列挙されたクラスが分割単位
 - 列挙されていないクラスの `{% mood_view %}` はインライン展開される
 
-## `{% mood_view %}` との関係
+### `{% mood_view %}` との関係
 
 テンプレートの `{% mood_view %}` タグは `paginate` 設定に応じて振る舞いが変わる:
 

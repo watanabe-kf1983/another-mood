@@ -180,7 +180,6 @@ categories:
       E7:
         title: "Query Object の apply_to_catalog 実装"
         note: |
-          設計: internal/components/composer.md「Query Object の双対性」節。
           クエリ定義から静的に出力スキーマを推論 + 合成 child entity を
           __definition.entities に emit。F3 の前提。
         phase: 8
@@ -333,7 +332,7 @@ categories:
       - src/another_mood/components/preprocess/normalizer.py
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
-    spec: internal/components/normalizer.md
+    spec: design/normalizer/normalizer.md
     tasks:
       H1:
         title: 仕様確定
@@ -452,7 +451,7 @@ categories:
           user-visible な結果は値 (BuildReport / ScaffoldResult) と
           on_report callback、live フィードバックは logging に統一。
           CLI / MCP の双方が呼ぶ command.py を新設し、print は cli.py のみ
-          (ruff T201 で機械的強制)。設計原則は internal/io-boundaries.md。
+          (ruff T201 で機械的強制)。
         phase: 9
         done: true
 
@@ -462,7 +461,7 @@ categories:
       - src/another_mood/components/shared/json_data_model.py
       - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/shared/data_catalog.py
-    spec: internal/json-data-model.md
+    spec: design/json-data-model.md
     tasks:
       M1:
         title: _parent 参照の付与
@@ -549,7 +548,7 @@ categories:
         note: |
           Windows でも動作確認する。現時点で判明している POSIX 依存は
           `_NORMAL_EXIT_CODES` (src/another_mood/pipeline/render.py) の件のみ。
-          詳細は internal/architecture.md「動作環境」節を参照。
+          詳細は design/architecture.md「動作環境」節を参照。
         phase: 10
 
   L:
