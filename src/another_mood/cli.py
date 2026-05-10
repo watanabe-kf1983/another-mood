@@ -1,5 +1,6 @@
 """CLI entry point."""
 
+import socket
 import sys
 from collections.abc import Callable
 from datetime import datetime
@@ -26,8 +27,14 @@ def callback() -> None:
 
 
 def _load_config(**kwargs: object) -> ProjectConfig:
-    """Build and verify ProjectConfig, exiting cleanly on validation failure."""
-    config = ProjectConfig(**kwargs)  # type: ignore[arg-type]
+    """Build and verify ProjectConfig, exiting cleanly on validation failure.
+
+    ``None`` kwargs are dropped so callers can forward typer Options
+    (``--flag`` defaulted to ``None``) directly without a per-flag
+    ``if x is not None`` dance.
+    """
+    fields = {k: v for k, v in kwargs.items() if v is not None}
+    config = ProjectConfig(**fields)  # type: ignore[arg-type]
     try:
         config.verify()
     except ConfigValidationError as exc:
@@ -141,12 +148,11 @@ def build(
     ),
 ) -> None:
     """Build the project to Markdown and rendered HTML."""
-    overrides: dict[str, Path] = {}
-    if out_dir is not None:
-        overrides["out_dir"] = Path(out_dir)
-    if render_dir is not None:
-        overrides["render_dir"] = Path(render_dir)
-    config = _load_config(project_dir=Path(project_dir), **overrides)
+    config = _load_config(
+        project_dir=Path(project_dir),
+        out_dir=out_dir,
+        render_dir=render_dir,
+    )
     result = command.build(config, on_report=_build_listener())
     if result.has_errors():
         raise SystemExit(1)
@@ -155,15 +161,22 @@ def build(
 @app.command()
 def watch(
     project_dir: str = typer.Argument(help="Project directory"),
-    port: int = typer.Option(5077, help="Preview server port"),
+    host: str | None = typer.Option(
+        None,
+        "--host",
+        help="Preview server bind address (default: 127.0.0.1).",
+    ),
+    port: int | None = typer.Option(
+        None, "--port", help="Preview server port (default: 5077)."
+    ),
 ) -> None:
     """Watch for file changes, rebuild incrementally, and serve a live preview."""
-    config = _load_config(project_dir=Path(project_dir), port=port)
+    config = _load_config(project_dir=Path(project_dir), host=host, port=port)
     try:
         with command.watch(config, on_report=_build_listener()) as session:
+            base = f"http://{_display_host(session.host)}:{session.port}"
             print(
-                f"Server running at {session.server_url}\n"
-                f"  Reports: {session.reports_url}",
+                f"Server running at {base}/\n  Reports: {base}/reports/",
                 file=sys.stderr,
                 flush=True,
             )
@@ -173,6 +186,37 @@ def watch(
         raise typer.Exit(1) from exc
     except KeyboardInterrupt:
         pass
+
+
+_WILDCARD_BIND_HOSTS = frozenset({"0.0.0.0", "::", "[::]"})
+
+
+def _display_host(bind: str) -> str:
+    """Pick a copy-pasteable host for the printed preview URL.
+
+    Hugo binds to ``bind`` literally, but a wildcard like ``0.0.0.0`` is not
+    a useful URL to share. Resolve a routable LAN address in that case so a
+    collaborative-authoring host can hand the URL to attendees verbatim.
+    """
+    if bind not in _WILDCARD_BIND_HOSTS:
+        return bind
+    return _local_ip() or bind
+
+
+def _local_ip() -> str | None:
+    """Return the source IP the OS would use for an outbound connection.
+
+    UDP ``connect`` does not send a packet — it only fixes the destination so
+    the kernel can choose an interface. The dest IP is unreachable but
+    irrelevant; we just read back the chosen source. Returns ``None`` on any
+    socket error (e.g. no routable interface).
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("192.0.2.1", 1))
+            return s.getsockname()[0]
+    except OSError:
+        return None
 
 
 def main() -> None:

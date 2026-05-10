@@ -22,12 +22,13 @@ _STARTUP_PROBE_TIMEOUT = 0.5
 
 
 class HugoServerStartupError(RuntimeError):
-    """Hugo dev server died before reaching ready state (e.g. port in use)."""
+    """Hugo dev server died before reaching ready state (e.g. address in use)."""
 
-    def __init__(self, port: int, returncode: int) -> None:
+    def __init__(self, host: str, port: int, returncode: int) -> None:
         super().__init__(
-            f"Hugo server failed to start on port {port} (exit code {returncode})."
+            f"Hugo server failed to start on {host}:{port} (exit code {returncode})."
         )
+        self.host = host
         self.port = port
         self.returncode = returncode
 
@@ -51,6 +52,7 @@ def RenderStage(
     upstream: ComponentOutput,
     prep_dir: Path,
     hugo_build_dir: Path,
+    host: str,
     port: int,
 ) -> MultiStageTask:
     """Compose the render pipeline: prep Stage + Hugo serve Task + Hugo build Stage."""
@@ -63,7 +65,7 @@ def RenderStage(
         [
             Stage(run_fn=prep_call, watch_paths=[], upstreams=[upstream]),
             Stage(run_fn=hugo_build_call, watch_paths=[], upstreams=[prep_out]),
-            _HugoServeTask(content_dir=content_dir, port=port),
+            _HugoServeTask(content_dir=content_dir, host=host, port=port),
         ]
     )
 
@@ -73,6 +75,7 @@ class _HugoServeTask(Task):
     """Hugo dev server. No-op in build mode (`hugo build` handles HTML output)."""
 
     content_dir: Path
+    host: str
     port: int
 
     def run(self) -> None:
@@ -80,7 +83,7 @@ class _HugoServeTask(Task):
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
-        process = renderer.serve(self.content_dir, self.port)
+        process = renderer.serve(self.content_dir, self.host, self.port)
 
         # Surface fast-fail startup errors (e.g. port already in use) before
         # signalling readiness; Hugo binds the port synchronously at startup.
@@ -89,7 +92,7 @@ class _HugoServeTask(Task):
         except subprocess.TimeoutExpired:
             pass  # Still running — startup succeeded.
         else:
-            raise HugoServerStartupError(self.port, process.returncode)
+            raise HugoServerStartupError(self.host, self.port, process.returncode)
 
         monitor = threading.Thread(
             target=_wait_for_exit, args=(process, shutdown), daemon=True

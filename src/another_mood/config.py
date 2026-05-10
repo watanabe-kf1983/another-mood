@@ -38,6 +38,7 @@ class ProjectConfig(BaseSettings):
     render_dir: Path = Field(default=Path(""))
 
     # Server
+    host: str = Field(default="127.0.0.1")
     port: int = Field(default=5077)
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:

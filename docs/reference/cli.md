@@ -16,7 +16,7 @@ mood watch .
 |---|---|
 | [`mood init <project_dir>`](#init) | Shortcut for `mood blueprint apply starter <project_dir>`. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
-| [`mood watch <project_dir> [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
+| [`mood watch <project_dir> [--host <addr>] [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
 | [`mood blueprint list`](#blueprint-list) | List the available blueprints. |
 | [`mood blueprint apply <name> <project_dir>`](#blueprint-apply) | Apply a blueprint into a project directory. |
 | [`mood docs list`](#docs-list) | List bundled documentation entries with their `docs://` URIs. |
@@ -83,7 +83,7 @@ Exits with code 0 if all stages succeed, or 1 if any stage fails.
 Watch files for changes, rebuild automatically, and serve a live preview.
 
 ```bash
-mood watch <project_dir> [--port <port>]
+mood watch <project_dir> [--host <addr>] [--port <port>]
 ```
 
 When a change is detected on an input path (the schema file or the contents / queries / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
@@ -92,6 +92,16 @@ When a change is detected on an input path (the schema file or the contents / qu
 $ mood watch .
 Press Ctrl+C to stop.
 ```
+
+### `--host`
+
+Specifies the bind address of the preview server. Defaults to `127.0.0.1` (loopback only; also overridable via the environment variable `RB_HOST`). Pass `0.0.0.0` to expose the server on the LAN, e.g. so attendees of a design meeting can browse the docs as the author edits them:
+
+```bash
+mood watch . --host 0.0.0.0
+```
+
+The preview server has no authentication, so use this only on trusted networks. When `--host 0.0.0.0` (or `::`) is given, the URL printed at startup substitutes a routable LAN address for the wildcard so it can be copy-pasted directly.
 
 ### `--port`
 
@@ -170,4 +180,5 @@ RB_PORT=8080 mood watch .
 | `tmp_dir` | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` | — |
 | `out_dir` | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` | — |
 | `render_dir` | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` | — |
+| `host` | `127.0.0.1` | `RB_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `RB_PORT` | `--port` (only on `watch`) |
