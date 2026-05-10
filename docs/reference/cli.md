@@ -127,7 +127,7 @@ For each file, prints `  created: <path>` to stderr, or `warning: skipped (alrea
 
 ## docs
 
-Inspect the documentation that ships with Another Mood. The same catalog is exposed to AI agents as MCP Resources and Tools (see `docs/mcp-resources.yaml`); these CLI commands give you the same view from the terminal.
+Inspect the documentation that ships with Another Mood. The same catalog is exposed to AI agents as MCP Resources and Tools; these CLI commands give you the same view from the terminal.
 
 ### docs list
 

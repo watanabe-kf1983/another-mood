@@ -14,7 +14,7 @@ from another_mood.components.docs_catalog.catalog import (
 @pytest.fixture()
 def synthetic_docs(tmp_path: Path) -> Path:
     """Create a small synthetic docs tree with a manifest."""
-    (tmp_path / "mcp-resources.yaml").write_text(
+    (tmp_path / "catalog.yaml").write_text(
         "resources:\n"
         "  - path: foo.md\n"
         "    description: |\n"

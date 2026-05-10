@@ -1,7 +1,7 @@
 """Bundled documentation catalog.
 
 A *doc entry* is a single file from the bundled ``docs/`` tree exposed as an
-MCP resource.  The catalog is declared in ``docs/mcp-resources.yaml`` (the
+MCP resource.  The catalog is declared in ``docs/catalog.yaml`` (the
 manifest) as a list of ``{path, description}`` items.
 
 Public API (in increasing order of convenience):
@@ -20,7 +20,7 @@ from typing import cast
 
 import yaml
 
-CATALOG_FILE = "mcp-resources.yaml"
+CATALOG_FILE = "catalog.yaml"
 
 MIME_TYPES: Mapping[str, str] = {
     ".md": "text/markdown",
@@ -60,7 +60,7 @@ def read_doc(uri: str) -> str:
 
 
 def load_catalog(docs_root: Path) -> Mapping[str, DocEntry]:
-    """Read ``<docs_root>/mcp-resources.yaml`` and return ``uri -> DocEntry``.
+    """Read ``<docs_root>/catalog.yaml`` and return ``uri -> DocEntry``.
 
     Trusts the manifest's shape since it is shipped with the package; relies
     on ``read_text`` / ``yaml.safe_load`` to raise on a missing or

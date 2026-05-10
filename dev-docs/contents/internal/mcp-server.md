@@ -40,9 +40,9 @@ CLI と MCP のエントリは別バイナリとして公開する（後述「##
 - MCP の resource URI は仕様上「サーバ内で識別子として機能すればよく、外部リゾルバブルである必要はない」。`<scheme>://<path>` パターンは公式サンプル（`file://` / `git://` / `screen://` 等）に倣う慣習的な書式
 - 別案 `file://` は不採用。実ファイルパスと誤解されうる（クライアントがホスト OS のファイルパスとしてリゾルブを試みる挙動を誘発しうる）
 
-### カタログ駆動の静的登録: `docs/mcp-resources.yaml`
+### カタログ駆動の静的登録: `docs/catalog.yaml`
 
-公開対象は `docs/mcp-resources.yaml`（ホワイトリスト）に列挙する。`mcp_server.py` 起動時に 1 回読んで `add_resource` で登録する。スキャン方式は採らない。
+公開対象は `docs/catalog.yaml`（ホワイトリスト）に列挙する。`mcp_server.py` 起動時に 1 回読んで `add_resource` で登録する。スキャン方式は採らない。
 
 ```yaml
 resources:
@@ -59,7 +59,7 @@ resources:
 - スキャンだと `index.md` のような agent 向けに公開不要なナビゲーションファイルを毎回除外ロジックで弾く必要が出る。catalog 方式ならホワイトリストで自然に制御できる
 - catalog の場所を `docs/` 直下にしたのは、MCP に公開する素材（docs/ 配下）と、その目次を同じツリーに置くため。`docs/index.md` のリンク説明と並べてメンテできる
 
-`docs/mcp-resources.yaml` の `description` は `docs/index.md` / `docs/reference/index.md` のリンク説明文と手書きで同期する。3 箇所同期になるが、いずれも頻繁に動かないため当面はコスト許容。drift が顕在化したら catalog を真としてリンク説明側を生成する自動化を再検討する。
+`docs/catalog.yaml` の `description` は `docs/index.md` / `docs/reference/index.md` のリンク説明文と手書きで同期する。3 箇所同期になるが、いずれも頻繁に動かないため当面はコスト許容。drift が顕在化したら catalog を真としてリンク説明側を生成する自動化を再検討する。
 
 ### mimeType の導出
 
