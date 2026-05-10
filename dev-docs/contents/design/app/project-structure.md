@@ -1,6 +1,8 @@
 # プロジェクト構成
 
-## 背景: MS-Access アナロジー
+## External Design
+
+### 背景: MS-Access アナロジー
 
 contents / queries / templates の三層構造は MS-Access の Table / Query / Form・Report に対応する:
 
@@ -14,13 +16,13 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 さらに、Access の Query Design View は SQL を書かずに GUI でクエリを構築できる。queries/ を YAML DSL で定義することで、クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。
 
-## 背景: ソースコードリポジトリ内での配置
+### 背景: ソースコードリポジトリ内での配置
 
 ソースコードリポジトリ内で使う場合、プロジェクトディレクトリを `docs/` 等のサブディレクトリに配置し `mood build docs/` のように指定する。`src/` や `tests/` との境界が明確になる。
 
 独立したプロジェクトの場合は、プロジェクトルートに直接配置し `mood build .` を使う。
 
-## 背景: .another-mood/ を CWD 直下に配置する理由
+### 背景: .another-mood/ を CWD 直下に配置する理由
 
 出力ディレクトリ `.another-mood/` は `<projectDir>`（入力ディレクトリ）の中ではなく、CWD（プロジェクトルート）直下に配置する。
 
@@ -30,6 +32,6 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 - 入力がプロジェクト外（git submodule 等）にある場合でも破綻しない
 - `contents_dir` を編集するメンバの視界に入らない
 
-## 背景: 出力を `<projectDir>` ごとにサブディレクトリで分離する理由
+### 背景: 出力を `<projectDir>` ごとにサブディレクトリで分離する理由
 
 `.another-mood/<projectDir>/` のように入力パスに対応するサブディレクトリを自動作成する。異なる `<projectDir>` を別プロセスで同時処理しても出力が衝突しない。サブディレクトリ名は CWD からの相対パスをそのまま使うため予測可能である。
