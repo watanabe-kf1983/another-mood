@@ -75,9 +75,9 @@ properties:
 
 ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
 
-### 参照整合性制約: references (D1〜D9)
+### 参照整合性制約: references (D1-D7)
 
-> **未実装** — Phase 10 タスク [D1〜D9](../../../tasks.md) で具体化する想定。配置とシンタックスは D1 着手時に再設計するため、以下は議論用の素描。
+> **未実装** — Phase 10 タスク [D1〜D7](../../../tasks.md) で具体化する想定。配置とシンタックスは D1 着手時に再設計するため、以下は議論用の素描。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
 
 参照関係は JSON Schema 本体に埋め込まず、`references` として独立して定義する想定。参照関係は本質的に二者間の関係であり、片側のスキーマに埋め込むのは不自然なため。Snowflake の宣言的 FK と同じアプローチで、制約は**強制しない**。
 

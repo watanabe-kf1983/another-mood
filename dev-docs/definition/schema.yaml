@@ -26,6 +26,12 @@ properties:
                 type: integer
               done:
                 type: boolean
+              proposal:
+                type: string
+                description: |
+                  対応する Proposal 節への相対パス + アンカー
+                  (例: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2)。
+                  Proposal が無いタスクでは省略する。
             additionalProperties: false
             required: [ title, phase ]
       additionalProperties: false

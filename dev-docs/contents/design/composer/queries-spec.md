@@ -14,9 +14,9 @@
 
 > 現状は Composer が正規化済みデータと同名のクエリを silent に上書きする。Phase 10 タスク [E6](../../../tasks.md)。
 
-### where / sort / join (E1〜E4)
+### where / sort / join (E1-E4)
 
-YAML DSL に `where`, `sort`, `join` 句を追加する拡張候補。Phase 8 タスク [E1〜E4](../../../tasks.md)（仕様詰めが先）。
+YAML DSL に `where`, `sort`, `join` 句を追加する拡張候補。Phase 10 タスク [E1〜E4](../../../tasks.md)（仕様詰めが先）。
 
 ### `_parent` 親参照 (M1)
 

@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 8 タスク [B1〜B6](../../../tasks.md)（ラッパーツリー / アンカー ID 規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `get_page_url`）
+> **未実装** — Phase 10 タスク [B1〜B6](../../../tasks.md)（ラッパーツリー / アンカー ID 規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `get_page_url`）
 
 ### ID 体系
 

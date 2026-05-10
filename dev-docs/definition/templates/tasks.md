@@ -13,9 +13,9 @@ Phase 8 以降の残タスクを機能カテゴリ別に整理したもの。各
 **仕様:** [{{ category.spec }}](prose/{{ category.spec }})
 {% endif %}
 
-| ID | タスク | 備考 | Phase | Done |
-|---|---|---|---|---|
+| ID | タスク | Proposal | 備考 | Phase | Done |
+|---|---|---|---|---|---|
 {% for task in category.tasks -%}
-| {{ task.id }} | {{ task.title }} | {{ task.note | replace('\n', ' ') | trim }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
+| {{ task.id }} | {{ task.title }} | {% if task.proposal %}[{{ task.proposal }}](prose/{{ task.proposal }}){% endif %} | {{ task.note | replace('\n', ' ') | trim }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
 {% endfor %}
 {% endfor %}

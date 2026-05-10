@@ -10,26 +10,32 @@ categories:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
         note: contents_dir 基点パス解決が必要 (B2 と連携)
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
         title: shiftHeadings(n) Jinja2 フィルタ
         note: テンプレート側で使用
         phase: 10
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
 
   B:
     title: アンカー / リンク解決
@@ -41,24 +47,30 @@ categories:
         title: views データのラッパーツリー構築
         note: data / parent / class_name フィールド
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B2:
         title: アンカー ID 生成規則
         note: リスト型 {class}.item.{id} / シングルトン {class}
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B3:
         title: アンカー → ラッパーのオンデマンド走査 + キャッシュ
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B4:
         title: link_md Jinja2 フィルタ
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B5:
         title: レンダリング後の toc:id 文字列のリンク URL 置換
         note: prose body 内も含む
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
       B6:
         title: ラッパーの get_page_url() 実装
         note: C3 と連携
         phase: 10
+        proposal: design/generator/generator.md#リンク解決-b1-b6
 
   C:
     title: ページ分割 (paging)
@@ -70,25 +82,31 @@ categories:
       C1:
         title: profilesFile の読み込み・パース
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C2:
         title: paginate 設定の評価
         note: クラスが分割対象か判定
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C3:
         title: パス自動導出
         note: リスト型 {class}/{id}.md / シングルトン {class}.md
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C4:
         title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
         note: 現在は常に分割。インライン展開モードの新設になる
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
       C6:
         title: 複数プロファイルの並列ビルド
         phase: 10
+        proposal: design/generator/paging-spec.md#proposals
 
   D:
     title: ユーザコンテンツバリデーション
@@ -105,37 +123,46 @@ categories:
         title: --strict CLI フラグの配線
         note: pipeline 全体に伝播
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D2:
         title: "FK チェック: to: schema_name"
         note: additionalProperties パターンの .id 省略形
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D3:
         title: "FK チェック: to: schema_name.property_name"
         note: 明示プロパティ
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D4:
         title: "FK チェック: from がプロパティ名なし"
         note: 辞書キー自体が FK
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D5:
         title: "type: array スキーマ参照時のプロパティ名必須チェック"
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D6:
         title: 参照先がトップレベルスキーマのみであることの検証
         note: ネストパス禁止
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D7:
         title: 警告レポートを BuildReport に乗せる
         note: エラーではなく warning レベル
         phase: 10
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無（旧 I1）
         phase: 10
+        proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動（旧 I2）
         phase: 10
+        proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
       D10:
         title: schema.yaml への一本化 (`schemas:` ラッパー除去)
         note: |
@@ -155,16 +182,20 @@ categories:
         title: where 句の仕様詰め + 実装
         note: 式言語にするか、単純な eq のみか
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E2:
         title: sort 句の仕様詰め + 実装
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E3:
         title: join 句の仕様詰め + 実装
         note: 参照整合性 (D) との関係整理
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E4:
         title: QuerySchema を E1〜E3 に合わせて拡張
         phase: 10
+        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E5:
         title: from 句の子エンティティ対応
         note: "from: parent.child ドット記法で任意の深さまでフラット化"
@@ -177,6 +208,7 @@ categories:
           silent に上書きするため、著者が気付かずにパススルーデータを
           上書きする事故が起きる。重複を検知してエラーにする。
         phase: 10
+        proposal: design/composer/queries-spec.md#同名禁止-e6
       E7:
         title: "Query Object の apply_to_catalog 実装"
         note: |
@@ -217,6 +249,7 @@ categories:
         title: ER 図テンプレート
         note: 前提 D, E3, Mermaid エスケープ
         phase: 10
+        proposal: design/app/meta-documentation.md#er-図-f4
       F5:
         title: DFD テンプレート
         note: 仕様未着手
@@ -228,16 +261,10 @@ categories:
       F7:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
-          前提 E1〜E4 (where / sort / join など) の DSL 拡張。F1〜F3 で
-          組み上げた __meta_entity / __table_view / __meta_query は
-          Jinja2 内に rejectattr('view'), startswith による子孫マッチ,
-          type == 'object' 除外といった集計ロジックを抱え複雑化している。
-          これらを Query DSL 側に移し (__definition.entities 自体を from
-          に取れるようにするのも含む)、テンプレートは Query 結果を
-          テーブルに流すだけの薄いラッパに退化させたい。同時に本ツール
-          自身のメタドキュメンテーションを自前の DSL で構築できるように
-          なり、dog-fooding の度合いが上がる。
+          詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
+          前提 E1〜E4 (where / sort / join) の DSL 拡張。
         phase: 10
+        proposal: design/app/meta-documentation.md#query-化リファクタ-f7
 
   G:
     title: CLI / 設定システム
@@ -255,10 +282,12 @@ categories:
         title: another-mood.config.json 読み込み
         note: config-spec.md
         phase: 10
+        proposal: design/app/config-spec.md#設定ファイル-g2
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
         phase: 10
+        proposal: design/app/config-spec.md#rendercustomservercommand-g3
       G4:
         title: schema_dir の単複統一 (schema/ → schemas/)
         note: |
@@ -288,15 +317,10 @@ categories:
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         note: |
-          現状 `mood watch` は 127.0.0.1 のみで listen するため、LAN 上の
-          他端末から開発プレビューを参照できない。要件定義 / 設計会議で
-          1 人がソースを更新・出席者全員が即座にブラウザで参照する
-          collaborative authoring を支える機能として `--host` を追加する。
-          仕様: cli-spec.md (mood watch 節) / config-spec.md (host キー)。
-
-          UX オプション: `--host 0.0.0.0` 起動時、コンソールに表示する URL を
-          localhost ではなく自機 LAN IP にすると親切（出席者にコピペで配れる）。
+          詳細は design/app/cli-spec.md「mood watch --host (G5)」、
+          config キーは design/app/config-spec.md。
         phase: 10
+        proposal: design/app/cli-spec.md#mood-watch-host-g5
       G6:
         title: "mood watch --detach + PID file 対応"
         note: |
@@ -338,19 +362,18 @@ categories:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 10
+        proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
       H2:
         title: 実装
         phase: 10
+        proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
       H3:
         title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
         note: |
-          内蔵スキーマ {id, title, body} は body が Typed Value のため設計上は
-          既に媒体非依存。バイナリファイル取り扱い (H1/H2) を機に、
-          エンティティ名 `prose` を媒体非依存な名前に改名する。
-          下位互換のため、旧名 `prose` は内蔵クエリとして残し、
-          mime_type が text/markdown のレコードのみを供給する案がある。
-          詳細仕様は H1/H2 の進捗に合わせて確定。
+          詳細は design/normalizer/normalizer.md「散文サブシステムの一般化 (H3)」。
+          前提 H1, H2。
         phase: 10
+        proposal: design/normalizer/normalizer.md#散文サブシステムの一般化-h3
 
   J:
     title: プラグインシステム
@@ -467,6 +490,7 @@ categories:
         title: _parent 参照の付与
         note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
         phase: 10
+        proposal: design/json-data-model.md#親参照-_parent-m1
       M2:
         title: Entity と ObjectType の分離
         note: CatalogEntity を access_path ベースの Entity と path+`.item` ベースの ObjectType に分割。Catalog プレフィックスも除去。
@@ -481,6 +505,7 @@ categories:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
         phase: 10
+        proposal: design/normalizer/schema-spec.md#title-キーワード-m4
 
   N:
     title: レンダリング / 出力形式
@@ -532,6 +557,7 @@ categories:
     impl_paths:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/shared/
+      - src/another_mood/components/generator/
       - src/another_mood/pipeline/
     tasks:
       O1:
@@ -550,6 +576,17 @@ categories:
           `_NORMAL_EXIT_CODES` (src/another_mood/pipeline/render.py) の件のみ。
           詳細は design/architecture.md「動作環境」節を参照。
         phase: 10
+        proposal: design/architecture.md#windows-posix-依存の修正-o3
+      O4:
+        title: インラインコードのフェンス長を動的に決める code_fence フィルタ
+        note: |
+          内蔵テンプレート (__meta_entity の attributes 表など) が任意
+          Mapping を Markdown テーブルセルにダンプしているが、値にバック
+          クォートが含まれるとフェンスが内側で早期終了してセルが崩れる。
+          詳細仕様は design/generator/generator.md「インラインコードの
+          フェンス長 (O4)」。
+        phase: 10
+        proposal: design/generator/generator.md#インラインコードのフェンス長-o4
 
   L:
     title: dog-fooding リファクタ
