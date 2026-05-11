@@ -173,16 +173,37 @@ categories:
     tasks:
       E1:
         title: where 句の仕様詰め + 実装
-        note: 式言語にするか、単純な eq のみか
+        note: |
+          詳細は design/composer/queries-spec.md「where (E1)」。
+          構造化 YAML 形式 (式言語ではない)。述語の閉じた集合:
+          eq / neq / is_null / gt / gte / lt / lte / startswith / endswith / contains
+          + ブール結合 and / or。catalog 上は type: object opaque
+          (metadata/validation と同じパターン)。
+          derive は identity (where は schema を変えない)。
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E2:
         title: sort 句の仕様詰め + 実装
+        note: |
+          詳細は design/composer/queries-spec.md「sort (E2)」。
+          object 形式で by / direction (asc/desc, default asc) / nulls
+          (first/last, default last) を指定。単一属性キーのみ。
+          複合キー / 派生式は将来 Group By との合わせ技で検討。
+          derive は identity (sort は schema を変えない)。
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E3:
         title: join 句の仕様詰め + 実装
-        note: 参照整合性 (D) との関係整理
+        note: |
+          詳細は design/composer/queries-spec.md「join (E3)」。
+          list 形式、左結合的評価。kind は nested / flat_inner / flat_left
+          の 3 択 required (default なし)。on: は単一キーの eq のみ。
+          as: 必須 (nested で配列名、flat で prefix)。
+          右側 pre-filter は join[].filter: (where と分離)。
+          where: は常に post-join。
+          derive は kind ごとに固有の catalog transform を持つ
+          (where/sort と異なり identity ではない)。
+          スコープ外: 複合キー on:, 多重 NESTED, FK 自動推論。
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E4:
@@ -222,7 +243,22 @@ categories:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
           詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
-          前提 E1〜E4 (where / sort / join) の DSL 拡張。
+          前提 F8 (カタログ自己記述) と E1〜E4 (where / sort / join) の DSL 拡張。
+        phase: 10
+        proposal: design/app/meta-documentation.md#query-化リファクタ-f7
+      F8:
+        title: __definition の自己記述カタログを built-in に追加
+        note: |
+          F7 の前提。`__definition` / `__definition.entities` /
+          `__definition.queries` を built-in entity として登録し、
+          クエリ DSL の `from:` でカタログ自体を読めるようにする。
+          スコープ:
+          - resources/ 配下に self-description の YAML を追加
+            (`prose` を登録している既存 built-in と同形式)
+          - composer で data catalog を sources に合流させ、
+            `From.apply` 時に実データが見つかるようにする
+          - dataclass との round-trip テスト
+          詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
         phase: 10
         proposal: design/app/meta-documentation.md#query-化リファクタ-f7
 
