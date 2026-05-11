@@ -44,9 +44,9 @@ class Node:
 
 `derive` と `apply` は異なる stage で走る (preprocess の `query_deriver` vs composer の `compose`) ため、derive の解決結果を apply で流用できない。両者が同じ catalog を引数に取り、同じ `walk_path` を呼ぶ形で最長一致ロジックを共有する。
 
-#### API 変更
+#### 呼び出し側への影響
 
-- `From.apply` のシグネチャに `catalog: dc.Node` を追加する破壊的変更。`Query.apply` も同様
+- `From.apply` / `Query.apply` のシグネチャに `catalog: dc.Node` を追加する。利用者は YAML を書くだけで Python の `apply` を直接呼ばないので公開挙動には影響しない
 - 呼び出し側 (`composer.compose`) は既に `data_catalog_dir` を受け取っているので、catalog tree を組んで `apply` に渡せる
 
 #### スコープ
