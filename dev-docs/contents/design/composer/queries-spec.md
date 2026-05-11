@@ -8,6 +8,51 @@
 
 ## Proposals
 
+### `from:` パス解決の最長一致化 (E8)
+
+> **未実装** — Phase 10 タスク [E8](../../../tasks.md)。F8 (`__definition` 自己記述カタログ) の前提。
+
+#### 背景: catalog の edge 名と `From` の path split の不整合
+
+Schema flattening 規約により、catalog の edge 名にはドットが含まれうる。例えばユーザスキーマで `members` 配下の singleton object `hobby` が collection `pets` を持つ場合、現状の `schema_tree._collect_edges` は `members` 配下に `hobby` (type=object) と `hobby.pets` (dotted edge 名) をフラット属性として並べる。
+
+一方 `From.derive` / `From.apply` は `path.split(".")` で素朴にセグメント化し、1 セグメントずつ catalog tree を walk する。結果として `from: members.hobby.pets` は `["members", "hobby", "pets"]` に分割され、`members` を解決後に `hobby` を child として探しに行くが、catalog 上の edge 名は `hobby.pets` (1 edge) なので一致せず失敗する。
+
+この不整合は F8 で `__definition.entities` (top-level かつ id にドットを含む) を catalog に載せようとした時に同じ形で顕在化する。現状はユーザ領域では「入れ子 singleton object の中の collection」に対する entity が `schema_tree` 側で作られないため発火していないが、構造的なギャップとしては独立に存在する。
+
+#### 解決方針: catalog edge の最長一致による walk
+
+`From` の path 解決を「`.` で固定 split」から「catalog の edge 名に従って最長一致で消費」に変える。
+
+具体的には、`dc.Node` に共有ヘルパを追加する:
+
+```python
+class Node:
+    def walk_path(self, path: str) -> Sequence[tuple[str, "Node"]]:
+        """Walk path by longest edge-name match.
+
+        At each step, consume the longest prefix of the remaining path
+        that matches a child edge name. Returns the sequence of
+        (edge_name, target_node) traversed. Raises if no match.
+        """
+```
+
+`From.derive` と `From.apply` の双方がこのヘルパを使う:
+
+- `From.derive(catalog)`: `walk_path` を呼び、最終 node を返す
+- `From.apply(records, catalog)`: `walk_path` を呼び、各 step の edge 名を `.split(".")` で展開して `flatten_children` を逐次呼ぶ。dotted edge は「catalog 側で 1 edge」「データ側で N 段ネスト」を繋ぐ規約への対処
+
+`derive` と `apply` は異なる stage で走る (preprocess の `query_deriver` vs composer の `compose`) ため、derive の解決結果を apply で流用できない。両者が同じ catalog を引数に取り、同じ `walk_path` を呼ぶ形で最長一致ロジックを共有する。
+
+#### API 変更
+
+- `From.apply` のシグネチャに `catalog: dc.Node` を追加する破壊的変更。`Query.apply` も同様
+- 呼び出し側 (`composer.compose`) は既に `data_catalog_dir` を受け取っているので、catalog tree を組んで `apply` に渡せる
+
+#### スコープ
+
+E8 はパス解決ロジックの修正のみ。F8 の自己記述カタログそのものは別タスク。E8 が入った後の catalog は、ユーザ領域で「入れ子 singleton object の中の collection を entity 化する」拡張 (`schema_tree` 側) を受け入れる準備が整う (現状はその拡張自体未実装、別タスクで扱う)。
+
 ### 同名禁止 (E6)
 
 クエリ名と正規化済みデータ名（テーブル名）の重複を禁止する（エラー）。クエリの `from:` は常に正規化済みデータ（テーブル）を指すため、同名を許すと循環参照が生じる。加工が必要な場合はクエリに別名を付ける。
