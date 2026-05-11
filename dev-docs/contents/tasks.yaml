@@ -173,7 +173,13 @@ categories:
     tasks:
       E1:
         title: where 句の仕様詰め + 実装
-        note: 式言語にするか、単純な eq のみか
+        note: |
+          詳細は design/composer/queries-spec.md「where (E1)」。
+          構造化 YAML 形式 (式言語ではない)。述語の閉じた集合:
+          eq / neq / is_null / gt / gte / lt / lte / startswith / endswith / contains
+          + ブール結合 and / or。catalog 上は type: object opaque
+          (metadata/validation と同じパターン)。
+          derive は identity (where は schema を変えない)。
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E2:
