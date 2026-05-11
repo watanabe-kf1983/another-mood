@@ -353,6 +353,13 @@ categories:
       - src/another_mood/components/generator/
       - src/another_mood/pipeline/
     tasks:
+      O3:
+        title: Windows での動作確認
+        note: |
+          利用者向け要件は design/architecture.md「動作環境」。
+          Windows 実機で pytest / mood build / mood watch を検証済み。
+        phase: 10
+        done: true
       O4:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
         note: |
