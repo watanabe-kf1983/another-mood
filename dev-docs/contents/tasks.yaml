@@ -194,7 +194,16 @@ categories:
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E3:
         title: join 句の仕様詰め + 実装
-        note: 参照整合性 (D) との関係整理
+        note: |
+          詳細は design/composer/queries-spec.md「join (E3)」。
+          list 形式、左結合的評価。kind は nested / flat_inner / flat_left
+          の 3 択 required (default なし)。on: は単一キーの eq のみ。
+          as: 必須 (nested で配列名、flat で prefix)。
+          右側 pre-filter は join[].filter: (where と分離)。
+          where: は常に post-join。
+          derive は kind ごとに固有の catalog transform を持つ
+          (where/sort と異なり identity ではない)。
+          スコープ外: 複合キー on:, 多重 NESTED, FK 自動推論。
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E4:
