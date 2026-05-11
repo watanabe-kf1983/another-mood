@@ -54,6 +54,37 @@ where:
 - 構文レベルで「式が書けない」ため、算術や関数呼び出しへのスコープ膨張を物理的に止められる
 - catalog 不整合 (where が opaque になる) は metadata/validation で既に確立されているパターンなので新規債務にならない
 
+#### sort (E2)
+
+**形式**: object (`grouped:` と対称)。
+
+```yaml
+sort:
+  by: phase
+  direction: desc       # asc (default) / desc
+  nulls: last           # first / last (default: last)
+```
+
+**スコープ内**:
+
+- 単一属性キー (`by:`)
+- 方向: `asc` / `desc`
+- null 配置: `nulls: first` / `nulls: last` (デフォルト `last`)
+
+**スコープ外** (将来 Group By との合わせ技で検討):
+
+- 複合キー / multi-column sort
+- 派生式 (`id | split('.') | first` 等) によるソート
+- カスタム比較関数
+
+**catalog 上の扱い**: `__definition.queries` の `sort` attribute は scalar object としてフラット化され、`sort.by` / `sort.direction` / `sort.nulls` が attribute としてカタログ化される。`where` と異なり構造は固定なので opaque にはしない。
+
+**`derive` への影響**: `sort` は record の順序のみ変えて schema 形状は変えないため、`Query.derive` は sort 句に対して identity。
+
+#### 背景: nulls first/last を初版に含めた理由
+
+将来「指定したくなる」ことが目に見えているため、後から syntax を増やす破壊的変更を避ける目的で初版から入れる。デフォルトを `last` にするのは PostgreSQL の `ASC NULLS LAST` 慣習に合わせる狙い (DESC でも `last` にすることで「null は常に末尾」という単純な不変条件で覚えられる)。
+
 ### `_parent` 親参照 (M1)
 
 `from` のドット記法でフラット化された各オブジェクトに `_parent` を付与し、親オブジェクトにアクセス可能にする（[json-data-model.md](../json-data-model.md) 参照）。

@@ -184,6 +184,12 @@ categories:
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E2:
         title: sort 句の仕様詰め + 実装
+        note: |
+          詳細は design/composer/queries-spec.md「sort (E2)」。
+          object 形式で by / direction (asc/desc, default asc) / nulls
+          (first/last, default last) を指定。単一属性キーのみ。
+          複合キー / 派生式は将来 Group By との合わせ技で検討。
+          derive は identity (sort は schema を変えない)。
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
       E3:
