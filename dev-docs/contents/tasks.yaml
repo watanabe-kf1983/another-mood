@@ -210,6 +210,16 @@ categories:
         title: QuerySchema を E1〜E3 に合わせて拡張
         phase: 10
         proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
+      E8:
+        title: "`from:` パス解決の最長一致化"
+        note: |
+          詳細は design/composer/queries-spec.md「`from:` パス解決の最長一致化 (E8)」。
+          現状は `From` が path を素朴に `.` で split して 1 セグメントずつ
+          walk するため、catalog 側にドット含みの edge 名 (singleton object を
+          フラット化した `a.b` 等) があると到達できない。F8 (`__definition`
+          自己記述) の前提でもある。
+        phase: 10
+        proposal: design/composer/queries-spec.md#from-パス解決の最長一致化-e8
       E6:
         title: クエリ名と正規化済みデータ名の同名禁止チェック
         note: |
@@ -249,7 +259,8 @@ categories:
       F8:
         title: __definition の自己記述カタログを built-in に追加
         note: |
-          F7 の前提。`__definition` / `__definition.entities` /
+          F7 の前提。本タスク自体は E8 (パス解決の最長一致化) を前提とする。
+          `__definition` / `__definition.entities` /
           `__definition.queries` を built-in entity として登録し、
           クエリ DSL の `from:` でカタログ自体を読めるようにする。
           スコープ:
