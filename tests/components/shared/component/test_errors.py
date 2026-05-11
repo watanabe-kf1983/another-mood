@@ -14,7 +14,7 @@ from another_mood.components.shared.component.errors import (
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True))
+    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
 
 class TestErrorPropagation:

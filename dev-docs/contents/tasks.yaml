@@ -356,11 +356,10 @@ categories:
       O3:
         title: Windows での動作確認
         note: |
-          Windows でも動作確認する。現時点で判明している POSIX 依存は
-          `_NORMAL_EXIT_CODES` (src/another_mood/pipeline/render.py) の件のみ。
-          詳細は design/architecture.md「動作環境」節を参照。
+          利用者向け要件は design/architecture.md「動作環境」。
+          Windows 実機で pytest / mood build / mood watch を検証済み。
         phase: 10
-        proposal: design/architecture.md#windows-posix-依存の修正-o3
+        done: true
       O4:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
         note: |

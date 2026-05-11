@@ -67,7 +67,7 @@ class Diagnostic:
         must never break diagnostic serialization.
         """
         try:
-            text = self.file.read_text(errors="replace")
+            text = self.file.read_text(encoding="utf-8", errors="replace")
             # Bias context upward: for YAML/JSON, parent keys above matter
             # more than siblings below.
             return format_pointed(

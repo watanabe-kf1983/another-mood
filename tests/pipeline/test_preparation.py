@@ -10,12 +10,12 @@ from another_mood.pipeline.adapters.preparation import prepare_render, sync
 
 def _write(path: Path, content: str = "# Hello\n") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True))
+    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
 
 class TestSync:

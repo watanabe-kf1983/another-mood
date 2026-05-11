@@ -58,7 +58,7 @@ def render(
         out_dir, templates_dir=templates_dir, filters=filters
     ).render(template_name, data)
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "index.md").write_text(rendered)
+    (out_dir / "index.md").write_text(rendered, encoding="utf-8")
 
 
 def _query_from(parents: Sequence[Record], path: str) -> Sequence[Record]:

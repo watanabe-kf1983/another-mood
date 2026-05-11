@@ -22,7 +22,7 @@ from another_mood.components.shared.component.build_report import (
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     """Write a Python dict as a YAML file."""
-    path.write_text(yaml.safe_dump(data, allow_unicode=True))
+    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
 
 class TestGenerate:

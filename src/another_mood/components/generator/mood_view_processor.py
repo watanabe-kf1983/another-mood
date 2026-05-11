@@ -40,7 +40,7 @@ class MoodViewProcessorImpl:
         else:
             out_file = self.out_dir / f"{template_name}.md"
         out_file.parent.mkdir(parents=True, exist_ok=True)
-        out_file.write_text(rendered)
+        out_file.write_text(rendered, encoding="utf-8")
         return ""
 
 

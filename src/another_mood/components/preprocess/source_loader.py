@@ -70,7 +70,7 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     if FileType.MARKDOWN.match(src):
         rel = src.relative_to(src_dir)
         record = parse_markdown(
-            src.read_text(encoding="utf-8"), str(rel.with_suffix(""))
+            src.read_text(encoding="utf-8"), rel.with_suffix("").as_posix()
         )
         return {"prose": [record.to_data()]}
     if FileType.YAML.match(src):

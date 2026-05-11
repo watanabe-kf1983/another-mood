@@ -56,7 +56,7 @@ def _load_mapping(path: Path) -> dict[str, Any]:
     types (dict / list / scalar) — round-trip mode is not needed here.
     """
     if FileType.YAML.match(path):
-        loaded: object = YAML(typ="safe").load(path.read_text())  # type: ignore[no-untyped-call]
+        loaded: object = YAML(typ="safe").load(path.read_text(encoding="utf-8"))  # type: ignore[no-untyped-call]
         if not isinstance(loaded, dict):
             raise ValueError(
                 f"Expected a YAML mapping in {path}, got {type(loaded).__name__}"

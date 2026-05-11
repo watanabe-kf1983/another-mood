@@ -35,21 +35,21 @@ class TestComponentCall:
     def test_direct_call(self, tmp_path: Path) -> None:
         @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:
-            (out_dir / "result.txt").write_text(str(src_dir))
+            (out_dir / "result.txt").write_text(str(src_dir), encoding="utf-8")
 
         out = tmp_path / "out"
-        my_fn(src_dir=Path("/input"), out_dir=out)
-        assert (out / "data" / "result.txt").read_text() == "/input"
+        my_fn(src_dir=Path("input"), out_dir=out)
+        assert (out / "data" / "result.txt").read_text(encoding="utf-8") == "input"
 
     def test_bind_then_call(self, tmp_path: Path) -> None:
         @Component(out_dir="out_dir")
         def my_fn(src_dir: Path, *, out_dir: Path) -> None:
-            (out_dir / "result.txt").write_text(str(src_dir))
+            (out_dir / "result.txt").write_text(str(src_dir), encoding="utf-8")
 
         out = tmp_path / "out"
-        call = my_fn.bind(src_dir=Path("/input"), out_dir=out)
+        call = my_fn.bind(src_dir=Path("input"), out_dir=out)
         call()
-        assert (out / "data" / "result.txt").read_text() == "/input"
+        assert (out / "data" / "result.txt").read_text(encoding="utf-8") == "input"
 
     def test_call_with_positional_args(self, tmp_path: Path) -> None:
         @Component(out_dir="out_dir")
@@ -98,7 +98,7 @@ class TestExclusiveWriteWrapping:
 class TestErrorPropagationWrapping:
     def _write_yaml(self, path: Path, data: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(yaml.safe_dump(data, allow_unicode=True))
+        path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
     def test_skips_fn_on_upstream_errors(self, tmp_path: Path) -> None:
         upstream_dir = tmp_path / "upstream"

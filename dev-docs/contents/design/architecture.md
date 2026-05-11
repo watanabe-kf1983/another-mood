@@ -75,8 +75,3 @@ OUT: `render_dir`
 - [normalizer.md](normalizer/normalizer.md)
 - [generator.md](generator/generator.md)
 
-## Proposals
-
-### Windows POSIX 依存の修正 (O3)
-
-判明している runtime の POSIX 依存: `src/another_mood/pipeline/render.py` の `_NORMAL_EXIT_CODES` で signal 値の負値（`-SIGTERM` / `-SIGINT`）をマッチしている箇所。Windows の `TerminateProcess` は負の signal 値で exit しないため、Windows 環境では「正常終了」が「異常終了」とログされる。Phase 10 タスク [O3](../../tasks.md)。
