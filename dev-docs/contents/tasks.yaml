@@ -222,7 +222,22 @@ categories:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
           詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
-          前提 E1〜E4 (where / sort / join) の DSL 拡張。
+          前提 F8 (カタログ自己記述) と E1〜E4 (where / sort / join) の DSL 拡張。
+        phase: 10
+        proposal: design/app/meta-documentation.md#query-化リファクタ-f7
+      F8:
+        title: __definition の自己記述カタログを built-in に追加
+        note: |
+          F7 の前提。`__definition` / `__definition.entities` /
+          `__definition.queries` を built-in entity として登録し、
+          クエリ DSL の `from:` でカタログ自体を読めるようにする。
+          スコープ:
+          - resources/ 配下に self-description の YAML を追加
+            (`prose` を登録している既存 built-in と同形式)
+          - composer で data catalog を sources に合流させ、
+            `From.apply` 時に実データが見つかるようにする
+          - dataclass との round-trip テスト
+          詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
         phase: 10
         proposal: design/app/meta-documentation.md#query-化リファクタ-f7
 
