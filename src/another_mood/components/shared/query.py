@@ -105,14 +105,12 @@ class From:
         return records
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        node = catalog
-        for segment in self.segments:
-            if not node.has_child(segment):
-                raise QueryDeriveError(
-                    f"unknown entity '{self.path}'", offender=self.path
-                )
-            node = node.child(segment)
-        return node
+        try:
+            return catalog.walk_path(self.path)
+        except KeyError as exc:
+            raise QueryDeriveError(
+                f"unknown entity '{self.path}'", offender=self.path
+            ) from exc
 
 
 def flatten_children(
