@@ -11,7 +11,7 @@
 | inspect_schema | schema_file | — | inspect_schemas_dir |
 | normalize_contents | contents_dir | inspect_schemas_dir | normalize_contents_dir |
 | derive_queries | queries_dir | inspect_schemas_dir | derive_queries_dir |
-| compose | — | normalize_contents_dir, derive_queries_dir | compose_dir |
+| compose | — | inspect_schemas_dir, normalize_contents_dir, derive_queries_dir | compose_dir |
 | generate | templates_dir | compose_dir | generate_dir |
 | reconcile | — | generate_dir | reconcile_dir |
 | render | — | reconcile_dir | render_dir |
