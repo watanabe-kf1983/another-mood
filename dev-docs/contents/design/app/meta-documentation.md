@@ -94,12 +94,37 @@ F7 が必要とする最小限の DSL 語彙の見立て:
 - `sort` — built-in flag 等での並び替え (E2)
 - `join` — entity と view 行の結合 (現在の `__views | query_from(id)` の置き換え, E3)
 
-scalar object 中間ノード (例 `__definition.entities.item_type`) はカタログのフラット化ルールにより独立 entity にならず、attribute がドット名で親に flatten される。よって catalog 上に立つ自己記述 entity は `__definition` (root) / `__definition.entities` / `__definition.entities.item_type.attributes` / `__definition.queries` (+ そのネスト object[] 子) に集約される。
+scalar object 中間ノード (例 `__definition.entities.item_type`) はカタログのフラット化ルールにより独立 entity にならず、attribute がドット名で親に flatten される。よって catalog 上に立つ自己記述 entity は `__definition.entities` / `__definition.entities.item_type.attributes` / `__definition.queries` / `__definition.queries.select` に集約される (詳細は F8)。
 
 ### `__definition` の自己記述カタログ (F8)
 
-> **未実装** — Phase 10 タスク [F8](../../../tasks.md)。F7 の前提。
+> **未実装** — Phase 10 タスク [F8](../../../tasks.md)。F7 の前提。本タスク自体は [E8](../composer/queries-spec.md#from-パス解決の最長一致化-e8) (パス解決の最長一致化) を前提とする。
 
-カタログの persisted form を表現する authoritative な JSON Schema は無く、Single Source of Truth は `data_catalog.py` の dataclass (`Entity` / `ObjectType` / `Attribute`)。よって自己記述カタログは `prose` built-in と同形式の YAML を直接書き、dataclass との round-trip テストでドリフトを抑える。
+#### 自己記述レコードの構築: dataclass の classmethod で組み立てる
 
-YAML 直書きを選んだ理由: JSON Schema からの生成案は (a) 対応する authoritative な JSON Schema がそもそも存在せず、(b) 作っても dataclass との二重定義になるためコストが上回ると判断した。
+カタログの persisted form を表現する authoritative な JSON Schema は無く、Single Source of Truth は `data_catalog.py` の dataclass (`Entity` / `ObjectType` / `Attribute`) および `query.py` のクエリ DSL クラス。自己記述カタログは、それぞれの SSoT クラスにクラスメソッドを持たせて Python 上で `dc.Entity` レコードを直接構築する:
+
+- `dc.Entity.get_catalog() -> Sequence[Entity]` — Schema 側 (`__definition.entities` および `__definition.entities.item_type.attributes`)
+- `Query.get_catalog() -> Sequence[Entity]` — Query 側 (`__definition.queries` および `__definition.queries.select`)
+
+採用理由:
+
+- 自己記述は被記述者 (dataclass) の近傍に置く。Schema 側を `data_catalog.py`、Query DSL 側を `query.py` がそれぞれ責任を持つ
+- 既存 built-in (prose) は JSON Schema → catalog 変換だが、`__definition` には対応する authoritative な JSON Schema が存在しない。YAML 直書き案は dataclass との二重定義になる。Python 構築なら dataclass フィールド情報を一部 reflection で活用可能 (`dataclasses.fields(...)`) で drift 抑制が利く
+- `__definition.queries` への entity 参照は `Entity.get_catalog()` 内で id 文字列リテラルとして書く (`query.py` を import せず ID 規約だけ知る)。合流は call site で `[*Entity.get_catalog(), *Query.get_catalog()]`
+
+#### `__definition` root 自体はカタログに載せない
+
+ユーザ領域では、トップレベル singleton (= スキーマルート) はカタログに entity として現れず、その直下のコレクションが top-level entity (`parent_entity=null`) として並ぶ。これと同じ構造を `__definition` にも適用し、`__definition` 自身はカタログに含めない。
+
+`__definition.entities` / `__definition.queries` は dotted id を持つ top-level entity (`parent_entity=null`) として登録する。`from: __definition.entities` は E8 のパス解決最長一致化を前提に解決される。
+
+#### パイプライン上の取り込み箇所
+
+`inspect_schema` を拡張し、`Entity.get_catalog() + Query.get_catalog()` の合算を `out_dir/__builtin/__definition.yaml` として YAML 化する。既存の prose built-in と同じ流路。`watch_paths` に監視対象が無い静的内容のためだけに専用 component を新設する利点が無い、という判断。
+
+`composer` 側は `sources = load_model(contents_out, data_catalog_out, queries_out)` に拡張する。これだけで `sources["__definition"] = {"entities": [...], "queries": [...]}` が deep-merge 規約により自動で組まれ、`From.apply` が `__definition.*` を walk 可能になる。専用の合流ロジックは書かない。
+
+#### dataclass との drift 抑制
+
+`get_catalog()` の出力と dataclass のフィールド集合の対応をテストで突き合わせる方針 (具体形は実装後に判断)。`dataclasses.fields(dc.Entity)` 等で得た field 集合と、自己記述カタログ上の `__definition.entities` 直下 attribute id 集合の対応を assert する形が候補。
