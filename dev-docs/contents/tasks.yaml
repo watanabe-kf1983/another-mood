@@ -213,13 +213,12 @@ categories:
       E8:
         title: "`from:` パス解決の最長一致化"
         note: |
-          詳細は design/composer/queries-spec.md「`from:` パス解決の最長一致化 (E8)」。
-          現状は `From` が path を素朴に `.` で split して 1 セグメントずつ
-          walk するため、catalog 側にドット含みの edge 名 (singleton object を
-          フラット化した `a.b` 等) があると到達できない。F8 (`__definition`
-          自己記述) の前提でもある。
+          `dc.Node.walk_path` を共有ヘルパとして導入し、`From.derive` /
+          `From.apply` がカタログ edge 名による最長一致 walk で path を解決する
+          形に変更。詳細は design/composer/queries-spec.md「Internal Design」。
+          F8 (`__definition` 自己記述カタログ) の前提が整った。
         phase: 10
-        proposal: design/composer/queries-spec.md#from-パス解決の最長一致化-e8
+        done: true
       E6:
         title: クエリ名と正規化済みデータ名の同名禁止チェック
         note: |

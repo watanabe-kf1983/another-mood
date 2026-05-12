@@ -254,6 +254,36 @@ class TestFromDerive:
             """
         )
 
+    def test_resolves_dotted_edge_name_as_single_step(self) -> None:
+        """A catalog edge whose name itself contains a dot (e.g. from a
+        singleton-object flattening) is consumed as one step by
+        longest-match walk — naive ``path.split('.')`` would split it
+        spuriously and miss the edge."""
+        root = dc.Node.from_flat(
+            _catalog(
+                """
+                - id: members
+                  item_type:
+                    id: members.item
+                    attributes:
+                      - { id: hobby, type: object, required: false }
+                      - id: hobby.pets
+                        type: object[]
+                        required: false
+                        entity: members.hobby.pets
+                        item_type: members.item.hobby.pets.item
+                - id: members.hobby.pets
+                  item_type:
+                    id: members.item.hobby.pets.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                  parent_entity: members
+                """
+            )
+        )
+        target = root.child("members").child("hobby.pets")
+        assert From(path="members.hobby.pets").derive(root) is target
+
 
 class TestGroupedDerive:
     def test_wraps_with_by_and_as_name(self) -> None:
