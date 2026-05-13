@@ -294,19 +294,17 @@ categories:
       F8:
         title: __definition の自己記述カタログを built-in に追加
         note: |
-          F7 の前提。本タスク自体は E8 (パス解決の最長一致化) を前提とする。
-          `__definition` / `__definition.entities` /
-          `__definition.queries` を built-in entity として登録し、
-          クエリ DSL の `from:` でカタログ自体を読めるようにする。
-          スコープ:
-          - resources/ 配下に self-description の YAML を追加
-            (`prose` を登録している既存 built-in と同形式)
-          - composer で data catalog を sources に合流させ、
-            `From.apply` 時に実データが見つかるようにする
-          - dataclass との round-trip テスト
-          詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
+          F7 の前提。`__definition.entities` / `__definition.queries`
+          (および子 entity の `.item_type.attributes` / `.select`)
+          を built-in entity として登録し、クエリ DSL の `from:` で
+          カタログ自体を読めるようにする。各 catalog dataclass の
+          `catalog()` classmethod が Node 形式で構造を返し、
+          `inspect_schema._emit_definition_catalog` が `to_flat` で
+          namespace に配置する。composer 側は load_model に
+          data_catalog_dir / queries_dir を合流させた。
+          詳細は design/app/meta-documentation.md「自己記述カタログ」。
         phase: 10
-        proposal: design/app/meta-documentation.md#query-化リファクタ-f7
+        done: true
 
   G:
     title: CLI / 設定システム
