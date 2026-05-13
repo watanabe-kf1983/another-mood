@@ -1,10 +1,4 @@
-"""Composer — combine normalized data into views.
-
-Passthrough-copies normalized contents and the `__definition` namespace
-(data catalog + query definitions including derived entities) to views,
-then evaluates queries against contents and writes the per-query
-results.
-"""
+"""Composer — combine normalized data into views."""
 
 import shutil
 from pathlib import Path
@@ -26,7 +20,7 @@ def compose(
     *,
     out_dir: Path,
 ) -> None:
-    """Copy contents + meta-definition passthrough, then evaluate queries."""
+    """Copy upstream outputs, merge into a sources namespace, evaluate queries."""
     contents_out = out_dir / "contents"
     data_catalog_out = out_dir / "data-catalog"
     queries_out = out_dir / "queries"
@@ -36,11 +30,10 @@ def compose(
     shutil.copytree(data_catalog_dir, data_catalog_out)
     shutil.copytree(queries_dir, queries_out)
 
-    sources = load_model(contents_out)
-    merged = load_model(queries_out)
+    sources = load_model(contents_out, data_catalog_out, queries_out)
     raw_queries = cast(
         list[dict[str, object]],
-        merged.get("__definition", {}).get("queries", []),
+        sources.get("__definition", {}).get("queries", []),
     )
 
     query_results_out.mkdir(parents=True, exist_ok=True)

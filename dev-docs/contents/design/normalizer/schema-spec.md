@@ -130,3 +130,85 @@ user-roles:
 2. **ER 図の自動生成**: references からリレーションを読み取り、Mermaid ER 図を描画
 3. **影響分析**: 被参照キーを変更しようとした際に「どこから参照されているか」を逆引きで特定できる
 4. **リネーム支援**: references に基づいて参照箇所を列挙し、一括置換の漏れを `--strict` で検証できる
+
+### singleton-flatten 内の object[] child entity link を保持する (E10)
+
+> **未実装** — Phase 10 タスク [E10](../../../tasks.md)。
+
+現状 `schema_tree._collect_edges` は singleton ObjectNode の sub-property を `(edge_with_correct_type, dc.Node())` の組で吐き出しており、`object[]` サブプロパティの場合に **child entity link 情報を捨てている**。結果として:
+
+- catalog 上の attribute は `type: object[]` だが `entity: null` になり、独立 entity として登録されない
+- query DSL で `from: <singleton>.<collection>` (例: `members.hobby.pets`) が walk 失敗する
+- メタドキュメンテーションでも `__meta_entity` / `__table_view` の自動生成対象外となり、table view 列は `[{...}, {...}]` の Python repr として文字列化される
+
+catalog データモデル自体は dotted-name の entity link をサポートしているので (F8 自己記述カタログが手書きで使用、`_MEMBERS_DOTTED_EDGE_YAML` テストフィクスチャ参照)、変換ロジック側を揃えるだけで足りる。
+
+#### 修正方針
+
+`_collect_edges` の singleton 分岐で、sub-property の child node を **構造を保持した形** で吐き出す:
+
+```python
+if isinstance(prop.node, ObjectNode):
+    yield (_property_to_edge(prop), dc.Node())
+    for sub in prop.node.properties:
+        # 現状: 常に dc.Node() (= scalar 化、entity link 喪失)
+        # 修正後: sub.node に composite child があれば to_catalog_node で構造保持
+        yield (
+            _property_to_edge(sub, name=f"{prop.name}.{sub.name}"),
+            to_catalog_node(sub.node),
+        )
+```
+
+`to_catalog_node` 自体が ArrayNode → ObjectNode を unwrap してくれるため、`object[]` サブプロパティでは entity link が立ち、scalar サブプロパティでは空 Node のままになる (`to_catalog_node(ValueNode) -> dc.Node()`)。
+
+#### 動作確認用テストデータ
+
+下記スキーマ + データで `members.hobby.pets` が catalog の独立 entity として現れることを期待する:
+
+```yaml
+# definition/schema.yaml に追加
+members:
+  type: object
+  additionalProperties:
+    type: object
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+      hobby:
+        type: object
+        additionalProperties: false
+        properties:
+          pets:
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                kind:
+                  type: string
+```
+
+```yaml
+# contents/members.yaml
+members:
+  alice:
+    name: Alice
+    hobby:
+      pets:
+        dog1:
+          name: Pochi
+          kind: dog
+        cat1:
+          name: Tama
+          kind: cat
+```
+
+期待する catalog 出力 (`schema_tree` 修正後):
+
+- `members` entity の attributes に `hobby.pets: object[]` + `entity: members.hobby.pets` + `item_type: members.item.hobby.pets.item` が立つ
+- `members.hobby.pets` entity が `parent_entity: members` 付きで登録される
+- query DSL で `from: members.hobby.pets` が walk 可能
+- `__meta_entity/members.hobby.pets.md` および `__table_view/members.hobby.pets.md` が自動生成される

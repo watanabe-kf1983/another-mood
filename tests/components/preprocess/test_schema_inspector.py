@@ -459,3 +459,28 @@ class TestInspectSchema:
         data = yaml.safe_load(out_file.read_text())
         prose = next(e for e in data["__definition"]["entities"] if e["id"] == "prose")
         assert prose["builtin"] is True
+
+    def test_emits_builtin_definition_catalog(self, tmp_path: Path) -> None:
+        """Self-description catalog (__definition.*) is emitted under __builtin/.
+
+        Each catalog dataclass contributes its own ``catalog()`` Node;
+        ``inspect_schema`` flattens them under the ``__definition.*``
+        namespace and tags every record ``builtin=True``.
+        """
+        schema_file = _write_schema(tmp_path / "schema.yaml", _VALID_SCHEMA_BODY)
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        out_file = out_dir / "__builtin" / "__definition.yaml"
+        assert out_file.exists()
+        data = yaml.safe_load(out_file.read_text())
+        entities = data["__definition"]["entities"]
+        assert {e["id"] for e in entities} == {
+            "__definition.entities",
+            "__definition.entities.item_type.attributes",
+            "__definition.queries",
+            "__definition.queries.select",
+        }
+        assert all(e["builtin"] for e in entities)

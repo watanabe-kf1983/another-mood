@@ -1,5 +1,7 @@
 """Tests for Query DSL — object model and evaluation."""
 
+import dataclasses
+
 import pytest
 from ruamel.yaml import YAML
 
@@ -71,27 +73,27 @@ class TestFrom:
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_name="name").apply({"name": "Alice"}) == (
+        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}) == (
             "name",
             "Alice",
         )
 
     def test_renames_field(self) -> None:
-        assert SelectItem(item="category", as_name="id").apply(
+        assert SelectItem(item="category", as_="id").apply(
             {"category": "user-management"}
         ) == ("id", "user-management")
 
     def test_raises_on_missing_field(self) -> None:
         with pytest.raises(KeyError):
-            SelectItem(item="missing", as_name="x").apply({"name": "Alice"})
+            SelectItem(item="missing", as_="x").apply({"name": "Alice"})
 
 
 class TestSelect:
     def test_projects_fields(self) -> None:
         select = Select(
             items=[
-                SelectItem(item="category", as_name="id"),
-                SelectItem(item="category", as_name="category"),
+                SelectItem(item="category", as_="id"),
+                SelectItem(item="category", as_="category"),
             ]
         )
         records = [{"category": "a", "extra": 1}, {"category": "b", "extra": 2}]
@@ -101,7 +103,7 @@ class TestSelect:
         ]
 
     def test_empty_records(self) -> None:
-        select = Select(items=[SelectItem(item="x", as_name="x")])
+        select = Select(items=[SelectItem(item="x", as_="x")])
         assert list(select.apply([])) == []
 
 
@@ -125,9 +127,7 @@ class TestGrouped:
                 "entities": [{"id": "order", "category": "b"}],
             },
         ]
-        assert (
-            list(Grouped(by="category", as_name="entities").apply(records)) == expected
-        )
+        assert list(Grouped(by="category", as_="entities").apply(records)) == expected
 
     def test_preserves_insertion_order(self) -> None:
         records = [
@@ -135,12 +135,12 @@ class TestGrouped:
             {"id": "2", "cat": "a"},
             {"id": "3", "cat": "b"},
         ]
-        result = Grouped(by="cat", as_name="items").apply(records)
+        result = Grouped(by="cat", as_="items").apply(records)
         assert [r["cat"] for r in result] == ["b", "a"]
 
     def test_raises_on_missing_key(self) -> None:
         with pytest.raises(KeyError):
-            Grouped(by="missing", as_name="items").apply([{"id": "x"}])
+            Grouped(by="missing", as_="items").apply([{"id": "x"}])
 
 
 class TestQuery:
@@ -156,13 +156,13 @@ class TestQuery:
         query = Query(
             select=Select(
                 items=[
-                    SelectItem(item="category", as_name="id"),
-                    SelectItem(item="category", as_name="category"),
-                    SelectItem(item="entities", as_name="entities"),
+                    SelectItem(item="category", as_="id"),
+                    SelectItem(item="category", as_="category"),
+                    SelectItem(item="entities", as_="entities"),
                 ]
             ),
-            from_clause=From(path="entities"),
-            grouped=Grouped(by="category", as_name="entities"),
+            from_=From(path="entities"),
+            grouped=Grouped(by="category", as_="entities"),
         )
         expected = [
             {
@@ -186,8 +186,8 @@ class TestQuery:
     def test_without_grouped(self) -> None:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
-            select=Select(items=[SelectItem(item="name", as_name="name")]),
-            from_clause=From(path="items"),
+            select=Select(items=[SelectItem(item="name", as_="name")]),
+            from_=From(path="items"),
             grouped=None,
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
@@ -202,11 +202,11 @@ class TestQuery:
         query = Query(
             select=Select(
                 items=[
-                    SelectItem(item="id", as_name="id"),
-                    SelectItem(item="phase", as_name="phase"),
+                    SelectItem(item="id", as_="id"),
+                    SelectItem(item="phase", as_="phase"),
                 ]
             ),
-            from_clause=From(path="categories.tasks"),
+            from_=From(path="categories.tasks"),
             grouped=None,
         )
         assert list(query.apply([sources])) == [
@@ -286,10 +286,10 @@ class TestFromDerive:
 
 
 class TestGroupedDerive:
-    def test_wraps_with_by_and_as_name(self) -> None:
+    def test_wraps_with_by_and_alias(self) -> None:
         root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path="categories.tasks").derive(root)
-        wrapped = Grouped(by="phase", as_name="tasks").derive(leaf)
+        wrapped = Grouped(by="phase", as_="tasks").derive(leaf)
         assert wrapped.to_flat("groups") == _catalog(
             """
             - id: groups
@@ -320,8 +320,8 @@ class TestSelectDerive:
         leaf = From(path="categories.tasks").derive(root)
         projected = Select(
             items=[
-                SelectItem(item="phase", as_name="id"),
-                SelectItem(item="title", as_name="title"),
+                SelectItem(item="phase", as_="id"),
+                SelectItem(item="title", as_="title"),
             ]
         ).derive(leaf)
         assert projected.to_flat("projection") == _catalog(
@@ -340,13 +340,13 @@ class TestQueryDerive:
     def test_tasks_by_phase(self) -> None:
         """End-to-end: from → grouped → select → flatten produces the expected catalog."""
         query = Query(
-            from_clause=From(path="categories.tasks"),
-            grouped=Grouped(by="phase", as_name="tasks"),
+            from_=From(path="categories.tasks"),
+            grouped=Grouped(by="phase", as_="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="phase", as_name="id"),
-                    SelectItem(item="phase", as_name="phase"),
-                    SelectItem(item="tasks", as_name="tasks"),
+                    SelectItem(item="phase", as_="id"),
+                    SelectItem(item="phase", as_="phase"),
+                    SelectItem(item="tasks", as_="tasks"),
                 ]
             ),
         )
@@ -378,12 +378,12 @@ class TestQueryDerive:
 
     def test_without_grouped(self) -> None:
         query = Query(
-            from_clause=From(path="categories.tasks"),
+            from_=From(path="categories.tasks"),
             grouped=None,
             select=Select(
                 items=[
-                    SelectItem(item="id", as_name="id"),
-                    SelectItem(item="title", as_name="title"),
+                    SelectItem(item="id", as_="id"),
+                    SelectItem(item="title", as_="title"),
                 ]
             ),
         )
@@ -414,12 +414,12 @@ class TestParseQuery:
         assert parse_query(raw) == Query(
             select=Select(
                 items=[
-                    SelectItem(item="category", as_name="id"),
-                    SelectItem(item="category", as_name="category"),
+                    SelectItem(item="category", as_="id"),
+                    SelectItem(item="category", as_="category"),
                 ]
             ),
-            from_clause=From(path="entities"),
-            grouped=Grouped(by="category", as_name="items"),
+            from_=From(path="entities"),
+            grouped=Grouped(by="category", as_="items"),
         )
 
     def test_grouped_as_defaults_to_last_path_segment(self) -> None:
@@ -428,11 +428,11 @@ class TestParseQuery:
             "grouped": {"by": "category"},
             "select": [{"item": "category"}],
         }
-        assert parse_query(raw).grouped == Grouped(by="category", as_name="entities")
+        assert parse_query(raw).grouped == Grouped(by="category", as_="entities")
 
     def test_from_dot_notation_splits_into_path(self) -> None:
         raw = {"from": "categories.tasks", "select": [{"item": "id"}]}
-        assert parse_query(raw).from_clause == From(path="categories.tasks")
+        assert parse_query(raw).from_ == From(path="categories.tasks")
 
     def test_without_grouped(self) -> None:
         raw = {
@@ -447,5 +447,50 @@ class TestParseQuery:
             "select": [{"item": "name"}],
         }
         assert parse_query(raw).select == Select(
-            items=[SelectItem(item="name", as_name="name")]
+            items=[SelectItem(item="name", as_="name")]
         )
+
+
+def _catalog_name(field_name: str) -> str:
+    """Translate a dataclass field name into its catalog edge name.
+
+    DSL dataclasses use PEP 8 trailing underscores to dodge Python
+    keyword conflicts (``from_`` / ``as_``); the catalog edge names use
+    the bare YAML keys (``from`` / ``as``). Stripping the trailing
+    underscore is the full translation.
+    """
+    return field_name.removesuffix("_")
+
+
+class TestCatalogDriftSuppression:
+    """Assert Query / Grouped / SelectItem ``catalog()`` Nodes stay in sync.
+
+    The catalog edge names use bare YAML keys, while the dataclasses use
+    PEP 8 trailing-underscore names where the YAML key collides with a
+    Python keyword. :func:`_catalog_name` bridges the two.
+
+    ``id`` on a query record is synthesized by ``parse_query`` from the
+    dict-pattern key and has no Query dataclass field — the test
+    includes it explicitly in the expected set.
+    """
+
+    def test_query_top_level_edges_match_dataclass_fields(self) -> None:
+        non_dotted = {
+            edge.name for edge, _ in Query.catalog().children if "." not in edge.name
+        }
+        assert non_dotted == {"id"} | {
+            _catalog_name(f.name) for f in dataclasses.fields(Query)
+        }
+
+    def test_grouped_dotted_edges_match_dataclass_fields(self) -> None:
+        dotted = {
+            edge.name.removeprefix("grouped.")
+            for edge, _ in Query.catalog().children
+            if edge.name.startswith("grouped.")
+        }
+        assert dotted == {_catalog_name(f.name) for f in dataclasses.fields(Grouped)}
+
+    def test_select_item_edges_match_dataclass_fields(self) -> None:
+        assert {edge.name for edge, _ in SelectItem.catalog().children} == {
+            _catalog_name(f.name) for f in dataclasses.fields(SelectItem)
+        }

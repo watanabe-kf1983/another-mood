@@ -1,5 +1,7 @@
 """Tests for catalog — persisted-record round-trip and tree build/flatten."""
 
+import dataclasses
+
 import pytest
 from ruamel.yaml import YAML
 
@@ -208,6 +210,43 @@ class TestWalkPath:
         root = dc.Node.from_flat(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
         with pytest.raises(KeyError):
             root.walk_path("members.unknown")
+
+
+class TestCatalogDriftSuppression:
+    """Assert each catalog dataclass and its ``catalog()`` Node stay in sync.
+
+    Failing here means a field was added/removed from ``Attribute``,
+    ``Entity``, or ``ObjectType`` without a matching update to the
+    corresponding ``catalog()`` classmethod — fix the catalog method
+    (and any consumer) before silencing the test.
+
+    Coverage beyond field-set drift (edge types, entity-link wiring, the
+    composition with ``to_flat``) is intentionally not tested here:
+    those properties are visible directly in the implementation and are
+    redundantly exercised by the broader ``to_flat`` / ``from_flat``
+    identity tests above.
+    """
+
+    def test_attribute_edges_match_dataclass_fields(self) -> None:
+        assert {edge.name for edge, _ in dc.Attribute.catalog().children} == {
+            f.name for f in dataclasses.fields(dc.Attribute)
+        }
+
+    def test_entity_top_level_edges_match_dataclass_fields(self) -> None:
+        non_dotted = {
+            edge.name
+            for edge, _ in dc.Entity.catalog().children
+            if "." not in edge.name
+        }
+        assert non_dotted == {f.name for f in dataclasses.fields(dc.Entity)}
+
+    def test_object_type_dotted_edges_match_dataclass_fields(self) -> None:
+        dotted = {
+            edge.name.removeprefix("item_type.")
+            for edge, _ in dc.Entity.catalog().children
+            if edge.name.startswith("item_type.")
+        }
+        assert dotted == {f.name for f in dataclasses.fields(dc.ObjectType)}
 
 
 class TestRenameOnFlatten:
