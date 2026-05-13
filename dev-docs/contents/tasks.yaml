@@ -510,3 +510,4 @@ categories:
 
           機能変化なし。schema_inspector の解釈は不変、純粋にスタイル統一。
         phase: 10
+        done: true

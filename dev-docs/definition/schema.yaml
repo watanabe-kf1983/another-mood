@@ -1,9 +1,11 @@
 type: object
+additionalProperties: false
 properties:
   categories:
     type: object
     additionalProperties:
       type: object
+      additionalProperties: false
       properties:
         title:
           type: string
@@ -17,6 +19,7 @@ properties:
           type: object
           additionalProperties:
             type: object
+            additionalProperties: false
             properties:
               title:
                 type: string
@@ -32,8 +35,5 @@ properties:
                   対応する Proposal 節への相対パス + アンカー
                   (例: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2)。
                   Proposal が無いタスクでは省略する。
-            additionalProperties: false
             required: [ title, phase ]
-      additionalProperties: false
       required: [ title, impl_paths, tasks ]
-additionalProperties: false

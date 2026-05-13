@@ -1,9 +1,11 @@
 type: object
+additionalProperties: false
 properties:
   entities:
     type: object
     additionalProperties:
       type: object
+      additionalProperties: false
       properties:
         name:
           type: string
@@ -15,6 +17,7 @@ properties:
           type: object
           additionalProperties:
             type: object
+            additionalProperties: false
             properties:
               name:
                 type: string
@@ -24,15 +27,14 @@ properties:
                 type: boolean
               fk:
                 type: string
-            additionalProperties: false
             required: [name, type]
-      additionalProperties: false
       required: [name, fields]
 
   relations:
     type: array
     items:
       type: object
+      additionalProperties: false
       properties:
         from:
           type: string
@@ -43,6 +45,4 @@ properties:
           enum: ["1:1", "1:N", "N:N"]
         description:
           type: string
-      additionalProperties: false
       required: [from, to, cardinality]
-additionalProperties: false

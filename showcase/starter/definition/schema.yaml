@@ -1,9 +1,11 @@
 type: object
+additionalProperties: false
 properties:
   members:
     type: object
     additionalProperties:
       type: object
+      additionalProperties: false
       properties:
         name:
           type: string
@@ -11,6 +13,4 @@ properties:
           type: string
         description:
           type: string
-      additionalProperties: false
       required: [name, role]
-additionalProperties: false
