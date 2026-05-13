@@ -18,7 +18,11 @@ class TestCompose:
         contents = tmp_path / "contents" / "data"
         _write(
             contents / "items.yaml",
-            "items:\n  - {name: a, value: 1}\n  - {name: b, value: 2}\n",
+            dedent("""\
+                items:
+                  - {name: a, value: 1}
+                  - {name: b, value: 2}
+            """),
         )
 
         # Queries dir simulates query_deriver output: queries plus their
@@ -26,33 +30,37 @@ class TestCompose:
         queries = tmp_path / "queries" / "data"
         _write(
             queries / "name_query.yaml",
-            "__definition:\n"
-            "  queries:\n"
-            "    - id: names\n"
-            "      from: items\n"
-            "      select:\n"
-            "        - {item: name}\n"
-            "  entities:\n"
-            "    - id: names\n"
-            "      item_type:\n"
-            "        id: names.item\n"
-            "        attributes:\n"
-            "          - {id: name, type: string, required: true}\n"
-            "      builtin: false\n"
-            "      view: true\n",
+            dedent("""\
+                __definition:
+                  queries:
+                    - id: names
+                      from: items
+                      select:
+                        - {item: name}
+                  entities:
+                    - id: names
+                      item_type:
+                        id: names.item
+                        attributes:
+                          - {id: name, type: string, required: true}
+                      builtin: false
+                      view: true
+            """),
         )
 
         data_catalog = tmp_path / "data-catalog" / "data"
         _write(
             data_catalog / "schema.yaml",
-            "__definition:\n"
-            "  entities:\n"
-            "    - id: items\n"
-            "      item_type:\n"
-            "        id: items.item\n"
-            "        attributes:\n"
-            "          - {id: name, type: string, required: true}\n"
-            "          - {id: value, type: integer, required: true}\n",
+            dedent("""\
+                __definition:
+                  entities:
+                    - id: items
+                      item_type:
+                        id: items.item
+                        attributes:
+                          - {id: name, type: string, required: true}
+                          - {id: value, type: integer, required: true}
+            """),
         )
 
         out = tmp_path / "views"
