@@ -213,11 +213,11 @@ class TestWalkPath:
 
 
 class TestCatalogDriftSuppression:
-    """Assert each catalog dataclass and its ``catalog()`` Node stay in sync.
+    """Assert each catalog dataclass and its ``catalog`` Node stay in sync.
 
     Failing here means a field was added/removed from ``Attribute``,
     ``Entity``, or ``ObjectType`` without a matching update to the
-    corresponding ``catalog()`` classmethod — fix the catalog method
+    corresponding ``catalog`` class attribute — fix the catalog Node
     (and any consumer) before silencing the test.
 
     Coverage beyond field-set drift (edge types, entity-link wiring, the
@@ -228,22 +228,20 @@ class TestCatalogDriftSuppression:
     """
 
     def test_attribute_edges_match_dataclass_fields(self) -> None:
-        assert {edge.name for edge, _ in dc.Attribute.catalog().children} == {
+        assert {edge.name for edge, _ in dc.Attribute.catalog.children} == {
             f.name for f in dataclasses.fields(dc.Attribute)
         }
 
     def test_entity_top_level_edges_match_dataclass_fields(self) -> None:
         non_dotted = {
-            edge.name
-            for edge, _ in dc.Entity.catalog().children
-            if "." not in edge.name
+            edge.name for edge, _ in dc.Entity.catalog.children if "." not in edge.name
         }
         assert non_dotted == {f.name for f in dataclasses.fields(dc.Entity)}
 
     def test_object_type_dotted_edges_match_dataclass_fields(self) -> None:
         dotted = {
             edge.name.removeprefix("item_type.")
-            for edge, _ in dc.Entity.catalog().children
+            for edge, _ in dc.Entity.catalog.children
             if edge.name.startswith("item_type.")
         }
         assert dotted == {f.name for f in dataclasses.fields(dc.ObjectType)}
