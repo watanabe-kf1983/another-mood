@@ -1,5 +1,7 @@
 """Tests for Query DSL — object model and evaluation."""
 
+import dataclasses
+
 import pytest
 from ruamel.yaml import YAML
 
@@ -449,3 +451,48 @@ class TestParseQuery:
         assert parse_query(raw).select == Select(
             items=[SelectItem(item="name", as_name="name")]
         )
+
+
+# Python-keyword conflicts force the DSL dataclasses to use non-conflict
+# field names (``from_clause`` / ``as_name``) while parse_query reads the
+# original YAML keys (``from`` / ``as``).  Tests reverse the rename when
+# comparing catalog edge names (YAML form) against dataclass fields
+# (Python form).
+_FIELD_NAME_TO_YAML_KEY = {"from_clause": "from", "as_name": "as"}
+
+
+def _yaml_name(field_name: str) -> str:
+    return _FIELD_NAME_TO_YAML_KEY.get(field_name, field_name)
+
+
+class TestCatalogDriftSuppression:
+    """Assert Query / Grouped / SelectItem ``catalog()`` Nodes stay in sync.
+
+    The persisted YAML form is the canonical reference, so the comparison
+    against ``dataclasses.fields()`` needs two adjustments:
+    1. Python-keyword renames (handled by :func:`_yaml_name`).
+    2. ``id`` on a query record is synthesized by ``parse_query`` from
+       the dict-pattern key and has no Query dataclass field — the test
+       includes it explicitly in the expected set.
+    """
+
+    def test_query_top_level_edges_match_dataclass_fields(self) -> None:
+        non_dotted = {
+            edge.name for edge, _ in Query.catalog().children if "." not in edge.name
+        }
+        assert non_dotted == {"id"} | {
+            _yaml_name(f.name) for f in dataclasses.fields(Query)
+        }
+
+    def test_grouped_dotted_edges_match_dataclass_fields(self) -> None:
+        dotted = {
+            edge.name.removeprefix("grouped.")
+            for edge, _ in Query.catalog().children
+            if edge.name.startswith("grouped.")
+        }
+        assert dotted == {_yaml_name(f.name) for f in dataclasses.fields(Grouped)}
+
+    def test_select_item_edges_match_dataclass_fields(self) -> None:
+        assert {edge.name for edge, _ in SelectItem.catalog().children} == {
+            _yaml_name(f.name) for f in dataclasses.fields(SelectItem)
+        }
