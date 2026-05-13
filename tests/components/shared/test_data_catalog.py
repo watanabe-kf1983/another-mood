@@ -161,8 +161,8 @@ class TestBuildAndFlatten:
         self, root_name: str, yaml_text: str
     ) -> None:
         flat = _catalog(yaml_text)
-        root = dc.Node.from_flat(flat)
-        assert root.child(root_name).to_flat(root_name) == flat
+        root = dc.build_tree(flat)
+        assert dc.flatten_tree(root.child(root_name), root_name) == flat
 
 
 _MEMBERS_DOTTED_EDGE_YAML = """
@@ -188,26 +188,26 @@ _MEMBERS_DOTTED_EDGE_YAML = """
 
 class TestWalkPath:
     def test_single_segment(self) -> None:
-        root = dc.Node.from_flat(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
+        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
         assert root.walk_path("members") is root.child("members")
 
     def test_longest_match_picks_dotted_edge(self) -> None:
         # ``hobby.pets`` is a single edge, even though there is also a
         # shorter ``hobby`` edge under ``members``.  walk_path consumes
         # the longest match.
-        root = dc.Node.from_flat(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
+        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
         target = root.child("members").child("hobby.pets")
         assert root.walk_path("members.hobby.pets") is target
 
     def test_raises_when_no_match(self) -> None:
-        root = dc.Node.from_flat(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
+        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
         with pytest.raises(KeyError):
             root.walk_path("missing")
 
     def test_raises_when_partial_match_only(self) -> None:
         # ``members.unknown`` shares the ``members`` prefix but no
         # second-step edge matches ``unknown`` — should still raise.
-        root = dc.Node.from_flat(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
+        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
         with pytest.raises(KeyError):
             root.walk_path("members.unknown")
 
@@ -221,9 +221,9 @@ class TestCatalogDriftSuppression:
     (and any consumer) before silencing the test.
 
     Coverage beyond field-set drift (edge types, entity-link wiring, the
-    composition with ``to_flat``) is intentionally not tested here:
+    composition with ``flatten_tree``) is intentionally not tested here:
     those properties are visible directly in the implementation and are
-    redundantly exercised by the broader ``to_flat`` / ``from_flat``
+    redundantly exercised by the broader ``build_tree`` / ``flatten_tree``
     identity tests above.
     """
 
@@ -248,7 +248,7 @@ class TestCatalogDriftSuppression:
 
 
 class TestRenameOnFlatten:
-    def test_to_flat_renames_root_and_propagates(self) -> None:
+    def test_flatten_tree_renames_root_and_propagates(self) -> None:
         flat = _catalog(
             """
             - id: categories
@@ -291,5 +291,5 @@ class TestRenameOnFlatten:
               parent_entity: tasks_by_phase
             """
         )
-        root = dc.Node.from_flat(flat)
-        assert root.child("categories").to_flat("tasks_by_phase") == expected
+        root = dc.build_tree(flat)
+        assert dc.flatten_tree(root.child("categories"), "tasks_by_phase") == expected

@@ -193,7 +193,7 @@ def collect_entities(root: ObjectNode) -> Sequence[dc.Entity]:
         entity
         for edge, child in catalog_node.children
         if child.is_entity
-        for entity in child.to_flat(edge.name)
+        for entity in dc.flatten_tree(child, edge.name)
     ]
 
 

@@ -73,34 +73,6 @@ class Node:
                 raise KeyError(remaining)
             candidate = candidate.rsplit(".", 1)[0]
 
-    @classmethod
-    def from_flat(cls, catalog: Sequence["Entity"]) -> "Node":
-        """Build a virtual-root tree from a flat catalog list.
-
-        The virtual root mirrors the records-side ``Sequence[Record]``
-        wrapping that From.apply receives: every top-level entity hangs
-        off it as an ``object[]`` edge so path traversal walks ``object[]``
-        edges uniformly down to any leaf entity.
-        """
-        return cls(
-            children=[
-                (
-                    Edge(name=entity.id, type="object[]", required=True),
-                    _build_entity_node(entity, catalog),
-                )
-                for entity in _children_of(None, catalog)
-            ],
-        )
-
-    def to_flat(self, root_name: str) -> Sequence["Entity"]:
-        """Flatten this node into a list of Entity records.
-
-        The top entity gets ``root_name`` as its id; descendant ids are
-        built by joining the chain of child edge names with dots — the
-        access_path convention shared by every catalog producer.
-        """
-        return _flatten_entity(self, edge_path=(root_name,), parent_entity_id=None)
-
 
 # ── Persistence form (serialization view) ─────────────────────────────
 
@@ -118,8 +90,8 @@ class Attribute:
     #: Node-form self-description of the persisted Attribute record.
     #: Composed into ``Entity.catalog`` as the child of the
     #: ``item_type.attributes`` edge.  The caller assigns the catalog id
-    #: via ``Node.to_flat(root_name=...)``; ``Attribute`` itself
-    #: doesn't know where in the namespace it lives.
+    #: via ``flatten_tree(root_name=...)``; ``Attribute`` itself doesn't
+    #: know where in the namespace it lives.
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
@@ -173,7 +145,7 @@ class Entity:
     #: ``Attribute.catalog`` as the child-entity link.
     #:
     #: The caller assigns the catalog id via
-    #: ``catalog.to_flat(root_name=...)`` and is expected to set
+    #: ``flatten_tree(catalog, root_name=...)`` and is expected to set
     #: ``builtin=True`` before persisting.
     catalog: ClassVar[Node] = Node(
         children=[
@@ -200,6 +172,38 @@ class Entity:
             **_without(d, "item_type"),
             item_type=ObjectType.from_dict(d["item_type"]),
         )
+
+
+# ── Conversion between forms ──────────────────────────────────────────
+
+
+def build_tree(catalog: Sequence[Entity]) -> Node:
+    """Build a virtual-root tree from a flat catalog list.
+
+    The virtual root mirrors the records-side ``Sequence[Record]``
+    wrapping that ``From.apply`` receives: every top-level entity hangs
+    off it as an ``object[]`` edge so path traversal walks ``object[]``
+    edges uniformly down to any leaf entity.
+    """
+    return Node(
+        children=[
+            (
+                Edge(name=entity.id, type="object[]", required=True),
+                _build_entity_node(entity, catalog),
+            )
+            for entity in _children_of(None, catalog)
+        ],
+    )
+
+
+def flatten_tree(node: Node, root_name: str) -> Sequence[Entity]:
+    """Flatten ``node`` into a list of Entity records.
+
+    The top entity gets ``root_name`` as its id; descendant ids are
+    built by joining the chain of child edge names with dots — the
+    access_path convention shared by every catalog producer.
+    """
+    return _flatten_entity(node, edge_path=(root_name,), parent_entity_id=None)
 
 
 # ── Internal helpers ──────────────────────────────────────────────────

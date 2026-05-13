@@ -202,7 +202,7 @@ class TestBuildSchemaTree:
         assert tree == ArrayNode(child=ArrayNode(child=ValueNode(type="string")))
 
 
-# ── B→C: to_catalog_node + dc.Node.to_flat ──────────────────────────
+# ── B→C: to_catalog_node + dc.flatten_tree ──────────────────────
 #
 # Spec: "SchemaTree → データカタログの変換ルール" (schema-inspector.md)
 #
@@ -213,14 +213,14 @@ class TestBuildSchemaTree:
 
 
 class TestToCatalogNode:
-    """to_catalog_node + dc.Node.to_flat: SchemaTree → flat Entity list."""
+    """to_catalog_node + dc.flatten_tree: SchemaTree → flat Entity list."""
 
     def test_top_level_array_of_objects(self) -> None:
         """Top-level ArrayNode → ObjectNode → entity with item_type.id == name + .item."""
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("x", True, ValueNode(type="number")),
         ]))
-        assert to_catalog_node(tree).to_flat("points") == [
+        assert dc.flatten_tree(to_catalog_node(tree),"points") == [
             dc.Entity("points", item_type=dc.ObjectType("points.item", attributes=[
                 dc.Attribute("x", "number", True),
             ])),
@@ -234,7 +234,7 @@ class TestToCatalogNode:
                 SchemaProperty("zipcode", False, ValueNode(type="string")),
             ])),
         ]))
-        assert to_catalog_node(tree).to_flat("persons") == [
+        assert dc.flatten_tree(to_catalog_node(tree),"persons") == [
             dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
                 dc.Attribute("address",         "object", True),
                 dc.Attribute("address.city",    "string", True),
@@ -249,7 +249,7 @@ class TestToCatalogNode:
                 SchemaProperty("name", True, ValueNode(type="string")),
             ]))),
         ]))
-        assert to_catalog_node(tree).to_flat("orders") == [
+        assert dc.flatten_tree(to_catalog_node(tree),"orders") == [
             dc.Entity("orders", item_type=dc.ObjectType("orders.item", attributes=[
                 dc.Attribute("items", "object[]", False,
                              entity="orders.items",
@@ -269,7 +269,7 @@ class TestToCatalogNode:
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("tags", False, ArrayNode(child=ValueNode(type="string"))),
         ]))
-        assert to_catalog_node(tree).to_flat("articles") == [
+        assert dc.flatten_tree(to_catalog_node(tree),"articles") == [
             dc.Entity("articles", item_type=dc.ObjectType("articles.item", attributes=[
                 dc.Attribute("tags", "string[]", False),
             ])),
@@ -280,7 +280,7 @@ class TestToCatalogNode:
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
         ]))
-        assert to_catalog_node(tree).to_flat("sheets") == [
+        assert dc.flatten_tree(to_catalog_node(tree),"sheets") == [
             dc.Entity("sheets", item_type=dc.ObjectType("sheets.item", attributes=[
                 dc.Attribute("matrix", "number[][]", False),
             ])),
@@ -293,7 +293,7 @@ class TestToCatalogNode:
                 SchemaProperty("v", True, ValueNode(type="number")),
             ])))),
         ]))
-        assert to_catalog_node(tree).to_flat("boards") == [
+        assert dc.flatten_tree(to_catalog_node(tree),"boards") == [
             dc.Entity("boards", item_type=dc.ObjectType("boards.item", attributes=[
                 dc.Attribute("grid", "object[][]", False,
                              entity="boards.grid",
@@ -316,7 +316,7 @@ class TestToCatalogNode:
             ]),
             metadata={"title": "My Collection"},
         )
-        assert to_catalog_node(tree).to_flat("things")[0].item_type.metadata == {"title": "My Collection"}
+        assert dc.flatten_tree(to_catalog_node(tree),"things")[0].item_type.metadata == {"title": "My Collection"}
 
     def test_attribute_metadata_and_validation(self) -> None:
         """ValueNode metadata/validation → Attribute metadata/validation."""
@@ -327,7 +327,7 @@ class TestToCatalogNode:
                 validation={"minimum": 0, "maximum": 100},
             )),
         ]))
-        assert to_catalog_node(tree).to_flat("games")[0].item_type.attributes[0] == dc.Attribute(
+        assert dc.flatten_tree(to_catalog_node(tree),"games")[0].item_type.attributes[0] == dc.Attribute(
             "score", "integer", True,
             metadata={"description": "Player score"},
             validation={"minimum": 0, "maximum": 100},
@@ -339,7 +339,7 @@ class TestToCatalogNode:
             SchemaProperty("a", True,  ValueNode(type="string")),
             SchemaProperty("b", False, ValueNode(type="string")),
         ]))
-        assert [(a.id, a.required) for a in to_catalog_node(tree).to_flat("ts")[0].item_type.attributes] == [
+        assert [(a.id, a.required) for a in dc.flatten_tree(to_catalog_node(tree),"ts")[0].item_type.attributes] == [
             ("a", True), ("b", False),
         ]
 

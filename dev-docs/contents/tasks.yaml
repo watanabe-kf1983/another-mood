@@ -213,22 +213,13 @@ categories:
       E9:
         title: catalog データモデルの依存方向反転 (Node primary)
         note: |
-          現状は Entity / ObjectType / Attribute (persist form) が先に
-          定義され Node / Edge (in-memory tree) がそれに依存する形だが、
-          本質的には Node が構造の正本で Entity は serialization view
-          (id 派生規則付き) と捉えるのが自然。これに合わせて:
-          - data_catalog.py 内宣言順序を Edge/Node →
-            Attribute/ObjectType/Entity に reorder
-          - `Node.from_flat` / `Node.to_flat` を Entity 側に移動
-            (例: `Entity.from_node` / `Entity.to_node`、命名は実装時判断)
-          - 全 call site (schema_tree, query_deriver, composer 等) の追従
-          F8 で self-description method (Node を返す classmethod) を
-          parens 抜きの property access として書けなかったのが、まさに
-          この倒立の症状。反転すればクラス属性化を含む自然な API に
-          書き直せる。F7 のブロッカーではないが、F7 のテンプレート
-          Query 化が新しい依存方向の API 上で書ければ思考コストが
-          下がるので、F7 より前に入れるのが望ましい。
+          `data_catalog.py` の宣言順序を Edge/Node → Attribute/ObjectType/Entity
+          に反転し、`catalog` を class attribute (parens 抜きアクセス) に降格。
+          `Node.from_flat` / `Node.to_flat` はモジュール関数の
+          `dc.build_tree` / `dc.flatten_tree` に移管。F7 のテンプレート Query 化を新しい依存方向の API 上で書ける
+          ようにするための地ならし。
         phase: 10
+        done: true
       E8:
         title: "`from:` パス解決の最長一致化"
         note: |

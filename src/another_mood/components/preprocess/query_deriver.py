@@ -35,7 +35,7 @@ def derive_queries(
 ) -> None:
     """Validate query files and derive view entities into out_dir."""
     schema = build_query_schema()
-    catalog = dc.Node.from_flat(_load_catalog(data_catalog_dir))
+    catalog = dc.build_tree(_load_catalog(data_catalog_dir))
 
     diagnostics: list[Diagnostic] = []
     pending: list[
@@ -83,7 +83,7 @@ def _derive_entities(
     for raw in queries:
         name = cast(str, raw["id"])
         try:
-            derived = parse_query(raw).derive(catalog).to_flat(name)
+            derived = dc.flatten_tree(parse_query(raw).derive(catalog), name)
         except QueryDeriveError as exc:
             diagnostics.append(_diagnostic_from(exc))
             continue
