@@ -1,6 +1,7 @@
 """Tests for Composer — passthrough copy and query application."""
 
 from pathlib import Path
+from textwrap import dedent
 
 import yaml
 
@@ -94,3 +95,56 @@ class TestCompose:
         )
 
         assert (out / "data" / "contents" / "data.yaml").read_text() == "key: value\n"
+
+    def test_query_can_walk_definition_entities(self, tmp_path: Path) -> None:
+        """``from: __definition.entities`` returns the catalog records as data.
+
+        Demonstrates that the data catalog (under data_catalog_dir) is
+        merged into ``sources`` alongside contents and queries, so a
+        query can walk the catalog itself — the F8 self-description
+        plumbing lands here.
+        """
+        (tmp_path / "contents" / "data").mkdir(parents=True)
+
+        # Two catalog entries (one user-defined, one builtin) so the
+        # query result can be checked for both pass-through and filtering.
+        data_catalog = tmp_path / "data-catalog" / "data"
+        _write(
+            data_catalog / "schema.yaml",
+            dedent("""\
+                __definition:
+                  entities:
+                    - id: alpha
+                      item_type: {id: alpha.item, attributes: []}
+                      builtin: false
+                    - id: beta
+                      item_type: {id: beta.item, attributes: []}
+                      builtin: true
+            """),
+        )
+
+        queries = tmp_path / "queries" / "data"
+        _write(
+            queries / "all_entities.yaml",
+            dedent("""\
+                __definition:
+                  queries:
+                    - id: entity_ids
+                      from: __definition.entities
+                      select:
+                        - {item: id}
+                  entities: []
+            """),
+        )
+
+        out = tmp_path / "views"
+        compose(
+            contents_dir=tmp_path / "contents",
+            queries_dir=tmp_path / "queries",
+            data_catalog_dir=tmp_path / "data-catalog",
+            out_dir=out,
+        )
+
+        assert yaml.safe_load(
+            (out / "data" / "query-results" / "entity_ids.yaml").read_text()
+        ) == {"entity_ids": [{"id": "alpha"}, {"id": "beta"}]}
