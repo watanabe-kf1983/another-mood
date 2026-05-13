@@ -53,6 +53,27 @@ class Attribute:
     def from_dict(cls, d: Mapping[str, Any]) -> "Attribute":
         return cls(**d)
 
+    @classmethod
+    def catalog(cls) -> "Node":
+        """Node-form self-description of the persisted Attribute record.
+
+        Returns a ``Node`` whose children mirror the Attribute dataclass
+        fields. The caller composes this node into a parent tree and
+        assigns the catalog id via ``to_flat(root_name)`` — ``Attribute``
+        itself does not know where in the namespace it lives.
+        """
+        return Node(
+            children=[
+                (Edge(name="id", type="string", required=True), Node()),
+                (Edge(name="type", type="string", required=True), Node()),
+                (Edge(name="required", type="boolean", required=True), Node()),
+                (Edge(name="metadata", type="object", required=False), Node()),
+                (Edge(name="validation", type="object", required=False), Node()),
+                (Edge(name="entity", type="string", required=False), Node()),
+                (Edge(name="item_type", type="string", required=False), Node()),
+            ],
+        )
+
 
 @dataclass(frozen=True)
 class ObjectType:
@@ -87,6 +108,39 @@ class Entity:
         return cls(
             **_without(d, "item_type"),
             item_type=ObjectType.from_dict(d["item_type"]),
+        )
+
+    @classmethod
+    def catalog(cls) -> "Node":
+        """Node-form self-description of the persisted Entity record.
+
+        Returns a ``Node`` whose children mirror the Entity dataclass
+        fields. ``ObjectType`` (the type of ``item_type``) is singleton-
+        flattened inline: the wrapper edge ``item_type`` (type=object)
+        plus dotted-name edges ``item_type.id`` / ``item_type.metadata``
+        for scalars, and ``item_type.attributes`` carrying
+        ``Attribute.catalog()`` as the child-entity link.
+
+        The caller assigns the catalog id via ``to_flat(root_name)`` and
+        is expected to set ``builtin=True`` before persisting.
+        """
+        return Node(
+            children=[
+                (Edge(name="id", type="string", required=True), Node()),
+                (Edge(name="item_type", type="object", required=True), Node()),
+                (Edge(name="item_type.id", type="string", required=True), Node()),
+                (
+                    Edge(name="item_type.metadata", type="object", required=False),
+                    Node(),
+                ),
+                (
+                    Edge(name="item_type.attributes", type="object[]", required=True),
+                    Attribute.catalog(),
+                ),
+                (Edge(name="parent_entity", type="string", required=False), Node()),
+                (Edge(name="builtin", type="boolean", required=False), Node()),
+                (Edge(name="view", type="boolean", required=False), Node()),
+            ],
         )
 
 
