@@ -240,20 +240,16 @@ categories:
       E10:
         title: singleton-flatten 内の object[] を child entity link として保持
         note: |
-          現状 `schema_tree._collect_edges` は singleton ObjectNode の
-          sub-property を常に `(edge, dc.Node())` の組で吐き出し、
-          object[] サブプロパティの場合に child entity link を捨てている。
-          結果 `members.hobby.pets` のような nested collection が catalog
-          上で独立 entity にならず、query DSL の `from:` で walk 不可。
-          メタドキュメンテーションの自動生成対象からも漏れる。
-          catalog データモデル自体は dotted-name entity link をサポート
-          しており (F8 自己記述カタログが手書きで使用)、変換ロジック側
-          (`to_catalog_node(sub.node)` への置き換え) で揃えれば足りる。
-          影響: `__meta_entity` / `__table_view` の自動生成対象が増え、
-          `from: <singleton>.<collection>` 形式のパスが解決可能になる。
-          詳細は design/normalizer/schema-spec.md。
+          `schema_tree._collect_edges` の singleton 分岐で、ArrayNode 型の
+          sub-property に対してのみ `to_catalog_node(sub.node)` を呼んで
+          child entity link を保持。`members.hobby.pets` のような
+          nested collection が catalog の独立 entity になり、
+          query DSL の `from:` で walk 可能・メタドキュメンテーションの
+          自動生成対象にも入る。深いネスト object (singleton-of-singleton) は
+          引き続き 1 段平坦化のみで、深い構造は catalog に現れない。
+          詳細は design/normalizer/schema-spec.md「シングルトン」節。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#singleton-flatten-内の-object-child-entity-link-を保持する-e10
+        done: true
 
   F:
     title: メタドキュメンテーション拡張

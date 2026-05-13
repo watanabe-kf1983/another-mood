@@ -213,17 +213,27 @@ def to_catalog_node(node: Node) -> dc.Node:
 def _collect_edges(
     obj: ObjectNode,
 ) -> Iterable[tuple[dc.Edge, dc.Node]]:
-    # Singleton ObjectNode properties surface as the singleton attribute
-    # itself (type='object') plus their sub-properties flattened one level
-    # deep into dotted-name scalars, matching SchemaInspector's "no
-    # nested-object entities" convention.
+    # A singleton property (ObjectNode child of obj) is inlined into the
+    # parent entity rather than becoming its own entity.  Each singleton
+    # contributes two kinds of edges:
+    #   - the singleton itself, as a scalar `object` edge with no child;
+    #   - one `<singleton>.<sub>` dotted-name edge per sub-property.
+    # If a sub-property is a collection (ArrayNode), its child Node is
+    # carried along so a nested entity hangs off the dotted edge.  Scalar
+    # and nested-singleton sub-properties degrade to opaque edges with
+    # no child.
     for prop in obj.properties:
         if isinstance(prop.node, ObjectNode):
             yield (_property_to_edge(prop), dc.Node())
             for sub in prop.node.properties:
+                sub_child = (
+                    to_catalog_node(sub.node)
+                    if isinstance(sub.node, ArrayNode)
+                    else dc.Node()
+                )
                 yield (
                     _property_to_edge(sub, name=f"{prop.name}.{sub.name}"),
-                    dc.Node(),
+                    sub_child,
                 )
         else:
             yield (_property_to_edge(prop), to_catalog_node(prop.node))
