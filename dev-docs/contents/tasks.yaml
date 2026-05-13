@@ -478,3 +478,37 @@ categories:
         title: PyPI 公開
         note: 詳細タスクは別途切り出す（ライセンス / README / メタデータ整備など）
         phase: 12
+
+  R:
+    title: ユーザドキュメント・サンプルプロジェクト改善
+    impl_paths:
+      - docs/
+      - showcase/
+    tasks:
+      R1:
+        title: "スキーマ記述例の `additionalProperties: false` 位置を統一"
+        note: |
+          現状の JSON Schema サンプルは `additionalProperties: false` を
+          各 `properties:` ブロックの末尾 (required: の後ろ) に置いている
+          が、ネストが深くなると「閉じの false」が複数インデントレベル
+          で末尾に集中し、書き手が「いまどの properties に対応する
+          false を書こうとしているか」を追うコストが高い。
+          推奨スタイルとして `properties:` を書くときは必ずその直上に
+          `additionalProperties: false` を置く形に揃える:
+
+          ```yaml
+          type: object
+          additionalProperties: false   # ← properties の直上
+          properties:
+            name: { type: string }
+            ...
+          required: [name]
+          ```
+
+          影響範囲:
+          - showcase/ 配下の全 schema.yaml
+          - docs/ 内の schema 記述例 (reference / guides 等)
+          - design ドキュメント内の例示 (該当があれば)
+
+          機能変化なし。schema_inspector の解釈は不変、純粋にスタイル統一。
+        phase: 10
