@@ -24,6 +24,7 @@ from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.query import Query
 
 
 _SCHEMA_SCHEMA_FILE = Path(
@@ -49,6 +50,11 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
         builtin=True,
     )
 
+    # Emit the self-description catalog so queries can read the catalog
+    # itself (e.g. ``from: __definition.entities``).  Data and schema
+    # coincide here: each persisted Entity record describes one Entity.
+    _emit_definition_catalog(out_dir / "__builtin" / "__definition.yaml")
+
 
 def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
     """Extract data catalog from a single schema file and write it to dst."""
@@ -57,6 +63,25 @@ def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -
     if entities:
         catalog = {"entities": [e.to_dict() for e in entities]}
         save_model(dst, {"__definition": catalog})
+
+
+def _emit_definition_catalog(dst: Path) -> None:
+    """Emit the self-description catalog for the ``__definition`` namespace.
+
+    The entries are constructed in Python from the dataclasses' own
+    ``catalog()`` methods (rather than read from a JSON Schema source
+    like ``content-schema.yaml``), because no authoritative external
+    schema exists for the catalog dataclasses themselves.
+    """
+    entities = [
+        *dc.Entity.catalog().to_flat("__definition.entities"),
+        *Query.catalog().to_flat("__definition.queries"),
+    ]
+    entities = [replace(e, builtin=True) for e in entities]
+    save_model(
+        dst,
+        {"__definition": {"entities": [e.to_dict() for e in entities]}},
+    )
 
 
 def check_schema(schema_file: Path) -> None:
