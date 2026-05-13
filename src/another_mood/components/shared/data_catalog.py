@@ -1,35 +1,9 @@
-"""Catalog model — Node/Edge tree as canonical, Entity as serialization view.
+"""Catalog model — Node/Edge tree as canonical, Entity as flat serialization view.
 
-The catalog has two co-existing forms:
-
-* In-memory tree form — nested ``Node`` / ``Edge`` structure
-  used for path traversal and query view derivation.  This is the
-  primary representation that the composer's query pipeline operates on.
-* Persistence form — flat list of ``Entity`` records with parent-id
-  pointers, used for YAML round-tripping.  Each ``Entity`` is one
-  serialization view of a position in the tree; ``id`` is the dotted
-  access path, and ``parent_entity`` carries the parent pointer.
-
-Node/Edge split:
-
-* ``Node`` carries an entity's intrinsic body — its own type
-  metadata and its children.
-* ``Edge`` carries the parent's view of the child — the attribute
-  name, type, required flag, and attribute-level metadata / validation.
-
-Splitting these lets a node be detached from its original parent without
-dragging stale "as parent saw me" fields along, or re-wired under a fresh
-Edge with new parent-side values — a property the composer relies
-on when deriving query views.
-
-Catalog conventions exploited by the tree form:
-
-* Every catalog entity corresponds to an array-typed attribute (``object[]``).
-  Singleton object properties are flattened into dotted attribute names and
-  never become entities, so composite nodes (those with children) are always
-  reached via ``object[]`` edges.
-* The root node is a virtual container whose children are the top-level
-  entities; it is never emitted to the flat catalog.
+Node carries the intrinsic body of a tree position; Edge is the parent's
+view of that child.  Splitting them lets the composer detach a node and
+re-wire it under a fresh Edge with new parent-side fields — heavily
+relied on in query derivation.
 """
 
 from collections.abc import Mapping, Sequence
