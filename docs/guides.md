@@ -127,17 +127,17 @@ Schemas are written in **JSON Schema** (for the supported vocabulary and minor d
 
 ```yaml
 type: object
+additionalProperties: false
 properties:
   members:
     type: object
     additionalProperties:        # ← means "map of same-shaped entries"
       type: object
+      additionalProperties: false
       properties:
         name: { type: string }
         role: { type: string }
       required: [name, role]
-      additionalProperties: false
-additionalProperties: false
 ```
 
 A content file matching this schema (the file name is up to you):
@@ -156,7 +156,7 @@ The root structure is fixed and always satisfies these three rules:
 
 - The outermost type is `type: object`
 - Each entry under `properties:` represents one **entity** (a collection of records of the same shape) — `members` in the example above
-- The trailing `additionalProperties: false` makes any undeclared top-level key an error
+- `additionalProperties: false` (written immediately above `properties:`) makes any undeclared top-level key an error
 
 The entity name (`members`) must match the top-level key in the content file.
 
@@ -172,11 +172,11 @@ members:
   type: object
   additionalProperties:
     type: object
+    additionalProperties: false
     properties:
       name: { type: string }
       role: { type: string }
     required: [name, role]
-    additionalProperties: false
 ```
 
 ```yaml
@@ -212,10 +212,10 @@ steps:
   type: array
   items:
     type: object
+    additionalProperties: false
     properties:
       label: { type: string }
     required: [label]
-    additionalProperties: false
 ```
 
 ```yaml
@@ -236,10 +236,10 @@ For things like site config — where the keys are known up front and there is e
 # add to definition/schema.yaml
 site_config:
   type: object
+  additionalProperties: false
   properties:
     title: { type: string }
     base_url: { type: string }
-  additionalProperties: false
 ```
 
 ```yaml

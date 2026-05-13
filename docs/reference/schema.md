@@ -5,25 +5,25 @@ The **schema** is the file that declares the types of structured data the projec
 ```yaml
 # definition/schema.yaml
 type: object
+additionalProperties: false
 properties:
   users:
     type: object
     additionalProperties:
       type: object
+      additionalProperties: false
       properties:
         name: { type: string }
         email: { type: string }
       required: [name]
-      additionalProperties: false
   orders:
     type: array
     items:
       type: object
+      additionalProperties: false
       properties:
         title: { type: string }
         customer: { type: string }
-      additionalProperties: false
-additionalProperties: false
 ```
 
 ## Root constraints
@@ -32,7 +32,7 @@ The root of the schema file must satisfy:
 
 - `type: object` is required.
 - `properties` is required. Each entry represents one **entity** (a collection of records of the same shape).
-- `additionalProperties: false` at the end (any undeclared top-level key becomes an error).
+- `additionalProperties: false` is required (any undeclared top-level key becomes an error). The same pairing is required at every nested level: any `properties:` without `additionalProperties: false` causes a build error. The recommended style is to write `additionalProperties: false` on the line directly above each `properties:`.
 
 A [map pattern](#map-pattern) (`additionalProperties: <schema>` without accompanying `properties`) is not allowed at the root level (the meta-schema rejects it).
 
@@ -53,11 +53,11 @@ users:
   type: object
   additionalProperties:                  # ← map-pattern signal
     type: object
+    additionalProperties: false
     properties:
       name: { type: string }
       email: { type: string }
     required: [name]
-    additionalProperties: false
 ```
 
 On the content file side, write a map:
@@ -92,16 +92,16 @@ screens:
   type: object
   additionalProperties:
     type: object
+    additionalProperties: false
     properties:
       title: { type: string }
       buttons:                           # nested map pattern
         type: object
         additionalProperties:
           type: object
+          additionalProperties: false
           properties:
             label: { type: string }
-          additionalProperties: false
-    additionalProperties: false
 ```
 
 **Non-object values**: when `additionalProperties` is something other than an object (e.g., `type: string`), each entry is normalized to `{ id: <key>, value: <value> }`.
@@ -115,9 +115,9 @@ tags:
   type: array
   items:
     type: object
+    additionalProperties: false
     properties:
       name: { type: string }
-    additionalProperties: false
 ```
 
 On the content file side, write an array directly:
@@ -137,10 +137,10 @@ Pattern for an object with predetermined keys and exactly one record (e.g., site
 ```yaml
 site_config:
   type: object
+  additionalProperties: false
   properties:
     title: { type: string }
     base_url: { type: string }
-  additionalProperties: false
 ```
 
 ```yaml
