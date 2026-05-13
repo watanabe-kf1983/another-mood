@@ -240,9 +240,9 @@ _TASKS_CATALOG_YAML = """
 
 class TestFromDerive:
     def test_walks_dot_path_to_leaf(self) -> None:
-        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path="categories.tasks").derive(root)
-        assert leaf.to_flat("tasks") == _catalog(
+        assert dc.flatten_tree(leaf, "tasks") == _catalog(
             """
             - id: tasks
               item_type:
@@ -259,7 +259,7 @@ class TestFromDerive:
         singleton-object flattening) is consumed as one step by
         longest-match walk — naive ``path.split('.')`` would split it
         spuriously and miss the edge."""
-        root = dc.Node.from_flat(
+        root = dc.build_tree(
             _catalog(
                 """
                 - id: members
@@ -287,10 +287,10 @@ class TestFromDerive:
 
 class TestGroupedDerive:
     def test_wraps_with_by_and_alias(self) -> None:
-        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path="categories.tasks").derive(root)
         wrapped = Grouped(by="phase", as_="tasks").derive(leaf)
-        assert wrapped.to_flat("groups") == _catalog(
+        assert dc.flatten_tree(wrapped, "groups") == _catalog(
             """
             - id: groups
               item_type:
@@ -316,7 +316,7 @@ class TestGroupedDerive:
 
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
-        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
         leaf = From(path="categories.tasks").derive(root)
         projected = Select(
             items=[
@@ -324,7 +324,7 @@ class TestSelectDerive:
                 SelectItem(item="title", as_="title"),
             ]
         ).derive(leaf)
-        assert projected.to_flat("projection") == _catalog(
+        assert dc.flatten_tree(projected, "projection") == _catalog(
             """
             - id: projection
               item_type:
@@ -350,8 +350,8 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
-        result = query.derive(root).to_flat("tasks_by_phase")
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        result = dc.flatten_tree(query.derive(root), "tasks_by_phase")
         assert result == _catalog(
             """
             - id: tasks_by_phase
@@ -387,8 +387,8 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = dc.Node.from_flat(_catalog(_TASKS_CATALOG_YAML))
-        result = query.derive(root).to_flat("task_titles")
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        result = dc.flatten_tree(query.derive(root), "task_titles")
         assert result == _catalog(
             """
             - id: task_titles
@@ -463,7 +463,7 @@ def _catalog_name(field_name: str) -> str:
 
 
 class TestCatalogDriftSuppression:
-    """Assert Query / Grouped / SelectItem ``catalog()`` Nodes stay in sync.
+    """Assert Query / Grouped / SelectItem ``catalog`` Nodes stay in sync.
 
     The catalog edge names use bare YAML keys, while the dataclasses use
     PEP 8 trailing-underscore names where the YAML key collides with a
@@ -476,7 +476,7 @@ class TestCatalogDriftSuppression:
 
     def test_query_top_level_edges_match_dataclass_fields(self) -> None:
         non_dotted = {
-            edge.name for edge, _ in Query.catalog().children if "." not in edge.name
+            edge.name for edge, _ in Query.catalog.children if "." not in edge.name
         }
         assert non_dotted == {"id"} | {
             _catalog_name(f.name) for f in dataclasses.fields(Query)
@@ -485,12 +485,12 @@ class TestCatalogDriftSuppression:
     def test_grouped_dotted_edges_match_dataclass_fields(self) -> None:
         dotted = {
             edge.name.removeprefix("grouped.")
-            for edge, _ in Query.catalog().children
+            for edge, _ in Query.catalog.children
             if edge.name.startswith("grouped.")
         }
         assert dotted == {_catalog_name(f.name) for f in dataclasses.fields(Grouped)}
 
     def test_select_item_edges_match_dataclass_fields(self) -> None:
-        assert {edge.name for edge, _ in SelectItem.catalog().children} == {
+        assert {edge.name for edge, _ in SelectItem.catalog.children} == {
             _catalog_name(f.name) for f in dataclasses.fields(SelectItem)
         }

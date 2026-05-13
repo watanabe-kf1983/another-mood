@@ -74,8 +74,8 @@ def _emit_definition_catalog(dst: Path) -> None:
     schema exists for the catalog dataclasses themselves.
     """
     entities = [
-        *dc.Entity.catalog().to_flat("__definition.entities"),
-        *Query.catalog().to_flat("__definition.queries"),
+        *dc.flatten_tree(dc.Entity.catalog, "__definition.entities"),
+        *dc.flatten_tree(Query.catalog, "__definition.queries"),
     ]
     entities = [replace(e, builtin=True) for e in entities]
     save_model(

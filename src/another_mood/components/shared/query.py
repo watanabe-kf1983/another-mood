@@ -10,7 +10,7 @@ duality rationale.
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Protocol, cast, runtime_checkable
+from typing import ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
 
@@ -60,6 +60,17 @@ class SelectItem:
     item: str
     as_: str
 
+    #: Node-form self-description of a persisted select-item record.
+    #: A Node whose children mirror the SelectItem record's YAML keys
+    #: (``item`` and ``as``).  Composed into ``Query.catalog`` as the
+    #: child node of the ``select`` edge.
+    catalog: ClassVar[dc.Node] = dc.Node(
+        children=[
+            (dc.Edge(name="item", type="string", required=True), dc.Node()),
+            (dc.Edge(name="as", type="string", required=False), dc.Node()),
+        ],
+    )
+
     def apply(self, record: Record) -> tuple[str, object]:
         return (self.as_, record[self.item])
 
@@ -70,21 +81,6 @@ class SelectItem:
             )
         edge, child = catalog.child_entry(self.item)
         return (replace(edge, name=self.as_), child)
-
-    @classmethod
-    def catalog(cls) -> dc.Node:
-        """Node-form self-description of a persisted select-item record.
-
-        Returns a Node whose children mirror the SelectItem record's
-        YAML keys (``item`` and ``as``). Composed into ``Query.catalog()``
-        as the child node of the ``select`` edge.
-        """
-        return dc.Node(
-            children=[
-                (dc.Edge(name="item", type="string", required=True), dc.Node()),
-                (dc.Edge(name="as", type="string", required=False), dc.Node()),
-            ],
-        )
 
 
 @dataclass(frozen=True)
@@ -189,6 +185,33 @@ class Query:
     from_: From
     grouped: Grouped | None
 
+    #: Node-form self-description of a persisted query record.
+    #: Mirrors how a query appears in YAML after normalization: ``id``
+    #: synthesized from the dict-pattern key, ``from`` and ``select``
+    #: from the DSL keys, and ``grouped`` singleton-flattened into
+    #: ``grouped.by`` / ``grouped.as``.  The ``select`` edge carries
+    #: ``SelectItem.catalog`` as the child-entity link.
+    #:
+    #: The caller (inspect_schema) assigns the catalog id
+    #: ``__definition.queries`` via ``to_flat`` and sets ``builtin=True``
+    #: before persisting.
+    catalog: ClassVar[dc.Node] = dc.Node(
+        children=[
+            (dc.Edge(name="id", type="string", required=True), dc.Node()),
+            (dc.Edge(name="from", type="string", required=True), dc.Node()),
+            (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
+            (dc.Edge(name="grouped.by", type="string", required=True), dc.Node()),
+            (
+                dc.Edge(name="grouped.as", type="string", required=False),
+                dc.Node(),
+            ),
+            (
+                dc.Edge(name="select", type="object[]", required=False),
+                SelectItem.catalog,
+            ),
+        ],
+    )
+
     def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
         records = self.from_.apply(parents)
         if self.grouped:
@@ -200,38 +223,6 @@ class Query:
         if self.grouped:
             node = self.grouped.derive(node)
         return self.select.derive(node)
-
-    @classmethod
-    def catalog(cls) -> dc.Node:
-        """Node-form self-description of a persisted query record.
-
-        Returns a Node mirroring how a query appears in YAML after
-        normalization: ``id`` synthesized from the dict-pattern key,
-        ``from`` and ``select`` from the DSL keys, and ``grouped``
-        singleton-flattened into ``grouped.by`` / ``grouped.as``.
-        The ``select`` edge carries ``SelectItem.catalog()`` as the
-        child-entity link.
-
-        The caller (inspect_schema) assigns the catalog id
-        ``__definition.queries`` via ``to_flat`` and sets
-        ``builtin=True`` before persisting.
-        """
-        return dc.Node(
-            children=[
-                (dc.Edge(name="id", type="string", required=True), dc.Node()),
-                (dc.Edge(name="from", type="string", required=True), dc.Node()),
-                (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
-                (dc.Edge(name="grouped.by", type="string", required=True), dc.Node()),
-                (
-                    dc.Edge(name="grouped.as", type="string", required=False),
-                    dc.Node(),
-                ),
-                (
-                    dc.Edge(name="select", type="object[]", required=False),
-                    SelectItem.catalog(),
-                ),
-            ],
-        )
 
 
 def parse_query(raw: Mapping[str, object]) -> Query:

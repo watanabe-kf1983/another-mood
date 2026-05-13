@@ -1,154 +1,16 @@
-"""Catalog model — persisted records and in-memory tree representation.
+"""Catalog model — Node/Edge tree as canonical, Entity as flat serialization view.
 
-The catalog has two co-existing forms:
-
-* Persistence form — flat list of ``Entity`` records with parent-id pointers,
-  used for YAML round-tripping.  Each class exposes ``to_dict`` / ``from_dict``.
-* In-memory tree form — nested ``Node`` / ``Edge`` structure
-  used for path traversal and query view derivation.
-
-Node/Edge split:
-
-* ``Node`` carries an entity's intrinsic body — its own type
-  metadata and its children.
-* ``Edge`` carries the parent's view of the child — the attribute
-  name, type, required flag, and attribute-level metadata / validation.
-
-Splitting these lets a node be detached from its original parent without
-dragging stale "as parent saw me" fields along, or re-wired under a fresh
-Edge with new parent-side values — a property the composer relies
-on when deriving query views.
-
-Catalog conventions exploited by the tree form:
-
-* Every catalog entity corresponds to an array-typed attribute (``object[]``).
-  Singleton object properties are flattened into dotted attribute names and
-  never become entities, so composite nodes (those with children) are always
-  reached via ``object[]`` edges.
-* The root node is a virtual container whose children are the top-level
-  entities; it is never emitted to the flat catalog.
+Node carries the intrinsic body of a tree position; Edge is the parent's
+view of that child.  Splitting them lets the composer detach a node and
+re-wire it under a fresh Edge with new parent-side fields — heavily
+relied on in query derivation.
 """
 
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, ClassVar
 
-# ── Persisted form ────────────────────────────────────────────────────
-
-
-@dataclass(frozen=True)
-class Attribute:
-    id: str
-    type: str
-    required: bool
-    metadata: Mapping[str, object] | None = None
-    validation: Mapping[str, object] | None = None
-    entity: str | None = None  # referenced Entity.id (= access_path)
-    item_type: str | None = None  # referenced ObjectType.id
-
-    def to_dict(self) -> Mapping[str, object]:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, d: Mapping[str, Any]) -> "Attribute":
-        return cls(**d)
-
-    @classmethod
-    def catalog(cls) -> "Node":
-        """Node-form self-description of the persisted Attribute record.
-
-        Returns a ``Node`` whose children mirror the Attribute dataclass
-        fields. The caller composes this node into a parent tree and
-        assigns the catalog id via ``to_flat(root_name)`` — ``Attribute``
-        itself does not know where in the namespace it lives.
-        """
-        return Node(
-            children=[
-                (Edge(name="id", type="string", required=True), Node()),
-                (Edge(name="type", type="string", required=True), Node()),
-                (Edge(name="required", type="boolean", required=True), Node()),
-                (Edge(name="metadata", type="object", required=False), Node()),
-                (Edge(name="validation", type="object", required=False), Node()),
-                (Edge(name="entity", type="string", required=False), Node()),
-                (Edge(name="item_type", type="string", required=False), Node()),
-            ],
-        )
-
-
-@dataclass(frozen=True)
-class ObjectType:
-    id: str
-    attributes: Sequence[Attribute]
-    metadata: Mapping[str, object] | None = None
-
-    def to_dict(self) -> Mapping[str, object]:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, d: Mapping[str, Any]) -> "ObjectType":
-        return cls(
-            **_without(d, "attributes"),
-            attributes=[Attribute.from_dict(a) for a in d["attributes"]],
-        )
-
-
-@dataclass(frozen=True)
-class Entity:
-    id: str
-    item_type: ObjectType
-    parent_entity: str | None = None
-    builtin: bool = False
-    view: bool = False  # synthesized from a query (composer-set)
-
-    def to_dict(self) -> Mapping[str, object]:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, d: Mapping[str, Any]) -> "Entity":
-        return cls(
-            **_without(d, "item_type"),
-            item_type=ObjectType.from_dict(d["item_type"]),
-        )
-
-    @classmethod
-    def catalog(cls) -> "Node":
-        """Node-form self-description of the persisted Entity record.
-
-        Returns a ``Node`` whose children mirror the Entity dataclass
-        fields. ``ObjectType`` (the type of ``item_type``) is singleton-
-        flattened inline: the wrapper edge ``item_type`` (type=object)
-        plus dotted-name edges ``item_type.id`` / ``item_type.metadata``
-        for scalars, and ``item_type.attributes`` carrying
-        ``Attribute.catalog()`` as the child-entity link.
-
-        The caller assigns the catalog id via ``to_flat(root_name)`` and
-        is expected to set ``builtin=True`` before persisting.
-        """
-        return Node(
-            children=[
-                (Edge(name="id", type="string", required=True), Node()),
-                (Edge(name="item_type", type="object", required=True), Node()),
-                (Edge(name="item_type.id", type="string", required=True), Node()),
-                (
-                    Edge(name="item_type.metadata", type="object", required=False),
-                    Node(),
-                ),
-                (
-                    Edge(name="item_type.attributes", type="object[]", required=True),
-                    Attribute.catalog(),
-                ),
-                (Edge(name="parent_entity", type="string", required=False), Node()),
-                (Edge(name="builtin", type="boolean", required=False), Node()),
-                (Edge(name="view", type="boolean", required=False), Node()),
-            ],
-        )
-
-
-def _without(d: Mapping[str, Any], *keys: str) -> dict[str, Any]:
-    return {k: v for k, v in d.items() if k not in keys}
-
-
-# ── In-memory tree form ───────────────────────────────────────────────
+# ── In-memory tree form (canonical) ───────────────────────────────────
 
 
 @dataclass(frozen=True)
@@ -211,33 +73,144 @@ class Node:
                 raise KeyError(remaining)
             candidate = candidate.rsplit(".", 1)[0]
 
-    @classmethod
-    def from_flat(cls, catalog: Sequence[Entity]) -> "Node":
-        """Build a virtual-root tree from a flat catalog list.
 
-        The virtual root mirrors the records-side ``Sequence[Record]``
-        wrapping that From.apply receives: every top-level entity hangs
-        off it as an ``object[]`` edge so path traversal walks ``object[]``
-        edges uniformly down to any leaf entity.
-        """
+# ── Persistence form (serialization view) ─────────────────────────────
+
+
+@dataclass(frozen=True)
+class Attribute:
+    id: str
+    type: str
+    required: bool
+    metadata: Mapping[str, object] | None = None
+    validation: Mapping[str, object] | None = None
+    entity: str | None = None  # referenced Entity.id (= access_path)
+    item_type: str | None = None  # referenced ObjectType.id
+
+    #: Node-form self-description of the persisted Attribute record.
+    #: Composed into ``Entity.catalog`` as the child of the
+    #: ``item_type.attributes`` edge.  The caller assigns the catalog id
+    #: via ``flatten_tree(root_name=...)``; ``Attribute`` itself doesn't
+    #: know where in the namespace it lives.
+    catalog: ClassVar[Node] = Node(
+        children=[
+            (Edge(name="id", type="string", required=True), Node()),
+            (Edge(name="type", type="string", required=True), Node()),
+            (Edge(name="required", type="boolean", required=True), Node()),
+            (Edge(name="metadata", type="object", required=False), Node()),
+            (Edge(name="validation", type="object", required=False), Node()),
+            (Edge(name="entity", type="string", required=False), Node()),
+            (Edge(name="item_type", type="string", required=False), Node()),
+        ],
+    )
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "Attribute":
+        return cls(**d)
+
+
+@dataclass(frozen=True)
+class ObjectType:
+    id: str
+    attributes: Sequence[Attribute]
+    metadata: Mapping[str, object] | None = None
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "ObjectType":
         return cls(
-            children=[
-                (
-                    Edge(name=entity.id, type="object[]", required=True),
-                    _build_entity_node(entity, catalog),
-                )
-                for entity in _children_of(None, catalog)
-            ],
+            **_without(d, "attributes"),
+            attributes=[Attribute.from_dict(a) for a in d["attributes"]],
         )
 
-    def to_flat(self, root_name: str) -> Sequence[Entity]:
-        """Flatten this node into a list of Entity records.
 
-        The top entity gets ``root_name`` as its id; descendant ids are
-        built by joining the chain of child edge names with dots — the
-        access_path convention shared by every catalog producer.
-        """
-        return _flatten_entity(self, edge_path=(root_name,), parent_entity_id=None)
+@dataclass(frozen=True)
+class Entity:
+    id: str
+    item_type: ObjectType
+    parent_entity: str | None = None
+    builtin: bool = False
+    view: bool = False  # synthesized from a query (composer-set)
+
+    #: Node-form self-description of the persisted Entity record.
+    #: ``ObjectType`` (the type of ``item_type``) is singleton-flattened
+    #: inline: the wrapper edge ``item_type`` (type=object) plus
+    #: dotted-name edges ``item_type.id`` / ``item_type.metadata`` for
+    #: scalars, and ``item_type.attributes`` carrying
+    #: ``Attribute.catalog`` as the child-entity link.
+    #:
+    #: The caller assigns the catalog id via
+    #: ``flatten_tree(catalog, root_name=...)`` and is expected to set
+    #: ``builtin=True`` before persisting.
+    catalog: ClassVar[Node] = Node(
+        children=[
+            (Edge(name="id", type="string", required=True), Node()),
+            (Edge(name="item_type", type="object", required=True), Node()),
+            (Edge(name="item_type.id", type="string", required=True), Node()),
+            (Edge(name="item_type.metadata", type="object", required=False), Node()),
+            (
+                Edge(name="item_type.attributes", type="object[]", required=True),
+                Attribute.catalog,
+            ),
+            (Edge(name="parent_entity", type="string", required=False), Node()),
+            (Edge(name="builtin", type="boolean", required=False), Node()),
+            (Edge(name="view", type="boolean", required=False), Node()),
+        ],
+    )
+
+    def to_dict(self) -> Mapping[str, object]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "Entity":
+        return cls(
+            **_without(d, "item_type"),
+            item_type=ObjectType.from_dict(d["item_type"]),
+        )
+
+
+# ── Conversion between forms ──────────────────────────────────────────
+
+
+def build_tree(catalog: Sequence[Entity]) -> Node:
+    """Build a virtual-root tree from a flat catalog list.
+
+    The virtual root mirrors the records-side ``Sequence[Record]``
+    wrapping that ``From.apply`` receives: every top-level entity hangs
+    off it as an ``object[]`` edge so path traversal walks ``object[]``
+    edges uniformly down to any leaf entity.
+    """
+    return Node(
+        children=[
+            (
+                Edge(name=entity.id, type="object[]", required=True),
+                _build_entity_node(entity, catalog),
+            )
+            for entity in _children_of(None, catalog)
+        ],
+    )
+
+
+def flatten_tree(node: Node, root_name: str) -> Sequence[Entity]:
+    """Flatten ``node`` into a list of Entity records.
+
+    The top entity gets ``root_name`` as its id; descendant ids are
+    built by joining the chain of child edge names with dots — the
+    access_path convention shared by every catalog producer.
+    """
+    return _flatten_entity(node, edge_path=(root_name,), parent_entity_id=None)
+
+
+# ── Internal helpers ──────────────────────────────────────────────────
+
+
+def _without(d: Mapping[str, Any], *keys: str) -> dict[str, Any]:
+    return {k: v for k, v in d.items() if k not in keys}
 
 
 def _build_entity_node(
