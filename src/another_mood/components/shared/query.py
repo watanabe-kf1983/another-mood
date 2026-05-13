@@ -55,13 +55,13 @@ class QueryNode(Protocol):
 
 @dataclass(frozen=True)
 class SelectItem:
-    """A single field projection (rename ``item`` to ``as_name``)."""
+    """A single field projection (rename ``item`` to ``as_``)."""
 
     item: str
-    as_name: str
+    as_: str
 
     def apply(self, record: Record) -> tuple[str, object]:
-        return (self.as_name, record[self.item])
+        return (self.as_, record[self.item])
 
     def derive(self, catalog: dc.Node) -> tuple[dc.Edge, dc.Node]:
         if not catalog.has_child(self.item):
@@ -69,7 +69,7 @@ class SelectItem:
                 f"unknown attribute '{self.item}'", offender=self.item
             )
         edge, child = catalog.child_entry(self.item)
-        return (replace(edge, name=self.as_name), child)
+        return (replace(edge, name=self.as_), child)
 
     @classmethod
     def catalog(cls) -> dc.Node:
@@ -153,19 +153,19 @@ def flatten_children(
 
 @dataclass(frozen=True)
 class Grouped:
-    """Group input rows by ``by`` and package each group under ``as_name``.
+    """Group input rows by ``by`` and package each group under ``as_``.
 
     Grouped rows are preserved verbatim (including their own ``by`` field).
     """
 
     by: str
-    as_name: str
+    as_: str
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         groups: dict[object, list[Record]] = {}
         for record in records:
             groups.setdefault(record[self.by], []).append(record)
-        return [{self.by: key, self.as_name: items} for key, items in groups.items()]
+        return [{self.by: key, self.as_: items} for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         if not catalog.has_child(self.by):
@@ -174,7 +174,7 @@ class Grouped:
             children=[
                 catalog.child_entry(self.by),
                 (
-                    dc.Edge(name=self.as_name, type="object[]", required=True),
+                    dc.Edge(name=self.as_, type="object[]", required=True),
                     catalog,
                 ),
             ],
@@ -186,17 +186,17 @@ class Query:
     """Pipeline of clauses applied in the order ``from → grouped? → select``."""
 
     select: Select
-    from_clause: From
+    from_: From
     grouped: Grouped | None
 
     def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records = self.from_clause.apply(parents)
+        records = self.from_.apply(parents)
         if self.grouped:
             records = self.grouped.apply(records)
         return self.select.apply(records)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        node = self.from_clause.derive(catalog)
+        node = self.from_.derive(catalog)
         if self.grouped:
             node = self.grouped.derive(node)
         return self.select.derive(node)
@@ -241,22 +241,22 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     validated Query objects come out.
     """
     from_raw = cast(str, raw["from"])
-    from_clause = From(path=from_raw)
+    from_ = From(path=from_raw)
 
     grouped: Grouped | None = None
     if "grouped" in raw:
         grouped_raw = cast(Mapping[str, str], raw["grouped"])
         grouped = Grouped(
             by=grouped_raw["by"],
-            as_name=grouped_raw.get("as", from_clause.segments[-1]),
+            as_=grouped_raw.get("as", from_.segments[-1]),
         )
 
     select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
     select = Select(
         items=[
-            SelectItem(item=entry["item"], as_name=entry.get("as", entry["item"]))
+            SelectItem(item=entry["item"], as_=entry.get("as", entry["item"]))
             for entry in select_raw
         ]
     )
 
-    return Query(select=select, from_clause=from_clause, grouped=grouped)
+    return Query(select=select, from_=from_, grouped=grouped)
