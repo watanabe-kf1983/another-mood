@@ -313,6 +313,59 @@ _CASES = [
         """,
         id="field metadata and validation keywords",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          members:
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string }
+                hobby:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    pets:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          name: { type: string }
+                          kind: { type: string }
+        """,
+        """
+        entities:
+          - id: members
+            builtin: false
+            view: false
+            item_type:
+              id: members.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: name, type: string, required: false }
+                - { id: hobby, type: object, required: false }
+                - id: hobby.pets
+                  type: "object[]"
+                  required: false
+                  entity: members.hobby.pets
+                  item_type: members.item.hobby.pets.item
+          - id: members.hobby.pets
+            builtin: false
+            view: false
+            parent_entity: members
+            item_type:
+              id: members.item.hobby.pets.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: name, type: string, required: false }
+                - { id: kind, type: string, required: false }
+        """,
+        id="object[] inside singleton — child entity at dotted path",
+    ),
 ]
 
 

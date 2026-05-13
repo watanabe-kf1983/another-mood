@@ -343,4 +343,60 @@ class TestToCatalogNode:
             ("a", True), ("b", False),
         ]
 
+    def test_singleton_with_collection_subproperty_creates_child_entity(self) -> None:
+        """Singleton ObjectNode containing an object[] sub-property keeps the child entity link.
+
+        Singleton-flatten emits the singleton itself as a type='object'
+        scalar attribute and its sub-properties as dotted-name edges; for
+        ArrayNode(ObjectNode) sub-properties the child entity must be
+        registered so that ``from: <singleton>.<collection>`` walks.
+        """
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("name", True, ValueNode(type="string")),
+            SchemaProperty("hobby", True, ObjectNode(properties=[
+                SchemaProperty("pets", False, ArrayNode(child=ObjectNode(properties=[
+                    SchemaProperty("name", True, ValueNode(type="string")),
+                    SchemaProperty("kind", False, ValueNode(type="string")),
+                ]))),
+            ])),
+        ]))
+        assert dc.flatten_tree(to_catalog_node(tree), "members") == [
+            dc.Entity("members", item_type=dc.ObjectType("members.item", attributes=[
+                dc.Attribute("name", "string", True),
+                dc.Attribute("hobby", "object", True),
+                dc.Attribute("hobby.pets", "object[]", False,
+                             entity="members.hobby.pets",
+                             item_type="members.item.hobby.pets.item"),
+            ])),
+            dc.Entity(
+                "members.hobby.pets",
+                item_type=dc.ObjectType("members.item.hobby.pets.item", attributes=[
+                    dc.Attribute("name", "string", True),
+                    dc.Attribute("kind", "string", False),
+                ]),
+                parent_entity="members",
+            ),
+        ]
+
+    def test_singleton_with_scalar_subproperties_stays_flat(self) -> None:
+        """Singleton with only scalar/scalar-array sub-properties remains flat (no child entity).
+
+        Guards against over-eager promotion: scalar sub-properties of a
+        singleton must stay as dotted-name attributes on the parent, never
+        become entities.
+        """
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("address", True, ObjectNode(properties=[
+                SchemaProperty("city",     True,  ValueNode(type="string")),
+                SchemaProperty("aliases",  False, ArrayNode(child=ValueNode(type="string"))),
+            ])),
+        ]))
+        assert dc.flatten_tree(to_catalog_node(tree), "persons") == [
+            dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
+                dc.Attribute("address",         "object",   True),
+                dc.Attribute("address.city",    "string",   True),
+                dc.Attribute("address.aliases", "string[]", False),
+            ])),
+        ]
+
 # fmt: on
