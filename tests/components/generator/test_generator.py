@@ -8,7 +8,7 @@ import yaml
 from jinja2 import Undefined
 
 from another_mood.components.generator.generator import (
-    _at,  # pyright: ignore[reportPrivateUsage]
+    _pluck,  # pyright: ignore[reportPrivateUsage]
     _query_from,  # pyright: ignore[reportPrivateUsage]
     _to_yaml,  # pyright: ignore[reportPrivateUsage]
     generate,
@@ -93,21 +93,22 @@ class TestGenerate:
         assert report["__build_report"]["errors"]
 
 
-class TestAtFilter:
-    """Unit tests for the `at` filter function."""
+class TestPluckFilter:
+    """Unit tests for the `pluck` filter function."""
 
-    def test_scalar(self) -> None:
-        assert _at({"x": "hi"}, "x") == "hi"
+    def test_dotted_path_returns_raw_value(self) -> None:
+        # Regression: a nested collection reached via a dotted path
+        # (e.g. `hobby.pets` after E10's singleton flattening) must
+        # come back as a raw list so the table-view template can
+        # `length`-count it. Falsy real values must pass through, not
+        # be folded into "missing".
+        row = {"hobby": {"pets": [{"id": "dog1"}]}, "done": False}
+        assert _pluck(row, "hobby.pets") == [{"id": "dog1"}]
+        assert _pluck(row, "done") is False
 
-    def test_nested_dotted_path(self) -> None:
-        assert _at({"m": {"title": "T"}}, "m.title") == "T"
-
-    def test_missing_path_returns_empty(self) -> None:
-        assert _at({"x": 1}, "missing") == ""
-
-    def test_stringifies_non_str(self) -> None:
-        assert _at({"x": True}, "x") == "True"
-        assert _at({"x": [1, 2]}, "x") == "[1, 2]"
+    def test_unreachable_path_yields_undefined(self) -> None:
+        assert isinstance(_pluck({"x": 1}, "missing"), Undefined)
+        assert isinstance(_pluck({"x": 1}, "x.y"), Undefined)
 
 
 class TestQueryFromFilter:

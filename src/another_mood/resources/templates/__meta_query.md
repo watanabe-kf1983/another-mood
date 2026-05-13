@@ -55,9 +55,9 @@
 {% for row in rows -%}
 | {% for attribute in attributes -%}
 {%- if attribute.entity -%}
-*{{ (row[attribute.id] or []) | length }} items*
+*{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
-{{ row | at(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}
+{{ row | pluck(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}
 {%- endif %} | {% endfor %}
 {% endfor -%}
 {%- else -%}

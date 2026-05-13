@@ -78,24 +78,20 @@ def _query_from(parents: Sequence[Record], path: str) -> Sequence[Record]:
         return []
 
 
-def _at(row: object, path: str) -> str:
+def _pluck(row: object, path: str) -> object:
     """System-only Jinja2 filter: navigate a dotted path through nested mappings.
 
-    Exposed to built-in templates only (see `_query_from`). Missing keys,
-    None, and Undefined collapse to empty string. Leaf values are
-    stringified (Python repr for lists/mappings); GFM escaping is left to
-    the caller via Jinja2's `replace` filter.
+    Exposed to built-in templates only (see `_query_from`). Returns the
+    raw value at the path. Missing keys and broken intermediate steps
+    yield Jinja2's `Undefined`, which renders as the empty string under
+    the standard Undefined contract and is falsy for `or []` / `length`.
     """
     value: object = row
     for part in path.split("."):
         if not isinstance(value, Mapping):
-            return ""
-        value = cast(Mapping[str, object], value).get(part)
-        if value is None:
-            return ""
-    if isinstance(value, Undefined):
-        return ""
-    return str(value)
+            return Undefined()
+        value = cast(Mapping[str, object], value).get(part, Undefined())
+    return value
 
 
 def _to_yaml(value: object, flow: bool = False) -> str:
@@ -123,6 +119,6 @@ def _to_yaml(value: object, flow: bool = False) -> str:
 
 _FILTERS: Mapping[str, Callable[..., Any]] = {
     "query_from": _query_from,
-    "at": _at,
+    "pluck": _pluck,
     "to_yaml": _to_yaml,
 }
