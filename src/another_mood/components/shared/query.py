@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from typing import ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.json_data_model import pluck
 
 type Record = Mapping[str, object]
 
@@ -72,7 +73,7 @@ class SelectItem:
     )
 
     def apply(self, record: Record) -> tuple[str, object]:
-        return (self.as_, record[self.item])
+        return (self.as_, pluck(record, self.item))
 
     def derive(self, catalog: dc.Node) -> tuple[dc.Edge, dc.Node]:
         if not catalog.has_child(self.item):
@@ -160,7 +161,7 @@ class Grouped:
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         groups: dict[object, list[Record]] = {}
         for record in records:
-            groups.setdefault(record[self.by], []).append(record)
+            groups.setdefault(pluck(record, self.by), []).append(record)
         return [{self.by: key, self.as_: items} for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
