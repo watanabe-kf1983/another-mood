@@ -277,7 +277,7 @@ class Query:
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
-            (dc.Edge(name="select", type="object[]", required=False), dc.Node()),
+            (dc.Edge(name="select", type="object", required=False), dc.Node()),
             (dc.Edge(name="sort", type="object", required=False), dc.Node()),
         ],
     )
