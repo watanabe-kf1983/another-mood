@@ -8,9 +8,10 @@ serialization conventions: YAML 1.2, literal-block multiline strings,
 None-key elision).
 """
 
+from collections.abc import Mapping
 from functools import reduce
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ruamel.yaml import YAML
 from ruamel.yaml.representer import RoundTripRepresenter
@@ -88,6 +89,37 @@ def _merge_values(base_val: JsonValue, override_val: JsonValue) -> JsonValue:
     if isinstance(base_val, list) and isinstance(override_val, list):
         return [*base_val, *override_val]
     return override_val
+
+
+# ── Path access ──────────────────────────────────────────────────────
+
+
+def pluck(record: Mapping[str, object], key_path: str) -> object:
+    """Read the value at ``key_path`` from ``record`` by longest-first key match.
+
+    Data-side dual of :meth:`data_catalog.Node._longest_edge_match`.
+    Raises ``KeyError`` when no prefix matches at some step.
+    """
+    segment, value = _longest_key_match(record, key_path)
+    remaining = key_path[len(segment) + 1 :]
+    if not remaining:
+        return value
+    if not isinstance(value, Mapping):
+        raise KeyError(key_path)
+    return pluck(cast(Mapping[str, object], value), remaining)
+
+
+def _longest_key_match(
+    record: Mapping[str, object], remaining: str
+) -> tuple[str, object]:
+    """Single-step longest-first key match — peer of ``Node._longest_edge_match``."""
+    candidate = remaining
+    while True:
+        if candidate in record:
+            return candidate, record[candidate]
+        if "." not in candidate:
+            raise KeyError(remaining)
+        candidate = candidate.rsplit(".", 1)[0]
 
 
 # ── Write ────────────────────────────────────────────────────────────
