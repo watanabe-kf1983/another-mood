@@ -314,6 +314,38 @@ class TestGroupedDerive:
         )
 
 
+class TestGroupedDottedBy:
+    """A dotted ``by`` must agree between derive and apply.
+
+    Same shape as :class:`TestSelectItemDottedItem`: a flat dotted-name
+    catalog edge lets ``Grouped.derive`` resolve ``by="a.b"`` by
+    literal match, so ``apply`` must navigate the dotted path into
+    each nested record rather than look up the literal ``"a.b"`` key.
+    """
+
+    _CATALOG = dc.Node(
+        children=[
+            (dc.Edge(name="a.b", type="string", required=True), dc.Node()),
+        ],
+    )
+
+    def test_derive_resolves_flat_dotted_edge(self) -> None:
+        result = Grouped(by="a.b", as_="items").derive(self._CATALOG)
+        assert [edge.name for edge, _ in result.children] == ["a.b", "items"]
+
+    def test_apply_traverses_nested_record(self) -> None:
+        records = [
+            {"a": {"b": "v1"}},
+            {"a": {"b": "v2"}},
+            {"a": {"b": "v1"}},
+        ]
+        expected = [
+            {"a.b": "v1", "items": [{"a": {"b": "v1"}}, {"a": {"b": "v1"}}]},
+            {"a.b": "v2", "items": [{"a": {"b": "v2"}}]},
+        ]
+        assert list(Grouped(by="a.b", as_="items").apply(records)) == expected
+
+
 class TestSelectItemDottedItem:
     """A dotted ``item`` must agree between derive and apply.
 
