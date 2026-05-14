@@ -71,14 +71,6 @@ class SelectItem:
     item: str
     as_: str
 
-    #: Catalog self-description of a persisted select-item record.
-    catalog: ClassVar[dc.Node] = dc.Node(
-        children=[
-            (dc.Edge(name="item", type="string", required=True), dc.Node()),
-            (dc.Edge(name="as", type="string", required=False), dc.Node()),
-        ],
-    )
-
     def apply(self, record: Record) -> tuple[str, object]:
         return (self.as_, pluck(record, self.item))
 
@@ -285,10 +277,7 @@ class Query:
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
-            (
-                dc.Edge(name="select", type="object[]", required=False),
-                SelectItem.catalog,
-            ),
+            (dc.Edge(name="select", type="object[]", required=False), dc.Node()),
             (dc.Edge(name="sort", type="object", required=False), dc.Node()),
         ],
     )

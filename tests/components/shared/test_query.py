@@ -769,7 +769,7 @@ def _catalog_name(field_name: str) -> str:
 
 
 class TestCatalogDriftSuppression:
-    """Assert Query / SelectItem ``catalog`` Nodes stay in sync.
+    """Assert ``Query.catalog`` stays in sync with the Query dataclass.
 
     The catalog edge names use bare YAML keys, while the dataclasses use
     PEP 8 trailing-underscore names where the YAML key collides with a
@@ -783,9 +783,4 @@ class TestCatalogDriftSuppression:
     def test_query_edges_match_dataclass_fields(self) -> None:
         assert {edge.name for edge, _ in Query.catalog.children} == {"id"} | {
             _catalog_name(f.name) for f in dataclasses.fields(Query)
-        }
-
-    def test_select_item_edges_match_dataclass_fields(self) -> None:
-        assert {edge.name for edge, _ in SelectItem.catalog.children} == {
-            _catalog_name(f.name) for f in dataclasses.fields(SelectItem)
         }
