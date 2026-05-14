@@ -20,6 +20,9 @@ from another_mood.components.shared.file_type import FileType
 
 type JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 
+type KeyPath = tuple[str, ...]
+"""A sequence of dict keys for direct path access (each element is a literal key)."""
+
 
 # ── Read ─────────────────────────────────────────────────────────────
 
@@ -94,32 +97,59 @@ def _merge_values(base_val: JsonValue, override_val: JsonValue) -> JsonValue:
 # ── Path access ──────────────────────────────────────────────────────
 
 
-def pluck(record: Mapping[str, object], key_path: str) -> object:
-    """Read the value at ``key_path`` from ``record`` by longest-first key match.
+def pluck(record: Mapping[str, object], key_path: str | KeyPath) -> object:
+    """Read the value at ``key_path`` from ``record``.
+
+    Accepts either a dotted string path (resolved by longest-first key
+    match via :func:`split_path`) or a pre-computed :data:`KeyPath` of
+    literal keys.  Raises ``KeyError`` if a string path cannot be
+    fully resolved.
+    """
+    if isinstance(key_path, str):
+        keys, remaining = split_path(record, key_path)
+        if remaining:
+            raise KeyError(key_path)
+    else:
+        keys = key_path
+    value: object = record
+    for k in keys:
+        value = cast(Mapping[str, object], value)[k]  # type: ignore[reportUnnecessaryCast]
+    return value
+
+
+def split_path(record: Mapping[str, object], key_path: str) -> tuple[KeyPath, str]:
+    """Walk ``record`` by longest-first key match as far as possible.
+
+    Returns ``(keys, remaining)``: ``keys`` is the directly-applicable
+    :data:`KeyPath` consumed from ``key_path``, ``remaining`` is the
+    suffix where descent stopped (empty when fully resolved, equal to
+    ``key_path`` when no prefix matched at the root).
 
     Data-side dual of :meth:`data_catalog.Node._longest_edge_match`.
-    Raises ``KeyError`` when no prefix matches at some step.
     """
-    segment, value = _longest_key_match(record, key_path)
-    remaining = key_path[len(segment) + 1 :]
-    if not remaining:
-        return value
-    if not isinstance(value, Mapping):
-        raise KeyError(key_path)
-    return pluck(cast(Mapping[str, object], value), remaining)
+    keys: list[str] = []
+    current: object = record
+    remaining = key_path
+    while remaining and isinstance(current, Mapping):
+        key, value = match_key(cast(Mapping[str, object], current), remaining)  # type: ignore[reportUnnecessaryCast]
+        if not key:
+            break
+        keys.append(key)
+        remaining = remaining[len(key) + 1 :]
+        current = value
+    return tuple(keys), remaining
 
 
-def _longest_key_match(
-    record: Mapping[str, object], remaining: str
-) -> tuple[str, object]:
-    """Single-step longest-first key match — peer of ``Node._longest_edge_match``."""
-    candidate = remaining
-    while True:
-        if candidate in record:
-            return candidate, record[candidate]
+def match_key(record: Mapping[str, object], key_path: str) -> tuple[str, object]:
+    """Return the longest key in ``record`` matching a prefix of ``key_path``,
+    with its value.  Returns ``("", record)`` if no prefix matches.
+    """
+    candidate = key_path
+    while candidate not in record:
         if "." not in candidate:
-            raise KeyError(remaining)
+            return "", record
         candidate = candidate.rsplit(".", 1)[0]
+    return candidate, record[candidate]
 
 
 # ── Write ────────────────────────────────────────────────────────────

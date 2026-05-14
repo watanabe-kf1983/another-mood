@@ -26,27 +26,40 @@ def _catalog(yaml_text: str) -> list[dc.Entity]:
 class TestFlattenChildren:
     def test_array_of_objects_extends(self) -> None:
         parents = [{"k": [{"id": "1"}, {"id": "2"}]}]
-        assert list(flatten_children(parents, "k")) == [{"id": "1"}, {"id": "2"}]
+        assert flatten_children(parents, "k") == ([{"id": "1"}, {"id": "2"}], "")
 
     def test_single_object_is_one_element(self) -> None:
         parents = [{"k": {"id": "1"}}]
-        assert list(flatten_children(parents, "k")) == [{"id": "1"}]
+        assert flatten_children(parents, "k") == ([{"id": "1"}], "")
 
     def test_deep_nested_arrays_flatten(self) -> None:
         parents = [{"k": [[{"id": "a"}, {"id": "b"}], [{"id": "c"}]]}]
-        assert list(flatten_children(parents, "k")) == [
-            {"id": "a"},
-            {"id": "b"},
-            {"id": "c"},
-        ]
+        assert flatten_children(parents, "k") == (
+            [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+            "",
+        )
 
     def test_concatenates_across_parents(self) -> None:
         parents = [{"k": [{"id": "1"}]}, {"k": {"id": "2"}}]
-        assert list(flatten_children(parents, "k")) == [{"id": "1"}, {"id": "2"}]
+        assert flatten_children(parents, "k") == ([{"id": "1"}, {"id": "2"}], "")
 
     def test_raises_on_missing_key(self) -> None:
         with pytest.raises(KeyError):
             flatten_children([{"k": []}], "missing")
+
+    def test_falls_back_to_shorter_prefix_when_full_path_not_a_key(self) -> None:
+        # Data is nested; longest-match falls back from "a.b" to "a".
+        parents = [{"a": [{"id": "x"}]}]
+        assert flatten_children(parents, "a.b") == ([{"id": "x"}], "b")
+
+    def test_literal_dotted_key_consumes_in_one_step(self) -> None:
+        # User-defined or singleton-flattened literal dotted key.
+        parents = [{"a.b": [{"id": "x"}]}]
+        assert flatten_children(parents, "a.b") == ([{"id": "x"}], "")
+
+    def test_returns_empty_when_parents_empty(self) -> None:
+        # No parent to inspect; signal "done" so the caller's loop exits.
+        assert flatten_children([], "k") == ([], "")
 
 
 class TestFrom:
@@ -68,6 +81,22 @@ class TestFrom:
             {"id": "A1"},
             {"id": "A2"},
             {"id": "B1"},
+        ]
+
+    def test_walks_literal_dotted_key_as_one_step(self) -> None:
+        # Records carrying a literal dotted key (e.g. a user-defined
+        # property name with a dot) are walked as one step by longest
+        # match — naive ``path.split('.')`` would split spuriously.
+        sources = {
+            "members": [
+                {"id": "m1", "hobby.pets": [{"id": "p1"}, {"id": "p2"}]},
+                {"id": "m2", "hobby.pets": [{"id": "p3"}]},
+            ]
+        }
+        assert list(From(path="members.hobby.pets").apply([sources])) == [
+            {"id": "p1"},
+            {"id": "p2"},
+            {"id": "p3"},
         ]
 
 

@@ -8,12 +8,12 @@ evaluating data.  See dev-docs/internal/components/composer.md for the
 duality rationale.
 """
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import pluck
+from another_mood.components.shared.json_data_model import pluck, split_path
 
 type Record = Mapping[str, object]
 
@@ -106,14 +106,11 @@ class From:
 
     path: str
 
-    @property
-    def segments(self) -> Sequence[str]:
-        return self.path.split(".")
-
     def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records = parents
-        for key in self.segments:
-            records = flatten_children(records, key)
+        records: Sequence[Record] = parents
+        remaining = self.path
+        while remaining:
+            records, remaining = flatten_children(records, remaining)
         return records
 
     def derive(self, catalog: dc.Node) -> dc.Node:
@@ -126,26 +123,40 @@ class From:
 
 
 def flatten_children(
-    parents: Iterable[Mapping[str, object]], child_key: str
-) -> Sequence[Record]:
-    """Deep-flatten each parent's child_key into a sequence of objects.
+    parents: Sequence[Mapping[str, object]], key_path: str
+) -> tuple[Sequence[Record], str]:
+    """Consume one longest-match step of ``key_path`` from each parent
+    and deep-flatten its value into a list of objects.
 
-    Walks through any depth of nested arrays; a single object is taken
-    as-is. Non-object leaves are not expected (entity-addressed paths
-    only reach objects or arrays of objects, possibly nested).
+    Returns ``(records, remaining_key_path)``.  Walks any depth of
+    nested arrays; a single object is taken as-is.
     """
+    if not parents:
+        return ([], "")
+
+    # Determine the directly-applicable key sequence from the first parent;
+    # parents at the same level share a shape per the catalog.
+    keys, remaining = split_path(parents[0], key_path)
+    if remaining and not keys:
+        # First parent couldn't consume even one step — treat as miss.
+        raise KeyError(key_path)
+
     result: list[Record] = []
-
-    def _walk(v: object) -> None:
-        if isinstance(v, Mapping):
-            result.append(cast(Record, v))
-            return
-        for item in cast(Sequence[object], v):
-            _walk(item)
-
     for parent in parents:
-        _walk(parent[child_key])
-    return result
+        result.extend(_flatten_nd_pure_array(pluck(parent, keys)))
+    return (result, remaining)
+
+
+def _flatten_nd_pure_array(v: object) -> list[Record]:
+    """Flatten a Mapping or (possibly nested) list of Mappings."""
+    if isinstance(v, Mapping):
+        return [cast(Record, v)]
+    elif isinstance(v, list):
+        return [
+            r for item in cast(list[object], v) for r in _flatten_nd_pure_array(item)
+        ]
+    else:
+        raise TypeError(f"expected Mapping or list of Mappings, got {type(v).__name__}")
 
 
 @dataclass(frozen=True)
@@ -240,7 +251,7 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         grouped_raw = cast(Mapping[str, str], raw["grouped"])
         grouped = Grouped(
             by=grouped_raw["by"],
-            as_=grouped_raw.get("as", from_.segments[-1]),
+            as_=grouped_raw.get("as", from_raw.rsplit(".", 1)[-1]),
         )
 
     select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
