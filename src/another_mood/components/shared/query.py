@@ -15,6 +15,7 @@ wrapper.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from functools import reduce
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
@@ -71,14 +72,6 @@ class SelectItem:
     item: str
     as_: str
 
-    #: Catalog self-description of a persisted select-item record.
-    catalog: ClassVar[dc.Node] = dc.Node(
-        children=[
-            (dc.Edge(name="item", type="string", required=True), dc.Node()),
-            (dc.Edge(name="as", type="string", required=False), dc.Node()),
-        ],
-    )
-
     def apply(self, record: Record) -> tuple[str, object]:
         return (self.as_, pluck(record, self.item))
 
@@ -92,7 +85,7 @@ class SelectItem:
 
 
 @dataclass(frozen=True)
-class Select:
+class Select(QueryNode):
     """Project named fields from each input row, optionally renaming them."""
 
     items: Sequence[SelectItem]
@@ -108,13 +101,12 @@ class Select:
 
 
 @dataclass(frozen=True)
-class From:
+class From(QueryNode):
     """Walks a dot-path through nested object[] arrays to a leaf data source."""
 
     path: str
 
-    def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records: Sequence[Record] = parents
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         remaining = self.path
         while remaining:
             records, remaining = flatten_children(records, remaining)
@@ -167,7 +159,7 @@ def _flatten_nd_pure_array(v: object) -> list[Record]:
 
 
 @dataclass(frozen=True)
-class Grouped:
+class Grouped(QueryNode):
     """Group input rows by ``by`` and package each group under ``as_``.
 
     Grouped rows are preserved verbatim (including their own ``by`` field).
@@ -197,7 +189,7 @@ class Grouped:
 
 
 @dataclass(frozen=True)
-class Where:
+class Where(QueryNode):
     """Pipeline wrapper around a :class:`RecordPredicate` tree."""
 
     predicate: RecordPredicate
@@ -232,7 +224,7 @@ class Missing(Enum):
 
 
 @dataclass(frozen=True)
-class Sort:
+class Sort(QueryNode):
     """Order output records by a single attribute."""
 
     by: str
@@ -268,7 +260,7 @@ class Sort:
 
 
 @dataclass(frozen=True)
-class Query:
+class Query(QueryNode):
     """Pipeline of clauses applied in the order
     ``from → where? → grouped? → select → sort?``."""
 
@@ -278,58 +270,27 @@ class Query:
     where: Where | None = None
     sort: Sort | None = None
 
-    #: Catalog self-description of a persisted query record. ``where``
-    #: is opaque ``object`` because its recursive predicate shape
-    #: doesn't fit the catalog's fixed-attribute model.
+    #: Catalog self-description of a persisted query record.
     catalog: ClassVar[dc.Node] = dc.Node(
         children=[
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
-            (dc.Edge(name="grouped.by", type="string", required=True), dc.Node()),
-            (
-                dc.Edge(name="grouped.as", type="string", required=False),
-                dc.Node(),
-            ),
-            (
-                dc.Edge(name="select", type="object[]", required=False),
-                SelectItem.catalog,
-            ),
+            (dc.Edge(name="select", type="object", required=False), dc.Node()),
             (dc.Edge(name="sort", type="object", required=False), dc.Node()),
-            (dc.Edge(name="sort.by", type="string", required=True), dc.Node()),
-            (
-                dc.Edge(name="sort.direction", type="string", required=False),
-                dc.Node(),
-            ),
-            (
-                dc.Edge(name="sort.missing", type="string", required=False),
-                dc.Node(),
-            ),
         ],
     )
 
-    def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records = self.from_.apply(parents)
-        if self.where is not None:
-            records = self.where.apply(records)
-        if self.grouped:
-            records = self.grouped.apply(records)
-        records = self.select.apply(records)
-        if self.sort is not None:
-            records = self.sort.apply(records)
-        return records
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        return reduce(lambda r, qn: qn.apply(r), self._pipeline(), records)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        node = self.from_.derive(catalog)
-        if self.where is not None:
-            node = self.where.derive(node)
-        if self.grouped:
-            node = self.grouped.derive(node)
-        node = self.select.derive(node)
-        if self.sort is not None:
-            node = self.sort.derive(node)
-        return node
+        return reduce(lambda c, qn: qn.derive(c), self._pipeline(), catalog)
+
+    def _pipeline(self) -> Sequence[QueryNode]:
+        clauses = (self.from_, self.where, self.grouped, self.select, self.sort)
+        return [c for c in clauses if c is not None]
 
 
 def parse_query(raw: Mapping[str, object]) -> Query:

@@ -769,7 +769,7 @@ def _catalog_name(field_name: str) -> str:
 
 
 class TestCatalogDriftSuppression:
-    """Assert Query / Grouped / SelectItem ``catalog`` Nodes stay in sync.
+    """Assert ``Query.catalog`` stays in sync with the Query dataclass.
 
     The catalog edge names use bare YAML keys, while the dataclasses use
     PEP 8 trailing-underscore names where the YAML key collides with a
@@ -780,31 +780,7 @@ class TestCatalogDriftSuppression:
     includes it explicitly in the expected set.
     """
 
-    def test_query_top_level_edges_match_dataclass_fields(self) -> None:
-        non_dotted = {
-            edge.name for edge, _ in Query.catalog.children if "." not in edge.name
-        }
-        assert non_dotted == {"id"} | {
+    def test_query_edges_match_dataclass_fields(self) -> None:
+        assert {edge.name for edge, _ in Query.catalog.children} == {"id"} | {
             _catalog_name(f.name) for f in dataclasses.fields(Query)
-        }
-
-    def test_grouped_dotted_edges_match_dataclass_fields(self) -> None:
-        dotted = {
-            edge.name.removeprefix("grouped.")
-            for edge, _ in Query.catalog.children
-            if edge.name.startswith("grouped.")
-        }
-        assert dotted == {_catalog_name(f.name) for f in dataclasses.fields(Grouped)}
-
-    def test_sort_dotted_edges_match_dataclass_fields(self) -> None:
-        dotted = {
-            edge.name.removeprefix("sort.")
-            for edge, _ in Query.catalog.children
-            if edge.name.startswith("sort.")
-        }
-        assert dotted == {_catalog_name(f.name) for f in dataclasses.fields(Sort)}
-
-    def test_select_item_edges_match_dataclass_fields(self) -> None:
-        assert {edge.name for edge, _ in SelectItem.catalog.children} == {
-            _catalog_name(f.name) for f in dataclasses.fields(SelectItem)
         }

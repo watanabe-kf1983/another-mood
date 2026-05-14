@@ -481,6 +481,5 @@ class TestInspectSchema:
             "__definition.entities",
             "__definition.entities.item_type.attributes",
             "__definition.queries",
-            "__definition.queries.select",
         }
         assert all(e["builtin"] for e in entities)
