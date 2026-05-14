@@ -106,14 +106,11 @@ class From:
 
     path: str
 
-    @property
-    def segments(self) -> Sequence[str]:
-        return self.path.split(".")
-
     def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records = parents
-        for key in self.segments:
-            records = flatten_children(records, key)
+        records: Sequence[Record] = parents
+        remaining = self.path
+        while remaining:
+            records, remaining = flatten_children(records, remaining)
         return records
 
     def derive(self, catalog: dc.Node) -> dc.Node:
@@ -126,14 +123,34 @@ class From:
 
 
 def flatten_children(
-    parents: Iterable[Mapping[str, object]], child_key: str
-) -> Sequence[Record]:
-    """Deep-flatten each parent's child_key into a sequence of objects.
+    parents: Iterable[Mapping[str, object]], key_path: str
+) -> tuple[Sequence[Record], str]:
+    """Consume the longest matching key prefix of ``key_path`` from each
+    parent and deep-flatten its value into a sequence of objects.
+
+    Returns ``(records, remaining)`` — ``records`` is the flat list of
+    objects reached, ``remaining`` is the suffix of ``key_path`` after
+    the consumed prefix (empty when ``key_path`` is fully consumed).
+    Data-side counterpart of :meth:`data_catalog.Node._longest_edge_match`:
+    a singleton-flattened catalog edge such as ``hobby.pets`` is
+    consumed as one step regardless of whether the data carries the
+    literal flat key or a nested ``{hobby: {pets: ...}}`` form.
 
     Walks through any depth of nested arrays; a single object is taken
     as-is. Non-object leaves are not expected (entity-addressed paths
     only reach objects or arrays of objects, possibly nested).
     """
+    parents_list = list(parents)
+    if not parents_list:
+        return ([], "")
+
+    key = key_path
+    while key not in parents_list[0]:
+        if "." not in key:
+            raise KeyError(key_path)
+        key = key.rsplit(".", 1)[0]
+    remaining = key_path[len(key) + 1 :]
+
     result: list[Record] = []
 
     def _walk(v: object) -> None:
@@ -143,9 +160,9 @@ def flatten_children(
         for item in cast(Sequence[object], v):
             _walk(item)
 
-    for parent in parents:
-        _walk(parent[child_key])
-    return result
+    for parent in parents_list:
+        _walk(parent[key])
+    return (result, remaining)
 
 
 @dataclass(frozen=True)
@@ -240,7 +257,7 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         grouped_raw = cast(Mapping[str, str], raw["grouped"])
         grouped = Grouped(
             by=grouped_raw["by"],
-            as_=grouped_raw.get("as", from_.segments[-1]),
+            as_=grouped_raw.get("as", from_raw.rsplit(".", 1)[-1]),
         )
 
     select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
