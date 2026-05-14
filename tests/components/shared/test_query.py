@@ -314,6 +314,31 @@ class TestGroupedDerive:
         )
 
 
+class TestSelectItemDottedItem:
+    """A dotted ``item`` must agree between derive and apply.
+
+    A catalog whose edge name is literally ``a.b`` (as singleton-object
+    flattening produces) makes ``derive`` accept ``SelectItem(item="a.b")``
+    by literal match.  ``apply`` should then navigate the dotted path
+    into the nested record, not look up the literal ``"a.b"`` key —
+    otherwise a query that derives cleanly fails at evaluation time.
+    """
+
+    _CATALOG = dc.Node(
+        children=[
+            (dc.Edge(name="a.b", type="string", required=True), dc.Node()),
+        ],
+    )
+
+    def test_derive_resolves_flat_dotted_edge(self) -> None:
+        edge, _ = SelectItem(item="a.b", as_="x").derive(self._CATALOG)
+        assert edge.name == "x"
+        assert edge.type == "string"
+
+    def test_apply_traverses_nested_record(self) -> None:
+        assert SelectItem(item="a.b", as_="x").apply({"a": {"b": "v"}}) == ("x", "v")
+
+
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
