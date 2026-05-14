@@ -6,6 +6,14 @@
 
 {{ from }}
 
+{% if where -%}
+### Where
+
+```yaml
+{{ where | to_yaml }}
+```
+
+{% endif -%}
 {% if grouped -%}
 ### Grouped by
 

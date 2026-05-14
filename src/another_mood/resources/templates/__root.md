@@ -35,6 +35,7 @@
 {% mood_view "__meta_query" with {
   "id": query.id,
   "from": query.from,
+  "where": query.where,
   "grouped": query.grouped,
   "select": query.select,
   "entities": __definition.entities,
