@@ -82,6 +82,36 @@ additionalProperties:
             type: string
         required: [item]
         additionalProperties: false
+    sort:
+      title: Sort clause
+      description: >-
+        Orders the final output records by one field. Runs after
+        `select:`, so `by:` references attribute names in the projected
+        output (including any `as:` aliases).
+      type: object
+      additionalProperties: false
+      properties:
+        by:
+          title: Sort key field
+          description: >-
+            Name of the field to order by. Records that lack this
+            field form the "missing" group placed by `missing:`.
+          type: string
+        direction:
+          title: Sort direction
+          description: Ascending (default) or descending.
+          type: string
+          enum: [asc, desc]
+        missing:
+          title: Missing-key placement
+          description: >-
+            Where to place records that lack the `by:` field.
+            Independent of `direction:` — `missing: first` always
+            places them at the head, `missing: last` at the tail.
+            Default `last`.
+          type: string
+          enum: [first, last]
+      required: [by]
   required: [from]
   additionalProperties: false
 
