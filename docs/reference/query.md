@@ -12,6 +12,8 @@ Structure of a view definition:
 # queries/by_role.yaml
 by_role:                     # ← top-level key of the file becomes the view name
   from: members              # required
+  where:                     # optional
+    active: true
   grouped:                   # optional
     by: role
   select:                    # optional
@@ -24,10 +26,11 @@ by_role:                     # ← top-level key of the file becomes the view na
 | Clause | Required | Role |
 |---|---|---|
 | `from` | Required | Source data (what to operate on). |
+| `where` | Optional | Per-record filter applied before grouping. |
 | `grouped` | Optional | Grouping of records. |
 | `select` | Optional | Projection of output fields. When omitted, the result is an array of empty objects. |
 
-Evaluation order: `from` → `grouped` → `select`.
+Evaluation order: `from` → `where` → `grouped` → `select`.
 
 ## Automatic pass-through
 
@@ -56,6 +59,44 @@ from: a.b.c.d   # flattens stepwise from a → b → c → d
 ```
 
 Each segment's value must be **an object or an array of objects** (optionally wrapped in any depth of nested arrays). A single object counts as one element; arrays are flattened and concatenated regardless of depth.
+
+## where
+
+Filters records by a predicate. Top-level keys are field names or the combinators `and` / `or` / `not`; multiple keys at the same level combine by implicit AND.
+
+```yaml
+where:
+  active: true                  # field: scalar is shorthand for { eq: <scalar> }
+  age: { gt: 10, lt: 20 }       # multi-predicate bundle combines by AND
+  or:
+    - role: engineer
+    - role: designer
+  not:
+    id: { startswith: '__' }
+```
+
+### Operators
+
+The closed set of atomic operators:
+
+| Operator | Target type | Meaning |
+|---|---|---|
+| `eq` | any scalar | Equality. The type matters — `42` and `"42"` are not equal. |
+| `gt` / `gte` / `lt` / `lte` | number | Numeric comparison. The record value must also be numeric (`int` / `float`, excluding `bool`); other types fail to match silently. |
+| `startswith` / `endswith` / `contains` | string | String prefix / suffix / substring. Non-string record values fail to match silently. |
+| `exists` | boolean | `true` requires the field to be present in the record; `false` requires it absent. |
+
+`eq` accepts a bare scalar value as shorthand (`field: <scalar>` is equivalent to `field: { eq: <scalar> }`).
+
+### Combinators
+
+| Combinator | Argument | Meaning |
+|---|---|---|
+| `and` | list of clauses | All clauses must match. |
+| `or` | list of clauses | At least one clause must match. |
+| `not` | single clause | The inner clause must NOT match. |
+
+Multiple keys at the same level — fields, combinators, or both — combine by implicit AND.
 
 ## grouped
 

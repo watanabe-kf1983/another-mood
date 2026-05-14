@@ -1,0 +1,8 @@
+active_members:
+  from: members
+  where:
+    active: true
+  select:
+    - item: id
+    - item: name
+    - item: role
