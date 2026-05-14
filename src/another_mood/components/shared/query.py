@@ -84,7 +84,7 @@ class SelectItem:
 
 
 @dataclass(frozen=True)
-class Select:
+class Select(QueryNode):
     """Project named fields from each input row, optionally renaming them."""
 
     items: Sequence[SelectItem]
@@ -100,13 +100,12 @@ class Select:
 
 
 @dataclass(frozen=True)
-class From:
+class From(QueryNode):
     """Walks a dot-path through nested object[] arrays to a leaf data source."""
 
     path: str
 
-    def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records: Sequence[Record] = parents
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         remaining = self.path
         while remaining:
             records, remaining = flatten_children(records, remaining)
@@ -159,7 +158,7 @@ def _flatten_nd_pure_array(v: object) -> list[Record]:
 
 
 @dataclass(frozen=True)
-class Grouped:
+class Grouped(QueryNode):
     """Group input rows by ``by`` and package each group under ``as_``.
 
     Grouped rows are preserved verbatim (including their own ``by`` field).
@@ -189,7 +188,7 @@ class Grouped:
 
 
 @dataclass(frozen=True)
-class Where:
+class Where(QueryNode):
     """Pipeline wrapper around a :class:`RecordPredicate` tree."""
 
     predicate: RecordPredicate
@@ -224,7 +223,7 @@ class Missing(Enum):
 
 
 @dataclass(frozen=True)
-class Sort:
+class Sort(QueryNode):
     """Order output records by a single attribute."""
 
     by: str
@@ -260,7 +259,7 @@ class Sort:
 
 
 @dataclass(frozen=True)
-class Query:
+class Query(QueryNode):
     """Pipeline of clauses applied in the order
     ``from → where? → grouped? → select → sort?``."""
 
@@ -282,8 +281,8 @@ class Query:
         ],
     )
 
-    def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
-        records = self.from_.apply(parents)
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        records = self.from_.apply(records)
         if self.where is not None:
             records = self.where.apply(records)
         if self.grouped:
