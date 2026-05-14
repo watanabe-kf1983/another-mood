@@ -15,6 +15,7 @@ wrapper.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from functools import reduce
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
@@ -282,26 +283,14 @@ class Query(QueryNode):
     )
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        records = self.from_.apply(records)
-        if self.where is not None:
-            records = self.where.apply(records)
-        if self.grouped:
-            records = self.grouped.apply(records)
-        records = self.select.apply(records)
-        if self.sort is not None:
-            records = self.sort.apply(records)
-        return records
+        return reduce(lambda r, qn: qn.apply(r), self._pipeline(), records)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        node = self.from_.derive(catalog)
-        if self.where is not None:
-            node = self.where.derive(node)
-        if self.grouped:
-            node = self.grouped.derive(node)
-        node = self.select.derive(node)
-        if self.sort is not None:
-            node = self.sort.derive(node)
-        return node
+        return reduce(lambda c, qn: qn.derive(c), self._pipeline(), catalog)
+
+    def _pipeline(self) -> Sequence[QueryNode]:
+        clauses = (self.from_, self.where, self.grouped, self.select, self.sort)
+        return [c for c in clauses if c is not None]
 
 
 def parse_query(raw: Mapping[str, object]) -> Query:
