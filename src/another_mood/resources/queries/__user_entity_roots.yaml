@@ -1,0 +1,15 @@
+# Root entities surfaced in the built-in __root template's Entity list
+# (excludes catalog-internal entities whose ids start with "__").  The
+# per-entity __meta_entity / __table_view loops iterate __entity_roots
+# directly so the hidden built-in entities still get meta pages.
+__user_entity_roots:
+  from: __definition.entities
+  where:
+    view: false
+    parent_entity: { exists: false }
+    not:
+      id: { startswith: __ }
+  select:
+    - item: id
+    - item: builtin
+    - item: item_type

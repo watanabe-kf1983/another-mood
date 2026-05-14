@@ -25,6 +25,8 @@ _QUERY_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
 )
 
+_BUILTIN_QUERIES_DIR = Path(str(resources.files("another_mood.resources") / "queries"))
+
 
 @Component(out_dir="out_dir", upstream_dirs=["data_catalog_dir"])
 def derive_queries(
@@ -41,21 +43,27 @@ def derive_queries(
     pending: list[
         tuple[Path, Sequence[Mapping[str, object]], list[Mapping[str, object]]]
     ] = []
-    for src_file, normalized in iter_normalized(queries_dir, schema):
-        queries = cast(Sequence[Mapping[str, object]], normalized)
-        entities, errors = _derive_entities(queries, catalog)
-        diagnostics.extend(errors)
-        pending.append((src_file, queries, entities))
+
+    for src_dir, dst_dir in [
+        (queries_dir, out_dir),
+        (_BUILTIN_QUERIES_DIR, out_dir / "__builtin"),
+    ]:
+        for src_file, normalized in iter_normalized(src_dir, schema):
+            queries = cast(Sequence[Mapping[str, object]], normalized)
+            entities, errors = _derive_entities(queries, catalog)
+            diagnostics.extend(errors)
+            # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
+            # never collide on the same destination.
+            rel = src_file.relative_to(src_dir)
+            dst = dst_dir / rel.with_name(rel.name + ".yaml")
+            pending.append((dst, queries, entities))
 
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
-    for src_file, queries, entities in pending:
-        # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
-        # never collide on the same destination.
-        rel = src_file.relative_to(queries_dir)
+    for dst, queries, entities in pending:
         save_model(
-            out_dir / rel.with_name(rel.name + ".yaml"),
+            dst,
             {
                 "__definition": {
                     "queries": list(queries),
