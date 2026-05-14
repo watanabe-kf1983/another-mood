@@ -14,7 +14,8 @@ wrapper.
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import ClassVar, Protocol, cast, runtime_checkable
+from enum import Enum
+from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.json_data_model import pluck, split_path
@@ -70,10 +71,7 @@ class SelectItem:
     item: str
     as_: str
 
-    #: Node-form self-description of a persisted select-item record.
-    #: A Node whose children mirror the SelectItem record's YAML keys
-    #: (``item`` and ``as``).  Composed into ``Query.catalog`` as the
-    #: child node of the ``select`` edge.
+    #: Catalog self-description of a persisted select-item record.
     catalog: ClassVar[dc.Node] = dc.Node(
         children=[
             (dc.Edge(name="item", type="string", required=True), dc.Node()),
@@ -219,25 +217,70 @@ class Where:
         return catalog
 
 
+class Direction(Enum):
+    """Sort direction.  Enum value = YAML key."""
+
+    ASC = "asc"
+    DESC = "desc"
+
+
+class Missing(Enum):
+    """Missing-key placement in a sort.  Enum value = YAML key."""
+
+    FIRST = "first"
+    LAST = "last"
+
+
+@dataclass(frozen=True)
+class Sort:
+    """Order output records by a single attribute."""
+
+    by: str
+    direction: Direction = Direction.ASC
+    missing: Missing = Missing.LAST
+
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        keyed: list[tuple[Any, Record]] = []
+        absent: list[Record] = []
+        for record in records:
+            try:
+                keyed.append((pluck(record, self.by), record))
+            except KeyError:
+                absent.append(record)
+        ordered = [
+            r
+            for _, r in sorted(
+                keyed, key=lambda kv: kv[0], reverse=self.direction is Direction.DESC
+            )
+        ]
+        return absent + ordered if self.missing is Missing.FIRST else ordered + absent
+
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        # Schema transform is identity (sort reorders only); call still
+        # validates that ``by`` resolves in the catalog.
+        try:
+            catalog.walk_path(self.by)
+        except KeyError as exc:
+            raise QueryDeriveError(
+                f"unknown attribute '{self.by}'", offender=self.by
+            ) from exc
+        return catalog
+
+
 @dataclass(frozen=True)
 class Query:
     """Pipeline of clauses applied in the order
-    ``from → where? → grouped? → select``."""
+    ``from → where? → grouped? → select → sort?``."""
 
     select: Select
     from_: From
     grouped: Grouped | None
     where: Where | None = None
+    sort: Sort | None = None
 
-    #: Node-form self-description of a persisted query record.
-    #: ``grouped`` is singleton-flattened into ``grouped.by`` /
-    #: ``grouped.as``; ``where`` is opaque ``object`` (same pattern as
-    #: attribute ``metadata`` / ``validation``) because its recursive
-    #: shape doesn't fit the catalog's fixed-attribute model.
-    #: ``select`` carries ``SelectItem.catalog`` as the child-entity
-    #: link.  The caller (inspect_schema) assigns the catalog id
-    #: ``__definition.queries`` and sets ``builtin=True`` before
-    #: persisting.
+    #: Catalog self-description of a persisted query record. ``where``
+    #: is opaque ``object`` because its recursive predicate shape
+    #: doesn't fit the catalog's fixed-attribute model.
     catalog: ClassVar[dc.Node] = dc.Node(
         children=[
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
@@ -253,6 +296,16 @@ class Query:
                 dc.Edge(name="select", type="object[]", required=False),
                 SelectItem.catalog,
             ),
+            (dc.Edge(name="sort", type="object", required=False), dc.Node()),
+            (dc.Edge(name="sort.by", type="string", required=True), dc.Node()),
+            (
+                dc.Edge(name="sort.direction", type="string", required=False),
+                dc.Node(),
+            ),
+            (
+                dc.Edge(name="sort.missing", type="string", required=False),
+                dc.Node(),
+            ),
         ],
     )
 
@@ -262,16 +315,21 @@ class Query:
             records = self.where.apply(records)
         if self.grouped:
             records = self.grouped.apply(records)
-        return self.select.apply(records)
+        records = self.select.apply(records)
+        if self.sort is not None:
+            records = self.sort.apply(records)
+        return records
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         node = self.from_.derive(catalog)
         if self.where is not None:
-            # Identity on the node, but validates key_path references.
             node = self.where.derive(node)
         if self.grouped:
             node = self.grouped.derive(node)
-        return self.select.derive(node)
+        node = self.select.derive(node)
+        if self.sort is not None:
+            node = self.sort.derive(node)
+        return node
 
 
 def parse_query(raw: Mapping[str, object]) -> Query:
@@ -305,4 +363,13 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         ]
     )
 
-    return Query(select=select, from_=from_, grouped=grouped, where=where)
+    sort: Sort | None = None
+    if "sort" in raw:
+        sort_raw = cast(Mapping[str, str], raw["sort"])
+        sort = Sort(
+            by=sort_raw["by"],
+            direction=Direction(sort_raw.get("direction", "asc")),
+            missing=Missing(sort_raw.get("missing", "last")),
+        )
+
+    return Query(select=select, from_=from_, grouped=grouped, where=where, sort=sort)
