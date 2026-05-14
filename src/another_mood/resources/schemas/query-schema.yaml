@@ -2,8 +2,9 @@ title: QuerySchema
 description: >-
   Meta-schema validating user-defined query files under queries_dir. Each
   top-level key names a query (= view) and maps to a definition with a
-  required `from:` data source and optional `grouped:` / `select:` clauses.
-  See docs/reference/query.md for the prose specification.
+  required `from:` data source and optional `where:` / `grouped:` /
+  `select:` clauses. See docs/reference/query.md for the prose
+  specification.
 
 type: object
 propertyNames:
@@ -14,9 +15,10 @@ propertyNames:
 additionalProperties:
   title: Query definition
   description: >-
-    A single query (view) definition. `from:` selects the normalized data
-    source; optional `grouped:` reshapes it into groups; optional `select:`
-    projects the output fields. See docs/reference/query.md for semantics.
+    A single query (view) definition. `from:` selects the normalized
+    data source; optional `where:` filters records; optional `grouped:`
+    reshapes them into groups; optional `select:` projects output
+    fields. See docs/reference/query.md for semantics.
   type: object
   properties:
     from:
@@ -28,6 +30,12 @@ additionalProperties:
         (e.g. `categories.tasks`) flattens nested child entities into a
         single sequence.
       type: string
+    where:
+      title: Filter clause
+      description: >-
+        Per-record filter applied between `from:` and `grouped:`. See
+        the `whereClause` definition for the recursive grammar.
+      $ref: "#/$defs/whereClause"
     grouped:
       title: Grouping clause
       description: >-
@@ -76,3 +84,93 @@ additionalProperties:
         additionalProperties: false
   required: [from]
   additionalProperties: false
+
+$defs:
+  whereClause:
+    title: Where clause node
+    description: >-
+      One node in the where-clause tree: a per-field predicate or a
+      combinator. Reserved keys `and` / `or` / `not` combine inner
+      clauses; every other key is a field name (dotted `key_path`
+      supported) whose value is either a scalar (sugar for `eq`) or a
+      `predicateBundle`. Multiple top-level keys combine by implicit
+      AND.
+    type: object
+    properties:
+      and:
+        title: Conjunction
+        description: All inner clauses must match.
+        type: array
+        minItems: 1
+        items: { $ref: "#/$defs/whereClause" }
+      or:
+        title: Disjunction
+        description: At least one inner clause must match.
+        type: array
+        minItems: 1
+        items: { $ref: "#/$defs/whereClause" }
+      not:
+        title: Negation
+        description: >-
+          Inverts the inner clause. Takes a single `whereClause`; a
+          list form is rejected so `!(a∧b)` vs `[¬a, ¬b]` is
+          unrepresentable.
+        $ref: "#/$defs/whereClause"
+    additionalProperties:
+      title: Field predicate
+      description: >-
+        A scalar (sugar for `{ eq: <scalar> }`) or an explicit
+        `predicateBundle`.
+      oneOf:
+        - $ref: "#/$defs/predicateBundle"
+        - type: [string, number, integer, boolean]
+
+  predicateBundle:
+    title: Predicate bundle
+    description: >-
+      One or more atomic operators applied to a field. Multiple
+      operators combine by implicit AND (`{ gt: 10, lt: 20 }` reads as
+      BETWEEN). The closed set of operators is enumerated here; any
+      other key is rejected.
+    type: object
+    minProperties: 1
+    properties:
+      eq:
+        title: Equality
+        description: Strict equality (`==` in Python).
+      gt:
+        title: Greater than
+        description: Numeric strict greater than.
+        type: number
+      gte:
+        title: Greater than or equal
+        description: Numeric greater than or equal.
+        type: number
+      lt:
+        title: Less than
+        description: Numeric strict less than.
+        type: number
+      lte:
+        title: Less than or equal
+        description: Numeric less than or equal.
+        type: number
+      startswith:
+        title: String prefix
+        description: Record value must start with this string.
+        type: string
+      endswith:
+        title: String suffix
+        description: Record value must end with this string.
+        type: string
+      contains:
+        title: Substring
+        description: Record value must contain this string.
+        type: string
+      exists:
+        title: Presence
+        description: >-
+          `true` requires the field to be present; `false` requires it
+          to be absent. The only operator that consults presence
+          rather than value.
+        type: boolean
+    additionalProperties: false
