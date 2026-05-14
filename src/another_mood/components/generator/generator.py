@@ -18,7 +18,7 @@ from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_model, pluck
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
@@ -78,20 +78,20 @@ def _query_from(parents: Sequence[Record], path: str) -> Sequence[Record]:
         return []
 
 
-def _pluck(row: object, path: str) -> object:
-    """System-only Jinja2 filter: navigate a dotted path through nested mappings.
+def _pluck(row: object, key_path: str) -> object:
+    """System-only Jinja2 filter wrapper around :func:`pluck`.
 
-    Exposed to built-in templates only (see `_query_from`). Returns the
-    raw value at the path. Missing keys and broken intermediate steps
-    yield Jinja2's `Undefined`, which renders as the empty string under
-    the standard Undefined contract and is falsy for `or []` / `length`.
+    Exposed to built-in templates only (see `_query_from`). Missing keys
+    and broken intermediate steps yield Jinja2's `Undefined`, which
+    renders as the empty string under the standard Undefined contract
+    and is falsy for `or []` / `length`.
     """
-    value: object = row
-    for part in path.split("."):
-        if not isinstance(value, Mapping):
-            return Undefined()
-        value = cast(Mapping[str, object], value).get(part, Undefined())
-    return value
+    if not isinstance(row, Mapping):
+        return Undefined()
+    try:
+        return pluck(cast(Mapping[str, object], row), key_path)
+    except KeyError:
+        return Undefined()
 
 
 def _to_yaml(value: object, flow: bool = False) -> str:
