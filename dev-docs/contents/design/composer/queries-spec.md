@@ -46,7 +46,7 @@ where:
 | 述語 | 値型 | 意味 |
 |---|---|---|
 | `eq` | 任意 | Python `==` で等価。型違いは常に False (`1 == "1"` は False)。`bool` と `int` の暗黙互換は Python 仕様通り。 |
-| `gt`/`gte`/`lt`/`lte` | number | レコード値とともに **`int` または `float`** (bool 除く) のみ許容。それ以外の型は型エラーとして診断化。文字列の lex 比較 (`"10" < "2"`) のような surprise を構文・実行両面で防ぐため。 |
+| `gt`/`gte`/`lt`/`lte` | number | レコード値が **`int` または `float`** (bool 除く) のときのみ比較。それ以外の型は False (filter out)。文字列の lex 比較 (`"10" < "2"`) のような surprise を防ぐため、`isinstance` ガードと同じ扱いにする。 |
 | `startswith`/`endswith`/`contains` | string | Python の `str.startswith` / `endswith` / `in` に対応。レコード値が文字列でなければ False (filter out)。 |
 | `exists` | boolean | `true` ならキーがレコードに存在、`false` ならキー不在。**「キー欠落」を扱う唯一の述語**。 |
 

@@ -1,11 +1,15 @@
 """Query DSL — object model and evaluation.
 
-Each DSL element (From / Grouped / Select / SelectItem / Query) is a
-``QueryNode``: it pairs a record transform with a catalog transform
-derived from the same DSL fragment.  The two transforms compose along
-the same pipeline so that the resulting schema can be inspected without
-evaluating data.  See dev-docs/internal/components/composer.md for the
-duality rationale.
+Each DSL element (From / Grouped / Select / SelectItem / Where /
+Query) is a ``QueryNode``: it pairs a record transform with a catalog
+transform derived from the same DSL fragment.  The two transforms
+compose along the same pipeline so that the resulting schema can be
+inspected without evaluating data.  See
+dev-docs/internal/components/composer.md for the duality rationale.
+
+The ``where`` clause's per-record predicate AST lives in
+:mod:`record_predicate`; :class:`Where` here is just the pipeline
+wrapper.
 """
 
 from collections.abc import Mapping, Sequence
@@ -14,6 +18,11 @@ from typing import ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.json_data_model import pluck, split_path
+from another_mood.components.shared.record_predicate import (
+    RecordPredicate,
+    UnknownKeyPathError,
+    parse_record_predicate,
+)
 
 type Record = Mapping[str, object]
 
@@ -190,27 +199,50 @@ class Grouped:
 
 
 @dataclass(frozen=True)
+class Where:
+    """Pipeline wrapper around a :class:`RecordPredicate` tree."""
+
+    predicate: RecordPredicate
+
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        return [r for r in records if self.predicate.matches(r)]
+
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        # Schema transform is identity (where filters records only);
+        # the call still validates key_path references and translates
+        # the predicate-side error so :mod:`record_predicate` need not
+        # know about :class:`QueryDeriveError`.
+        try:
+            self.predicate.validate_by_catalog(catalog)
+        except UnknownKeyPathError as exc:
+            raise QueryDeriveError(str(exc), offender=exc.key_path) from exc
+        return catalog
+
+
+@dataclass(frozen=True)
 class Query:
-    """Pipeline of clauses applied in the order ``from → grouped? → select``."""
+    """Pipeline of clauses applied in the order
+    ``from → where? → grouped? → select``."""
 
     select: Select
     from_: From
     grouped: Grouped | None
+    where: Where | None = None
 
     #: Node-form self-description of a persisted query record.
-    #: Mirrors how a query appears in YAML after normalization: ``id``
-    #: synthesized from the dict-pattern key, ``from`` and ``select``
-    #: from the DSL keys, and ``grouped`` singleton-flattened into
-    #: ``grouped.by`` / ``grouped.as``.  The ``select`` edge carries
-    #: ``SelectItem.catalog`` as the child-entity link.
-    #:
-    #: The caller (inspect_schema) assigns the catalog id
-    #: ``__definition.queries`` via ``to_flat`` and sets ``builtin=True``
-    #: before persisting.
+    #: ``grouped`` is singleton-flattened into ``grouped.by`` /
+    #: ``grouped.as``; ``where`` is opaque ``object`` (same pattern as
+    #: attribute ``metadata`` / ``validation``) because its recursive
+    #: shape doesn't fit the catalog's fixed-attribute model.
+    #: ``select`` carries ``SelectItem.catalog`` as the child-entity
+    #: link.  The caller (inspect_schema) assigns the catalog id
+    #: ``__definition.queries`` and sets ``builtin=True`` before
+    #: persisting.
     catalog: ClassVar[dc.Node] = dc.Node(
         children=[
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
+            (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped.by", type="string", required=True), dc.Node()),
             (
@@ -226,12 +258,17 @@ class Query:
 
     def apply(self, parents: Sequence[Record]) -> Sequence[Record]:
         records = self.from_.apply(parents)
+        if self.where is not None:
+            records = self.where.apply(records)
         if self.grouped:
             records = self.grouped.apply(records)
         return self.select.apply(records)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         node = self.from_.derive(catalog)
+        if self.where is not None:
+            # Identity on the node, but validates key_path references.
+            node = self.where.derive(node)
         if self.grouped:
             node = self.grouped.derive(node)
         return self.select.derive(node)
@@ -245,6 +282,12 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     """
     from_raw = cast(str, raw["from"])
     from_ = From(path=from_raw)
+
+    where: Where | None = None
+    if "where" in raw:
+        where = Where(
+            predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
+        )
 
     grouped: Grouped | None = None
     if "grouped" in raw:
@@ -262,4 +305,4 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         ]
     )
 
-    return Query(select=select, from_=from_, grouped=grouped)
+    return Query(select=select, from_=from_, grouped=grouped, where=where)
