@@ -6,12 +6,15 @@ import pytest
 from ruamel.yaml import YAML
 
 from another_mood.components.shared.query import (
+    Direction,
     From,
     Grouped,
+    Missing,
     Query,
     QueryDeriveError,
     Select,
     SelectItem,
+    Sort,
     Where,
     flatten_children,
     parse_query,
@@ -471,6 +474,73 @@ class TestWhere:
             where.derive(leaf)
 
 
+class TestSort:
+    """Sort orders records by one attribute; ``direction`` × ``missing``
+    are orthogonal so the default ``missing=last`` invariant holds for
+    both ``asc`` and ``desc``."""
+
+    @pytest.mark.parametrize(
+        ("direction", "missing", "expected"),
+        [
+            (Direction.ASC, Missing.LAST, [{"x": 1}, {"x": 2}, {}]),
+            (Direction.DESC, Missing.LAST, [{"x": 2}, {"x": 1}, {}]),
+            (Direction.ASC, Missing.FIRST, [{}, {"x": 1}, {"x": 2}]),
+            (Direction.DESC, Missing.FIRST, [{}, {"x": 2}, {"x": 1}]),
+        ],
+    )
+    def test_direction_missing_matrix(
+        self,
+        direction: Direction,
+        missing: Missing,
+        expected: list[dict[str, object]],
+    ) -> None:
+        records = [{"x": 2}, {}, {"x": 1}]
+        assert (
+            list(Sort(by="x", direction=direction, missing=missing).apply(records))
+            == expected
+        )
+
+    def test_stable_for_equal_keys(self) -> None:
+        # Python ``sorted`` is stable; the original order of equal keys
+        # is preserved so subsequent sort + group / sort combinations
+        # behave predictably.
+        records = [
+            {"x": 1, "tag": "a"},
+            {"x": 1, "tag": "b"},
+            {"x": 1, "tag": "c"},
+        ]
+        assert list(Sort(by="x").apply(records)) == records
+
+    def test_empty_records(self) -> None:
+        assert list(Sort(by="x").apply([])) == []
+
+    def test_dotted_by_path(self) -> None:
+        # ``pluck`` resolves dotted paths; sort inherits that.
+        records = [
+            {"meta": {"phase": 12}},
+            {"meta": {"phase": 8}},
+            {"meta": {"phase": 10}},
+        ]
+        assert list(Sort(by="meta.phase").apply(records)) == [
+            {"meta": {"phase": 8}},
+            {"meta": {"phase": 10}},
+            {"meta": {"phase": 12}},
+        ]
+
+
+class TestSortDerive:
+    def test_returns_catalog_unchanged_for_valid_by(self) -> None:
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path="categories.tasks").derive(root)
+        assert Sort(by="phase").derive(leaf) is leaf
+
+    def test_raises_on_unknown_by(self) -> None:
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path="categories.tasks").derive(root)
+        with pytest.raises(QueryDeriveError, match="nonexistent"):
+            Sort(by="nonexistent").derive(leaf)
+
+
 class TestQueryPipelineOrder:
     def test_where_filters_before_grouped(self) -> None:
         """``from → where → grouped → select``: where prunes records
@@ -500,6 +570,103 @@ class TestQueryPipelineOrder:
         assert list(query.apply([sources])) == [
             {"cat": "x", "items": [{"id": "a", "cat": "x", "open": True}]}
         ]
+
+    def test_sort_runs_after_select(self) -> None:
+        """``sort`` sees the projected output (matches SQL ``ORDER BY``
+        after ``SELECT``), so ``by:`` can reference a ``select`` alias."""
+        sources = {
+            "items": [
+                {"name": "a", "phase": 3},
+                {"name": "b", "phase": 1},
+                {"name": "c", "phase": 2},
+            ]
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: items
+                select:
+                  - item: name
+                  - item: phase
+                    as: rank
+                sort:
+                  by: rank
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"name": "b", "rank": 1},
+            {"name": "c", "rank": 2},
+            {"name": "a", "rank": 3},
+        ]
+
+    def test_sort_after_grouped(self) -> None:
+        """After grouping, ``sort`` orders the group records."""
+        sources = {
+            "items": [
+                {"id": "a", "cat": "x"},
+                {"id": "b", "cat": "z"},
+                {"id": "c", "cat": "y"},
+            ]
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: items
+                grouped:
+                  by: cat
+                  as: items
+                select:
+                  - item: cat
+                  - item: items
+                sort:
+                  by: cat
+                """
+            )
+        )
+        assert [row["cat"] for row in query.apply([sources])] == ["x", "y", "z"]
+
+
+class TestQueryDeriveWithSort:
+    def test_sort_validates_against_post_select_catalog(self) -> None:
+        """``sort.derive`` runs after ``select.derive``, so ``by:`` must
+        resolve in the projected catalog — sorting by a source attribute
+        that ``select`` did not project raises ``QueryDeriveError``."""
+        query = Query(
+            from_=From(path="categories.tasks"),
+            grouped=None,
+            select=Select(items=[SelectItem(item="title", as_="title")]),
+            sort=Sort(by="phase"),
+        )
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        with pytest.raises(QueryDeriveError, match="phase"):
+            query.derive(root)
+
+    def test_sort_by_select_alias(self) -> None:
+        """``sort.by`` resolves the ``as:`` alias produced by select."""
+        query = Query(
+            from_=From(path="categories.tasks"),
+            grouped=None,
+            select=Select(
+                items=[
+                    SelectItem(item="phase", as_="rank"),
+                    SelectItem(item="title", as_="title"),
+                ]
+            ),
+            sort=Sort(by="rank"),
+        )
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        result = dc.flatten_tree(query.derive(root), "ranked_tasks")
+        assert result == _catalog(
+            """
+            - id: ranked_tasks
+              item_type:
+                id: ranked_tasks.item
+                attributes:
+                  - { id: rank, type: integer, required: true }
+                  - { id: title, type: string, required: true }
+            """
+        )
 
 
 class TestParseQuery:
@@ -569,6 +736,26 @@ class TestParseQuery:
         raw = {"from": "items", "select": [{"item": "id"}]}
         assert parse_query(raw).where is None
 
+    def test_parses_sort_with_defaults(self) -> None:
+        raw = {
+            "from": "items",
+            "select": [{"item": "name"}],
+            "sort": {"by": "name"},
+        }
+        assert parse_query(raw).sort == Sort(
+            by="name", direction=Direction.ASC, missing=Missing.LAST
+        )
+
+    def test_parses_sort_full(self) -> None:
+        raw = {
+            "from": "items",
+            "select": [{"item": "name"}],
+            "sort": {"by": "name", "direction": "desc", "missing": "first"},
+        }
+        assert parse_query(raw).sort == Sort(
+            by="name", direction=Direction.DESC, missing=Missing.FIRST
+        )
+
 
 def _catalog_name(field_name: str) -> str:
     """Translate a dataclass field name into its catalog edge name.
@@ -608,6 +795,14 @@ class TestCatalogDriftSuppression:
             if edge.name.startswith("grouped.")
         }
         assert dotted == {_catalog_name(f.name) for f in dataclasses.fields(Grouped)}
+
+    def test_sort_dotted_edges_match_dataclass_fields(self) -> None:
+        dotted = {
+            edge.name.removeprefix("sort.")
+            for edge, _ in Query.catalog.children
+            if edge.name.startswith("sort.")
+        }
+        assert dotted == {_catalog_name(f.name) for f in dataclasses.fields(Sort)}
 
     def test_select_item_edges_match_dataclass_fields(self) -> None:
         assert {edge.name for edge, _ in SelectItem.catalog.children} == {

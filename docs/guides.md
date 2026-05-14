@@ -343,7 +343,7 @@ by_role:
 
 ### Anatomy of a query
 
-A query has four blocks: `from` → `where` (optional) → `grouped` (optional) → `select` (optional).
+A query has five blocks: `from` → `where` (optional) → `grouped` (optional) → `select` (optional) → `sort` (optional).
 
 | Block | Role |
 |---|---|
@@ -351,6 +351,7 @@ A query has four blocks: `from` → `where` (optional) → `grouped` (optional) 
 | `where` | Filters records by a predicate (e.g. `{ active: true }`). |
 | `grouped` | Combines records that share the same value for the field named by `by`. |
 | `select` | Lists fields to include in the output. Use `as` to rename. |
+| `sort` | Orders the output records by one field (e.g. `{ by: name }`). |
 
 File names and splitting under `definition/queries/` are as flexible as for content files: multiple views per file and subdirectories are both allowed.
 
