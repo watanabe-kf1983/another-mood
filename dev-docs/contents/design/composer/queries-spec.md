@@ -6,6 +6,16 @@
 
 著者がネスト（コンポジション）で書いたデータを、別の軸で再グループ化したいというニーズは、データの利用が進むにつれて事後的に現れる。`from` のドット記法は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上でフラットなアクセスを可能にする。詳細は [json-data-model.md](../json-data-model.md) の「背景: なぜ永続化形式をフラット化しないか」を参照。
 
+### 背景: where の closed set から `neq` (not equal) を外した理由
+
+DB DSL によくある `neq` を入れなかったのは、対象キーが欠落しているレコードで何を返すべきかが、自然な読み方で 3 通りに分かれるため:
+
+- 実データ上の `≠` と読めば **True** (値がないので x とは異なる)
+- SQL の 3 値論理として読めば **UNKNOWN** (NULL の neq は UNKNOWN なので False 寄り)
+- 「`eq` の論理否定」と読めば **True** (`eq` が False なので flip して True)
+
+`neq` を closed set に入れると、どの解釈を採っても残り 2 つを期待した利用者から不自然に見える。代わりに「atomic 述語は欠落キーで常に False」+「`not` は内側の結果を flip」の 2 規則で semantics を一意化し、「等しくない」が必要なら `not: { field: x }` と書く設計にした。否定の挙動が `not` 1 箇所に集約され、述語ごとに考えなくてよくなる。
+
 ## Proposals
 
 ### 同名禁止 (E6)
@@ -14,89 +24,9 @@
 
 > 現状は Composer が正規化済みデータと同名のクエリを silent に上書きする。Phase 10 タスク [E6](../../../tasks.md)。
 
-### where / sort / join (E1-E4)
+### sort / join (E2-E4)
 
-YAML DSL に `where`, `sort`, `join` 句を追加する拡張候補。Phase 10 タスク [E1〜E4](../../../tasks.md)（仕様詰めが先）。
-
-#### where (E1)
-
-**形式**: 構造化 YAML (式言語ではない)。top-level の複数キーは暗黙 AND、明示的に `or:` / `and:` / `not:` で結合する。
-
-**評価順序**: `from → where → grouped → select`。SQL の WHERE/GROUP BY と同じく、record をフィルタしてから group する。
-
-```yaml
-where:
-  view: false                       # field: value は eq の sugar
-  or:
-    - id: categories
-    - id: { startswith: 'categories.' }
-  not:
-    id: { startswith: '__' }        # not は単一の whereClause を取る
-```
-
-**述語の閉じた集合**:
-
-- フィールド述語 (atomic): `eq`, `gt`, `gte`, `lt`, `lte`, `startswith`, `endswith`, `contains`, `exists`
-- 論理結合 (combinator): `and`, `or`, `not`
-
-これより先 (算術、関数呼び出し、正規表現、ユーザ定義式) は入れない。境界を構文レベルで守るために式言語化を避けた。
-
-**個別述語の意味**:
-
-| 述語 | 値型 | 意味 |
-|---|---|---|
-| `eq` | 任意 | Python `==` で等価。型違いは常に False (`1 == "1"` は False)。`bool` と `int` の暗黙互換は Python 仕様通り。 |
-| `gt`/`gte`/`lt`/`lte` | number | レコード値が **`int` または `float`** (bool 除く) のときのみ比較。それ以外の型は False (filter out)。文字列の lex 比較 (`"10" < "2"`) のような surprise を防ぐため、`isinstance` ガードと同じ扱いにする。 |
-| `startswith`/`endswith`/`contains` | string | Python の `str.startswith` / `endswith` / `in` に対応。レコード値が文字列でなければ False (filter out)。 |
-| `exists` | boolean | `true` ならキーがレコードに存在、`false` ならキー不在。**「キー欠落」を扱う唯一の述語**。 |
-
-**キー欠落のセマンティクス**:
-
-スキーマモデルが null 値を許さない（[schema-spec.md](../normalizer/schema-spec.md) の `type:` 列挙に `null` は含まない）ため、`required: false` 属性は **値が null** ではなく **キー自体が欠落** している状態として現れる。E1 の評価規則:
-
-- **atomic 述語はキー欠落で常に False** (= レコードはフィルタアウト)
-- **`exists` のみキー欠落に応答**: `{ exists: false }` でキー欠落レコードを True とする
-- **`not` は内側の結果を flip**: `not { eq: "x" }` はキー欠落レコードでは `not False = True` を返し、フィルタに残す
-
-この 2 規則で全 semantics が閉じる。例えば `not (exists: true)` と `exists: false` は等価。
-
-**フィールド参照とドットパス**:
-
-`where` のフィールド名は `select.item` / `grouped.by` と同じ `pluck` 経由で参照され、ドットパス (`hobby.active` など) で nested 属性に到達できる。catalog の dotted edge (singleton-flattened) も literal edge も longest-first match で同じ規則。
-
-**catalog 上の扱い**: `__definition.queries` の `where` attribute は `type: object` の opaque として登録する (attribute の `metadata` / `validation` と同じパターン)。recursive な構造を catalog の固定型モデルに乗せないため。`__meta_query` テンプレートでは `where` を `| to_yaml` でコードブロックとしてダンプする。
-
-**`derive` への影響**: `where` は record をフィルタするだけで schema 形状を変えないため、`Query.derive` は where 句に対して identity (catalog transform 不要)。
-
-#### 背景: 構造化 YAML を選んだ理由
-
-候補は (a) 構造化 YAML / (b) SQL 風の式言語 string の二案。構造化を選んだ理由:
-
-- 既存 DSL (`from:` / `select:` / `grouped:`) との一貫性
-- JSON Schema 検証を既存の `query-schema.yaml` の延長で書ける
-- YAML パーサが付ける位置情報 (`UserStr` 経由の diagnostic) がそのまま使える
-- 構文レベルで「式が書けない」ため、算術や関数呼び出しへのスコープ膨張を物理的に止められる
-- catalog 不整合 (where が opaque になる) は metadata/validation で既に確立されているパターンなので新規債務にならない
-
-#### 背景: `neq` / `is_null` / `null` sugar を closed set から外した理由
-
-3 つの記法を採らない設計判断:
-
-- **`neq` を入れない**: `not` + `eq` の合成で表現可能であり、`neq` を独立した atomic 述語とすると「キー欠落レコードを True/False どちらに倒すか」の答えが出ない（実データの neq とも、3VL の neq とも、論理否定の neq とも解釈できる）。`not` を直交した結合子として置き、「atomic 述語は欠落で False」+「`not` は flip」の 2 規則で全 semantics が決まる構造にする。
-- **`is_null` を入れない / `field: null` sugar を入れない**: スキーマモデルが null を許さないので、利用者に `null` リテラルを書かせるのはモデルとのズレを意識させて不幸。「キー欠落」概念のみが存在し、それを表す唯一の手段として `exists` を採用する。
-- **`exists` という名前**: MongoDB の `$exists` の慣習に合わせる。「キーが存在するか」の意味が誤読されにくい。
-
-#### 背景: `not` を whereClause レベルの結合子として単一引数で配置する理由
-
-`and:` / `or:` がリストを取るのに対し、`not:` は単一の whereClause を取る:
-
-```yaml
-where:
-  not:
-    id: { startswith: "__" }
-```
-
-`not: [...]` を許すと「`!(a∧b)` か `[¬a, ¬b]` か」が曖昧になる。リスト排除を構文レベルで強制すれば、利用者が `and:` / `or:` で結合してから `not` でくるむ流れが自然に促される。SQL/MongoDB/JSON Logic も同じ姿勢。
+YAML DSL に `sort`, `join` 句を追加する拡張候補。Phase 10 タスク [E2〜E4](../../../tasks.md)（仕様詰めが先）。
 
 #### sort (E2)
 
