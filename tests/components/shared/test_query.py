@@ -9,10 +9,16 @@ from another_mood.components.shared.query import (
     From,
     Grouped,
     Query,
+    QueryDeriveError,
     Select,
     SelectItem,
+    Where,
     flatten_children,
     parse_query,
+)
+from another_mood.components.shared.record_predicate import (
+    FieldPredicate,
+    Operator,
 )
 from another_mood.components.shared import data_catalog as dc
 
@@ -430,6 +436,72 @@ class TestQueryDerive:
         )
 
 
+class TestWhere:
+    """Pipeline wrapper around a :class:`RecordPredicate`."""
+
+    def test_apply_filters_records(self) -> None:
+        where = Where(
+            predicate=FieldPredicate(
+                key_path="open", operator=Operator.EQ, target=True
+            ),
+        )
+        records = [{"open": True}, {"open": False}, {"open": True}]
+        assert list(where.apply(records)) == [{"open": True}, {"open": True}]
+
+    def test_derive_returns_catalog_unchanged_for_valid_key_path(self) -> None:
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path="categories.tasks").derive(root)
+        where = Where(
+            predicate=FieldPredicate(key_path="phase", operator=Operator.GT, target=5),
+        )
+        assert where.derive(leaf) is leaf
+
+    def test_derive_translates_unknown_key_path(self) -> None:
+        """The predicate-side :class:`UnknownKeyPathError` is
+        converted to the user-facing :class:`QueryDeriveError` at the
+        clause boundary so diagnostics carry source provenance."""
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        leaf = From(path="categories.tasks").derive(root)
+        where = Where(
+            predicate=FieldPredicate(
+                key_path="nonexistent", operator=Operator.EQ, target=1
+            ),
+        )
+        with pytest.raises(QueryDeriveError, match="nonexistent"):
+            where.derive(leaf)
+
+
+class TestQueryPipelineOrder:
+    def test_where_filters_before_grouped(self) -> None:
+        """``from → where → grouped → select``: where prunes records
+        before grouping so empty groups never form."""
+        sources = {
+            "items": [
+                {"id": "a", "cat": "x", "open": True},
+                {"id": "b", "cat": "x", "open": False},
+                {"id": "c", "cat": "y", "open": False},
+            ]
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: items
+                where:
+                  open: true
+                grouped:
+                  by: cat
+                  as: items
+                select:
+                  - item: cat
+                  - item: items
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"cat": "x", "items": [{"id": "a", "cat": "x", "open": True}]}
+        ]
+
+
 class TestParseQuery:
     def test_full_query(self) -> None:
         raw = {
@@ -449,6 +521,7 @@ class TestParseQuery:
             ),
             from_=From(path="entities"),
             grouped=Grouped(by="category", as_="items"),
+            where=None,
         )
 
     def test_grouped_as_defaults_to_last_path_segment(self) -> None:
@@ -478,6 +551,23 @@ class TestParseQuery:
         assert parse_query(raw).select == Select(
             items=[SelectItem(item="name", as_="name")]
         )
+
+    def test_parses_where_wraps_in_where(self) -> None:
+        """``parse_query`` wraps the parsed predicate in :class:`Where`;
+        detailed AST shape per input is covered in
+        ``test_record_predicate.TestParseRecordPredicate``."""
+        raw = {
+            "from": "items",
+            "where": {"x": 1},
+            "select": [{"item": "id"}],
+        }
+        assert parse_query(raw).where == Where(
+            predicate=FieldPredicate(key_path="x", operator=Operator.EQ, target=1),
+        )
+
+    def test_parses_query_without_where(self) -> None:
+        raw = {"from": "items", "select": [{"item": "id"}]}
+        assert parse_query(raw).where is None
 
 
 def _catalog_name(field_name: str) -> str:

@@ -1,0 +1,11 @@
+# Entities whose id starts with "user" — narrows the catalog to the
+# user-related subset (``user``, ``user_role``).
+user_entities:
+  from: entities
+  where:
+    id: { startswith: user }
+  select:
+    - item: id
+    - item: name
+    - item: category
+    - item: description

@@ -176,12 +176,14 @@ categories:
         note: |
           詳細は design/composer/queries-spec.md「where (E1)」。
           構造化 YAML 形式 (式言語ではない)。述語の閉じた集合:
-          eq / neq / is_null / gt / gte / lt / lte / startswith / endswith / contains
-          + ブール結合 and / or。catalog 上は type: object opaque
+          eq / gt / gte / lt / lte / startswith / endswith / contains / exists
+          + ブール結合 and / or / not。catalog 上は type: object opaque
           (metadata/validation と同じパターン)。
-          derive は identity (where は schema を変えない)。
+          derive は identity (where は schema を変えない) — ただし
+          validate_by_catalog で key_path 参照の存在をチェックして
+          QueryDeriveError を立てる。
         phase: 10
-        proposal: design/composer/queries-spec.md#where--sort--join-e1-e4
+        done: true
       E2:
         title: sort 句の仕様詰め + 実装
         note: |

@@ -6,6 +6,16 @@
 
 著者がネスト（コンポジション）で書いたデータを、別の軸で再グループ化したいというニーズは、データの利用が進むにつれて事後的に現れる。`from` のドット記法は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上でフラットなアクセスを可能にする。詳細は [json-data-model.md](../json-data-model.md) の「背景: なぜ永続化形式をフラット化しないか」を参照。
 
+### 背景: where の closed set から `neq` (not equal) を外した理由
+
+DB DSL によくある `neq` を入れなかったのは、対象キーが欠落しているレコードで何を返すべきかが、自然な読み方で 3 通りに分かれるため:
+
+- 実データ上の `≠` と読めば **True** (値がないので x とは異なる)
+- SQL の 3 値論理として読めば **UNKNOWN** (NULL の neq は UNKNOWN なので False 寄り)
+- 「`eq` の論理否定」と読めば **True** (`eq` が False なので flip して True)
+
+`neq` を closed set に入れると、どの解釈を採っても残り 2 つを期待した利用者から不自然に見える。代わりに「atomic 述語は欠落キーで常に False」+「`not` は内側の結果を flip」の 2 規則で semantics を一意化し、「等しくない」が必要なら `not: { field: x }` と書く設計にした。否定の挙動が `not` 1 箇所に集約され、述語ごとに考えなくてよくなる。
+
 ## Proposals
 
 ### 同名禁止 (E6)
@@ -14,45 +24,9 @@
 
 > 現状は Composer が正規化済みデータと同名のクエリを silent に上書きする。Phase 10 タスク [E6](../../../tasks.md)。
 
-### where / sort / join (E1-E4)
+### sort / join (E2-E4)
 
-YAML DSL に `where`, `sort`, `join` 句を追加する拡張候補。Phase 10 タスク [E1〜E4](../../../tasks.md)（仕様詰めが先）。
-
-#### where (E1)
-
-**形式**: 構造化 YAML (式言語ではない)。top-level の複数キーは暗黙 AND、明示的に `or:` / `and:` で結合する。
-
-```yaml
-where:
-  view: false                       # field: value は eq の sugar
-  parent_entity: null               # field: null は is_null の sugar
-  or:
-    - id: categories
-    - id: { startswith: 'categories.' }
-```
-
-**述語の閉じた集合**:
-
-- スカラ等価: `eq`, `neq`, `is_null`
-- 数値順序: `gt`, `gte`, `lt`, `lte`
-- 文字列パターン: `startswith`, `endswith`, `contains`
-- ブール結合: `and`, `or`
-
-これより先 (算術、関数呼び出し、正規表現、ユーザ定義式) は入れない。境界を構文レベルで守るために式言語化を避けた。
-
-**catalog 上の扱い**: `__definition.queries` の `where` attribute は `type: object` の opaque として登録する (attribute の `metadata` / `validation` と同じパターン)。recursive な構造を catalog の固定型モデルに乗せないため。`__meta_query` テンプレートでは `where` を `| to_yaml` でコードブロックとしてダンプする。
-
-**`derive` への影響**: `where` は record をフィルタするだけで schema 形状を変えないため、`Query.derive` は where 句に対して identity (catalog transform 不要)。
-
-#### 背景: 構造化 YAML を選んだ理由
-
-候補は (a) 構造化 YAML / (b) SQL 風の式言語 string の二案。構造化を選んだ理由:
-
-- 既存 DSL (`from:` / `select:` / `grouped:`) との一貫性
-- JSON Schema 検証を既存の `query-schema.yaml` の延長で書ける
-- YAML パーサが付ける位置情報 (`UserStr` 経由の diagnostic) がそのまま使える
-- 構文レベルで「式が書けない」ため、算術や関数呼び出しへのスコープ膨張を物理的に止められる
-- catalog 不整合 (where が opaque になる) は metadata/validation で既に確立されているパターンなので新規債務にならない
+YAML DSL に `sort`, `join` 句を追加する拡張候補。Phase 10 タスク [E2〜E4](../../../tasks.md)（仕様詰めが先）。
 
 #### sort (E2)
 

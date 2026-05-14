@@ -11,6 +11,8 @@ properties:
           type: string
         role:
           type: string
+        active:
+          type: boolean
         description:
           type: string
       required: [name, role]

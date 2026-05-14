@@ -2,14 +2,17 @@ members:
   alice:
     name: Alice
     role: engineer
+    active: true
     description: Backend developer working on API design.
 
   bob:
     name: Bob
     role: engineer
+    active: false
     description: Frontend developer focused on UI components.
 
   carol:
     name: Carol
     role: designer
+    active: true
     description: UX designer responsible for user research.

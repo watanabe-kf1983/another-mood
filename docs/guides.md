@@ -40,14 +40,16 @@ What you write (under `my-project/`):
 ```
 my-project/
 ├── definition/
-│   ├── schema.yaml              # data types
-│   ├── queries/by_role.yaml     # group by role
+│   ├── schema.yaml                       # data types
+│   ├── queries/
+│   │   ├── by_role.yaml                  # group by role
+│   │   └── active_members.yaml           # filter to active members
 │   └── templates/
-│       ├── index.md             # top page
-│       ├── member.md            # member detail
-│       └── by_role.md           # listing by role
+│       ├── index.md                      # top page
+│       ├── member.md                     # member detail
+│       └── by_role.md                    # listing by role
 └── contents/
-    └── members.yaml             # data (3 members)
+    └── members.yaml                      # data (3 members)
 ```
 
 What the tool generates (under `.another-mood/my-project/`):
@@ -341,11 +343,12 @@ by_role:
 
 ### Anatomy of a query
 
-A query has three blocks: `from` → `grouped` (optional) → `select` (optional).
+A query has four blocks: `from` → `where` (optional) → `grouped` (optional) → `select` (optional).
 
 | Block | Role |
 |---|---|
 | `from` | Specifies the source data. Dot notation can drill into nested data (see reference for details). |
+| `where` | Filters records by a predicate (e.g. `{ active: true }`). |
 | `grouped` | Combines records that share the same value for the field named by `by`. |
 | `select` | Lists fields to include in the output. Use `as` to rename. |
 
