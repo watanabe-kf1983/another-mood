@@ -278,34 +278,18 @@ class Query:
     where: Where | None = None
     sort: Sort | None = None
 
-    #: Catalog self-description of a persisted query record. ``where``
-    #: is opaque ``object`` because its recursive predicate shape
-    #: doesn't fit the catalog's fixed-attribute model.
+    #: Catalog self-description of a persisted query record.
     catalog: ClassVar[dc.Node] = dc.Node(
         children=[
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
-            (dc.Edge(name="grouped.by", type="string", required=True), dc.Node()),
-            (
-                dc.Edge(name="grouped.as", type="string", required=False),
-                dc.Node(),
-            ),
             (
                 dc.Edge(name="select", type="object[]", required=False),
                 SelectItem.catalog,
             ),
             (dc.Edge(name="sort", type="object", required=False), dc.Node()),
-            (dc.Edge(name="sort.by", type="string", required=True), dc.Node()),
-            (
-                dc.Edge(name="sort.direction", type="string", required=False),
-                dc.Node(),
-            ),
-            (
-                dc.Edge(name="sort.missing", type="string", required=False),
-                dc.Node(),
-            ),
         ],
     )
 
