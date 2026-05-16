@@ -124,8 +124,6 @@ def split_path(record: Mapping[str, object], key_path: str) -> tuple[KeyPath, st
     :data:`KeyPath` consumed from ``key_path``, ``remaining`` is the
     suffix where descent stopped (empty when fully resolved, equal to
     ``key_path`` when no prefix matched at the root).
-
-    Data-side dual of :meth:`data_catalog.Node._longest_edge_match`.
     """
     keys: list[str] = []
     current: object = record
