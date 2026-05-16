@@ -1,9 +1,14 @@
 tasks_by_phase:
-  from: categories.tasks
+  from: categories
+  flatten:
+    of: tasks
+    as: task
   grouped:
-    by: phase
+    by: task.phase
+    as: tasks
   select:
-    - item: phase
+    - item: task.phase
       as: id
-    - item: phase
+    - item: task.phase
+      as: phase
     - item: tasks
