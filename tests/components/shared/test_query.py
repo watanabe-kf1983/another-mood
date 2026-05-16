@@ -540,6 +540,11 @@ class TestSortDerive:
         with pytest.raises(QueryDeriveError, match="nonexistent"):
             Sort(by="nonexistent").derive(leaf)
 
+    def test_raises_on_by_path_crossing_array(self) -> None:
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        with pytest.raises(QueryDeriveError, match="tasks.title"):
+            Sort(by="tasks.title").derive(root.child("categories"))
+
 
 class TestQueryPipelineOrder:
     def test_where_filters_before_grouped(self) -> None:

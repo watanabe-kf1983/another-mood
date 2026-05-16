@@ -250,12 +250,8 @@ class Sort(QueryNode):
     def derive(self, catalog: dc.Node) -> dc.Node:
         # Schema transform is identity (sort reorders only); call still
         # validates that ``by`` resolves in the catalog.
-        try:
-            catalog.walk_path(self.by)
-        except KeyError as exc:
-            raise QueryDeriveError(
-                f"unknown attribute '{self.by}'", offender=self.by
-            ) from exc
+        if not catalog.has_child(self.by):
+            raise QueryDeriveError(f"unknown attribute '{self.by}'", offender=self.by)
         return catalog
 
 
