@@ -40,27 +40,13 @@ Data for entities declared in [Schema](schema.md) is automatically passed throug
 
 ## from
 
-Specifies the entity to read from. The entity name matches a key under `properties` in schema.yaml (= the top-level key in content files).
+Specifies the entity to read from. The value is the entity name (= the top-level key in source YAML, declared under `properties` in schema.yaml).
 
 ```yaml
-from: members    # read from the members entity
+from: members
 ```
 
-### Dot notation for child entities
-
-`from` can use dot notation to reach a nested child entity. The result is detached from the parent and returned as a flat array.
-
-```yaml
-from: categories.tasks   # flatten tasks nested under categories
-```
-
-Any depth can be chained:
-
-```yaml
-from: a.b.c.d   # flattens stepwise from a → b → c → d
-```
-
-Each segment's value must be **an object or an array of objects** (optionally wrapped in any depth of nested arrays). A single object counts as one element; arrays are flattened and concatenated regardless of depth.
+To read from a child entity, name the parent here and use [`flatten:`](#flatten) to descend.
 
 ## flatten
 
@@ -174,7 +160,7 @@ grouped:
 | Key | Required | Role |
 |---|---|---|
 | `by` | Required | Name of the field used as the grouping key. |
-| `as` | Optional | Name given to the inner array of group members. Defaults to the last segment of `from` (the trailing key when using dot notation). |
+| `as` | Optional | Name given to the inner array of group members. Defaults to the last segment of `from:`. |
 
 Group order follows the source data's order (the order in which each key first appears). Records within a group keep the source's shape, including the grouping field.
 
