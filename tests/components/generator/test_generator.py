@@ -9,7 +9,6 @@ from jinja2 import Undefined
 
 from another_mood.components.generator.generator import (
     _pluck,  # pyright: ignore[reportPrivateUsage]
-    _query_from,  # pyright: ignore[reportPrivateUsage]
     _to_yaml,  # pyright: ignore[reportPrivateUsage]
     generate,
     reconcile,
@@ -109,28 +108,6 @@ class TestPluckFilter:
     def test_unreachable_path_yields_undefined(self) -> None:
         assert isinstance(_pluck({"x": 1}, "missing"), Undefined)
         assert isinstance(_pluck({"x": 1}, "x.y"), Undefined)
-
-
-class TestQueryFromFilter:
-    """Unit tests for the `query_from` filter function."""
-
-    def test_resolves_entity_id(self) -> None:
-        parents = [{"items": [{"id": "a"}, {"id": "b"}]}]
-        assert _query_from(parents, "items") == [{"id": "a"}, {"id": "b"}]
-
-    def test_resolves_dotted_entity_id(self) -> None:
-        # The id is matched verbatim; longest-first descent handles
-        # the YAML nesting under the namespace key.
-        parents = [{"__definition": {"entities": [{"id": "user"}, {"id": "role"}]}}]
-        assert _query_from(parents, "__definition.entities") == [
-            {"id": "user"},
-            {"id": "role"},
-        ]
-
-    def test_empty_for_missing_entity(self) -> None:
-        # Entity declared in the catalog but no records populated yet
-        # (common in a scaffolded project). Should return [], not raise.
-        assert _query_from([{"x": 1}], "missing") == []
 
 
 class TestToYamlFilter:

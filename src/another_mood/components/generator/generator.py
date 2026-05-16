@@ -6,14 +6,13 @@ See: dev-docs/contents/internal/components/generator.md
 
 import math
 import shutil
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, cast
 
 import yaml
 from jinja2 import Undefined
 
-from another_mood.components.shared.query import From, Record
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
@@ -25,7 +24,7 @@ from another_mood.components.shared.json_data_model import load_model, pluck
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     data = load_model(data_dir)
-    data["__views"] = [{k: v for k, v in data.items() if k != "__views"}]
+    data["__views"] = {k: v for k, v in data.items() if k != "__views"}
     render("__root", data, out_dir, filters=_FILTERS)
     render("__reports", data, out_dir / "reports", templates_dir=templates_dir)
 
@@ -61,30 +60,13 @@ def render(
     (out_dir / "index.md").write_text(rendered, encoding="utf-8")
 
 
-def _query_from(parents: Sequence[Record], name: str) -> Sequence[Record]:
-    """System-only Jinja2 filter: apply a Query DSL `from` clause to parents.
-
-    Exposed to built-in templates (the `__root` render) only, not to user
-    templates, until the built-in API stabilises. Mirrors the `from:`
-    clause so a template can resolve an entity id against the root
-    parents list exposed as `__views`. Returns an empty sequence when
-    the entity is not populated (e.g. declared in the catalog but no
-    records yet); Composer-side strict evaluation still treats such
-    cases as errors.
-    """
-    try:
-        return From(name=name).apply(parents)
-    except KeyError:
-        return []
-
-
 def _pluck(row: object, key_path: str) -> object:
     """System-only Jinja2 filter wrapper around :func:`pluck`.
 
-    Exposed to built-in templates only (see `_query_from`). Missing keys
-    and broken intermediate steps yield Jinja2's `Undefined`, which
-    renders as the empty string under the standard Undefined contract
-    and is falsy for `or []` / `length`.
+    Exposed to built-in templates only, until the built-in API
+    stabilises. Missing keys and broken intermediate steps yield
+    Jinja2's `Undefined`, which renders as the empty string under the
+    standard Undefined contract and is falsy for `or []` / `length`.
     """
     if not isinstance(row, Mapping):
         return Undefined()
@@ -118,7 +100,6 @@ def _to_yaml(value: object, flow: bool = False) -> str:
 
 
 _FILTERS: Mapping[str, Callable[..., Any]] = {
-    "query_from": _query_from,
     "pluck": _pluck,
     "to_yaml": _to_yaml,
 }
