@@ -30,6 +30,32 @@ additionalProperties:
         (e.g. `categories.tasks`) flattens nested child entities into a
         single sequence.
       type: string
+    flatten:
+      title: Flatten clause
+      description: >-
+        Unwind one or more intrinsic array attributes of each row.
+        Accepts three shapes: a bare attribute name (scalar shorthand),
+        a single object describing one unwind, or an ordered list of
+        either. After flattening, the parent fields stay at the row's
+        top level and the array's element fields are nested under the
+        `as:` namespace (defaults to `of:` when omitted).
+      oneOf:
+        - title: Scalar shorthand
+          description: >-
+            Bare attribute name. Equivalent to `{ of: <name> }` with
+            `as:` defaulting to the same name and `preserve_empty: false`.
+          type: string
+        - $ref: "#/$defs/flattenItem"
+        - title: List form
+          description: >-
+            Ordered list of flatten operations. Each later item observes
+            the row shape produced by the earlier ones.
+          type: array
+          minItems: 1
+          items:
+            oneOf:
+              - type: string
+              - $ref: "#/$defs/flattenItem"
     where:
       title: Filter clause
       description: >-
@@ -116,6 +142,37 @@ additionalProperties:
   additionalProperties: false
 
 $defs:
+  flattenItem:
+    title: Flatten item
+    description: >-
+      One unwind operation. `of:` names the intrinsic array attribute
+      to expand. `as:` renames its element namespace in the output row
+      (defaults to `of:`). `preserve_empty: true` keeps parent rows
+      whose array is empty or missing (the `as:` field is absent on
+      those rows); the default `false` drops them.
+    type: object
+    properties:
+      of:
+        title: Source array attribute
+        description: >-
+          Name of the intrinsic array attribute on the current row to
+          unwind.
+        type: string
+      as:
+        title: Output namespace
+        description: >-
+          Name given to the element namespace on each produced row.
+          Defaults to the value of `of:`.
+        type: string
+      preserve_empty:
+        title: Keep empty parents
+        description: >-
+          When `true`, rows whose `of:` array is empty or missing are
+          kept (without the `as:` field). Default `false` drops them.
+        type: boolean
+    required: [of]
+    additionalProperties: false
+
   whereClause:
     title: Where clause node
     description: >-

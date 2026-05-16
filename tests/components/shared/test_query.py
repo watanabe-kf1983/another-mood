@@ -7,6 +7,7 @@ from ruamel.yaml import YAML
 
 from another_mood.components.shared.query import (
     Direction,
+    Flatten,
     From,
     Grouped,
     Missing,
@@ -17,6 +18,7 @@ from another_mood.components.shared.query import (
     Sort,
     Where,
     flatten_children,
+    parse_flatten,
     parse_query,
 )
 from another_mood.components.shared.record_predicate import (
@@ -143,6 +145,119 @@ class TestSelect:
     def test_empty_records(self) -> None:
         select = Select(items=[SelectItem(item="x", as_="x")])
         assert list(select.apply([])) == []
+
+
+class TestFlatten:
+    def test_unwinds_array_attribute(self) -> None:
+        flat = Flatten(of="tasks", as_="tasks")
+        records = [
+            {"id": 1, "name": "A", "tasks": [{"t": 1}, {"t": 2}]},
+            {"id": 2, "name": "B", "tasks": [{"t": 3}]},
+        ]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "name": "A", "tasks": {"t": 1}},
+            {"id": 1, "name": "A", "tasks": {"t": 2}},
+            {"id": 2, "name": "B", "tasks": {"t": 3}},
+        ]
+
+    def test_renames_to_as(self) -> None:
+        flat = Flatten(of="tasks", as_="task")
+        records = [{"id": 1, "tasks": [{"t": 1}]}]
+        assert list(flat.apply(records)) == [{"id": 1, "task": {"t": 1}}]
+
+    def test_drops_empty_parents_by_default(self) -> None:
+        flat = Flatten(of="tasks", as_="task")
+        records: list[dict[str, object]] = [
+            {"id": 1, "tasks": [{"t": 1}]},
+            {"id": 2, "tasks": []},
+        ]
+        assert list(flat.apply(records)) == [{"id": 1, "task": {"t": 1}}]
+
+    def test_preserve_empty_keeps_parent_without_as_field(self) -> None:
+        flat = Flatten(of="tasks", as_="task", preserve_empty=True)
+        records: list[dict[str, object]] = [
+            {"id": 1, "tasks": [{"t": 1}]},
+            {"id": 2, "tasks": []},
+        ]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "task": {"t": 1}},
+            {"id": 2},
+        ]
+
+    def test_missing_key_treated_as_empty(self) -> None:
+        flat = Flatten(of="tasks", as_="task", preserve_empty=True)
+        # Optional array attribute omitted from a record behaves the same
+        # as an explicit empty list.
+        records = [{"id": 1}]
+        assert list(flat.apply(records)) == [{"id": 1}]
+
+    def test_unwinds_scalar_array(self) -> None:
+        flat = Flatten(of="hobbies", as_="hobby")
+        records = [{"id": 1, "hobbies": ["a", "b"]}]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "hobby": "a"},
+            {"id": 1, "hobby": "b"},
+        ]
+
+
+_FLATTEN_CATALOG_YAML = """
+- id: categories
+  item_type:
+    id: categories.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: title, type: string, required: true }
+      - id: tasks
+        type: object[]
+        required: true
+        entity: categories.tasks
+        item_type: categories.item.tasks.item
+- id: categories.tasks
+  item_type:
+    id: categories.item.tasks.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: phase, type: integer, required: true }
+  parent_entity: categories
+"""
+
+
+class TestFlattenDerive:
+    @pytest.fixture
+    def categories(self) -> dc.Node:
+        return dc.build_tree(_catalog(_FLATTEN_CATALOG_YAML)).child("categories")
+
+    def test_replaces_array_edge_with_singleton(self, categories: dc.Node) -> None:
+        leaf = Flatten(of="tasks", as_="task").derive(categories)
+        edge_by_name = {e.name: e for e, _ in leaf.children}
+        assert "tasks" not in edge_by_name
+        assert edge_by_name["task"].type == "object"
+        # preserve_empty=False → child rows always carry the namespace.
+        assert edge_by_name["task"].required is True
+
+    def test_preserve_empty_makes_as_field_optional(self, categories: dc.Node) -> None:
+        leaf = Flatten(of="tasks", as_="task", preserve_empty=True).derive(categories)
+        edge_by_name = {e.name: e for e, _ in leaf.children}
+        assert edge_by_name["task"].required is False
+
+    def test_keeps_as_same_as_of_when_omitted(self, categories: dc.Node) -> None:
+        leaf = Flatten(of="tasks", as_="tasks").derive(categories)
+        edge_by_name = {e.name: e for e, _ in leaf.children}
+        assert "tasks" in edge_by_name
+        # Type still drops the [] — same name, different cardinality.
+        assert edge_by_name["tasks"].type == "object"
+
+    def test_raises_on_unknown_attribute(self, categories: dc.Node) -> None:
+        with pytest.raises(QueryDeriveError, match="missing"):
+            Flatten(of="missing", as_="x").derive(categories)
+
+    def test_raises_when_target_not_array(self, categories: dc.Node) -> None:
+        with pytest.raises(QueryDeriveError, match="not an array"):
+            Flatten(of="title", as_="x").derive(categories)
+
+    def test_raises_on_as_collision(self, categories: dc.Node) -> None:
+        with pytest.raises(QueryDeriveError, match="collides"):
+            Flatten(of="tasks", as_="title").derive(categories)
 
 
 class TestGrouped:
@@ -540,6 +655,11 @@ class TestSortDerive:
         with pytest.raises(QueryDeriveError, match="nonexistent"):
             Sort(by="nonexistent").derive(leaf)
 
+    def test_raises_on_by_path_crossing_array(self) -> None:
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        with pytest.raises(QueryDeriveError, match="tasks.title"):
+            Sort(by="tasks.title").derive(root.child("categories"))
+
 
 class TestQueryPipelineOrder:
     def test_where_filters_before_grouped(self) -> None:
@@ -598,6 +718,66 @@ class TestQueryPipelineOrder:
             {"name": "b", "rank": 1},
             {"name": "c", "rank": 2},
             {"name": "a", "rank": 3},
+        ]
+
+    def test_flatten_runs_between_from_and_where(self) -> None:
+        """``flatten`` unwinds before ``where``, so the predicate sees the
+        post-flatten row shape (parent fields top-level, child namespace
+        scoped under ``as:``)."""
+        sources = {
+            "categories": [
+                {
+                    "id": "A",
+                    "tasks": [{"id": "A1", "phase": 8}, {"id": "A2", "phase": 10}],
+                },
+                {
+                    "id": "B",
+                    "tasks": [{"id": "B1", "phase": 10}],
+                },
+            ]
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: categories
+                flatten:
+                  of: tasks
+                  as: task
+                select:
+                  - item: id
+                    as: category_id
+                  - item: task
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"category_id": "A", "task": {"id": "A1", "phase": 8}},
+            {"category_id": "A", "task": {"id": "A2", "phase": 10}},
+            {"category_id": "B", "task": {"id": "B1", "phase": 10}},
+        ]
+
+    def test_list_form_flattens_chain_sequentially(self) -> None:
+        """Each later entry in the ``flatten:`` list sees the row shape
+        produced by the earlier ones — the second unwind multiplies over
+        the first."""
+        sources = {"members": [{"id": 1, "hobbies": ["h1"], "pets": ["p1", "p2"]}]}
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: members
+                flatten:
+                  - { of: hobbies, as: hobby }
+                  - { of: pets, as: pet }
+                select:
+                  - item: id
+                  - item: hobby
+                  - item: pet
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"id": 1, "hobby": "h1", "pet": "p1"},
+            {"id": 1, "hobby": "h1", "pet": "p2"},
         ]
 
     def test_sort_after_grouped(self) -> None:
@@ -667,6 +847,31 @@ class TestQueryDeriveWithSort:
                   - { id: title, type: string, required: true }
             """
         )
+
+
+class TestParseFlatten:
+    def test_shorthand(self) -> None:
+        assert list(parse_flatten("tasks")) == [Flatten(of="tasks", as_="tasks")]
+
+    def test_object_form(self) -> None:
+        assert list(
+            parse_flatten({"of": "tasks", "as": "task", "preserve_empty": True})
+        ) == [Flatten(of="tasks", as_="task", preserve_empty=True)]
+
+    def test_object_form_as_defaults_to_of(self) -> None:
+        assert list(parse_flatten({"of": "tasks"})) == [
+            Flatten(of="tasks", as_="tasks")
+        ]
+
+    def test_list_form_mixes_shorthand_and_object(self) -> None:
+        assert list(parse_flatten(["hobbies", {"of": "pets", "as": "pet"}])) == [
+            Flatten(of="hobbies", as_="hobbies"),
+            Flatten(of="pets", as_="pet"),
+        ]
+
+    def test_rejects_unsupported_shape(self) -> None:
+        with pytest.raises(TypeError):
+            parse_flatten(42)
 
 
 class TestParseQuery:
@@ -745,6 +950,14 @@ class TestParseQuery:
         assert parse_query(raw).sort == Sort(
             by="name", direction=Direction.ASC, missing=Missing.LAST
         )
+
+    def test_parses_query_without_flatten(self) -> None:
+        raw = {"from": "items", "select": [{"item": "id"}]}
+        assert list(parse_query(raw).flatten) == []
+
+    def test_parses_flatten_wires_into_query(self) -> None:
+        raw = {"from": "items", "flatten": "tasks", "select": [{"item": "id"}]}
+        assert list(parse_query(raw).flatten) == [Flatten(of="tasks", as_="tasks")]
 
     def test_parses_sort_full(self) -> None:
         raw = {

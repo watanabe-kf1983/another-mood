@@ -31,3 +31,11 @@
 {% for rel in relations -%}
 | {{ rel.from }} | {{ rel.to }} | {{ rel.cardinality }} | {{ rel.description }} |
 {% endfor %}
+
+## 全フィールド一覧
+
+| Entity | Field | Type | PK | FK |
+|--------|-------|------|----|----|
+{% for row in entity_fields -%}
+| {{ row.entity_name }} | {{ row.field.name }} | {{ row.field.type }} | {{ "✓" if row.field.pk else "" }} | {{ row.field.fk or "" }} |
+{% endfor %}

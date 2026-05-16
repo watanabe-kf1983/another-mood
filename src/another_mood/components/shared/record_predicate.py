@@ -123,10 +123,8 @@ class FieldPredicate(RecordPredicate):
         return self.operator.evaluate(value, self.target)
 
     def validate_by_catalog(self, catalog: dc.Node) -> None:
-        try:
-            catalog.walk_path(self.key_path)
-        except KeyError as exc:
-            raise UnknownKeyPathError(self.key_path) from exc
+        if not catalog.has_child(self.key_path):
+            raise UnknownKeyPathError(self.key_path)
 
 
 @dataclass(frozen=True)

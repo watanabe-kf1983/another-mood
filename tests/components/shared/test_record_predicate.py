@@ -252,6 +252,34 @@ class TestValidateByCatalog:
         with pytest.raises(UnknownKeyPathError, match="bad"):
             combinator.validate_by_catalog(catalog)
 
+    def test_rejects_key_path_crossing_array(self) -> None:
+        catalog = dc.build_tree(
+            _catalog(
+                """
+                - id: members
+                  item_type:
+                    id: members.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                      - id: tasks
+                        type: object[]
+                        required: true
+                        entity: members.tasks
+                        item_type: members.item.tasks.item
+                - id: members.tasks
+                  item_type:
+                    id: members.item.tasks.item
+                    attributes:
+                      - { id: title, type: string, required: true }
+                  parent_entity: members
+                """
+            )
+        ).child("members")
+        with pytest.raises(UnknownKeyPathError, match="tasks.title"):
+            FieldPredicate(
+                key_path="tasks.title", operator=Operator.EQ, target="x"
+            ).validate_by_catalog(catalog)
+
 
 class TestParseRecordPredicate:
     @pytest.mark.parametrize(

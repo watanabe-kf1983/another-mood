@@ -182,14 +182,15 @@ categories:
       E11:
         title: クエリ DSL 拡充前半 (flatten 句導入 + from 厳密化)
         note: |
-          詳細は design/composer/queries-spec.md「`flatten:` 句と `from:` 厳密化 (E11)」。
-          flatten 句 (top-level、intrinsic 配列専用、preserve_empty オプション) の新設、
-          from 厳密 entity ID lookup (ドット記法廃止、tasks-by-phase.yaml 1 件 migration を含む)、
-          「走査の非対称性」設計原則の確立 (nested 配列に潜るのは flatten 系のみ) を扱う。
-          実装には query-schema.yaml の対応する schema 更新を含む。
+          詳細は design/composer/queries-spec.md「`from:` 厳密化 (E11)」。
+          flatten 句 (top-level、intrinsic 配列専用、preserve_empty オプション) と
+          「走査の非対称性」設計原則は実装済み (Select.derive の prefix-match 拡張を含む)。
+          残: from 厳密 entity ID lookup (ドット記法廃止) +
+          tasks-by-phase.yaml の `from: categories.tasks` →
+          `from: categories` + `flatten: tasks` migration。
           E3 (join 導入) の前提タスク。
         phase: 10
-        proposal: design/composer/queries-spec.md#flatten-句と-from-厳密化-e11
+        proposal: design/composer/queries-spec.md#from-厳密化-e11
       E3:
         title: クエリ DSL 拡充後半 (join 句導入 + where 射程統一)
         note: |
@@ -413,6 +414,15 @@ categories:
           実需が surface してから着手。前提 M6。
         phase: 13
         proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
+      M8:
+        title: derive_queries 出力を typed Query 形式で流す
+        note: |
+          現状の derive_queries は parse_query で型付け / 検証した結果を
+          YAML に戻しているため、template 側 (例: __meta_query) で同じ
+          shape 分岐 (scalar / mapping / list の正規化) を再度書く必要が
+          ある。derive 段階で正規化済み形式に揃えて出力すれば、
+          generator 側の Jinja ロジックが単純化される。
+        phase: 10
 
   N:
     title: レンダリング / 出力形式

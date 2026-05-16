@@ -216,9 +216,11 @@ class TestDeriveQueries:
         merged = load_model(out / "data")["__definition"]
         derived_query_ids = {q["id"] for q in merged["queries"]}
         derived_view_ids = {e["id"] for e in merged["entities"] if e["view"]}
-        # Every bundled query produces a same-named view entity.
+        # Every bundled query produces a same-named view entity.  Extra
+        # descendant view entities (e.g. from grouped or from selecting an
+        # entity-typed singleton) are allowed.
         assert derived_query_ids
-        assert derived_view_ids == derived_query_ids
+        assert derived_query_ids <= derived_view_ids
 
 
 class TestIdentifierDiagnostics:

@@ -26,12 +26,13 @@ by_role:                     # ← top-level key of the file becomes the view na
 | Clause | Required | Role |
 |---|---|---|
 | `from` | Required | Source data (what to operate on). |
+| `flatten` | Optional | Unwind one or more intrinsic array attributes. |
 | `where` | Optional | Per-record filter applied before grouping. |
 | `grouped` | Optional | Grouping of records. |
 | `select` | Optional | Projection of output fields. When omitted, the result is an array of empty objects. |
 | `sort` | Optional | Ordering of the final output records. |
 
-Evaluation order: `from` → `where` → `grouped` → `select` → `sort`.
+Evaluation order: `from` → `flatten` → `where` → `grouped` → `select` → `sort`.
 
 ## Automatic pass-through
 
@@ -60,6 +61,67 @@ from: a.b.c.d   # flattens stepwise from a → b → c → d
 ```
 
 Each segment's value must be **an object or an array of objects** (optionally wrapped in any depth of nested arrays). A single object counts as one element; arrays are flattened and concatenated regardless of depth.
+
+## flatten
+
+Unwinds one or more intrinsic array attributes. Each input row produces N output rows, where N is the length of the array at `of:`: the row's other fields are repeated verbatim across all N copies, and each copy gets one of the array's elements placed under `as:`. Runs between `from:` and `where:`.
+
+```yaml
+# Single attribute, scalar shorthand
+from: categories
+flatten: tasks                     # 1 row per task; element placed under `tasks`
+
+# Single attribute, object form
+from: categories
+flatten:
+  of: tasks
+  as: task                         # rename the element namespace
+  preserve_empty: true             # keep parents whose array is empty or missing
+
+# Multiple attributes, list form (each later entry sees the row shape
+# produced by earlier ones)
+from: members
+flatten:
+  - hobbies
+  - { of: pets, as: pet }
+```
+
+| Key | Required | Role |
+|---|---|---|
+| `of` | Required | Name of the array attribute on the current row to unwind. Must be an array type (`object[]` / `string[]` / `integer[]` / ...). |
+| `as` | Optional | Name given to the element on each produced row. Defaults to the value of `of:`. |
+| `preserve_empty` | Optional | `true` keeps parent rows whose array is empty or missing (the `as:` field is absent on those rows). Default `false` drops them. |
+
+The shorthand `flatten: <name>` is equivalent to `flatten: { of: <name>, as: <name>, preserve_empty: false }`.
+
+### Output shape
+
+For `from: categories` + `flatten: { of: tasks, as: task }`, given input:
+
+```yaml
+categories:
+  - id: A
+    tasks:
+      - { id: A1, phase: 8 }
+      - { id: A2, phase: 10 }
+  - id: B
+    tasks:
+      - { id: B1, phase: 10 }
+```
+
+the intermediate result after `flatten` (before `where`):
+
+```yaml
+- { id: A, task: { id: A1, phase: 8 } }
+- { id: A, task: { id: A2, phase: 10 } }
+- { id: B, task: { id: B1, phase: 10 } }
+```
+
+Parent fields (e.g. `id`) stay at the top level; element fields are accessed via the `as:` namespace (`row.task.id`).
+
+### When the array is empty
+
+When N = 0 (the array at `of:` resolves to `[]` or the attribute is absent), an input row by default produces no output rows — the parent is dropped. Setting `preserve_empty: true` makes such rows survive as a single output row with no `as:` field, useful when the template needs to emit an entry for every parent regardless of whether children exist.
 
 ## where
 

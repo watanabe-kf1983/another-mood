@@ -6,6 +6,22 @@
 
 {{ from }}
 
+{% if flatten -%}
+### Flatten
+
+{% if flatten is string or flatten is mapping -%}
+{% set entries = [flatten] -%}
+{% else -%}
+{% set entries = flatten -%}
+{% endif -%}
+| Of | As | Preserve Empty |
+|----|----|----------------|
+{% for raw in entries -%}
+{% set entry = {"of": raw, "as": raw} if raw is string else raw -%}
+| {{ entry.of }} | {{ entry.as or entry.of }} | {% if entry.preserve_empty %}yes{% endif %} |
+{% endfor %}
+
+{% endif -%}
 {% if where -%}
 ### Where
 
