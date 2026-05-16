@@ -7,14 +7,14 @@ the data catalog.  Output YAML carries both the queries and the
 derived entities under ``__definition``.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.preprocess.normalize_core import iter_normalized
-from another_mood.components.preprocess.source_loader import UserStr
+from another_mood.components.preprocess.normalize_core import check
+from another_mood.components.preprocess.source_loader import UserStr, load_source
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
@@ -48,8 +48,7 @@ def derive_queries(
         (queries_dir, out_dir),
         (_BUILTIN_QUERIES_DIR, out_dir / "__builtin"),
     ]:
-        for src_file, normalized in iter_normalized(src_dir, schema):
-            queries = cast(Sequence[Mapping[str, object]], normalized)
+        for src_file, queries in _iter_top_level(src_dir, schema):
             entities, errors = _derive_entities(queries, catalog)
             diagnostics.extend(errors)
             # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
@@ -76,6 +75,30 @@ def derive_queries(
 def build_query_schema() -> Mapping[str, object]:
     """Build a validation/normalization schema for query files."""
     return load_model(_QUERY_SCHEMA_FILE)
+
+
+def _iter_top_level(
+    src_dir: Path, schema: Mapping[str, object]
+) -> Iterator[tuple[Path, list[Mapping[str, object]]]]:
+    """Validate src_dir and yield top-level dict→list converted query lists.
+
+    Query bodies pass through untouched — the catalog boundary stops
+    at the top level. See design/normalizer/normalizer.md.
+    """
+    check(src_dir, schema)
+    for src_file in sorted(src_dir.rglob("*")):
+        if not src_file.is_file():
+            continue
+        data = load_source(src_file, src_dir)
+        if data is None:
+            continue
+        yield (
+            src_file,
+            [
+                {"id": key, **cast(Mapping[str, object], body)}
+                for key, body in data.items()
+            ],
+        )
 
 
 def _derive_entities(

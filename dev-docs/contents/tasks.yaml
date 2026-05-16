@@ -392,14 +392,8 @@ categories:
         proposal: design/normalizer/schema-spec.md#title-キーワード-m4
       M5:
         title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
-        note: |
-          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
-          段階 1。query_deriver で iter_normalized の利用をやめ、check + top-level
-          dict→list 変換のみに限定。query body 内側 (where 等) はパススルー。
-          動作不変、境界の明文化と latent risk 解消が目的。後続 M6 で marker 駆動
-          に置き換わる可能性あり。
-        phase: 13
-        proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
+        phase: 10
+        done: true
       M6:
         title: blob marker 機構の導入 (内部 schema 専用、段階 2)
         note: |
