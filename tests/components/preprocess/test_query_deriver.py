@@ -149,6 +149,49 @@ class TestDeriveQueries:
             }
         }
 
+    def test_query_body_passes_through_untouched(self, tmp_path: Path) -> None:
+        """Query body passes through the normalizer verbatim — the
+        schema-driven normalizer stops at the top level."""
+        queries = tmp_path / "queries"
+        _write(
+            queries / "filtered.yaml",
+            "phase10:\n"
+            "  from: items\n"
+            "  where:\n"
+            "    phase:\n"
+            "      eq: '10'\n"
+            "  select:\n"
+            "    - item: name\n",
+        )
+        _write_catalog(
+            tmp_path / "data-catalog",
+            "__definition:\n"
+            "  entities:\n"
+            "    - id: items\n"
+            "      item_type:\n"
+            "        id: items.item\n"
+            "        attributes:\n"
+            "          - {id: name, type: string, required: true}\n"
+            "          - {id: phase, type: string, required: true}\n",
+        )
+
+        out = tmp_path / "derived"
+        derive_queries(
+            queries_dir=queries,
+            data_catalog_dir=tmp_path / "data-catalog",
+            out_dir=out,
+        )
+
+        data = yaml.safe_load((out / "data" / "filtered.yaml.yaml").read_text())
+        assert data["__definition"]["queries"] == [
+            {
+                "id": "phase10",
+                "from": "items",
+                "where": {"phase": {"eq": "10"}},
+                "select": [{"item": "name"}],
+            }
+        ]
+
     def test_empty_user_queries_still_emits_builtin(self, tmp_path: Path) -> None:
         """Built-in queries are processed regardless of user input.
 
