@@ -1,7 +1,7 @@
 """Query DSL — object model and evaluation.
 
-Each DSL element (From / Grouped / Select / SelectItem / Where /
-Query) is a ``QueryNode``: it pairs a record transform with a catalog
+Each DSL element (From / Flatten / Where / Grouped / SelectItem / Select /
+Sort / Query) is a ``QueryNode``: it pairs a record transform with a catalog
 transform derived from the same DSL fragment.  The two transforms
 compose along the same pipeline so that the resulting schema can be
 inspected without evaluating data.  See
@@ -63,48 +63,6 @@ class QueryNode(Protocol):
         will consume, without touching record data.
         """
         ...
-
-
-@dataclass(frozen=True)
-class SelectItem:
-    """A single field projection (rename ``item`` to ``as_``)."""
-
-    item: str
-    as_: str
-
-    def apply(self, record: Record) -> tuple[str, object]:
-        return (self.as_, pluck(record, self.item))
-
-    def derive(self, catalog: dc.Node) -> Sequence[tuple[dc.Edge, dc.Node]]:
-        # Pull dotted siblings too so derive mirrors apply's ``pluck``,
-        # which returns the whole singleton object.
-        catalog.require_child(self.item)
-        prefix = self.item + "."
-        return [
-            (replace(edge, name=self.as_ + edge.name.removeprefix(self.item)), node)
-            for edge, node in catalog.children
-            if edge.name == self.item or edge.name.startswith(prefix)
-        ]
-
-
-@dataclass(frozen=True)
-class Select(QueryNode):
-    """Project named fields from each input row, optionally renaming them."""
-
-    items: Sequence[SelectItem]
-
-    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        return [
-            {name: value for s in self.items for name, value in [s.apply(record)]}
-            for record in records
-        ]
-
-    def derive(self, catalog: dc.Node) -> dc.Node:
-        return dc.Node(
-            children=list(
-                chain.from_iterable(item.derive(catalog) for item in self.items)
-            )
-        )
 
 
 @dataclass(frozen=True)
@@ -190,6 +148,20 @@ class Flatten(QueryNode):
 
 
 @dataclass(frozen=True)
+class Where(QueryNode):
+    """Pipeline wrapper around a :class:`RecordPredicate` tree."""
+
+    predicate: RecordPredicate
+
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        return [r for r in records if self.predicate.matches(r)]
+
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        self.predicate.validate_by_catalog(catalog)
+        return catalog
+
+
+@dataclass(frozen=True)
 class Grouped(QueryNode):
     """Group input rows by ``by`` and package each group under ``as_``.
 
@@ -218,17 +190,45 @@ class Grouped(QueryNode):
 
 
 @dataclass(frozen=True)
-class Where(QueryNode):
-    """Pipeline wrapper around a :class:`RecordPredicate` tree."""
+class SelectItem:
+    """A single field projection (rename ``item`` to ``as_``)."""
 
-    predicate: RecordPredicate
+    item: str
+    as_: str
+
+    def apply(self, record: Record) -> tuple[str, object]:
+        return (self.as_, pluck(record, self.item))
+
+    def derive(self, catalog: dc.Node) -> Sequence[tuple[dc.Edge, dc.Node]]:
+        # Pull dotted siblings too so derive mirrors apply's ``pluck``,
+        # which returns the whole singleton object.
+        catalog.require_child(self.item)
+        prefix = self.item + "."
+        return [
+            (replace(edge, name=self.as_ + edge.name.removeprefix(self.item)), node)
+            for edge, node in catalog.children
+            if edge.name == self.item or edge.name.startswith(prefix)
+        ]
+
+
+@dataclass(frozen=True)
+class Select(QueryNode):
+    """Project named fields from each input row, optionally renaming them."""
+
+    items: Sequence[SelectItem]
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        return [r for r in records if self.predicate.matches(r)]
+        return [
+            {name: value for s in self.items for name, value in [s.apply(record)]}
+            for record in records
+        ]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        self.predicate.validate_by_catalog(catalog)
-        return catalog
+        return dc.Node(
+            children=list(
+                chain.from_iterable(item.derive(catalog) for item in self.items)
+            )
+        )
 
 
 class Direction(Enum):
@@ -279,11 +279,11 @@ class Query(QueryNode):
     """Pipeline of clauses applied in the order
     ``from → flatten? → where? → grouped? → select → sort?``."""
 
-    select: Select
     from_: From
-    grouped: Grouped | None
     flatten: Sequence[Flatten] = ()
     where: Where | None = None
+    grouped: Grouped | None = None
+    select: Select = Select(items=())
     sort: Sort | None = None
 
     #: Catalog self-description of a persisted query record.
@@ -367,11 +367,11 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         )
 
     return Query(
-        select=select,
         from_=from_,
-        grouped=grouped,
         flatten=flatten,
         where=where,
+        grouped=grouped,
+        select=select,
         sort=sort,
     )
 
