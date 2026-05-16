@@ -227,8 +227,6 @@ class Where(QueryNode):
         return [r for r in records if self.predicate.matches(r)]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # Schema transform is identity (where filters records only);
-        # call still validates predicate key_paths against the catalog.
         self.predicate.validate_by_catalog(catalog)
         return catalog
 
@@ -272,8 +270,6 @@ class Sort(QueryNode):
         return absent + ordered if self.missing is Missing.FIRST else ordered + absent
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # Schema transform is identity (sort reorders only); call still
-        # validates that ``by`` resolves in the catalog.
         catalog.require_child(self.by)
         return catalog
 
