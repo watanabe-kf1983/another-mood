@@ -23,7 +23,6 @@ from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.json_data_model import pluck
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
-    UnknownKeyPathError,
     parse_record_predicate,
 )
 
@@ -79,19 +78,12 @@ class SelectItem:
     def derive(self, catalog: dc.Node) -> Sequence[tuple[dc.Edge, dc.Node]]:
         # Pull dotted siblings too so derive mirrors apply's ``pluck``,
         # which returns the whole singleton object.
+        catalog.require_child(self.item)
         prefix = self.item + "."
-        matches = [
-            (edge, node)
-            for edge, node in catalog.children
-            if edge.name == self.item or edge.name.startswith(prefix)
-        ]
-        if not matches:
-            raise QueryDeriveError(
-                f"unknown attribute '{self.item}'", offender=self.item
-            )
         return [
             (replace(edge, name=self.as_ + edge.name.removeprefix(self.item)), node)
-            for edge, node in matches
+            for edge, node in catalog.children
+            if edge.name == self.item or edge.name.startswith(prefix)
         ]
 
 
@@ -148,8 +140,6 @@ class Flatten(QueryNode):
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        if not catalog.has_child(self.of):
-            raise QueryDeriveError(f"unknown attribute '{self.of}'", offender=self.of)
         edge, child = catalog.child_entry(self.of)
         if not edge.type.endswith("[]"):
             raise QueryDeriveError(
@@ -216,8 +206,6 @@ class Grouped(QueryNode):
         return [{self.by: key, self.as_: items} for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        if not catalog.has_child(self.by):
-            raise QueryDeriveError(f"unknown attribute '{self.by}'", offender=self.by)
         return dc.Node(
             children=[
                 catalog.child_entry(self.by),
@@ -240,13 +228,8 @@ class Where(QueryNode):
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         # Schema transform is identity (where filters records only);
-        # the call still validates key_path references and translates
-        # the predicate-side error so :mod:`record_predicate` need not
-        # know about :class:`QueryDeriveError`.
-        try:
-            self.predicate.validate_by_catalog(catalog)
-        except UnknownKeyPathError as exc:
-            raise QueryDeriveError(str(exc), offender=exc.key_path) from exc
+        # call still validates predicate key_paths against the catalog.
+        self.predicate.validate_by_catalog(catalog)
         return catalog
 
 
@@ -291,8 +274,7 @@ class Sort(QueryNode):
     def derive(self, catalog: dc.Node) -> dc.Node:
         # Schema transform is identity (sort reorders only); call still
         # validates that ``by`` resolves in the catalog.
-        if not catalog.has_child(self.by):
-            raise QueryDeriveError(f"unknown attribute '{self.by}'", offender=self.by)
+        catalog.require_child(self.by)
         return catalog
 
 
@@ -325,7 +307,12 @@ class Query(QueryNode):
         return reduce(lambda r, qn: qn.apply(r), self._pipeline(), records)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        return reduce(lambda c, qn: qn.derive(c), self._pipeline(), catalog)
+        try:
+            return reduce(lambda c, qn: qn.derive(c), self._pipeline(), catalog)
+        except dc.UnknownChildError as exc:
+            raise QueryDeriveError(
+                f"unknown attribute '{exc.name}'", offender=exc.name
+            ) from exc
 
     def _pipeline(self) -> Sequence[QueryNode]:
         clauses = (

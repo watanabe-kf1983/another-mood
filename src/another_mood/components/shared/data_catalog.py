@@ -42,13 +42,45 @@ class Node:
         """Whether an edge named ``name`` exists among this node's children."""
         return any(e.name == name for e, _ in self.children)
 
+    def require_child(self, name: str) -> None:
+        """Raise :class:`UnknownChildError` if no child edge is named ``name``.
+
+        For validate-only callers (e.g. clauses that re-emit the catalog
+        unchanged) that want the same error vocabulary as ``child`` /
+        ``child_entry`` without performing an access.
+        """
+        if not self.has_child(name):
+            raise UnknownChildError(name)
+
     def child_entry(self, name: str) -> tuple[Edge, "Node"]:
-        """Return the (edge, child) entry reached by the edge named ``name``."""
-        return next((e, c) for e, c in self.children if e.name == name)
+        """Return the (edge, child) entry reached by the edge named ``name``.
+
+        Raises :class:`UnknownChildError` if no such edge exists.
+        """
+        for e, c in self.children:
+            if e.name == name:
+                return e, c
+        raise UnknownChildError(name)
 
     def child(self, name: str) -> "Node":
-        """Return the child node reached by the edge named ``name``."""
+        """Return the child node reached by the edge named ``name``.
+
+        Raises :class:`UnknownChildError` if no such edge exists.
+        """
         return self.child_entry(name)[1]
+
+
+class UnknownChildError(LookupError):
+    """Raised by :meth:`Node.child` / :meth:`Node.child_entry` /
+    :meth:`Node.require_child` when no child edge has the requested name.
+
+    Carries ``name`` so callers (e.g. query derive) can re-raise their
+    own typed error referencing the offending identifier.
+    """
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.name = name
 
 
 # ── Persistence form (serialization view) ─────────────────────────────

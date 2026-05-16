@@ -78,25 +78,12 @@ def _to_string(v: object) -> str:
     return v
 
 
-class UnknownKeyPathError(Exception):
-    """A ``key_path`` does not resolve in the catalog.
-
-    Defined here rather than imported from :mod:`query` so this module
-    has no reverse dependency.  :meth:`query.Where.derive` translates
-    it into ``QueryDeriveError`` with source-location provenance.
-    """
-
-    def __init__(self, key_path: str) -> None:
-        super().__init__(f"unknown attribute '{key_path}'")
-        self.key_path = key_path
-
-
 @runtime_checkable
 class RecordPredicate(Protocol):
     def matches(self, record: Record) -> bool: ...
 
     def validate_by_catalog(self, catalog: dc.Node) -> None:
-        """Raise :class:`UnknownKeyPathError` for any unresolved
+        """Raise :class:`dc.UnknownChildError` for any unresolved
         ``key_path`` — catches typos that would otherwise degrade
         :meth:`matches` to a silent always-false filter."""
         ...
@@ -123,8 +110,7 @@ class FieldPredicate(RecordPredicate):
         return self.operator.evaluate(value, self.target)
 
     def validate_by_catalog(self, catalog: dc.Node) -> None:
-        if not catalog.has_child(self.key_path):
-            raise UnknownKeyPathError(self.key_path)
+        catalog.require_child(self.key_path)
 
 
 @dataclass(frozen=True)

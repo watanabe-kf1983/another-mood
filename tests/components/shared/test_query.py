@@ -201,7 +201,9 @@ class TestFlattenDerive:
         assert edge_by_name["tasks"].type == "object"
 
     def test_raises_on_unknown_attribute(self, categories: dc.Node) -> None:
-        with pytest.raises(QueryDeriveError, match="missing"):
+        # Catalog-layer error here; Query.derive translates it into
+        # QueryDeriveError at the pipeline boundary.
+        with pytest.raises(dc.UnknownChildError, match="missing"):
             Flatten(of="missing", as_="x").derive(categories)
 
     def test_raises_when_target_not_array(self, categories: dc.Node) -> None:
@@ -492,10 +494,11 @@ class TestWhere:
         )
         assert where.derive(leaf) is leaf
 
-    def test_derive_translates_unknown_key_path(self) -> None:
-        """The predicate-side :class:`UnknownKeyPathError` is
-        converted to the user-facing :class:`QueryDeriveError` at the
-        clause boundary so diagnostics carry source provenance."""
+    def test_derive_propagates_unknown_key_path(self) -> None:
+        """Predicate-side misses surface as the catalog-layer
+        :class:`dc.UnknownChildError`; ``Query.derive`` translates it
+        into a user-facing :class:`QueryDeriveError` at the pipeline
+        boundary."""
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
         where = Where(
@@ -503,7 +506,7 @@ class TestWhere:
                 key_path="nonexistent", operator=Operator.EQ, target=1
             ),
         )
-        with pytest.raises(QueryDeriveError, match="nonexistent"):
+        with pytest.raises(dc.UnknownChildError, match="nonexistent"):
             where.derive(leaf)
 
 
@@ -570,12 +573,12 @@ class TestSortDerive:
     def test_raises_on_unknown_by(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
-        with pytest.raises(QueryDeriveError, match="nonexistent"):
+        with pytest.raises(dc.UnknownChildError, match="nonexistent"):
             Sort(by="nonexistent").derive(leaf)
 
     def test_raises_on_by_path_crossing_array(self) -> None:
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        with pytest.raises(QueryDeriveError, match="tasks.title"):
+        with pytest.raises(dc.UnknownChildError, match="tasks.title"):
             Sort(by="tasks.title").derive(root.child("categories"))
 
 
