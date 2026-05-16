@@ -186,6 +186,7 @@ categories:
           flatten 句 (top-level、intrinsic 配列専用、preserve_empty オプション) の新設、
           from 厳密 entity ID lookup (ドット記法廃止、tasks-by-phase.yaml 1 件 migration を含む)、
           「走査の非対称性」設計原則の確立 (nested 配列に潜るのは flatten 系のみ) を扱う。
+          実装には query-schema.yaml の対応する schema 更新を含む。
           E3 (join 導入) の前提タスク。
         phase: 10
         proposal: design/composer/queries-spec.md#flatten-句と-from-厳密化-e11
@@ -196,12 +197,9 @@ categories:
           前提: E11 (flatten 句と from 厳密化)。
           cross-table join (明示 on:、デフォルト nest、inline flatten オプション、
           join[].where: pre-join filter)、top-level where と join[].where の射程統一を扱う。
+          実装には query-schema.yaml の対応する schema 更新を含む。
           スコープ外: 複合キー on:、FK 自動推論、nested-list 操作 (ツリー shape 出力 /
           nested 内 filter / sort 等)。実現方式の候補は queries-spec.md にメモのみ。
-        phase: 10
-        proposal: design/composer/queries-spec.md#join-句と-where-射程統一-e3
-      E4:
-        title: QuerySchema を E1〜E3 + E11 に合わせて拡張
         phase: 10
         proposal: design/composer/queries-spec.md#join-句と-where-射程統一-e3
       E9:
@@ -269,7 +267,7 @@ categories:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
           詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
-          前提 F8 (カタログ自己記述) と E1〜E4 + E11 (where / sort / flatten / join) の DSL 拡張。
+          前提 F8 (カタログ自己記述) と DSL 拡張 (E1, E2, E11, E3 — where / sort / flatten / join)。
         phase: 10
         proposal: design/app/meta-documentation.md#query-化リファクタ-f7
       F8:
