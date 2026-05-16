@@ -61,19 +61,19 @@ def render(
     (out_dir / "index.md").write_text(rendered, encoding="utf-8")
 
 
-def _query_from(parents: Sequence[Record], path: str) -> Sequence[Record]:
+def _query_from(parents: Sequence[Record], name: str) -> Sequence[Record]:
     """System-only Jinja2 filter: apply a Query DSL `from` clause to parents.
 
     Exposed to built-in templates (the `__root` render) only, not to user
     templates, until the built-in API stabilises. Mirrors the `from:`
-    clause so a template can resolve an entity id (possibly dotted for
-    nested entities) against the root parents list exposed as `__views`.
-    Returns an empty sequence when the path is not populated (e.g. an
-    entity is declared in the catalog but has no records yet);
-    Composer-side strict evaluation still treats such cases as errors.
+    clause so a template can resolve an entity id against the root
+    parents list exposed as `__views`. Returns an empty sequence when
+    the entity is not populated (e.g. declared in the catalog but no
+    records yet); Composer-side strict evaluation still treats such
+    cases as errors.
     """
     try:
-        return From(path=path).apply(parents)
+        return From(name=name).apply(parents)
     except KeyError:
         return []
 

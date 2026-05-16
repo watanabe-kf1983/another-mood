@@ -118,22 +118,16 @@ class TestQueryFromFilter:
         parents = [{"items": [{"id": "a"}, {"id": "b"}]}]
         assert _query_from(parents, "items") == [{"id": "a"}, {"id": "b"}]
 
-    def test_flattens_nested_entity(self) -> None:
-        parents = [
-            {
-                "parents": [
-                    {"id": "p1", "children": [{"id": "c1"}, {"id": "c2"}]},
-                    {"id": "p2", "children": [{"id": "c3"}]},
-                ]
-            }
-        ]
-        assert _query_from(parents, "parents.children") == [
-            {"id": "c1"},
-            {"id": "c2"},
-            {"id": "c3"},
+    def test_resolves_dotted_entity_id(self) -> None:
+        # The id is matched verbatim; longest-first descent handles
+        # the YAML nesting under the namespace key.
+        parents = [{"__definition": {"entities": [{"id": "user"}, {"id": "role"}]}}]
+        assert _query_from(parents, "__definition.entities") == [
+            {"id": "user"},
+            {"id": "role"},
         ]
 
-    def test_empty_for_missing_key(self) -> None:
+    def test_empty_for_missing_entity(self) -> None:
         # Entity declared in the catalog but no records populated yet
         # (common in a scaffolded project). Should return [], not raise.
         assert _query_from([{"x": 1}], "missing") == []
