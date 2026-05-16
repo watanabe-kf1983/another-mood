@@ -179,24 +179,31 @@ categories:
         title: sort 句の仕様詰め + 実装
         phase: 10
         done: true
-      E3:
-        title: join 句の仕様詰め + 実装
+      E11:
+        title: クエリ DSL 拡充前半 (flatten 句導入 + from 厳密化)
         note: |
-          詳細は design/composer/queries-spec.md「join (E3)」。
-          list 形式、左結合的評価。kind は nested / flat_inner / flat_left
-          の 3 択 required (default なし)。on: は単一キーの eq のみ。
-          as: 必須 (nested で配列名、flat で prefix)。
-          右側 pre-filter は join[].filter: (where と分離)。
-          where: は常に post-join。
-          derive は kind ごとに固有の catalog transform を持つ
-          (where/sort と異なり identity ではない)。
-          スコープ外: 複合キー on:, 多重 NESTED, FK 自動推論。
+          詳細は design/composer/queries-spec.md「`flatten:` 句と `from:` 厳密化 (E11)」。
+          flatten 句 (top-level、intrinsic 配列専用、preserve_empty オプション) の新設、
+          from 厳密 entity ID lookup (ドット記法廃止、tasks-by-phase.yaml 1 件 migration を含む)、
+          「走査の非対称性」設計原則の確立 (nested 配列に潜るのは flatten 系のみ) を扱う。
+          E3 (join 導入) の前提タスク。
         phase: 10
-        proposal: design/composer/queries-spec.md#join-e3
+        proposal: design/composer/queries-spec.md#flatten-句と-from-厳密化-e11
+      E3:
+        title: クエリ DSL 拡充後半 (join 句導入 + where 射程統一)
+        note: |
+          詳細は design/composer/queries-spec.md「`join:` 句と `where:` 射程統一 (E3)」。
+          前提: E11 (flatten 句と from 厳密化)。
+          cross-table join (明示 on:、デフォルト nest、inline flatten オプション、
+          join[].where: pre-join filter)、top-level where と join[].where の射程統一を扱う。
+          スコープ外: 複合キー on:、FK 自動推論、nested-list 操作 (ツリー shape 出力 /
+          nested 内 filter / sort 等)。実現方式の候補は queries-spec.md にメモのみ。
+        phase: 10
+        proposal: design/composer/queries-spec.md#join-句と-where-射程統一-e3
       E4:
-        title: QuerySchema を E1〜E3 に合わせて拡張
+        title: QuerySchema を E1〜E3 + E11 に合わせて拡張
         phase: 10
-        proposal: design/composer/queries-spec.md#join-e3
+        proposal: design/composer/queries-spec.md#join-句と-where-射程統一-e3
       E9:
         title: catalog データモデルの依存方向反転 (Node primary)
         note: |
@@ -247,7 +254,7 @@ categories:
     tasks:
       F4:
         title: ER 図テンプレート
-        note: 前提 D, E3, Mermaid エスケープ
+        note: 前提 D, E11, E3, Mermaid エスケープ
         phase: 10
         proposal: design/app/meta-documentation.md#er-図-f4
       F5:
@@ -262,7 +269,7 @@ categories:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
           詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
-          前提 F8 (カタログ自己記述) と E1〜E4 (where / sort / join) の DSL 拡張。
+          前提 F8 (カタログ自己記述) と E1〜E4 + E11 (where / sort / flatten / join) の DSL 拡張。
         phase: 10
         proposal: design/app/meta-documentation.md#query-化リファクタ-f7
       F8:
