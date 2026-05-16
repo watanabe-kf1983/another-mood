@@ -1,0 +1,15 @@
+# All fields across all entities, flattened into one row per field.
+# Each row carries the parent entity's id/name at the top level and the
+# field's attributes nested under ``field`` — exercises the ``flatten``
+# clause on the intrinsic ``entities.fields`` child entity.
+entity_fields:
+  from: entities
+  flatten:
+    of: fields
+    as: field
+  select:
+    - item: id
+      as: entity_id
+    - item: name
+      as: entity_name
+    - item: field
