@@ -392,6 +392,35 @@ categories:
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
         phase: 13
         proposal: design/normalizer/schema-spec.md#title-キーワード-m4
+      M5:
+        title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
+        note: |
+          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
+          段階 1。query_deriver で iter_normalized の利用をやめ、check + top-level
+          dict→list 変換のみに限定。query body 内側 (where 等) はパススルー。
+          動作不変、境界の明文化と latent risk 解消が目的。後続 M6 で marker 駆動
+          に置き換わる可能性あり。
+        phase: 13
+        proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
+      M6:
+        title: blob marker 機構の導入 (内部 schema 専用、段階 2)
+        note: |
+          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
+          段階 2。x-mood-blob: true 等のマーカーを導入し、build_schema_tree と
+          normalize_data がそれを認識する形に拡張。query-schema.yaml の whereClause
+          等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
+          schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
+        phase: 13
+        proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
+      M7:
+        title: user schema からの blob 型宣言の解放 (段階 3)
+        note: |
+          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
+          段階 3。schema-schema.yaml に if/then で blob サブツリーを許容する
+          ルールを追加し、__meta_entity / docs/reference/schema.md を更新。
+          実需が surface してから着手。前提 M6。
+        phase: 13
+        proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
 
   N:
     title: レンダリング / 出力形式
