@@ -165,53 +165,6 @@ class TestBuildAndFlatten:
         assert dc.flatten_tree(root.child(root_name), root_name) == flat
 
 
-_MEMBERS_DOTTED_EDGE_YAML = """
-- id: members
-  item_type:
-    id: members.item
-    attributes:
-      - { id: id, type: string, required: true }
-      - { id: hobby, type: object, required: false }
-      - id: hobby.pets
-        type: object[]
-        required: false
-        entity: members.hobby.pets
-        item_type: members.item.hobby.pets.item
-- id: members.hobby.pets
-  item_type:
-    id: members.item.hobby.pets.item
-    attributes:
-      - { id: id, type: string, required: true }
-  parent_entity: members
-"""
-
-
-class TestWalkPath:
-    def test_single_segment(self) -> None:
-        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
-        assert root.walk_path("members") is root.child("members")
-
-    def test_longest_match_picks_dotted_edge(self) -> None:
-        # ``hobby.pets`` is a single edge, even though there is also a
-        # shorter ``hobby`` edge under ``members``.  walk_path consumes
-        # the longest match.
-        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
-        target = root.child("members").child("hobby.pets")
-        assert root.walk_path("members.hobby.pets") is target
-
-    def test_raises_when_no_match(self) -> None:
-        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
-        with pytest.raises(KeyError):
-            root.walk_path("missing")
-
-    def test_raises_when_partial_match_only(self) -> None:
-        # ``members.unknown`` shares the ``members`` prefix but no
-        # second-step edge matches ``unknown`` — should still raise.
-        root = dc.build_tree(_catalog(_MEMBERS_DOTTED_EDGE_YAML))
-        with pytest.raises(KeyError):
-            root.walk_path("members.unknown")
-
-
 class TestCatalogDriftSuppression:
     """Assert each catalog dataclass and its ``catalog`` Node stay in sync.
 

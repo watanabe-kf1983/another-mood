@@ -24,11 +24,8 @@ additionalProperties:
     from:
       title: Data source
       description: >-
-        Name of the normalized data source to read from. Resolves to a
-        top-level key of a YAML file under normalize_contents_dir (the
-        key matches the file basename without extension). Dot notation
-        (e.g. `categories.tasks`) flattens nested child entities into a
-        single sequence.
+        Id of the entity to read from. Must match a catalog entity id
+        verbatim; dots are not a path separator.
       type: string
     flatten:
       title: Flatten clause

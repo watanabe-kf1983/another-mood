@@ -20,7 +20,7 @@ from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import pluck, split_path
+from another_mood.components.shared.json_data_model import pluck
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
     UnknownKeyPathError,
@@ -117,60 +117,22 @@ class Select(QueryNode):
 
 @dataclass(frozen=True)
 class From(QueryNode):
-    """Walks a dot-path through nested object[] arrays to a leaf data source."""
+    """Read all rows of one entity by direct name lookup."""
 
-    path: str
+    name: str
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        remaining = self.path
-        while remaining:
-            records, remaining = flatten_children(records, remaining)
-        return records
+        (wrapper,) = records
+        value = pluck(wrapper, self.name)
+        assert isinstance(value, list), (
+            f"from '{self.name}' must resolve to a list; got {type(value).__name__}"
+        )
+        return cast(Sequence[Record], value)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        try:
-            return catalog.walk_path(self.path)
-        except KeyError as exc:
-            raise QueryDeriveError(
-                f"unknown entity '{self.path}'", offender=self.path
-            ) from exc
-
-
-def flatten_children(
-    parents: Sequence[Mapping[str, object]], key_path: str
-) -> tuple[Sequence[Record], str]:
-    """Consume one longest-match step of ``key_path`` from each parent
-    and deep-flatten its value into a list of objects.
-
-    Returns ``(records, remaining_key_path)``.  Walks any depth of
-    nested arrays; a single object is taken as-is.
-    """
-    if not parents:
-        return ([], "")
-
-    # Determine the directly-applicable key sequence from the first parent;
-    # parents at the same level share a shape per the catalog.
-    keys, remaining = split_path(parents[0], key_path)
-    if remaining and not keys:
-        # First parent couldn't consume even one step — treat as miss.
-        raise KeyError(key_path)
-
-    result: list[Record] = []
-    for parent in parents:
-        result.extend(_flatten_nd_pure_array(pluck(parent, keys)))
-    return (result, remaining)
-
-
-def _flatten_nd_pure_array(v: object) -> list[Record]:
-    """Flatten a Mapping or (possibly nested) list of Mappings."""
-    if isinstance(v, Mapping):
-        return [cast(Record, v)]
-    elif isinstance(v, list):
-        return [
-            r for item in cast(list[object], v) for r in _flatten_nd_pure_array(item)
-        ]
-    else:
-        raise TypeError(f"expected Mapping or list of Mappings, got {type(v).__name__}")
+        if not catalog.has_child(self.name):
+            raise QueryDeriveError(f"unknown entity '{self.name}'", offender=self.name)
+        return catalog.child(self.name)
 
 
 @dataclass(frozen=True)
@@ -384,7 +346,7 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     validated Query objects come out.
     """
     from_raw = cast(str, raw["from"])
-    from_ = From(path=from_raw)
+    from_ = From(name=from_raw)
 
     flatten: Sequence[Flatten] = (
         parse_flatten(raw["flatten"]) if "flatten" in raw else ()

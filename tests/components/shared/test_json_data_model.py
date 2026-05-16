@@ -183,8 +183,7 @@ class TestPluck:
 
     def test_flat_dotted_key_takes_precedence_over_nested(self) -> None:
         # When the record could be resolved either way, the longer literal
-        # key wins — mirrors ``Node._longest_edge_match`` on the catalog
-        # side, which prefers the longest matching edge name.
+        # key wins.
         record: dict[str, Any] = {"a.b": "flat", "a": {"b": "nested"}}
         assert pluck(record, "a.b") == "flat"
 

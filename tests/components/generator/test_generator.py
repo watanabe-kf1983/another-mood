@@ -9,7 +9,6 @@ from jinja2 import Undefined
 
 from another_mood.components.generator.generator import (
     _pluck,  # pyright: ignore[reportPrivateUsage]
-    _query_from,  # pyright: ignore[reportPrivateUsage]
     _to_yaml,  # pyright: ignore[reportPrivateUsage]
     generate,
     reconcile,
@@ -109,34 +108,6 @@ class TestPluckFilter:
     def test_unreachable_path_yields_undefined(self) -> None:
         assert isinstance(_pluck({"x": 1}, "missing"), Undefined)
         assert isinstance(_pluck({"x": 1}, "x.y"), Undefined)
-
-
-class TestQueryFromFilter:
-    """Unit tests for the `query_from` filter function."""
-
-    def test_resolves_entity_id(self) -> None:
-        parents = [{"items": [{"id": "a"}, {"id": "b"}]}]
-        assert _query_from(parents, "items") == [{"id": "a"}, {"id": "b"}]
-
-    def test_flattens_nested_entity(self) -> None:
-        parents = [
-            {
-                "parents": [
-                    {"id": "p1", "children": [{"id": "c1"}, {"id": "c2"}]},
-                    {"id": "p2", "children": [{"id": "c3"}]},
-                ]
-            }
-        ]
-        assert _query_from(parents, "parents.children") == [
-            {"id": "c1"},
-            {"id": "c2"},
-            {"id": "c3"},
-        ]
-
-    def test_empty_for_missing_key(self) -> None:
-        # Entity declared in the catalog but no records populated yet
-        # (common in a scaffolded project). Should return [], not raise.
-        assert _query_from([{"x": 1}], "missing") == []
 
 
 class TestToYamlFilter:

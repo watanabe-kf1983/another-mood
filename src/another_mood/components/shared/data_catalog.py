@@ -50,29 +50,6 @@ class Node:
         """Return the child node reached by the edge named ``name``."""
         return self.child_entry(name)[1]
 
-    def walk_path(self, path: str) -> "Node":
-        """Resolve ``path`` to a descendant node by longest edge-name match.
-
-        Raises ``KeyError`` when no child edge matches at some step.
-        """
-        current = self
-        remaining = path
-        while remaining:
-            edge_name, current = current._longest_edge_match(remaining)
-            # +1 skips the dot separator; slicing past the end yields "",
-            # so single-edge paths terminate cleanly.
-            remaining = remaining[len(edge_name) + 1 :]
-        return current
-
-    def _longest_edge_match(self, remaining: str) -> tuple[str, "Node"]:
-        candidate = remaining
-        while True:
-            if self.has_child(candidate):
-                return candidate, self.child(candidate)
-            if "." not in candidate:
-                raise KeyError(remaining)
-            candidate = candidate.rsplit(".", 1)[0]
-
 
 # ── Persistence form (serialization view) ─────────────────────────────
 

@@ -17,7 +17,6 @@ from another_mood.components.shared.query import (
     SelectItem,
     Sort,
     Where,
-    flatten_children,
     parse_flatten,
     parse_query,
 )
@@ -34,81 +33,35 @@ def _catalog(yaml_text: str) -> list[dc.Entity]:
     return [dc.Entity.from_dict(e) for e in loaded]
 
 
-class TestFlattenChildren:
-    def test_array_of_objects_extends(self) -> None:
-        parents = [{"k": [{"id": "1"}, {"id": "2"}]}]
-        assert flatten_children(parents, "k") == ([{"id": "1"}, {"id": "2"}], "")
-
-    def test_single_object_is_one_element(self) -> None:
-        parents = [{"k": {"id": "1"}}]
-        assert flatten_children(parents, "k") == ([{"id": "1"}], "")
-
-    def test_deep_nested_arrays_flatten(self) -> None:
-        parents = [{"k": [[{"id": "a"}, {"id": "b"}], [{"id": "c"}]]}]
-        assert flatten_children(parents, "k") == (
-            [{"id": "a"}, {"id": "b"}, {"id": "c"}],
-            "",
-        )
-
-    def test_concatenates_across_parents(self) -> None:
-        parents = [{"k": [{"id": "1"}]}, {"k": {"id": "2"}}]
-        assert flatten_children(parents, "k") == ([{"id": "1"}, {"id": "2"}], "")
-
-    def test_raises_on_missing_key(self) -> None:
-        with pytest.raises(KeyError):
-            flatten_children([{"k": []}], "missing")
-
-    def test_falls_back_to_shorter_prefix_when_full_path_not_a_key(self) -> None:
-        # Data is nested; longest-match falls back from "a.b" to "a".
-        parents = [{"a": [{"id": "x"}]}]
-        assert flatten_children(parents, "a.b") == ([{"id": "x"}], "b")
-
-    def test_literal_dotted_key_consumes_in_one_step(self) -> None:
-        # User-defined or singleton-flattened literal dotted key.
-        parents = [{"a.b": [{"id": "x"}]}]
-        assert flatten_children(parents, "a.b") == ([{"id": "x"}], "")
-
-    def test_returns_empty_when_parents_empty(self) -> None:
-        # No parent to inspect; signal "done" so the caller's loop exits.
-        assert flatten_children([], "k") == ([], "")
-
-
 class TestFrom:
-    def test_single_segment(self) -> None:
+    def test_returns_rows_of_named_top_level_entity(self) -> None:
         sources = {"entities": [{"id": "user"}, {"id": "role"}]}
-        assert list(From(path="entities").apply([sources])) == [
+        assert list(From(name="entities").apply([sources])) == [
             {"id": "user"},
             {"id": "role"},
         ]
 
-    def test_multi_segment_chains_flattens(self) -> None:
-        sources = {
-            "categories": [
-                {"id": "A", "tasks": [{"id": "A1"}, {"id": "A2"}]},
-                {"id": "B", "tasks": [{"id": "B1"}]},
-            ]
-        }
-        assert list(From(path="categories.tasks").apply([sources])) == [
-            {"id": "A1"},
-            {"id": "A2"},
-            {"id": "B1"},
+    def test_resolves_dotted_entity_id(self) -> None:
+        sources = {"__definition": {"entities": [{"id": "user"}, {"id": "role"}]}}
+        assert list(From(name="__definition.entities").apply([sources])) == [
+            {"id": "user"},
+            {"id": "role"},
         ]
 
-    def test_walks_literal_dotted_key_as_one_step(self) -> None:
-        # Records carrying a literal dotted key (e.g. a user-defined
-        # property name with a dot) are walked as one step by longest
-        # match — naive ``path.split('.')`` would split spuriously.
-        sources = {
-            "members": [
-                {"id": "m1", "hobby.pets": [{"id": "p1"}, {"id": "p2"}]},
-                {"id": "m2", "hobby.pets": [{"id": "p3"}]},
-            ]
-        }
-        assert list(From(path="members.hobby.pets").apply([sources])) == [
-            {"id": "p1"},
-            {"id": "p2"},
-            {"id": "p3"},
-        ]
+    def test_raises_on_unknown_name(self) -> None:
+        with pytest.raises(KeyError):
+            From(name="missing").apply([{"members": []}])
+
+
+_TOP_LEVEL_TASKS_CATALOG_YAML = """
+- id: tasks
+  item_type:
+    id: tasks.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: title, type: string, required: true }
+      - { id: phase, type: integer, required: true }
+"""
 
 
 class TestSelectItem:
@@ -314,7 +267,7 @@ class TestQuery:
                     SelectItem(item="entities", as_="entities"),
                 ]
             ),
-            from_=From(path="entities"),
+            from_=From(name="entities"),
             grouped=Grouped(by="category", as_="entities"),
         )
         expected = [
@@ -340,32 +293,10 @@ class TestQuery:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             select=Select(items=[SelectItem(item="name", as_="name")]),
-            from_=From(path="items"),
+            from_=From(name="items"),
             grouped=None,
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
-
-    def test_dot_path_in_from(self) -> None:
-        sources = {
-            "categories": [
-                {"id": "A", "tasks": [{"id": "A1", "phase": 8}]},
-                {"id": "B", "tasks": [{"id": "B1", "phase": 10}]},
-            ]
-        }
-        query = Query(
-            select=Select(
-                items=[
-                    SelectItem(item="id", as_="id"),
-                    SelectItem(item="phase", as_="phase"),
-                ]
-            ),
-            from_=From(path="categories.tasks"),
-            grouped=None,
-        )
-        assert list(query.apply([sources])) == [
-            {"id": "A1", "phase": 8},
-            {"id": "B1", "phase": 10},
-        ]
 
 
 _TASKS_CATALOG_YAML = """
@@ -392,56 +323,43 @@ _TASKS_CATALOG_YAML = """
 
 
 class TestFromDerive:
-    def test_walks_dot_path_to_leaf(self) -> None:
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
-        assert dc.flatten_tree(leaf, "tasks") == _catalog(
-            """
-            - id: tasks
-              item_type:
-                id: tasks.item
-                attributes:
-                  - { id: id, type: string, required: true }
-                  - { id: title, type: string, required: true }
-                  - { id: phase, type: integer, required: true }
-            """
-        )
+    def test_returns_named_top_level_entity(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        assert From(name="tasks").derive(root) is root.child("tasks")
 
-    def test_resolves_dotted_edge_name_as_single_step(self) -> None:
-        """A catalog edge whose name itself contains a dot (e.g. from a
-        singleton-object flattening) is consumed as one step by
-        longest-match walk — naive ``path.split('.')`` would split it
-        spuriously and miss the edge."""
+    def test_accepts_dotted_top_level_id(self) -> None:
         root = dc.build_tree(
             _catalog(
                 """
-                - id: members
+                - id: __definition.entities
                   item_type:
-                    id: members.item
-                    attributes:
-                      - { id: hobby, type: object, required: false }
-                      - id: hobby.pets
-                        type: object[]
-                        required: false
-                        entity: members.hobby.pets
-                        item_type: members.item.hobby.pets.item
-                - id: members.hobby.pets
-                  item_type:
-                    id: members.item.hobby.pets.item
+                    id: __definition.entities.item
                     attributes:
                       - { id: id, type: string, required: true }
-                  parent_entity: members
                 """
             )
         )
-        target = root.child("members").child("hobby.pets")
-        assert From(path="members.hobby.pets").derive(root) is target
+        assert From(name="__definition.entities").derive(root) is root.child(
+            "__definition.entities"
+        )
+
+    def test_rejects_unknown_name(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        with pytest.raises(QueryDeriveError, match="missing"):
+            From(name="missing").derive(root)
+
+    def test_rejects_composition_walk(self) -> None:
+        # ``categories.tasks`` is a child entity, not a root edge —
+        # composition descent is the job of ``flatten:``.
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        with pytest.raises(QueryDeriveError, match="categories.tasks"):
+            From(name="categories.tasks").derive(root)
 
 
 class TestGroupedDerive:
     def test_wraps_with_by_and_alias(self) -> None:
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
         wrapped = Grouped(by="phase", as_="tasks").derive(leaf)
         assert dc.flatten_tree(wrapped, "groups") == _catalog(
             """
@@ -469,8 +387,8 @@ class TestGroupedDerive:
 
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
         projected = Select(
             items=[
                 SelectItem(item="phase", as_="id"),
@@ -493,7 +411,7 @@ class TestQueryDerive:
     def test_tasks_by_phase(self) -> None:
         """End-to-end: from → grouped → select → flatten produces the expected catalog."""
         query = Query(
-            from_=From(path="categories.tasks"),
+            from_=From(name="tasks"),
             grouped=Grouped(by="phase", as_="tasks"),
             select=Select(
                 items=[
@@ -503,7 +421,7 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         result = dc.flatten_tree(query.derive(root), "tasks_by_phase")
         assert result == _catalog(
             """
@@ -531,7 +449,7 @@ class TestQueryDerive:
 
     def test_without_grouped(self) -> None:
         query = Query(
-            from_=From(path="categories.tasks"),
+            from_=From(name="tasks"),
             grouped=None,
             select=Select(
                 items=[
@@ -540,7 +458,7 @@ class TestQueryDerive:
                 ]
             ),
         )
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         result = dc.flatten_tree(query.derive(root), "task_titles")
         assert result == _catalog(
             """
@@ -567,8 +485,8 @@ class TestWhere:
         assert list(where.apply(records)) == [{"open": True}, {"open": True}]
 
     def test_derive_returns_catalog_unchanged_for_valid_key_path(self) -> None:
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
         where = Where(
             predicate=FieldPredicate(key_path="phase", operator=Operator.GT, target=5),
         )
@@ -578,8 +496,8 @@ class TestWhere:
         """The predicate-side :class:`UnknownKeyPathError` is
         converted to the user-facing :class:`QueryDeriveError` at the
         clause boundary so diagnostics carry source provenance."""
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
         where = Where(
             predicate=FieldPredicate(
                 key_path="nonexistent", operator=Operator.EQ, target=1
@@ -645,13 +563,13 @@ class TestSort:
 
 class TestSortDerive:
     def test_returns_catalog_unchanged_for_valid_by(self) -> None:
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
         assert Sort(by="phase").derive(leaf) is leaf
 
     def test_raises_on_unknown_by(self) -> None:
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        leaf = From(path="categories.tasks").derive(root)
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
         with pytest.raises(QueryDeriveError, match="nonexistent"):
             Sort(by="nonexistent").derive(leaf)
 
@@ -813,19 +731,19 @@ class TestQueryDeriveWithSort:
         resolve in the projected catalog — sorting by a source attribute
         that ``select`` did not project raises ``QueryDeriveError``."""
         query = Query(
-            from_=From(path="categories.tasks"),
+            from_=From(name="tasks"),
             grouped=None,
             select=Select(items=[SelectItem(item="title", as_="title")]),
             sort=Sort(by="phase"),
         )
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         with pytest.raises(QueryDeriveError, match="phase"):
             query.derive(root)
 
     def test_sort_by_select_alias(self) -> None:
         """``sort.by`` resolves the ``as:`` alias produced by select."""
         query = Query(
-            from_=From(path="categories.tasks"),
+            from_=From(name="tasks"),
             grouped=None,
             select=Select(
                 items=[
@@ -835,7 +753,7 @@ class TestQueryDeriveWithSort:
             ),
             sort=Sort(by="rank"),
         )
-        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         result = dc.flatten_tree(query.derive(root), "ranked_tasks")
         assert result == _catalog(
             """
@@ -891,22 +809,22 @@ class TestParseQuery:
                     SelectItem(item="category", as_="category"),
                 ]
             ),
-            from_=From(path="entities"),
+            from_=From(name="entities"),
             grouped=Grouped(by="category", as_="items"),
             where=None,
         )
 
-    def test_grouped_as_defaults_to_last_path_segment(self) -> None:
+    def test_grouped_as_defaults_to_last_segment_of_from(self) -> None:
         raw = {
-            "from": "entities",
+            "from": "__definition.entities",
             "grouped": {"by": "category"},
             "select": [{"item": "category"}],
         }
         assert parse_query(raw).grouped == Grouped(by="category", as_="entities")
 
-    def test_from_dot_notation_splits_into_path(self) -> None:
-        raw = {"from": "categories.tasks", "select": [{"item": "id"}]}
-        assert parse_query(raw).from_ == From(path="categories.tasks")
+    def test_from_dotted_id_is_carried_verbatim(self) -> None:
+        raw = {"from": "__definition.entities", "select": [{"item": "id"}]}
+        assert parse_query(raw).from_ == From(name="__definition.entities")
 
     def test_without_grouped(self) -> None:
         raw = {
