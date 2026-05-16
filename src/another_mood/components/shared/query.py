@@ -76,13 +76,23 @@ class SelectItem:
     def apply(self, record: Record) -> tuple[str, object]:
         return (self.as_, pluck(record, self.item))
 
-    def derive(self, catalog: dc.Node) -> tuple[dc.Edge, dc.Node]:
-        if not catalog.has_child(self.item):
+    def derive(self, catalog: dc.Node) -> Sequence[tuple[dc.Edge, dc.Node]]:
+        # Pull dotted siblings too so derive mirrors apply's ``pluck``,
+        # which returns the whole singleton object.
+        prefix = self.item + "."
+        matches = [
+            (edge, node)
+            for edge, node in catalog.children
+            if edge.name == self.item or edge.name.startswith(prefix)
+        ]
+        if not matches:
             raise QueryDeriveError(
                 f"unknown attribute '{self.item}'", offender=self.item
             )
-        edge, child = catalog.child_entry(self.item)
-        return (replace(edge, name=self.as_), child)
+        return [
+            (replace(edge, name=self.as_ + edge.name.removeprefix(self.item)), node)
+            for edge, node in matches
+        ]
 
 
 @dataclass(frozen=True)
@@ -98,7 +108,11 @@ class Select(QueryNode):
         ]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        return dc.Node(children=[item.derive(catalog) for item in self.items])
+        return dc.Node(
+            children=list(
+                chain.from_iterable(item.derive(catalog) for item in self.items)
+            )
+        )
 
 
 @dataclass(frozen=True)
@@ -186,18 +200,26 @@ class Flatten(QueryNode):
                 f"flatten alias '{self.as_}' collides with an existing attribute",
                 offender=self.as_,
             )
-        new_edge = replace(
+        wrapper = replace(
             edge,
             name=self.as_,
             type=edge.type[:-2],
             required=not self.preserve_empty,
         )
+        # Inline as ``<as_>.X`` siblings — catalog convention for
+        # singleton sub-objects (see data_catalog._build_entity_node).
+        inlined = [
+            (replace(sub_edge, name=f"{self.as_}.{sub_edge.name}"), sub_node)
+            for sub_edge, sub_node in child.children
+        ]
         return dc.Node(
             metadata=catalog.metadata,
-            children=[
-                (new_edge, child) if e.name == self.of else (e, c)
-                for e, c in catalog.children
-            ],
+            children=list(
+                chain.from_iterable(
+                    [(wrapper, dc.Node()), *inlined] if e.name == self.of else [(e, c)]
+                    for e, c in catalog.children
+                )
+            ),
         )
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
