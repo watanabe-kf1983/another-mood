@@ -16,6 +16,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 from functools import reduce
+from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
@@ -159,6 +160,62 @@ def _flatten_nd_pure_array(v: object) -> list[Record]:
 
 
 @dataclass(frozen=True)
+class Flatten(QueryNode):
+    """Unwind one array attribute: each element becomes a separate row
+    carrying the parent's other fields plus the element under ``as_``."""
+
+    of: str
+    as_: str
+    preserve_empty: bool = False
+
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        return list(chain.from_iterable(self._unwind(parent) for parent in records))
+
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        if not catalog.has_child(self.of):
+            raise QueryDeriveError(f"unknown attribute '{self.of}'", offender=self.of)
+        edge, child = catalog.child_entry(self.of)
+        if not edge.type.endswith("[]"):
+            raise QueryDeriveError(
+                f"flatten target '{self.of}' is not an array attribute "
+                f"(type '{edge.type}')",
+                offender=self.of,
+            )
+        if self.as_ != self.of and catalog.has_child(self.as_):
+            raise QueryDeriveError(
+                f"flatten alias '{self.as_}' collides with an existing attribute",
+                offender=self.as_,
+            )
+        new_edge = replace(
+            edge,
+            name=self.as_,
+            type=edge.type[:-2],
+            required=not self.preserve_empty,
+        )
+        return dc.Node(
+            metadata=catalog.metadata,
+            children=[
+                (new_edge, child) if e.name == self.of else (e, c)
+                for e, c in catalog.children
+            ],
+        )
+
+    def _unwind(self, parent: Record) -> Sequence[Record]:
+        other = {k: v for k, v in parent.items() if k != self.of}
+        try:
+            raw = pluck(parent, self.of)
+        except KeyError:
+            raw = []
+        assert isinstance(raw, list), (
+            f"flatten target '{self.of}' must be an array; got {type(raw).__name__}"
+        )
+        children = cast(list[object], raw)
+        if self.preserve_empty and not children:
+            return [other]
+        return [{**other, self.as_: child} for child in children]
+
+
+@dataclass(frozen=True)
 class Grouped(QueryNode):
     """Group input rows by ``by`` and package each group under ``as_``.
 
@@ -258,11 +315,12 @@ class Sort(QueryNode):
 @dataclass(frozen=True)
 class Query(QueryNode):
     """Pipeline of clauses applied in the order
-    ``from → where? → grouped? → select → sort?``."""
+    ``from → flatten? → where? → grouped? → select → sort?``."""
 
     select: Select
     from_: From
     grouped: Grouped | None
+    flatten: Sequence[Flatten] = ()
     where: Where | None = None
     sort: Sort | None = None
 
@@ -271,6 +329,7 @@ class Query(QueryNode):
         children=[
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
+            (dc.Edge(name="flatten", type="object", required=False), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
             (dc.Edge(name="select", type="object", required=False), dc.Node()),
@@ -285,7 +344,14 @@ class Query(QueryNode):
         return reduce(lambda c, qn: qn.derive(c), self._pipeline(), catalog)
 
     def _pipeline(self) -> Sequence[QueryNode]:
-        clauses = (self.from_, self.where, self.grouped, self.select, self.sort)
+        clauses = (
+            self.from_,
+            *self.flatten,
+            self.where,
+            self.grouped,
+            self.select,
+            self.sort,
+        )
         return [c for c in clauses if c is not None]
 
 
@@ -297,6 +363,10 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     """
     from_raw = cast(str, raw["from"])
     from_ = From(path=from_raw)
+
+    flatten: Sequence[Flatten] = (
+        parse_flatten(raw["flatten"]) if "flatten" in raw else ()
+    )
 
     where: Where | None = None
     if "where" in raw:
@@ -329,4 +399,47 @@ def parse_query(raw: Mapping[str, object]) -> Query:
             missing=Missing(sort_raw.get("missing", "last")),
         )
 
-    return Query(select=select, from_=from_, grouped=grouped, where=where, sort=sort)
+    return Query(
+        select=select,
+        from_=from_,
+        grouped=grouped,
+        flatten=flatten,
+        where=where,
+        sort=sort,
+    )
+
+
+def parse_flatten(raw: object) -> Sequence[Flatten]:
+    """Parse the three accepted shapes of the ``flatten:`` clause.
+
+    * bare string  → one shorthand entry
+    * mapping      → one object-form entry
+    * sequence     → list-form, each entry either shorthand or object form
+    """
+    if isinstance(raw, str):
+        return [_flatten_from_shorthand(raw)]
+    if isinstance(raw, Mapping):
+        return [_flatten_from_mapping(cast(Mapping[str, object], raw))]
+    if isinstance(raw, Sequence):
+        return [
+            _flatten_from_shorthand(entry)
+            if isinstance(entry, str)
+            else _flatten_from_mapping(cast(Mapping[str, object], entry))
+            for entry in cast(Sequence[object], raw)
+        ]
+    raise TypeError(
+        f"flatten clause must be a string, mapping, or list; got {type(raw).__name__}"
+    )
+
+
+def _flatten_from_shorthand(name: str) -> Flatten:
+    return Flatten(of=name, as_=name)
+
+
+def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
+    of = cast(str, raw["of"])
+    return Flatten(
+        of=of,
+        as_=cast(str, raw.get("as", of)),
+        preserve_empty=cast(bool, raw.get("preserve_empty", False)),
+    )
