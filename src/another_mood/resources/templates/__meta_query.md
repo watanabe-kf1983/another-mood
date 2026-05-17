@@ -22,6 +22,21 @@
 {% endfor %}
 
 {% endif -%}
+{% if join -%}
+### Join
+
+{% if join is mapping -%}
+{% set entries = [join] -%}
+{% else -%}
+{% set entries = join -%}
+{% endif -%}
+| To | On (left = right) | As |
+|----|-------------------|-----|
+{% for entry in entries -%}
+| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as or entry.to }} |
+{% endfor %}
+
+{% endif -%}
 {% if where -%}
 ### Where
 
