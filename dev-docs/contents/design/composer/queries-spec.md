@@ -189,7 +189,7 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 
 - `Join` クラスは `QueryNode` を継承しない。merge ロジックを純粋な 2-input 関数 (`merge_records(left, right)` / `merge_catalog(left, right)`) として持つ
 - `Join` の右側 (右 entity + 任意の pre-join `where:`) は再帰的に組み立てたサブ `Query` として保持する
-- `Query` に `joins: Sequence[Join]` フィールドを追加。`Query.apply` / `Query.derive` は pipeline 順序を機械的に展開する中で joins を扱う
+- `Query` に `join: Sequence[Join]` フィールドを追加 (既存 `flatten: Sequence[Flatten]` と同じ singular 命名)。`Query.apply` / `Query.derive` は pipeline 順序を機械的に展開する中で join を扱う
 - apply 側と derive 側で同じ pipeline 順序を機械的に書き下すことになり、~10 行ずつ程度の重複が生じるが、汎用 2-input 抽象化を導入するより局所的な特別扱いの方が、現スコープ (1 つの 2-input op) では適切と判断
 
 ##### 背景: 汎用 2-input 抽象化を採らなかった理由

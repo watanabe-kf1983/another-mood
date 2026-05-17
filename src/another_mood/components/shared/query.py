@@ -15,7 +15,6 @@ wrapper.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
-from functools import reduce
 from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
@@ -148,6 +147,68 @@ class Flatten(QueryNode):
 
 
 @dataclass(frozen=True)
+class JoinOn:
+    """A single equi-join key pair: left attribute = right attribute.
+
+    Both paths follow the asymmetry rule (External Design: nested object
+    dot path allowed, array crossing not).
+    """
+
+    left: str
+    right: str
+
+
+@dataclass(frozen=True)
+class Join:
+    """Attach a right relation as a nested array on each left row.
+
+    Not a :class:`QueryNode` (2-in 1-out). ``right`` is a sub-Query
+    evaluated against the same sources as the outer Query.
+    """
+
+    right: "Query"
+    on: JoinOn
+    as_: str
+
+    def merge_records(
+        self,
+        left: Sequence[Record],
+        right: Sequence[Record],
+    ) -> Sequence[Record]:
+        index: dict[object, list[Record]] = {}
+        for r in right:
+            try:
+                key = pluck(r, self.on.right)
+            except KeyError:
+                continue
+            index.setdefault(key, []).append(r)
+
+        def _matched(row: Record) -> list[Record]:
+            try:
+                return index.get(pluck(row, self.on.left), [])
+            except KeyError:
+                return []
+
+        return [{**row, self.as_: _matched(row)} for row in left]
+
+    def merge_catalog(self, left: dc.Node, right: dc.Node) -> dc.Node:
+        left.require_child(self.on.left)
+        right.require_child(self.on.right)
+        if left.has_child(self.as_):
+            raise QueryDeriveError(
+                f"join alias '{self.as_}' collides with an existing attribute",
+                offender=self.as_,
+            )
+        return dc.Node(
+            metadata=left.metadata,
+            children=[
+                *left.children,
+                (dc.Edge(name=self.as_, type="object[]", required=True), right),
+            ],
+        )
+
+
+@dataclass(frozen=True)
 class Where(QueryNode):
     """Pipeline wrapper around a :class:`RecordPredicate` tree."""
 
@@ -277,10 +338,11 @@ class Sort(QueryNode):
 @dataclass(frozen=True)
 class Query(QueryNode):
     """Pipeline of clauses applied in the order
-    ``from → flatten? → where? → grouped? → select → sort?``."""
+    ``from → flatten* → join* → where? → grouped? → select → sort?``."""
 
     from_: From
     flatten: Sequence[Flatten] = ()
+    join: Sequence[Join] = ()
     where: Where | None = None
     grouped: Grouped | None = None
     select: Select = Select(items=())
@@ -292,6 +354,7 @@ class Query(QueryNode):
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
             (dc.Edge(name="from", type="string", required=True), dc.Node()),
             (dc.Edge(name="flatten", type="object", required=False), dc.Node()),
+            (dc.Edge(name="join", type="object", required=False), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
             (dc.Edge(name="grouped", type="object", required=False), dc.Node()),
             (dc.Edge(name="select", type="object", required=False), dc.Node()),
@@ -300,26 +363,45 @@ class Query(QueryNode):
     )
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        return reduce(lambda r, qn: qn.apply(r), self._pipeline(), records)
+        # Join is 2-in 1-out, so the pipeline cannot be a single fold
+        # over QueryNode. Each step is written out; see
+        # composer/queries-spec.md "評価器の構造" for why this is
+        # preferred over a generic 2-input abstraction.
+        out = self.from_.apply(records)
+        for f in self.flatten:
+            out = f.apply(out)
+        for j in self.join:
+            out = j.merge_records(out, j.right.apply(records))
+        if self.where is not None:
+            out = self.where.apply(out)
+        if self.grouped is not None:
+            out = self.grouped.apply(out)
+        if self.select.items:
+            out = self.select.apply(out)
+        if self.sort is not None:
+            out = self.sort.apply(out)
+        return out
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         try:
-            return reduce(lambda c, qn: qn.derive(c), self._pipeline(), catalog)
+            out = self.from_.derive(catalog)
+            for f in self.flatten:
+                out = f.derive(out)
+            for j in self.join:
+                out = j.merge_catalog(out, j.right.derive(catalog))
+            if self.where is not None:
+                out = self.where.derive(out)
+            if self.grouped is not None:
+                out = self.grouped.derive(out)
+            if self.select.items:
+                out = self.select.derive(out)
+            if self.sort is not None:
+                out = self.sort.derive(out)
+            return out
         except dc.UnknownChildError as exc:
             raise QueryDeriveError(
                 f"unknown attribute '{exc.name}'", offender=exc.name
             ) from exc
-
-    def _pipeline(self) -> Sequence[QueryNode]:
-        clauses = (
-            self.from_,
-            *self.flatten,
-            self.where,
-            self.grouped,
-            self.select,
-            self.sort,
-        )
-        return [c for c in clauses if c is not None]
 
 
 def parse_query(raw: Mapping[str, object]) -> Query:
@@ -333,6 +415,10 @@ def parse_query(raw: Mapping[str, object]) -> Query:
 
     flatten: Sequence[Flatten] = (
         parse_flatten(raw["flatten"]) if "flatten" in raw else ()
+    )
+
+    join: Sequence[Join] = (
+        (parse_join(cast(Mapping[str, object], raw["join"])),) if "join" in raw else ()
     )
 
     where: Where | None = None
@@ -369,6 +455,7 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     return Query(
         from_=from_,
         flatten=flatten,
+        join=join,
         where=where,
         grouped=grouped,
         select=select,
@@ -409,4 +496,19 @@ def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
         of=of,
         as_=cast(str, raw.get("as", of)),
         preserve_empty=cast(bool, raw.get("preserve_empty", False)),
+    )
+
+
+def parse_join(raw: Mapping[str, object]) -> Join:
+    """Parse one ``join:`` entry (object form).
+
+    List form and the inline ``where:`` / ``flatten:`` options are
+    deferred to later sub-PRs of E3.
+    """
+    to = cast(str, raw["to"])
+    on_raw = cast(Mapping[str, str], raw["on"])
+    return Join(
+        right=Query(from_=From(name=to)),
+        on=JoinOn(left=on_raw["left"], right=on_raw["right"]),
+        as_=cast(str, raw.get("as", to)),
     )

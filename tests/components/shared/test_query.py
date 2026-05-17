@@ -10,6 +10,8 @@ from another_mood.components.shared.query import (
     Flatten,
     From,
     Grouped,
+    Join,
+    JoinOn,
     Missing,
     Query,
     QueryDeriveError,
@@ -18,6 +20,7 @@ from another_mood.components.shared.query import (
     Sort,
     Where,
     parse_flatten,
+    parse_join,
     parse_query,
 )
 from another_mood.components.shared.record_predicate import (
@@ -234,6 +237,179 @@ class TestFlattenDerive:
     def test_raises_on_as_collision(self, categories: dc.Node) -> None:
         with pytest.raises(QueryDeriveError, match="collides"):
             Flatten(of="tasks", as_="title").derive(categories)
+
+
+_CATS_TASKS_CATALOG_YAML = """
+- id: cats
+  item_type:
+    id: cats.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: name, type: string, required: true }
+- id: tasks
+  item_type:
+    id: tasks.item
+    attributes:
+      - { id: id, type: string, required: true }
+      - { id: title, type: string, required: true }
+      - { id: cat, type: string, required: true }
+"""
+
+
+def _right_query(name: str) -> Query:
+    """A right-side Query that just reads one entity, as built by ``parse_join``."""
+    return Query(from_=From(name=name))
+
+
+class TestJoin:
+    """``merge_records``: nested attach with default cardinality.
+
+    Every left row survives; matching right rows arrive as a list under
+    ``as_`` (possibly empty). ``flatten:`` (E3 part 3) is what later
+    drops or unwinds that list.
+    """
+
+    def test_attaches_matched_right_rows_under_as_(self) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
+        )
+        left = [{"id": "A"}, {"id": "B"}]
+        right = [
+            {"id": "A1", "cat": "A"},
+            {"id": "A2", "cat": "A"},
+            {"id": "B1", "cat": "B"},
+        ]
+        assert list(join.merge_records(left, right)) == [
+            {
+                "id": "A",
+                "tasks": [
+                    {"id": "A1", "cat": "A"},
+                    {"id": "A2", "cat": "A"},
+                ],
+            },
+            {"id": "B", "tasks": [{"id": "B1", "cat": "B"}]},
+        ]
+
+    def test_left_row_with_no_match_gets_empty_list(self) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
+        )
+        left = [{"id": "A"}, {"id": "Z"}]
+        right = [{"id": "A1", "cat": "A"}]
+        assert list(join.merge_records(left, right)) == [
+            {"id": "A", "tasks": [{"id": "A1", "cat": "A"}]},
+            {"id": "Z", "tasks": []},
+        ]
+
+    def test_left_row_missing_key_gets_empty_list(self) -> None:
+        # Schema validation in ``merge_catalog`` rules out unknown
+        # ``on.left``, but optional attributes can still be absent on
+        # individual rows — those rows behave like a no-match.
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
+        )
+        left: list[dict[str, object]] = [{}]
+        right = [{"id": "A1", "cat": "A"}]
+        assert list(join.merge_records(left, right)) == [{"tasks": []}]
+
+    def test_right_row_missing_key_excluded_from_index(self) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
+        )
+        left = [{"id": "A"}]
+        right = [{"id": "A1", "cat": "A"}, {"id": "stray"}]
+        assert list(join.merge_records(left, right)) == [
+            {"id": "A", "tasks": [{"id": "A1", "cat": "A"}]},
+        ]
+
+    def test_dotted_left_path(self) -> None:
+        # ``pluck`` resolves dotted paths on the left row.
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="meta.cat", right="cat"),
+            as_="tasks",
+        )
+        left = [{"meta": {"cat": "A"}}]
+        right = [{"id": "A1", "cat": "A"}]
+        assert list(join.merge_records(left, right)) == [
+            {"meta": {"cat": "A"}, "tasks": [{"id": "A1", "cat": "A"}]},
+        ]
+
+
+class TestJoinDerive:
+    """``merge_catalog``: schema-side merge.  ``require_child`` runs on
+    both sides, so the asymmetry rule (no array crossings) and the
+    ``as_`` collision rule are enforced before any data is touched."""
+
+    @pytest.fixture
+    def root(self) -> dc.Node:
+        return dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
+
+    def test_attaches_right_node_under_as_edge(self, root: dc.Node) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
+        )
+        left = root.child("cats")
+        right = root.child("tasks")
+        merged = join.merge_catalog(left, right)
+        edge_by_name = {e.name: (e, n) for e, n in merged.children}
+        # Left attrs preserved.
+        assert {"id", "name"}.issubset(edge_by_name)
+        # Right surfaces as an object[] under as_.
+        edge, node = edge_by_name["tasks"]
+        assert edge.type == "object[]"
+        assert edge.required is True
+        assert node is right
+
+    def test_raises_when_left_key_unknown(self, root: dc.Node) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="missing", right="cat"),
+            as_="tasks",
+        )
+        with pytest.raises(dc.UnknownChildError, match="missing"):
+            join.merge_catalog(root.child("cats"), root.child("tasks"))
+
+    def test_raises_when_right_key_unknown(self, root: dc.Node) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="missing"),
+            as_="tasks",
+        )
+        with pytest.raises(dc.UnknownChildError, match="missing"):
+            join.merge_catalog(root.child("cats"), root.child("tasks"))
+
+    def test_raises_on_as_collision(self, root: dc.Node) -> None:
+        join = Join(
+            right=_right_query("tasks"),
+            on=JoinOn(left="id", right="cat"),
+            as_="name",  # already an attribute on cats
+        )
+        with pytest.raises(QueryDeriveError, match="collides"):
+            join.merge_catalog(root.child("cats"), root.child("tasks"))
+
+    def test_raises_when_left_key_crosses_array(self) -> None:
+        # Asymmetry rule: ``on.left`` cannot reach inside a nested array.
+        # The flattened catalog encoding has no direct edge ``tasks.title``
+        # under categories, so ``require_child`` raises.
+        root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
+        join = Join(
+            right=_right_query("categories"),
+            on=JoinOn(left="tasks.title", right="id"),
+            as_="x",
+        )
+        with pytest.raises(dc.UnknownChildError, match="tasks.title"):
+            join.merge_catalog(root.child("categories"), root.child("categories"))
 
 
 class TestWhere:
@@ -469,12 +645,12 @@ class TestSortDerive:
 
 class TestQueryPipeline:
     """Assert that Query runs clauses in the order
-    ``from → flatten* → where? → grouped? → select → sort?``.
+    ``from → flatten* → join* → where? → grouped? → select → sort?``.
 
     Each test pins one user-visible promise that depends on the ordering.
     Only adjacent pairs are tested; non-adjacent pairs (flatten<grouped,
-    flatten<select, ...) follow by transitivity because ``_pipeline()``
-    returns a single fixed order.
+    flatten<select, ...) follow by transitivity because ``Query.apply``
+    runs a single fixed order.
     """
 
     def test_apply_where_after_flatten(self) -> None:
@@ -634,6 +810,113 @@ class TestQueryPipeline:
             """
         )
 
+    def test_apply_join_after_flatten(self) -> None:
+        """``join.on.left`` resolves a name introduced by ``flatten`` —
+        running join before flatten would leave the join-key attribute
+        living inside an array."""
+        sources = {
+            "cats": [
+                {"id": "A", "info": [{"name": "Apple"}]},
+                {"id": "B", "info": [{"name": "Beta"}]},
+            ],
+            "tasks": [
+                {"id": "A1", "owner": "Apple"},
+                {"id": "B1", "owner": "Beta"},
+            ],
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: cats
+                flatten: { of: info, as: info }
+                join:
+                  to: tasks
+                  on: { left: info.name, right: owner }
+                  as: tasks
+                select:
+                  - item: id
+                  - item: tasks
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"id": "A", "tasks": [{"id": "A1", "owner": "Apple"}]},
+            {"id": "B", "tasks": [{"id": "B1", "owner": "Beta"}]},
+        ]
+
+    def test_apply_where_after_join(self) -> None:
+        """``where`` references ``tasks`` — a key that only appears
+        after join attaches it.  If ``where`` ran before join, every
+        row would be filtered out as missing the key."""
+        sources = {
+            "cats": [{"id": "A"}, {"id": "B"}],
+            "tasks": [
+                {"id": "A1", "cat": "A"},
+                {"id": "B1", "cat": "B"},
+            ],
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: cats
+                join:
+                  to: tasks
+                  on: { left: id, right: cat }
+                  as: tasks
+                where:
+                  tasks: { exists: true }
+                select:
+                  - item: id
+                  - item: tasks
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"id": "A", "tasks": [{"id": "A1", "cat": "A"}]},
+            {"id": "B", "tasks": [{"id": "B1", "cat": "B"}]},
+        ]
+
+    def test_derive_join_emits_nested_entity(self) -> None:
+        """``Query.derive`` end-to-end with a join: the resulting view
+        catalog has the joined entity as a nested object[] child."""
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: cats
+                join:
+                  to: tasks
+                  on: { left: id, right: cat }
+                  as: tasks
+                select:
+                  - item: id
+                  - item: tasks
+                """
+            )
+        )
+        root = dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
+        assert dc.flatten_tree(query.derive(root), "cat_tasks") == _catalog(
+            """
+            - id: cat_tasks
+              item_type:
+                id: cat_tasks.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - id: tasks
+                    type: object[]
+                    required: true
+                    entity: cat_tasks.tasks
+                    item_type: cat_tasks.item.tasks.item
+            - id: cat_tasks.tasks
+              item_type:
+                id: cat_tasks.item.tasks.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - { id: title, type: string, required: true }
+                  - { id: cat, type: string, required: true }
+              parent_entity: cat_tasks
+            """
+        )
+
     def test_apply_flatten_chain_in_order(self) -> None:
         """Later entries in a ``Sequence[Flatten]`` take earlier
         entries' unwind output as input — the second unwind multiplies
@@ -660,8 +943,8 @@ class TestQueryPipeline:
 
 
 class TestQueryOptionalClauses:
-    """``flatten``/``where``/``grouped``/``sort`` are all optional;
-    ``_pipeline()`` skips ``None``/empty clauses."""
+    """``flatten``/``join``/``where``/``grouped``/``sort`` are all optional;
+    ``Query.apply`` / ``Query.derive`` skip ``None``/empty clauses."""
 
     def test_apply_without_grouped(self) -> None:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
@@ -741,6 +1024,29 @@ class TestParseFlatten:
     def test_rejects_unsupported_shape(self) -> None:
         with pytest.raises(TypeError):
             parse_flatten(42)
+
+
+class TestParseJoin:
+    """``parse_join`` (object form only in E3 part 1).
+
+    List form, inline ``where:`` and inline ``flatten:`` are deferred
+    to later sub-PRs of E3.
+    """
+
+    def test_object_form(self) -> None:
+        assert parse_join(
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+        ) == Join(
+            right=Query(from_=From(name="tasks")),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
+        )
+
+    def test_as_defaults_to_to(self) -> None:
+        assert (
+            parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}}).as_
+            == "tasks"
+        )
 
 
 class TestParseQuery:
@@ -827,6 +1133,24 @@ class TestParseQuery:
     def test_parses_flatten_wires_into_query(self) -> None:
         raw = {"from": "items", "flatten": "tasks", "select": [{"item": "id"}]}
         assert list(parse_query(raw).flatten) == [Flatten(of="tasks", as_="tasks")]
+
+    def test_parses_query_without_join(self) -> None:
+        raw = {"from": "items", "select": [{"item": "id"}]}
+        assert list(parse_query(raw).join) == []
+
+    def test_parses_join_wires_into_query(self) -> None:
+        raw = {
+            "from": "cats",
+            "join": {"to": "tasks", "on": {"left": "id", "right": "cat"}},
+            "select": [{"item": "id"}],
+        }
+        assert list(parse_query(raw).join) == [
+            Join(
+                right=Query(from_=From(name="tasks")),
+                on=JoinOn(left="id", right="cat"),
+                as_="tasks",
+            )
+        ]
 
     def test_parses_sort_full(self) -> None:
         raw = {
