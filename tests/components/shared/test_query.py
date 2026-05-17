@@ -467,125 +467,57 @@ class TestSortDerive:
             Sort(by="tasks.title").derive(root.child("categories"))
 
 
-class TestQuery:
-    def test_example_project_erds(self) -> None:
-        """Matches the ecommerce example query: group entities by category."""
+class TestQueryPipeline:
+    """Assert that Query runs clauses in the order
+    ``from → flatten* → where? → grouped? → select → sort?``.
+
+    Each test pins one user-visible promise that depends on the ordering.
+    Only adjacent pairs are tested; non-adjacent pairs (flatten<grouped,
+    flatten<select, ...) follow by transitivity because ``_pipeline()``
+    returns a single fixed order.
+    """
+
+    def test_apply_where_after_flatten(self) -> None:
+        """``where`` sees the post-flatten row shape and can reference
+        child fields under the ``as_`` namespace.  If the order were
+        reversed, ``task.phase`` would not resolve while ``tasks`` is
+        still an array."""
         sources = {
-            "entities": [
-                {"id": "user", "name": "ユーザー", "category": "user-management"},
-                {"id": "role", "name": "ロール", "category": "user-management"},
-                {"id": "order", "name": "注文", "category": "order-management"},
+            "categories": [
+                {
+                    "id": "A",
+                    "tasks": [{"id": "A1", "phase": 8}, {"id": "A2", "phase": 10}],
+                },
+                {
+                    "id": "B",
+                    "tasks": [{"id": "B1", "phase": 10}],
+                },
             ]
         }
-        query = Query(
-            select=Select(
-                items=[
-                    SelectItem(item="category", as_="id"),
-                    SelectItem(item="category", as_="category"),
-                    SelectItem(item="entities", as_="entities"),
-                ]
-            ),
-            from_=From(name="entities"),
-            grouped=Grouped(by="category", as_="entities"),
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: categories
+                flatten:
+                  of: tasks
+                  as: task
+                where:
+                  task.phase: 10
+                select:
+                  - item: id
+                    as: category_id
+                  - item: task
+                """
+            )
         )
-        expected = [
-            {
-                "id": "user-management",
-                "category": "user-management",
-                "entities": [
-                    {"id": "user", "name": "ユーザー", "category": "user-management"},
-                    {"id": "role", "name": "ロール", "category": "user-management"},
-                ],
-            },
-            {
-                "id": "order-management",
-                "category": "order-management",
-                "entities": [
-                    {"id": "order", "name": "注文", "category": "order-management"},
-                ],
-            },
+        assert list(query.apply([sources])) == [
+            {"category_id": "A", "task": {"id": "A2", "phase": 10}},
+            {"category_id": "B", "task": {"id": "B1", "phase": 10}},
         ]
-        assert list(query.apply([sources])) == expected
 
-    def test_without_grouped(self) -> None:
-        sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
-        query = Query(
-            select=Select(items=[SelectItem(item="name", as_="name")]),
-            from_=From(name="items"),
-            grouped=None,
-        )
-        assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
-
-
-class TestQueryDerive:
-    def test_tasks_by_phase(self) -> None:
-        """End-to-end: from → grouped → select → flatten produces the expected catalog."""
-        query = Query(
-            from_=From(name="tasks"),
-            grouped=Grouped(by="phase", as_="tasks"),
-            select=Select(
-                items=[
-                    SelectItem(item="phase", as_="id"),
-                    SelectItem(item="phase", as_="phase"),
-                    SelectItem(item="tasks", as_="tasks"),
-                ]
-            ),
-        )
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        result = dc.flatten_tree(query.derive(root), "tasks_by_phase")
-        assert result == _catalog(
-            """
-            - id: tasks_by_phase
-              item_type:
-                id: tasks_by_phase.item
-                attributes:
-                  - { id: id, type: integer, required: true }
-                  - { id: phase, type: integer, required: true }
-                  - id: tasks
-                    type: object[]
-                    required: true
-                    entity: tasks_by_phase.tasks
-                    item_type: tasks_by_phase.item.tasks.item
-            - id: tasks_by_phase.tasks
-              item_type:
-                id: tasks_by_phase.item.tasks.item
-                attributes:
-                  - { id: id, type: string, required: true }
-                  - { id: title, type: string, required: true }
-                  - { id: phase, type: integer, required: true }
-              parent_entity: tasks_by_phase
-            """
-        )
-
-    def test_without_grouped(self) -> None:
-        query = Query(
-            from_=From(name="tasks"),
-            grouped=None,
-            select=Select(
-                items=[
-                    SelectItem(item="id", as_="id"),
-                    SelectItem(item="title", as_="title"),
-                ]
-            ),
-        )
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        result = dc.flatten_tree(query.derive(root), "task_titles")
-        assert result == _catalog(
-            """
-            - id: task_titles
-              item_type:
-                id: task_titles.item
-                attributes:
-                  - { id: id, type: string, required: true }
-                  - { id: title, type: string, required: true }
-            """
-        )
-
-
-class TestQueryPipelineOrder:
-    def test_where_filters_before_grouped(self) -> None:
-        """``from → where → grouped → select``: where prunes records
-        before grouping so empty groups never form."""
+    def test_apply_grouped_after_where(self) -> None:
+        """Rows pruned by ``where`` do not enter any group, so no empty
+        group ever forms."""
         sources = {
             "items": [
                 {"id": "a", "cat": "x", "open": True},
@@ -612,9 +544,42 @@ class TestQueryPipelineOrder:
             {"cat": "x", "items": [{"id": "a", "cat": "x", "open": True}]}
         ]
 
-    def test_sort_runs_after_select(self) -> None:
-        """``sort`` sees the projected output (matches SQL ``ORDER BY``
-        after ``SELECT``), so ``by:`` can reference a ``select`` alias."""
+    def test_apply_select_after_grouped(self) -> None:
+        """``select`` can project ``grouped``'s ``as_`` (the group
+        payload).  If the order were reversed, ``members`` would not
+        exist on the record and ``select`` would raise ``KeyError``."""
+        sources = {
+            "items": [
+                {"id": "a", "cat": "x"},
+                {"id": "b", "cat": "x"},
+                {"id": "c", "cat": "y"},
+            ]
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: items
+                grouped:
+                  by: cat
+                  as: members
+                select:
+                  - item: cat
+                  - item: members
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {
+                "cat": "x",
+                "members": [{"id": "a", "cat": "x"}, {"id": "b", "cat": "x"}],
+            },
+            {"cat": "y", "members": [{"id": "c", "cat": "y"}]},
+        ]
+
+    def test_apply_sort_after_select(self) -> None:
+        """``sort.by`` resolves the ``as:`` alias produced by ``select``
+        (data side).  If the order were reversed, the alias would not
+        exist on the record."""
         sources = {
             "items": [
                 {"name": "a", "phase": 3},
@@ -641,110 +606,10 @@ class TestQueryPipelineOrder:
             {"name": "a", "rank": 3},
         ]
 
-    def test_flatten_runs_between_from_and_where(self) -> None:
-        """``flatten`` unwinds before ``where``, so the predicate sees the
-        post-flatten row shape (parent fields top-level, child namespace
-        scoped under ``as:``)."""
-        sources = {
-            "categories": [
-                {
-                    "id": "A",
-                    "tasks": [{"id": "A1", "phase": 8}, {"id": "A2", "phase": 10}],
-                },
-                {
-                    "id": "B",
-                    "tasks": [{"id": "B1", "phase": 10}],
-                },
-            ]
-        }
-        query = parse_query(
-            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
-                """
-                from: categories
-                flatten:
-                  of: tasks
-                  as: task
-                select:
-                  - item: id
-                    as: category_id
-                  - item: task
-                """
-            )
-        )
-        assert list(query.apply([sources])) == [
-            {"category_id": "A", "task": {"id": "A1", "phase": 8}},
-            {"category_id": "A", "task": {"id": "A2", "phase": 10}},
-            {"category_id": "B", "task": {"id": "B1", "phase": 10}},
-        ]
-
-    def test_list_form_flattens_chain_sequentially(self) -> None:
-        """Each later entry in the ``flatten:`` list sees the row shape
-        produced by the earlier ones — the second unwind multiplies over
-        the first."""
-        sources = {"members": [{"id": 1, "hobbies": ["h1"], "pets": ["p1", "p2"]}]}
-        query = parse_query(
-            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
-                """
-                from: members
-                flatten:
-                  - { of: hobbies, as: hobby }
-                  - { of: pets, as: pet }
-                select:
-                  - item: id
-                  - item: hobby
-                  - item: pet
-                """
-            )
-        )
-        assert list(query.apply([sources])) == [
-            {"id": 1, "hobby": "h1", "pet": "p1"},
-            {"id": 1, "hobby": "h1", "pet": "p2"},
-        ]
-
-    def test_sort_after_grouped(self) -> None:
-        """After grouping, ``sort`` orders the group records."""
-        sources = {
-            "items": [
-                {"id": "a", "cat": "x"},
-                {"id": "b", "cat": "z"},
-                {"id": "c", "cat": "y"},
-            ]
-        }
-        query = parse_query(
-            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
-                """
-                from: items
-                grouped:
-                  by: cat
-                  as: items
-                select:
-                  - item: cat
-                  - item: items
-                sort:
-                  by: cat
-                """
-            )
-        )
-        assert [row["cat"] for row in query.apply([sources])] == ["x", "y", "z"]
-
-
-class TestQueryDeriveWithSort:
-    def test_sort_validates_against_post_select_catalog(self) -> None:
-        """``sort.derive`` runs after ``select.derive``, so ``by:`` must
-        resolve in the projected catalog — sorting by a source attribute
-        that ``select`` did not project raises ``QueryDeriveError``."""
-        query = Query(
-            from_=From(name="tasks"),
-            grouped=None,
-            select=Select(items=[SelectItem(item="title", as_="title")]),
-            sort=Sort(by="phase"),
-        )
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        with pytest.raises(QueryDeriveError, match="phase"):
-            query.derive(root)
-
-    def test_sort_by_select_alias(self) -> None:
-        """``sort.by`` resolves the ``as:`` alias produced by select."""
+    def test_derive_sort_after_select(self) -> None:
+        """``sort.derive`` runs on the catalog produced by
+        ``select.derive`` — ``by:`` resolves against an alias that
+        only exists in the projected catalog."""
         query = Query(
             from_=From(name="tasks"),
             grouped=None,
@@ -768,6 +633,89 @@ class TestQueryDeriveWithSort:
                   - { id: title, type: string, required: true }
             """
         )
+
+    def test_apply_flatten_chain_in_order(self) -> None:
+        """Later entries in a ``Sequence[Flatten]`` take earlier
+        entries' unwind output as input — the second unwind multiplies
+        over the first."""
+        sources = {"members": [{"id": 1, "hobbies": ["h1"], "pets": ["p1", "p2"]}]}
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: members
+                flatten:
+                  - { of: hobbies, as: hobby }
+                  - { of: pets, as: pet }
+                select:
+                  - item: id
+                  - item: hobby
+                  - item: pet
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"id": 1, "hobby": "h1", "pet": "p1"},
+            {"id": 1, "hobby": "h1", "pet": "p2"},
+        ]
+
+
+class TestQueryOptionalClauses:
+    """``flatten``/``where``/``grouped``/``sort`` are all optional;
+    ``_pipeline()`` skips ``None``/empty clauses."""
+
+    def test_apply_without_grouped(self) -> None:
+        sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
+        query = Query(
+            from_=From(name="items"),
+            grouped=None,
+            select=Select(items=[SelectItem(item="name", as_="name")]),
+        )
+        assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
+
+    def test_derive_without_grouped(self) -> None:
+        query = Query(
+            from_=From(name="tasks"),
+            grouped=None,
+            select=Select(
+                items=[
+                    SelectItem(item="id", as_="id"),
+                    SelectItem(item="title", as_="title"),
+                ]
+            ),
+        )
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        result = dc.flatten_tree(query.derive(root), "task_titles")
+        assert result == _catalog(
+            """
+            - id: task_titles
+              item_type:
+                id: task_titles.item
+                attributes:
+                  - { id: id, type: string, required: true }
+                  - { id: title, type: string, required: true }
+            """
+        )
+
+
+class TestQueryDeriveErrorTranslation:
+    """``Query.derive`` translates ``dc.UnknownChildError`` raised by
+    any clause into ``QueryDeriveError`` while preserving ``offender``,
+    so the outer layer can build a user-facing diagnostic."""
+
+    def test_unknown_attribute_surfaces_as_query_derive_error(self) -> None:
+        # ``sort.by`` points at an attribute not projected by ``select``.
+        # ``Sort.derive`` raises ``dc.UnknownChildError``, which
+        # ``Query.derive`` translates into ``QueryDeriveError``.
+        query = Query(
+            from_=From(name="tasks"),
+            grouped=None,
+            select=Select(items=[SelectItem(item="title", as_="title")]),
+            sort=Sort(by="phase"),
+        )
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        with pytest.raises(QueryDeriveError, match="phase") as exc_info:
+            query.derive(root)
+        assert exc_info.value.offender == "phase"
 
 
 class TestParseFlatten:
