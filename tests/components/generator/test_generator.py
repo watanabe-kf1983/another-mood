@@ -54,13 +54,8 @@ class TestGenerate:
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        # TODO: stale list-form access (`__views[0]`) left over from before
-        # E11 (2/2) unwrapped __views to a mapping. Passes by accident
-        # (KeyError → Undefined → `in` is False → "no"). Rewrite to
-        # `'__views' in __views` so the test actually exercises the
-        # snapshot-excludes-self invariant.
         (templates_dir / "index.md").write_text(
-            "{% if '__views' in __views[0] %}yes{% else %}no{% endif %}"
+            "{% if '__views' in __views %}yes{% else %}no{% endif %}"
         )
 
         out_dir = tmp_path / "output"
