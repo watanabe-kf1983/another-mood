@@ -10,6 +10,7 @@ from jinja2 import Undefined
 from another_mood.components.generator.generator import (
     _pluck,  # pyright: ignore[reportPrivateUsage]
     _to_yaml,  # pyright: ignore[reportPrivateUsage]
+    _walk_entity,  # pyright: ignore[reportPrivateUsage]
     generate,
     reconcile,
 )
@@ -53,6 +54,11 @@ class TestGenerate:
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
+        # TODO: stale list-form access (`__views[0]`) left over from before
+        # E11 (2/2) unwrapped __views to a mapping. Passes by accident
+        # (KeyError → Undefined → `in` is False → "no"). Rewrite to
+        # `'__views' in __views` so the test actually exercises the
+        # snapshot-excludes-self invariant.
         (templates_dir / "index.md").write_text(
             "{% if '__views' in __views[0] %}yes{% else %}no{% endif %}"
         )
@@ -108,6 +114,104 @@ class TestPluckFilter:
     def test_unreachable_path_yields_undefined(self) -> None:
         assert isinstance(_pluck({"x": 1}, "missing"), Undefined)
         assert isinstance(_pluck({"x": 1}, "x.y"), Undefined)
+
+
+class TestWalkEntityFilter:
+    """Unit tests for the `walk_entity` filter function."""
+
+    def test_root_entity_returns_views_list(self) -> None:
+        views = {"posts": [{"id": "a"}, {"id": "b"}]}
+        entities = [{"id": "posts"}]
+        assert _walk_entity(views, "posts", entities) == [{"id": "a"}, {"id": "b"}]
+
+    def test_single_step_child_flattens_array_attribute(self) -> None:
+        # Mirrors `entities.fields` in showcase/ecommerce: each entity
+        # row carries a `fields` array — walking to the child entity
+        # produces a flat list of all field records.
+        views = {
+            "entities": [
+                {"id": "user", "fields": [{"id": "id"}, {"id": "name"}]},
+                {"id": "role", "fields": [{"id": "id"}]},
+            ]
+        }
+        entities = [
+            {"id": "entities"},
+            {"id": "entities.fields", "parent_entity": "entities"},
+        ]
+        assert _walk_entity(views, "entities.fields", entities) == [
+            {"id": "id"},
+            {"id": "name"},
+            {"id": "id"},
+        ]
+
+    def test_singleton_traversed_suffix(self) -> None:
+        # The catalog encodes `item_type.attributes` as the suffix that
+        # carries the array attribute past a singleton (`item_type`).
+        # `pluck`'s dotted lookup handles that step transparently.
+        views = {
+            "__definition": {
+                "entities": [
+                    {"id": "user", "item_type": {"attributes": [{"id": "id"}]}},
+                    {"id": "role", "item_type": {"attributes": [{"id": "name"}]}},
+                ]
+            }
+        }
+        entities = [
+            {"id": "__definition.entities"},
+            {
+                "id": "__definition.entities.item_type.attributes",
+                "parent_entity": "__definition.entities",
+            },
+        ]
+        assert _walk_entity(
+            views, "__definition.entities.item_type.attributes", entities
+        ) == [{"id": "id"}, {"id": "name"}]
+
+    def test_multi_step_chain(self) -> None:
+        # Three-level chain: erds → erds.entities → erds.entities.fields.
+        views = {
+            "erds": [
+                {
+                    "id": "user-management",
+                    "entities": [
+                        {"id": "user", "fields": [{"id": "id"}]},
+                        {"id": "role", "fields": [{"id": "name"}, {"id": "perm"}]},
+                    ],
+                },
+            ]
+        }
+        entities = [
+            {"id": "erds"},
+            {"id": "erds.entities", "parent_entity": "erds"},
+            {"id": "erds.entities.fields", "parent_entity": "erds.entities"},
+        ]
+        assert _walk_entity(views, "erds.entities.fields", entities) == [
+            {"id": "id"},
+            {"id": "name"},
+            {"id": "perm"},
+        ]
+
+    def test_missing_root_yields_empty(self) -> None:
+        # An entity declared in the catalog but with no records yet:
+        # template's `{% if rows %}` guard renders `(no records)`.
+        entities = [{"id": "posts"}]
+        assert _walk_entity({}, "posts", entities) == []
+
+    def test_missing_intermediate_suffix_skips_row(self) -> None:
+        # A parent row missing the child array contributes zero children
+        # rather than raising — matches the silent-skip behaviour of the
+        # previous query_from filter so partial data still renders.
+        views = {
+            "entities": [
+                {"id": "user", "fields": [{"id": "id"}]},
+                {"id": "role"},
+            ]
+        }
+        entities = [
+            {"id": "entities"},
+            {"id": "entities.fields", "parent_entity": "entities"},
+        ]
+        assert _walk_entity(views, "entities.fields", entities) == [{"id": "id"}]
 
 
 class TestToYamlFilter:

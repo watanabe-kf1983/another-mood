@@ -6,7 +6,8 @@ See: dev-docs/contents/internal/components/generator.md
 
 import math
 import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from itertools import chain, pairwise
 from pathlib import Path
 from typing import Any, cast
 
@@ -76,6 +77,62 @@ def _pluck(row: object, key_path: str) -> object:
         return Undefined()
 
 
+def _walk_entity(
+    views: object,
+    entity_id: str,
+    entities: Sequence[Mapping[str, object]],
+) -> object:
+    """System-only Jinja2 filter: collect all rows of ``entity_id``
+    (root or descendant) from the ``views`` mapping.
+
+    Descent for child entities follows the catalog's ``parent_entity``
+    chain rather than parsing the dotted id, so singleton-traversed
+    paths like ``__definition.entities.item_type.attributes`` resolve
+    via :func:`pluck`'s dotted lookup. Missing root key or absent
+    intermediate keys collapse to an empty list — the ``{% if rows %}``
+    guard in built-in templates renders ``(no records)`` either way.
+    """
+    if not isinstance(views, Mapping):
+        return Undefined()
+    by_id = {cast(str, e["id"]): e for e in entities}
+    ancestors = _ancestor_chain(entity_id, by_id)
+    rows: Sequence[object] = _safe_pluck(
+        cast(Mapping[str, object], views), ancestors[0]
+    )
+    for parent_id, child_id in pairwise(ancestors):
+        suffix = child_id.removeprefix(parent_id + ".")
+        rows = list(
+            chain.from_iterable(
+                _safe_pluck(row, suffix)
+                for row in cast(Sequence[Mapping[str, object]], rows)
+            )
+        )
+    return rows
+
+
+def _ancestor_chain(
+    entity_id: str, by_id: Mapping[str, Mapping[str, object]]
+) -> Sequence[str]:
+    """Walk ``parent_entity`` links upward, returning ids root-first."""
+    chain_: list[str] = []
+    current: str | None = entity_id
+    while current is not None:
+        chain_.insert(0, current)
+        current = cast("str | None", by_id[current].get("parent_entity"))
+    return chain_
+
+
+def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[object]:
+    """``pluck`` returning ``[]`` for missing keys, list-wrapping scalars."""
+    try:
+        value = pluck(row, key_path)
+    except KeyError:
+        return []
+    if isinstance(value, list):
+        return cast(Sequence[object], value)
+    return [value]
+
+
 def _to_yaml(value: object, flow: bool = False) -> str:
     """System-only Jinja2 filter: dump a value as YAML.
 
@@ -102,4 +159,5 @@ def _to_yaml(value: object, flow: bool = False) -> str:
 _FILTERS: Mapping[str, Callable[..., Any]] = {
     "pluck": _pluck,
     "to_yaml": _to_yaml,
+    "walk_entity": _walk_entity,
 }
