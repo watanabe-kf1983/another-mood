@@ -175,11 +175,32 @@ from
 → join                       (list 順、各 item は post-join に inline flatten 可)
 → where                      (post-join filter)
 → grouped
-→ sort
 → select
+→ sort
 ```
 
 interleave (flatten → join → flatten → ...) は list 内項目順序で表現する。intrinsic 配列の「途中段」flatten はサポート外で、必要なら別 query に分割する。
+
+`sort` を `select` の後ろに置くのは、`sort.by:` が `select:` の `as:` で導入された出力名を参照できるようにするため。SQL の論理処理順序 (`SELECT` → `ORDER BY`)、MongoDB aggregation (`$project` → `$sort`)、PRQL (`select` → `sort`)、Pandas (`assign` → `sort_values`)、LINQ (`Select` → `OrderBy`) いずれも同じ慣例。
+
+#### 評価器の構造
+
+`join:` は **2 入力 1 出力** の操作で、他の op (`from`, `flatten`, `where`, `grouped`, `select`, `sort` はすべて 1-in 1-out) と arity が異なる。既存の `QueryNode` Protocol (1-in 1-out 想定) には乗らないため、E3 では Join を `QueryNode` 非該当のクラスとして別途定義し、`Query.apply` / `Query.derive` で直書きの特別扱いを挟む方針を採る。
+
+- `Join` クラスは `QueryNode` を継承しない。merge ロジックを純粋な 2-input 関数 (`merge_records(left, right)` / `merge_catalog(left, right)`) として持つ
+- `Join` の右側 (右 entity + 任意の pre-join `where:`) は再帰的に組み立てたサブ `Query` として保持する
+- `Query` に `joins: Sequence[Join]` フィールドを追加。`Query.apply` / `Query.derive` は pipeline 順序を機械的に展開する中で joins を扱う
+- apply 側と derive 側で同じ pipeline 順序を機械的に書き下すことになり、~10 行ずつ程度の重複が生じるが、汎用 2-input 抽象化を導入するより局所的な特別扱いの方が、現スコープ (1 つの 2-input op) では適切と判断
+
+##### 背景: 汎用 2-input 抽象化を採らなかった理由
+
+検討した代替案として、評価器を 3 層 (Query が pipeline 順序を独占し、Stage 層が汎用 wiring を担い、Op 層が純粋関数として arity ごとに分かれる) に分解する tree/pull 評価器が挙がる。Join は `BinaryOp` + `BinaryStage` の組として一貫性ある形で扱える。利点は (a) 1-input / 2-input が型レベルで対等に並ぶ、(b) apply / derive の重複コードが再帰呼び出しで自然に消える、(c) 将来 union や sub-query reference 等の追加 op に拡張しやすい、こと。
+
+欠点として、新規プロトコル / クラスが計 6 個 (`Stage`, `UnaryOp`, `BinaryOp`, `Origin`, `UnaryStage`, `BinaryStage`)、公開 API (`Query.apply` / `derive` シグネチャ) の変更、既存テスト / 呼び出し側への波及が発生する。
+
+現スコープでは 2-input op は `join:` 1 つで、union 等の追加予定もない (D 群 / F 系の隣接タスクで言及無し)。「機械的重複 ~20 行を消すために 80+ 行の抽象階層を投資する」のは現状ではコスト過大と判断。
+
+将来、2-input op が増える / 多 join のパターンが想定外に複雑化する等の signal が出たら、その時点で tree/pull への refactor を検討する。Join がすでに特別扱いされているので、その特別扱いを抽象化する方向への escalation は incremental に行える。
 
 #### スコープ外: nested-list 操作
 
