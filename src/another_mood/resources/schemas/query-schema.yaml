@@ -16,9 +16,11 @@ additionalProperties:
   title: Query definition
   description: >-
     A single query (view) definition. `from:` selects the normalized
-    data source; optional `where:` filters records; optional `grouped:`
-    reshapes them into groups; optional `select:` projects output
-    fields. See docs/reference/query.md for semantics.
+    data source; optional `flatten:` unwinds intrinsic arrays; optional
+    `join:` attaches a related entity; optional `where:` filters
+    records; optional `grouped:` reshapes them into groups; optional
+    `select:` projects output fields. See docs/reference/query.md for
+    semantics.
   type: object
   properties:
     from:
@@ -53,6 +55,16 @@ additionalProperties:
             oneOf:
               - type: string
               - $ref: "#/$defs/flattenItem"
+    join:
+      title: Join clause
+      description: >-
+        Attach a related entity as a nested array on each row. `to:`
+        names the right entity, `on: { left, right }` is a single
+        equi-join key pair, and `as:` (defaults to `to:`) names the
+        attached namespace. The matched right rows live as a list under
+        `as:` on each left row (left rows with no match get an empty
+        list).
+      $ref: "#/$defs/joinItem"
     where:
       title: Filter clause
       description: >-
@@ -168,6 +180,41 @@ $defs:
           kept (without the `as:` field). Default `false` drops them.
         type: boolean
     required: [of]
+    additionalProperties: false
+
+  joinItem:
+    title: Join item
+    description: >-
+      One join operation. `to:` is the right entity id, `on: { left,
+      right }` is a single equi-join key pair (each path may be a
+      dotted attribute, array crossings not allowed), and `as:` renames
+      the attached namespace (defaults to `to:`).
+    type: object
+    properties:
+      to:
+        title: Right entity
+        description: Id of the entity to join in.
+        type: string
+      on:
+        title: Join key pair
+        description: >-
+          Single equi-join key pair. `left:` is an attribute on the
+          current row, `right:` is an attribute on the right entity.
+        type: object
+        properties:
+          left:
+            type: string
+          right:
+            type: string
+        required: [left, right]
+        additionalProperties: false
+      as:
+        title: Output namespace
+        description: >-
+          Name of the nested array attached to each left row. Defaults
+          to the value of `to:`.
+        type: string
+    required: [to, on]
     additionalProperties: false
 
   whereClause:
