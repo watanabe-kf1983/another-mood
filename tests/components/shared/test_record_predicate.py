@@ -14,7 +14,6 @@ from another_mood.components.shared.record_predicate import (
     Operator,
     Or,
     RecordPredicate,
-    UnknownKeyPathError,
     parse_record_predicate,
 )
 
@@ -208,7 +207,7 @@ _TASKS_CATALOG = """
 
 class TestValidateByCatalog:
     """``validate_by_catalog`` walks ``key_path`` references and raises
-    :class:`UnknownKeyPathError` on misses; combinators recurse."""
+    :class:`dc.UnknownChildError` on misses; combinators recurse."""
 
     @pytest.fixture
     def catalog(self) -> dc.Node:
@@ -220,7 +219,7 @@ class TestValidateByCatalog:
         ).validate_by_catalog(catalog)
 
     def test_field_predicate_raises_on_unknown(self, catalog: dc.Node) -> None:
-        with pytest.raises(UnknownKeyPathError, match="nonexistent"):
+        with pytest.raises(dc.UnknownChildError, match="nonexistent"):
             FieldPredicate(
                 key_path="nonexistent", operator=Operator.EQ, target=1
             ).validate_by_catalog(catalog)
@@ -249,7 +248,7 @@ class TestValidateByCatalog:
     def test_combinator_propagates(
         self, combinator: RecordPredicate, catalog: dc.Node
     ) -> None:
-        with pytest.raises(UnknownKeyPathError, match="bad"):
+        with pytest.raises(dc.UnknownChildError, match="bad"):
             combinator.validate_by_catalog(catalog)
 
     def test_rejects_key_path_crossing_array(self) -> None:
@@ -275,7 +274,7 @@ class TestValidateByCatalog:
                 """
             )
         ).child("members")
-        with pytest.raises(UnknownKeyPathError, match="tasks.title"):
+        with pytest.raises(dc.UnknownChildError, match="tasks.title"):
             FieldPredicate(
                 key_path="tasks.title", operator=Operator.EQ, target="x"
             ).validate_by_catalog(catalog)
