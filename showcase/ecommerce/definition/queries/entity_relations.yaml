@@ -1,0 +1,13 @@
+# Each entity with its outgoing relations attached as a nested list.
+# Exercises the ``join:`` clause (nested attach: 1 row per entity, the
+# matched relations live under ``outgoing`` as a list).
+entity_relations:
+  from: entities
+  join:
+    to: relations
+    on: { left: id, right: from }
+    as: outgoing
+  select:
+    - item: id
+    - item: name
+    - item: outgoing
