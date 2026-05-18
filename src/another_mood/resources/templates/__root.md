@@ -38,6 +38,7 @@
   "id": query.id,
   "from": query.from,
   "flatten": query.flatten,
+  "join": query.join,
   "where": query.where,
   "grouped": query.grouped,
   "select": query.select,

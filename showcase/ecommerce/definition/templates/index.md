@@ -32,6 +32,17 @@
 | {{ rel.from }} | {{ rel.to }} | {{ rel.cardinality }} | {{ rel.description }} |
 {% endfor %}
 
+## エンティティ別の出ているリレーション
+
+{% for entity in entity_relations -%}
+- **{{ entity.name }}** ({{ entity.id }})
+{%- for rel in entity.outgoing %}
+  - → {{ rel.to }} ({{ rel.cardinality }})
+{%- else %}
+  - _(none)_
+{%- endfor %}
+{% endfor %}
+
 ## 全フィールド一覧
 
 | Entity | Field | Type | PK | FK |
