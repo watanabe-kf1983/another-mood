@@ -185,16 +185,8 @@ categories:
         done: true
       E3:
         title: クエリ DSL 拡充後半 (join 句導入 + where 射程統一)
-        note: |
-          詳細は design/composer/queries-spec.md「`join:` 句と `where:` 射程統一 (E3)」。
-          前提: E11 (flatten 句と from 厳密化)。
-          cross-table join (明示 on:、デフォルト nest、inline flatten オプション、
-          join[].where: pre-join filter)、top-level where と join[].where の射程統一を扱う。
-          実装には query-schema.yaml の対応する schema 更新を含む。
-          スコープ外: 複合キー on:、FK 自動推論、nested-list 操作 (ツリー shape 出力 /
-          nested 内 filter / sort 等)。実現方式の候補は queries-spec.md にメモのみ。
         phase: 10
-        proposal: design/composer/queries-spec.md#join-句と-where-射程統一-e3
+        done: true
       E9:
         title: catalog データモデルの依存方向反転 (Node primary)
         note: |
