@@ -502,13 +502,18 @@ def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
 def parse_join(raw: Mapping[str, object]) -> Join:
     """Parse one ``join:`` entry (object form).
 
-    List form and the inline ``where:`` / ``flatten:`` options are
-    deferred to later sub-PRs of E3.
+    List form and the inline ``flatten:`` option are deferred to later
+    sub-PRs of E3.
     """
     to = cast(str, raw["to"])
     on_raw = cast(Mapping[str, str], raw["on"])
+    where: Where | None = None
+    if "where" in raw:
+        where = Where(
+            predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
+        )
     return Join(
-        right=Query(from_=From(name=to)),
+        right=Query(from_=From(name=to), where=where),
         on=JoinOn(left=on_raw["left"], right=on_raw["right"]),
         as_=cast(str, raw.get("as", to)),
     )

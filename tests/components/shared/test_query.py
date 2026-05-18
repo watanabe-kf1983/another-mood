@@ -844,6 +844,40 @@ class TestQueryPipeline:
             {"id": "B", "tasks": [{"id": "B1", "owner": "Beta"}]},
         ]
 
+    def test_apply_pre_join_where_filters_right_before_merge(self) -> None:
+        """``join.where:`` drops right rows before the merge — left rows
+        whose only matches got filtered end up with an empty list,
+        not removed.  Contrast with ``test_apply_where_after_join``
+        where a top-level ``where:`` would drop the left row too."""
+        sources = {
+            "cats": [{"id": "A"}, {"id": "B"}],
+            "tasks": [
+                {"id": "A1", "cat": "A", "open": True},
+                {"id": "A2", "cat": "A", "open": False},
+                {"id": "B1", "cat": "B", "open": False},
+            ],
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: cats
+                join:
+                  to: tasks
+                  on: { left: id, right: cat }
+                  where:
+                    open: true
+                  as: tasks
+                select:
+                  - item: id
+                  - item: tasks
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"id": "A", "tasks": [{"id": "A1", "cat": "A", "open": True}]},
+            {"id": "B", "tasks": []},
+        ]
+
     def test_apply_where_after_join(self) -> None:
         """``where`` references ``tasks`` — a key that only appears
         after join attaches it.  If ``where`` ran before join, every
@@ -1046,6 +1080,33 @@ class TestParseJoin:
         assert (
             parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}}).as_
             == "tasks"
+        )
+
+    def test_without_where_leaves_right_subquery_unfiltered(self) -> None:
+        join = parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
+        assert join.right.where is None
+
+    def test_parses_where_into_right_subquery(self) -> None:
+        """Pre-join ``where:`` becomes the right-side sub-Query's own
+        ``where`` field; no special handling on ``Join`` itself."""
+        join = parse_join(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "where": {"open": True},
+            }
+        )
+        assert join == Join(
+            right=Query(
+                from_=From(name="tasks"),
+                where=Where(
+                    predicate=FieldPredicate(
+                        key_path="open", operator=Operator.EQ, target=True
+                    ),
+                ),
+            ),
+            on=JoinOn(left="id", right="cat"),
+            as_="tasks",
         )
 
 
