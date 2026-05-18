@@ -30,10 +30,10 @@
 {% else -%}
 {% set entries = join -%}
 {% endif -%}
-| To | On (left = right) | As |
-|----|-------------------|-----|
+| To | On (left = right) | As | Pre-join where |
+|----|-------------------|-----|----------------|
 {% for entry in entries -%}
-| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as or entry.to }} |
+| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as or entry.to }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} |
 {% endfor %}
 
 {% endif -%}
