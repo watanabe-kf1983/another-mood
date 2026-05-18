@@ -27,12 +27,13 @@ by_role:                     # ← top-level key of the file becomes the view na
 |---|---|---|
 | `from` | Required | Source data (what to operate on). |
 | `flatten` | Optional | Unwind one or more intrinsic array attributes. |
+| `join` | Optional | Attach one or more related entities. |
 | `where` | Optional | Per-record filter applied before grouping. |
 | `grouped` | Optional | Grouping of records. |
 | `select` | Optional | Projection of output fields. When omitted, the result is an array of empty objects. |
 | `sort` | Optional | Ordering of the final output records. |
 
-Evaluation order: `from` → `flatten` → `where` → `grouped` → `select` → `sort`.
+Evaluation order: `from` → `flatten` → `join` → `where` → `grouped` → `select` → `sort`.
 
 ## Automatic pass-through
 
@@ -108,6 +109,171 @@ Parent fields (e.g. `id`) stay at the top level; element fields are accessed via
 ### When the array is empty
 
 When N = 0 (the array at `of:` resolves to `[]` or the attribute is absent), an input row by default produces no output rows — the parent is dropped. Setting `preserve_empty: true` makes such rows survive as a single output row with no `as:` field, useful when the template needs to emit an entry for every parent regardless of whether children exist.
+
+## join
+
+For each input row, looks up matching rows in another entity and attaches them. "Matching" is defined by single key equality: one attribute on the current row equals one attribute on the other entity's row.
+
+Throughout this section the examples assume two source entities:
+
+```yaml
+cats:
+  - { id: A, name: Apple }
+  - { id: B, name: Beta }
+  - { id: Z, name: Zelda }   # no matching task
+
+tasks:
+  - { id: T1, cat: A, title: groom, open: true }
+  - { id: T2, cat: A, title: feed,  open: false }
+  - { id: T3, cat: B, title: play,  open: true }
+```
+
+### Default: attach matches as a list
+
+Without an inline `flatten:` (introduced below), each input row produces exactly one output row — the matches arrive together as a list under `as:`.
+
+```yaml
+from: cats
+join:
+  to: tasks
+  on: { left: id, right: cat }
+```
+
+Intermediate result after `join` (before `where`):
+
+```yaml
+- { id: A, name: Apple, tasks: [{id: T1, cat: A, ...}, {id: T2, cat: A, ...}] }
+- { id: B, name: Beta,  tasks: [{id: T3, cat: B, ...}] }
+- { id: Z, name: Zelda, tasks: [] }    # no match — kept with an empty list
+```
+
+The list lives under the join's `as:`, which defaults to `to:` (here `tasks`). Set `as:` explicitly to avoid collisions with existing attributes or to disambiguate multiple joins to the same entity.
+
+### Inline `flatten:` — one row per match
+
+Adding an inline `flatten:` unwinds the attached list in place: one output row per (input, match) pair.
+
+```yaml
+from: cats
+join:
+  to: tasks
+  on: { left: id, right: cat }
+  flatten: { as: task }   # rename: plural `tasks` → singular `task`
+```
+
+Intermediate result:
+
+```yaml
+- { id: A, name: Apple, task: {id: T1, cat: A, ...} }
+- { id: A, name: Apple, task: {id: T2, cat: A, ...} }
+- { id: B, name: Beta,  task: {id: T3, cat: B, ...} }
+```
+
+Zelda has no matching task, so no row is produced for her. To keep input rows with no match, add `preserve_empty: true`:
+
+```yaml
+join:
+  to: tasks
+  on: { left: id, right: cat }
+  flatten: { as: task, preserve_empty: true }
+```
+
+```yaml
+- { id: A, name: Apple, task: {id: T1, cat: A, ...} }
+- { id: A, name: Apple, task: {id: T2, cat: A, ...} }
+- { id: B, name: Beta,  task: {id: T3, cat: B, ...} }
+- { id: Z, name: Zelda }                # surviving row carries no `task` field
+```
+
+For readers familiar with SQL: the no-`flatten:` form (matches as a list) has no direct SQL analogue; default `flatten:` is the `INNER JOIN` shape; and `preserve_empty: true` is the `LEFT JOIN` shape.
+
+The shorthand `flatten: true` stands for the all-defaults form `flatten: {}` — no rename (so the slot keeps the join's plural `as:` name) and `preserve_empty: false`.
+
+### Fields
+
+| Key | Required | Role |
+|---|---|---|
+| `to` | Required | Id of the entity to match against. |
+| `on` | Required | `{ left, right }` — match rows where the input row's `left:` attribute equals the other entity's `right:` attribute. |
+| `as` | Optional | Name given to the matches on each output row. Defaults to the value of `to:`. |
+| `where` | Optional | Pre-join filter applied to `to:` before matching. Same grammar as the top-level `where:`. |
+| `flatten` | Optional | Unwind the attached list in place. `true` for shorthand, or an object with `as:` (defaults to the join's `as:`) and `preserve_empty:` (defaults to `false`). |
+
+`on.left:` and `on.right:` accept a dotted path through a nested singleton object (e.g. `meta.kind`), but cannot cross a list. Only the top-level `flatten:` and the inline `flatten:` here change row cardinality — other clauses always operate within a single row's attributes and never reach into a nested list.
+
+### Pre-join `where:` (and the SQL LEFT-WHERE trap)
+
+A `where:` written *inside* the join filters `to:` **before** the match runs. The top-level `where:` (outside the join) runs **after**. The distinction matters when input rows with no match must survive — i.e. when `flatten: { preserve_empty: true }` is set:
+
+```yaml
+# Right: filter the tasks first; cats with no surviving task still appear.
+from: cats
+join:
+  to: tasks
+  on: { left: id, right: cat }
+  where:
+    open: true                # pre-join filter
+  flatten:
+    as: task
+    preserve_empty: true
+
+# Wrong: filtering on the joined attribute at the top level silently
+# drops the cats whose task is closed (and the cats with no task at all),
+# turning the LEFT-shape into an INNER-shape. The classic SQL gotcha.
+from: cats
+join:
+  to: tasks
+  on: { left: id, right: cat }
+  flatten:
+    as: task
+    preserve_empty: true
+where:
+  task.open: true             # post-join filter
+```
+
+With the source data above, the **right** form yields:
+
+```yaml
+- { id: A, name: Apple, task: {id: T1, open: true, ...} }   # T2 dropped: open=false
+- { id: B, name: Beta,  task: {id: T3, open: true, ...} }
+- { id: Z, name: Zelda }                                     # kept: preserve_empty
+```
+
+The wrong form additionally drops `Zelda` — her row has no `task` field, so `task.open: true` cannot hold and the post-join `where:` removes her.
+
+### Multiple joins (list form)
+
+Several joins are written as an ordered list. Each later item sees the row shape produced by earlier ones — so a later `on.left:` can reference an attribute introduced by an earlier `flatten.as:`.
+
+Suppose each task additionally carries a `place:` reference, and a separate `places` entity describes those:
+
+```yaml
+tasks:
+  - { id: T1, cat: A, title: groom, place: yard,    open: true  }
+  - { id: T2, cat: A, title: feed,  place: kitchen, open: false }
+  - { id: T3, cat: B, title: play,  place: yard,    open: true  }
+
+places:
+  - { id: yard,    location: outside }
+  - { id: kitchen, location: inside  }
+```
+
+A two-stage join attaches each task and then, for each task, the task's place:
+
+```yaml
+from: cats
+join:
+  - to: tasks
+    on: { left: id, right: cat }
+    flatten: { as: task }                # 1 row per (cat, task)
+  - to: places
+    on: { left: task.place, right: id }  # `task.place` introduced by the earlier flatten
+    flatten: { as: place }               # 1 row per (cat, task, place)
+```
+
+If the earlier join had no inline `flatten:`, its `as:` would still be a list at the next step; a later `on.left:` cannot reach inside a list (only `flatten:` ever traverses one), so the unwind must come first.
+
+The single-object form (`join: { to: ..., on: ... }`) is equivalent to a 1-element list — a shorthand for the common one-join case.
 
 ## where
 

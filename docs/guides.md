@@ -343,12 +343,13 @@ by_role:
 
 ### Anatomy of a query
 
-A query has six blocks: `from` → `flatten` (optional) → `where` (optional) → `grouped` (optional) → `select` (optional) → `sort` (optional).
+A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) → `where` (optional) → `grouped` (optional) → `select` (optional) → `sort` (optional).
 
 | Block | Role |
 |---|---|
 | `from` | Specifies the source data by entity name. |
 | `flatten` | Unwinds an array attribute — one input row produces N output rows where N is the array length. |
+| `join` | Attaches matching rows from another entity onto each input row. |
 | `where` | Filters records by a predicate (e.g. `{ active: true }`). |
 | `grouped` | Combines records that share the same value for the field named by `by`. |
 | `select` | Lists fields to include in the output. Use `as` to rename. |
