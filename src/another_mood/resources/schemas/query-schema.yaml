@@ -58,17 +58,17 @@ additionalProperties:
     join:
       title: Join clause
       description: >-
-        Attach a related entity as a nested array on each row. `to:`
-        names the right entity, `on: { left, right }` is a single
-        equi-join key pair, and `as:` (defaults to `to:`) names the
-        attached namespace. The matched right rows live as a list under
-        `as:` on each left row (left rows with no match get an empty
-        list). Optional `where:` filters the right entity before the
-        join (use this rather than top-level `where:` when right rows
-        must be dropped but left rows kept). Optional `flatten:` unwinds
-        the attached array in place, turning the join into a per-pair
-        row stream.
-      $ref: "#/$defs/joinItem"
+        Attach one or more related entities to each row. Accepts a
+        single object (one join) or an ordered list of objects
+        (multiple joins). Each later list entry observes the row shape
+        produced by earlier ones. See `joinItem` for per-key semantics.
+      oneOf:
+        - $ref: "#/$defs/joinItem"
+        - title: List form
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/$defs/joinItem"
     where:
       title: Filter clause
       description: >-
@@ -191,10 +191,10 @@ $defs:
   joinItem:
     title: Join item
     description: >-
-      One join operation. `to:` is the right entity id, `on: { left,
-      right }` is a single equi-join key pair (each path may be a
-      dotted attribute, array crossings not allowed), and `as:` renames
-      the attached namespace (defaults to `to:`).
+      One join operation. Match each current row against the right
+      entity (`to:`) where the current row's `on.left:` attribute
+      equals the right row's `on.right:` attribute, and attach the
+      matches under `as:` (defaults to `to:`).
     type: object
     properties:
       to:
@@ -202,10 +202,12 @@ $defs:
         description: Id of the entity to join in.
         type: string
       on:
-        title: Join key pair
+        title: Join condition
         description: >-
-          Single equi-join key pair. `left:` is an attribute on the
-          current row, `right:` is an attribute on the right entity.
+          Match rows where the left side's `left:` attribute equals
+          the right side's `right:` attribute. Each path may be a
+          dotted attribute on a nested object; array crossings are
+          not allowed.
         type: object
         properties:
           left:

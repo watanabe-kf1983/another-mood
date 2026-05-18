@@ -427,9 +427,7 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         parse_flatten(raw["flatten"]) if "flatten" in raw else ()
     )
 
-    join: Sequence[Join] = (
-        (parse_join(cast(Mapping[str, object], raw["join"])),) if "join" in raw else ()
-    )
+    join: Sequence[Join] = parse_join_clause(raw["join"]) if "join" in raw else ()
 
     where: Where | None = None
     if "where" in raw:
@@ -509,11 +507,27 @@ def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
     )
 
 
-def parse_join(raw: Mapping[str, object]) -> Join:
-    """Parse one ``join:`` entry (object form).
+def parse_join_clause(raw: object) -> Sequence[Join]:
+    """Parse the two accepted shapes of the ``join:`` clause.
 
-    List form is deferred to E3 part 4.
+    * mapping  → one object-form entry
+    * sequence → list-form, each entry an object-form entry. Later
+      items observe the row shape produced by earlier ones (so a later
+      ``on.left`` can reference an attribute introduced by an earlier
+      ``flatten.as``).
     """
+    if isinstance(raw, Mapping):
+        return (parse_join(cast(Mapping[str, object], raw)),)
+    if isinstance(raw, Sequence):
+        return tuple(
+            parse_join(cast(Mapping[str, object], entry))
+            for entry in cast(Sequence[object], raw)
+        )
+    raise TypeError(f"join clause must be a mapping or list; got {type(raw).__name__}")
+
+
+def parse_join(raw: Mapping[str, object]) -> Join:
+    """Parse one ``join:`` entry (object form)."""
     to = cast(str, raw["to"])
     on_raw = cast(Mapping[str, str], raw["on"])
     where: Where | None = None
