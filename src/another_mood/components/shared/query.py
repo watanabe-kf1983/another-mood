@@ -147,30 +147,18 @@ class Flatten(QueryNode):
 
 
 @dataclass(frozen=True)
-class JoinOn:
-    """A single equi-join key pair: left attribute = right attribute.
-
-    Both paths follow the asymmetry rule (External Design: nested object
+class Merge:
+    """Equi-join with default cardinality: attach matched right rows
+    as a list under ``right_as`` on each left row.  Both ``on_*``
+    paths follow the asymmetry rule (External Design: nested object
     dot path allowed, array crossing not).
     """
 
-    left: str
-    right: str
+    on_left: str
+    on_right: str
+    right_as: str
 
-
-@dataclass(frozen=True)
-class Join:
-    """Attach a right relation as a nested array on each left row.
-
-    Not a :class:`QueryNode` (2-in 1-out). ``right`` is a sub-Query
-    evaluated against the same sources as the outer Query.
-    """
-
-    right: "Query"
-    on: JoinOn
-    as_: str
-
-    def merge_records(
+    def apply(
         self,
         left: Sequence[Record],
         right: Sequence[Record],
@@ -178,34 +166,56 @@ class Join:
         index: dict[object, list[Record]] = {}
         for r in right:
             try:
-                key = pluck(r, self.on.right)
+                key = pluck(r, self.on_right)
             except KeyError:
                 continue
             index.setdefault(key, []).append(r)
 
         def _matched(row: Record) -> list[Record]:
             try:
-                return index.get(pluck(row, self.on.left), [])
+                return index.get(pluck(row, self.on_left), [])
             except KeyError:
                 return []
 
-        return [{**row, self.as_: _matched(row)} for row in left]
+        return [{**row, self.right_as: _matched(row)} for row in left]
 
-    def merge_catalog(self, left: dc.Node, right: dc.Node) -> dc.Node:
-        left.require_child(self.on.left)
-        right.require_child(self.on.right)
-        if left.has_child(self.as_):
+    def derive(self, left: dc.Node, right: dc.Node) -> dc.Node:
+        left.require_child(self.on_left)
+        right.require_child(self.on_right)
+        if left.has_child(self.right_as):
             raise QueryDeriveError(
-                f"join alias '{self.as_}' collides with an existing attribute",
-                offender=self.as_,
+                f"join alias '{self.right_as}' collides with an existing attribute",
+                offender=self.right_as,
             )
         return dc.Node(
             metadata=left.metadata,
             children=[
                 *left.children,
-                (dc.Edge(name=self.as_, type="object[]", required=True), right),
+                (dc.Edge(name=self.right_as, type="object[]", required=True), right),
             ],
         )
+
+
+@dataclass(frozen=True)
+class Join:
+    """Attach a right relation, with an optional inline flatten.
+    ``apply`` / ``derive`` run ``right`` → ``merge`` → optional
+    ``flatten`` in sequence; ``right`` reads the outer Query's sources.
+    """
+
+    right: "Query"
+    merge: Merge
+    flatten: Flatten | None = None
+
+    def apply(
+        self, left: Sequence[Record], sources: Sequence[Record]
+    ) -> Sequence[Record]:
+        out = self.merge.apply(left, self.right.apply(sources))
+        return self.flatten.apply(out) if self.flatten is not None else out
+
+    def derive(self, left: dc.Node, root_catalog: dc.Node) -> dc.Node:
+        out = self.merge.derive(left, self.right.derive(root_catalog))
+        return self.flatten.derive(out) if self.flatten is not None else out
 
 
 @dataclass(frozen=True)
@@ -371,7 +381,7 @@ class Query(QueryNode):
         for f in self.flatten:
             out = f.apply(out)
         for j in self.join:
-            out = j.merge_records(out, j.right.apply(records))
+            out = j.apply(out, records)
         if self.where is not None:
             out = self.where.apply(out)
         if self.grouped is not None:
@@ -388,7 +398,7 @@ class Query(QueryNode):
             for f in self.flatten:
                 out = f.derive(out)
             for j in self.join:
-                out = j.merge_catalog(out, j.right.derive(catalog))
+                out = j.derive(out, catalog)
             if self.where is not None:
                 out = self.where.derive(out)
             if self.grouped is not None:
@@ -502,8 +512,7 @@ def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
 def parse_join(raw: Mapping[str, object]) -> Join:
     """Parse one ``join:`` entry (object form).
 
-    List form and the inline ``flatten:`` option are deferred to later
-    sub-PRs of E3.
+    List form is deferred to E3 part 4.
     """
     to = cast(str, raw["to"])
     on_raw = cast(Mapping[str, str], raw["on"])
@@ -512,8 +521,29 @@ def parse_join(raw: Mapping[str, object]) -> Join:
         where = Where(
             predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
         )
+    right_as = cast(str, raw.get("as", to))
     return Join(
         right=Query(from_=From(name=to), where=where),
-        on=JoinOn(left=on_raw["left"], right=on_raw["right"]),
-        as_=cast(str, raw.get("as", to)),
+        merge=Merge(
+            on_left=on_raw["left"], on_right=on_raw["right"], right_as=right_as
+        ),
+        flatten=_parse_inline_flatten(raw.get("flatten"), right_as),
+    )
+
+
+def _parse_inline_flatten(raw: object, join_as: str) -> Flatten | None:
+    """Parse ``join[].flatten``: shorthand ``true`` or an object with
+    optional ``as:`` / ``preserve_empty:``.  ``of:`` is fixed to the
+    join's ``as:`` since the unwind target is always the just-attached
+    array.
+    """
+    if raw is None:
+        return None
+    if raw is True:
+        return Flatten(of=join_as, as_=join_as)
+    mapping = cast(Mapping[str, object], raw)
+    return Flatten(
+        of=join_as,
+        as_=cast(str, mapping.get("as", join_as)),
+        preserve_empty=cast(bool, mapping.get("preserve_empty", False)),
     )

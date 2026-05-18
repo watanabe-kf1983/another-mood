@@ -65,7 +65,9 @@ additionalProperties:
         `as:` on each left row (left rows with no match get an empty
         list). Optional `where:` filters the right entity before the
         join (use this rather than top-level `where:` when right rows
-        must be dropped but left rows kept).
+        must be dropped but left rows kept). Optional `flatten:` unwinds
+        the attached array in place, turning the join into a per-pair
+        row stream.
       $ref: "#/$defs/joinItem"
     where:
       title: Filter clause
@@ -173,7 +175,9 @@ $defs:
         title: Output namespace
         description: >-
           Name given to the element namespace on each produced row.
-          Defaults to the value of `of:`.
+          Defaults to the value of `of:`. Typically set to rename a
+          plural array attribute (`tasks`) to its singular form
+          (`task`) once each row carries just one element.
         type: string
       preserve_empty:
         title: Keep empty parents
@@ -225,6 +229,28 @@ $defs:
           but the corresponding left rows should be kept (the SQL
           "filter in WHERE after LEFT JOIN turns it into INNER" trap).
         $ref: "#/$defs/whereClause"
+      flatten:
+        title: Inline post-join flatten
+        description: >-
+          Unwind the attached `as:` array after the merge so each
+          output row carries one matched right record. Object form:
+          `as:` renames the post-flatten attribute (default = the
+          join's `as:`; typically set to rename a plural like `tasks`
+          to its singular `task` once each row carries just one
+          element); `preserve_empty: true` keeps left rows with no
+          match (the LEFT-join analogue; default `false` drops them).
+          Shorthand `true` uses both defaults.
+        oneOf:
+          - const: true
+          - type: object
+            properties:
+              as:
+                title: Post-flatten attribute name
+                type: string
+              preserve_empty:
+                title: Keep unmatched left rows
+                type: boolean
+            additionalProperties: false
     required: [to, on]
     additionalProperties: false
 
