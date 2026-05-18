@@ -373,10 +373,6 @@ class Query(QueryNode):
     )
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        # Join is 2-in 1-out, so the pipeline cannot be a single fold
-        # over QueryNode. Each step is written out; see
-        # composer/queries-spec.md "評価器の構造" for why this is
-        # preferred over a generic 2-input abstraction.
         out = self.from_.apply(records)
         for f in self.flatten:
             out = f.apply(out)
