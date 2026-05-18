@@ -13,6 +13,7 @@ from another_mood.components.shared.query import (
     Join,
     Merge,
     Missing,
+    PassThrough,
     Query,
     QueryDeriveError,
     Select,
@@ -784,7 +785,6 @@ class TestQueryPipeline:
         only exists in the projected catalog."""
         query = Query(
             from_=From(name="tasks"),
-            grouped=None,
             select=Select(
                 items=[
                     SelectItem(item="phase", as_="rank"),
@@ -947,6 +947,105 @@ class TestQueryPipeline:
             """
         )
 
+    def test_apply_multi_join_chained_via_flatten_as(self) -> None:
+        """A later ``join.on.left`` resolves a scalar introduced by an
+        earlier ``join[].flatten.as`` — the multi-join chaining pattern
+        from queries-spec ("多 join"). Running the joins in a single
+        ``Sequence[Join]`` keeps this composition local; if the second
+        join ran in isolation it would not see ``customer.address_id``
+        as a scalar attribute on the row."""
+        sources = {
+            "orders": [
+                {"id": "O1", "customer_id": "C1"},
+                {"id": "O2", "customer_id": "C2"},
+            ],
+            "customers": [
+                {"id": "C1", "address_id": "A1"},
+                {"id": "C2", "address_id": "A2"},
+            ],
+            "addresses": [
+                {"id": "A1", "city": "Tokyo"},
+                {"id": "A2", "city": "Osaka"},
+            ],
+        }
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: orders
+                join:
+                  - to: customers
+                    on: { left: customer_id, right: id }
+                    as: customer
+                    flatten: true
+                  - to: addresses
+                    on: { left: customer.address_id, right: id }
+                    as: address
+                    flatten: true
+                select:
+                  - item: id
+                  - item: address
+                """
+            )
+        )
+        assert list(query.apply([sources])) == [
+            {"id": "O1", "address": {"id": "A1", "city": "Tokyo"}},
+            {"id": "O2", "address": {"id": "A2", "city": "Osaka"}},
+        ]
+
+    def test_derive_multi_join_chained_via_flatten_as(self) -> None:
+        """Catalog-side counterpart of ``test_apply_multi_join_*``:
+        the second join's ``on.left`` lookup must succeed against the
+        post-flatten catalog produced by the first join. If the chain
+        were broken (e.g. first join left ``customer`` as an array),
+        ``customer.address_id`` would be an array crossing and
+        ``Merge.derive`` would raise."""
+        catalog = dc.build_tree(
+            _catalog(
+                """
+                - id: orders
+                  item_type:
+                    id: orders.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                      - { id: customer_id, type: string, required: true }
+                - id: customers
+                  item_type:
+                    id: customers.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                      - { id: address_id, type: string, required: true }
+                - id: addresses
+                  item_type:
+                    id: addresses.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                      - { id: city, type: string, required: true }
+                """
+            )
+        )
+        query = parse_query(
+            YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+                """
+                from: orders
+                join:
+                  - to: customers
+                    on: { left: customer_id, right: id }
+                    as: customer
+                    flatten: true
+                  - to: addresses
+                    on: { left: customer.address_id, right: id }
+                    as: address
+                    flatten: true
+                select:
+                  - item: id
+                  - item: address
+                """
+            )
+        )
+        attrs = {e.name: e for e, _ in query.derive(catalog).children}
+        assert attrs["id"].type == "string"
+        assert attrs["address"].type == "object"
+
     def test_apply_flatten_chain_in_order(self) -> None:
         """Later entries in a ``Sequence[Flatten]`` take earlier
         entries' unwind output as input — the second unwind multiplies
@@ -980,7 +1079,6 @@ class TestQueryOptionalClauses:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             from_=From(name="items"),
-            grouped=None,
             select=Select(items=[SelectItem(item="name", as_="name")]),
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
@@ -988,7 +1086,6 @@ class TestQueryOptionalClauses:
     def test_derive_without_grouped(self) -> None:
         query = Query(
             from_=From(name="tasks"),
-            grouped=None,
             select=Select(
                 items=[
                     SelectItem(item="id", as_="id"),
@@ -1021,7 +1118,6 @@ class TestQueryDeriveErrorTranslation:
         # ``Query.derive`` translates into ``QueryDeriveError``.
         query = Query(
             from_=From(name="tasks"),
-            grouped=None,
             select=Select(items=[SelectItem(item="title", as_="title")]),
             sort=Sort(by="phase"),
         )
@@ -1057,9 +1153,11 @@ class TestParseFlatten:
 
 
 class TestParseJoin:
-    """``parse_join`` (object form).
+    """``parse_join`` (single object-form entry).
 
-    List form is deferred to E3 part 4.
+    Clause-level shape dispatch (object vs list) lives in
+    ``parse_join_clause`` / ``parse_query`` and is covered under
+    ``TestParseQuery``.
     """
 
     def test_object_form(self) -> None:
@@ -1080,7 +1178,7 @@ class TestParseJoin:
 
     def test_without_where_leaves_right_subquery_unfiltered(self) -> None:
         join = parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
-        assert join.right.where is None
+        assert join.right.where == PassThrough()
 
     def test_parses_inline_flatten_shorthand(self) -> None:
         """``flatten: true`` expands to a Flatten that unwinds the
@@ -1165,7 +1263,6 @@ class TestParseQuery:
             ),
             from_=From(name="entities"),
             grouped=Grouped(by="category", as_="items"),
-            where=None,
         )
 
     def test_grouped_as_defaults_to_last_segment_of_from(self) -> None:
@@ -1185,7 +1282,11 @@ class TestParseQuery:
             "from": "items",
             "select": [{"item": "name"}],
         }
-        assert parse_query(raw).grouped is None
+        assert parse_query(raw).grouped == PassThrough()
+
+    def test_parses_query_without_select(self) -> None:
+        raw = {"from": "items"}
+        assert parse_query(raw).select == PassThrough()
 
     def test_select_item_as_defaults_to_item(self) -> None:
         raw = {
@@ -1211,7 +1312,7 @@ class TestParseQuery:
 
     def test_parses_query_without_where(self) -> None:
         raw = {"from": "items", "select": [{"item": "id"}]}
-        assert parse_query(raw).where is None
+        assert parse_query(raw).where == PassThrough()
 
     def test_parses_sort_with_defaults(self) -> None:
         raw = {
@@ -1246,6 +1347,50 @@ class TestParseQuery:
                 right=Query(from_=From(name="tasks")),
                 merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
             )
+        ]
+
+    def test_parses_join_list_form_single_item(self) -> None:
+        """List form with one entry produces the same Join sequence as
+        the object form — they are equivalent surface syntaxes."""
+        raw = {
+            "from": "cats",
+            "join": [{"to": "tasks", "on": {"left": "id", "right": "cat"}}],
+            "select": [{"item": "id"}],
+        }
+        assert list(parse_query(raw).join) == [
+            Join(
+                right=Query(from_=From(name="tasks")),
+                merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+            )
+        ]
+
+    def test_parses_join_list_form_multiple_items_preserves_order(self) -> None:
+        """List entries become a ``Sequence[Join]`` in declared order;
+        ``Query.apply`` / ``Query.derive`` rely on this ordering for
+        multi-join chaining (later ``on.left`` can refer to attributes
+        introduced by earlier ``flatten.as``)."""
+        raw = {
+            "from": "orders",
+            "join": [
+                {
+                    "to": "customers",
+                    "on": {"left": "customer_id", "right": "id"},
+                    "as": "customer",
+                    "flatten": True,
+                },
+                {
+                    "to": "addresses",
+                    "on": {"left": "customer.address_id", "right": "id"},
+                    "as": "address",
+                },
+            ],
+            "select": [{"item": "id"}],
+        }
+        joins = list(parse_query(raw).join)
+        assert [j.merge.right_as for j in joins] == ["customer", "address"]
+        assert [j.merge.on_left for j in joins] == [
+            "customer_id",
+            "customer.address_id",
         ]
 
     def test_parses_sort_full(self) -> None:

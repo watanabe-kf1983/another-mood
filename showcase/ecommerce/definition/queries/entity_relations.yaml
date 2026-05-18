@@ -44,6 +44,30 @@ entity_relation_pairs:
     - item: name
     - item: relation
 
+# Exercises the ``join:`` list form (multi-join): a relation row
+# carries only the target entity's id under ``to``, so to surface
+# the target's name a second join dereferences it against the
+# ``entities`` table. The second join's ``on.left`` (``relation.to``)
+# is a scalar attribute introduced by the first join's
+# ``flatten: { as: relation }`` — the multi-join chaining pattern
+# from queries-spec.
+entity_relation_targets:
+  from: entities
+  join:
+    - to: relations
+      on: { left: id, right: from }
+      as: outgoing
+      flatten: { as: relation }
+    - to: entities
+      on: { left: relation.to, right: id }
+      as: target_matches
+      flatten: { as: target }
+  select:
+    - item: id
+    - item: name
+    - item: relation
+    - item: target
+
 # Exercises ``flatten: { preserve_empty: true }`` — the LEFT-join
 # analogue: entities with no outgoing relation survive (without the
 # ``relation`` field), so the whole entity list stays visible. The
