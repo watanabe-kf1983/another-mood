@@ -11,7 +11,7 @@ from another_mood.components.shared.query import (
     From,
     Grouped,
     Join,
-    JoinOn,
+    Merge,
     Missing,
     Query,
     QueryDeriveError,
@@ -256,32 +256,23 @@ _CATS_TASKS_CATALOG_YAML = """
 """
 
 
-def _right_query(name: str) -> Query:
-    """A right-side Query that just reads one entity, as built by ``parse_join``."""
-    return Query(from_=From(name=name))
-
-
-class TestJoin:
-    """``merge_records``: nested attach with default cardinality.
+class TestMerge:
+    """``Merge.apply``: nested attach with default cardinality.
 
     Every left row survives; matching right rows arrive as a list under
-    ``as_`` (possibly empty). ``flatten:`` (E3 part 3) is what later
-    drops or unwinds that list.
+    ``as_`` (possibly empty). Unwinding that list is the role of
+    ``Join.flatten`` (applied by ``Query.apply`` right after the merge).
     """
 
     def test_attaches_matched_right_rows_under_as_(self) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
         left = [{"id": "A"}, {"id": "B"}]
         right = [
             {"id": "A1", "cat": "A"},
             {"id": "A2", "cat": "A"},
             {"id": "B1", "cat": "B"},
         ]
-        assert list(join.merge_records(left, right)) == [
+        assert list(merge.apply(left, right)) == [
             {
                 "id": "A",
                 "tasks": [
@@ -293,59 +284,43 @@ class TestJoin:
         ]
 
     def test_left_row_with_no_match_gets_empty_list(self) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
         left = [{"id": "A"}, {"id": "Z"}]
         right = [{"id": "A1", "cat": "A"}]
-        assert list(join.merge_records(left, right)) == [
+        assert list(merge.apply(left, right)) == [
             {"id": "A", "tasks": [{"id": "A1", "cat": "A"}]},
             {"id": "Z", "tasks": []},
         ]
 
     def test_left_row_missing_key_gets_empty_list(self) -> None:
-        # Schema validation in ``merge_catalog`` rules out unknown
+        # Schema validation in ``Merge.derive`` rules out unknown
         # ``on.left``, but optional attributes can still be absent on
         # individual rows — those rows behave like a no-match.
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
         left: list[dict[str, object]] = [{}]
         right = [{"id": "A1", "cat": "A"}]
-        assert list(join.merge_records(left, right)) == [{"tasks": []}]
+        assert list(merge.apply(left, right)) == [{"tasks": []}]
 
     def test_right_row_missing_key_excluded_from_index(self) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
         left = [{"id": "A"}]
         right = [{"id": "A1", "cat": "A"}, {"id": "stray"}]
-        assert list(join.merge_records(left, right)) == [
+        assert list(merge.apply(left, right)) == [
             {"id": "A", "tasks": [{"id": "A1", "cat": "A"}]},
         ]
 
     def test_dotted_left_path(self) -> None:
         # ``pluck`` resolves dotted paths on the left row.
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="meta.cat", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="meta.cat", on_right="cat", right_as="tasks")
         left = [{"meta": {"cat": "A"}}]
         right = [{"id": "A1", "cat": "A"}]
-        assert list(join.merge_records(left, right)) == [
+        assert list(merge.apply(left, right)) == [
             {"meta": {"cat": "A"}, "tasks": [{"id": "A1", "cat": "A"}]},
         ]
 
 
-class TestJoinDerive:
-    """``merge_catalog``: schema-side merge.  ``require_child`` runs on
+class TestMergeDerive:
+    """``Merge.derive``: schema-side merge.  ``require_child`` runs on
     both sides, so the asymmetry rule (no array crossings) and the
     ``as_`` collision rule are enforced before any data is touched."""
 
@@ -354,14 +329,10 @@ class TestJoinDerive:
         return dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
 
     def test_attaches_right_node_under_as_edge(self, root: dc.Node) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
         left = root.child("cats")
         right = root.child("tasks")
-        merged = join.merge_catalog(left, right)
+        merged = merge.derive(left, right)
         edge_by_name = {e.name: (e, n) for e, n in merged.children}
         # Left attrs preserved.
         assert {"id", "name"}.issubset(edge_by_name)
@@ -372,44 +343,69 @@ class TestJoinDerive:
         assert node is right
 
     def test_raises_when_left_key_unknown(self, root: dc.Node) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="missing", right="cat"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="missing", on_right="cat", right_as="tasks")
         with pytest.raises(dc.UnknownChildError, match="missing"):
-            join.merge_catalog(root.child("cats"), root.child("tasks"))
+            merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_when_right_key_unknown(self, root: dc.Node) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="missing"),
-            as_="tasks",
-        )
+        merge = Merge(on_left="id", on_right="missing", right_as="tasks")
         with pytest.raises(dc.UnknownChildError, match="missing"):
-            join.merge_catalog(root.child("cats"), root.child("tasks"))
+            merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_on_as_collision(self, root: dc.Node) -> None:
-        join = Join(
-            right=_right_query("tasks"),
-            on=JoinOn(left="id", right="cat"),
-            as_="name",  # already an attribute on cats
-        )
+        # ``right_as="name"`` already exists as an attribute on cats.
+        merge = Merge(on_left="id", on_right="cat", right_as="name")
         with pytest.raises(QueryDeriveError, match="collides"):
-            join.merge_catalog(root.child("cats"), root.child("tasks"))
+            merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_when_left_key_crosses_array(self) -> None:
         # Asymmetry rule: ``on.left`` cannot reach inside a nested array.
         # The flattened catalog encoding has no direct edge ``tasks.title``
         # under categories, so ``require_child`` raises.
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        join = Join(
-            right=_right_query("categories"),
-            on=JoinOn(left="tasks.title", right="id"),
-            as_="x",
-        )
+        merge = Merge(on_left="tasks.title", on_right="id", right_as="x")
         with pytest.raises(dc.UnknownChildError, match="tasks.title"):
-            join.merge_catalog(root.child("categories"), root.child("categories"))
+            merge.derive(root.child("categories"), root.child("categories"))
+
+
+class TestJoin:
+    """Composition of right sub-Query, ``Merge``, and optional
+    ``Flatten``. Each part is covered by its own test class."""
+
+    def test_apply_chains_right_then_merge_then_flatten(self) -> None:
+        sources = {
+            "cats": [{"id": "A"}, {"id": "B"}],
+            "tasks": [
+                {"id": "A1", "cat": "A"},
+                {"id": "A2", "cat": "A"},
+                {"id": "B1", "cat": "B"},
+            ],
+        }
+        join = Join(
+            right=Query(from_=From(name="tasks")),
+            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+            flatten=Flatten(of="tasks", as_="task"),
+        )
+        left = [{"id": "A"}, {"id": "B"}]
+        assert list(join.apply(left, [sources])) == [
+            {"id": "A", "task": {"id": "A1", "cat": "A"}},
+            {"id": "A", "task": {"id": "A2", "cat": "A"}},
+            {"id": "B", "task": {"id": "B1", "cat": "B"}},
+        ]
+
+    def test_derive_chains_right_then_merge_then_flatten(self) -> None:
+        root = dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
+        join = Join(
+            right=Query(from_=From(name="tasks")),
+            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+            flatten=Flatten(of="tasks", as_="task"),
+        )
+        attrs = {e.name: e for e, _ in join.derive(root.child("cats"), root).children}
+        # Merge's ``tasks`` edge has been unwound by Flatten — only the
+        # singleton ``task`` namespace remains, with inlined siblings.
+        assert "tasks" not in attrs
+        assert attrs["task"].type == "object"
+        assert "task.id" in attrs
 
 
 class TestWhere:
@@ -1061,10 +1057,9 @@ class TestParseFlatten:
 
 
 class TestParseJoin:
-    """``parse_join`` (object form only in E3 part 1).
+    """``parse_join`` (object form).
 
-    List form, inline ``where:`` and inline ``flatten:`` are deferred
-    to later sub-PRs of E3.
+    List form is deferred to E3 part 4.
     """
 
     def test_object_form(self) -> None:
@@ -1072,19 +1067,61 @@ class TestParseJoin:
             {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
         ) == Join(
             right=Query(from_=From(name="tasks")),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
+            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
         )
 
     def test_as_defaults_to_to(self) -> None:
         assert (
-            parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}}).as_
+            parse_join(
+                {"to": "tasks", "on": {"left": "id", "right": "cat"}}
+            ).merge.right_as
             == "tasks"
         )
 
     def test_without_where_leaves_right_subquery_unfiltered(self) -> None:
         join = parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
         assert join.right.where is None
+
+    def test_parses_inline_flatten_shorthand(self) -> None:
+        """``flatten: true`` expands to a Flatten that unwinds the
+        join's ``as:`` namespace in place (no rename)."""
+        join = parse_join(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": "tasks",
+                "flatten": True,
+            }
+        )
+        assert join.flatten == Flatten(of="tasks", as_="tasks")
+
+    def test_parses_inline_flatten_object_form(self) -> None:
+        """Object form: ``as:`` renames the now-singular attribute;
+        ``preserve_empty`` rides through unchanged."""
+        join = parse_join(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": "tasks",
+                "flatten": {"as": "task", "preserve_empty": True},
+            }
+        )
+        assert join.flatten == Flatten(of="tasks", as_="task", preserve_empty=True)
+
+    def test_inline_flatten_as_defaults_to_join_as(self) -> None:
+        join = parse_join(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": "owned_tasks",
+                "flatten": {},
+            }
+        )
+        assert join.flatten == Flatten(of="owned_tasks", as_="owned_tasks")
+
+    def test_without_flatten_leaves_join_flatten_none(self) -> None:
+        join = parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
+        assert join.flatten is None
 
     def test_parses_where_into_right_subquery(self) -> None:
         """Pre-join ``where:`` becomes the right-side sub-Query's own
@@ -1105,8 +1142,7 @@ class TestParseJoin:
                     ),
                 ),
             ),
-            on=JoinOn(left="id", right="cat"),
-            as_="tasks",
+            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
         )
 
 
@@ -1208,8 +1244,7 @@ class TestParseQuery:
         assert list(parse_query(raw).join) == [
             Join(
                 right=Query(from_=From(name="tasks")),
-                on=JoinOn(left="id", right="cat"),
-                as_="tasks",
+                merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
             )
         ]
 
