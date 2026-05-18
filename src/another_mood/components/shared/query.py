@@ -346,6 +346,19 @@ class Sort(QueryNode):
 
 
 @dataclass(frozen=True)
+class PassThrough(QueryNode):
+    """Identity stage: returns its input unchanged. Used as the default
+    value of optional clauses on :class:`Query` so the pipeline body
+    stays a uniform sequence of calls — no per-clause None guards."""
+
+    def apply(self, records: Sequence[Record]) -> Sequence[Record]:
+        return records
+
+    def derive(self, catalog: dc.Node) -> dc.Node:
+        return catalog
+
+
+@dataclass(frozen=True)
 class Query(QueryNode):
     """Pipeline of clauses applied in the order
     ``from → flatten* → join* → where? → grouped? → select → sort?``."""
@@ -353,10 +366,10 @@ class Query(QueryNode):
     from_: From
     flatten: Sequence[Flatten] = ()
     join: Sequence[Join] = ()
-    where: Where | None = None
-    grouped: Grouped | None = None
-    select: Select = Select(items=())
-    sort: Sort | None = None
+    where: Where | PassThrough = PassThrough()
+    grouped: Grouped | PassThrough = PassThrough()
+    select: Select | PassThrough = PassThrough()
+    sort: Sort | PassThrough = PassThrough()
 
     #: Catalog self-description of a persisted query record.
     catalog: ClassVar[dc.Node] = dc.Node(
@@ -378,14 +391,10 @@ class Query(QueryNode):
             out = f.apply(out)
         for j in self.join:
             out = j.apply(out, records)
-        if self.where is not None:
-            out = self.where.apply(out)
-        if self.grouped is not None:
-            out = self.grouped.apply(out)
-        if self.select.items:
-            out = self.select.apply(out)
-        if self.sort is not None:
-            out = self.sort.apply(out)
+        out = self.where.apply(out)
+        out = self.grouped.apply(out)
+        out = self.select.apply(out)
+        out = self.sort.apply(out)
         return out
 
     def derive(self, catalog: dc.Node) -> dc.Node:
@@ -395,14 +404,10 @@ class Query(QueryNode):
                 out = f.derive(out)
             for j in self.join:
                 out = j.derive(out, catalog)
-            if self.where is not None:
-                out = self.where.derive(out)
-            if self.grouped is not None:
-                out = self.grouped.derive(out)
-            if self.select.items:
-                out = self.select.derive(out)
-            if self.sort is not None:
-                out = self.sort.derive(out)
+            out = self.where.derive(out)
+            out = self.grouped.derive(out)
+            out = self.select.derive(out)
+            out = self.sort.derive(out)
             return out
         except dc.UnknownChildError as exc:
             raise QueryDeriveError(
@@ -425,13 +430,13 @@ def parse_query(raw: Mapping[str, object]) -> Query:
 
     join: Sequence[Join] = parse_join_clause(raw["join"]) if "join" in raw else ()
 
-    where: Where | None = None
+    where: Where | PassThrough = PassThrough()
     if "where" in raw:
         where = Where(
             predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
         )
 
-    grouped: Grouped | None = None
+    grouped: Grouped | PassThrough = PassThrough()
     if "grouped" in raw:
         grouped_raw = cast(Mapping[str, str], raw["grouped"])
         grouped = Grouped(
@@ -440,14 +445,18 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         )
 
     select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
-    select = Select(
-        items=[
-            SelectItem(item=entry["item"], as_=entry.get("as", entry["item"]))
-            for entry in select_raw
-        ]
+    select: Select | PassThrough = (
+        Select(
+            items=[
+                SelectItem(item=entry["item"], as_=entry.get("as", entry["item"]))
+                for entry in select_raw
+            ]
+        )
+        if select_raw
+        else PassThrough()
     )
 
-    sort: Sort | None = None
+    sort: Sort | PassThrough = PassThrough()
     if "sort" in raw:
         sort_raw = cast(Mapping[str, str], raw["sort"])
         sort = Sort(
@@ -526,7 +535,7 @@ def parse_join(raw: Mapping[str, object]) -> Join:
     """Parse one ``join:`` entry (object form)."""
     to = cast(str, raw["to"])
     on_raw = cast(Mapping[str, str], raw["on"])
-    where: Where | None = None
+    where: Where | PassThrough = PassThrough()
     if "where" in raw:
         where = Where(
             predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))

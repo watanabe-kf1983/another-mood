@@ -13,6 +13,7 @@ from another_mood.components.shared.query import (
     Join,
     Merge,
     Missing,
+    PassThrough,
     Query,
     QueryDeriveError,
     Select,
@@ -784,7 +785,6 @@ class TestQueryPipeline:
         only exists in the projected catalog."""
         query = Query(
             from_=From(name="tasks"),
-            grouped=None,
             select=Select(
                 items=[
                     SelectItem(item="phase", as_="rank"),
@@ -1079,7 +1079,6 @@ class TestQueryOptionalClauses:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             from_=From(name="items"),
-            grouped=None,
             select=Select(items=[SelectItem(item="name", as_="name")]),
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
@@ -1087,7 +1086,6 @@ class TestQueryOptionalClauses:
     def test_derive_without_grouped(self) -> None:
         query = Query(
             from_=From(name="tasks"),
-            grouped=None,
             select=Select(
                 items=[
                     SelectItem(item="id", as_="id"),
@@ -1120,7 +1118,6 @@ class TestQueryDeriveErrorTranslation:
         # ``Query.derive`` translates into ``QueryDeriveError``.
         query = Query(
             from_=From(name="tasks"),
-            grouped=None,
             select=Select(items=[SelectItem(item="title", as_="title")]),
             sort=Sort(by="phase"),
         )
@@ -1181,7 +1178,7 @@ class TestParseJoin:
 
     def test_without_where_leaves_right_subquery_unfiltered(self) -> None:
         join = parse_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
-        assert join.right.where is None
+        assert join.right.where == PassThrough()
 
     def test_parses_inline_flatten_shorthand(self) -> None:
         """``flatten: true`` expands to a Flatten that unwinds the
@@ -1266,7 +1263,6 @@ class TestParseQuery:
             ),
             from_=From(name="entities"),
             grouped=Grouped(by="category", as_="items"),
-            where=None,
         )
 
     def test_grouped_as_defaults_to_last_segment_of_from(self) -> None:
@@ -1286,7 +1282,11 @@ class TestParseQuery:
             "from": "items",
             "select": [{"item": "name"}],
         }
-        assert parse_query(raw).grouped is None
+        assert parse_query(raw).grouped == PassThrough()
+
+    def test_parses_query_without_select(self) -> None:
+        raw = {"from": "items"}
+        assert parse_query(raw).select == PassThrough()
 
     def test_select_item_as_defaults_to_item(self) -> None:
         raw = {
@@ -1312,7 +1312,7 @@ class TestParseQuery:
 
     def test_parses_query_without_where(self) -> None:
         raw = {"from": "items", "select": [{"item": "id"}]}
-        assert parse_query(raw).where is None
+        assert parse_query(raw).where == PassThrough()
 
     def test_parses_sort_with_defaults(self) -> None:
         raw = {
