@@ -63,7 +63,9 @@ additionalProperties:
         equi-join key pair, and `as:` (defaults to `to:`) names the
         attached namespace. The matched right rows live as a list under
         `as:` on each left row (left rows with no match get an empty
-        list).
+        list). Optional `where:` filters the right entity before the
+        join (use this rather than top-level `where:` when right rows
+        must be dropped but left rows kept).
       $ref: "#/$defs/joinItem"
     where:
       title: Filter clause
@@ -214,6 +216,15 @@ $defs:
           Name of the nested array attached to each left row. Defaults
           to the value of `to:`.
         type: string
+      where:
+        title: Pre-join filter
+        description: >-
+          Per-record predicate applied to the right entity before the
+          join. Same grammar as the top-level `where:`. Use this (not
+          the top-level `where:`) when right rows need to be dropped
+          but the corresponding left rows should be kept (the SQL
+          "filter in WHERE after LEFT JOIN turns it into INNER" trap).
+        $ref: "#/$defs/whereClause"
     required: [to, on]
     additionalProperties: false
 

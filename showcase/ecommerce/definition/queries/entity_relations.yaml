@@ -11,3 +11,19 @@ entity_relations:
     - item: id
     - item: name
     - item: outgoing
+
+# Exercises pre-join ``where:`` — the right entity is filtered before
+# the merge, so left rows whose only matches got dropped end up with
+# an empty list rather than disappearing.
+entity_plural_relations:
+  from: entities
+  join:
+    to: relations
+    on: { left: id, right: from }
+    where:
+      description: { contains: "複数" }
+    as: plural_outgoing
+  select:
+    - item: id
+    - item: name
+    - item: plural_outgoing
