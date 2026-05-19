@@ -55,22 +55,23 @@ Unwinds one or more intrinsic array attributes. Each input row produces N output
 
 ```yaml
 # Single attribute, scalar shorthand
-from: categories
-flatten: tasks                     # 1 row per task; element placed under `tasks`
+from: artists
+flatten: members                   # 1 row per member; element placed under `members`
 
 # Single attribute, object form
-from: categories
+from: artists
 flatten:
-  of: tasks
-  as: task                         # rename the element namespace
-  preserve_empty: true             # keep parents whose array is empty or missing
+  of: members
+  as: member                       # rename the element namespace
+  preserve_empty: true             # keep artists whose member map is empty or missing
 
 # Multiple attributes, list form (each later entry sees the row shape
-# produced by earlier ones)
-from: members
+# produced by earlier ones). The example imagines `artists` carries
+# additional `tours` and `awards` arrays alongside `members`:
+from: artists
 flatten:
-  - hobbies
-  - { of: pets, as: pet }
+  - tours
+  - { of: awards, as: award }
 ```
 
 | Key | Required | Role |
@@ -83,28 +84,28 @@ The shorthand `flatten: <name>` is equivalent to `flatten: { of: <name>, as: <na
 
 ### Output shape
 
-For `from: categories` + `flatten: { of: tasks, as: task }`, given input:
+For `from: artists` + `flatten: { of: members, as: member }`, given input:
 
 ```yaml
-categories:
+artists:
   - id: A
-    tasks:
-      - { id: A1, phase: 8 }
-      - { id: A2, phase: 10 }
+    members:
+      - { id: m1, name: Anna, instrument: synth  }
+      - { id: m2, name: Beth, instrument: drums  }
   - id: B
-    tasks:
-      - { id: B1, phase: 10 }
+    members:
+      - { id: m3, name: Carl, instrument: vocals }
 ```
 
 the intermediate result after `flatten` (before `where`):
 
 ```yaml
-- { id: A, task: { id: A1, phase: 8 } }
-- { id: A, task: { id: A2, phase: 10 } }
-- { id: B, task: { id: B1, phase: 10 } }
+- { id: A, member: { id: m1, name: Anna, instrument: synth  } }
+- { id: A, member: { id: m2, name: Beth, instrument: drums  } }
+- { id: B, member: { id: m3, name: Carl, instrument: vocals } }
 ```
 
-Parent fields (e.g. `id`) stay at the top level; element fields are accessed via the `as:` namespace (`row.task.id`).
+Parent fields (e.g. `id`) stay at the top level; element fields are accessed via the `as:` namespace (`row.member.id`).
 
 ### When the array is empty
 
@@ -117,15 +118,15 @@ For each input row, looks up matching rows in another entity and attaches them. 
 Throughout this section the examples assume two source entities:
 
 ```yaml
-cats:
-  - { id: A, name: Apple }
-  - { id: B, name: Beta }
-  - { id: Z, name: Zelda }   # no matching task
+artists:
+  - { id: A, name: Apricot }
+  - { id: B, name: Birch }
+  - { id: Z, name: Zephyr }   # no matching album
 
-tasks:
-  - { id: T1, cat: A, title: groom, open: true }
-  - { id: T2, cat: A, title: feed,  open: false }
-  - { id: T3, cat: B, title: play,  open: true }
+albums:
+  - { id: D1, artist_id: A, is_live: false }
+  - { id: D2, artist_id: A, is_live: true  }
+  - { id: D3, artist_id: B, is_live: false }
 ```
 
 ### Default: attach matches as a list
@@ -133,56 +134,56 @@ tasks:
 Without an inline `flatten:` (introduced below), each input row produces exactly one output row — the matches arrive together as a list under `as:`.
 
 ```yaml
-from: cats
+from: artists
 join:
-  to: tasks
-  on: { left: id, right: cat }
+  to: albums
+  on: { left: id, right: artist_id }
 ```
 
 Intermediate result after `join` (before `where`):
 
 ```yaml
-- { id: A, name: Apple, tasks: [{id: T1, cat: A, ...}, {id: T2, cat: A, ...}] }
-- { id: B, name: Beta,  tasks: [{id: T3, cat: B, ...}] }
-- { id: Z, name: Zelda, tasks: [] }    # no match — kept with an empty list
+- { id: A, name: Apricot, albums: [{id: D1, artist_id: A, ...}, {id: D2, artist_id: A, ...}] }
+- { id: B, name: Birch,   albums: [{id: D3, artist_id: B, ...}] }
+- { id: Z, name: Zephyr,  albums: [] }    # no match — kept with an empty list
 ```
 
-The list lives under the join's `as:`, which defaults to `to:` (here `tasks`). Set `as:` explicitly to avoid collisions with existing attributes or to disambiguate multiple joins to the same entity.
+The list lives under the join's `as:`, which defaults to `to:` (here `albums`). Set `as:` explicitly to avoid collisions with existing attributes or to disambiguate multiple joins to the same entity.
 
 ### Inline `flatten:` — one row per match
 
 Adding an inline `flatten:` unwinds the attached list in place: one output row per (input, match) pair.
 
 ```yaml
-from: cats
+from: artists
 join:
-  to: tasks
-  on: { left: id, right: cat }
-  flatten: { as: task }   # rename: plural `tasks` → singular `task`
+  to: albums
+  on: { left: id, right: artist_id }
+  flatten: { as: album }   # rename: plural `albums` → singular `album`
 ```
 
 Intermediate result:
 
 ```yaml
-- { id: A, name: Apple, task: {id: T1, cat: A, ...} }
-- { id: A, name: Apple, task: {id: T2, cat: A, ...} }
-- { id: B, name: Beta,  task: {id: T3, cat: B, ...} }
+- { id: A, name: Apricot, album: {id: D1, artist_id: A, ...} }
+- { id: A, name: Apricot, album: {id: D2, artist_id: A, ...} }
+- { id: B, name: Birch,   album: {id: D3, artist_id: B, ...} }
 ```
 
-Zelda has no matching task, so no row is produced for her. To keep input rows with no match, add `preserve_empty: true`:
+`Z` has no matching album, so no row is produced for it. To keep input rows with no match, add `preserve_empty: true`:
 
 ```yaml
 join:
-  to: tasks
-  on: { left: id, right: cat }
-  flatten: { as: task, preserve_empty: true }
+  to: albums
+  on: { left: id, right: artist_id }
+  flatten: { as: album, preserve_empty: true }
 ```
 
 ```yaml
-- { id: A, name: Apple, task: {id: T1, cat: A, ...} }
-- { id: A, name: Apple, task: {id: T2, cat: A, ...} }
-- { id: B, name: Beta,  task: {id: T3, cat: B, ...} }
-- { id: Z, name: Zelda }                # surviving row carries no `task` field
+- { id: A, name: Apricot, album: {id: D1, artist_id: A, ...} }
+- { id: A, name: Apricot, album: {id: D2, artist_id: A, ...} }
+- { id: B, name: Birch,   album: {id: D3, artist_id: B, ...} }
+- { id: Z, name: Zephyr }                # surviving row carries no `album` field
 ```
 
 For readers familiar with SQL: the no-`flatten:` form (matches as a list) has no direct SQL analogue; default `flatten:` is the `INNER JOIN` shape; and `preserve_empty: true` is the `LEFT JOIN` shape.
@@ -206,69 +207,70 @@ The shorthand `flatten: true` stands for the all-defaults form `flatten: {}` —
 A `where:` written *inside* the join filters `to:` **before** the match runs. The top-level `where:` (outside the join) runs **after**. The distinction matters when input rows with no match must survive — i.e. when `flatten: { preserve_empty: true }` is set:
 
 ```yaml
-# Right: filter the tasks first; cats with no surviving task still appear.
-from: cats
+# Right: filter the albums first; artists with no surviving album still appear.
+from: artists
 join:
-  to: tasks
-  on: { left: id, right: cat }
+  to: albums
+  on: { left: id, right: artist_id }
   where:
-    open: true                # pre-join filter
+    is_live: false            # pre-join filter
   flatten:
-    as: task
+    as: album
     preserve_empty: true
 
 # Wrong: filtering on the joined attribute at the top level silently
-# drops the cats whose task is closed (and the cats with no task at all),
-# turning the LEFT-shape into an INNER-shape. The classic SQL gotcha.
-from: cats
+# drops the artists whose only album was a live one (and the artists
+# with no album at all), turning the LEFT-shape into an INNER-shape.
+# The classic SQL gotcha.
+from: artists
 join:
-  to: tasks
-  on: { left: id, right: cat }
+  to: albums
+  on: { left: id, right: artist_id }
   flatten:
-    as: task
+    as: album
     preserve_empty: true
 where:
-  task.open: true             # post-join filter
+  album.is_live: false        # post-join filter
 ```
 
 With the source data above, the **right** form yields:
 
 ```yaml
-- { id: A, name: Apple, task: {id: T1, open: true, ...} }   # T2 dropped: open=false
-- { id: B, name: Beta,  task: {id: T3, open: true, ...} }
-- { id: Z, name: Zelda }                                     # kept: preserve_empty
+- { id: A, name: Apricot, album: {id: D1, is_live: false, ...} }   # D2 dropped: is_live=true
+- { id: B, name: Birch,   album: {id: D3, is_live: false, ...} }
+- { id: Z, name: Zephyr }                                            # kept: preserve_empty
 ```
 
-The wrong form additionally drops `Zelda` — her row has no `task` field, so `task.open: true` cannot hold and the post-join `where:` removes her.
+The wrong form additionally drops `Z` — its row has no `album` field, so `album.is_live: false` cannot hold and the post-join `where:` removes it.
 
 ### Multiple joins (list form)
 
 Several joins are written as an ordered list. Each later item sees the row shape produced by earlier ones — so a later `on.left:` can reference an attribute introduced by an earlier `flatten.as:`.
 
-Suppose each task additionally carries a `place:` reference, and a separate `places` entity describes those:
+Suppose each album additionally carries a `label_id:` reference, and a separate `labels` entity describes those:
 
 ```yaml
-tasks:
-  - { id: T1, cat: A, title: groom, place: yard,    open: true  }
-  - { id: T2, cat: A, title: feed,  place: kitchen, open: false }
-  - { id: T3, cat: B, title: play,  place: yard,    open: true  }
+albums:
+  - { id: D1, artist_id: A, label_id: L1 }
+  - { id: D2, artist_id: A, label_id: L1 }
+  - { id: D3, artist_id: B, label_id: L2 }
 
-places:
-  - { id: yard,    location: outside }
-  - { id: kitchen, location: inside  }
+labels:
+  - { id: L1, name: Amber Records }
+  - { id: L2, name: Iron Pulse }
 ```
 
-A two-stage join attaches each task and then, for each task, the task's place:
+A two-stage join attaches each album and then, for each album, the album's label:
 
 ```yaml
-from: cats
+from: artists
 join:
-  - to: tasks
-    on: { left: id, right: cat }
-    flatten: { as: task }                # 1 row per (cat, task)
-  - to: places
-    on: { left: task.place, right: id }  # `task.place` introduced by the earlier flatten
-    flatten: { as: place }               # 1 row per (cat, task, place)
+  - to: albums
+    on: { left: id, right: artist_id }
+    flatten: { as: album }                  # 1 row per (artist, album)
+  - to: labels
+    on: { left: album.label_id, right: id } # `album.label_id` from prior flatten
+    flatten: { as: label }                  # 1 row per (artist, album, label)
 ```
 
 If the earlier join had no inline `flatten:`, its `as:` would still be a list at the next step; a later `on.left:` cannot reach inside a list (only `flatten:` ever traverses one), so the unwind must come first.
@@ -345,7 +347,7 @@ the intermediate result after `grouped` (before `select`):
 
 ```yaml
 - role: engineer
-  members:                             # `as` omitted, so the inner-array name is the last segment of from: "members"
+  members:                # `as` omitted - default = last segment of `from:` ("members")
     - { id: alice, name: Alice, role: engineer }
     - { id: bob,   name: Bob,   role: engineer }
 - role: designer

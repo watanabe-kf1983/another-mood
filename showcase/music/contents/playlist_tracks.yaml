@@ -1,0 +1,16 @@
+playlist_tracks:
+  - { playlist_id: staff_picks, track_id: after_rain,         position: 1 }
+  - { playlist_id: staff_picks, track_id: estuary_mirror,     position: 2 }
+  - { playlist_id: staff_picks, track_id: last_train,         position: 3 }
+  - { playlist_id: staff_picks, track_id: graphite_summer_song, position: 4 }
+
+  - { playlist_id: late_night_drive, track_id: quiet_districts, position: 1 }
+  - { playlist_id: late_night_drive, track_id: atlas,           position: 2 }
+  - { playlist_id: late_night_drive, track_id: dawn_title_track, position: 3 }
+  - { playlist_id: late_night_drive, track_id: boiler_room,     position: 4 }
+  - { playlist_id: late_night_drive, track_id: winter_song,     position: 5 }
+
+  - { playlist_id: side_b, track_id: quiet_districts_live, position: 1 }
+  - { playlist_id: side_b, track_id: service_tunnel_live, position: 2 }
+  - { playlist_id: side_b, track_id: atlas,               position: 3 }
+  - { playlist_id: side_b, track_id: dawn_title_track,    position: 4 }

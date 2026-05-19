@@ -14,7 +14,7 @@
 
 このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/reports/prose/index.md](.another-mood/dev-docs/output/reports/prose/index.md)。
 
-利用者向けサンプルプロジェクト群は `showcase/`（`starter` / `ecommerce` 等の各テンプレート）にある。`mood build showcase/{name}` でビルドできる。
+利用者向けサンプルプロジェクト群は `showcase/`（`starter` / `music` 等の各テンプレート）にある。`mood build showcase/{name}` でビルドできる。
 
 ### ドキュメント
 

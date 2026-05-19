@@ -454,4 +454,4 @@ Be aware that misspellings silently produce empty strings — no error is raised
 ## Further reading
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
-- [showcase/ecommerce/](../showcase/ecommerce/) — a more complex working sample than the member list, modeling an e-commerce site that exercises entities, relations, prose, queries, and templates end-to-end.
+- [showcase/music/](../showcase/music/) — a more complex working sample than the member list, modeling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises groupings, joins, multi-join chains, intrinsic flatten, self-referencing entities, and prose alongside structured data.

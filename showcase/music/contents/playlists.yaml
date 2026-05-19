@@ -1,0 +1,15 @@
+playlists:
+  staff_picks:
+    name: Staff Picks
+    curator: editorial
+    description: A short rotating selection assembled by the editorial desk.
+
+  late_night_drive:
+    name: Late Night Drive
+    curator: midori_circuit
+    description: Guest curation from Midori Circuit for long, dark motorway runs.
+
+  side_b:
+    name: Side B
+    curator: editorial
+    description: Slow burners and second-side closers - tracks that need at least five minutes of room.

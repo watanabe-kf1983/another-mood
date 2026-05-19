@@ -1,0 +1,155 @@
+type: object
+additionalProperties: false
+properties:
+  artists:
+    type: object
+    additionalProperties:
+      type: object
+      description: An artist or band that appears in the catalog. May own zero or more albums and zero or more members.
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Display name of the artist or band.
+        country:
+          type: string
+          description: Primary country of operation (free-form, e.g. "Japan").
+        formed_year:
+          type: integer
+          description: Year the act was formed.
+        bio:
+          type: string
+          description: Short prose description shown on the artist's page.
+        members:
+          type: object
+          description: Current line-up, keyed by a short slug. Optional - an artist with no settled line-up may omit it or leave it empty.
+          additionalProperties:
+            type: object
+            description: One member of an artist's line-up.
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+                description: Display name of the member.
+              instrument:
+                type: string
+                description: Primary instrument or role within the group (e.g. "guitar", "vocals").
+            required: [name]
+      required: [name]
+
+  labels:
+    type: object
+    additionalProperties:
+      type: object
+      description: A record label that releases albums in this catalog.
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Display name of the label.
+        country:
+          type: string
+          description: Country the label is based in.
+        founded:
+          type: integer
+          description: Year the label was founded.
+      required: [name]
+
+  genres:
+    type: object
+    additionalProperties:
+      type: object
+      description: A musical genre. Genres form a forest - top-level genres have no parent_id, and subgenres point at their parent via parent_id (self-reference).
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Display name of the genre.
+        parent_id:
+          type: string
+          description: Id of the parent genre. Omitted for top-level genres.
+      required: [name]
+
+  albums:
+    type: object
+    additionalProperties:
+      type: object
+      description: A studio or live album. Each album belongs to exactly one artist; label and genre are optional but typical.
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: Album title.
+        artist_id:
+          type: string
+          description: Id of the artist who released this album.
+        label_id:
+          type: string
+          description: Id of the label that released this album.
+        genre_id:
+          type: string
+          description: Id of the album's primary genre.
+        year:
+          type: integer
+          description: Year of release.
+        is_live:
+          type: boolean
+          description: True for concert recordings, false (or omitted) for studio albums.
+      required: [title, artist_id, year]
+
+  tracks:
+    type: object
+    additionalProperties:
+      type: object
+      description: A single track. Each track belongs to exactly one album.
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: Track title.
+        album_id:
+          type: string
+          description: Id of the album this track appears on.
+        track_no:
+          type: integer
+          description: Position of the track within the album, 1-indexed.
+        duration_sec:
+          type: integer
+          description: Duration in whole seconds.
+      required: [title, album_id, track_no]
+
+  playlists:
+    type: object
+    additionalProperties:
+      type: object
+      description: A curated listening order over tracks. Membership and order are recorded separately in playlist_tracks (N:N).
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Display name of the playlist.
+        curator:
+          type: string
+          description: Id or short name of whoever assembled the playlist (an artist id, or a free-form tag such as "editorial").
+        description:
+          type: string
+          description: Short prose blurb shown alongside the playlist title.
+      required: [name]
+
+  playlist_tracks:
+    type: array
+    items:
+      type: object
+      description: Membership link between a playlist and a track. The position field gives playback order within the playlist. Stored as an array (not a map) because no entry has a natural single-field key.
+      additionalProperties: false
+      properties:
+        playlist_id:
+          type: string
+          description: Id of the playlist this entry belongs to.
+        track_id:
+          type: string
+          description: Id of the track included in the playlist.
+        position:
+          type: integer
+          description: 1-indexed playback position within the playlist.
+      required: [playlist_id, track_id, position]

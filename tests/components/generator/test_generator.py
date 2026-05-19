@@ -120,9 +120,10 @@ class TestWalkEntityFilter:
         assert _walk_entity(views, "posts", entities) == [{"id": "a"}, {"id": "b"}]
 
     def test_single_step_child_flattens_array_attribute(self) -> None:
-        # Mirrors `entities.fields` in showcase/ecommerce: each entity
-        # row carries a `fields` array — walking to the child entity
-        # produces a flat list of all field records.
+        # A parent entity (`entities`) whose rows carry an array attribute
+        # (`fields`): walking to the child entity flattens the per-parent
+        # arrays into a single list. Same pattern is exercised end-to-end
+        # by `artists.members` in showcase/music.
         views = {
             "entities": [
                 {"id": "user", "fields": [{"id": "id"}, {"id": "name"}]},
