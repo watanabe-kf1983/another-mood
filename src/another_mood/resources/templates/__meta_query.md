@@ -9,31 +9,20 @@
 {% if flatten -%}
 ### Flatten
 
-{% if flatten is string or flatten is mapping -%}
-{% set entries = [flatten] -%}
-{% else -%}
-{% set entries = flatten -%}
-{% endif -%}
 | Of | As | Preserve Empty |
 |----|----|----------------|
-{% for raw in entries -%}
-{% set entry = {"of": raw, "as": raw} if raw is string else raw -%}
-| {{ entry.of }} | {{ entry.as or entry.of }} | {% if entry.preserve_empty %}yes{% endif %} |
+{% for entry in flatten -%}
+| {{ entry.of }} | {{ entry.as }} | {% if entry.preserve_empty %}yes{% endif %} |
 {% endfor %}
 
 {% endif -%}
 {% if join -%}
 ### Join
 
-{% if join is mapping -%}
-{% set entries = [join] -%}
-{% else -%}
-{% set entries = join -%}
-{% endif -%}
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
-{% for entry in entries -%}
-| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as or entry.to }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
+{% for entry in join -%}
+| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
 {% endfor %}
 
 {% endif -%}
@@ -48,7 +37,7 @@
 {% if grouped -%}
 ### Grouped by
 
-{{ grouped.by }}{% if grouped.as %} (as {{ grouped.as }}){% endif %}
+{{ grouped.by }} (as {{ grouped.as }})
 
 {% endif -%}
 ### Select
@@ -57,7 +46,7 @@
 | Item | As |
 |------|----|
 {% for entry in select -%}
-| {{ entry.item }} | {{ entry.as or entry.item }} |
+| {{ entry.item }} | {{ entry.as }} |
 {% endfor -%}
 {%- else -%}
 (no select items defined)
