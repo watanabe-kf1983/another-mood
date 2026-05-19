@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.shared.query import parse_query
+from another_mood.components.shared.query import Query
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
 
@@ -39,5 +39,5 @@ def compose(
     query_results_out.mkdir(parents=True, exist_ok=True)
     for raw in raw_queries:
         name = cast(str, raw["id"])
-        sources[name] = parse_query(raw).apply([sources])
+        sources[name] = Query.from_dict(raw).apply([sources])
         save_model(query_results_out / f"{name}.yaml", {name: sources[name]})

@@ -399,14 +399,9 @@ categories:
         phase: 13
         proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
       M8:
-        title: derive_queries 出力を typed Query 形式で流す
-        note: |
-          現状の derive_queries は parse_query で型付け / 検証した結果を
-          YAML に戻しているため、template 側 (例: __meta_query) で同じ
-          shape 分岐 (scalar / mapping / list の正規化) を再度書く必要が
-          ある。derive 段階で正規化済み形式に揃えて出力すれば、
-          generator 側の Jinja ロジックが単純化される。
+        title: derive_queries 出力を canonical 形式で流す
         phase: 10
+        done: true
 
   N:
     title: レンダリング / 出力形式

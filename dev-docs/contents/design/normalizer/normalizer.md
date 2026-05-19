@@ -7,7 +7,7 @@
 正規化スコープは catalog 化スコープと一致させる。境界外で walker が走ると、新規変換の追加で silent に壊れる latent risk が生じる。
 
 - `content_normalizer`: user schema 全体が catalog 範囲 (`iter_normalized` で深く正規化)
-- `query_deriver`: top-level dict のみが catalog 範囲 (`_iter_top_level` で dict→list 変換のみ。query body は `parse_query` までパススルー)
+- `query_deriver`: top-level dict のみが catalog 範囲 (`_iter_top_level` で dict→list 変換 + `normalize_query` による DSL の sugar→canonical 変換。catalog 化はしない)
 
 ## Proposals
 

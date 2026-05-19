@@ -145,6 +145,14 @@ class Flatten(QueryNode):
             return [other]
         return [{**other, self.as_: child} for child in children]
 
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object]) -> "Flatten":
+        return cls(
+            of=cast(str, raw["of"]),
+            as_=cast(str, raw["as"]),
+            preserve_empty=cast(bool, raw["preserve_empty"]),
+        )
+
 
 @dataclass(frozen=True)
 class Merge:
@@ -217,6 +225,28 @@ class Join:
         out = self.merge.derive(left, self.right.derive(root_catalog))
         return self.flatten.derive(out) if self.flatten is not None else out
 
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object]) -> "Join":
+        to = cast(str, raw["to"])
+        on_raw = cast(Mapping[str, str], raw["on"])
+        where: Where | PassThrough = PassThrough()
+        if "where" in raw:
+            where = Where.from_dict(cast(Mapping[str, object], raw["where"]))
+        flatten = (
+            Flatten.from_dict(cast(Mapping[str, object], raw["flatten"]))
+            if "flatten" in raw
+            else None
+        )
+        return cls(
+            right=Query(from_=From(name=to), where=where),
+            merge=Merge(
+                on_left=on_raw["left"],
+                on_right=on_raw["right"],
+                right_as=cast(str, raw["as"]),
+            ),
+            flatten=flatten,
+        )
+
 
 @dataclass(frozen=True)
 class Where(QueryNode):
@@ -230,6 +260,10 @@ class Where(QueryNode):
     def derive(self, catalog: dc.Node) -> dc.Node:
         self.predicate.validate_by_catalog(catalog)
         return catalog
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object]) -> "Where":
+        return cls(predicate=parse_record_predicate(raw))
 
 
 @dataclass(frozen=True)
@@ -299,6 +333,12 @@ class Select(QueryNode):
             children=list(
                 chain.from_iterable(item.derive(catalog) for item in self.items)
             )
+        )
+
+    @classmethod
+    def from_dict(cls, raw: Sequence[Mapping[str, str]]) -> "Select":
+        return cls(
+            items=[SelectItem(item=entry["item"], as_=entry["as"]) for entry in raw]
         )
 
 
@@ -414,155 +454,55 @@ class Query(QueryNode):
                 f"unknown attribute '{exc.name}'", offender=exc.name
             ) from exc
 
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object]) -> "Query":
+        """Build a Query from a canonical query record.
 
-def parse_query(raw: Mapping[str, object]) -> Query:
-    """Parse a YAML-loaded query record into a typed Query object.
+        This is the Any-to-typed boundary: canonical query data comes
+        in (sugar expanded, optional defaults filled by upstream
+        normalization), validated Query objects come out.
+        """
+        from_ = From(name=cast(str, raw["from"]))
 
-    This is the Any-to-typed boundary: raw YAML data comes in,
-    validated Query objects come out.
-    """
-    from_raw = cast(str, raw["from"])
-    from_ = From(name=from_raw)
-
-    flatten: Sequence[Flatten] = (
-        parse_flatten(raw["flatten"]) if "flatten" in raw else ()
-    )
-
-    join: Sequence[Join] = parse_join_clause(raw["join"]) if "join" in raw else ()
-
-    where: Where | PassThrough = PassThrough()
-    if "where" in raw:
-        where = Where(
-            predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
+        flatten: Sequence[Flatten] = tuple(
+            Flatten.from_dict(entry)
+            for entry in cast(Sequence[Mapping[str, object]], raw.get("flatten", ()))
         )
 
-    grouped: Grouped | PassThrough = PassThrough()
-    if "grouped" in raw:
-        grouped_raw = cast(Mapping[str, str], raw["grouped"])
-        grouped = Grouped(
-            by=grouped_raw["by"],
-            as_=grouped_raw.get("as", from_raw.rsplit(".", 1)[-1]),
+        join: Sequence[Join] = tuple(
+            Join.from_dict(entry)
+            for entry in cast(Sequence[Mapping[str, object]], raw.get("join", ()))
         )
 
-    select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
-    select: Select | PassThrough = (
-        Select(
-            items=[
-                SelectItem(item=entry["item"], as_=entry.get("as", entry["item"]))
-                for entry in select_raw
-            ]
-        )
-        if select_raw
-        else PassThrough()
-    )
+        where: Where | PassThrough = PassThrough()
+        if "where" in raw:
+            where = Where.from_dict(cast(Mapping[str, object], raw["where"]))
 
-    sort: Sort | PassThrough = PassThrough()
-    if "sort" in raw:
-        sort_raw = cast(Mapping[str, str], raw["sort"])
-        sort = Sort(
-            by=sort_raw["by"],
-            direction=Direction(sort_raw.get("direction", "asc")),
-            missing=Missing(sort_raw.get("missing", "last")),
+        grouped: Grouped | PassThrough = PassThrough()
+        if "grouped" in raw:
+            grouped_raw = cast(Mapping[str, str], raw["grouped"])
+            grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
+
+        select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
+        select: Select | PassThrough = (
+            Select.from_dict(select_raw) if select_raw else PassThrough()
         )
 
-    return Query(
-        from_=from_,
-        flatten=flatten,
-        join=join,
-        where=where,
-        grouped=grouped,
-        select=select,
-        sort=sort,
-    )
+        sort: Sort | PassThrough = PassThrough()
+        if "sort" in raw:
+            sort_raw = cast(Mapping[str, str], raw["sort"])
+            sort = Sort(
+                by=sort_raw["by"],
+                direction=Direction(sort_raw["direction"]),
+                missing=Missing(sort_raw["missing"]),
+            )
 
-
-def parse_flatten(raw: object) -> Sequence[Flatten]:
-    """Parse the three accepted shapes of the ``flatten:`` clause.
-
-    * bare string  → one shorthand entry
-    * mapping      → one object-form entry
-    * sequence     → list-form, each entry either shorthand or object form
-    """
-    if isinstance(raw, str):
-        return [_flatten_from_shorthand(raw)]
-    if isinstance(raw, Mapping):
-        return [_flatten_from_mapping(cast(Mapping[str, object], raw))]
-    if isinstance(raw, Sequence):
-        return [
-            _flatten_from_shorthand(entry)
-            if isinstance(entry, str)
-            else _flatten_from_mapping(cast(Mapping[str, object], entry))
-            for entry in cast(Sequence[object], raw)
-        ]
-    raise TypeError(
-        f"flatten clause must be a string, mapping, or list; got {type(raw).__name__}"
-    )
-
-
-def _flatten_from_shorthand(name: str) -> Flatten:
-    return Flatten(of=name, as_=name)
-
-
-def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
-    of = cast(str, raw["of"])
-    return Flatten(
-        of=of,
-        as_=cast(str, raw.get("as", of)),
-        preserve_empty=cast(bool, raw.get("preserve_empty", False)),
-    )
-
-
-def parse_join_clause(raw: object) -> Sequence[Join]:
-    """Parse the two accepted shapes of the ``join:`` clause.
-
-    * mapping  → one object-form entry
-    * sequence → list-form, each entry an object-form entry. Later
-      items observe the row shape produced by earlier ones (so a later
-      ``on.left`` can reference an attribute introduced by an earlier
-      ``flatten.as``).
-    """
-    if isinstance(raw, Mapping):
-        return (parse_join(cast(Mapping[str, object], raw)),)
-    if isinstance(raw, Sequence):
-        return tuple(
-            parse_join(cast(Mapping[str, object], entry))
-            for entry in cast(Sequence[object], raw)
+        return cls(
+            from_=from_,
+            flatten=flatten,
+            join=join,
+            where=where,
+            grouped=grouped,
+            select=select,
+            sort=sort,
         )
-    raise TypeError(f"join clause must be a mapping or list; got {type(raw).__name__}")
-
-
-def parse_join(raw: Mapping[str, object]) -> Join:
-    """Parse one ``join:`` entry (object form)."""
-    to = cast(str, raw["to"])
-    on_raw = cast(Mapping[str, str], raw["on"])
-    where: Where | PassThrough = PassThrough()
-    if "where" in raw:
-        where = Where(
-            predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
-        )
-    right_as = cast(str, raw.get("as", to))
-    return Join(
-        right=Query(from_=From(name=to), where=where),
-        merge=Merge(
-            on_left=on_raw["left"], on_right=on_raw["right"], right_as=right_as
-        ),
-        flatten=_parse_inline_flatten(raw.get("flatten"), right_as),
-    )
-
-
-def _parse_inline_flatten(raw: object, join_as: str) -> Flatten | None:
-    """Parse ``join[].flatten``: shorthand ``true`` or an object with
-    optional ``as:`` / ``preserve_empty:``.  ``of:`` is fixed to the
-    join's ``as:`` since the unwind target is always the just-attached
-    array.
-    """
-    if raw is None:
-        return None
-    if raw is True:
-        return Flatten(of=join_as, as_=join_as)
-    mapping = cast(Mapping[str, object], raw)
-    return Flatten(
-        of=join_as,
-        as_=cast(str, mapping.get("as", join_as)),
-        preserve_empty=cast(bool, mapping.get("preserve_empty", False)),
-    )

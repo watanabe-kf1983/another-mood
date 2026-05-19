@@ -36,7 +36,7 @@ class TestCompose:
                     - id: names
                       from: items
                       select:
-                        - {item: name}
+                        - {item: name, as: name}
                   entities:
                     - id: names
                       item_type:
@@ -140,7 +140,7 @@ class TestCompose:
                     - id: entity_ids
                       from: __definition.entities
                       select:
-                        - {item: id}
+                        - {item: id, as: id}
                   entities: []
             """),
         )

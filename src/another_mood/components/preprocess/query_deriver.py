@@ -14,12 +14,13 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.preprocess.normalize_core import check
+from another_mood.components.preprocess.query_normalizer import normalize_query
 from another_mood.components.preprocess.source_loader import UserStr, load_source
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
-from another_mood.components.shared.query import QueryDeriveError, parse_query
+from another_mood.components.shared.query import Query, QueryDeriveError
 
 _QUERY_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
@@ -80,10 +81,12 @@ def build_query_schema() -> Mapping[str, object]:
 def _iter_top_level(
     src_dir: Path, schema: Mapping[str, object]
 ) -> Iterator[tuple[Path, list[Mapping[str, object]]]]:
-    """Validate src_dir and yield top-level dict→list converted query lists.
+    """Validate src_dir and yield top-level dict→list converted query
+    lists, with each body canonicalized via ``normalize_query``.
 
-    Query bodies pass through untouched — the catalog boundary stops
-    at the top level. See design/normalizer/normalizer.md.
+    The catalog boundary stops at the top level — query body structure
+    (e.g. the ``where:`` AST) is not normalized as catalog data. See
+    design/normalizer/normalizer.md.
     """
     check(src_dir, schema)
     for src_file in sorted(src_dir.rglob("*")):
@@ -95,7 +98,7 @@ def _iter_top_level(
         yield (
             src_file,
             [
-                {"id": key, **cast(Mapping[str, object], body)}
+                normalize_query({"id": key, **cast(Mapping[str, object], body)})
                 for key, body in data.items()
             ],
         )
@@ -114,7 +117,7 @@ def _derive_entities(
     for raw in queries:
         name = cast(str, raw["id"])
         try:
-            derived = dc.flatten_tree(parse_query(raw).derive(catalog), name)
+            derived = dc.flatten_tree(Query.from_dict(raw).derive(catalog), name)
         except QueryDeriveError as exc:
             diagnostics.append(_diagnostic_from(exc))
             continue
