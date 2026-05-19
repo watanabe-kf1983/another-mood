@@ -131,7 +131,11 @@ class TestDeriveQueries:
         assert data == {
             "__definition": {
                 "queries": [
-                    {"id": "names", "from": "items", "select": [{"item": "name"}]}
+                    {
+                        "id": "names",
+                        "from": "items",
+                        "select": [{"item": "name", "as": "name"}],
+                    }
                 ],
                 "entities": [
                     {
@@ -188,7 +192,7 @@ class TestDeriveQueries:
                 "id": "phase10",
                 "from": "items",
                 "where": {"phase": {"eq": "10"}},
-                "select": [{"item": "name"}],
+                "select": [{"item": "name", "as": "name"}],
             }
         ]
 

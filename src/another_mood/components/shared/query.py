@@ -416,19 +416,23 @@ class Query(QueryNode):
 
 
 def parse_query(raw: Mapping[str, object]) -> Query:
-    """Parse a YAML-loaded query record into a typed Query object.
+    """Parse a canonical query record into a typed Query object.
 
-    This is the Any-to-typed boundary: raw YAML data comes in,
-    validated Query objects come out.
+    This is the Any-to-typed boundary: canonical query data comes in
+    (sugar expanded, optional defaults filled by upstream
+    normalization), validated Query objects come out.
     """
-    from_raw = cast(str, raw["from"])
-    from_ = From(name=from_raw)
+    from_ = From(name=cast(str, raw["from"]))
 
-    flatten: Sequence[Flatten] = (
-        parse_flatten(raw["flatten"]) if "flatten" in raw else ()
+    flatten: Sequence[Flatten] = tuple(
+        _parse_flatten(entry)
+        for entry in cast(Sequence[Mapping[str, object]], raw.get("flatten", ()))
     )
 
-    join: Sequence[Join] = parse_join_clause(raw["join"]) if "join" in raw else ()
+    join: Sequence[Join] = tuple(
+        _parse_join(entry)
+        for entry in cast(Sequence[Mapping[str, object]], raw.get("join", ()))
+    )
 
     where: Where | PassThrough = PassThrough()
     if "where" in raw:
@@ -439,17 +443,13 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     grouped: Grouped | PassThrough = PassThrough()
     if "grouped" in raw:
         grouped_raw = cast(Mapping[str, str], raw["grouped"])
-        grouped = Grouped(
-            by=grouped_raw["by"],
-            as_=grouped_raw.get("as", from_raw.rsplit(".", 1)[-1]),
-        )
+        grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
 
     select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
     select: Select | PassThrough = (
         Select(
             items=[
-                SelectItem(item=entry["item"], as_=entry.get("as", entry["item"]))
-                for entry in select_raw
+                SelectItem(item=entry["item"], as_=entry["as"]) for entry in select_raw
             ]
         )
         if select_raw
@@ -461,8 +461,8 @@ def parse_query(raw: Mapping[str, object]) -> Query:
         sort_raw = cast(Mapping[str, str], raw["sort"])
         sort = Sort(
             by=sort_raw["by"],
-            direction=Direction(sort_raw.get("direction", "asc")),
-            missing=Missing(sort_raw.get("missing", "last")),
+            direction=Direction(sort_raw["direction"]),
+            missing=Missing(sort_raw["missing"]),
         )
 
     return Query(
@@ -476,63 +476,15 @@ def parse_query(raw: Mapping[str, object]) -> Query:
     )
 
 
-def parse_flatten(raw: object) -> Sequence[Flatten]:
-    """Parse the three accepted shapes of the ``flatten:`` clause.
-
-    * bare string  → one shorthand entry
-    * mapping      → one object-form entry
-    * sequence     → list-form, each entry either shorthand or object form
-    """
-    if isinstance(raw, str):
-        return [_flatten_from_shorthand(raw)]
-    if isinstance(raw, Mapping):
-        return [_flatten_from_mapping(cast(Mapping[str, object], raw))]
-    if isinstance(raw, Sequence):
-        return [
-            _flatten_from_shorthand(entry)
-            if isinstance(entry, str)
-            else _flatten_from_mapping(cast(Mapping[str, object], entry))
-            for entry in cast(Sequence[object], raw)
-        ]
-    raise TypeError(
-        f"flatten clause must be a string, mapping, or list; got {type(raw).__name__}"
-    )
-
-
-def _flatten_from_shorthand(name: str) -> Flatten:
-    return Flatten(of=name, as_=name)
-
-
-def _flatten_from_mapping(raw: Mapping[str, object]) -> Flatten:
-    of = cast(str, raw["of"])
+def _parse_flatten(raw: Mapping[str, object]) -> Flatten:
     return Flatten(
-        of=of,
-        as_=cast(str, raw.get("as", of)),
-        preserve_empty=cast(bool, raw.get("preserve_empty", False)),
+        of=cast(str, raw["of"]),
+        as_=cast(str, raw["as"]),
+        preserve_empty=cast(bool, raw["preserve_empty"]),
     )
 
 
-def parse_join_clause(raw: object) -> Sequence[Join]:
-    """Parse the two accepted shapes of the ``join:`` clause.
-
-    * mapping  → one object-form entry
-    * sequence → list-form, each entry an object-form entry. Later
-      items observe the row shape produced by earlier ones (so a later
-      ``on.left`` can reference an attribute introduced by an earlier
-      ``flatten.as``).
-    """
-    if isinstance(raw, Mapping):
-        return (parse_join(cast(Mapping[str, object], raw)),)
-    if isinstance(raw, Sequence):
-        return tuple(
-            parse_join(cast(Mapping[str, object], entry))
-            for entry in cast(Sequence[object], raw)
-        )
-    raise TypeError(f"join clause must be a mapping or list; got {type(raw).__name__}")
-
-
-def parse_join(raw: Mapping[str, object]) -> Join:
-    """Parse one ``join:`` entry (object form)."""
+def _parse_join(raw: Mapping[str, object]) -> Join:
     to = cast(str, raw["to"])
     on_raw = cast(Mapping[str, str], raw["on"])
     where: Where | PassThrough = PassThrough()
@@ -540,29 +492,17 @@ def parse_join(raw: Mapping[str, object]) -> Join:
         where = Where(
             predicate=parse_record_predicate(cast(Mapping[str, object], raw["where"]))
         )
-    right_as = cast(str, raw.get("as", to))
+    flatten = (
+        _parse_flatten(cast(Mapping[str, object], raw["flatten"]))
+        if "flatten" in raw
+        else None
+    )
     return Join(
         right=Query(from_=From(name=to), where=where),
         merge=Merge(
-            on_left=on_raw["left"], on_right=on_raw["right"], right_as=right_as
+            on_left=on_raw["left"],
+            on_right=on_raw["right"],
+            right_as=cast(str, raw["as"]),
         ),
-        flatten=_parse_inline_flatten(raw.get("flatten"), right_as),
-    )
-
-
-def _parse_inline_flatten(raw: object, join_as: str) -> Flatten | None:
-    """Parse ``join[].flatten``: shorthand ``true`` or an object with
-    optional ``as:`` / ``preserve_empty:``.  ``of:`` is fixed to the
-    join's ``as:`` since the unwind target is always the just-attached
-    array.
-    """
-    if raw is None:
-        return None
-    if raw is True:
-        return Flatten(of=join_as, as_=join_as)
-    mapping = cast(Mapping[str, object], raw)
-    return Flatten(
-        of=join_as,
-        as_=cast(str, mapping.get("as", join_as)),
-        preserve_empty=cast(bool, mapping.get("preserve_empty", False)),
+        flatten=flatten,
     )
