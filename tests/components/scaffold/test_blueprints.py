@@ -79,13 +79,13 @@ def test_apply_blueprint_copies_named_blueprint(tmp_path: Path) -> None:
     assert (target / "definition" / "schema.yaml") in result.created
 
 
-def test_available_blueprints_lists_starter_and_ecommerce() -> None:
+def test_available_blueprints_lists_starter_and_music() -> None:
     blueprints = available_blueprints()
 
     # Manifest order is preserved; starter must come first.
     names = [b.name for b in blueprints]
     assert names[0] == "starter"
-    assert "ecommerce" in names
+    assert "music" in names
     assert all(b.description for b in blueprints)
 
 

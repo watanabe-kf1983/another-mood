@@ -1,0 +1,25 @@
+genres:
+  # Top-level genres (no parent_id)
+  rock:
+    name: Rock
+  electronic:
+    name: Electronic
+
+  # Rock subgenres
+  punk:
+    name: Punk
+    parent_id: rock
+  post_punk:
+    name: Post-Punk
+    parent_id: punk
+  psych:
+    name: Psychedelic Rock
+    parent_id: rock
+
+  # Electronic subgenres
+  ambient:
+    name: Ambient
+    parent_id: electronic
+  techno:
+    name: Techno
+    parent_id: electronic

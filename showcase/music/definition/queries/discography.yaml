@@ -1,0 +1,63 @@
+# Each artist with their albums attached as a nested list. Exercises the
+# ``join:`` clause (nested attach: 1 row per artist, the matched albums
+# live under ``albums`` as a list).
+artist_discography:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+  select:
+    - item: id
+    - item: name
+    - item: country
+    - item: formed_year
+    - item: bio
+    - item: members
+    - item: albums
+
+# Same as above but only studio albums - exercises pre-join ``where:``
+# (the right entity is filtered before the merge runs). Artists whose
+# only releases happen to be live records still appear, with an empty
+# ``studio_albums`` list rather than dropping out.
+artist_studio_albums:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    where:
+      is_live: false
+    as: studio_albums
+  select:
+    - item: id
+    - item: name
+    - item: studio_albums
+
+# Each (artist, album) pair as its own row. Exercises inline ``flatten:``
+# - the joined array is unwound in place, yielding 1 row per pair and
+# renaming the slot from plural ``albums`` to singular ``album``.
+# Artists with no album are dropped (inner-join shape).
+artist_album_pairs:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+    flatten: { as: album }
+  select:
+    - item: id
+    - item: name
+    - item: album
+
+# Like ``artist_album_pairs`` but with ``flatten: { preserve_empty: true
+# }`` - the LEFT-join analogue: artists with no album survive (without
+# the ``album`` field), so the full roster including ``vacant_canvas``
+# stays visible. The ``select:`` clause is omitted because pluck would
+# raise on the missing ``album`` for the unmatched row.
+artist_album_pairs_all:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+    flatten: { as: album, preserve_empty: true }

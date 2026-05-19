@@ -1,0 +1,12 @@
+# Albums grouped by genre - exercises ``grouped:``. The grouping field
+# (``genre_id``) is re-emitted in ``select:`` once as the group key and
+# once renamed as ``id`` so the template can use it as a path slug.
+albums_by_genre:
+  from: albums
+  grouped:
+    by: genre_id
+  select:
+    - item: genre_id
+      as: id
+    - item: genre_id
+    - item: albums

@@ -1,0 +1,15 @@
+labels:
+  amber_records:
+    name: Amber Records
+    country: Germany
+    founded: 1998
+
+  coastal_tapes:
+    name: Coastal Tapes
+    country: Portugal
+    founded: 2011
+
+  iron_pulse:
+    name: Iron Pulse
+    country: United States
+    founded: 2003

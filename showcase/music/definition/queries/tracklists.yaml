@@ -1,0 +1,39 @@
+# Each album with its tracks attached as a nested list. Exercises
+# ``join:`` (nested attach).
+album_tracklist:
+  from: albums
+  join:
+    to: tracks
+    on: { left: id, right: album_id }
+    as: tracks
+  select:
+    - item: id
+    - item: title
+    - item: artist_id
+    - item: label_id
+    - item: genre_id
+    - item: year
+    - item: is_live
+    - item: tracks
+
+# Each track with its album and the album's artist attached - exercises
+# the ``join:`` list form (multi-join): the first join brings the album
+# in, and the second join uses an attribute introduced by the first
+# join's ``flatten: { as: album }`` (``album.artist_id``) as the lookup
+# key for the second match.
+tracks_with_artist:
+  from: tracks
+  join:
+    - to: albums
+      on: { left: album_id, right: id }
+      as: album_matches
+      flatten: { as: album }
+    - to: artists
+      on: { left: album.artist_id, right: id }
+      as: artist_matches
+      flatten: { as: artist }
+  select:
+    - item: id
+    - item: title
+    - item: album
+    - item: artist

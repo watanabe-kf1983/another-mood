@@ -1,0 +1,72 @@
+albums:
+  neon_after_rain:
+    title: Neon After Rain
+    artist_id: midori_circuit
+    label_id: amber_records
+    genre_id: techno
+    year: 2018
+    is_live: false
+
+  live_in_osaka:
+    title: Neon After Rain - Live in Osaka
+    artist_id: midori_circuit
+    label_id: amber_records
+    genre_id: techno
+    year: 2019
+    is_live: true
+
+  tidal_atlas:
+    title: Tidal Atlas
+    artist_id: lighthouse_collective
+    label_id: coastal_tapes
+    genre_id: psych
+    year: 2019
+    is_live: false
+
+  dawn_cassette:
+    title: Dawn Cassette
+    artist_id: lighthouse_collective
+    label_id: coastal_tapes
+    genre_id: psych
+    year: 2022
+    is_live: false
+
+  factory_lullabies:
+    title: Factory Lullabies
+    artist_id: nine_thirty_west
+    label_id: iron_pulse
+    genre_id: punk
+    year: 2012
+    is_live: false
+
+  last_train_to_dawn:
+    title: Last Train to Dawn
+    artist_id: nine_thirty_west
+    label_id: iron_pulse
+    genre_id: punk
+    year: 2015
+    is_live: false
+
+  live_at_the_garage:
+    title: Last Train - Live at the Garage
+    artist_id: nine_thirty_west
+    label_id: iron_pulse
+    genre_id: punk
+    year: 2016
+    is_live: true
+
+  graphite_summer:
+    title: Graphite Summer
+    artist_id: amber_ghost
+    label_id: amber_records
+    genre_id: post_punk
+    year: 2008
+    is_live: false
+
+  winter_in_the_machine:
+    title: Winter in the Machine
+    artist_id: amber_ghost
+    label_id: amber_records
+    genre_id: post_punk
+    year: 2014
+    is_live: false

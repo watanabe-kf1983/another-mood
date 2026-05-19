@@ -1,0 +1,74 @@
+artists:
+  midori_circuit:
+    name: Midori Circuit
+    country: Japan
+    formed_year: 2014
+    bio: A Tokyo-based duo who build patient techno out of field recordings made on overnight commuter trains.
+    members:
+      aoi:
+        name: Aoi Takeda
+        instrument: synthesizers
+      rin:
+        name: Rin Sato
+        instrument: drum machines
+
+  lighthouse_collective:
+    name: Lighthouse Collective
+    country: Portugal
+    formed_year: 2017
+    bio: A Lisbon five-piece whose psychedelic guitar suites are recorded almost entirely in coastal cottages over long weekends.
+    members:
+      pedro:
+        name: Pedro Ribeiro
+        instrument: guitar
+      ines:
+        name: Ines Costa
+        instrument: vocals
+      joao:
+        name: Joao Mendes
+        instrument: bass
+      sofia:
+        name: Sofia Almeida
+        instrument: drums
+      miguel:
+        name: Miguel Faria
+        instrument: keys
+
+  nine_thirty_west:
+    name: Nine-Thirty West
+    country: United States
+    formed_year: 2009
+    bio: A Detroit punk trio whose songs rarely cross the three-minute mark and almost always end on a slammed-shut door.
+    members:
+      casey:
+        name: Casey Rourke
+        instrument: vocals
+      dani:
+        name: Dani Park
+        instrument: guitar
+      leon:
+        name: Leon Bishop
+        instrument: drums
+
+  amber_ghost:
+    name: Amber Ghost
+    country: Germany
+    formed_year: 2003
+    bio: A Berlin post-punk outfit known for long-form ballads built around analogue synth drones and brittle baritone vocals.
+    members:
+      klaus:
+        name: Klaus Reichert
+        instrument: vocals
+      anke:
+        name: Anke Voss
+        instrument: synthesizers
+      tobi:
+        name: Tobi Lang
+        instrument: drums
+
+  vacant_canvas:
+    name: Vacant Canvas
+    country: Iceland
+    formed_year: 2021
+    bio: A Reykjavik quartet still working toward a debut release; their roster entry is intentionally light - no released albums and no settled line-up yet.
+    members: {}

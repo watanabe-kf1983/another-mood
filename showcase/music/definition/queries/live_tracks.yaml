@@ -1,0 +1,10 @@
+# Tracks whose title contains ``Live`` - exercises ``where: contains``.
+# Surfaces the live takes regardless of which album they sit on.
+live_tracks:
+  from: tracks
+  where:
+    title: { contains: Live }
+  select:
+    - item: id
+    - item: title
+    - item: album_id

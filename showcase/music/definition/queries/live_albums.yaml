@@ -1,0 +1,11 @@
+# Albums whose id starts with ``live_`` - exercises ``where: startswith``.
+# The naming convention picks out concert recordings without referring to
+# the ``is_live`` flag.
+live_albums:
+  from: albums
+  where:
+    id: { startswith: live_ }
+  select:
+    - item: id
+    - item: title
+    - item: year

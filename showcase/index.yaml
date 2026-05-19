@@ -1,5 +1,5 @@
 blueprints:
   - name: starter
     description: Minimal sample with members and roles, the easiest entry point.
-  - name: ecommerce
-    description: Worked example modelling an e-commerce catalog with entities, relations, prose, queries, and templates.
+  - name: music
+    description: Worked example modelling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises grouping, joins, multi-join chains, intrinsic flatten, self-referencing entities, and prose alongside structured data.
