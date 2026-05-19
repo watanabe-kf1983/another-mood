@@ -5,14 +5,19 @@ properties:
     type: object
     additionalProperties:
       type: object
+      description: One member of the team or community covered by this starter project.
       additionalProperties: false
       properties:
         name:
           type: string
+          description: Display name of the member.
         role:
           type: string
+          description: Role the member fills (e.g. "engineer", "designer").
         active:
           type: boolean
+          description: Whether the member is currently active. Used by the `active_members` query as the filter key.
         description:
           type: string
+          description: Short prose blurb shown on the member's detail page.
       required: [name, role]
