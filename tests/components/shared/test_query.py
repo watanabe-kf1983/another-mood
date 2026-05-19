@@ -21,7 +21,6 @@ from another_mood.components.shared.query import (
     SelectItem,
     Sort,
     Where,
-    parse_query,
 )
 from another_mood.components.shared.record_predicate import (
     FieldPredicate,
@@ -39,10 +38,10 @@ def _catalog(yaml_text: str) -> list[dc.Entity]:
 def _parse_query_yaml(yaml_text: str) -> Query:
     """Load YAML, normalize, and parse — mirrors the production path
     where ``query_deriver`` runs ``normalize_query`` before
-    ``parse_query`` sees the record.
+    ``Query.from_dict`` sees the record.
     """
     raw: dict[str, object] = YAML(typ="safe").load(yaml_text)  # type: ignore[no-untyped-call]
-    return parse_query(normalize_query({"id": "q", **raw}))
+    return Query.from_dict(normalize_query({"id": "q", **raw}))
 
 
 class TestFrom:
@@ -74,7 +73,6 @@ _TOP_LEVEL_TASKS_CATALOG_YAML = """
       - { id: title, type: string, required: true }
       - { id: phase, type: integer, required: true }
 """
-
 
 _TASKS_CATALOG_YAML = """
 - id: categories
@@ -248,6 +246,13 @@ class TestFlattenDerive:
             Flatten(of="tasks", as_="title").derive(categories)
 
 
+class TestFlattenFromDict:
+    def test_lifts_canonical_mapping(self) -> None:
+        assert Flatten.from_dict(
+            {"of": "tasks", "as": "task", "preserve_empty": True}
+        ) == Flatten(of="tasks", as_="task", preserve_empty=True)
+
+
 _CATS_TASKS_CATALOG_YAML = """
 - id: cats
   item_type:
@@ -417,6 +422,56 @@ class TestJoin:
         assert "task.id" in attrs
 
 
+class TestJoinFromDict:
+    def test_basic(self) -> None:
+        assert Join.from_dict(
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+        ) == Join(
+            right=Query(from_=From(name="tasks")),
+            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+        )
+
+    def test_without_where_leaves_right_subquery_passthrough(self) -> None:
+        join = Join.from_dict(
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+        )
+        assert join.right.where == PassThrough()
+
+    def test_without_flatten_leaves_join_flatten_none(self) -> None:
+        join = Join.from_dict(
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+        )
+        assert join.flatten is None
+
+    def test_wires_inline_flatten(self) -> None:
+        join = Join.from_dict(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": "tasks",
+                "flatten": {"of": "tasks", "as": "task", "preserve_empty": True},
+            }
+        )
+        assert join.flatten == Flatten(of="tasks", as_="task", preserve_empty=True)
+
+    def test_wires_pre_join_where(self) -> None:
+        """``join[].where:`` becomes the right sub-Query's ``where``;
+        no special handling on ``Join`` itself."""
+        join = Join.from_dict(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": "tasks",
+                "where": {"open": True},
+            }
+        )
+        assert join.right.where == Where(
+            predicate=FieldPredicate(
+                key_path="open", operator=Operator.EQ, target=True
+            ),
+        )
+
+
 class TestWhere:
     """Pipeline wrapper around a :class:`RecordPredicate`."""
 
@@ -451,6 +506,16 @@ class TestWhere:
         )
         with pytest.raises(dc.UnknownChildError, match="nonexistent"):
             where.derive(leaf)
+
+
+class TestWhereFromDict:
+    def test_wraps_parsed_predicate(self) -> None:
+        """``Where.from_dict`` delegates the predicate AST construction
+        to :func:`parse_record_predicate`; detailed AST shape per input
+        is covered in ``test_record_predicate.TestParseRecordPredicate``."""
+        assert Where.from_dict({"x": 1}) == Where(
+            predicate=FieldPredicate(key_path="x", operator=Operator.EQ, target=1),
+        )
 
 
 class TestGrouped:
@@ -573,6 +638,18 @@ class TestSelectDerive:
                   - { id: id, type: integer, required: true }
                   - { id: title, type: string, required: true }
             """
+        )
+
+
+class TestSelectFromDict:
+    def test_lifts_items(self) -> None:
+        assert Select.from_dict(
+            [{"item": "category", "as": "id"}, {"item": "category", "as": "category"}]
+        ) == Select(
+            items=[
+                SelectItem(item="category", as_="id"),
+                SelectItem(item="category", as_="category"),
+            ]
         )
 
 
@@ -1113,96 +1190,58 @@ class TestQueryDeriveErrorTranslation:
         assert exc_info.value.offender == "phase"
 
 
-class TestParseQuery:
+class TestQueryFromDict:
     def test_full_query(self) -> None:
-        raw = {
-            "from": "entities",
-            "grouped": {"by": "category", "as": "items"},
-            "select": [
-                {"item": "category", "as": "id"},
-                {"item": "category", "as": "category"},
-            ],
-        }
-        assert parse_query(raw) == Query(
-            select=Select(
-                items=[
-                    SelectItem(item="category", as_="id"),
-                    SelectItem(item="category", as_="category"),
-                ]
-            ),
-            from_=From(name="entities"),
-            grouped=Grouped(by="category", as_="items"),
-        )
-
-    def test_from_dotted_id_is_carried_verbatim(self) -> None:
-        raw = {
-            "from": "__definition.entities",
-            "select": [{"item": "id", "as": "id"}],
-        }
-        assert parse_query(raw).from_ == From(name="__definition.entities")
-
-    def test_without_grouped(self) -> None:
+        """All clauses present: ``Query.from_dict`` assembles every
+        clause into the final Query dataclass.  Non-default
+        ``direction`` / ``missing`` on ``sort`` cover the enum lookups
+        that Query.from_dict does inline (Sort has no own from_dict)."""
         raw = {
             "from": "items",
-            "select": [{"item": "name", "as": "name"}],
-        }
-        assert parse_query(raw).grouped == PassThrough()
-
-    def test_parses_query_without_select(self) -> None:
-        raw = {"from": "items"}
-        assert parse_query(raw).select == PassThrough()
-
-    def test_parses_where_wraps_in_where(self) -> None:
-        """``parse_query`` wraps the parsed predicate in :class:`Where`;
-        detailed AST shape per input is covered in
-        ``test_record_predicate.TestParseRecordPredicate``."""
-        raw = {
-            "from": "items",
-            "where": {"x": 1},
-            "select": [{"item": "id", "as": "id"}],
-        }
-        assert parse_query(raw).where == Where(
-            predicate=FieldPredicate(key_path="x", operator=Operator.EQ, target=1),
-        )
-
-    def test_parses_query_without_where(self) -> None:
-        raw = {"from": "items", "select": [{"item": "id", "as": "id"}]}
-        assert parse_query(raw).where == PassThrough()
-
-    def test_parses_query_without_flatten(self) -> None:
-        raw = {"from": "items", "select": [{"item": "id", "as": "id"}]}
-        assert list(parse_query(raw).flatten) == []
-
-    def test_parses_flatten_wires_into_query(self) -> None:
-        raw = {
-            "from": "items",
-            "flatten": [{"of": "tasks", "as": "tasks", "preserve_empty": False}],
-            "select": [{"item": "id", "as": "id"}],
-        }
-        assert list(parse_query(raw).flatten) == [Flatten(of="tasks", as_="tasks")]
-
-    def test_parses_query_without_join(self) -> None:
-        raw = {"from": "items", "select": [{"item": "id", "as": "id"}]}
-        assert list(parse_query(raw).join) == []
-
-    def test_parses_join_wires_into_query(self) -> None:
-        raw = {
-            "from": "cats",
+            "flatten": [{"of": "tags", "as": "tag", "preserve_empty": False}],
             "join": [
                 {
-                    "to": "tasks",
-                    "on": {"left": "id", "right": "cat"},
-                    "as": "tasks",
+                    "to": "owners",
+                    "on": {"left": "owner_id", "right": "id"},
+                    "as": "owner",
                 }
             ],
-            "select": [{"item": "id", "as": "id"}],
+            "where": {"open": True},
+            "grouped": {"by": "category", "as": "members"},
+            "select": [{"item": "category", "as": "category"}],
+            "sort": {"by": "category", "direction": "desc", "missing": "first"},
         }
-        assert list(parse_query(raw).join) == [
-            Join(
-                right=Query(from_=From(name="tasks")),
-                merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
-            )
-        ]
+        assert Query.from_dict(raw) == Query(
+            from_=From(name="items"),
+            flatten=(Flatten(of="tags", as_="tag", preserve_empty=False),),
+            join=(
+                Join(
+                    right=Query(from_=From(name="owners")),
+                    merge=Merge(on_left="owner_id", on_right="id", right_as="owner"),
+                ),
+            ),
+            where=Where(
+                predicate=FieldPredicate(
+                    key_path="open", operator=Operator.EQ, target=True
+                ),
+            ),
+            grouped=Grouped(by="category", as_="members"),
+            select=Select(items=[SelectItem(item="category", as_="category")]),
+            sort=Sort(by="category", direction=Direction.DESC, missing=Missing.FIRST),
+        )
+
+    def test_minimal_query_uses_passthrough_for_absent_clauses(self) -> None:
+        """All optional clauses absent: each field defaults to
+        ``PassThrough`` (or an empty tuple for the list-typed
+        clauses)."""
+        query = Query.from_dict({"from": "items"})
+        assert query.from_ == From(name="items")
+        assert tuple(query.flatten) == ()
+        assert tuple(query.join) == ()
+        assert query.where == PassThrough()
+        assert query.grouped == PassThrough()
+        assert query.select == PassThrough()
+        assert query.sort == PassThrough()
 
     def test_parses_join_list_form_multiple_items_preserves_order(self) -> None:
         """List entries become a ``Sequence[Join]`` in declared order;
@@ -1230,22 +1269,12 @@ class TestParseQuery:
             ],
             "select": [{"item": "id", "as": "id"}],
         }
-        joins = list(parse_query(raw).join)
+        joins = list(Query.from_dict(raw).join)
         assert [j.merge.right_as for j in joins] == ["customer", "address"]
         assert [j.merge.on_left for j in joins] == [
             "customer_id",
             "customer.address_id",
         ]
-
-    def test_parses_sort_full(self) -> None:
-        raw = {
-            "from": "items",
-            "select": [{"item": "name", "as": "name"}],
-            "sort": {"by": "name", "direction": "desc", "missing": "first"},
-        }
-        assert parse_query(raw).sort == Sort(
-            by="name", direction=Direction.DESC, missing=Missing.FIRST
-        )
 
 
 def _catalog_name(field_name: str) -> str:
@@ -1266,7 +1295,7 @@ class TestCatalogDriftSuppression:
     PEP 8 trailing-underscore names where the YAML key collides with a
     Python keyword. :func:`_catalog_name` bridges the two.
 
-    ``id`` on a query record is synthesized by ``parse_query`` from the
+    ``id`` on a query record is synthesized by ``Query.from_dict`` from the
     dict-pattern key and has no Query dataclass field — the test
     includes it explicitly in the expected set.
     """

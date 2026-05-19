@@ -20,7 +20,7 @@ from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
-from another_mood.components.shared.query import QueryDeriveError, parse_query
+from another_mood.components.shared.query import Query, QueryDeriveError
 
 _QUERY_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
@@ -117,7 +117,7 @@ def _derive_entities(
     for raw in queries:
         name = cast(str, raw["id"])
         try:
-            derived = dc.flatten_tree(parse_query(raw).derive(catalog), name)
+            derived = dc.flatten_tree(Query.from_dict(raw).derive(catalog), name)
         except QueryDeriveError as exc:
             diagnostics.append(_diagnostic_from(exc))
             continue
