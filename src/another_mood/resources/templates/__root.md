@@ -3,7 +3,7 @@
 ## Entities
 
 {% if __user_entity_roots -%}
-{% for entity in __user_entity_roots | sort(attribute='builtin') -%}
+{% for entity in __user_entity_roots -%}
 - [{{ entity.id }}](__meta_entity/{{ entity.id }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
 {% endfor %}
 {%- else -%}

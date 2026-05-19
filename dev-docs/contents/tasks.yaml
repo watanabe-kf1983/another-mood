@@ -251,10 +251,12 @@ categories:
       F7:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
         note: |
-          詳細は design/app/meta-documentation.md「Query 化リファクタ (F7)」。
-          前提 F8 (カタログ自己記述) と DSL 拡張 (E1, E2, E11, E3 — where / sort / flatten / join)。
+          built-in テンプレートで DSL に寄せられる集計は寄せ、tree descent
+          (子孫マッチ / walk_entity) はテンプレート / Python ヘルパに残す住み分けに
+          落ち着いた。詳細は design/app/meta-documentation.md「メタドキュメンテーションの
+          DSL 化境界」。
         phase: 10
-        proposal: design/app/meta-documentation.md#query-化リファクタ-f7
+        done: true
       F8:
         title: __definition の自己記述カタログを built-in に追加
         note: |

@@ -74,7 +74,7 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### 自己記述カタログ (`__definition.*`)
 
-データカタログ自体を `__definition.entities` / `__definition.queries` という built-in entity として登録し、クエリ DSL から `from: __definition.*` で walk 可能にしている。F7 (テンプレート Query 化リファクタ) がメタドキュメンテーションを自前の DSL で組み立てるための足場。
+データカタログ自体を `__definition.entities` / `__definition.queries` という built-in entity として登録し、クエリ DSL から `from: __definition.*` で walk 可能にしている。built-in メタドキュメンテーションテンプレートが自分のメタデータを自分の DSL から読めるようにするための足場。
 
 各 catalog dataclass (`Entity` / `Attribute` / `Query` / `SelectItem`) が自身の `catalog()` classmethod で構造を Node 形式で返し、呼び出し側 (`inspect_schema._emit_definition_catalog`) が `to_flat(root_name)` で id を割り当てて `builtin=True` を付与し、`out_dir/__builtin/__definition.yaml` に書き出す。データクラス自身は namespace 内の自分の位置を知らない。
 
@@ -82,24 +82,18 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 `composer` 側の `sources` は 3 上流出力 (normalize_contents, inspect_schema, derive_queries) の deep-merge で組まれており、`__definition.entities` レコードはスキーマ宣言として上流ステージで使われると同時に、ここでは `From.apply` の walk 対象としても機能する (= データ / スキーマの双役)。
 
+### メタドキュメンテーションの DSL 化境界
+
+built-in メタドキュメンテーション (`__meta_entity` / `__table_view` / `__meta_query`) では、tabular な leaf 操作のみを Query DSL に持ち出し (`__entity_roots` / `__user_entity_roots` / `__user_queries` がそれ)、entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
+
+#### 背景
+
+メタカタログは `parent_entity` リンクのツリーで、relational/tabular な DSL とは噛み合わない。ツリー descent を DSL で表現するには SQL の `WITH RECURSIVE` や Cypher のパス構文相当 (推移閉包 / 非 equi join) が要り、YAML DSL に押し込むと確実に式言語的な異物になる。
+
+leaf データの集計・整形は DSL の母語、tree descent は Python (Jinja2 フィルタ) の母語、という住み分けに留めるのが、DSL の単純さとテンプレートの可読性の両方に効く。
+
 ## Proposals
 
 ### ER 図 (F4)
 
 Phase 10 タスク [F4](../../../tasks.md)。前提 D, E3, Mermaid エスケープ。
-
-### Query 化リファクタ (F7)
-
-> **未実装** — Phase 10 タスク [F7](../../../tasks.md)。前提とする E1〜E4 (where / sort / join) の DSL 拡張は未実装、[F8](../../../tasks.md) (カタログ自己記述) は実装済み。
-
-現在の `__meta_entity` / `__table_view` / `__meta_query` テンプレートは Jinja2 内に `rejectattr('view')`, `startswith` による子孫マッチ, `type == 'object'` 除外といった集計ロジックを抱え複雑化している。
-
-これらを Query DSL 側に移し、テンプレートは Query 結果をテーブルに流すだけの薄いラッパに退化させたい。F8 で `__definition.*` が catalog に登録され `from:` で読めるようになったので、土台は揃っている。同時に本ツール自身のメタドキュメンテーションを自前の DSL で構築できるようになり、dog-fooding の度合いが上がる。
-
-F7 が必要とする最小限の DSL 語彙の見立て:
-
-- `from: __definition.entities` — カタログ自体を query 源として開く (F8 実装済み)
-- `where` — 等価・null 判定で `view=false` / `parent_entity is null` / `type != 'object'` 等を表現 (E1)
-- 子コレクションへの `where` — `__definition.entities.item_type.attributes` を `from:` に取り、where で属性フィルタを表現することで賄える見込み
-- `sort` — built-in flag 等での並び替え (E2)
-- `join` — entity と view 行の結合 (現在の `__views | query_from(id)` の置き換え, E3)

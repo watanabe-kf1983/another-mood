@@ -13,3 +13,4 @@ __user_entity_roots:
     - item: id
     - item: builtin
     - item: item_type
+  sort: { by: builtin }
