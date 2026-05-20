@@ -34,7 +34,7 @@
     "claude-code": "npm install -g @anthropic-ai/claude-code",
     "mcp-language-server": "go install github.com/isaacphi/mcp-language-server@latest",
     "ast-grep": "npm install -g @ast-grep/cli",
-    "playwright-deps": "sudo apt-get update && sudo apt-get install -y fonts-noto-cjk && npx -y playwright install chrome"
+    "playwright-deps": "sudo apt-get update && sudo apt-get install -y fonts-noto-cjk && (npx -y playwright install chrome || true) && command -v google-chrome"
   },
 
   "remoteUser": "vscode"
