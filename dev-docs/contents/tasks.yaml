@@ -272,11 +272,18 @@ categories:
       F4b:
         title: ER 図テンプレート — 近傍図
         note: |
-          `__meta_entity/<id>.md` に主役 + descendants + FK out 先を描く
-          近傍図を追加。主役は全属性、隣接 entity はヘッダのみ。
-          主役の attributes 表との重複は実物を見て判断。前提 F4a。
+          `__meta_entity/<id>.md` のタイトル直下に近傍 classDiagram を
+          追加。focus + descendants + focus subtree からの FK out 先を
+          node 集合とし、focus + descendants は全属性 (`*` で required、
+          `[FK]` で x_ref を印付け)、FK out 先はヘッダのみ。composition
+          edge は描画範囲内に両端が揃う親子、association edge は focus
+          subtree → FK out 先 (FK in は描かない)。自己 FK は self-loop。
+          attributes 表との重複は許容 (役割分担あり)。実装は
+          __meta_entity.md テンプレート単体で完結し、新規 built-in
+          query/filter なし。詳細は design/app/meta-documentation.md
+          「`__meta_entity/<id>.md` の近傍 ER 図」。
         phase: 10
-        proposal: design/app/meta-documentation.md#er-図-s1--f4a-f4c
+        done: true
       F4c:
         title: ER 図テンプレート — per-query 図
         note: |

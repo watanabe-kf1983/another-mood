@@ -109,6 +109,42 @@ ObjectType id は `.item` で必ずドット入り (`artists.item`、descendant 
 
 ユーザ-land 領域では id 空間にドットが入らない想定なので、user-land のテンプレートでは alias 化フィルタは不要 (S1 = `showcase/japanese-table-design` で確認済み)。
 
+### `__meta_entity/<id>.md` の近傍 ER 図
+
+各 entity ページの先頭 (タイトル直下、`[→ Entity Data]` リンクの直下) に、focus entity + その descendants + focus subtree が FK 参照する先だけを描く小さな classDiagram を出す。`__root` 全体図と次の点だけ異なる:
+
+| 観点 | `__root` 全体図 (F4a) | `__meta_entity/<id>.md` 近傍図 (F4b) |
+|---|---|---|
+| node 集合 | user 領域 + prose 全体 | focus + focus の descendants + focus subtree からの FK out 先 |
+| 属性表示 | 全 node ヘッダのみ | focus + descendants は全属性、FK out 先はヘッダのみ |
+| composition edge | 全 node 間の親子 | 描画範囲内に両端がある親子のみ |
+| association edge | 両端が node 集合に入る FK | focus subtree から FK out 先への矢印のみ (FK in は描かない) |
+
+#### 背景: 属性行の表記
+
+focus + descendants の属性行は `[*]<id> : <type> [FK]` 形式:
+
+- 先頭 `*`: `required: true` の attribute につける必須印
+- `<type>`: scalar 型は `string` / `integer` / `boolean` 等、child entity を指す attribute は `child_item_type` (例: `テーブル.item.列.item`)
+- 末尾 `[FK]`: `x_ref` を持つ attribute につける外部キー印
+
+Mermaid classDiagram は member 行の verbatim をほぼそのまま描画するため、`*` 接頭辞 (UML の visibility 文字 `+`/`-`/`#`/`~` には属さない) は識別子の一部として通る。S1 / showcase/music の実機検証で、ASCII / 日本語 ID 両方で問題なくレンダリングされることを確認済み。
+
+#### 背景: attribute 表との重複は許容
+
+主役 entity の属性は近傍図にも attributes 表にも出るが、両方とも保持する:
+
+- ER 図: 関係を含めた構造の **視覚的概観** (属性の型は補助情報)
+- attributes 表: `references` 列の隣接 entity ページへのリンク、`validation` / `metadata` 等の **詳細参照** (ER 図に載らない情報を持つ)
+
+役割が分かれており、片方を削ると失われる読者の問いがある。S1 / showcase/music の実機検証でも視覚的にうるさく感じなかったため、いったん両方を残す。
+
+#### 背景: 親 (ancestor) は node 集合に入れない
+
+近傍図は「focus を起点とした下流・外向き」を描く図に揃える。focus の親 entity (= focus subtree の上にいる ancestor) は node 集合に入れない。
+
+ただし `focus.parent_entity` がたまたま FK out 先になっているケース (例: `genres` の `parent_id` が `genres` 自身を指す自己 FK) は、composition edge ではなく association edge の self-loop として描かれる。FK out 先になっていれば node 集合に入り、composition の両端が描画範囲内に揃えば composition edge も描かれる。実装は「composition edge は両端が node 集合 (subtree ∪ FK 先) に揃ったときのみ描く」ルールで自然に処理される。
+
 #### 背景: user-land 先行 / built-in 輸入 (S1 → F4)
 
 ER 図は本ツールの「ユーザ向けの中核ユースケース」(ソフトウェアシステム設計書のテーブル定義から自動的に ERD を描く) でもあるため、built-in メタドキュメンテーションで先に走らせるのではなく user-land で同じことが成立するか ([S1](system-dev-docs.md#s1-テーブル定義--2-種類のスキーマ図-showcasejapanese-table-design)) を先に確認した。built-in 先行だと (a) user-land で再現できない可能性が surface しない、(b) ツール価値提案の検証が遅れる、(c) Unicode / 識別子問題が後出しになる (built-in は catalog id (ASCII) しか扱わないため、日本語識別子下での Mermaid quoting 制約が surface しない)。
@@ -150,25 +186,14 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ## Proposals
 
-### ER 図の追加配置 (F4b / F4c)
+### per-query ER 図 (F4c)
 
-F4a で `__root` 全体図を入れたあとに、近傍図と per-query 図を別配置として段階投入する。基盤 (Mermaid classDiagram 採用、composition/association 区別、`__user_content_entities` クエリ、`mermaid_class_id` フィルタ、edge ラベル/カーディナリティ規約) は F4a で確立しており、External Design の「`__root` の Entity Relationship 図」節を参照。
+`__meta_query/<id>.md` に MS Access のクエリデザインビュー風の ER 図を追加する。基盤 (Mermaid classDiagram 採用、composition/association 区別、`mermaid_class_id` フィルタ、edge ラベル/カーディナリティ規約) は F4a で確立、F4b で「partial node 集合に対する近傍描画」の前例ができている。
 
-| 配置 | nodes | composition edge | association edge | 属性 |
-|---|---|---|---|---|
-| **近傍図** (`__meta_entity/<id>.md`、F4b) | focus + focus の descendants + focus subtree の FK out 先 | 描画範囲内の親子 | focus subtree から FK out 先への矢印のみ (FK in は描かない) | focus + descendants は全属性、FK out 先はヘッダのみ |
-| **per-query 図** (`__meta_query/<id>.md`、F4c) | `{query.from} ∪ {j.to for j in query.join}` (= top-level entity の集合) | nodes 内に親子があれば描く | nodes 内に両端がある FK | なし (ヘッダのみ) |
+node 集合は `{query.from} ∪ {j.to for j in query.join}` (= top-level entity の集合)。composition edge は nodes 内に親子があれば描く、association edge は両端が nodes 内にある FK のみ、属性はヘッダのみ。
 
-#### 近傍図 (F4b) の attribute 表との重複
-
-主役 entity の attributes は `__meta_entity` ページに既に表として出ている。近傍図でも主役を全属性表示するため、同じ情報が二重に出る形になる。**いったんそのまま実装して、実物を見て鬱陶しければ削る**。
-
-#### per-query 図 (F4c) のノード集合が top-level に閉じる理由
+#### ノード集合が top-level に閉じる理由
 
 `From.derive` は `catalog.has_child(name)` で top-level entity のみを引く。`build_tree` は `parent_entity is None` のものしか virtual root の子にしないため、`from: artists.members` のような descendant 直接指定はそもそも build エラーになる。`Join.from_dict` も内部で `From(name=to)` を作って root_catalog 上で derive するので同じ制約に従う。
 
 このため per-query 図のノード集合は `query.from` と `query.join[].to` を素直に union するだけで top-level entity の集合になる。MS Access のクエリデザインビューと同じく「クエリの入り口テーブル群とその間の関係だけ」を示す形に自然に収まる。
-
-#### 近傍図のフィルタ式パターン
-
-tree descent は flat catalog に対する filter で十分書ける (再帰不要)。`entity.id == focus_id or entity.id.startswith(focus_id ~ ".")` で focus + descendants を抽出するパターンは `__meta_entity.md` / `__table_view.md` に既出。per-query 図は `query.from` と `query.join[].to` から id 集合を組み、`__user_content_entities` を引き当てる。
