@@ -126,16 +126,17 @@ categories:
           { entity, attribute? } の構造化形式。辞書キー FK (propertyNames
           パターン) は当面サポート外。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        done: true
       D2:
         title: Schema-Inspector 拡張 — x-ref の収集
         note: |
-          traversal 中に x-ref を収集し、Attribute に x_ref: XRef フィールド
-          として載せる。既存 Attribute.entity / item_type は FK 対象との
-          混同を避けるため child_entity / child_item_type に改名。
-          Attribute.catalog にも x_ref の三辺を追加し DSL から参照可能にする。
+          traversal 中に x-ref を収集し、Attribute.x_ref: XRef として catalog
+          に反映。既存 Attribute.entity / item_type は混同回避のため
+          child_entity / child_item_type に改名。XRef.attribute は catalog
+          層で常に文字列として解決済み (省略時は SchemaTree → DataCatalog
+          境界で "id" を補う)。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        done: true
       D3:
         title: Schema-level コヒーレンスチェック
         note: |
@@ -143,31 +144,34 @@ categories:
           参照先がトップレベル entity のみ / type: array 参照時の attribute
           必須を検証。違反は build エラー (JSON Schema 違反と同等)。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d3-d5-d7
       D4:
         title: showcase/music への x-ref 適用
-        note: 動作確認用の入出力例
+        note: |
+          showcase/music スキーマの 7 FK を x-ref で宣言。__meta_entity
+          テンプレートに references 列を追加し、target entity 名を meta
+          ページへのリンクとして描画。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        done: true
       D5:
         title: docs/reference 同期
         note: schema.md 等に x-ref キーワードの仕様を反映
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d3-d5-d7
       D6:
         title: Data-level FK 整合性検査
         note: |
           各データ値が target 集合 (辞書キー集合 or 指定 attribute の値集合)
           に属するかを normalizer / validator で照合。違反は warning レベル。
         phase: 11
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d3-d5-d7
       D7:
         title: 警告インフラ
         note: |
           BuildReport の warning フィールド、output/__meta_*/ 配下の診断ページ、
           CLI --strict フラグの exit code 制御。D6 を表出するチャネル群。
         phase: 11
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d3-d5-d7
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
