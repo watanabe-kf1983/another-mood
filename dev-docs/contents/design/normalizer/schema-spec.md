@@ -104,7 +104,9 @@ schema-level の不整合は data の読み込み以前に build を止める。
 
 「TBD だらけの要件定義フェーズに data-level 警告が大量に出てうるさい」懸念は、`x-ref` 自体が property 単位の opt-in であることで自然に解消される。整備が進んだプロパティに `x-ref` を足していけば、足した分だけ検査が始まる。
 
-> 現状の実装範囲: meta-schema 受理と catalog 反映までは動く。schema-level coherence チェックと data-level 検査 + 警告インフラは未実装 — `## Proposals` を参照。
+x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (現状は `prose`) のみ。catalog メタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
+
+> 現状の実装範囲: meta-schema 受理、catalog 反映、schema-level coherence チェックまで動く。data-level 検査 + 警告インフラは未実装 — `## Proposals` を参照。
 
 #### この宣言が果たす役割
 
@@ -167,26 +169,9 @@ properties:
 
 ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
 
-### 参照整合性制約: x-ref (D3, D5-D7)
+### 参照整合性制約: x-ref (D5-D7)
 
-> Phase 10 残作業は **D3** (schema-level コヒーレンスチェック) と **D5** (docs/reference 同期)。Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
-
-#### D3: schema-level コヒーレンスチェック
-
-検査本体はカタログ層で 2 つに統合できる:
-
-1. **target 存在検査** — `x_ref.entity` が `parent_entity is None` の entity に id 一致するか
-2. **target 属性存在検査** — target ObjectType の `attributes` に `x_ref.attribute` 名が含まれるか
-
-仕様の「`type: array` 参照時は `attribute:` 必須」は、`XRef.attribute` が catalog 層で常に文字列に解決済みであるため (2) に統合される (`type: array` の target で `id` を attribute として定義していなければ、暗黙の "id" が見つからずエラーになる)。
-
-Diagnostic の source position は preprocess の `source_loader` モジュールが提供する `UserStr` タグを利用する:
-
-- `_emit_catalog_file` は `parse_yaml(schema_file)` でスキーマを読み込む。スカラー文字列値が `UserStr` (= `str` + `Location`) に昇格する
-- `_to_xref` 内で `attribute:` 省略時に生成する暗黙のデフォルト `"id"` は、`entity:` 値の `Location` を継承する `UserStr("id", ...)` として作る。これにより、暗黙 FK の attribute 不在エラーは `entity:` の行を指すようになる
-- coherence check 側は `XRef.entity` / `XRef.attribute` が `UserStr` であれば `Location` から `Diagnostic` の line/column を埋め、そうでなければファイル単位の Diagnostic にフォールバック
-
-未決: target が nested entity (`parent_entity` が non-None) を指している場合と、そもそも存在しない場合のメッセージを分けるかどうか。
+> Phase 10 残作業は **D5** (docs/reference 同期)。Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
 
 #### Phase 11+: data-level (D6, D7)
 

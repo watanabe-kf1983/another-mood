@@ -11,18 +11,16 @@ from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 
-import yaml
-
 from another_mood.components.preprocess.schema_tree import (
     ObjectNode,
     build_schema_tree,
     collect_entities,
 )
-from another_mood.components.preprocess.source_loader import parse_yaml
+from another_mood.components.preprocess.source_loader import UserStr, parse_yaml
 from another_mood.components.preprocess.validator import Validator
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
 from another_mood.components.shared.query import Query
 
@@ -40,14 +38,22 @@ _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
 def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     """Validate the user schema file and extract a data catalog."""
     check_schema(schema_file)
-    _emit_catalog_file(schema_file, out_dir / schema_file.name)
 
-    # Emit the built-in contents schema (prose) so its entities
-    # appear in meta-documentation alongside user-defined schemas.
-    _emit_catalog_file(
-        _BUILTIN_CONTENTS_SCHEMA_FILE,
-        out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name,
-        builtin=True,
+    user_entities = _extract_from_file(schema_file)
+    prose_entities = _extract_from_file(_BUILTIN_CONTENTS_SCHEMA_FILE, builtin=True)
+
+    # __definition.* (emitted below) is intentionally not in valid_targets:
+    # references to catalog metadata are not a meaningful FK relation.
+    diagnostics = check_xref_coherence(
+        user_entities,
+        valid_targets=[*user_entities, *prose_entities],
+    )
+    if diagnostics:
+        raise FileValidationError(diagnostics=diagnostics)
+
+    _write_catalog(user_entities, out_dir / schema_file.name)
+    _write_catalog(
+        prose_entities, out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name
     )
 
     # Emit the self-description catalog so queries can read the catalog
@@ -56,10 +62,14 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     _emit_definition_catalog(out_dir / "__builtin" / "__definition.yaml")
 
 
-def _emit_catalog_file(schema_file: Path, dst: Path, *, builtin: bool = False) -> None:
-    """Extract data catalog from a single schema file and write it to dst."""
-    schema = yaml.safe_load(schema_file.read_text(encoding="utf-8"))
-    entities = extract_entities(schema, builtin=builtin)
+def _extract_from_file(
+    schema_file: Path, *, builtin: bool = False
+) -> Sequence[dc.Entity]:
+    schema = parse_yaml(schema_file)
+    return extract_entities(schema, builtin=builtin)
+
+
+def _write_catalog(entities: Sequence[dc.Entity], dst: Path) -> None:
     if entities:
         catalog = {"entities": [e.to_dict() for e in entities]}
         save_model(dst, {"__definition": catalog})
@@ -114,3 +124,61 @@ def extract_entities(
 def build_schema_validator() -> Validator:
     """Build a Validator for the user schema file (against built-in SchemaSchema)."""
     return Validator(load_model(_SCHEMA_SCHEMA_FILE))
+
+
+def check_xref_coherence(
+    entities: Sequence[dc.Entity],
+    *,
+    valid_targets: Sequence[dc.Entity],
+) -> Sequence[Diagnostic]:
+    """Diagnose x-refs whose entity/attribute target is absent from ``valid_targets``."""
+    target_index: Mapping[str, frozenset[str]] = {
+        e.id: frozenset(a.id for a in e.item_type.attributes)
+        for e in valid_targets
+        if e.parent_entity is None
+    }
+    return [
+        diag
+        for entity in entities
+        for attr in entity.item_type.attributes
+        if attr.x_ref is not None
+        for diag in _xref_diagnostics(attr.x_ref, target_index)
+    ]
+
+
+def _xref_diagnostics(
+    x_ref: dc.XRef,
+    target_index: Mapping[str, frozenset[str]],
+) -> Sequence[Diagnostic]:
+    if x_ref.entity not in target_index:
+        return [
+            _xref_diagnostic(
+                x_ref.entity,
+                f"x-ref target entity '{x_ref.entity}' not found",
+            )
+        ]
+    if x_ref.attribute not in target_index[x_ref.entity]:
+        return [
+            _xref_diagnostic(
+                x_ref.attribute,
+                f"x-ref target attribute '{x_ref.entity}.{x_ref.attribute}' not found",
+            )
+        ]
+    return []
+
+
+def _xref_diagnostic(value: str, message: str) -> Diagnostic:
+    """Build a Diagnostic from a UserStr-tagged offender."""
+    if not isinstance(value, UserStr):
+        raise RuntimeError(
+            f"x-ref offender {value!r} is not UserStr-tagged; "
+            "the catalog must be built via parse_yaml so source positions are available"
+        )
+    location = value.location
+    return Diagnostic(
+        file=location.file,
+        line=location.line,
+        column=location.column,
+        message=message,
+        source="x-ref",
+    )

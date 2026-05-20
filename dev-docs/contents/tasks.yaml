@@ -140,11 +140,14 @@ categories:
       D3:
         title: Schema-level コヒーレンスチェック
         note: |
-          x-ref.entity の存在 / x-ref.attribute の target ObjectType 内存在 /
-          参照先がトップレベル entity のみ / type: array 参照時の attribute
-          必須を検証。違反は build エラー (JSON Schema 違反と同等)。
+          x-ref.entity / x-ref.attribute を catalog 層で検証する build エラーを
+          schema_inspector に追加。target スコープはユーザ entity + 内蔵 prose の
+          トップレベル群 (__definition.* は除外)。type: array 参照時の attribute
+          必須は、暗黙の "id" が target attribute に見つからないという形で
+          attribute 検査に統合される。Diagnostic の line/column は parse_yaml の
+          UserStr Location から復元する。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d3-d5-d7
+        done: true
       D4:
         title: showcase/music への x-ref 適用
         note: |
