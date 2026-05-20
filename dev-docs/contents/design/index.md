@@ -35,3 +35,4 @@
 - [config-spec.md](app/config-spec.md) — 設定システムの設計判断と未実装 config キー（CLI / 環境変数 / 設定ファイル / パス制約）
 - [mcp-design.md](app/mcp-design.md) — MCP の設計判断（External + Internal、各種背景）
 - [meta-documentation.md](app/meta-documentation.md) — メタドキュメンテーション（ツール自身の可視化）
+- [system-dev-docs.md](app/system-dev-docs.md) — システム開発ドキュメント（S カテゴリ、ユーザ-authored 設計書 artifact 群）
