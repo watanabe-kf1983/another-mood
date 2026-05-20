@@ -58,12 +58,12 @@
 ### Type: {{ entity.item_type.id }}
 
 {% if entity.item_type.attributes -%}
-| id | type | required | metadata | validation |
-|----|------|----------|----------|------------|
+| id | type | required | validation | metadata |
+|----|------|----------|------------|----------|
 {% for attribute in entity.item_type.attributes -%}
 {%- set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" -%}
 {%- set type_cell = "`" ~ (attribute.child_item_type or attribute.type) ~ array_suffix ~ "`" -%}
-| `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} |
+| `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} |
 {% endfor -%}
 {%- else -%}
 (no attributes)

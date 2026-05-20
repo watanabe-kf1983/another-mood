@@ -68,6 +68,8 @@ properties:
         parent_id:
           type: string
           description: Id of the parent genre. Omitted for top-level genres.
+          x-ref:
+            entity: genres
       required: [name]
 
   albums:
@@ -83,12 +85,18 @@ properties:
         artist_id:
           type: string
           description: Id of the artist who released this album.
+          x-ref:
+            entity: artists
         label_id:
           type: string
           description: Id of the label that released this album.
+          x-ref:
+            entity: labels
         genre_id:
           type: string
           description: Id of the album's primary genre.
+          x-ref:
+            entity: genres
         year:
           type: integer
           description: Year of release.
@@ -110,6 +118,8 @@ properties:
         album_id:
           type: string
           description: Id of the album this track appears on.
+          x-ref:
+            entity: albums
         track_no:
           type: integer
           description: Position of the track within the album, 1-indexed.
@@ -146,9 +156,13 @@ properties:
         playlist_id:
           type: string
           description: Id of the playlist this entry belongs to.
+          x-ref:
+            entity: playlists
         track_id:
           type: string
           description: Id of the track included in the playlist.
+          x-ref:
+            entity: tracks
         position:
           type: integer
           description: 1-indexed playback position within the playlist.
