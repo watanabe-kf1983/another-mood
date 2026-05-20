@@ -2,33 +2,6 @@
 
 ## External Design
 
-### コンポジション vs 集約
-
-YAML はツリー構造を持てるため、1:N の子オブジェクトを必ずしも別スキーマに切り出す必要はない。判断基準は「親を消したら子も消えるか」:
-
-- **コンポジション**（消える）→ ネスト。入れ子の `additionalProperties` も正規化される
-- **集約**（消えない）→ 別スキーマ + キー参照（references で定義）
-
-```yaml
-# コンポジション: 画面の中のボタンは画面と一体
-user-screen:
-  title: ユーザー画面
-  buttons:
-    save:
-      label: 保存
-      action: save
-    cancel:
-      label: キャンセル
-      action: cancel
-
-# 集約: 注文が参照するユーザーは独立して存在
-order-001:
-  title: 注文A
-  customer: tanaka       # 別スキーマ（users）へのキー参照
-```
-
-コンポジションの関係にあるオブジェクトは FK として被参照されない。したがって references の参照先はトップレベルスキーマのみで十分。
-
 ### 背景: OpenAPI のスキーマモデルとの違い
 
 OpenAPI は API 通信プロトコルを記述するため、エンドポイントを流れる**色々な切れ端**それぞれに対応する名前付き型を `components.schemas` に並べる（各エンドポイントから `$ref` で参照する形）。
@@ -63,19 +36,9 @@ albums:
           attribute: name           # 明示プロパティ参照
 ```
 
-#### 構文規則
-
-- `entity:` 必須 — トップレベル entity 名
-- `attribute:` 省略可 — 省略時は「target が辞書キーパターン (`additionalProperties`) の暗黙 .id」を参照する省略形
-- 参照先が `type: array` の entity の場合は `attribute:` 必須 (暗黙の id がないため)
-- **参照先はトップレベル entity のみ**。ネストパス (`screens.buttons.save` 等) はサポートしない。コンポジション内の入れ子オブジェクトが被参照される必要が出たら、別 entity に切り出すべきサイン
-
 #### 書ける位置
 
-| 位置 | 可否 | 意味 |
-|---|---|---|
-| プロパティ宣言の直下 | OK | 単一値 FK |
-| `items:` の直下 | NG (meta-validation エラー) | スカラー配列要素の FK。当面サポートしない (後述) |
+プロパティ宣言の直下にだけ x-ref を書ける。`items:` 直下 (スカラー配列要素の FK) は meta-schema エラーで拒否し、辞書キー自体に FK を付けるパターン (`propertyNames` に x-ref) もサポートしない。理由は以下のとおり:
 
 `items:` 直下の `x-ref` を明示エラーにする理由は、現状のデータカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、catalog 構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo は catalog 上で attribute として現れるため)。
 
@@ -106,8 +69,6 @@ schema-level の不整合は data の読み込み以前に build を止める。
 
 x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (現状は `prose`) のみ。catalog メタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
 
-> 現状の実装範囲: meta-schema 受理、catalog 反映、schema-level coherence チェックまで動く。data-level 検査 + 警告インフラは未実装 — `## Proposals` を参照。
-
 #### この宣言が果たす役割
 
 1. **ER 図の自動生成** — references からリレーションを読み取り、Mermaid ER 図を描画 ([F4](../../../tasks.md))
@@ -115,6 +76,10 @@ x-ref target の許容範囲: ユーザスキーマで宣言された top-level 
 3. **影響分析** — 被参照キーを変更しようとした際に「どこから参照されているか」を逆引きで特定できる
 4. **リネーム支援** — references に基づいて参照箇所を列挙し、一括置換の漏れを検証できる
 5. **(将来) 参照整合性検証** — data-level の dangling 参照を `--strict` 連動で警告
+
+#### 背景: なぜ参照先を top-level entity のみに限定したか
+
+x-ref の `entity:` フィールドは top-level entity しか受け付けない。コンポジション (ネスト構造で表現される 1:N) の関係にあるオブジェクトは、定義上、親と一体で扱われるため独立した FK 被参照対象にならない。逆に、ネスト先のオブジェクトが他から参照されるニーズが surface したら、それはコンポジションではなく集約として別 entity に切り出すべきサインで、ネストパス (`screens.buttons.save` 等) を target にする構文拡張ではなく、データモデル側の修正で対応する。
 
 #### 背景: なぜ property 側に置くか
 
@@ -169,9 +134,9 @@ properties:
 
 ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
 
-### 参照整合性制約: x-ref (D5-D7)
+### 参照整合性制約: x-ref (D6-D7)
 
-> Phase 10 残作業は **D5** (docs/reference 同期)。Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
+> Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
 
 #### Phase 11+: data-level (D6, D7)
 
