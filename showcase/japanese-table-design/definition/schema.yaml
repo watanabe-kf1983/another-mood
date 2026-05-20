@@ -1,0 +1,71 @@
+type: object
+additionalProperties: false
+properties:
+  型対応:
+    type: object
+    description: "設計対象システムで用いる DDL 型とドメイン層の型の対応辞書。マップのキーが DDL 表記そのもの (例: VARCHAR(16)) で、列の `型` から x-ref で参照される。"
+    additionalProperties:
+      type: object
+      description: DDL 表記 1 つに対応する型エントリ。
+      additionalProperties: false
+      properties:
+        ドメイン型:
+          type: string
+          description: "設計書のドメインモデル上で扱う論理型 (例: string, integer)。"
+        Python型:
+          type: string
+          description: "Python 実装上で割り当てる型 (例: str, int, datetime.date)。"
+      required: [ドメイン型, Python型]
+
+  テーブル:
+    type: object
+    description: 設計対象システムを構成するテーブルの集合。各テーブルはマップのキー (テーブル ID) で識別する。
+    additionalProperties:
+      type: object
+      description: 設計対象システムの 1 つのテーブルを表すレコード。
+      additionalProperties: false
+      properties:
+        名前:
+          type: string
+          description: 設計書に掲載する表示名。
+        説明:
+          type: string
+          description: テーブルの役割を 1〜2 文で説明する短い文章。
+        列:
+          type: array
+          description: テーブルが持つ列の一覧。並び順は設計書での掲載順。
+          items:
+            type: object
+            description: テーブル内の 1 つの列の定義。
+            additionalProperties: false
+            properties:
+              名前:
+                type: string
+                description: 列名。設計書に掲載する表示名で、ID も兼ねる。
+              型:
+                type: string
+                description: "列のデータ型を SQL 風に表記したもの (例: INTEGER, VARCHAR(255), DATE)。型対応 entity への参照キー。"
+                x-ref:
+                  entity: 型対応
+              必須:
+                type: boolean
+                description: NOT NULL 制約があるかどうか。省略時は false 扱い。
+              主キー:
+                type: boolean
+                description: この列が主キーを構成するかどうか。省略時は false 扱い。
+              参照:
+                type: object
+                description: 外部キー参照。別テーブルの列を指す。
+                additionalProperties: false
+                properties:
+                  テーブル:
+                    type: string
+                    description: 参照先テーブルの ID。
+                    x-ref:
+                      entity: テーブル
+                  列:
+                    type: string
+                    description: 参照先テーブル内の列名。
+                required: [テーブル, 列]
+            required: [名前, 型]
+      required: [名前, 列]

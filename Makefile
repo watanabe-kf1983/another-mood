@@ -21,6 +21,7 @@ build-projects:
 	uv run mood build dev-docs
 	uv run mood build showcase/starter
 	uv run mood build showcase/music
+	uv run mood build showcase/japanese-table-design
 
 format:
 	uv run ruff format .

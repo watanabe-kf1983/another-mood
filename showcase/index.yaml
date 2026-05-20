@@ -3,3 +3,5 @@ blueprints:
     description: Minimal sample with members and roles, the easiest entry point.
   - name: music
     description: Worked example modelling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises grouping, joins, multi-join chains, intrinsic flatten, self-referencing entities, and prose alongside structured data.
+  - name: japanese-table-design
+    description: System-design-document showcase modelling a small bookstore inventory in Japanese (top-level entity, property names, data values, and descriptions are all Japanese). Demonstrates authoring a table-design document with auto-generated ERD via Mermaid classDiagram and erDiagram, drawn from a user-authored data file rather than a built-in catalog.

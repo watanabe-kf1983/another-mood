@@ -1,0 +1,22 @@
+型対応:
+  "VARCHAR(16)":
+    ドメイン型: string
+    Python型: str
+  "VARCHAR(20)":
+    ドメイン型: string
+    Python型: str
+  "VARCHAR(60)":
+    ドメイン型: string
+    Python型: str
+  "VARCHAR(120)":
+    ドメイン型: string
+    Python型: str
+  "VARCHAR(255)":
+    ドメイン型: string
+    Python型: str
+  INTEGER:
+    ドメイン型: integer
+    Python型: int
+  DATE:
+    ドメイン型: date
+    Python型: datetime.date
