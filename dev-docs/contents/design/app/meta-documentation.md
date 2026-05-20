@@ -94,6 +94,148 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ## Proposals
 
-### ER 図 (F4)
+### ER 図 (F4a-F4c)
 
-Phase 10 タスク [F4](../../../tasks.md)。前提 D, E3, Mermaid エスケープ。
+Phase 10 タスク [F4a](../../../tasks.md) / [F4b](../../../tasks.md) / [F4c](../../../tasks.md)。前提 D, E11, E3。3 配置 × インクリメンタル投入。
+
+#### 描画記法: classDiagram (ER 図でなく)
+
+Mermaid `erDiagram` ではなく `classDiagram` 構文で描く。「ER 図」というユーザ向けの呼称はそのまま使う (読者の探し方は "ER 図" / "schema diagram" であり、内部構文は実装詳細)。
+
+##### 背景: なぜ classDiagram か
+
+理由は 2 つ:
+
+1. **視覚密度** — `erDiagram` はヘッダ帯付きの分厚いボックスで縦に伸びる。多 entity を一画面に収めにくい。`classDiagram` の方がスキーマ可視化として読める密度になる。
+2. **意味的に分けて描ける** — このツールのカタログには 2 種類の関係がある:
+    - **composition**: `Entity.parent_entity` 連鎖 (singleton-flatten によるネスト分解)。`*--` で描く
+    - **association**: `Attribute.x_ref` による FK。`-->` で描く
+
+   `classDiagram` は UML 表記でこの 2 つを区別できる。`erDiagram` だとどちらも「リレーション」に潰れて情報量が落ちる。例: music の `artists *-- artists.members` (オーナーシップ) と `albums --> artists` (参照) は明確に別概念。
+
+#### 配置とスコープ
+
+3 ヶ所に描く。各々の役割と描画ルール:
+
+| 配置 | nodes | composition edge | association edge | 属性 |
+|---|---|---|---|---|
+| **全体図** (`index.md`) | `__user_content_entities` 全件 (user 領域 + prose、descendant 含む) | 描画範囲内の親子全部 | 描画範囲内に両端がある FK 全部 | なし (ヘッダのみ) |
+| **近傍図** (`__meta_entity/<id>.md`) | focus + focus の descendants + focus subtree の FK out 先 | 描画範囲内の親子 | focus subtree から FK out 先への矢印のみ (FK in は描かない) | focus + descendants は全属性、FK out 先はヘッダのみ |
+| **per-query 図** (`__meta_query/<id>.md`) | `{query.from} ∪ {j.to for j in query.join}` (= top-level entity の集合) | nodes 内に親子があれば描く | nodes 内に両端がある FK | なし (ヘッダのみ) |
+
+共通ルール:
+
+- **`view: true` の entity は描かない** — クエリ由来の派生 view は schema として描く対象外
+- **edge ラベル**: composition は無し (親子関係は自明)、association は **FK 属性名** (`artist_id` 等)
+- **カーディナリティは書かない** — 詳細は下記「カーディナリティを書かない理由」
+- **escape は最小対応**: 最初は dotted entity id の classDiagram alias 化 (`mermaid_class_id` フィルタ) のみ。他のエスケープは実害が出てから対応
+
+##### per-query 図のノード集合が top-level に閉じる理由
+
+`From.derive` は `catalog.has_child(name)` で top-level entity のみを引く。`build_tree` は `parent_entity is None` のものしか virtual root の子にしないため、`from: artists.members` のような descendant 直接指定はそもそも build エラーになる。`Join.from_dict` も内部で `From(name=to)` を作って root_catalog 上で derive するので同じ制約に従う。
+
+このため per-query 図のノード集合は `query.from` (string) と `query.join[].to` (string) を素直に union するだけで top-level entity の集合になり、ancestor chain を描き足すかどうかの判断は不要。MS Access のクエリデザインビューと同じく「クエリの入り口テーブル群とその間の関係だけ」を示す形に自然に収まる。
+
+##### 近傍図の attribute 表との重複
+
+主役 entity の attributes は `__meta_entity` ページに既に表として出ている。近傍図でも主役を全属性表示するため、同じ情報が二重に出る形になる。**いったんそのまま実装して、実物を見て鬱陶しければ削る**。
+
+#### 描画判断の根拠
+
+##### カーディナリティを書かない理由
+
+矢印根元 (source 側) と矢の先 (target 側) のカーディナリティ表記は、初期版では **両端とも書かない**。
+
+- **source 側は常に `0..*`** — D8/D9 (unique 制約) が入るまで「source レコードが target をシェアしない」保証ができないので、機械的に常に `0..*`。常に同じ値だと情報量ゼロ。
+- **target 側は `1` or `0..1`** — `attribute.required` で決まる。情報を持つが、per-entity 図では attributes 表の `required` 列と重複する。全体図 / per-query 図でもリーダーが「nullable な FK か」を真剣に知りたい場面は稀で、必要なら entity 詳細ページに飛べばよい。
+- **clutter コスト** — 多 FK の entity (e.g. music の `albums` は 3 FK) で `0..* --- 1` が並ぶと視覚的に重い。
+
+D8/D9 で unique 制約が入った段階で、初めて source 側が `0..*` / `0..1` / `1..1` に分かれるため、その時に source 側だけ追加するのが筋がいい。要望が surface したら検討。
+
+##### edge ラベルに attribute 名を載せる
+
+association edge には **FK 属性名** をラベルとして載せる:
+
+```
+albums --> artists : artist_id
+albums --> labels : label_id
+albums --> genres : genre_id
+```
+
+カーディナリティより実用情報量が高い:
+
+- どの FK か一目で分かる
+- 同じ pair 間に複数 FK があるケース (将来 `composer_id` / `lyricist_id` が両方 `artists` を指す等) で必須
+
+composition edge はラベル無し (親子関係は自明)。
+
+#### Internal Design ドラフト
+
+##### 新規組み込みクエリ: `__user_content_entities`
+
+全体図および per-query 図のノード候補集合。`__user_entity_roots` から `parent_entity: { exists: false }` 条件を外したバージョン。descendant も含む:
+
+```yaml
+__user_content_entities:
+  from: __definition.entities
+  where:
+    view: false
+    not:
+      id: { startswith: __ }
+  select:
+    - item: id
+    - item: parent_entity
+    - item: builtin
+    - item: item_type
+```
+
+注: `view: false` で query 由来の派生 entity が落ちる。`id: { startswith: __ }` の否定で `__definition.*` などの catalog-internal entity が落ちる。`prose` は `builtin: true` だが id に `__` プレフィクスが無いので含まれる。
+
+##### Jinja2 フィルタ追加: `mermaid_class_id`
+
+dotted entity id を classDiagram 安全な class 識別子に変換:
+
+```python
+def _mermaid_class_id(entity_id: str) -> str:
+    return entity_id.replace(".", "__")
+```
+
+`artists.members` → `artists__members`。classDiagram の class 名はドット非対応のため必須。`__meta_entity/<id>.md` 等の他フィルタと同じく `_FILTERS` テーブルに登録する。
+
+他のエスケープ (引用符、改行、`<>` 等) は description / metadata を図に出さない方針なので初期版では不要。実害が surface したら対応。
+
+##### テンプレート内のフィルタ式パターン
+
+tree descent は flat catalog に対する filter で十分書ける (再帰不要)。全体図の骨格:
+
+```jinja2
+```mermaid
+classDiagram
+{# nodes #}
+{% for entity in __user_content_entities -%}
+class {{ entity.id | mermaid_class_id }}["{{ entity.id }}"]
+{% endfor -%}
+{# composition edges #}
+{% for entity in __user_content_entities if entity.parent_entity -%}
+{{ entity.parent_entity | mermaid_class_id }} *-- {{ entity.id | mermaid_class_id }}
+{% endfor -%}
+{# association edges #}
+{% set node_ids = __user_content_entities | map(attribute='id') | list -%}
+{% for entity in __user_content_entities -%}
+{% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids -%}
+{{ entity.id | mermaid_class_id }} --> {{ attr.x_ref.entity | mermaid_class_id }} : {{ attr.id }}
+{% endfor -%}
+{% endfor -%}
+```
+```
+
+近傍図は `entity.id == focus_id or entity.id.startswith(focus_id ~ ".")` でフィルタする descendant 抽出パターンを追加 (`__meta_entity.md` / `__table_view.md` に既出)。per-query 図は `query.from` と `query.join[].to` から id 集合を組み、`__user_content_entities` を引き当てる。
+
+#### タスク分割
+
+実装規模を抑え、各段階で showcase/music を見て判断できるよう 3 PR に分ける:
+
+- **F4a**: クエリ `__user_content_entities` 追加 + `mermaid_class_id` フィルタ + 全体図 (index.md)。基盤と最も汎用な配置を先行
+- **F4b**: 近傍図 (`__meta_entity/<id>.md`)。主役属性表との重複を実物で判断
+- **F4c**: per-query 図 (`__meta_query/<id>.md`)
+

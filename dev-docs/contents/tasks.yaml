@@ -257,11 +257,30 @@ categories:
       - src/another_mood/components/generator/
     spec: design/app/meta-documentation.md
     tasks:
-      F4:
-        title: ER 図テンプレート
-        note: 前提 D, E11, E3, Mermaid エスケープ
+      F4a:
+        title: ER 図テンプレート — 全体図 + 基盤
+        note: |
+          全体図 (`index.md`)、新規クエリ `__user_content_entities`、
+          Jinja2 フィルタ `mermaid_class_id`。前提 D, E11, E3。
+          描画は Mermaid classDiagram、composition/association を区別。
+          association edge ラベルは FK 属性名、カーディナリティは書かない。
         phase: 10
-        proposal: design/app/meta-documentation.md#er-図-f4
+        proposal: design/app/meta-documentation.md#er-図-f4a-f4c
+      F4b:
+        title: ER 図テンプレート — 近傍図
+        note: |
+          `__meta_entity/<id>.md` に主役 + descendants + FK out 先を描く
+          近傍図を追加。主役は全属性、隣接 entity はヘッダのみ。
+          主役の attributes 表との重複は実物を見て判断。前提 F4a。
+        phase: 10
+        proposal: design/app/meta-documentation.md#er-図-f4a-f4c
+      F4c:
+        title: ER 図テンプレート — per-query 図
+        note: |
+          `__meta_query/<id>.md` に `{query.from} ∪ {join[].to}` の
+          ノード集合で MS Access スタイルの ERD を描く。前提 F4a。
+        phase: 10
+        proposal: design/app/meta-documentation.md#er-図-f4a-f4c
       F5:
         title: DFD テンプレート
         note: 仕様未着手
