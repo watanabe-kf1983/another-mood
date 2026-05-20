@@ -74,7 +74,7 @@ class TestDictRoundTrip:
                         id="artist_id",
                         type="string",
                         required=True,
-                        x_ref=dc.XRef(entity="artists"),
+                        x_ref=dc.XRef(entity="artists", attribute="id"),
                     ),
                     dc.Attribute(
                         id="curator",

@@ -610,11 +610,17 @@ class TestInspectSchema:
             e for e in data["__definition"]["entities"] if e["id"] == "albums"
         )
         attrs_by_id = {a["id"]: a for a in albums["item_type"]["attributes"]}
-        # save_model strips None-valued keys, so unset XRef.attribute and
-        # absent x_ref do not appear at all in the persisted dict.
-        assert attrs_by_id["artist_id"]["x_ref"] == {"entity": "artists"}
+        # Source 'x-ref:' that omits 'attribute:' is resolved to the
+        # implicit-id default at the SchemaTree -> DataCatalog boundary,
+        # so the persisted record always carries an 'attribute' string.
+        assert attrs_by_id["artist_id"]["x_ref"] == {
+            "entity": "artists",
+            "attribute": "id",
+        }
         assert attrs_by_id["curator"]["x_ref"] == {
             "entity": "artists",
             "attribute": "name",
         }
+        # Attributes without x-ref keep x_ref unset; save_model elides
+        # None-valued keys, so the persisted record has no x_ref key.
         assert "x_ref" not in attrs_by_id["id"]

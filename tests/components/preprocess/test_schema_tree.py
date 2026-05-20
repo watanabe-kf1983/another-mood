@@ -467,7 +467,8 @@ class TestToCatalogNode:
         ]
 
     def test_x_ref_propagates_to_attribute(self) -> None:
-        """SchemaProperty.x_ref (raw mapping) becomes dc.XRef at the catalog boundary."""
+        """SchemaProperty.x_ref (raw mapping) becomes dc.XRef at the catalog boundary;
+        omitted 'attribute' is filled with the implicit-id default."""
         tree = ArrayNode(child=ObjectNode(properties=[
             SchemaProperty("artist_id", True, ValueNode(type="string"),
                            x_ref={"entity": "artists"}),
@@ -477,7 +478,7 @@ class TestToCatalogNode:
         assert dc.flatten_tree(to_catalog_node(tree), "albums") == [
             dc.Entity("albums", item_type=dc.ObjectType("albums.item", attributes=[
                 dc.Attribute("artist_id", "string", True,
-                             x_ref=dc.XRef(entity="artists")),
+                             x_ref=dc.XRef(entity="artists", attribute="id")),
                 dc.Attribute("curator", "string", False,
                              x_ref=dc.XRef(entity="users", attribute="name")),
             ])),
@@ -495,7 +496,7 @@ class TestToCatalogNode:
             dc.Entity("users", item_type=dc.ObjectType("users.item", attributes=[
                 dc.Attribute("address",         "object", True),
                 dc.Attribute("address.city_id", "string", True,
-                             x_ref=dc.XRef(entity="cities")),
+                             x_ref=dc.XRef(entity="cities", attribute="id")),
             ])),
         ]
 

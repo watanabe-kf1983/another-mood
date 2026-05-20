@@ -271,13 +271,16 @@ def _to_xref(raw: Mapping[str, object] | None) -> dc.XRef | None:
     """Construct ``dc.XRef`` from the raw ``x-ref`` mapping at the catalog boundary.
 
     Extra keys (forward compatibility) are silently dropped; the
-    meta-schema guarantees ``entity`` is present.
+    meta-schema guarantees ``entity`` is present.  When the source
+    omits ``attribute:``, the synthetic ``.id`` of a dict-pattern
+    target is implied and filled in here, so the catalog-side
+    ``XRef.attribute`` is always a real string.
     """
     if raw is None:
         return None
     return dc.XRef(
         entity=cast(str, raw["entity"]),
-        attribute=cast(str | None, raw.get("attribute")),
+        attribute=cast(str, raw.get("attribute", "id")),
     )
 
 

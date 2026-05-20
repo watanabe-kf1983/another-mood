@@ -17,13 +17,15 @@ from typing import Any, ClassVar, cast
 class XRef:
     """Foreign-key reference declared on a property via ``x-ref:``.
 
-    ``entity`` is the target top-level entity id; ``attribute`` (if
-    given) is the target attribute name.  When ``attribute`` is omitted,
-    the synthetic ``.id`` of a dict-pattern target entity is implied.
+    ``entity`` is the target top-level entity id; ``attribute`` is the
+    target attribute name.  The source-level shorthand of omitting
+    ``attribute:`` (meaning "the synthetic ``.id`` of a dict-pattern
+    target") is resolved at the SchemaTree → DataCatalog boundary, so
+    on the catalog side ``attribute`` is always a real string.
     """
 
     entity: str
-    attribute: str | None = None
+    attribute: str
 
 
 @dataclass(frozen=True)
@@ -131,8 +133,8 @@ class Attribute:
             (Edge(name="child_entity", type="string", required=False), Node()),
             (Edge(name="child_item_type", type="string", required=False), Node()),
             (Edge(name="x_ref", type="object", required=False), Node()),
-            (Edge(name="x_ref.entity", type="string", required=False), Node()),
-            (Edge(name="x_ref.attribute", type="string", required=False), Node()),
+            (Edge(name="x_ref.entity", type="string", required=True), Node()),
+            (Edge(name="x_ref.attribute", type="string", required=True), Node()),
         ],
     )
 
