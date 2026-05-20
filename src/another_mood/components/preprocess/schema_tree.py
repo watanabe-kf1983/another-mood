@@ -11,6 +11,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, assert_never, cast
 
+from another_mood.components.preprocess.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────
@@ -268,20 +269,18 @@ def _property_to_edge(prop: SchemaProperty, *, name: str | None = None) -> dc.Ed
 
 
 def _to_xref(raw: Mapping[str, object] | None) -> dc.XRef | None:
-    """Construct ``dc.XRef`` from the raw ``x-ref`` mapping at the catalog boundary.
-
-    Extra keys (forward compatibility) are silently dropped; the
-    meta-schema guarantees ``entity`` is present.  When the source
-    omits ``attribute:``, the synthetic ``.id`` of a dict-pattern
-    target is implied and filled in here, so the catalog-side
-    ``XRef.attribute`` is always a real string.
-    """
     if raw is None:
         return None
-    return dc.XRef(
-        entity=cast(str, raw["entity"]),
-        attribute=cast(str, raw.get("attribute", "id")),
-    )
+    entity = cast(str, raw["entity"])
+    if "attribute" in raw:
+        attribute = cast(str, raw["attribute"])
+    elif isinstance(entity, UserStr):
+        # Implicit "id" inherits entity's Location so coherence-check
+        # diagnostics on the implicit FK target point at the entity: line.
+        attribute = UserStr("id", entity.location)
+    else:
+        attribute = "id"
+    return dc.XRef(entity=entity, attribute=attribute)
 
 
 def _unwrap_to_object(node: Node) -> ObjectNode | None:

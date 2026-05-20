@@ -1,15 +1,20 @@
 """Tests for SchemaInspector — SchemaSchema validation and data catalog extraction."""
 
 from pathlib import Path
+from textwrap import dedent
 
 import pytest
 import yaml
 
 from another_mood.components.preprocess.schema_inspector import (
+    _xref_diagnostic,  # pyright: ignore[reportPrivateUsage]
+    _xref_diagnostics,  # pyright: ignore[reportPrivateUsage]
     build_schema_validator,
     check_schema,
     inspect_schema,
 )
+from another_mood.components.preprocess.source_loader import Location, UserStr
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.diagnostic import FileValidationError
 
 
@@ -428,6 +433,44 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="x-ref without entity rejected",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                artist_id:
+                  type: string
+                  x-ref:
+                    entity: artists
+                    attribute:
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref attribute null rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                artist_id:
+                  type: string
+                  x-ref:
+                    entity: artists
+                    etity: typo
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref unknown subkey rejected",
+    ),
 ]
 
 
@@ -624,3 +667,153 @@ class TestInspectSchema:
         # Attributes without x-ref keep x_ref unset; save_model elides
         # None-valued keys, so the persisted record has no x_ref key.
         assert "x_ref" not in attrs_by_id["id"]
+
+    def test_xref_to_array_entity_without_attribute_raises(
+        self, tmp_path: Path
+    ) -> None:
+        # Array entities lack an implicit ``id`` (only ``additionalProperties``
+        # dict patterns inject one), so the synthetic default fails the lookup.
+        schema_file = _write_schema(
+            tmp_path / "schema.yaml",
+            dedent("""\
+                type: object
+                additionalProperties: false
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        kind: { type: string }
+                  refs:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        event_id:
+                          type: string
+                          x-ref:
+                            entity: events
+            """),
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        with pytest.raises(FileValidationError) as exc_info:
+            inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        diagnostics = exc_info.value.diagnostics
+        assert len(diagnostics) == 1
+        assert "events.id" in diagnostics[0].message
+        assert diagnostics[0].line is not None
+
+    def test_xref_to_prose_builtin_entity_accepted(self, tmp_path: Path) -> None:
+        schema_file = _write_schema(
+            tmp_path / "schema.yaml",
+            dedent("""\
+                type: object
+                additionalProperties: false
+                properties:
+                  notes:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        source_doc:
+                          type: string
+                          x-ref:
+                            entity: prose
+            """),
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_file, out_dir=out_dir)  # should not raise
+
+    def test_xref_to_definition_namespace_rejected(self, tmp_path: Path) -> None:
+        schema_file = _write_schema(
+            tmp_path / "schema.yaml",
+            dedent("""\
+                type: object
+                additionalProperties: false
+                properties:
+                  refs:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        meta_id:
+                          type: string
+                          x-ref:
+                            entity: __definition.entities
+            """),
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        with pytest.raises(FileValidationError) as exc_info:
+            inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        assert any(
+            "__definition.entities" in d.message for d in exc_info.value.diagnostics
+        )
+
+
+# ── _xref_diagnostics / _xref_diagnostic (rule + plumbing) ──────────
+
+
+def _loc(value: str) -> UserStr:
+    """Build a UserStr tagged with a dummy file location."""
+    return UserStr(value, Location(file=Path("schema.yaml"), line=10, column=20))
+
+
+class TestXRefDiagnostics:
+    """_xref_diagnostics: rule check for a single XRef against a target index."""
+
+    _INDEX = {
+        "artists": frozenset({"id", "name"}),
+        "users": frozenset({"id", "email"}),
+    }
+
+    def test_valid_target(self) -> None:
+        assert (
+            _xref_diagnostics(
+                dc.XRef(entity=_loc("artists"), attribute=_loc("name")), self._INDEX
+            )
+            == []
+        )
+
+    def test_missing_entity(self) -> None:
+        diagnostics = _xref_diagnostics(
+            dc.XRef(entity=_loc("ghosts"), attribute=_loc("id")), self._INDEX
+        )
+        assert len(diagnostics) == 1
+        assert "ghosts" in diagnostics[0].message
+
+    def test_missing_attribute(self) -> None:
+        diagnostics = _xref_diagnostics(
+            dc.XRef(entity=_loc("artists"), attribute=_loc("nickname")), self._INDEX
+        )
+        assert len(diagnostics) == 1
+        assert "artists.nickname" in diagnostics[0].message
+
+
+class TestXRefDiagnostic:
+    """_xref_diagnostic: UserStr Location → Diagnostic plumbing."""
+
+    def test_user_str_location_flows_to_diagnostic(self) -> None:
+        diag = _xref_diagnostic(
+            _loc("ghosts"), "x-ref target entity 'ghosts' not found"
+        )
+        assert diag.line == 10
+        assert diag.column == 20
+        assert diag.source == "x-ref"
+
+    def test_non_user_str_raises(self) -> None:
+        """Plain ``str`` means the catalog skipped ``parse_yaml`` — internal bug."""
+        with pytest.raises(RuntimeError, match="UserStr"):
+            _xref_diagnostic("plain", "any message")

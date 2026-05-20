@@ -238,25 +238,6 @@ class TestBuildSchemaTree:
             ),
         ])
 
-    def test_x_ref_extra_keys_preserved_at_tree_layer(self) -> None:
-        """Extra keys remain on the SchemaTree mapping; the catalog layer drops them."""
-        tree = build_schema_tree(yaml.safe_load("""
-            type: object
-            properties:
-              owner_id:
-                type: string
-                x-ref:
-                  entity: users
-                  future_key: ignored
-            additionalProperties: false
-        """))
-        assert tree == ObjectNode(properties=[
-            SchemaProperty(
-                "owner_id", False, ValueNode(type="string"),
-                x_ref={"entity": "users", "future_key": "ignored"},
-            ),
-        ])
-
     def test_no_x_ref(self) -> None:
         """Properties without x-ref produce SchemaProperty.x_ref=None."""
         tree = build_schema_tree(yaml.safe_load("""
