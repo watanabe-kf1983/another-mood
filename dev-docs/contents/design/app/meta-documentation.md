@@ -94,11 +94,11 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ## Proposals
 
-### ER 図 (R2 + F4a-F4c)
+### ER 図 (S1 + F4a-F4c)
 
-Phase 10 タスク [R2](../../../tasks.md) (user-land PoC) → [F4a](../../../tasks.md) / [F4b](../../../tasks.md) / [F4c](../../../tasks.md) (built-in 輸入) の順で段階投入。前提 D, E11, E3。
+Phase 10 タスク [S1](../../../tasks.md) (user-land PoC、[システム開発ドキュメント カテゴリ](system-dev-docs.md)) → [F4a](../../../tasks.md) / [F4b](../../../tasks.md) / [F4c](../../../tasks.md) (built-in 輸入) の順で段階投入。前提 D, E11, E3。
 
-#### user-land 先行 / built-in 輸入 (R2 → F4)
+#### user-land 先行 / built-in 輸入 (S1 → F4)
 
 ER 図は本ツールの **ユーザ向けの中核ユースケース**: ソフトウェアシステム設計書の中でテーブル定義から自動的に ERD を描かせる、というのが claim。したがって built-in メタドキュメンテーションで先に走らせるのではなく、**user-land で同じことが成立するかを先に確認** してから、その実装パターンを built-in に輸入する。
 
@@ -116,7 +116,7 @@ built-in 側だけでまず動かしてしまうと:
 - built-in 側の Python フィルタは「user-land で再現不可能な事情だけ」に限定される正当化が立つ
 - 日本語識別子問題が PoC 段階で押さえられ、F4a 着手時には対処戦略が確定している
 
-#### R2: user-land PoC (`showcase/japanese-table-design`)
+#### S1: user-land PoC (`showcase/japanese-table-design`)
 
 ##### スキーマ位相
 
@@ -155,7 +155,7 @@ properties:
 特徴:
 
 - **メタ層の `x-ref`** (`参照.テーブル` → `テーブル` entity) と **データ層の参照** (`列[].参照` フィールド) が同居する珍しい構成。前者は build-time 整合性検査、後者は ERD 描画の source。
-- **識別子はすべて日本語** — top-level entity (`テーブル`)、プロパティ名 (`名前` / `説明` / `列` / `参照`)、データ値、description すべて日本語前提。catalog entity id にも日本語が乗る (=`__meta_entity/テーブル.md` のような出力パスが生成される) ことの動作確認も R2 のスコープ。
+- **識別子はすべて日本語** — top-level entity (`テーブル`)、プロパティ名 (`名前` / `説明` / `列` / `参照`)、データ値、description すべて日本語前提。catalog entity id にも日本語が乗る (=`__meta_entity/テーブル.md` のような出力パスが生成される) ことの動作確認も S1 のスコープ。
 
 題材候補は小規模な題材 (図書館貸出 / 蔵書管理など)、テーブル数 4-6、FK 2-4 本。
 
@@ -178,11 +178,11 @@ classDiagram の Unicode 対応は v11 ドキュメント上以下の通り:
 | edge ラベル | `A --> B : "日本語"` (quoted) |
 | class メンバ (属性行) | `+型 名前` の `名前` 部の Unicode 可否は明文化されておらず実機確認が必要 |
 
-R2 で実機検証し、回避パターン (ASCII id + 日本語ラベル / 全 backtick / 属性名は ASCII 限定で metadata に日本語) を確定する。
+S1 で実機検証し、回避パターン (ASCII id + 日本語ラベル / 全 backtick / 属性名は ASCII 限定で metadata に日本語) を確定する。
 
 #### F4a-F4c: built-in 輸入
 
-R2 で確立したパターンを meta-documentation 系テンプレートに移植する。3 配置に分けて段階投入:
+S1 で確立したパターンを meta-documentation 系テンプレートに移植する。3 配置に分けて段階投入:
 
 | 配置 | nodes | composition edge | association edge | 属性 |
 |---|---|---|---|---|
@@ -271,13 +271,13 @@ __user_content_entities:
 
 ##### Jinja2 フィルタの要否
 
-`mermaid_class_id` (dotted catalog id → alias 化) フィルタを足すかどうかは **R2 の結果次第**:
+`mermaid_class_id` (dotted catalog id → alias 化) フィルタを足すかどうかは **S1 の結果次第**:
 
 - user-land の id 空間はドット非含意 (`tables`, `columns` 等) なので user 側では不要
 - built-in は catalog id がドット入り (`artists.members`, `__definition.entities`) なので、移植時には必要
 - → user-land で全く同じことを書けない理由 (catalog id がドット入り) に正当化を限定して、F4a で導入する
 
-他のエスケープ (Unicode quoting, 特殊文字) は R2 の検証結果次第。user-land で必要になったものは一般フィルタとして追加し、built-in は同じものを共用する。
+他のエスケープ (Unicode quoting, 特殊文字) は S1 の検証結果次第。user-land で必要になったものは一般フィルタとして追加し、built-in は同じものを共用する。
 
 ##### テンプレート内のフィルタ式パターン
 
@@ -310,8 +310,8 @@ class {{ entity.id | mermaid_class_id }}["{{ entity.id }}"]
 
 | Task | 内容 | 前提 |
 |---|---|---|
-| **R2** | user-land PoC (`showcase/japanese-table-design`)。テーブル定義スキーマ + 日本語サンプル + 素 Jinja2 で ERD を描く template。Mermaid Unicode 制約の実機検証 | D, E11, E3 |
-| **F4a** | R2 のパターンを built-in に輸入。全体図 (`index.md`) + 新規クエリ `__user_content_entities` + 必要なら `mermaid_class_id` フィルタ | R2 |
+| **S1** | user-land PoC (`showcase/japanese-table-design`)。テーブル定義スキーマ + 日本語サンプル + 素 Jinja2 で ERD を描く template。Mermaid Unicode 制約の実機検証 | D, E11, E3 |
+| **F4a** | S1 のパターンを built-in に輸入。全体図 (`index.md`) + 新規クエリ `__user_content_entities` + 必要なら `mermaid_class_id` フィルタ | S1 |
 | **F4b** | 近傍図 (`__meta_entity/<id>.md`)。主役属性表との重複は実物で判断 | F4a |
 | **F4c** | per-query 図 (`__meta_query/<id>.md`) | F4a |
 
