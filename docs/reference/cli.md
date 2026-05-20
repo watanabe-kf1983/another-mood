@@ -120,10 +120,12 @@ A *blueprint* is a working sample project (schema, contents, queries, templates)
 ### blueprint list
 
 ```bash
-mood blueprint list
+mood blueprint list [--names-only]
 ```
 
 Prints the available blueprints to stdout in a man-page style: each blueprint takes two lines — the name on the first, the description (indented) on the second.
+
+Pass `--names-only` to print just the names, one per line, suitable for scripting (e.g. iterating over blueprints in a shell loop or Makefile).
 
 ### blueprint apply
 

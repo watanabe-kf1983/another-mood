@@ -19,9 +19,10 @@ secrets:
 
 build-projects:
 	uv run mood build dev-docs
-	uv run mood build showcase/starter
-	uv run mood build showcase/music
-	uv run mood build showcase/japanese-table-design
+	@for name in $$(uv run mood blueprint list --names-only); do \
+		echo "uv run mood build showcase/$$name"; \
+		uv run mood build showcase/$$name || exit 1; \
+	done
 
 format:
 	uv run ruff format .

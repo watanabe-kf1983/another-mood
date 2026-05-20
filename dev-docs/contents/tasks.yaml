@@ -591,12 +591,5 @@ categories:
     tasks:
       T1:
         title: Makefile build-projects を全 showcase blueprint 自動列挙化
-        note: |
-          現状の Makefile `build-projects` ターゲットは `mood build showcase/starter`
-          / `mood build showcase/music` 等を 1 行ずつハードコードしている。
-          showcase blueprint を追加するたびに Makefile への追記が必要で、
-          抜けるとリグレ検知が漏れる。`showcase/index.yaml` の blueprint
-          一覧、または `showcase/*/definition/` ディレクトリ glob から
-          動的に build 対象を導出する形に変更し、showcase 追加時の
-          Makefile 更新を不要にする。
         phase: 10
+        done: true
