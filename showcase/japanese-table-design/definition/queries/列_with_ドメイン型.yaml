@@ -1,0 +1,20 @@
+# 各テーブルの各列に、列.型 を経由して 型対応 entity から
+# ドメイン型 / Python型 を結合して付与する。
+# テーブル.列 を flatten で 1 行 1 列に展開し、列.型 を join キーに使う。
+列_with_ドメイン型:
+  from: テーブル
+  flatten:
+    of: 列
+    as: 列
+  join:
+    to: 型対応
+    on: { left: 列.型, right: id }
+    as: 型対応_matches
+    flatten: { as: 型情報 }
+  select:
+    - item: id
+      as: テーブルID
+    - item: 名前
+      as: テーブル名
+    - item: 列
+    - item: 型情報
