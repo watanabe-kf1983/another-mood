@@ -253,6 +253,38 @@ site_config:
 
 Like the array form, no normalization happens; the value is passed to templates as written.
 
+#### When to nest vs split into a separate entity
+
+A child collection can sit either nested inside its parent, or split off into a separate top-level entity. The rule of thumb is **does the child still make sense if the parent is gone?**
+
+- If no (composition) → nest. Inner `additionalProperties` are normalized recursively at every level.
+- If yes (aggregation) → declare the child as a separate top-level entity and reference it by key.
+
+```yaml
+# Composition — buttons live inside their screen record
+screens:
+  user-screen:
+    title: User screen
+    buttons:
+      save:
+        label: Save
+        action: save
+      cancel:
+        label: Cancel
+        action: cancel
+
+# Aggregation — orders reference customers that live on their own
+customers:
+  tanaka:
+    name: Tanaka Taro
+orders:
+  order-001:
+    title: Order A
+    customer: tanaka       # references a customer by id (declared with x-ref in the schema)
+```
+
+For aggregation, declare the relationship with [`x-ref`](reference/schema.md#foreign-key-references-x-ref).
+
 #### Content files — naming and layout are up to you
 
 As we've seen, the data contents must follow the JSON Schema constraints from the schema file. The organization of the content files themselves (filenames, directory structure, number of files), however, has no such constraints. Organize at whatever granularity fits the project — by domain, by chapter, by review unit, and so on:
