@@ -44,11 +44,18 @@ def _load_config(**kwargs: object) -> ProjectConfig:
 
 
 @blueprint_app.command("list")
-def list_blueprints() -> None:
+def list_blueprints(
+    names_only: bool = typer.Option(
+        False,
+        "--names-only",
+        help="Print only blueprint names, one per line (machine-readable).",
+    ),
+) -> None:
     """List the bundled blueprints (sample projects)."""
     for blueprint in command.list_blueprints():
         print(blueprint.name)
-        print(f"  {blueprint.description}")
+        if not names_only:
+            print(f"  {blueprint.description}")
 
 
 def _render_scaffold(result: ScaffoldResult) -> None:
