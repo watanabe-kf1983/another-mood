@@ -548,34 +548,19 @@ categories:
     spec: design/app/system-dev-docs.md
     tasks:
       S1:
-        title: "showcase/japanese-table-design — テーブル定義から ERD を描く PoC"
+        title: "showcase/japanese-table-design — テーブル定義から 2 種類のスキーマ図を描く PoC"
         note: |
-          ソフトウェアシステム設計書サンプルの最小形として、テーブル
-          定義から Mermaid classDiagram を user template で描く showcase
-          を新設する。`showcase/japanese-table-design/` 配下:
-
-          - スキーマ: `テーブル` / `列` / `参照` モデル
-            (top-level entity 名含めすべて日本語識別子)。
-            `参照.テーブル` は `x-ref: { entity: テーブル }` で
-            メタ層の参照整合性を宣言
-          - サンプルデータ: 小規模な題材を一式 (例: 図書館貸出システム)、
-            **識別子・属性名・データ値・description すべて日本語**
-          - テンプレート: テーブル一覧 + 各テーブル詳細 + Mermaid
-            ERD (classDiagram + erDiagram 併記で比較)。Jinja2 の素の
-            機能と既存フィルタのみで記述し、カスタムフィルタには頼らない
-
-          検証ポイント:
-          1. user-accessible な primitive だけで ERD が描けるか
-          2. Mermaid classDiagram / erDiagram の Unicode 制約 (class /
-             entity 名、属性名、edge ラベル) を実機で確認し、回避
-             パターンを確立する (label 形式 / backtick 形式 / quoted 名 など)
-          3. classDiagram と erDiagram を並べて F4 で採る notation を確定
-          4. 不足プリミティブがあれば surface させ、別タスクに切り出す
-
-          F4a の実装着手前に完了させ、ここで確立したテンプレート
-          パターンを built-in 側に輸入する。
+          ソフトウェアシステム設計書サンプルの最小形。蔵書管理
+          (5 テーブル / 4 FK)、識別子はすべて日本語。1 つの source
+          data から テーブル設計図 (erDiagram, DDL 型) と
+          ドメインモデル図 (classDiagram, ドメイン型) を生成し、
+          ORM 的型対応 entity (`型対応`) と flatten + join クエリで
+          橋渡しした。Mermaid Unicode 制約の実機検証 / notation
+          選定の含意は design/app/system-dev-docs.md「S1」節に記録。
+          新規 Jinja2 フィルタも新規 DSL 機能も surface せず、F4a
+          着手の前提が整った。
         phase: 10
-        proposal: design/app/meta-documentation.md#er-図-s1--f4a-f4c
+        done: true
       S2:
         title: DFD テンプレート
         note: |
