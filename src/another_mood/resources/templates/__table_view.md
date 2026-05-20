@@ -12,7 +12,7 @@
 |{% for attribute in attributes %}---|{% endfor %}
 {% for row in rows -%}
 | {% for attribute in attributes -%}
-{%- if attribute.entity -%}
+{%- if attribute.child_entity -%}
 *{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
 {{ row | pluck(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}

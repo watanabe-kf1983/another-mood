@@ -122,6 +122,61 @@ _VALID_SCHEMA_CASES = [
         """,
         id="unicode schema and property names",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                artist_id:
+                  type: string
+                  x-ref:
+                    entity: artists
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref entity only",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                curator:
+                  type: string
+                  x-ref:
+                    entity: users
+                    attribute: name
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref entity and attribute",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          playlist_tracks:
+            type: array
+            items:
+              type: object
+              properties:
+                playlist_id:
+                  type: string
+                  x-ref:
+                    entity: playlists
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref on property nested under items",
+    ),
 ]
 
 _REJECTED_SCHEMA_CASES = [
@@ -342,6 +397,37 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="missing type on root rejected",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          tags:
+            type: array
+            items:
+              type: string
+              x-ref:
+                entity: tags-master
+        additionalProperties: false
+        """,
+        id="x-ref directly on items rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                artist_id:
+                  type: string
+                  x-ref: {}
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref without entity rejected",
+    ),
 ]
 
 
@@ -483,3 +569,58 @@ class TestInspectSchema:
             "__definition.queries",
         }
         assert all(e["builtin"] for e in entities)
+
+    def test_writes_x_ref_on_attribute(self, tmp_path: Path) -> None:
+        """x-ref declared on a property surfaces on the persisted Attribute."""
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
+            "  artists:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        name: { type: string }\n"
+            "      additionalProperties: false\n"
+            "  albums:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        artist_id:\n"
+            "          type: string\n"
+            "          x-ref:\n"
+            "            entity: artists\n"
+            "        curator:\n"
+            "          type: string\n"
+            "          x-ref:\n"
+            "            entity: artists\n"
+            "            attribute: name\n"
+            "      additionalProperties: false\n"
+            "additionalProperties: false\n"
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        data = yaml.safe_load((out_dir / "schema.yaml").read_text())
+        albums = next(
+            e for e in data["__definition"]["entities"] if e["id"] == "albums"
+        )
+        attrs_by_id = {a["id"]: a for a in albums["item_type"]["attributes"]}
+        # Source 'x-ref:' that omits 'attribute:' is resolved to the
+        # implicit-id default at the SchemaTree -> DataCatalog boundary,
+        # so the persisted record always carries an 'attribute' string.
+        assert attrs_by_id["artist_id"]["x_ref"] == {
+            "entity": "artists",
+            "attribute": "id",
+        }
+        assert attrs_by_id["curator"]["x_ref"] == {
+            "entity": "artists",
+            "attribute": "name",
+        }
+        # Attributes without x-ref keep x_ref unset; save_model elides
+        # None-valued keys, so the persisted record has no x_ref key.
+        assert "x_ref" not in attrs_by_id["id"]

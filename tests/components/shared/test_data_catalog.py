@@ -41,8 +41,8 @@ class TestDictRoundTrip:
                         id="items",
                         type="object[]",
                         required=False,
-                        entity="orders.items",
-                        item_type="orders.items.item",
+                        child_entity="orders.items",
+                        child_item_type="orders.items.item",
                     ),
                 ],
                 metadata={"title": "Order"},
@@ -63,6 +63,30 @@ class TestDictRoundTrip:
         )
         assert dc.Entity.from_dict(entity.to_dict()) == entity
 
+    def test_attribute_with_x_ref(self) -> None:
+        """``XRef`` survives the to_dict/from_dict round-trip on Attribute."""
+        entity = dc.Entity(
+            id="albums",
+            item_type=dc.ObjectType(
+                id="albums.item",
+                attributes=[
+                    dc.Attribute(
+                        id="artist_id",
+                        type="string",
+                        required=True,
+                        x_ref=dc.XRef(entity="artists", attribute="id"),
+                    ),
+                    dc.Attribute(
+                        id="curator",
+                        type="string",
+                        required=False,
+                        x_ref=dc.XRef(entity="users", attribute="name"),
+                    ),
+                ],
+            ),
+        )
+        assert dc.Entity.from_dict(entity.to_dict()) == entity
+
 
 class TestBuildAndFlatten:
     @pytest.mark.parametrize(
@@ -80,8 +104,8 @@ class TestBuildAndFlatten:
                       - id: tasks
                         type: object[]
                         required: true
-                        entity: categories.tasks
-                        item_type: categories.item.tasks.item
+                        child_entity: categories.tasks
+                        child_item_type: categories.item.tasks.item
                 - id: categories.tasks
                   item_type:
                     id: categories.item.tasks.item
@@ -108,8 +132,8 @@ class TestBuildAndFlatten:
                         type: object[]
                         required: true
                         metadata: { title: Fields list }
-                        entity: entities.fields
-                        item_type: entities.item.fields.item
+                        child_entity: entities.fields
+                        child_item_type: entities.item.fields.item
                     metadata: { title: Entity }
                 - id: entities.fields
                   item_type:
@@ -144,8 +168,8 @@ class TestBuildAndFlatten:
                       - id: hobby.pets
                         type: object[]
                         required: false
-                        entity: members.hobby.pets
-                        item_type: members.item.hobby.pets.item
+                        child_entity: members.hobby.pets
+                        child_item_type: members.item.hobby.pets.item
                 - id: members.hobby.pets
                   item_type:
                     id: members.item.hobby.pets.item
@@ -180,10 +204,21 @@ class TestCatalogDriftSuppression:
     identity tests above.
     """
 
-    def test_attribute_edges_match_dataclass_fields(self) -> None:
-        assert {edge.name for edge, _ in dc.Attribute.catalog.children} == {
-            f.name for f in dataclasses.fields(dc.Attribute)
+    def test_attribute_top_level_edges_match_dataclass_fields(self) -> None:
+        non_dotted = {
+            edge.name
+            for edge, _ in dc.Attribute.catalog.children
+            if "." not in edge.name
         }
+        assert non_dotted == {f.name for f in dataclasses.fields(dc.Attribute)}
+
+    def test_xref_dotted_edges_match_dataclass_fields(self) -> None:
+        dotted = {
+            edge.name.removeprefix("x_ref.")
+            for edge, _ in dc.Attribute.catalog.children
+            if edge.name.startswith("x_ref.")
+        }
+        assert dotted == {f.name for f in dataclasses.fields(dc.XRef)}
 
     def test_entity_top_level_edges_match_dataclass_fields(self) -> None:
         non_dotted = {
@@ -212,8 +247,8 @@ class TestRenameOnFlatten:
                   - id: tasks
                     type: object[]
                     required: true
-                    entity: categories.tasks
-                    item_type: categories.item.tasks.item
+                    child_entity: categories.tasks
+                    child_item_type: categories.item.tasks.item
             - id: categories.tasks
               item_type:
                 id: categories.item.tasks.item
@@ -233,8 +268,8 @@ class TestRenameOnFlatten:
                   - id: tasks
                     type: object[]
                     required: true
-                    entity: tasks_by_phase.tasks
-                    item_type: tasks_by_phase.item.tasks.item
+                    child_entity: tasks_by_phase.tasks
+                    child_item_type: tasks_by_phase.item.tasks.item
             - id: tasks_by_phase.tasks
               item_type:
                 id: tasks_by_phase.item.tasks.item

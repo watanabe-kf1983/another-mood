@@ -8,9 +8,24 @@ relied on in query derivation.
 
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 # ── In-memory tree form (canonical) ───────────────────────────────────
+
+
+@dataclass(frozen=True)
+class XRef:
+    """Foreign-key reference declared on a property via ``x-ref:``.
+
+    ``entity`` is the target top-level entity id; ``attribute`` is the
+    target attribute name.  The source-level shorthand of omitting
+    ``attribute:`` (meaning "the synthetic ``.id`` of a dict-pattern
+    target") is resolved at the SchemaTree → DataCatalog boundary, so
+    on the catalog side ``attribute`` is always a real string.
+    """
+
+    entity: str
+    attribute: str
 
 
 @dataclass(frozen=True)
@@ -22,6 +37,7 @@ class Edge:
     required: bool
     metadata: Mapping[str, object] | None = None
     validation: Mapping[str, object] | None = None
+    x_ref: XRef | None = None
 
 
 @dataclass(frozen=True)
@@ -93,14 +109,20 @@ class Attribute:
     required: bool
     metadata: Mapping[str, object] | None = None
     validation: Mapping[str, object] | None = None
-    entity: str | None = None  # referenced Entity.id (= access_path)
-    item_type: str | None = None  # referenced ObjectType.id
+    child_entity: str | None = None  # child Entity.id (= access_path)
+    child_item_type: str | None = None  # child ObjectType.id
+    x_ref: XRef | None = None  # FK declaration from ``x-ref:``
 
     #: Node-form self-description of the persisted Attribute record.
     #: Composed into ``Entity.catalog`` as the child of the
     #: ``item_type.attributes`` edge.  The caller assigns the catalog id
     #: via ``flatten_tree(root_name=...)``; ``Attribute`` itself doesn't
     #: know where in the namespace it lives.
+    #:
+    #: ``XRef`` (the type of ``x_ref``) is singleton-flattened inline:
+    #: the wrapper edge ``x_ref`` (type=object) plus dotted-name edges
+    #: for each XRef field — mirroring the ``item_type.*`` flattening
+    #: in ``Entity.catalog``.
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
@@ -108,8 +130,11 @@ class Attribute:
             (Edge(name="required", type="boolean", required=True), Node()),
             (Edge(name="metadata", type="object", required=False), Node()),
             (Edge(name="validation", type="object", required=False), Node()),
-            (Edge(name="entity", type="string", required=False), Node()),
-            (Edge(name="item_type", type="string", required=False), Node()),
+            (Edge(name="child_entity", type="string", required=False), Node()),
+            (Edge(name="child_item_type", type="string", required=False), Node()),
+            (Edge(name="x_ref", type="object", required=False), Node()),
+            (Edge(name="x_ref.entity", type="string", required=True), Node()),
+            (Edge(name="x_ref.attribute", type="string", required=True), Node()),
         ],
     )
 
@@ -118,7 +143,11 @@ class Attribute:
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "Attribute":
-        return cls(**d)
+        fields: dict[str, Any] = dict(d)
+        x_ref_raw = fields.get("x_ref")
+        if isinstance(x_ref_raw, Mapping):
+            fields["x_ref"] = XRef(**cast(Mapping[str, Any], x_ref_raw))
+        return cls(**fields)
 
 
 @dataclass(frozen=True)
@@ -242,7 +271,7 @@ def _build_entity_node(
             (
                 _edge_from_attribute(attr),
                 _build_entity_node(sub_by_name[attr.id], catalog)
-                if attr.entity
+                if attr.child_entity
                 else Node(),
             )
             for attr in entity.item_type.attributes
@@ -258,6 +287,7 @@ def _edge_from_attribute(attr: Attribute) -> Edge:
         required=attr.required,
         metadata=attr.metadata,
         validation=attr.validation,
+        x_ref=attr.x_ref,
     )
 
 
@@ -322,8 +352,9 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
         required=edge.required,
         metadata=edge.metadata,
         validation=edge.validation,
-        entity=".".join(edge_path) if node.is_entity else None,
-        item_type=_item_type_id(edge_path) if node.is_entity else None,
+        child_entity=".".join(edge_path) if node.is_entity else None,
+        child_item_type=_item_type_id(edge_path) if node.is_entity else None,
+        x_ref=edge.x_ref,
     )
 
 

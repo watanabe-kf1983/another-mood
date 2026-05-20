@@ -126,8 +126,8 @@ _CASES = [
                 - id: ingredients
                   type: "object[]"
                   required: true
-                  entity: recipes.ingredients
-                  item_type: recipes.item.ingredients.item
+                  child_entity: recipes.ingredients
+                  child_item_type: recipes.item.ingredients.item
           - id: recipes.ingredients
             builtin: false
             view: false
@@ -207,8 +207,8 @@ _CASES = [
                 - id: steps
                   type: "object[]"
                   required: false
-                  entity: recipes.steps
-                  item_type: recipes.item.steps.item
+                  child_entity: recipes.steps
+                  child_item_type: recipes.item.steps.item
           - id: recipes.steps
             builtin: false
             view: false
@@ -351,8 +351,8 @@ _CASES = [
                 - id: hobby.pets
                   type: "object[]"
                   required: false
-                  entity: members.hobby.pets
-                  item_type: members.item.hobby.pets.item
+                  child_entity: members.hobby.pets
+                  child_item_type: members.item.hobby.pets.item
           - id: members.hobby.pets
             builtin: false
             view: false
