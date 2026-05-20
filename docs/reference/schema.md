@@ -190,6 +190,33 @@ Annotation keywords that do not affect validation or normalization:
 
 - `format` (e.g., `email`, `uri`). Retained as an annotation, but values are not validated against it.
 
+### Foreign-key references (x-ref)
+
+`x-ref` declares that a property holds a foreign key pointing into another top-level entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
+
+```yaml
+albums:
+  type: object
+  additionalProperties:
+    properties:
+      artist_id:
+        type: string
+        x-ref:
+          entity: artists         # omitted attribute = the target's dict key (.id)
+      curator:
+        type: string
+        x-ref:
+          entity: users
+          attribute: name         # explicit attribute reference
+```
+
+Fields:
+
+- `entity` (required) — name of a top-level entity declared in this schema, or a built-in entity (currently `prose`).
+- `attribute` (optional) — name of an attribute on the target entity. When omitted, the synthetic `.id` of a map-pattern target is referenced; the target must therefore use the [map pattern](#map-pattern). When the target uses the [array pattern](#array-pattern) (no implicit `id`), `attribute` is required.
+
+The declared references appear in `output/__meta_entity/<entity>.md` as a `references` column, with the target rendered as a link to the target's meta page.
+
 ## Unsupported keywords
 
 Keywords that exist in JSON Schema draft 2020-12 but are rejected by the built-in meta-schema:

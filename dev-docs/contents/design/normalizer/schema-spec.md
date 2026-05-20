@@ -169,9 +169,9 @@ properties:
 
 ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
 
-### 参照整合性制約: x-ref (D5-D7)
+### 参照整合性制約: x-ref (D6-D7)
 
-> Phase 10 残作業は **D5** (docs/reference 同期)。Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
+> Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
 
 #### Phase 11+: data-level (D6, D7)
 
