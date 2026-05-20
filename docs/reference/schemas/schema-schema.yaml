@@ -26,6 +26,19 @@ $defs:
           type:
             const: object
 
+  xRef:
+    title: x-ref foreign-key declaration
+    description: >-
+      Structured foreign-key reference. `entity` is the target
+      top-level entity id; `attribute` (optional) is the target
+      attribute name. When `attribute` is omitted, the synthetic
+      `.id` of a dict-pattern target entity is assumed. Extra keys
+      are accepted for forward compatibility; downstream code uses
+      only `entity` and `attribute`. See docs/reference/schema.md
+      for the prose specification.
+    type: object
+    required: [entity]
+
   jsonSchemaSubset:
     title: Accepted JSON Schema subset
     description: >-
@@ -70,8 +83,21 @@ $defs:
           - $ref: "#/$defs/jsonSchemaSubset"
           - const: false
       items:
-        description: Schema applied to each element of an array.
-        $ref: "#/$defs/jsonSchemaSubset"
+        description: >-
+          Schema applied to each element of an array. `x-ref` directly
+          on the items schema is rejected because the data catalog does
+          not carry scalar-array-element metadata; FK on scalar array
+          elements is not supported at this stage. `x-ref` on regular
+          properties nested under `items:` (e.g. `items.properties.foo`)
+          remains accepted.
+        allOf:
+          - $ref: "#/$defs/jsonSchemaSubset"
+          - not:
+              required: [x-ref]
+
+      # --- Foreign-key reference (Another Mood extension) ---
+      x-ref:
+        $ref: "#/$defs/xRef"
 
       # --- Validation keywords (pass-through to jsonschema) ---
       required:

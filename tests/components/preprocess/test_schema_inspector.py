@@ -122,6 +122,61 @@ _VALID_SCHEMA_CASES = [
         """,
         id="unicode schema and property names",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                artist_id:
+                  type: string
+                  x-ref:
+                    entity: artists
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref entity only",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                curator:
+                  type: string
+                  x-ref:
+                    entity: users
+                    attribute: name
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref entity and attribute",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          playlist_tracks:
+            type: array
+            items:
+              type: object
+              properties:
+                playlist_id:
+                  type: string
+                  x-ref:
+                    entity: playlists
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref on property nested under items",
+    ),
 ]
 
 _REJECTED_SCHEMA_CASES = [
@@ -341,6 +396,37 @@ _REJECTED_SCHEMA_CASES = [
         additionalProperties: false
         """,
         id="missing type on root rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          tags:
+            type: array
+            items:
+              type: string
+              x-ref:
+                entity: tags-master
+        additionalProperties: false
+        """,
+        id="x-ref directly on items rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          albums:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                artist_id:
+                  type: string
+                  x-ref: {}
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="x-ref without entity rejected",
     ),
 ]
 
