@@ -8,6 +8,7 @@ import yaml
 from jinja2 import Undefined
 
 from another_mood.components.generator.generator import (
+    _mermaid_class_id,  # pyright: ignore[reportPrivateUsage]
     _pluck,  # pyright: ignore[reportPrivateUsage]
     _to_yaml,  # pyright: ignore[reportPrivateUsage]
     _walk_entity,  # pyright: ignore[reportPrivateUsage]
@@ -251,6 +252,26 @@ class TestToYamlFilter:
         )
         result = _to_yaml({"description": long_description, "title": "Prose id"}, True)
         assert "\n" not in result
+
+
+class TestMermaidClassIdFilter:
+    """Unit tests for the `mermaid_class_id` filter function."""
+
+    def test_top_level_id_passes_through(self) -> None:
+        assert _mermaid_class_id("artists") == "artists"
+
+    def test_dotted_id_is_aliased(self) -> None:
+        # Mermaid classDiagram treats unquoted dots as namespace
+        # separators, so descendant ids cannot be used directly as class
+        # names.  Dots collapse to underscores.
+        assert _mermaid_class_id("artists.members") == "artists_members"
+        assert _mermaid_class_id("__definition.entities") == "__definition_entities"
+
+    def test_non_string_returns_empty(self) -> None:
+        # Defensive: an Undefined or None from a missing template lookup
+        # should not blow up the diagram render.
+        assert _mermaid_class_id(None) == ""
+        assert _mermaid_class_id(42) == ""
 
 
 class TestReconcile:

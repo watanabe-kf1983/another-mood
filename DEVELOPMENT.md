@@ -81,6 +81,15 @@ another_mood/
 - **カバレッジ計測対象**: `components/`。Statements + Branches トータルで 90% 以上
 - **フィクスチャ**: ファイルベース、モジュール隣接型。期待値はテストコード内に記述
 
+#### 動作確認 (`mood watch` + Playwright MCP)
+
+`showcase/` や `dev-docs/` のテンプレート変更を実機で確認するときは `mood watch <project_dir> --port <port>` でローカルプレビューを上げ、必要なら Playwright MCP でレンダリングを観る。Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwright-mcp/` 配下に集約する:
+
+- ページスナップショット / console ログは Playwright MCP が自動でこのディレクトリに出す
+- スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する (デフォルトは cwd 直下に落ちて散らかる)
+
+検証目的のスクショは再現可能なので、コミット前に削除して構わない。
+
 #### タスクの進め方
 
 非自明な機能追加・変更では、まず `dev-docs/design/` の対応ファイル `## Proposals` セクション（必要なら新規ファイル）に検討メモを書いて方針を合意してから着手する。以降の手順:

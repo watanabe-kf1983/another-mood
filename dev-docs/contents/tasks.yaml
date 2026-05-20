@@ -260,14 +260,15 @@ categories:
       F4a:
         title: ER 図テンプレート — 全体図 + 基盤
         note: |
-          全体図 (`index.md`)、新規クエリ `__user_content_entities`、
-          必要なら Jinja2 フィルタ `mermaid_class_id`。前提 D, E11, E3,
-          S1 (user-land で先に成立を確認)。
-          描画は Mermaid classDiagram、composition/association を区別。
-          association edge ラベルは FK 属性名、カーディナリティは書かない。
-          S1 で確立したパターンを built-in に輸入する位置づけ。
+          `__root` に Entity Relationship 図 (Mermaid classDiagram)
+          を追加。組み込みクエリ `__user_content_entities` で user 領域 +
+          prose (descendant 含む) を node 集合化、`mermaid_class_id`
+          フィルタで dotted catalog id を alias 化。composition は親子、
+          association は両端が node 集合に入る FK のみ描画、edge ラベルは
+          FK 属性名、カーディナリティは書かない。詳細は
+          design/app/meta-documentation.md「`__root` の Entity Relationship 図」。
         phase: 10
-        proposal: design/app/meta-documentation.md#er-図-s1--f4a-f4c
+        done: true
       F4b:
         title: ER 図テンプレート — 近傍図
         note: |

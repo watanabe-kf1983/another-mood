@@ -99,8 +99,11 @@ additionalProperties:
       title: Output projection
       description: >-
         List of fields to include in the output. Fields not listed are
-        omitted. When `select:` itself is omitted, each output record is
-        an empty object.
+        omitted. A listed field that is absent on a particular record
+        is omitted from that record's output (no error, no fabricated
+        null) — matching the data model's "nullable = absent key"
+        convention. When `select:` itself is omitted, records pass
+        through unchanged.
       type: array
       items:
         title: Selected field
