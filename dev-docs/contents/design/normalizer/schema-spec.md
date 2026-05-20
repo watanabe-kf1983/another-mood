@@ -177,6 +177,98 @@ schema-level の不整合は data の読み込み以前に build を止める。
 4. **リネーム支援** — references に基づいて参照箇所を列挙し、一括置換の漏れを検証できる
 5. **(将来) 参照整合性検証** — data-level の dangling 参照を `--strict` 連動で警告
 
+#### データカタログ表現 (D2)
+
+x-ref の収集後、Schema-Inspector は `Attribute` (data_catalog.py) に FK 宣言フィールドを載せる形でカタログへ反映する。これで D6 の data-level 検証も F4/F5 のリレーション描画も、同じカタログを単一の真実として消費できる。
+
+##### Attribute への x_ref フィールド追加
+
+```python
+@dataclass(frozen=True)
+class XRef:
+    entity: str                     # target entity id
+    attribute: str | None = None    # target attribute name; None = 暗黙の .id
+
+@dataclass(frozen=True)
+class Attribute:
+    id: str
+    type: str
+    required: bool
+    metadata: ...
+    validation: ...
+    child_entity: str | None = None       # 既存 'entity' を改名 (下記)
+    child_item_type: str | None = None    # 既存 'item_type' を改名 (下記)
+    x_ref: XRef | None = None             # 新規: FK 宣言
+```
+
+##### 背景: 既存フィールドの改名
+
+`Attribute.entity` / `Attribute.item_type` は **catalog ツリー上の子 entity へのナビゲーション** (この attribute を辿ると子 entity に降りる) を表す枠で、FK target とは別概念。新規 `x_ref.entity` (FK 対象) と既存 `entity` を同名で並べると混同を招くため、既存を `child_entity` / `child_item_type` に改名する (`Entity.parent_entity` と呼応する命名)。
+
+##### propertyNames FK の取り回し
+
+辞書キー自体が FK のケースは、`_build_array_from_additional` で合成される **暗黙の `.id` Attribute に `x_ref` を載せる** 形に落ちる。これで「辞書キー FK」と「明示プロパティ FK」が同じ表現に揃い、D6 の検証側も F4/F5 の描画側も分岐なしで扱える。
+
+```yaml
+# schema (user-authored):
+user-roles:
+  type: object
+  propertyNames:
+    x-ref: { entity: users }
+  additionalProperties: { ... }
+```
+
+```python
+# catalog 表現 (Schema-Inspector 後):
+Attribute(id="id", type="string", required=True,
+          x_ref=XRef(entity="users"))
+```
+
+##### 自己記述カタログへの反映
+
+`Attribute.catalog` (F8 で導入された catalog の自己記述 Node) に x_ref の三辺を追加。Entity.item_type の singleton-flatten 規約に準拠して sub-edges まで enumerate する (DSL からは `attr.x_ref.entity` で参照可能になる):
+
+```python
+Attribute.catalog = Node(
+    children=[
+        ...,
+        (Edge(name="x_ref", type="object", required=False), Node()),
+        (Edge(name="x_ref.entity", type="string", required=False), Node()),
+        (Edge(name="x_ref.attribute", type="string", required=False), Node()),
+    ],
+)
+```
+
+##### 想定される消費パターン
+
+**D6 (data-level 検証)** — 属性を走査して x_ref を見つけたら target 集合と照合:
+
+```python
+for entity in catalog:
+    for attr in entity.item_type.attributes:
+        if attr.x_ref:
+            check_fk(entity, attr, attr.x_ref, data)
+```
+
+**F4 / F5 (ER 図 / DFD)** — DSL クエリで relations を組み立てる:
+
+```yaml
+relations:
+  from: __definition.entities
+  flatten:
+    of: item_type.attributes
+    as: attr
+  where:
+    attr.x_ref: { exists: true }
+  select:
+    - { item: id, as: from_entity }
+    - { item: attr.id, as: from_attribute }
+    - { item: attr.x_ref.entity, as: to_entity }
+    - { item: attr.x_ref.attribute, as: to_attribute }
+```
+
+関係一覧 (`__definition.references` のような派生 entity) を built-in に追加する案も考えられるが、上のクエリで十分書ける範囲なので、現段階ではテンプレート側に局所化する。汎用化したくなったら後で built-in に昇格する。
+
 #### 実装スコープの段階
 
 ##### Phase 10: schema-level (D1-D5)

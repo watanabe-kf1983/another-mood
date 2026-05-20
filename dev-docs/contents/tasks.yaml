@@ -129,8 +129,12 @@ categories:
       D2:
         title: Schema-Inspector 拡張 — x-ref の収集
         note: |
-          traversal 中に (path, x-ref) ペアを収集してデータカタログに反映。
-          F4 の ER 図テンプレートが catalog から読める形に揃える。
+          traversal 中に x-ref を収集し、Attribute に x_ref: XRef フィールド
+          として載せる。propertyNames FK は合成 .id Attribute の x_ref に乗せ、
+          明示プロパティ FK と同じ表現に揃える。既存 Attribute.entity /
+          item_type は FK 対象との混同を避けるため child_entity /
+          child_item_type に改名。Attribute.catalog にも x_ref の三辺を追加し
+          DSL から参照可能にする。
         phase: 10
         proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D3:
