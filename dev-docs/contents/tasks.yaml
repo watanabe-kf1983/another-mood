@@ -120,39 +120,55 @@ categories:
     spec: design/normalizer/schema-spec.md
     tasks:
       D1:
-        title: --strict CLI フラグの配線
-        note: pipeline 全体に伝播
+        title: Meta-schema 拡張 — x-ref キーワードの受理
+        note: |
+          property 直下と propertyNames の中で x-ref を許容、items: 配下は
+          明示エラー。値は { entity, attribute? } の構造化形式。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D2:
-        title: "FK チェック: to: schema_name"
-        note: additionalProperties パターンの .id 省略形
+        title: Schema-Inspector 拡張 — x-ref の収集
+        note: |
+          traversal 中に x-ref を収集し、Attribute に x_ref: XRef フィールド
+          として載せる。propertyNames FK は合成 .id Attribute の x_ref に乗せ、
+          明示プロパティ FK と同じ表現に揃える。既存 Attribute.entity /
+          item_type は FK 対象との混同を避けるため child_entity /
+          child_item_type に改名。Attribute.catalog にも x_ref の三辺を追加し
+          DSL から参照可能にする。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D3:
-        title: "FK チェック: to: schema_name.property_name"
-        note: 明示プロパティ
+        title: Schema-level コヒーレンスチェック
+        note: |
+          x-ref.entity の存在 / x-ref.attribute の target ObjectType 内存在 /
+          参照先がトップレベル entity のみ / type: array 参照時の attribute
+          必須を検証。違反は build エラー (JSON Schema 違反と同等)。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D4:
-        title: "FK チェック: from がプロパティ名なし"
-        note: 辞書キー自体が FK
+        title: showcase/music への x-ref 適用
+        note: 動作確認用の入出力例
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D5:
-        title: "type: array スキーマ参照時のプロパティ名必須チェック"
+        title: docs/reference 同期
+        note: schema.md 等に x-ref キーワードの仕様を反映
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D6:
-        title: 参照先がトップレベルスキーマのみであることの検証
-        note: ネストパス禁止
-        phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        title: Data-level FK 整合性検査
+        note: |
+          各データ値が target 集合 (辞書キー集合 or 指定 attribute の値集合)
+          に属するかを normalizer / validator で照合。違反は warning レベル。
+        phase: 11
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D7:
-        title: 警告レポートを BuildReport に乗せる
-        note: エラーではなく warning レベル
-        phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-references-d1-d7
+        title: 警告インフラ
+        note: |
+          BuildReport の warning フィールド、output/__meta_*/ 配下の診断ページ、
+          CLI --strict フラグの exit code 制御。D6 を表出するチャネル群。
+        phase: 11
+        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d1-d7
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
