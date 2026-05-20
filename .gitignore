@@ -29,5 +29,8 @@ reports/
 # another-mood output
 /.another-mood/
 
+# Playwright MCP session output (page snapshots, console logs, screenshots)
+/.playwright-mcp/
+
 # OS files
 .DS_Store
