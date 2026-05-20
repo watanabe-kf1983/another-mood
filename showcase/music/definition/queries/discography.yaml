@@ -52,8 +52,10 @@ artist_album_pairs:
 # Like ``artist_album_pairs`` but with ``flatten: { preserve_empty: true
 # }`` - the LEFT-join analogue: artists with no album survive (without
 # the ``album`` field), so the full roster including ``vacant_canvas``
-# stays visible. The ``select:`` clause is omitted because pluck would
-# raise on the missing ``album`` for the unmatched row.
+# stays visible. ``select`` projects an optional ``album`` column too:
+# rows for unmatched artists simply omit the ``album`` key (no error,
+# no fabricated null), matching the data model's "nullable = absent
+# key" convention.
 artist_album_pairs_all:
   from: artists
   join:
@@ -61,3 +63,7 @@ artist_album_pairs_all:
     on: { left: id, right: artist_id }
     as: albums
     flatten: { as: album, preserve_empty: true }
+  select:
+    - item: id
+    - item: name
+    - item: album

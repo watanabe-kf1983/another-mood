@@ -585,19 +585,20 @@ class TestGroupedDerive:
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}) == (
-            "name",
-            "Alice",
-        )
+        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}) == {
+            "name": "Alice",
+        }
 
     def test_renames_field(self) -> None:
         assert SelectItem(item="category", as_="id").apply(
             {"category": "user-management"}
-        ) == ("id", "user-management")
+        ) == {"id": "user-management"}
 
-    def test_raises_on_missing_field(self) -> None:
-        with pytest.raises(KeyError):
-            SelectItem(item="missing", as_="x").apply({"name": "Alice"})
+    def test_returns_empty_for_missing_field(self) -> None:
+        # The JSON data model treats a nullable field as an absent key,
+        # so projecting an optional schema attribute on a record that
+        # happens to omit it yields no output entry rather than raising.
+        assert SelectItem(item="missing", as_="x").apply({"name": "Alice"}) == {}
 
 
 class TestSelect:
@@ -617,6 +618,25 @@ class TestSelect:
     def test_empty_records(self) -> None:
         select = Select(items=[SelectItem(item="x", as_="x")])
         assert list(select.apply([])) == []
+
+    def test_optional_field_absent_in_some_records(self) -> None:
+        # A schema-optional attribute (here ``parent_entity``) is absent
+        # on some records and present on others.  ``select`` must
+        # produce variable-shape rows that omit the key when missing.
+        select = Select(
+            items=[
+                SelectItem(item="id", as_="id"),
+                SelectItem(item="parent_entity", as_="parent_entity"),
+            ]
+        )
+        records = [
+            {"id": "root_a"},
+            {"id": "child_a", "parent_entity": "root_a"},
+        ]
+        assert list(select.apply(records)) == [
+            {"id": "root_a"},
+            {"id": "child_a", "parent_entity": "root_a"},
+        ]
 
 
 class TestSelectDerive:

@@ -93,6 +93,16 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 旧案の `kind: nested | flat_inner | flat_left` enum も検討したが、(a) 動詞 (`flatten:`) を per-join 配置することで kind 名の暗記負担を減らし、(b) `preserve_empty` 等のオプションを naturally に乗せられる、(c) MongoDB の `$lookup` + `$unwind` のように nest と flat をファーストクラスで扱うエンジンの構造に近い、という利点がある。
 
+### 背景: `select` は欠落キーを出力から省く
+
+`select` の各 `item:` は、その attribute がレコードに存在しないとき (= schema 上 optional な属性で値が省略されているとき) は **出力レコードから当該キーを省く**。エラーにはしない。
+
+理由は data model 全体での「nullable = キー省略」原則との整合 ([json-data-model.md](../json-data-model.md))。`null` 値概念を持たない data model の下では、optional 属性が省略されたレコードは「キーがない」状態で素直に走るのが筋。`select` がここで `null` を捏造したりエラーで止めたりすると、後段の述語 (`where: { exists: false }`) や下流テンプレートの falsy 判定が壊れる。
+
+具体例: `from: __definition.entities` に `select - item: parent_entity` を入れると、top-level entity (= `parent_entity` キーが無い) は `parent_entity` キーを持たない行を吐き、child entity (= `parent_entity` に親 id) は値付きの行を吐く。出力レコードの shape が記録ごとに揺れることになるが、これは下流での `if row.parent_entity` 判定で自然に消える。
+
+この semantic は `from` / `flatten` / `where` / `grouped` といった他の DSL 句の missing-key 扱い (where 述語は欠落キーで常に False、sort は `missing: first/last` で位置を指定) と合わせて、「DSL は欠落を一級扱いする」運用に揃える。
+
 ### スコープ外: nested-list 操作
 
 下記は本ツールではサポートしない。 追加シンタックスが必要で、当面実現予定はない:

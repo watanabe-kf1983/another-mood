@@ -301,8 +301,18 @@ class SelectItem:
     item: str
     as_: str
 
-    def apply(self, record: Record) -> tuple[str, object]:
-        return (self.as_, pluck(record, self.item))
+    def apply(self, record: Record) -> Mapping[str, object]:
+        """Return ``{as_: value}`` when the source field is present, or
+        an empty mapping when it is absent.  Absent-key output matches
+        the JSON data model convention that nullable fields are
+        represented by key omission rather than a null value, so
+        projecting an optional schema attribute yields rows whose key
+        set varies with each record's presence of the field.
+        """
+        try:
+            return {self.as_: pluck(record, self.item)}
+        except KeyError:
+            return {}
 
     def derive(self, catalog: dc.Node) -> Sequence[tuple[dc.Edge, dc.Node]]:
         # Pull dotted siblings too so derive mirrors apply's ``pluck``,
@@ -324,7 +334,7 @@ class Select(QueryNode):
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         return [
-            {name: value for s in self.items for name, value in [s.apply(record)]}
+            {k: v for item in self.items for k, v in item.apply(record).items()}
             for record in records
         ]
 
