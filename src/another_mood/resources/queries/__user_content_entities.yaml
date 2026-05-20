@@ -1,0 +1,15 @@
+# Content entities (user-land + prose, including descendants) used as the
+# node set for the built-in ER diagram on the __root template.  Same gate
+# as __user_entity_roots minus the `parent_entity: { exists: false }`
+# filter, so child entities like `artists.members` are included.
+__user_content_entities:
+  from: __definition.entities
+  where:
+    view: false
+    not:
+      id: { startswith: __ }
+  select:
+    - item: id
+    - item: parent_entity
+    - item: builtin
+    - item: item_type

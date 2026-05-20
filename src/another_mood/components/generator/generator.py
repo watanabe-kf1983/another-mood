@@ -133,6 +133,26 @@ def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[object]:
     return [value]
 
 
+def _mermaid_class_id(entity_id: object) -> str:
+    """System-only Jinja2 filter: turn a catalog entity id into a
+    Mermaid classDiagram-safe identifier.
+
+    Catalog ids carry dots when a parent walk crosses entity boundaries
+    (``artists.members``, ``__definition.entities``).  Mermaid's
+    classDiagram parser treats unquoted dots as namespace separators, so
+    the dotted id cannot be used directly as a ``class`` name.  Replace
+    ``.`` with ``_`` to alias the id; templates pass the original id as
+    a label (``class artists_members["artists.members"]``) so the
+    rendered diagram still shows the canonical id to readers.
+
+    Catalog ids are constrained to ASCII identifier characters plus
+    ``.``, so no other escaping is required here.
+    """
+    if not isinstance(entity_id, str):
+        return ""
+    return entity_id.replace(".", "_")
+
+
 def _to_yaml(value: object, flow: bool = False) -> str:
     """System-only Jinja2 filter: dump a value as YAML.
 
@@ -160,4 +180,5 @@ _FILTERS: Mapping[str, Callable[..., Any]] = {
     "pluck": _pluck,
     "to_yaml": _to_yaml,
     "walk_entity": _walk_entity,
+    "mermaid_class_id": _mermaid_class_id,
 }
