@@ -41,8 +41,8 @@ class TestDictRoundTrip:
                         id="items",
                         type="object[]",
                         required=False,
-                        entity="orders.items",
-                        item_type="orders.items.item",
+                        child_entity="orders.items",
+                        child_item_type="orders.items.item",
                     ),
                 ],
                 metadata={"title": "Order"},
@@ -80,8 +80,8 @@ class TestBuildAndFlatten:
                       - id: tasks
                         type: object[]
                         required: true
-                        entity: categories.tasks
-                        item_type: categories.item.tasks.item
+                        child_entity: categories.tasks
+                        child_item_type: categories.item.tasks.item
                 - id: categories.tasks
                   item_type:
                     id: categories.item.tasks.item
@@ -108,8 +108,8 @@ class TestBuildAndFlatten:
                         type: object[]
                         required: true
                         metadata: { title: Fields list }
-                        entity: entities.fields
-                        item_type: entities.item.fields.item
+                        child_entity: entities.fields
+                        child_item_type: entities.item.fields.item
                     metadata: { title: Entity }
                 - id: entities.fields
                   item_type:
@@ -144,8 +144,8 @@ class TestBuildAndFlatten:
                       - id: hobby.pets
                         type: object[]
                         required: false
-                        entity: members.hobby.pets
-                        item_type: members.item.hobby.pets.item
+                        child_entity: members.hobby.pets
+                        child_item_type: members.item.hobby.pets.item
                 - id: members.hobby.pets
                   item_type:
                     id: members.item.hobby.pets.item
@@ -212,8 +212,8 @@ class TestRenameOnFlatten:
                   - id: tasks
                     type: object[]
                     required: true
-                    entity: categories.tasks
-                    item_type: categories.item.tasks.item
+                    child_entity: categories.tasks
+                    child_item_type: categories.item.tasks.item
             - id: categories.tasks
               item_type:
                 id: categories.item.tasks.item
@@ -233,8 +233,8 @@ class TestRenameOnFlatten:
                   - id: tasks
                     type: object[]
                     required: true
-                    entity: tasks_by_phase.tasks
-                    item_type: tasks_by_phase.item.tasks.item
+                    child_entity: tasks_by_phase.tasks
+                    child_item_type: tasks_by_phase.item.tasks.item
             - id: tasks_by_phase.tasks
               item_type:
                 id: tasks_by_phase.item.tasks.item

@@ -252,8 +252,8 @@ class TestToCatalogNode:
         assert dc.flatten_tree(to_catalog_node(tree),"orders") == [
             dc.Entity("orders", item_type=dc.ObjectType("orders.item", attributes=[
                 dc.Attribute("items", "object[]", False,
-                             entity="orders.items",
-                             item_type="orders.item.items.item"),
+                             child_entity="orders.items",
+                             child_item_type="orders.item.items.item"),
             ])),
             dc.Entity(
                 "orders.items",
@@ -296,8 +296,8 @@ class TestToCatalogNode:
         assert dc.flatten_tree(to_catalog_node(tree),"boards") == [
             dc.Entity("boards", item_type=dc.ObjectType("boards.item", attributes=[
                 dc.Attribute("grid", "object[][]", False,
-                             entity="boards.grid",
-                             item_type="boards.item.grid.item"),
+                             child_entity="boards.grid",
+                             child_item_type="boards.item.grid.item"),
             ])),
             dc.Entity(
                 "boards.grid",
@@ -365,8 +365,8 @@ class TestToCatalogNode:
                 dc.Attribute("name", "string", True),
                 dc.Attribute("hobby", "object", True),
                 dc.Attribute("hobby.pets", "object[]", False,
-                             entity="members.hobby.pets",
-                             item_type="members.item.hobby.pets.item"),
+                             child_entity="members.hobby.pets",
+                             child_item_type="members.item.hobby.pets.item"),
             ])),
             dc.Entity(
                 "members.hobby.pets",

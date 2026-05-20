@@ -263,8 +263,8 @@ class TestValidateByCatalog:
                       - id: tasks
                         type: object[]
                         required: true
-                        entity: members.tasks
-                        item_type: members.item.tasks.item
+                        child_entity: members.tasks
+                        child_item_type: members.item.tasks.item
                 - id: members.tasks
                   item_type:
                     id: members.item.tasks.item

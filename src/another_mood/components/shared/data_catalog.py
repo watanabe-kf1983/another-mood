@@ -93,8 +93,8 @@ class Attribute:
     required: bool
     metadata: Mapping[str, object] | None = None
     validation: Mapping[str, object] | None = None
-    entity: str | None = None  # referenced Entity.id (= access_path)
-    item_type: str | None = None  # referenced ObjectType.id
+    child_entity: str | None = None  # child Entity.id (= access_path)
+    child_item_type: str | None = None  # child ObjectType.id
 
     #: Node-form self-description of the persisted Attribute record.
     #: Composed into ``Entity.catalog`` as the child of the
@@ -108,8 +108,8 @@ class Attribute:
             (Edge(name="required", type="boolean", required=True), Node()),
             (Edge(name="metadata", type="object", required=False), Node()),
             (Edge(name="validation", type="object", required=False), Node()),
-            (Edge(name="entity", type="string", required=False), Node()),
-            (Edge(name="item_type", type="string", required=False), Node()),
+            (Edge(name="child_entity", type="string", required=False), Node()),
+            (Edge(name="child_item_type", type="string", required=False), Node()),
         ],
     )
 
@@ -242,7 +242,7 @@ def _build_entity_node(
             (
                 _edge_from_attribute(attr),
                 _build_entity_node(sub_by_name[attr.id], catalog)
-                if attr.entity
+                if attr.child_entity
                 else Node(),
             )
             for attr in entity.item_type.attributes
@@ -322,8 +322,8 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
         required=edge.required,
         metadata=edge.metadata,
         validation=edge.validation,
-        entity=".".join(edge_path) if node.is_entity else None,
-        item_type=_item_type_id(edge_path) if node.is_entity else None,
+        child_entity=".".join(edge_path) if node.is_entity else None,
+        child_item_type=_item_type_id(edge_path) if node.is_entity else None,
     )
 
 

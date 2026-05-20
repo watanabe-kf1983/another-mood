@@ -61,8 +61,8 @@
 | id | type | required | metadata | validation |
 |----|------|----------|----------|------------|
 {% for attribute in entity.item_type.attributes -%}
-{%- set array_suffix = "[]" if attribute.item_type and attribute.type.endswith("[]") else "" -%}
-{%- set type_cell = "`" ~ (attribute.item_type or attribute.type) ~ array_suffix ~ "`" -%}
+{%- set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" -%}
+{%- set type_cell = "`" ~ (attribute.child_item_type or attribute.type) ~ array_suffix ~ "`" -%}
 | `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} |
 {% endfor -%}
 {%- else -%}
@@ -82,7 +82,7 @@
 |{% for attribute in attributes %}---|{% endfor %}
 {% for row in rows -%}
 | {% for attribute in attributes -%}
-{%- if attribute.entity -%}
+{%- if attribute.child_entity -%}
 *{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
 {{ row | pluck(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}

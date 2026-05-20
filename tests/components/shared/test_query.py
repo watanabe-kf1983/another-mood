@@ -84,8 +84,8 @@ _TASKS_CATALOG_YAML = """
       - id: tasks
         type: object[]
         required: true
-        entity: categories.tasks
-        item_type: categories.item.tasks.item
+        child_entity: categories.tasks
+        child_item_type: categories.item.tasks.item
 - id: categories.tasks
   item_type:
     id: categories.item.tasks.item
@@ -194,8 +194,8 @@ _FLATTEN_CATALOG_YAML = """
       - id: tasks
         type: object[]
         required: true
-        entity: categories.tasks
-        item_type: categories.item.tasks.item
+        child_entity: categories.tasks
+        child_item_type: categories.item.tasks.item
 - id: categories.tasks
   item_type:
     id: categories.item.tasks.item
@@ -569,8 +569,8 @@ class TestGroupedDerive:
                   - id: tasks
                     type: object[]
                     required: true
-                    entity: groups.tasks
-                    item_type: groups.item.tasks.item
+                    child_entity: groups.tasks
+                    child_item_type: groups.item.tasks.item
             - id: groups.tasks
               item_type:
                 id: groups.item.tasks.item
@@ -1003,8 +1003,8 @@ class TestQueryPipeline:
                   - id: tasks
                     type: object[]
                     required: true
-                    entity: cat_tasks.tasks
-                    item_type: cat_tasks.item.tasks.item
+                    child_entity: cat_tasks.tasks
+                    child_item_type: cat_tasks.item.tasks.item
             - id: cat_tasks.tasks
               item_type:
                 id: cat_tasks.item.tasks.item
