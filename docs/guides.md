@@ -283,7 +283,7 @@ orders:
     customer: tanaka       # references a customer by id (declared with x-ref in the schema)
 ```
 
-For aggregation, declare the relationship with [`x-ref`](reference/schema.md#foreign-key-references-x-ref).
+For aggregation, declare the relationship with [`x-ref`](reference/schema.md#entity-references-x-ref).
 
 #### Content files — naming and layout are up to you
 

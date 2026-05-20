@@ -190,9 +190,9 @@ Annotation keywords that do not affect validation or normalization:
 
 - `format` (e.g., `email`, `uri`). Retained as an annotation, but values are not validated against it.
 
-### Foreign-key references (x-ref)
+### Entity references (x-ref)
 
-`x-ref` declares that a property holds a foreign key pointing into another top-level entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
+`x-ref` declares that a property's value references a record in another top-level entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
 
 ```yaml
 albums:
