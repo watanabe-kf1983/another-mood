@@ -201,6 +201,73 @@ class TestBuildSchemaTree:
         """))
         assert tree == ArrayNode(child=ArrayNode(child=ValueNode(type="string")))
 
+    def test_x_ref_entity_only(self) -> None:
+        """x-ref is stashed as the raw mapping on SchemaProperty.x_ref."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              artist_id:
+                type: string
+                x-ref:
+                  entity: artists
+            additionalProperties: false
+        """))
+        assert tree == ObjectNode(properties=[
+            SchemaProperty(
+                "artist_id", False, ValueNode(type="string"),
+                x_ref={"entity": "artists"},
+            ),
+        ])
+
+    def test_x_ref_with_attribute(self) -> None:
+        """Both entity and attribute survive in the raw mapping."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              curator:
+                type: string
+                x-ref:
+                  entity: users
+                  attribute: name
+            additionalProperties: false
+        """))
+        assert tree == ObjectNode(properties=[
+            SchemaProperty(
+                "curator", False, ValueNode(type="string"),
+                x_ref={"entity": "users", "attribute": "name"},
+            ),
+        ])
+
+    def test_x_ref_extra_keys_preserved_at_tree_layer(self) -> None:
+        """Extra keys remain on the SchemaTree mapping; the catalog layer drops them."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              owner_id:
+                type: string
+                x-ref:
+                  entity: users
+                  future_key: ignored
+            additionalProperties: false
+        """))
+        assert tree == ObjectNode(properties=[
+            SchemaProperty(
+                "owner_id", False, ValueNode(type="string"),
+                x_ref={"entity": "users", "future_key": "ignored"},
+            ),
+        ])
+
+    def test_no_x_ref(self) -> None:
+        """Properties without x-ref produce SchemaProperty.x_ref=None."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            properties:
+              plain: { type: string }
+            additionalProperties: false
+        """))
+        assert isinstance(tree, ObjectNode)
+        assert tree.properties[0].x_ref is None
+
 
 # ── B→C: to_catalog_node + dc.flatten_tree ──────────────────────
 #
@@ -396,6 +463,39 @@ class TestToCatalogNode:
                 dc.Attribute("address",         "object",   True),
                 dc.Attribute("address.city",    "string",   True),
                 dc.Attribute("address.aliases", "string[]", False),
+            ])),
+        ]
+
+    def test_x_ref_propagates_to_attribute(self) -> None:
+        """SchemaProperty.x_ref (raw mapping) becomes dc.XRef at the catalog boundary."""
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("artist_id", True, ValueNode(type="string"),
+                           x_ref={"entity": "artists"}),
+            SchemaProperty("curator", False, ValueNode(type="string"),
+                           x_ref={"entity": "users", "attribute": "name"}),
+        ]))
+        assert dc.flatten_tree(to_catalog_node(tree), "albums") == [
+            dc.Entity("albums", item_type=dc.ObjectType("albums.item", attributes=[
+                dc.Attribute("artist_id", "string", True,
+                             x_ref=dc.XRef(entity="artists")),
+                dc.Attribute("curator", "string", False,
+                             x_ref=dc.XRef(entity="users", attribute="name")),
+            ])),
+        ]
+
+    def test_x_ref_on_dotted_singleton_subproperty(self) -> None:
+        """x-ref on a sub-property of a singleton ObjectNode is carried by the dotted edge."""
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("address", True, ObjectNode(properties=[
+                SchemaProperty("city_id", True, ValueNode(type="string"),
+                               x_ref={"entity": "cities"}),
+            ])),
+        ]))
+        assert dc.flatten_tree(to_catalog_node(tree), "users") == [
+            dc.Entity("users", item_type=dc.ObjectType("users.item", attributes=[
+                dc.Attribute("address",         "object", True),
+                dc.Attribute("address.city_id", "string", True,
+                             x_ref=dc.XRef(entity="cities")),
             ])),
         ]
 

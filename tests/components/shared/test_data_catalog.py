@@ -63,6 +63,30 @@ class TestDictRoundTrip:
         )
         assert dc.Entity.from_dict(entity.to_dict()) == entity
 
+    def test_attribute_with_x_ref(self) -> None:
+        """``XRef`` survives the to_dict/from_dict round-trip on Attribute."""
+        entity = dc.Entity(
+            id="albums",
+            item_type=dc.ObjectType(
+                id="albums.item",
+                attributes=[
+                    dc.Attribute(
+                        id="artist_id",
+                        type="string",
+                        required=True,
+                        x_ref=dc.XRef(entity="artists"),
+                    ),
+                    dc.Attribute(
+                        id="curator",
+                        type="string",
+                        required=False,
+                        x_ref=dc.XRef(entity="users", attribute="name"),
+                    ),
+                ],
+            ),
+        )
+        assert dc.Entity.from_dict(entity.to_dict()) == entity
+
 
 class TestBuildAndFlatten:
     @pytest.mark.parametrize(
@@ -180,10 +204,21 @@ class TestCatalogDriftSuppression:
     identity tests above.
     """
 
-    def test_attribute_edges_match_dataclass_fields(self) -> None:
-        assert {edge.name for edge, _ in dc.Attribute.catalog.children} == {
-            f.name for f in dataclasses.fields(dc.Attribute)
+    def test_attribute_top_level_edges_match_dataclass_fields(self) -> None:
+        non_dotted = {
+            edge.name
+            for edge, _ in dc.Attribute.catalog.children
+            if "." not in edge.name
         }
+        assert non_dotted == {f.name for f in dataclasses.fields(dc.Attribute)}
+
+    def test_xref_dotted_edges_match_dataclass_fields(self) -> None:
+        dotted = {
+            edge.name.removeprefix("x_ref.")
+            for edge, _ in dc.Attribute.catalog.children
+            if edge.name.startswith("x_ref.")
+        }
+        assert dotted == {f.name for f in dataclasses.fields(dc.XRef)}
 
     def test_entity_top_level_edges_match_dataclass_fields(self) -> None:
         non_dotted = {

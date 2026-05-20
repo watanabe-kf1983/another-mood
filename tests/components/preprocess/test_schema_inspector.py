@@ -569,3 +569,52 @@ class TestInspectSchema:
             "__definition.queries",
         }
         assert all(e["builtin"] for e in entities)
+
+    def test_writes_x_ref_on_attribute(self, tmp_path: Path) -> None:
+        """x-ref declared on a property surfaces on the persisted Attribute."""
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
+            "  artists:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        name: { type: string }\n"
+            "      additionalProperties: false\n"
+            "  albums:\n"
+            "    type: object\n"
+            "    additionalProperties:\n"
+            "      type: object\n"
+            "      properties:\n"
+            "        artist_id:\n"
+            "          type: string\n"
+            "          x-ref:\n"
+            "            entity: artists\n"
+            "        curator:\n"
+            "          type: string\n"
+            "          x-ref:\n"
+            "            entity: artists\n"
+            "            attribute: name\n"
+            "      additionalProperties: false\n"
+            "additionalProperties: false\n"
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        data = yaml.safe_load((out_dir / "schema.yaml").read_text())
+        albums = next(
+            e for e in data["__definition"]["entities"] if e["id"] == "albums"
+        )
+        attrs_by_id = {a["id"]: a for a in albums["item_type"]["attributes"]}
+        # save_model strips None-valued keys, so unset XRef.attribute and
+        # absent x_ref do not appear at all in the persisted dict.
+        assert attrs_by_id["artist_id"]["x_ref"] == {"entity": "artists"}
+        assert attrs_by_id["curator"]["x_ref"] == {
+            "entity": "artists",
+            "attribute": "name",
+        }
+        assert "x_ref" not in attrs_by_id["id"]
