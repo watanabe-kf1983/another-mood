@@ -215,7 +215,7 @@ Fields:
 - `entity` (required) — name of a top-level entity declared in this schema, or a built-in entity (currently `prose`).
 - `attribute` (optional) — name of an attribute on the target entity. When omitted, the synthetic `.id` of a map-pattern target is referenced; the target must therefore use the [map pattern](#map-pattern). When the target uses the [array pattern](#array-pattern) (no implicit `id`), `attribute` is required.
 
-The declared references appear in `output/__meta_entity/<entity>.md` as a `references` column, with the target rendered as a link to the target's meta page.
+The declared references appear in `output/__meta_entity/<entity>.md` as a `references` column.
 
 ## Unsupported keywords
 
