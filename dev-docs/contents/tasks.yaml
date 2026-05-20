@@ -261,9 +261,11 @@ categories:
         title: ER 図テンプレート — 全体図 + 基盤
         note: |
           全体図 (`index.md`)、新規クエリ `__user_content_entities`、
-          Jinja2 フィルタ `mermaid_class_id`。前提 D, E11, E3。
+          必要なら Jinja2 フィルタ `mermaid_class_id`。前提 D, E11, E3,
+          R2 (user-land で先に成立を確認)。
           描画は Mermaid classDiagram、composition/association を区別。
           association edge ラベルは FK 属性名、カーディナリティは書かない。
+          R2 で確立したパターンを built-in に輸入する位置づけ。
         phase: 10
         proposal: design/app/meta-documentation.md#er-図-f4a-f4c
       F4b:
@@ -517,6 +519,35 @@ categories:
       - docs/
       - showcase/
     tasks:
+      R2:
+        title: "showcase/japanese-table-design — テーブル定義から ERD を描く PoC"
+        note: |
+          ソフトウェアシステム設計書サンプルの最小形として、テーブル
+          定義から Mermaid classDiagram を user template で描く showcase
+          を新設する。`showcase/japanese-table-design/` 配下:
+
+          - スキーマ: `テーブル` / `列` / `参照` モデル
+            (top-level entity 名含めすべて日本語識別子)。
+            `参照.テーブル` は `x-ref: { entity: テーブル }` で
+            メタ層の参照整合性を宣言
+          - サンプルデータ: 小規模な題材を一式 (例: 図書館貸出システム)、
+            **識別子・属性名・データ値・description すべて日本語**
+          - テンプレート: テーブル一覧 + 各テーブル詳細 + Mermaid
+            classDiagram の ERD。Jinja2 の素の機能と既存フィルタのみで
+            記述し、カスタムフィルタには頼らない
+
+          検証ポイント:
+          1. user-accessible な primitive だけで ERD が描けるか
+          2. Mermaid classDiagram の Unicode 制約 (class 名 / 属性名 /
+             edge ラベル) を実機で確認し、回避パターンを確立する
+             (label 形式 `class id["日本語"]` / backtick 形式 / 属性名の
+             表記など)
+          3. 不足プリミティブがあれば surface させ、別タスクに切り出す
+
+          F4a の実装着手前に完了させ、ここで確立したテンプレート
+          パターンを built-in 側に輸入する。
+        phase: 10
+        proposal: design/app/meta-documentation.md#er-図-f4a-f4c
       R1:
         title: "スキーマ記述例の `additionalProperties: false` 位置を統一"
         note: |
