@@ -169,14 +169,14 @@ categories:
           build エラーとして扱い、後続処理を中止する (D7 完成後に warning
           レベルに切り替える)。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d6-d7
+        done: true
       D7:
         title: 警告インフラ
         note: |
           BuildReport の warning フィールド、output/__meta_*/ 配下の診断ページ、
           CLI --strict フラグの exit code 制御。D6 を表出するチャネル群。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性制約-x-ref-d6-d7
+        proposal: design/normalizer/schema-spec.md#参照整合性違反の警告インフラ-d7
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
