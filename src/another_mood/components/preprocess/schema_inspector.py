@@ -168,17 +168,28 @@ def _xref_diagnostics(
 
 
 def _xref_diagnostic(value: str, message: str) -> Diagnostic:
-    """Build a Diagnostic from a UserStr-tagged offender."""
-    if not isinstance(value, UserStr):
-        raise RuntimeError(
-            f"x-ref offender {value!r} is not UserStr-tagged; "
-            "the catalog must be built via parse_yaml so source positions are available"
+    """Build a Diagnostic from a (possibly UserStr-tagged) offender.
+
+    When the offender carries a UserStr Location (the expected path,
+    since the catalog is built from parse_yaml output), the diagnostic
+    points at the originating YAML line/column.  Falls back to a
+    fileless diagnostic when the tag is missing, preserving the
+    message so the user still sees what went wrong instead of crashing
+    on a defensive RuntimeError.
+    """
+    if isinstance(value, UserStr):
+        location = value.location
+        return Diagnostic(
+            file=location.file,
+            line=location.line,
+            column=location.column,
+            message=message,
+            source="x-ref",
         )
-    location = value.location
     return Diagnostic(
-        file=location.file,
-        line=location.line,
-        column=location.column,
+        file=None,
+        line=None,
+        column=None,
         message=message,
         source="x-ref",
     )

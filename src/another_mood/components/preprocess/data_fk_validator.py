@@ -11,7 +11,7 @@ string value (set up by ``source_loader.parse_yaml``), so diagnostics
 point at the originating YAML line/column.  When the value is not
 UserStr-tagged (e.g. data was re-loaded from disk via ``typ='safe'``,
 or constructed in memory), the diagnostic still names the offending
-entity / attribute / value but without a source location.
+entity / attribute / value but the file/line/column fields stay None.
 
 D6/D7 transitional severity: while the warning infrastructure (D7) is
 not in place, FK violations surface as build errors (``severity=error``,
@@ -20,18 +20,11 @@ lands, this module's severity drops to warning.
 """
 
 from collections.abc import Iterator, Mapping, Sequence
-from pathlib import Path
 from typing import cast
 
 from another_mood.components.preprocess.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.diagnostic import Diagnostic
-
-
-#: Sentinel ``file`` value for diagnostics on FROM-side scalars that
-#: have lost their ``UserStr`` source tag.  Picked so the rendered
-#: path is visibly non-physical rather than a confusing real path.
-_UNKNOWN_SOURCE = Path("<unknown>")
 
 
 def check_fk_data(
@@ -141,7 +134,7 @@ def _fk_violation(entity: dc.Entity, attr: dc.Attribute, value: object) -> Diagn
             source="x-ref-data",
         )
     return Diagnostic(
-        file=_UNKNOWN_SOURCE,
+        file=None,
         line=None,
         column=None,
         message=message,

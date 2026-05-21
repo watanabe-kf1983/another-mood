@@ -348,9 +348,9 @@ class TestUntaggedValue:
         diagnostics = check_fk_data(catalog, data)
         assert len(diagnostics) == 1
         diag = diagnostics[0]
+        assert diag.file is None
         assert diag.line is None
         assert diag.column is None
-        assert diag.file == Path("<unknown>")
         assert (
             diag.message
             == "x-ref albums.artist_id = 'ghost' has no match in artists.id"
