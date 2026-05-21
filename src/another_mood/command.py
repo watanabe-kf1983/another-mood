@@ -118,6 +118,10 @@ class BuildResult:
     def has_errors(self) -> bool:
         return bool(self.errors)
 
+    def has_warnings(self) -> bool:
+        """True if any diagnostic was recorded with ``severity="warning"``."""
+        return any(d.severity == "warning" for d in self.diagnostics)
+
 
 # -- Commands ----------------------------------------------------------------
 
