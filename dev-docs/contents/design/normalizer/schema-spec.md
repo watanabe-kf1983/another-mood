@@ -38,7 +38,13 @@ albums:
 
 #### 書ける位置
 
-プロパティ宣言の直下にだけ x-ref を書ける。`items:` 直下 (スカラー配列要素の FK) は meta-schema エラーで拒否し、辞書キー自体に FK を付けるパターン (`propertyNames` に x-ref) もサポートしない。理由は以下のとおり:
+プロパティ宣言の直下にだけ x-ref を書ける。さらに以下の制約がある:
+
+- **`type: string` のプロパティのみ**。integer / number / boolean / object / array は meta-schema エラーで拒否
+- `items:` 直下 (スカラー配列要素の FK) は meta-schema エラーで拒否
+- 辞書キー自体に FK を付けるパターン (`propertyNames` に x-ref) はサポートしない
+
+`type: string` 限定の理由: dict-pattern の synthetic id は normalizer が string に揃え ([normalizer.md](normalizer.md)「dict-pattern の synthetic id は常に string」)、target attribute 値も string として比較する。integer / number に開放すると「dict キーは str 化されているのに FROM 側は int」など型ミスマッチが事故化する。FK 値の表現として string を強制することで、normalization contract と整合する。実需が薄いという観察 (showcase/music の 7 FK は全て string) も後押し。integer FK が surface したら、synthetic id の型推論機構と合わせて別タスクで開放する。
 
 `items:` 直下の `x-ref` を明示エラーにする理由は、現状のデータカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、catalog 構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo は catalog 上で attribute として現れるため)。
 

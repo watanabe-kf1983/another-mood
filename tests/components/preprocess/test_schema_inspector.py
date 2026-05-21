@@ -471,6 +471,27 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="x-ref unknown subkey rejected",
     ),
+    *[
+        pytest.param(
+            f"""
+            type: object
+            properties:
+              tasks:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    fk:
+                      type: {bad_type}
+                      x-ref:
+                        entity: phases
+                  additionalProperties: false
+            additionalProperties: false
+            """,
+            id=f"x-ref on type={bad_type} rejected",
+        )
+        for bad_type in ("integer", "number", "boolean", "object", "array")
+    ],
 ]
 
 
