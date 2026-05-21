@@ -89,7 +89,14 @@ class TestNormalizeContents:
         )
 
         out = tmp_path / "normalized"
-        normalize_contents(src_dir=src, out_dir=out, schema_file=schema_file)
+        catalog_dir = tmp_path / "catalog"
+        catalog_dir.mkdir()
+        normalize_contents(
+            src_dir=src,
+            out_dir=out,
+            schema_file=schema_file,
+            data_catalog_dir=catalog_dir,
+        )
 
         assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
             "items": [{"name": "a"}]

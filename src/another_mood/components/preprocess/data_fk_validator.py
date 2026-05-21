@@ -26,6 +26,12 @@ from another_mood.components.preprocess.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.diagnostic import Diagnostic
 
+#: Attribute types whose values can serve as FK targets.  Non-scalar
+#: types (``object``, ``object[]``) carry dict / list values that are
+#: not hashable into a target set, and could not match an x-ref value
+#: anyway since the meta-schema constrains x-ref to ``type: string``.
+_SCALAR_TYPES = frozenset({"string", "integer", "number", "boolean"})
+
 
 def check_fk_data(
     catalog: Sequence[dc.Entity],
@@ -71,9 +77,10 @@ def _build_target_index(
         if entity is None or entity.parent_entity is not None:
             continue
         for attr in entity.item_type.attributes:
-            if attr.child_entity is not None:
-                # Nested entity link (list value) is not a scalar
-                # attribute and never a valid FK target.
+            if attr.type not in _SCALAR_TYPES:
+                # Non-scalar attributes (singleton-flatten parents like
+                # ``body`` / ``x_ref``, child-entity links) cannot be FK
+                # targets and their dict/list values are unhashable.
                 continue
             values = frozenset(
                 rec[attr.id] for rec in records if rec.get(attr.id) is not None
