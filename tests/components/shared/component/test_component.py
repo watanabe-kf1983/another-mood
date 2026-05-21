@@ -7,6 +7,11 @@ import yaml
 
 
 from another_mood.components.shared.component.component import Component, ComponentCall
+from another_mood.components.shared.diagnostic import (
+    Diagnostic,
+    DiagnosticReporter,
+    DiagnosticSeverity,
+)
 
 
 class TestComponent:
@@ -142,6 +147,34 @@ class TestErrorPropagationWrapping:
 
         data = yaml.safe_load((out / "reports" / "__build_report.yaml").read_text())
         assert "boom" in data["__build_report"]["errors"][0]["message"]
+
+
+class TestDiagnosticsInjection:
+    def test_reporter_kwarg_is_injected_when_declared(self, tmp_path: Path) -> None:
+        received: list[DiagnosticReporter] = []
+
+        @Component(out_dir="out_dir", diagnostics="reporter")
+        def my_fn(*, out_dir: Path, reporter: DiagnosticReporter) -> None:
+            received.append(reporter)
+            reporter.report(
+                Diagnostic(
+                    file=None,
+                    line=None,
+                    column=None,
+                    message="heads up",
+                    severity=DiagnosticSeverity.warning,
+                )
+            )
+
+        my_fn(out_dir=tmp_path / "output")
+        assert len(received) == 1
+        assert isinstance(received[0], DiagnosticReporter)
+
+        data = yaml.safe_load(
+            (tmp_path / "output" / "reports" / "__build_report.yaml").read_text()
+        )
+        assert data["__build_report"]["diagnostics"][0]["message"] == "heads up"
+        assert data["__build_report"]["diagnostics"][0]["severity"] == "warning"
 
 
 class TestLockedReadWrapping:

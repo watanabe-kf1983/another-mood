@@ -114,8 +114,8 @@ class DiagnosticEntry:
 class BuildReport:
     """Typed snapshot of a __build_report.
 
-    Frozen value type. Mutators (``with_component_result``, ``with_exception``)
-    return a new instance with the change applied.
+    Frozen value type. ``with_*`` methods return a new instance with the
+    change applied.
     """
 
     stages: Sequence[StageResult] = ()
@@ -147,7 +147,7 @@ class BuildReport:
     def is_empty(self) -> bool:
         return not (self.stages or self.errors or self.diagnostics)
 
-    def with_component_result(self, component: str, result: str) -> "BuildReport":
+    def with_added_stage(self, component: str, result: str) -> "BuildReport":
         if not component:
             return self
         new_stage = StageResult(
@@ -161,6 +161,15 @@ class BuildReport:
             self,
             errors=_dedupe_append(self.errors, new_errors),
             diagnostics=_dedupe_append(self.diagnostics, new_diagnostics),
+        )
+
+    def with_added_diagnostics(
+        self, diagnostics: Iterable[DiagnosticEntry]
+    ) -> "BuildReport":
+        """Return a copy with the given diagnostics appended (deduped)."""
+        return replace(
+            self,
+            diagnostics=_dedupe_append(self.diagnostics, diagnostics),
         )
 
     def to_data(self) -> Mapping[str, object]:
