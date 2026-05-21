@@ -3,7 +3,6 @@
 from pathlib import Path
 from textwrap import dedent
 
-import pytest
 import yaml
 
 from another_mood.components.preprocess.content_normalizer import (
@@ -11,7 +10,10 @@ from another_mood.components.preprocess.content_normalizer import (
     normalize_contents,
 )
 from another_mood.components.preprocess.schema_inspector import inspect_schema
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.diagnostic import (
+    DiagnosticReporter,
+    DiagnosticSeverity,
+)
 
 
 class TestBuildContentsSchema:
@@ -135,12 +137,11 @@ _FK_SCHEMA = """
 """
 
 
-def test_normalize_contents_raises_on_dangling_fk(tmp_path: Path) -> None:
-    """End-to-end: inspect_schema's catalog + dangling FK → FileValidationError.
+def test_normalize_contents_reports_dangling_fk_as_warning(tmp_path: Path) -> None:
+    """End-to-end: inspect_schema's catalog + dangling FK → warning via reporter.
 
-    Uses ``.fn(...)`` to bypass the Component-framework wrappers so
-    the exception surfaces directly (matching the pattern in
-    test_schema_inspector / test_query_deriver).
+    Uses ``.fn(...)`` so the test can pass a :class:`DiagnosticReporter`
+    explicitly (the Component-framework would otherwise inject one).
     """
     schema_file = tmp_path / "schema.yaml"
     schema_file.write_text(dedent(_FK_SCHEMA).lstrip("\n"))
@@ -163,13 +164,21 @@ def test_normalize_contents_raises_on_dangling_fk(tmp_path: Path) -> None:
     out = tmp_path / "normalized"
     out.mkdir()
 
-    with pytest.raises(FileValidationError) as exc:
-        normalize_contents.fn(
-            src_dir=src,
-            out_dir=out,
-            schema_file=schema_file,
-            data_catalog_dir=catalog_dir,
-        )
-    assert [(d.source, d.message) for d in exc.value.diagnostics] == [
-        ("x-ref-data", "x-ref albums.artist_id = 'ghost' has no match in artists.id"),
+    reporter = DiagnosticReporter()
+    normalize_contents.fn(
+        src_dir=src,
+        out_dir=out,
+        schema_file=schema_file,
+        data_catalog_dir=catalog_dir,
+        reporter=reporter,
+    )
+
+    assert [(d.source, d.severity, d.message) for d in reporter.diagnostics] == [
+        (
+            "x-ref-data",
+            DiagnosticSeverity.warning,
+            "x-ref albums.artist_id = 'ghost' has no match in artists.id",
+        ),
     ]
+    # The normalized data still lands on disk — warnings do not stop the stage.
+    assert (out / "data.yaml.yaml").exists()

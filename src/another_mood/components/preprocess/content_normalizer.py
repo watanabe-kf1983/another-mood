@@ -16,7 +16,7 @@ from another_mood.components.preprocess.data_fk_validator import check_fk_data
 from another_mood.components.preprocess.normalize_core import iter_normalized
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.diagnostic import DiagnosticReporter
 from another_mood.components.shared.json_data_model import load_model, save_model
 
 _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
@@ -24,15 +24,20 @@ _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
 )
 
 
-@Component(out_dir="out_dir", upstream_dirs=["data_catalog_dir"])
+@Component(
+    out_dir="out_dir",
+    upstream_dirs=["data_catalog_dir"],
+    diagnostics="reporter",
+)
 def normalize_contents(
     src_dir: Path,
     *,
     schema_file: Path,
     data_catalog_dir: Path,
     out_dir: Path,
+    reporter: DiagnosticReporter,
 ) -> None:
-    """Normalize src_dir contents into out_dir and check FK integrity."""
+    """Normalize src_dir contents into out_dir and report FK warnings."""
     schema = build_contents_schema(schema_file)
     data_by_entity: dict[str, list[Mapping[str, object]]] = {}
     for src_file, data in iter_normalized(src_dir, schema):
@@ -42,9 +47,8 @@ def normalize_contents(
         save_model(out_dir / rel.with_name(rel.name + ".yaml"), data)
         _accumulate(data, data_by_entity)
 
-    diagnostics = check_fk_data(_load_catalog(data_catalog_dir), data_by_entity)
-    if diagnostics:
-        raise FileValidationError(diagnostics=diagnostics)
+    for diagnostic in check_fk_data(_load_catalog(data_catalog_dir), data_by_entity):
+        reporter.report(diagnostic)
 
 
 def build_contents_schema(

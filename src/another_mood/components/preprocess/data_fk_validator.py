@@ -13,10 +13,8 @@ UserStr-tagged (e.g. data was re-loaded from disk via ``typ='safe'``,
 or constructed in memory), the diagnostic still names the offending
 entity / attribute / value but the file/line/column fields stay None.
 
-D6/D7 transitional severity: while the warning infrastructure (D7) is
-not in place, FK violations surface as build errors (``severity=error``,
-``source="x-ref-data"``) so subsequent pipeline stages stop.  When D7
-lands, this module's severity drops to warning.
+Each violation is returned as a :class:`Diagnostic` with
+``severity=warning`` and ``source="x-ref-data"``.
 """
 
 from collections.abc import Iterator, Mapping, Sequence
@@ -24,7 +22,7 @@ from typing import cast
 
 from another_mood.components.preprocess.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.diagnostic import Diagnostic
+from another_mood.components.shared.diagnostic import Diagnostic, DiagnosticSeverity
 
 #: Attribute types whose values can serve as FK targets.  Non-scalar
 #: types (``object``, ``object[]``) carry dict / list values that are
@@ -138,6 +136,7 @@ def _fk_violation(entity: dc.Entity, attr: dc.Attribute, value: object) -> Diagn
             line=location.line,
             column=location.column,
             message=message,
+            severity=DiagnosticSeverity.warning,
             source="x-ref-data",
         )
     return Diagnostic(
@@ -145,5 +144,6 @@ def _fk_violation(entity: dc.Entity, attr: dc.Attribute, value: object) -> Diagn
         line=None,
         column=None,
         message=message,
+        severity=DiagnosticSeverity.warning,
         source="x-ref-data",
     )
