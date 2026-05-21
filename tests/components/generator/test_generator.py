@@ -17,6 +17,7 @@ from another_mood.components.generator.generator import (
 )
 from another_mood.components.shared.component.build_report import (
     BuildReport,
+    DiagnosticEntry,
     ErrorEntry,
 )
 
@@ -288,6 +289,66 @@ class TestReconcile:
 
         assert (out_dir / "data" / "index.md").read_text() == "# Root\n"
         assert (out_dir / "data" / "reports" / "index.md").read_text() == "# Hello\n"
+
+    def test_renders_warnings_page_and_links_from_index(self, tmp_path: Path) -> None:
+        upstream = tmp_path / "generate"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "data" / "index.md").write_text("# Root\n")
+        report = BuildReport(
+            diagnostics=(
+                DiagnosticEntry(
+                    file="albums.yaml",
+                    line=3,
+                    column=5,
+                    message="x-ref albums.artist_id = 'ghost' has no match in artists.id",
+                    severity="warning",
+                    source="x-ref-data",
+                ),
+            ),
+        )
+        report.write(upstream / "reports")
+
+        out_dir = tmp_path / "reconcile"
+        reconcile(data_dir=upstream, out_dir=out_dir)
+
+        index = (out_dir / "data" / "index.md").read_text()
+        assert index.startswith("# Root\n")
+        assert "## Warnings" in index
+        assert "1 warning — [view](__warnings/)" in index
+
+        warnings_page = (out_dir / "data" / "__warnings" / "index.md").read_text()
+        assert "# Warnings" in warnings_page
+        assert "**albums.yaml:3:5**" in warnings_page
+        assert (
+            "x-ref albums.artist_id = 'ghost' has no match in artists.id"
+            in warnings_page
+        )
+
+    def test_pluralises_warning_count(self, tmp_path: Path) -> None:
+        upstream = tmp_path / "generate"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "data" / "index.md").write_text("# Root\n")
+        report = BuildReport(
+            diagnostics=tuple(
+                DiagnosticEntry(
+                    file=f"f{i}.yaml",
+                    line=i,
+                    column=1,
+                    message=f"problem {i}",
+                    severity="warning",
+                )
+                for i in range(1, 4)
+            ),
+        )
+        report.write(upstream / "reports")
+
+        out_dir = tmp_path / "reconcile"
+        reconcile(data_dir=upstream, out_dir=out_dir)
+
+        assert (
+            "3 warnings — [view](__warnings/)"
+            in (out_dir / "data" / "index.md").read_text()
+        )
 
     def test_renders_error_page_when_upstream_has_errors(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"

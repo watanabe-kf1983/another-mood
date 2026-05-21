@@ -34,15 +34,37 @@ def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
 def reconcile(data_dir: Path, *, out_dir: Path) -> None:
     """Reconcile Generator output with the propagated BuildReport.
 
-    No upstream errors: pass Generator's data through unchanged.
+    No upstream errors: pass Generator's data through.  When the
+    propagated report carries warning diagnostics, render a
+    ``__warnings/`` page and link to it from ``index.md``.
+
     Upstream errors: render a __build_failure page in its place.
     """
-    with error_propagation([data_dir], out_dir, component="reconcile") as data_dirs:
-        if data_dirs is not None:
-            shutil.copytree(data_dirs.upstreams[0], data_dirs.out, dirs_exist_ok=True)
+    with error_propagation([data_dir], out_dir, component="reconcile") as ctx:
+        if ctx is not None:
+            shutil.copytree(ctx.upstreams[0], ctx.out, dirs_exist_ok=True)
+            warnings = [
+                d
+                for d in BuildReport.collect(data_dir / "reports").diagnostics
+                if d.severity == "warning"
+            ]
+            if warnings:
+                render(
+                    "__warnings",
+                    {"diagnostics": [d.to_data() for d in warnings]},
+                    ctx.out / "__warnings",
+                )
+                _append_warnings_link(ctx.out / "index.md", len(warnings))
         else:
             report = BuildReport.collect(data_dir / "reports")
             render("__build_failure", report.to_data(), out_dir / "data")
+
+
+def _append_warnings_link(index_md: Path, count: int) -> None:
+    """Append a short ``## Warnings`` block linking to the warnings page."""
+    label = f"{count} warning{'' if count == 1 else 's'}"
+    with index_md.open("a", encoding="utf-8") as f:
+        f.write(f"\n## Warnings\n\n{label} — [view](__warnings/)\n")
 
 
 def render(
