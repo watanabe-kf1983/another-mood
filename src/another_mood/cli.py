@@ -153,6 +153,11 @@ def build(
     render_dir: str | None = typer.Option(
         None, "--render-dir", help="Hugo render directory"
     ),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Fail the build if any warning is reported.",
+    ),
 ) -> None:
     """Build the project to Markdown and rendered HTML."""
     config = _load_config(
@@ -161,7 +166,7 @@ def build(
         render_dir=render_dir,
     )
     result = command.build(config, on_report=_build_listener())
-    if result.has_errors():
+    if result.has_errors() or (strict and result.has_warnings()):
         raise SystemExit(1)
 
 
