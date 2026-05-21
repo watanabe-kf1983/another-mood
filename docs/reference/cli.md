@@ -66,7 +66,7 @@ Equivalent to `mood blueprint apply starter <project_dir>`. Use `mood blueprint 
 Run all stages once to generate Markdown and HTML.
 
 ```bash
-mood build <project_dir>
+mood build <project_dir> [--strict]
 ```
 
 Steps:
@@ -77,6 +77,10 @@ Steps:
 4. Renders the Markdown in `output/` into HTML in `render/`.
 
 Exits with code 0 if all stages succeed, or 1 if any stage fails.
+
+### `--strict`
+
+Fail the build (exit code 1) when any warning is reported. Without `--strict`, warnings (e.g. a dangling [`x-ref`](schema.md#entity-references-x-ref) value) are listed on a dedicated page at `output/__warnings/`, linked from `output/index.md`, but do not affect the exit code. Useful in CI to gate merges on a clean build.
 
 ## watch
 
