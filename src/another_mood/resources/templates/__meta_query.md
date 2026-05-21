@@ -33,7 +33,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 
 ### From
 
-{{ from }}
+[{{ from }}](../__meta_entity/{{ from }}.md)
 
 {% if flatten -%}
 ### Flatten
@@ -51,7 +51,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join -%}
-| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
+| [{{ entry.to }}](../__meta_entity/{{ entry.to }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
 {% endfor %}
 
 {% endif -%}
