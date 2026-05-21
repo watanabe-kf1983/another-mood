@@ -38,7 +38,13 @@ albums:
 
 #### 書ける位置
 
-プロパティ宣言の直下にだけ x-ref を書ける。`items:` 直下 (スカラー配列要素の FK) は meta-schema エラーで拒否し、辞書キー自体に FK を付けるパターン (`propertyNames` に x-ref) もサポートしない。理由は以下のとおり:
+プロパティ宣言の直下にだけ x-ref を書ける。さらに以下の制約がある:
+
+- **`type: string` のプロパティのみ**。integer / number / boolean / object / array は meta-schema エラーで拒否
+- `items:` 直下 (スカラー配列要素の FK) は meta-schema エラーで拒否
+- 辞書キー自体に FK を付けるパターン (`propertyNames` に x-ref) はサポートしない
+
+`type: string` 限定の理由: dict-pattern の synthetic id は normalizer が string に揃え ([normalizer.md](normalizer.md)「dict-pattern の synthetic id は常に string」)、target attribute 値も string として比較する。integer / number に開放すると「dict キーは str 化されているのに FROM 側は int」など型ミスマッチが事故化する。FK 値の表現として string を強制することで、normalization contract と整合する。実需が薄いという観察 (showcase/music の 7 FK は全て string) も後押し。integer FK が surface したら、synthetic id の型推論機構と合わせて別タスクで開放する。
 
 `items:` 直下の `x-ref` を明示エラーにする理由は、現状のデータカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、catalog 構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo は catalog 上で attribute として現れるため)。
 
@@ -134,48 +140,13 @@ properties:
 
 ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
 
-### 参照整合性制約: x-ref (D6-D7)
+### 参照整合性違反の警告インフラ (D7)
 
-> Phase 11+ の **D6, D7** で data-level 整合性検査と警告インフラを実装予定。x-ref キーワード自体の仕様は External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
+> D6 (data-level FK 検査) は実装済み。x-ref キーワード本体の仕様と振る舞いは External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
 
-#### Phase 11+: data-level (D6, D7)
+BuildReport の warning フィールド、`output/__meta_*/` 配下の診断ページ、CLI `--strict` フラグの exit code 制御を整える。D6 違反を表出するチャネル群。
 
-実データを target 集合と照合する段階。
-
-- **D6**: Data-level FK 整合性検査 — 各データ値が target の集合に属するかを normalizer / validator で検証。違反は警告レベル
-- **D7**: 警告インフラ — BuildReport の warning フィールド、`output/__meta_*/` 配下の診断ページ、CLI `--strict` フラグの exit code 制御
-
-D6 の検証結果に source position を付ける実装は、`position_resolver` で path から遅延解決する形でよい。Schema-Inspector が x-ref 収集時に保持する path をそのまま使い回す。
-
-#### 想定される消費パターン (D6, F4, F5)
-
-**D6 (data-level 検証)** — 属性を走査して x_ref を見つけたら target 集合と照合:
-
-```python
-for entity in catalog:
-    for attr in entity.item_type.attributes:
-        if attr.x_ref:
-            check_fk(entity, attr, attr.x_ref, data)
-```
-
-**F4 / F5 (ER 図 / DFD)** — DSL クエリで relations を組み立てる:
-
-```yaml
-relations:
-  from: __definition.entities
-  flatten:
-    of: item_type.attributes
-    as: attr
-  where:
-    attr.x_ref: { exists: true }
-  select:
-    - { item: id, as: from_entity }
-    - { item: attr.id, as: from_attribute }
-    - { item: attr.x_ref.entity, as: to_entity }
-    - { item: attr.x_ref.attribute, as: to_attribute }
-```
-
-関係一覧 (`__definition.references` のような派生 entity) を built-in に追加する案も考えられるが、上のクエリで十分書ける範囲なので、現段階ではテンプレート側に局所化する。汎用化したくなったら後で built-in に昇格する。
+現状、D6 の FK 違反は schema-level コヒーレンス違反 (D3) と同じ build エラー扱いで後続処理を中止している。D7 で warning インフラが整った時点で、本来の重大度 (警告レベル: build/watch を止めない、`--strict` で exit code 制御のみ) に降ろす。
 
 #### 別軸の将来検討
 

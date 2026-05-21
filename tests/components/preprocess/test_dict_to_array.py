@@ -59,6 +59,25 @@ class TestFlatDict:
     def test_empty_dict(self) -> None:
         assert normalize_data({}, self.SCHEMA) == []
 
+    def test_coerces_int_key_to_string_id(self) -> None:
+        """YAML int keys (``10:``) are coerced to string ids.
+
+        The catalog declares the synthetic id as string, so the
+        normalizer must enforce that contract regardless of the YAML
+        scalar type the user wrote.
+        """
+        data = _y("""
+            10:
+              name: Ten
+            20:
+              name: Twenty
+        """)
+        result = normalize_data(data, self.SCHEMA)
+        assert result == [
+            {"id": "10", "name": "Ten"},
+            {"id": "20", "name": "Twenty"},
+        ]
+
 
 class TestNestedDict:
     """Recursive normalization for nested additionalProperties."""
@@ -201,6 +220,18 @@ class TestNonObjectAdditionalProperties:
 
     def test_empty_dict(self) -> None:
         assert normalize_data({}, self.SCHEMA_STRING) == []
+
+    def test_coerces_int_key_to_string_id(self) -> None:
+        """int-keyed dict-pattern: id is stringified even in {id, value} form."""
+        data = _y("""
+            10: ten
+            20: twenty
+        """)
+        result = normalize_data(data, self.SCHEMA_STRING)
+        assert result == [
+            {"id": "10", "value": "ten"},
+            {"id": "20", "value": "twenty"},
+        ]
 
 
 class TestNestedNonObjectAdditionalProperties:

@@ -29,9 +29,16 @@ class DiagnosticSeverity(Enum):
 
 @dataclass(frozen=True)
 class Diagnostic:
-    """A file validation diagnostic with source location."""
+    """A file validation diagnostic with source location.
 
-    file: Path
+    ``file`` is ``None`` when the diagnostic has no source-file
+    provenance (e.g. data was constructed in memory or re-loaded
+    through a non-position-preserving path).  The format / snippet /
+    to_entry methods all handle the None case by emitting a
+    placeholder and skipping the snippet.
+    """
+
+    file: Path | None
     line: int | None
     column: int | None
     message: str
@@ -40,17 +47,21 @@ class Diagnostic:
 
     def format(self) -> str:
         """Format for user-facing output."""
-        path = self.file.resolve()
+        prefix = str(self.file.resolve()) if self.file is not None else "<unknown>"
         if self.line and self.column:
-            return f"  {path}:{self.line}:{self.column}: {self.message}"
+            return f"  {prefix}:{self.line}:{self.column}: {self.message}"
         if self.line:
-            return f"  {path}:{self.line}: {self.message}"
-        return f"  {path}: {self.message}"
+            return f"  {prefix}:{self.line}: {self.message}"
+        return f"  {prefix}: {self.message}"
 
     def to_entry(self) -> DiagnosticEntry:
-        """Convert to the report-time DiagnosticEntry, baking in the snippet."""
+        """Convert to the report-time DiagnosticEntry, baking in the snippet.
+
+        ``file`` becomes an empty string on the report side when the
+        Diagnostic carries no source-file association.
+        """
         return DiagnosticEntry(
-            file=str(self.file.resolve()),
+            file=str(self.file.resolve()) if self.file is not None else "",
             line=self.line,
             column=self.column,
             message=self.message,
@@ -65,7 +76,11 @@ class Diagnostic:
         Best-effort: returns "" on any failure (missing file, permission error,
         bug in format_pointed) and emits a warning to stderr. Snippet enrichment
         must never break diagnostic serialization.
+
+        Returns "" immediately when ``file`` is None (no source to read).
         """
+        if self.file is None:
+            return ""
         try:
             text = self.file.read_text(encoding="utf-8", errors="replace")
             # Bias context upward: for YAML/JSON, parent keys above matter

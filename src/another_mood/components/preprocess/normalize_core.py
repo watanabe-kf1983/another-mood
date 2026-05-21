@@ -87,15 +87,20 @@ def _flatten_dict(data: DataMap, additional_schema: Schema) -> list[dict[str, ob
     When additionalProperties is an object schema with properties, the
     value's properties are expanded directly.  For non-object types
     (string, number, etc.) the value is wrapped as ``{"id": key, "value": val}``.
+
+    The synthesized ``id`` is always a string: YAML lets users write
+    int/bool keys (``10:``), but the catalog declares the implicit
+    ``id`` as string, and downstream consumers (x-ref target sets,
+    URL/anchor generation) need a single canonical type.
     """
     if additional_schema.get("type") == "object" and "properties" in additional_schema:
         props = cast(Schema, additional_schema.get("properties"))
         return [
-            {"id": key, **_recurse_properties(cast(DataMap, value), props)}
+            {"id": str(key), **_recurse_properties(cast(DataMap, value), props)}
             for key, value in data.items()
         ]
     return [
-        {"id": key, "value": normalize_data(value, additional_schema)}
+        {"id": str(key), "value": normalize_data(value, additional_schema)}
         for key, value in data.items()
     ]
 

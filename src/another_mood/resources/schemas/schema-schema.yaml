@@ -32,7 +32,8 @@ $defs:
       Structured foreign-key reference. `entity` is the target
       top-level entity id; `attribute` (optional) is the target
       attribute name. When `attribute` is omitted, the synthetic
-      `.id` of a dict-pattern target entity is assumed. See
+      `.id` of a dict-pattern target entity is assumed. May only
+      appear on properties whose `type` is `string`. See
       docs/reference/schema.md for the prose specification.
     type: object
     required: [entity]
@@ -134,6 +135,17 @@ $defs:
       format: { type: string }
 
     additionalProperties: false
+
+    # `x-ref` (FK declaration) is only allowed on string-typed properties.
+    # Target attribute values are compared as strings, and the synthetic id
+    # derived from a dict-pattern key is always a string. Allowing `x-ref` on
+    # other primitive types would silently no-op (array/object) or invite
+    # type-mismatch confusion; reject them at the meta-schema level instead.
+    dependentSchemas:
+      x-ref:
+        properties:
+          type:
+            const: string
 
     # When `properties:` is present at the same level, `additionalProperties: false`
     # becomes required. Without `properties:`, `additionalProperties` may be a schema

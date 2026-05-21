@@ -1,13 +1,17 @@
 """Tests for content_normalizer."""
 
 from pathlib import Path
+from textwrap import dedent
 
+import pytest
 import yaml
 
 from another_mood.components.preprocess.content_normalizer import (
     build_contents_schema,
     normalize_contents,
 )
+from another_mood.components.preprocess.schema_inspector import inspect_schema
+from another_mood.components.shared.diagnostic import FileValidationError
 
 
 class TestBuildContentsSchema:
@@ -89,8 +93,83 @@ class TestNormalizeContents:
         )
 
         out = tmp_path / "normalized"
-        normalize_contents(src_dir=src, out_dir=out, schema_file=schema_file)
+        catalog_dir = tmp_path / "catalog"
+        catalog_dir.mkdir()
+        normalize_contents(
+            src_dir=src,
+            out_dir=out,
+            schema_file=schema_file,
+            data_catalog_dir=catalog_dir,
+        )
 
         assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
             "items": [{"name": "a"}]
         }
+
+
+# x-ref schema reused by the FK integration tests: albums.artist_id → artists.
+_FK_SCHEMA = """
+    type: object
+    additionalProperties: false
+    properties:
+      artists:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            name: { type: string }
+          required: [name]
+      albums:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            title: { type: string }
+            artist_id:
+              type: string
+              x-ref:
+                entity: artists
+          required: [title, artist_id]
+"""
+
+
+def test_normalize_contents_raises_on_dangling_fk(tmp_path: Path) -> None:
+    """End-to-end: inspect_schema's catalog + dangling FK → FileValidationError.
+
+    Uses ``.fn(...)`` to bypass the Component-framework wrappers so
+    the exception surfaces directly (matching the pattern in
+    test_schema_inspector / test_query_deriver).
+    """
+    schema_file = tmp_path / "schema.yaml"
+    schema_file.write_text(dedent(_FK_SCHEMA).lstrip("\n"))
+    src = tmp_path / "contents"
+    src.mkdir()
+    (src / "data.yaml").write_text(
+        dedent("""
+            artists:
+              miyavi:
+                name: Miyavi
+            albums:
+              a1:
+                title: Day 1
+                artist_id: ghost
+        """).lstrip("\n")
+    )
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    inspect_schema.fn(schema_file, out_dir=catalog_dir)
+    out = tmp_path / "normalized"
+    out.mkdir()
+
+    with pytest.raises(FileValidationError) as exc:
+        normalize_contents.fn(
+            src_dir=src,
+            out_dir=out,
+            schema_file=schema_file,
+            data_catalog_dir=catalog_dir,
+        )
+    assert [(d.source, d.message) for d in exc.value.diagnostics] == [
+        ("x-ref-data", "x-ref albums.artist_id = 'ghost' has no match in artists.id"),
+    ]

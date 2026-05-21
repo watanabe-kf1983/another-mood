@@ -50,6 +50,22 @@ class TestDiagnostic:
             snippet="",
         )
 
+    def test_format_with_none_file_shows_unknown_placeholder(self) -> None:
+        d = Diagnostic(file=None, line=None, column=None, message="msg")
+        assert d.format() == "  <unknown>: msg"
+
+    def test_to_entry_with_none_file_serializes_to_empty_string(self) -> None:
+        d = Diagnostic(file=None, line=None, column=None, message="msg")
+        assert d.to_entry() == DiagnosticEntry(
+            file="",
+            line=None,
+            column=None,
+            message="msg",
+            severity="error",
+            source="",
+            snippet="",
+        )
+
 
 class TestSnippet:
     def test_normal(self, tmp_path: Path) -> None:
@@ -68,6 +84,10 @@ class TestSnippet:
         file.write_bytes(b"line1\n\xff\xfeinvalid\nline3\n")
         d = Diagnostic(file=file, line=2, column=1, message="x")
         assert "�" in d.snippet()
+
+    def test_returns_empty_when_file_is_none(self) -> None:
+        d = Diagnostic(file=None, line=1, column=1, message="x")
+        assert d.snippet() == ""
 
 
 class TestFileValidationError:

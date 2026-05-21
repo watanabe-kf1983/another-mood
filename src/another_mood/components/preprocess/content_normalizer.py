@@ -2,15 +2,21 @@
 
 Every source file is parsed into data, validated against the merged
 schema (built-in prose schema + user schema), and normalized
-(dict-to-array conversion for additionalProperties patterns).
+(dict-to-array conversion for additionalProperties patterns).  When
+the data catalog is available, FK references declared via ``x-ref``
+are also checked against the actual data (data-level FK integrity).
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from importlib import resources
 from pathlib import Path
+from typing import cast
 
+from another_mood.components.preprocess.data_fk_validator import check_fk_data
 from another_mood.components.preprocess.normalize_core import iter_normalized
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
+from another_mood.components.shared.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
 
 _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
@@ -23,16 +29,22 @@ def normalize_contents(
     src_dir: Path,
     *,
     schema_file: Path,
-    data_catalog_dir: Path | None = None,
+    data_catalog_dir: Path,
     out_dir: Path,
 ) -> None:
-    """Normalize src_dir contents into out_dir."""
+    """Normalize src_dir contents into out_dir and check FK integrity."""
     schema = build_contents_schema(schema_file)
+    data_by_entity: dict[str, list[Mapping[str, object]]] = {}
     for src_file, data in iter_normalized(src_dir, schema):
         # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
         # never collide on the same destination.
         rel = src_file.relative_to(src_dir)
         save_model(out_dir / rel.with_name(rel.name + ".yaml"), data)
+        _accumulate(data, data_by_entity)
+
+    diagnostics = check_fk_data(_load_catalog(data_catalog_dir), data_by_entity)
+    if diagnostics:
+        raise FileValidationError(diagnostics=diagnostics)
 
 
 def build_contents_schema(
@@ -46,3 +58,32 @@ def build_contents_schema(
     validated against the matching entry.
     """
     return load_model(_BUILTIN_CONTENTS_SCHEMA_FILE, schema_file)
+
+
+def _accumulate(data: object, sink: dict[str, list[Mapping[str, object]]]) -> None:
+    """Merge a per-file normalized payload into the per-entity record bag.
+
+    Only top-level keys whose value is a list (= an entity collection
+    after normalization) contribute.  Fixed-object top-levels do not
+    surface as FK targets and are skipped.  Multiple files sharing a
+    top-level key (e.g. prose pages contributing to ``prose``) have
+    their record lists concatenated.
+    """
+    if not isinstance(data, Mapping):
+        return
+    payload = cast(Mapping[str, object], data)
+    for entity_id, records in payload.items():
+        if isinstance(records, list):
+            sink.setdefault(entity_id, []).extend(
+                cast(Sequence[Mapping[str, object]], records)
+            )
+
+
+def _load_catalog(data_catalog_dir: Path) -> Sequence[dc.Entity]:
+    """Load merged ``__definition.entities`` as typed Entity records."""
+    merged = load_model(data_catalog_dir)
+    raw = cast(
+        Sequence[Mapping[str, object]],
+        merged.get("__definition", {}).get("entities", []),
+    )
+    return [dc.Entity.from_dict(e) for e in raw]

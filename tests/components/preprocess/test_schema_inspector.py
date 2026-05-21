@@ -471,6 +471,27 @@ _REJECTED_SCHEMA_CASES = [
         """,
         id="x-ref unknown subkey rejected",
     ),
+    *[
+        pytest.param(
+            f"""
+            type: object
+            properties:
+              tasks:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    fk:
+                      type: {bad_type}
+                      x-ref:
+                        entity: phases
+                  additionalProperties: false
+            additionalProperties: false
+            """,
+            id=f"x-ref on type={bad_type} rejected",
+        )
+        for bad_type in ("integer", "number", "boolean", "object", "array")
+    ],
 ]
 
 
@@ -813,7 +834,15 @@ class TestXRefDiagnostic:
         assert diag.column == 20
         assert diag.source == "x-ref"
 
-    def test_non_user_str_raises(self) -> None:
-        """Plain ``str`` means the catalog skipped ``parse_yaml`` — internal bug."""
-        with pytest.raises(RuntimeError, match="UserStr"):
-            _xref_diagnostic("plain", "any message")
+    def test_non_user_str_produces_fileless_diagnostic(self) -> None:
+        """Plain ``str`` means the catalog skipped ``parse_yaml``.
+
+        The diagnostic still surfaces (so the user sees the underlying
+        x-ref complaint) but carries no source location to point at.
+        """
+        diag = _xref_diagnostic("plain", "any message")
+        assert diag.file is None
+        assert diag.line is None
+        assert diag.column is None
+        assert diag.message == "any message"
+        assert diag.source == "x-ref"
