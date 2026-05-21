@@ -1,10 +1,39 @@
 # Query: {{ id }}
 
+## Source Diagram
+
+{% set node_ids = ([from] + (join | map(attribute='to') | list)) | unique | list -%}
+```mermaid
+classDiagram
+{% for entity in entities if entity.id in node_ids -%}
+class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
+{% endfor -%}
+{% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids -%}
+{%- set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first -%}
+{{ parent.item_type.id | mermaid_class_id }} *-- {{ entity.item_type.id | mermaid_class_id }}
+{% endfor -%}
+{% for top_id in node_ids -%}
+{%- set top_entity = entities | selectattr('id', 'eq', top_id) | first -%}
+{% if top_entity -%}
+{%- for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") -%}
+{%- for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids -%}
+{%- set target = entities | selectattr('id', 'eq', attr.x_ref.entity) | first -%}
+{% if target -%}
+{%- set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] -%}
+{%- set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id -%}
+{{ top_entity.item_type.id | mermaid_class_id }} --> {{ target.item_type.id | mermaid_class_id }} : {{ label }}
+{% endif -%}
+{%- endfor -%}
+{%- endfor -%}
+{% endif -%}
+{% endfor -%}
+```
+
 ## Definition
 
 ### From
 
-{{ from }}
+[{{ from }}](../__meta_entity/{{ from }}.md)
 
 {% if flatten -%}
 ### Flatten
@@ -22,7 +51,7 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join -%}
-| {{ entry.to }} | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
+| [{{ entry.to }}](../__meta_entity/{{ entry.to }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
 {% endfor %}
 
 {% endif -%}
