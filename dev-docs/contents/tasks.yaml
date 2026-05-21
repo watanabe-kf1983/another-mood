@@ -173,10 +173,12 @@ categories:
       D7:
         title: 警告インフラ
         note: |
-          BuildReport の warning フィールド、output/__meta_*/ 配下の診断ページ、
-          CLI --strict フラグの exit code 制御。D6 を表出するチャネル群。
+          BuildReport の warning フィールド (severity 区別 + has_warnings()
+          ヘルパ)、DiagnosticReporter による非中断診断チャネル、__root.md 末尾
+          の Warnings セクション、CLI mood build --strict の exit code 制御を
+          実装。D6 の FK 違反は severity=warning に降格済み。
         phase: 10
-        proposal: design/normalizer/schema-spec.md#参照整合性違反の警告インフラ-d7
+        done: true
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無

@@ -140,17 +140,3 @@ properties:
 
 ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
 
-### 参照整合性違反の警告インフラ (D7)
-
-> D6 (data-level FK 検査) は実装済み。x-ref キーワード本体の仕様と振る舞いは External Design 参照。Unique 制約 (D8, D9) は別記、[normalizer.md](normalizer.md) を参照。
-
-BuildReport の warning フィールド、`output/__meta_*/` 配下の診断ページ、CLI `--strict` フラグの exit code 制御を整える。D6 違反を表出するチャネル群。
-
-現状、D6 の FK 違反は schema-level コヒーレンス違反 (D3) と同じ build エラー扱いで後続処理を中止している。D7 で warning インフラが整った時点で、本来の重大度 (警告レベル: build/watch を止めない、`--strict` で exit code 制御のみ) に降ろす。
-
-#### 別軸の将来検討
-
-- **トップページへの警告バナー** — テンプレート側に「警告あり / 一覧へのリンク」を渡す機構。templates 拡張が必要なため別タスク
-- **query DSL `join` との統合** — `on:` の自動推定や整合チェック。join の利用パターンが見えてから設計
-- **スカラー配列要素の FK** — `items:` 配下に `x-ref` を書けるようにする。データカタログの構造拡張が必要なため、items-level の `enum` 等のメタ情報を一斉に扱う改修と合わせて検討
-
