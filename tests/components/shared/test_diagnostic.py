@@ -11,6 +11,7 @@ from another_mood.components.shared.component.build_report import (
 )
 from another_mood.components.shared.diagnostic import (
     Diagnostic,
+    DiagnosticReporter,
     DiagnosticSeverity,
     FileValidationError,
     format_pointed,
@@ -134,6 +135,48 @@ class TestFileValidationError:
                 snippet="",
             ),
         ]
+
+
+class TestDiagnosticReporter:
+    def test_starts_empty(self) -> None:
+        reporter = DiagnosticReporter()
+        assert reporter.diagnostics == ()
+
+    def test_buffers_reports_in_order(self) -> None:
+        reporter = DiagnosticReporter()
+        a = Diagnostic(
+            file=None,
+            line=None,
+            column=None,
+            message="first",
+            severity=DiagnosticSeverity.warning,
+        )
+        b = Diagnostic(
+            file=None,
+            line=None,
+            column=None,
+            message="second",
+            severity=DiagnosticSeverity.warning,
+        )
+        reporter.report(a)
+        reporter.report(b)
+        assert reporter.diagnostics == (a, b)
+
+    def test_snapshot_is_immutable_view(self) -> None:
+        """Mutating the snapshot must not affect future reports."""
+        reporter = DiagnosticReporter()
+        snapshot = reporter.diagnostics
+        reporter.report(
+            Diagnostic(
+                file=None,
+                line=None,
+                column=None,
+                message="x",
+                severity=DiagnosticSeverity.warning,
+            )
+        )
+        assert snapshot == ()
+        assert len(reporter.diagnostics) == 1
 
 
 class TestFormatPointed:

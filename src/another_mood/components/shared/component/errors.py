@@ -8,26 +8,34 @@ from pathlib import Path
 from typing import NamedTuple
 
 from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.diagnostic import DiagnosticReporter
 
 _logger = getLogger(__name__)
 
 
-class DataDirs(NamedTuple):
-    """Data directories resolved by error_propagation."""
+class StageContext(NamedTuple):
+    """Yielded by :func:`error_propagation` on success.
+
+    ``out`` / ``upstreams`` are the data subdirectories the body reads
+    and writes through.  Entries pushed to ``reporter`` are appended to
+    the stage's :class:`BuildReport` after the body returns.
+    """
 
     out: Path
     upstreams: Sequence[Path]
+    reporter: DiagnosticReporter
 
 
 @contextmanager
 def error_propagation(
     upstream_dirs: Sequence[Path], out_dir: Path, *, component: str = ""
-) -> Generator[DataDirs | None, None, None]:
+) -> Generator[StageContext | None, None, None]:
     """Context manager: propagate errors through the pipeline.
 
     Receives component-level directories (e.g. tmp/<name>/) and internally
-    separates data/ and reports/ subdirectories. Yields DataDirs with
-    resolved data paths on success, or None if upstream errors are found.
+    separates data/ and reports/ subdirectories. Yields :class:`StageContext`
+    with resolved data paths and a diagnostic reporter on success, or
+    ``None`` if upstream errors are found.
     """
     report_dir = out_dir / "reports"
     data_dir = out_dir / "data"
@@ -40,16 +48,24 @@ def error_propagation(
         yield None
     else:
         data_dir.mkdir(parents=True, exist_ok=True)
+        reporter = DiagnosticReporter()
         try:
-            yield DataDirs(out=data_dir, upstreams=upstream_data_dirs)
+            yield StageContext(
+                out=data_dir, upstreams=upstream_data_dirs, reporter=reporter
+            )
         except Exception as exc:
             result = "ng"
             _log_error(exc)
             report = report.with_exception(exc)
         else:
             result = "ok"
+        # Drain reported diagnostics regardless of success — warnings
+        # reported before a later raise should still surface to the user.
+        report = report.with_added_diagnostics(
+            d.to_entry() for d in reporter.diagnostics
+        )
     if component:
-        report = report.with_component_result(component, result)
+        report = report.with_added_stage(component, result)
     report.write(report_dir)
 
 

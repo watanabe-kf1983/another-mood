@@ -4,7 +4,10 @@ from pathlib import Path
 
 import yaml
 
-from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.build_report import (
+    BuildReport,
+    DiagnosticEntry,
+)
 
 
 def _write_report(dir_: Path, content: dict[str, object]) -> None:
@@ -46,3 +49,31 @@ class TestCollect:
         report = BuildReport.collect(tmp_path / "a", tmp_path / "b")
 
         assert report.to_data() == {"errors": [err1, err2]}
+
+
+class TestHasWarnings:
+    def test_false_when_empty(self) -> None:
+        assert BuildReport().has_warnings() is False
+
+    def test_false_when_only_error_diagnostics(self) -> None:
+        report = BuildReport(
+            diagnostics=(
+                DiagnosticEntry(
+                    file="a.yaml", line=1, column=None, message="x", severity="error"
+                ),
+            )
+        )
+        assert report.has_warnings() is False
+
+    def test_true_when_warning_diagnostic_present(self) -> None:
+        report = BuildReport(
+            diagnostics=(
+                DiagnosticEntry(
+                    file="a.yaml", line=1, column=None, message="x", severity="error"
+                ),
+                DiagnosticEntry(
+                    file="b.yaml", line=2, column=None, message="y", severity="warning"
+                ),
+            )
+        )
+        assert report.has_warnings() is True

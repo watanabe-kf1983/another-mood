@@ -93,6 +93,26 @@ class Diagnostic:
             return ""
 
 
+class DiagnosticReporter:
+    """Append-only buffer for :class:`Diagnostic` instances.
+
+    Producers push entries via :meth:`report`; consumers read the
+    accumulated snapshot through :attr:`diagnostics`.
+    """
+
+    def __init__(self) -> None:
+        self._diagnostics: list[Diagnostic] = []
+
+    def report(self, diagnostic: Diagnostic) -> None:
+        """Append a diagnostic to the buffer."""
+        self._diagnostics.append(diagnostic)
+
+    @property
+    def diagnostics(self) -> Sequence[Diagnostic]:
+        """Snapshot of every diagnostic buffered so far."""
+        return tuple(self._diagnostics)
+
+
 class FileValidationError(Exception):
     """Raised when input files contain validation errors.
 

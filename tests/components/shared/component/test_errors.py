@@ -6,7 +6,11 @@ from unittest.mock import patch
 
 import yaml
 
-from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.diagnostic import (
+    Diagnostic,
+    DiagnosticSeverity,
+    FileValidationError,
+)
 from another_mood.components.shared.component.errors import (
     error_propagation,
 )
@@ -130,6 +134,65 @@ class TestErrorPropagation:
             }
         ]
         assert "boom" in data["__build_report"]["errors"][0]["message"]
+
+    def test_drains_reporter_warnings_into_diagnostics(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+
+        out_dir = tmp_path / "output"
+        with patch(
+            "another_mood.components.shared.component.build_report._now_iso",
+            return_value="2026-04-01T00:00:00+00:00",
+        ):
+            with error_propagation([input_dir], out_dir, component="x") as ctx:
+                assert ctx is not None
+                ctx.reporter.report(
+                    Diagnostic(
+                        file=Path("a.yaml"),
+                        line=1,
+                        column=2,
+                        message="dangling FK",
+                        severity=DiagnosticSeverity.warning,
+                        source="x-ref-data",
+                    )
+                )
+
+        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        assert data["__build_report"]["stages"][0]["result"] == "ok"
+        assert "errors" not in data["__build_report"]
+        assert data["__build_report"]["diagnostics"] == [
+            {
+                "file": str(Path("a.yaml").resolve()),
+                "line": 1,
+                "column": 2,
+                "message": "dangling FK",
+                "severity": "warning",
+                "source": "x-ref-data",
+                "snippet": "",
+            },
+        ]
+
+    def test_keeps_warnings_reported_before_exception(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+
+        out_dir = tmp_path / "output"
+        with error_propagation([input_dir], out_dir) as ctx:
+            assert ctx is not None
+            ctx.reporter.report(
+                Diagnostic(
+                    file=None,
+                    line=None,
+                    column=None,
+                    message="reported first",
+                    severity=DiagnosticSeverity.warning,
+                )
+            )
+            raise ValueError("then it blew up")
+
+        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        messages = [d["message"] for d in data["__build_report"]["diagnostics"]]
+        assert "reported first" in messages
 
     def test_catches_file_validation_error(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"

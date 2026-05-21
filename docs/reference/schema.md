@@ -202,7 +202,7 @@ albums:
       artist_id:
         type: string
         x-ref:
-          entity: artists         # omitted attribute = the target's dict key (.id)
+          entity: artists         # omitted attribute = target's `.id` (map pattern only)
       curator:
         type: string
         x-ref:
@@ -212,13 +212,15 @@ albums:
 
 Fields:
 
-- `entity` (required) — name of a top-level entity declared in this schema, or a built-in entity (currently `prose`).
+- `entity` (required) — name of a top-level entity.
 - `attribute` (optional) — name of an attribute on the target entity. When omitted, the synthetic `.id` of a map-pattern target is referenced; the target must therefore use the [map pattern](#map-pattern). When the target uses the [array pattern](#array-pattern) (no implicit `id`), `attribute` is required.
 
 Constraints:
 
 - `x-ref` is only allowed on `type: string` properties.
-- `entity` and `attribute` must refer to a target that exists in the catalog, and every reference value must match an existing record. Violations are reported at build time.
+- `entity` and `attribute` must refer to a target that exists in the catalog (otherwise the build fails).
+
+At build time, every reference value in content data must point to an existing record in the target entity. Dangling references are reported as warnings: the build continues, with them listed at `output/__warnings/` (linked from `output/index.md`). Use [`mood build --strict`](cli.md#--strict) to fail the build on warnings.
 
 The declared references appear in `output/__meta_entity/<entity>.md` as a `references` column.
 
