@@ -162,11 +162,11 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 ↓ 正規化 ↓
 
 ```markdown
-処理フローの詳細は[Composer](toc:prose.item.design/composer/composer)を参照。
-[スキーマ仕様](toc:prose.item.design/normalizer/schema-spec)に従って検証する。
+処理フローの詳細は[Composer](toc:prose/design/composer/composer)を参照。
+[スキーマ仕様](toc:prose/design/normalizer/schema-spec)に従って検証する。
 ```
 
-アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。`toc:` リンクの解決は Document Generator が行う（[generator.md](../generator/generator.md) 参照）。
+アンカー文字列の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose は anchor 例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカーの一部として埋め込まれる。`toc:` リンクの解決は Document Generator が行う（[generator.md](../generator/generator.md) 参照）。
 
 #### 背景: ソースの可搬性
 

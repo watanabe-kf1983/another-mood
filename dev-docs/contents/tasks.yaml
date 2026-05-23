@@ -49,12 +49,13 @@ categories:
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B2:
-        title: アンカー ID 生成規則
-        note: リスト型 {class}.item.{id} / シングルトン {class}
+        title: アンカー生成規則
+        note: データツリー上のパスを `/` 区切りで構築。list 要素は id で識別。prose は id 内 `/` を素通し
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B3:
         title: アンカー → ラッパーのオンデマンド走査 + キャッシュ
+        note: 先頭セグメントが prose のときは残りを単一 id として扱う特例あり
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
       B4:
@@ -90,7 +91,7 @@ categories:
         proposal: design/generator/paging-spec.md#proposals
       C3:
         title: パス自動導出
-        note: リスト型 {class}/{id}.md / シングルトン {class}.md
+        note: アンカー文字列に `.md` を付けたものを paging file path とする ({anchor}.md)
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C4:
