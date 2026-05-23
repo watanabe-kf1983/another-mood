@@ -16,7 +16,7 @@
 1. **JSON は string キーしか持たない** — YAML キーは JSON 由来の正規化先には乗らない型を取りうるが、永続化形式 (`save_model` で書き出す YAML) は JSON 互換を保つ
 2. **catalog 宣言が `id: string`** ([schema-spec.md](schema-spec.md) Entity 名節) — 宣言とデータ実体の型を一致させる
 3. **x-ref ターゲット集合の型統一** — FK 検査が string-only で完結する (schema-schema は x-ref を type=string のみ許容)
-4. **URL/anchor 生成の一貫性** — entity ページのパス・アンカー生成器が常に string 入力を仮定できる
+4. **アンカー ID 生成の一貫性** — entity ページのパス・アンカー ID 生成器が常に string 入力を仮定できる
 
 この normalization contract は user 向け reference には書かない (JSON 由来の自然な前提であり、明文化が逆にノイズになる)。surface したら `docs/reference/schema.md` の dict-pattern 節に注釈を足す。
 

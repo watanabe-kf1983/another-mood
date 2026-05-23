@@ -142,13 +142,13 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 
 > **未実装** — Phase 10 タスク [A5](../../../tasks.md)
 
-ソース Markdown 内の相対リンクを `toc:` アンカー記法に変換する。
+ソース Markdown 内の相対リンクを `toc:` アンカー ID 記法に変換する。
 
 #### 変換ルール
 
 1. Markdown リンク `[text](relative/path.md)` を検出
 2. 相対パスを `contents_dir` 基点の正規化パスに解決
-3. 対応する prose レコードのアンカー ID に変換
+3. 対応する prose レコードのアンカー ID 記法 (`toc:...`) に変換
 
 #### 例
 
@@ -166,7 +166,7 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 [スキーマ仕様](toc:prose/design/normalizer/schema-spec)に従って検証する。
 ```
 
-アンカー文字列の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose は anchor 例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカーの一部として埋め込まれる。`toc:` リンクの解決は Document Generator が行う（[generator.md](../generator/generator.md) 参照）。
+アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカー ID の例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカー ID の一部として埋め込まれる。`toc:` リンクの解決は Document Generator が行う（[generator.md](../generator/generator.md) 参照）。
 
 #### 背景: ソースの可搬性
 

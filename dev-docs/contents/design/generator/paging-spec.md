@@ -28,12 +28,12 @@ pdf:
 
 ### パス自動導出
 
-分割対象クラスのページパスはアンカーから直接導出される — **アンカー文字列に `.md` を付けたものがファイルパス**（[anchor-spec](anchor-spec.md) 参照）:
+分割対象クラスのページパスはアンカー ID から直接導出される — **アンカー ID に `.md` を付けたものがファイルパス**（[anchor-spec](anchor-spec.md) 参照）:
 
-- リスト要素: `{anchor}.md`（例: `erds/user-management.md`、`erds/user-management/entities/user.md`）
-- シングルトン: `{anchor}.md`（例: `overview.md`）
+- リスト要素: `{anchor_id}.md`（例: `erds/user-management.md`、`erds/user-management/entities/user.md`）
+- シングルトン: `{anchor_id}.md`（例: `overview.md`）
 
-アンカーは `/` 区切りの path 形式なので、そのままファイルシステム上のパスとして使える。これにより anchor 規則と paging path 規則が同じ shape で表現される。
+アンカー ID は `/` 区切りの path 形式なので、そのままファイルシステム上のパスとして使える。これによりアンカー ID 規則と paging path 規則が同じ shape で表現される。
 
 ### 分割ルール
 
