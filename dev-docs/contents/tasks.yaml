@@ -213,46 +213,14 @@ categories:
     tasks:
       F4a:
         title: ER 図テンプレート — 全体図 + 基盤
-        note: |
-          `__root` に Entity Relationship 図 (Mermaid classDiagram)
-          を追加。組み込みクエリ `__user_content_entities` で user 領域 +
-          prose (descendant 含む) を node 集合化、`mermaid_class_id`
-          フィルタで dotted catalog id を alias 化。composition は親子、
-          association は両端が node 集合に入る FK のみ描画、edge ラベルは
-          FK 属性名、カーディナリティは書かない。詳細は
-          design/app/meta-documentation.md「`__root` の Entity Relationship 図」。
         phase: 10
         done: true
       F4b:
         title: ER 図テンプレート — 近傍図
-        note: |
-          `__meta_entity/<id>.md` のタイトル直下に近傍 classDiagram を
-          追加。focus + descendants + focus subtree からの FK out 先を
-          node 集合とし、focus + descendants は全属性 (`*` で required、
-          `[FK]` で x_ref を印付け)、FK out 先はヘッダのみ。composition
-          edge は描画範囲内に両端が揃う親子、association edge は focus
-          subtree → FK out 先 (FK in は描かない)。自己 FK は self-loop。
-          attributes 表との重複は許容 (役割分担あり)。実装は
-          __meta_entity.md テンプレート単体で完結し、新規 built-in
-          query/filter なし。詳細は design/app/meta-documentation.md
-          「`__meta_entity/<id>.md` の近傍 ER 図」。
         phase: 10
         done: true
       F4c:
         title: ER 図テンプレート — per-query 図
-        note: |
-          `__meta_query/<id>.md` のタイトル直下に「Source Diagram」節を
-          追加。ノード集合は `query.from` ∪ `query.join[].to` (= top-level
-          entity 群、`From.derive`/`Join` の制約により自然にそうなる)。
-          全ノードヘッダのみ。composition edge は両端が nodes 内のとき
-          (top-level だけなら実質発火しないが F4a/F4b と規則を揃える)。
-          association edge は各 top-level node の subtree (self + descendants)
-          に含まれる x_ref attribute から、target も nodes 内なら描く。
-          edge は `top → target` で集約し、ラベルは top からの相対 path
-          (例: `列.型`、`列.参照.テーブル`)。自己 FK は self-loop。実装は
-          __meta_query.md テンプレート単体で完結し、新規 built-in
-          query/filter なし。詳細は design/app/meta-documentation.md
-          「`__meta_query/<id>.md` の Source Diagram」。
         phase: 10
         done: true
       F7:
