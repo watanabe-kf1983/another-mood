@@ -20,14 +20,14 @@
 
 ## composer
 
-- [queries-spec.md](composer/queries-spec.md) — クエリ DSL の設計判断と未実装機能（E1〜E6, M1）
+- [queries-spec.md](composer/queries-spec.md) — クエリ DSL の設計判断と未実装機能（E1〜E6）
 
 ## generator
 
 - [template-spec.md](generator/template-spec.md) — テンプレートの設計判断（ChainableUndefined）と未実装機能（C4）
 - [anchor-spec.md](generator/anchor-spec.md) — アンカー（アンカー ID 体系、リンク記法、リンク解決）
 - [paging-spec.md](generator/paging-spec.md) — ページ分割（paging.yaml、プロファイル、分割ルール）
-- [generator.md](generator/generator.md) — Generator 内部設計（内蔵ルートテンプレート、Reconcile）と未実装機能（B1〜B6 リンク解決等）
+- [generator.md](generator/generator.md) — Generator 内部設計（内蔵ルートテンプレート、Reconcile）と未実装機能（B1〜B7 リンク解決・親参照等）
 
 ## app
 

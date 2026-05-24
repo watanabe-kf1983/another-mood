@@ -72,6 +72,11 @@ categories:
         note: C3 と連携
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b1-b6
+      B7:
+        title: _parent 参照の付与
+        note: ルート以外の全オブジェクトノードに親への参照を注入。テンプレートが元データを直接走査する場面向け
+        phase: 11
+        proposal: design/generator/generator.md#親参照-_parent-b7
 
   C:
     title: ページ分割 (paging)
@@ -425,11 +430,6 @@ categories:
       - src/another_mood/components/shared/data_catalog.py
     spec: design/json-data-model.md
     tasks:
-      M1:
-        title: _parent 参照の付与
-        note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
-        phase: 11
-        proposal: design/json-data-model.md#親参照-_parent-m1
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
