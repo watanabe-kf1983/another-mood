@@ -113,7 +113,7 @@ def make_environment(output_format: OutputFormat) -> Environment:
 
 - `autoescape=False` (デフォルト) のまま、**`finalize` フックで素文字列に escape を適用**する。Jinja2 の autoescape 機構は `markupsafe.escape` (HTML escape) 決め打ちで、escape 関数の差し替え API が無いため。
 - フィルタは **`Markup` を返す** ことで「escape 済み」を宣言する。`finalize` は `Markup` を素通しするので二重 escape にならない。
-- `{% mood_view "template" with data %}` でサブテンプレートを呼ぶ場合は、`template_name` の拡張子から output_format を引き、対応する Environment で render する。
+- `{% mood_view "template.md" with data %}` でサブテンプレートを呼ぶ場合は、`template_name` の拡張子から output_format を引き、対応する Environment で render する (テンプレート参照に拡張子が含まれていることは [template-spec.md](template-spec.md#テンプレート参照の拡張子明示化-p2) の前提に依存)。
 
 #### テンプレート著者の書き口
 

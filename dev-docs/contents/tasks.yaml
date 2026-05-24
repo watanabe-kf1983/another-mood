@@ -408,6 +408,16 @@ categories:
             - for 形式:    {% mood_view "NAME" for SEQ %}
             - filter 形式: {% mood_view NAME[id="..."] %}
         phase: 13
+      P2:
+        title: テンプレート参照の拡張子明示化
+        note: |
+          {% mood_view "name" %} 形式から {% mood_view "name.md" %} 形式へ
+          変更。コード側 (template_engine / mood_view_processor) は .md 付与を
+          止め、テンプレート著者がフルファイル名を書く。output_format 別
+          Environment 対応の前提整備を兼ねる。showcase / dev-docs / docs と
+          ユーザの全 mood_view 使用箇所に影響する破壊的変更。
+        phase: 11
+        proposal: design/generator/template-spec.md#テンプレート参照の拡張子明示化-p2
 
   Q:
     title: 公開
