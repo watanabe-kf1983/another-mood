@@ -15,7 +15,7 @@ class TestRender:
         (templates_dir / "hello.md").write_text("# {{ title }}\n")
 
         engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
-        result = engine.render("hello", {"title": "World"})
+        result = engine.render("hello.md", {"title": "World"})
         assert result == "# World\n"
 
 
@@ -35,7 +35,7 @@ class TestFiltersParam:
             templates_dir=templates_dir,
             filters={"shout": shout},
         )
-        assert engine.render("t", {}) == "HI!"
+        assert engine.render("t.md", {}) == "HI!"
 
 
 class TestTemplateSyntaxErrorConversion:
@@ -46,7 +46,7 @@ class TestTemplateSyntaxErrorConversion:
 
         engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
         with pytest.raises(FileValidationError) as exc_info:
-            engine.render("bad", {})
+            engine.render("bad.md", {})
 
         diags = exc_info.value.diagnostics
         assert len(diags) == 1

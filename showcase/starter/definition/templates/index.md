@@ -1,6 +1,6 @@
 # Project Members
 
-{% mood_view "prose" with (prose | selectattr("id", "equalto", "about") | first) inline %}
+{% mood_view "prose.md" with (prose | selectattr("id", "equalto", "about") | first) inline %}
 
 ## Members
 
@@ -9,7 +9,7 @@
 {%- endfor %}
 
 {%- for member in members -%}
-{% mood_view "member" with member %}
+{% mood_view "member.md" with member %}
 {%- endfor %}
 
 ## By Role
@@ -19,5 +19,5 @@
 {%- endfor %}
 
 {%- for entry in by_role -%}
-{% mood_view "by_role" with entry %}
+{% mood_view "by_role.md" with entry %}
 {%- endfor %}

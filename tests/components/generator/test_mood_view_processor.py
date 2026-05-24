@@ -46,18 +46,18 @@ class TestMoodViewParsing:
     def test_receives_template_name_and_data(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile" with user %}')
+        template = env.from_string('{% mood_view "profile.md" with user %}')
         template.render(user={"id": "alice", "name": "Alice"})
 
         assert len(mock.calls) == 1
-        assert mock.calls[0][0] == "profile"
+        assert mock.calls[0][0] == "profile.md"
         assert mock.calls[0][1] == {"id": "alice", "name": "Alice"}
 
     def test_data_is_resolved_expression(self) -> None:
         """The with-expression is evaluated, not passed as a string."""
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "card" with items[0] %}')
+        template = env.from_string('{% mood_view "card.md" with items[0] %}')
         template.render(items=[{"id": "x", "val": 42}])
 
         assert mock.calls[0][1] == {"id": "x", "val": 42}
@@ -66,19 +66,19 @@ class TestMoodViewParsing:
         mock = MockProcessor()
         env = _make_extension_env(mock)
         template = env.from_string(
-            '{% mood_view "a" with x %}{% mood_view "b" with y %}'
+            '{% mood_view "a.md" with x %}{% mood_view "b.md" with y %}'
         )
         template.render(x={"id": "1"}, y={"id": "2"})
 
         assert len(mock.calls) == 2
-        assert mock.calls[0][0] == "a"
-        assert mock.calls[1][0] == "b"
+        assert mock.calls[0][0] == "a.md"
+        assert mock.calls[1][0] == "b.md"
 
     def test_inside_for_loop(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
         template = env.from_string(
-            '{% for item in items %}{% mood_view "detail" with item %}{% endfor %}'
+            '{% for item in items %}{% mood_view "detail.md" with item %}{% endfor %}'
         )
         template.render(items=[{"id": "a"}, {"id": "b"}, {"id": "c"}])
 
@@ -92,7 +92,7 @@ class TestMoodViewInlineKeyword:
     def test_default_is_not_inline(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile" with user %}')
+        template = env.from_string('{% mood_view "profile.md" with user %}')
         template.render(user={"id": "alice"})
 
         assert mock.calls[0][2] is False
@@ -100,7 +100,7 @@ class TestMoodViewInlineKeyword:
     def test_inline_keyword_sets_flag(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile" with user inline %}')
+        template = env.from_string('{% mood_view "profile.md" with user inline %}')
         template.render(user={"id": "alice"})
 
         assert mock.calls[0][2] is True
@@ -108,7 +108,7 @@ class TestMoodViewInlineKeyword:
     def test_inline_return_value_appears_in_output(self) -> None:
         mock = MockProcessor(return_value="INLINED")
         env = _make_extension_env(mock)
-        template = env.from_string('before{% mood_view "x" with d inline %}after')
+        template = env.from_string('before{% mood_view "x.md" with d inline %}after')
         result = template.render(d={"id": "1"})
 
         assert result == "beforeINLINEDafter"
@@ -120,7 +120,7 @@ class TestMoodViewOutput:
     def test_return_value_appears_in_output(self) -> None:
         mock = MockProcessor(return_value="REPLACED")
         env = _make_extension_env(mock)
-        template = env.from_string('before{% mood_view "x" with d %}after')
+        template = env.from_string('before{% mood_view "x.md" with d %}after')
         result = template.render(d={"id": "1"})
 
         assert result == "beforeREPLACEDafter"
@@ -128,7 +128,7 @@ class TestMoodViewOutput:
     def test_empty_return_produces_nothing(self) -> None:
         mock = MockProcessor(return_value="")
         env = _make_extension_env(mock)
-        template = env.from_string('before{% mood_view "x" with d %}after')
+        template = env.from_string('before{% mood_view "x.md" with d %}after')
         result = template.render(d={"id": "1"})
 
         assert result == "beforeafter"
@@ -138,14 +138,14 @@ class TestMoodViewSyntaxError:
     def test_missing_with_keyword(self) -> None:
         env = _make_extension_env(MockProcessor())
         with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
-            env.from_string('{% mood_view "profile" user %}')
+            env.from_string('{% mood_view "profile.md" user %}')
 
 
 class TestMoodViewDataValidation:
     def test_accepts_dict_without_id(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile" with user %}')
+        template = env.from_string('{% mood_view "profile.md" with user %}')
         template.render(user={"name": "Alice"})
 
         assert len(mock.calls) == 1
@@ -154,7 +154,7 @@ class TestMoodViewDataValidation:
     def test_raises_on_non_dict(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile" with user %}')
+        template = env.from_string('{% mood_view "profile.md" with user %}')
 
         with pytest.raises(TypeError, match="got: str"):
             template.render(user="not a dict")
@@ -168,7 +168,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("profile", {"id": "alice", "name": "Alice"})
+        processor("profile.md", {"id": "alice", "name": "Alice"})
 
         assert (tmp_path / "profile" / "alice.md").exists()
 
@@ -176,7 +176,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("profile", {"id": "alice", "name": "Alice"})
+        processor("profile.md", {"id": "alice", "name": "Alice"})
 
         assert (tmp_path / "profile" / "alice.md").read_text() == "hi alice"
 
@@ -184,7 +184,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"profile.md": "content"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        result = processor("profile", {"id": "alice"})
+        result = processor("profile.md", {"id": "alice"})
 
         assert result == ""
 
@@ -192,7 +192,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"entity-detail.md": ""})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("entity-detail", {"id": "user"})
+        processor("entity-detail.md", {"id": "user"})
 
         assert (tmp_path / "entity-detail").is_dir()
 
@@ -200,8 +200,8 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"detail.md": "{{ id }}"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("detail", {"id": "a"})
-        processor("detail", {"id": "b"})
+        processor("detail.md", {"id": "a"})
+        processor("detail.md", {"id": "b"})
 
         assert (tmp_path / "detail" / "a.md").read_text() == "a"
         assert (tmp_path / "detail" / "b.md").read_text() == "b"
@@ -210,7 +210,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"summary.md": "count={{ items|length }}"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("summary", {"items": [1, 2, 3]})
+        processor("summary.md", {"items": [1, 2, 3]})
 
         assert (tmp_path / "summary.md").read_text() == "count=3"
 
@@ -218,7 +218,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"report.md": "ok"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("report", {"data": "value"})
+        processor("report.md", {"data": "value"})
 
         assert (tmp_path / "report.md").exists()
         assert not (tmp_path / "report").exists()
@@ -227,7 +227,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        result = processor("profile", {"id": "alice"}, inline=True)
+        result = processor("profile.md", {"id": "alice"}, inline=True)
 
         assert result == "hi alice"
 
@@ -235,7 +235,7 @@ class TestMoodViewProcessorImpl:
         env = Environment(keep_trailing_newline=True)
         env.loader = DictLoader({"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("profile", {"id": "alice"}, inline=True)
+        processor("profile.md", {"id": "alice"}, inline=True)
 
         assert not (tmp_path / "profile" / "alice.md").exists()
         assert not (tmp_path / "profile").exists()

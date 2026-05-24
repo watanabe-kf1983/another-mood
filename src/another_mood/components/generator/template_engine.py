@@ -45,7 +45,7 @@ class TemplateEngine:
 
     def render(self, template_name: str, data: Mapping[str, object]) -> str:
         try:
-            return self._env.get_template(f"{template_name}.md").render(data)
+            return self._env.get_template(template_name).render(data)
         except TemplateSyntaxError as exc:
             raise FileValidationError(
                 [
