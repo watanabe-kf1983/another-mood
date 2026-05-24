@@ -34,14 +34,14 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 (no entities defined yet)
 {%- endif %}
 {% for entity in __entity_roots -%}
-{% mood_view "__meta_entity" with {
+{% mood_view "__meta_entity.md" with {
   "id": entity.id,
   "builtin": entity.builtin,
   "entities": __definition.entities,
 } %}
 {%- endfor %}
 {% for entity in __entity_roots -%}
-{% mood_view "__table_view" with {
+{% mood_view "__table_view.md" with {
   "id": entity.id,
   "entities": __definition.entities,
   "__views": __views,
@@ -58,7 +58,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 (no queries defined yet)
 {%- endif %}
 {% for query in __definition.queries -%}
-{% mood_view "__meta_query" with {
+{% mood_view "__meta_query.md" with {
   "id": query.id,
   "from": query.from,
   "flatten": query.flatten,

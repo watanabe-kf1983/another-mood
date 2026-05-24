@@ -26,8 +26,8 @@ def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     data = load_model(data_dir)
     data["__views"] = {k: v for k, v in data.items() if k != "__views"}
-    render("__root", data, out_dir, filters=_FILTERS)
-    render("__reports", data, out_dir / "reports", templates_dir=templates_dir)
+    render("__root.md", data, out_dir, filters=_FILTERS)
+    render("__reports.md", data, out_dir / "reports", templates_dir=templates_dir)
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -50,14 +50,14 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
             ]
             if warnings:
                 render(
-                    "__warnings",
+                    "__warnings.md",
                     {"diagnostics": [d.to_data() for d in warnings]},
                     ctx.out / "__warnings",
                 )
                 _append_warnings_link(ctx.out / "index.md", len(warnings))
         else:
             report = BuildReport.collect(data_dir / "reports")
-            render("__build_failure", report.to_data(), out_dir / "data")
+            render("__build_failure.md", report.to_data(), out_dir / "data")
 
 
 def _append_warnings_link(index_md: Path, count: int) -> None:

@@ -9,7 +9,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 {%- endfor %}
 
 {%- for artist in artist_discography -%}
-{% mood_view "artist-detail" with artist %}
+{% mood_view "artist-detail.md" with artist %}
 {%- endfor %}
 
 ## Albums by genre
@@ -23,7 +23,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 {%- endfor %}
 
 {%- for album in album_tracklist -%}
-{% mood_view "album-detail" with album %}
+{% mood_view "album-detail.md" with album %}
 {%- endfor %}
 
 ## Genre hierarchy
@@ -106,5 +106,5 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {% endfor %}
 
 {%- for record in prose -%}
-{% mood_view "prose" with record %}
+{% mood_view "prose.md" with record %}
 {%- endfor %}

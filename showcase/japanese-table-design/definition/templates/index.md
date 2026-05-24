@@ -11,7 +11,7 @@
 {% endfor %}
 
 {% for t in テーブル -%}
-{% mood_view "テーブル詳細" with t %}
+{% mood_view "テーブル詳細.md" with t %}
 {% endfor %}
 
 ## ドメインモデル図 (Mermaid classDiagram)

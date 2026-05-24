@@ -19,7 +19,7 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 {%- endfor %}
 
 {%- for product in products -%}
-{% mood_view "product-detail" with product %}
+{% mood_view "product-detail.md" with product %}
 {%- endfor %}
 ```
 
@@ -52,7 +52,7 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 
 | Part | Description |
 |---|---|
-| `NAME` | The subtemplate's base name (the filename without the `.md` extension, given as a string). |
+| `NAME` | The subtemplate's filename including the extension (e.g. `"product-detail.md"`), given as a string. |
 | `DATA` | The data passed to the subtemplate (a map object). |
 
 An error is raised if `DATA` is not a map.
@@ -61,10 +61,10 @@ An error is raised if `DATA` is not a map.
 
 The output path is determined by whether `DATA` has an `id` field.
 
-| `DATA` | Output |
+| `DATA` | Output (when `NAME` is `"product-detail.md"`) |
 |---|---|
-| Includes `{ id: "foo", ... }` | `{outDir}/NAME/foo.md` |
-| No `id` field | `{outDir}/NAME.md` |
+| Includes `{ id: "foo", ... }` | `{outDir}/product-detail/foo.md` |
+| No `id` field | `{outDir}/product-detail.md` |
 
 ### Return value of the tag
 
@@ -78,7 +78,7 @@ To link from a parent page to a subpage, write Markdown link syntax separately, 
 {%- endfor %}
 
 {%- for product in products -%}
-{% mood_view "product-detail" with product %}
+{% mood_view "product-detail.md" with product %}
 {%- endfor %}
 ```
 

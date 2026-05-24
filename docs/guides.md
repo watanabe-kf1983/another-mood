@@ -422,7 +422,7 @@ Sample `definition/templates/index.md`:
 {%- endfor %}
 
 {%- for member in members -%}
-{% mood_view "member" with member %}
+{% mood_view "member.md" with member %}
 {%- endfor %}
 
 ## By Role
@@ -432,22 +432,22 @@ Sample `definition/templates/index.md`:
 {%- endfor %}
 
 {%- for entry in by_role -%}
-{% mood_view "by_role" with entry %}
+{% mood_view "by_role.md" with entry %}
 {%- endfor %}
 ```
 
 Each section has two `for` loops. The first **emits index links**; the second **writes the subpage bodies**.
 
-This split comes from how `{% mood_view %}` behaves. `{% mood_view "TEMPLATE_NAME" with DATA %}` is a tag that evaluates `definition/templates/<TEMPLATE_NAME>.md` against `DATA` and writes the result to a separate file; the tag itself **returns the empty string** (the write is a side effect). Because the parent page's index links must be written separately in Markdown link syntax, the loops split into one for links and one for body generation.
+This split comes from how `{% mood_view %}` behaves. `{% mood_view "TEMPLATE_NAME.md" with DATA %}` is a tag that evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA` and writes the result to a separate file; the tag itself **returns the empty string** (the write is a side effect). Because the parent page's index links must be written separately in Markdown link syntax, the loops split into one for links and one for body generation.
 
 The output filename depends on whether `DATA` has an `id` field:
 
-| `DATA` contents | Output |
+| `DATA` contents | Output (when the tag is `{% mood_view "member.md" with member %}`) |
 |---|---|
-| Map with `id` | `<TEMPLATE_NAME>/<id>.md` |
-| Map without `id` | `<TEMPLATE_NAME>.md` |
+| Map with `id` | `member/<id>.md` (e.g. `member/alice.md`) |
+| Map without `id` | `member.md` |
 
-In the sample, `{% mood_view "member" with member %}` writes to `member/alice.md` when `member.id` is `alice`. The `as: id` trick from the queries chapter — synthesizing an `id` so that `mood_view` splits its output one file per role — comes together here.
+In the sample, `{% mood_view "member.md" with member %}` writes to `member/alice.md` when `member.id` is `alice`. The `as: id` trick from the queries chapter — synthesizing an `id` so that `mood_view` splits its output one file per role — comes together here.
 
 `{% mood_view %}` can also be called from subtemplates (subpages can generate further subpages within them). For the full tag specification, see [Template — Jinja2 extensions](reference/template.md#jinja2-extension-mood_view).
 

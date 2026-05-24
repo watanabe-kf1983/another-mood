@@ -32,13 +32,14 @@ class MoodViewProcessorImpl:
     def __call__(
         self, template_name: str, data: dict[str, Any], *, inline: bool = False
     ) -> str:
-        rendered = self.env.get_template(f"{template_name}.md").render(data)
+        rendered = self.env.get_template(template_name).render(data)
         if inline:
             return rendered
+        stem = Path(template_name).stem
         if "id" in data:
-            out_file = self.out_dir / template_name / f"{data['id']}.md"
+            out_file = self.out_dir / stem / f"{data['id']}.md"
         else:
-            out_file = self.out_dir / f"{template_name}.md"
+            out_file = self.out_dir / template_name
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(rendered, encoding="utf-8")
         return ""
