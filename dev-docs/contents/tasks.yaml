@@ -417,7 +417,7 @@ categories:
           Environment 対応の前提整備を兼ねる。showcase / dev-docs / docs と
           ユーザの全 mood_view 使用箇所に影響する破壊的変更。
         phase: 11
-        proposal: design/generator/template-spec.md#テンプレート参照の拡張子明示化-p2
+        done: true
 
   Q:
     title: 公開
