@@ -9,22 +9,22 @@ categories:
       A1:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
-        phase: 11
+        phase: 13
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
-        phase: 11
+        phase: 13
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
-        phase: 11
+        phase: 13
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
-        phase: 11
+        phase: 13
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
@@ -612,3 +612,44 @@ categories:
         title: Makefile build-projects を全 showcase blueprint 自動列挙化
         phase: 10
         done: true
+
+  U:
+    title: テンプレートエンジン出力フォーマット対応
+    impl_paths:
+      - src/another_mood/components/generator/template_engine.py
+      - src/another_mood/components/generator/generator.py
+    spec: design/generator/output-format-spec.md
+    tasks:
+      U1:
+        title: output_format モデル基盤
+        note: |
+          OutputFormat 記述子 (name / escape / filters) と make_environment
+          factory を導入。Environment を autoescape=False + finalize フックで
+          構成し、素文字列に escape を適用する基盤を作る。Markup を返した
+          フィルタは finalize が素通しする契約。
+        phase: 11
+        proposal: design/generator/output-format-spec.md#実装方針
+      U2:
+        title: md output_format の escape 関数
+        note: |
+          ASCII punctuation 一律 backslash escape (CommonMark 許容範囲)。
+          finalize から呼ばれる素文字列向け escape。
+        phase: 11
+        proposal: design/generator/output-format-spec.md#md-output_format-の具体
+      U3:
+        title: md 用ラッパーフィルタ整備
+        note: |
+          inline_code (backtick 数動的調整) / fenced_code (fence 文字数動的
+          調整) / table_cell (改行 → <br>) / link_url (URL encoding)。
+          フィルタ名はフォーマット中立、実装は md 用 Environment に登録。
+          O4 を吸収できる可能性あり。
+        phase: 11
+        proposal: design/generator/output-format-spec.md#ラッパーフィルタ
+      U4:
+        title: 既存フィルタの output_format モデルへの移行
+        note: |
+          pluck / walk_entity / to_yaml / mermaid_class_id を output_format
+          別 Environment に登録し直す。mermaid_class_id は Mermaid テンプレート
+          対応時に Mermaid 専用に移す。
+        phase: 11
+        proposal: design/generator/output-format-spec.md#既存フィルタの移行
