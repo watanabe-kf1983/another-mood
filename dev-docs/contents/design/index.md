@@ -27,7 +27,7 @@
 - [template-spec.md](generator/template-spec.md) — テンプレートの設計判断（ChainableUndefined）と未実装機能（C4）
 - [anchor-spec.md](generator/anchor-spec.md) — アンカー（アンカー ID 体系、リンク記法、リンク解決）
 - [paging-spec.md](generator/paging-spec.md) — ページ分割（paging.yaml、プロファイル、分割ルール）
-- [generator.md](generator/generator.md) — Generator 内部設計（内蔵ルートテンプレート、Reconcile）と未実装機能（B1〜B6 ノードメタデータ・リンク解決等）
+- [generator.md](generator/generator.md) — Generator 内部設計（内蔵ルートテンプレート、Reconcile）と未実装機能（B1, B3〜B6 ノードメタデータ・リンク解決等）
 
 ## app
 

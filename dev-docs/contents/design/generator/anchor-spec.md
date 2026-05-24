@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B1〜B6](../../../tasks.md)（ノードメタデータ注入 / アンカー ID 生成規則 / オンデマンド走査 / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）
+> **未実装** — Phase 11 タスク [B1, B3〜B6](../../../tasks.md)（親参照注入 / `_meta` フィールド注入 / anchor_id → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）
 
 ### 用語
 

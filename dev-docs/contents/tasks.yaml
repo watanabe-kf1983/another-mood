@@ -28,7 +28,7 @@ categories:
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
-        note: contents_dir 基点パス解決が必要 (B2 と連携)
+        note: contents_dir 基点パス解決が必要。出力する anchor_id の形式は anchor-spec.md の規則に従う
         phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
@@ -44,35 +44,35 @@ categories:
     spec: design/generator/anchor-spec.md
     tasks:
       B1:
-        title: ノードメタデータの注入
-        note: anchor 可能な全 Mapping / Array ノードに `_parent` / `_parent_record` / `_meta` を生やす。`_meta` は `anchor_id` / `object_type_id` / `page_url` を持つ
+        title: 親参照の注入 (`_parent` / `_parent_record`)
+        note: anchor 可能な全 Mapping / Array ノードに親参照を生やす。Mapping のみ `_parent_record` を併設
         phase: 11
-        proposal: design/generator/generator.md#ノードメタデータ-b1
+        proposal: design/generator/generator.md#ノードメタデータ-b1-b3-b6
       B2:
-        title: アンカー ID 生成規則
-        note: データツリー上のパスを `/` 区切りで構築。list 要素は id で識別。prose は id 内 `/` を素通し
+        title: anchor_id → ノード マップ構築
+        note: 走査用 lookup を pre-render 時に構築。anchor フィルタおよび resolve フィルタが共有
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B3:
-        title: アンカー ID → ノードのオンデマンド走査 + キャッシュ
-        note: 先頭セグメントが prose のときは残りを単一 id として扱う特例あり
+        title: ノードへの `_meta.anchor_id` / `_meta.object_type_id` 注入
+        note: anchor-spec の規則に従って各ノードの anchor_id と object_type_id を計算し `_meta` に格納
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b6
+        proposal: design/generator/generator.md#ノードメタデータ-b1-b3-b6
       B4:
         title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
         note: anchor ID から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B5:
         title: prose body 処理フィルタ (`resolve`)
         note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B6:
         title: "`_meta.page_url` の算出"
         note: paginate 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b6
+        proposal: design/generator/generator.md#ノードメタデータ-b1-b3-b6
 
   C:
     title: ページ分割 (paging)
