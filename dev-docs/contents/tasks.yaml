@@ -123,62 +123,30 @@ categories:
     tasks:
       D1:
         title: Meta-schema 拡張 — x-ref キーワードの受理
-        note: |
-          property 直下で x-ref を許容、items: 直下は明示エラー。値は
-          { entity, attribute? } の構造化形式。辞書キー FK (propertyNames
-          パターン) は当面サポート外。
         phase: 10
         done: true
       D2:
         title: Schema-Inspector 拡張 — x-ref の収集
-        note: |
-          traversal 中に x-ref を収集し、Attribute.x_ref: XRef として catalog
-          に反映。既存 Attribute.entity / item_type は混同回避のため
-          child_entity / child_item_type に改名。XRef.attribute は catalog
-          層で常に文字列として解決済み (省略時は SchemaTree → DataCatalog
-          境界で "id" を補う)。
         phase: 10
         done: true
       D3:
         title: Schema-level コヒーレンスチェック
-        note: |
-          x-ref.entity / x-ref.attribute を catalog 層で検証する build エラーを
-          schema_inspector に追加。target スコープはユーザ entity + 内蔵 prose の
-          トップレベル群 (__definition.* は除外)。type: array 参照時の attribute
-          必須は、暗黙の "id" が target attribute に見つからないという形で
-          attribute 検査に統合される。Diagnostic の line/column は parse_yaml の
-          UserStr Location から復元する。
         phase: 10
         done: true
       D4:
         title: showcase/music への x-ref 適用
-        note: |
-          showcase/music スキーマの 7 FK を x-ref で宣言。__meta_entity
-          テンプレートに references 列を追加し、target entity 名を meta
-          ページへのリンクとして描画。
         phase: 10
         done: true
       D5:
         title: docs/reference 同期
-        note: schema.md 等に x-ref キーワードの仕様を反映
         phase: 10
         done: true
       D6:
         title: Data-level FK 整合性検査
-        note: |
-          各データ値が target 集合 (辞書キー集合 or 指定 attribute の値集合)
-          に属するかを normalizer / validator で照合。D7 未着手の間は暫定で
-          build エラーとして扱い、後続処理を中止する (D7 完成後に warning
-          レベルに切り替える)。
         phase: 10
         done: true
       D7:
         title: 警告インフラ
-        note: |
-          BuildReport の warning フィールド (severity 区別 + has_warnings()
-          ヘルパ)、DiagnosticReporter による非中断診断チャネル、__root.md 末尾
-          の Warnings セクション、CLI mood build --strict の exit code 制御を
-          実装。D6 の FK 違反は severity=warning に降格済み。
         phase: 10
         done: true
       D8:
@@ -217,21 +185,10 @@ categories:
         done: true
       E9:
         title: catalog データモデルの依存方向反転 (Node primary)
-        note: |
-          `data_catalog.py` の宣言順序を Edge/Node → Attribute/ObjectType/Entity
-          に反転し、`catalog` を class attribute (parens 抜きアクセス) に降格。
-          `Node.from_flat` / `Node.to_flat` はモジュール関数の
-          `dc.build_tree` / `dc.flatten_tree` に移管。F7 のテンプレート Query 化を新しい依存方向の API 上で書ける
-          ようにするための地ならし。
         phase: 10
         done: true
       E8:
         title: "`from:` パス解決の最長一致化"
-        note: |
-          `dc.Node.walk_path` を共有ヘルパとして導入し、`From.derive` /
-          `From.apply` がカタログ edge 名による最長一致 walk で path を解決する
-          形に変更。詳細は design/composer/queries-spec.md「Internal Design」。
-          F8 (`__definition` 自己記述カタログ) の前提が整った。
         phase: 10
         done: true
       E6:
@@ -244,15 +201,6 @@ categories:
         proposal: design/composer/queries-spec.md#同名禁止-e6
       E10:
         title: singleton-flatten 内の object[] を child entity link として保持
-        note: |
-          `schema_tree._collect_edges` の singleton 分岐で、ArrayNode 型の
-          sub-property に対してのみ `to_catalog_node(sub.node)` を呼んで
-          child entity link を保持。`members.hobby.pets` のような
-          nested collection が catalog の独立 entity になり、
-          query DSL の `from:` で walk 可能・メタドキュメンテーションの
-          自動生成対象にも入る。深いネスト object (singleton-of-singleton) は
-          引き続き 1 段平坦化のみで、深い構造は catalog に現れない。
-          詳細は design/normalizer/schema-spec.md「シングルトン」節。
         phase: 10
         done: true
 
@@ -309,25 +257,10 @@ categories:
         done: true
       F7:
         title: メタドキュメンテーションテンプレートの Query 化リファクタ
-        note: |
-          built-in テンプレートで DSL に寄せられる集計は寄せ、tree descent
-          (子孫マッチ / walk_entity) はテンプレート / Python ヘルパに残す住み分けに
-          落ち着いた。詳細は design/app/meta-documentation.md「メタドキュメンテーションの
-          DSL 化境界」。
         phase: 10
         done: true
       F8:
         title: __definition の自己記述カタログを built-in に追加
-        note: |
-          F7 の前提。`__definition.entities` / `__definition.queries`
-          (および子 entity の `.item_type.attributes` / `.select`)
-          を built-in entity として登録し、クエリ DSL の `from:` で
-          カタログ自体を読めるようにする。各 catalog dataclass の
-          `catalog()` classmethod が Node 形式で構造を返し、
-          `inspect_schema._emit_definition_catalog` が `to_flat` で
-          namespace に配置する。composer 側は load_model に
-          data_catalog_dir / queries_dir を合流させた。
-          詳細は design/app/meta-documentation.md「自己記述カタログ」。
         phase: 10
         done: true
 
@@ -350,9 +283,6 @@ categories:
         proposal: design/app/config-spec.md#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
-        note: |
-          利用者向け仕様は docs/reference/cli.md、
-          config キーは design/app/config-spec.md。
         phase: 10
         done: true
       G8:
@@ -482,9 +412,6 @@ categories:
     tasks:
       O3:
         title: Windows での動作確認
-        note: |
-          利用者向け要件は design/architecture.md「動作環境」。
-          Windows 実機で pytest / mood build / mood watch を検証済み。
         phase: 10
         done: true
       O4:
@@ -532,30 +459,6 @@ categories:
     tasks:
       R1:
         title: "スキーマ記述例の `additionalProperties: false` 位置を統一"
-        note: |
-          現状の JSON Schema サンプルは `additionalProperties: false` を
-          各 `properties:` ブロックの末尾 (required: の後ろ) に置いている
-          が、ネストが深くなると「閉じの false」が複数インデントレベル
-          で末尾に集中し、書き手が「いまどの properties に対応する
-          false を書こうとしているか」を追うコストが高い。
-          推奨スタイルとして `properties:` を書くときは必ずその直上に
-          `additionalProperties: false` を置く形に揃える:
-
-          ```yaml
-          type: object
-          additionalProperties: false   # ← properties の直上
-          properties:
-            name: { type: string }
-            ...
-          required: [name]
-          ```
-
-          影響範囲:
-          - showcase/ 配下の全 schema.yaml
-          - docs/ 内の schema 記述例 (reference / guides 等)
-          - design ドキュメント内の例示 (該当があれば)
-
-          機能変化なし。schema_inspector の解釈は不変、純粋にスタイル統一。
         phase: 10
         done: true
 
@@ -568,16 +471,6 @@ categories:
     tasks:
       S1:
         title: "showcase/japanese-table-design — テーブル定義から 2 種類のスキーマ図を描く PoC"
-        note: |
-          ソフトウェアシステム設計書サンプルの最小形。蔵書管理
-          (5 テーブル / 4 FK)、識別子はすべて日本語。1 つの source
-          data から テーブル設計図 (erDiagram, DDL 型) と
-          ドメインモデル図 (classDiagram, ドメイン型) を生成し、
-          ORM 的型対応 entity (`型対応`) と flatten + join クエリで
-          橋渡しした。Mermaid Unicode 制約の実機検証 / notation
-          選定の含意は design/app/system-dev-docs.md「S1」節に記録。
-          新規 Jinja2 フィルタも新規 DSL 機能も surface せず、F4a
-          着手の前提が整った。
         phase: 10
         done: true
       S2:
