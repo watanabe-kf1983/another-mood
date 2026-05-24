@@ -1,94 +1,156 @@
 # Anchor Specification
 
-アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。
+アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。アンカーを一意に指す文字列を **アンカー ID** と呼ぶ。
 
 ## Proposals
 
-> **未実装** — Phase 10 タスク [B1〜B6](../../../tasks.md)（ラッパーツリー / アンカー ID 規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `get_page_url`）
+> **未実装** — Phase 11 タスク [B1, B3〜B6](../../../tasks.md)（親参照注入 / `_meta` フィールド注入 / anchor_id → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）
+
+### 用語
+
+- **アンカー (anchor)**: リンクされ得る位置・対象。HTML/Markdown の anchor target と同義。本ツールではデータツリー上の各ノードがアンカーとなる
+- **アンカー ID (anchor ID)**: そのアンカーを一意に識別する文字列。本ツールが生成する。URL fragment として URL に埋め込まれる
 
 ### ID 体系
 
-正規化後のデータモデル（配列 or オブジェクト）によって、アンカーの識別方法が決まる。ここで言う **class** はデータカタログにおける **Entity ID** と同概念 ([meta-documentation.md](../app/meta-documentation.md))。
+アンカー ID は **データツリー上のパス** を `/` 区切りで表現した文字列。
 
-#### 配列（リスト型）
+#### セグメント構成
 
-Normalizer の正規化により各要素に `id` フィールドが付与される。
+データツリーを root から目的のノードまで辿り、各ステップを 1 セグメントとして書き出す:
 
-- class = ラッパーキーのドット区切りパスに `.item` を付加
-- アンカー ID = `{class}.{id}`
+- **dict キー（singleton 配下のキー）**: そのキーをそのまま使う
+- **リスト要素**: その要素の `id` フィールドの値を使う
 
-#### オブジェクト（シングルトン型）
+リスト要素に `id` フィールドが無い場合（Array pattern で id を schema 上要求していない場合、[schema-spec.md](../normalizer/schema-spec.md) 参照）、その要素はアンカー ID を持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカー ID を持たない。
 
-単一オブジェクトなので `id` は不要。ラッパーキー自体がアンカーとなる。
+#### Escape 規則
 
-- class = ラッパーキーのドット区切りパス
-- アンカー ID = `{class}`(class と同一)
+アンカー ID は URL fragment として埋め込まれる文字列。`/` を path 区切り文字として予約しているため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**。
+
+その他の URL-fragment-unsafe な文字（空白、`#` 等）も percent-encoding する。HTML5 の `id` 属性が空白を許容しないため、空白を含む id を持つレコードは技術的にアンカー ID 化不可（[未決事項](#未決事項)参照）。
+
+#### Prose の例外
+
+`prose` entity に限り、id 内の `/` を escape **せず** にアンカー ID へ素通しで埋め込む。
+
+理由:
+
+- `prose` の id は contents/ 内ファイルの相対パスから生成され、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture` のような可読性の低い文字列になる
+- `prose` は flat な配列 entity で sub-entity を持たないため、resolver が `prose/` 以降を「単一の id」として扱えば曖昧性は発生しない
+
+この例外は `prose` に固有のものとして明示的に定義する。一般化（「sub-entity を持たない配列 entity 一般に適用」等）はしない — 利用者 entity の構造変化に伴う将来の曖昧性混入を避けるため。
 
 #### 例
 
 正規化後の views データ:
 
 ```yaml
-overview:                        # オブジェクト → シングルトン
+overview:                          # オブジェクト → singleton
   title: システム概要
 
-erds:                            # 配列 → リスト
+erds:                              # 配列 → リスト
   - id: user-management
     title: ユーザー管理の ER図
-    entities:                    # 配列 → リスト（ネスト）
+    entities:                      # 配列 → リスト（ネスト）
       - id: user
         title: ユーザー
+      - id: account
+        title: アカウント
   - id: order-flow
     title: 受注フローの ER図
+    entities:
+      - id: user                   # 別の erd 配下なので user-management.entities.user とは別物
+        title: ユーザー（注文視点）
 
-screens:                         # 配列 → リスト
-  - id: user
-    title: ユーザー画面
+screens:
+  - id: user-list
+    title: ユーザー一覧画面
 
-prose:                           # 配列 → リスト（Markdown データソース）
-  - id: design/architecture.md
+prose:                             # flat list、id はファイル相対パス
+  - id: design/architecture
     title: Architecture
-  - id: design/normalizer/schema-spec.md
+  - id: design/normalizer/schema-spec
     title: Schema Specification
 ```
 
-| アンカー ID | class | id | title |
-|---|---|---|---|
-| `overview` | overview | *(なし)* | システム概要 |
-| `erds.item.user-management` | erds.item | user-management | ユーザー管理の ER図 |
-| `erds.item.entities.item.user` | erds.item.entities.item | user | ユーザー |
-| `screens.item.user` | screens.item | user | ユーザー画面 |
-| `prose.item.design/architecture.md` | prose.item | design/architecture.md | Architecture |
-| `prose.item.design/normalizer/schema-spec.md` | prose.item | design/normalizer/schema-spec.md | Schema Specification |
+| アンカー ID | 指す対象 |
+|---|---|
+| `overview` | overview singleton |
+| `erds/user-management` | user-management の ER図 |
+| `erds/user-management/entities/user` | user-management 配下の user エンティティ |
+| `erds/order-flow/entities/user` | order-flow 配下の user エンティティ（衝突しない） |
+| `screens/user-list` | user-list 画面 |
+| `prose/design/architecture` | Architecture 散文（id 内 `/` を素通し） |
+| `prose/design/normalizer/schema-spec` | Schema Specification 散文 |
 
-- `title`: 人間向けの表示名（日本語OK）
-- アンカー ID はグローバル一意とは限らない。リンク対象として使う主要オブジェクトの `id` が実質的にユニークであればよい
+旧仕様（`{class}.item.{id}` 形式）と異なり、新仕様ではアンカー ID が **データツリー上の到達経路そのもの** で構成されるため、ネストしたリスト要素間で id が重複してもアンカー ID が衝突しない。
+
+#### クラスとの関係
+
+class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカー ID とは直交する概念:
+
+- **class**: schema 上の位置を示す path-based 名（例: `categories.tasks`, `categories.item.tasks.item`）。クエリ DSL の `from:`、paging 設定、FK 解決、表示見出しで参照される
+- **アンカー ID**: データツリー上の実体パス（例: `categories/web/tasks/foo`）。リンク解決でのみ使われる
+
+旧仕様ではアンカー ID を `{class}.{id}` と class 名込みで構築していたが、新仕様ではアンカー ID は実体パスのみで構成する。class はアンカー ID 構築には登場しない。
 
 ### リンク記法
 
-テンプレート内では `link_md` フィルタを使用する:
+#### テンプレート内のアンカー参照
+
+テンプレート内では anchor ID から 3 種類のフィルタを使い分ける:
 
 ```jinja2
-{{ "erds.item.entities.item.user" | link_md }}
+{{ "erds/user-management/entities/user" | anchor_link }}
+{# → [<display>](<URL>) 形式の Markdown リンク #}
+
+{{ "erds/user-management/entities/user" | anchor_link("ER 図") }}
+{# → display text を明示。[ER 図](<URL>) #}
+
+{{ "erds/user-management/entities/user" | anchor_title }}
+{# → display 文字列のみ #}
+
+{{ "erds/user-management/entities/user" | anchor_url }}
+{# → URL 文字列のみ #}
 ```
 
-Markdown data 内では `toc:` 記法を使用する:
+display text は対象ノードから `title` → `name` → `id` → anchor_id 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`anchor_link(arg)` のように引数で渡せば override。
+
+#### Markdown 本文中のアンカー参照
+
+prose body 等の Markdown 本文では `toc:` プレフィックス記法でアンカー ID を URL として埋め込む:
 
 ```markdown
-ユーザーの詳細は[ユーザー](toc:erds.item.entities.item.user)を参照。
+ユーザーの詳細は[ユーザー](toc:erds/user-management/entities/user)を参照。
 ```
 
-Markdown データソースでは、Normalizer がソース内の相対リンクを自動的に `toc:` 記法に変換する（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）:
+この記法は二役を兼ねる:
+
+1. **author 向け sugar** — author が anchor で明示的に参照したいときの書き方
+2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
+
+ソース Markdown では普通の相対パスで書け、Normalizer が `toc:` 記法に変換する ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
 [Composer](../composer/composer.md)
 ↓ Normalizer が変換 ↓
-[Composer](toc:prose.item.design/composer/composer.md)
+[Composer](toc:prose/design/composer/composer)
 ```
 
 ### リンク解決
 
-アンカー ID から実際のリンク先 URL への解決は、paging 設定に依存する（[paging-spec](paging-spec.md) 参照）。エンジンがアンカー ID を適切な相対パスに置換する。
+リンク解決は Generator の **pre-render 段階で完結**する。post-render での文字列置換は行わない。
 
-→ 例: `[ユーザー](../erds/user-management.md#erds.item.entities.item.user)`
+- **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor ID から Markdown リンク / display text / URL を生成
+- **prose body 処理フィルタ (仮称 `resolve`)**: prose body 中の `toc:` URL を実 URL に置換。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタ
+
+いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_id → ノードのマップと paging 設定 ([paging-spec.md](paging-spec.md)) を引いて実 URL を構築する。例: `[ユーザー](../erds/user-management.md#erds/user-management/entities/user)`。
+
+prose 例外の resolver 側挙動: アンカー ID を path 区切り文字 `/` で分割しつつ走査するが、`prose/` を先頭セグメントに見たときは残り全体を単一の id とみなして flat list を引く。例外はアンカー ID 構築側 (escape 省略) と整合する形で resolver にも 1 箇所だけ規則を入れる。
+
+### 未決事項
+
+- **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカー ID 化不可。ビルド時に警告して当該 id 配下をアンカー ID 無し扱いとする方針（[F4 / D 群と連携、未タスク化](../../../tasks.md)）
+- **`toc:` プレフィックスの名前**: 実態は「アンカー参照」で TOC ではない。実装時（[B4, B5](../../../tasks.md)）に再検討する

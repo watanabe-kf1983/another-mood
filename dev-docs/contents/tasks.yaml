@@ -28,7 +28,7 @@ categories:
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
-        note: contents_dir 基点パス解決が必要 (B2 と連携)
+        note: contents_dir 基点パス解決が必要。出力する anchor_id の形式は anchor-spec.md の規則に従う
         phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
@@ -44,33 +44,35 @@ categories:
     spec: design/generator/anchor-spec.md
     tasks:
       B1:
-        title: views データのラッパーツリー構築
-        note: data / parent / class_name フィールド
+        title: 親参照の注入 (`_parent` / `_parent_record`)
+        note: anchor 可能な全 Mapping / Array ノードに親参照を生やす。Mapping のみ `_parent_record` を併設
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#ノードメタデータ-b1-b3-b6
       B2:
-        title: アンカー ID 生成規則
-        note: リスト型 {class}.item.{id} / シングルトン {class}
+        title: anchor_id → ノード マップ構築
+        note: 走査用 lookup を pre-render 時に構築。anchor フィルタおよび resolve フィルタが共有
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B3:
-        title: アンカー → ラッパーのオンデマンド走査 + キャッシュ
+        title: ノードへの `_meta.anchor_id` / `_meta.object_type_id` 注入
+        note: anchor-spec の規則に従って各ノードの anchor_id と object_type_id を計算し `_meta` に格納
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#ノードメタデータ-b1-b3-b6
       B4:
-        title: link_md Jinja2 フィルタ
+        title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
+        note: anchor ID から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B5:
-        title: レンダリング後の toc:id 文字列のリンク URL 置換
-        note: prose body 内も含む
+        title: prose body 処理フィルタ (`resolve`)
+        note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B6:
-        title: ラッパーの get_page_url() 実装
-        note: C3 と連携
+        title: "`_meta.page_url` の算出"
+        note: paginate 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#ノードメタデータ-b1-b3-b6
 
   C:
     title: ページ分割 (paging)
@@ -90,7 +92,7 @@ categories:
         proposal: design/generator/paging-spec.md#proposals
       C3:
         title: パス自動導出
-        note: リスト型 {class}/{id}.md / シングルトン {class}.md
+        note: アンカー ID に `.md` を付けたものを paging file path とする ({anchor_id}.md)
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C4:
@@ -424,11 +426,6 @@ categories:
       - src/another_mood/components/shared/data_catalog.py
     spec: design/json-data-model.md
     tasks:
-      M1:
-        title: _parent 参照の付与
-        note: ルート以外の全ノードに親オブジェクトへの参照を付与。永続化形式とクエリモデルの分離を実現する基盤
-        phase: 11
-        proposal: design/json-data-model.md#親参照-_parent-m1
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。

@@ -113,7 +113,7 @@ property レベル配置の副次的な利点:
 
 スキーマから抽出される各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
 
-- **Entity**: データツリー上の到達経路を表す identifier (`id` = access path)。クエリ DSL の `from:` や URL/anchor、ファイルパス、表示見出しに使う。例: `categories`, `categories.tasks`
+- **Entity**: データツリー上の到達経路を表す identifier (`id` = access path)。クエリ DSL の `from:`、paging 設定、表示見出しに使う。例: `categories`, `categories.tasks`。アンカー ID（リンク用の実体パス）とは別概念で、こちらは [anchor-spec.md](../generator/anchor-spec.md) を参照
 - **ObjectType**: Entity の中の 1 つの item の型 (`id`)。コレクションを 1 段降りるたびに `.item` を付加する path-based 名。FK 参照や型レベルの cross-reference に使う。例: `categories.item`, `categories.item.tasks.item`
 
 Entity は自身の `item_type` フィールドを通じて ObjectType を保持する。
