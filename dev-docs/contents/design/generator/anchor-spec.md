@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B1〜B6](../../../tasks.md)（ノードメタデータ注入 / アンカー ID 生成規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `_meta.page_url` 算出）
+> **未実装** — Phase 11 タスク [B1〜B6](../../../tasks.md)（ノードメタデータ注入 / アンカー ID 生成規則 / オンデマンド走査 / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）
 
 ### 用語
 
@@ -97,19 +97,40 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 
 ### リンク記法
 
-テンプレート内では `link_md` フィルタを使う:
+#### テンプレート内のアンカー参照
+
+テンプレート内では anchor ID から 3 種類のフィルタを使い分ける:
 
 ```jinja2
-{{ "erds/user-management/entities/user" | link_md }}
+{{ "erds/user-management/entities/user" | anchor_link }}
+{# → [<display>](<URL>) 形式の Markdown リンク #}
+
+{{ "erds/user-management/entities/user" | anchor_link("ER 図") }}
+{# → display text を明示。[ER 図](<URL>) #}
+
+{{ "erds/user-management/entities/user" | anchor_title }}
+{# → display 文字列のみ #}
+
+{{ "erds/user-management/entities/user" | anchor_url }}
+{# → URL 文字列のみ #}
 ```
 
-Markdown data 内では `toc:` 記法を使う（プレフィックス名は実装時に再検討、現状は暫定）:
+display text は対象ノードから `title` → `name` → `id` → anchor_id 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`anchor_link(arg)` のように引数で渡せば override。
+
+#### Markdown 本文中のアンカー参照
+
+prose body 等の Markdown 本文では `toc:` プレフィックス記法でアンカー ID を URL として埋め込む:
 
 ```markdown
 ユーザーの詳細は[ユーザー](toc:erds/user-management/entities/user)を参照。
 ```
 
-Markdown データソースでは、Normalizer がソース内の相対リンクを自動的に `toc:` 記法に変換する（[markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照）:
+この記法は二役を兼ねる:
+
+1. **author 向け sugar** — author が anchor で明示的に参照したいときの書き方
+2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
+
+ソース Markdown では普通の相対パスで書け、Normalizer が `toc:` 記法に変換する ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
@@ -120,11 +141,14 @@ Markdown データソースでは、Normalizer がソース内の相対リンク
 
 ### リンク解決
 
-アンカー ID から実際のリンク先 URL への解決は paging 設定に依存する（[paging-spec.md](paging-spec.md) 参照）。エンジンがアンカー ID を適切な相対パス + fragment に置換する。
+リンク解決は Generator の **pre-render 段階で完結**する。post-render での文字列置換は行わない。
 
-例: `[ユーザー](../erds/user-management.md#erds/user-management/entities/user)`
+- **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor ID から Markdown リンク / display text / URL を生成
+- **prose body 処理フィルタ (仮称 `resolve`)**: prose body 中の `toc:` URL を実 URL に置換。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタ
 
-prose 例外の resolver 側挙動: アンカー ID を path 区切り文字 `/` で分割しつつ走査するが、`prose/` を先頭セグメントに見たときは残り全体を単一の id とみなして flat list を引く。例外はアンカー ID 構築側（escape 省略）と整合する形で resolver にも 1 箇所だけ規則を入れる。
+いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_id → ノードのマップと paging 設定 ([paging-spec.md](paging-spec.md)) を引いて実 URL を構築する。例: `[ユーザー](../erds/user-management.md#erds/user-management/entities/user)`。
+
+prose 例外の resolver 側挙動: アンカー ID を path 区切り文字 `/` で分割しつつ走査するが、`prose/` を先頭セグメントに見たときは残り全体を単一の id とみなして flat list を引く。例外はアンカー ID 構築側 (escape 省略) と整合する形で resolver にも 1 箇所だけ規則を入れる。
 
 ### 未決事項
 

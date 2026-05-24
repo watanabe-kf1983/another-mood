@@ -94,11 +94,15 @@ categories:
 
 ### リンク解決 (B2-B6)
 
-> **未実装** — Phase 11 タスク [B2〜B6](../../../tasks.md)。アンカーの仕様は [anchor-spec.md](anchor-spec.md) を参照。
+> **未実装** — Phase 11 タスク [B2〜B6](../../../tasks.md)。アンカーの仕様 (リンク記法 / フィルタ API / 解決のタイミング) は [anchor-spec.md](anchor-spec.md) を参照。
 
-link_md / toc:id によるリンク解決:
+リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。各テンプレート render 用の TemplateEngine インスタンスに対し、resolver を closure binding で渡し、各種フィルタが共有する。
 
-1. アンカー ID でデータツリーを走査し、最初にヒットしたノードを返す
+#### resolver 内部 (B3)
+
+anchor ID からノードへの解決機構:
+
+1. anchor ID でデータツリーを走査し、最初にヒットしたノードを返す
 2. ヒットしたらキャッシュ (anchor_id → ノード) に登録
 3. 2 回目以降は O(1) で解決
 4. ノードの `_meta.page_url` + フラグメント (`#<anchor_id>`) でリンク URL を生成
@@ -107,9 +111,25 @@ link_md / toc:id によるリンク解決:
 
 全ノードの事前インデックスは構築しない。リンク対象は主要オブジェクトのごく一部であり、オンデマンド走査 + キャッシュで十分。
 
-#### prose body 内のリンク解決
+#### anchor フィルタ (B4)
 
-Markdown データソースの body には、Normalizer がソース内の相対リンクを `toc:` 記法に変換済みのリンクが含まれる ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照)。Generator はこれを上記と同じ仕組みで解決する。追加のリンク解決ロジックは不要。
+テンプレート内で anchor ID から `[<display>](<URL>)` / display 文字列 / URL 文字列 を生成する 3 つのフィルタ:
+
+- `anchor_link(anchor_id, [override_text])` — Markdown リンク全体
+- `anchor_title(anchor_id)` — display text のみ (`title` → `name` → `id` → anchor_id 全体 のチェイン)
+- `anchor_url(anchor_id)` — URL のみ
+
+仕様は [anchor-spec.md](anchor-spec.md#リンク記法) を参照。
+
+#### prose body 処理フィルタ (B5)
+
+Markdown データソースの body には、Normalizer がソース内の相対リンクを `toc:` 記法に変換済みのリンクが含まれる ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照)。仮称 `resolve` フィルタが body 内の `toc:` URL を実 URL に置換する。
+
+このフィルタは anchor 解決以外にも、見出しレベル正規化やエスケープ調整等の prose body 固有処理を兼ねる総合処理フィルタとして位置付ける (具体仕様は別途)。
+
+##### 暗黙適用は別途検討
+
+`{{ prose.body | resolve }}` を author に書かせるか、システムが自動的に処理を挟むかは、ノードメタデータ機構 (B1) の延長で検討する余地がある (例: schema が prose body 型を宣言してあればアクセス時に自動処理)。本タスクの最低線は明示適用で、暗黙適用は別タスクとして切り出す。
 
 ### インラインコードのフェンス長 (O4)
 

@@ -166,7 +166,7 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 [スキーマ仕様](toc:prose/design/normalizer/schema-spec)に従って検証する。
 ```
 
-アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカー ID の例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカー ID の一部として埋め込まれる。`toc:` リンクの解決は Document Generator が行う（[generator.md](../generator/generator.md) 参照）。
+アンカー ID の形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカー ID の例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカー ID の一部として埋め込まれる。`toc:` リンクの解決は Document Generator が pre-render フィルタ (仮称 `resolve`) で行う（[generator.md](../generator/generator.md#リンク解決-b2-b6) 参照）。
 
 #### 背景: ソースの可搬性
 

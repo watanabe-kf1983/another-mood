@@ -59,12 +59,13 @@ categories:
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b2-b6
       B4:
-        title: link_md Jinja2 フィルタ
+        title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
+        note: anchor ID から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b2-b6
       B5:
-        title: レンダリング後の toc:id 文字列のリンク URL 置換
-        note: prose body 内も含む
+        title: prose body 処理フィルタ (`resolve`)
+        note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b2-b6
       B6:
