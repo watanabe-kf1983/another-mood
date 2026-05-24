@@ -44,39 +44,34 @@ categories:
     spec: design/generator/anchor-spec.md
     tasks:
       B1:
-        title: views データのラッパーツリー構築
-        note: data / parent / class_name フィールド
+        title: ノードメタデータの注入
+        note: anchor 可能な全 Mapping / Array ノードに `_parent` / `_parent_record` / `_meta` を生やす。`_meta` は `anchor_id` / `object_type_id` / `page_url` を持つ
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#ノードメタデータ-b1
       B2:
         title: アンカー ID 生成規則
         note: データツリー上のパスを `/` 区切りで構築。list 要素は id で識別。prose は id 内 `/` を素通し
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b6
       B3:
-        title: アンカー ID → ラッパーのオンデマンド走査 + キャッシュ
+        title: アンカー ID → ノードのオンデマンド走査 + キャッシュ
         note: 先頭セグメントが prose のときは残りを単一 id として扱う特例あり
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b6
       B4:
         title: link_md Jinja2 フィルタ
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b6
       B5:
         title: レンダリング後の toc:id 文字列のリンク URL 置換
         note: prose body 内も含む
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
+        proposal: design/generator/generator.md#リンク解決-b2-b6
       B6:
-        title: ラッパーの get_page_url() 実装
-        note: C3 と連携
+        title: "`_meta.page_url` の算出"
+        note: paginate 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b1-b6
-      B7:
-        title: _parent 参照の付与
-        note: ルート以外の全オブジェクトノードに親への参照を注入。テンプレートが元データを直接走査する場面向け
-        phase: 11
-        proposal: design/generator/generator.md#親参照-_parent-b7
+        proposal: design/generator/generator.md#リンク解決-b2-b6
 
   C:
     title: ページ分割 (paging)

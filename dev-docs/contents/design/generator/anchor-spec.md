@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B1〜B6](../../../tasks.md)（ラッパーツリー / アンカー ID 生成規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `get_page_url`）
+> **未実装** — Phase 11 タスク [B1〜B6](../../../tasks.md)（ノードメタデータ注入 / アンカー ID 生成規則 / オンデマンド走査 / `link_md` フィルタ / `toc:id` 解決 / `_meta.page_url` 算出）
 
 ### 用語
 
