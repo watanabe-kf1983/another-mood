@@ -4,6 +4,7 @@ from pathlib import Path
 from textwrap import dedent
 
 from another_mood.components.generator.generator import render
+from another_mood.components.generator.template_engine import md_escape
 
 
 class TestWriteIndex:
@@ -53,8 +54,11 @@ class TestWriteIndex:
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result
-        assert "contents/entities.yaml" in result
-        assert "Unknown field 'stauts'" in result
+        # md_escape is applied to bare substitutions by the finalize hook —
+        # punctuation in paths / messages survives as backslash-escaped
+        # source that CommonMark renders back to the original characters.
+        assert md_escape("contents/entities.yaml") in result
+        assert md_escape("Unknown field 'stauts'") in result
 
     def test_renders_build_failure_with_snippet(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"

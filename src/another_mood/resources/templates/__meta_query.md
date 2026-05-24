@@ -6,11 +6,11 @@
 ```mermaid
 classDiagram
 {% for entity in entities if entity.id in node_ids -%}
-class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
+class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.id | safe }}"]
 {% endfor -%}
 {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids -%}
 {%- set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first -%}
-{{ parent.item_type.id | mermaid_class_id }} *-- {{ entity.item_type.id | mermaid_class_id }}
+{{ parent.item_type.id | mermaid_class_id | safe }} *-- {{ entity.item_type.id | mermaid_class_id | safe }}
 {% endfor -%}
 {% for top_id in node_ids -%}
 {%- set top_entity = entities | selectattr('id', 'eq', top_id) | first -%}
@@ -21,7 +21,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 {% if target -%}
 {%- set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] -%}
 {%- set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id -%}
-{{ top_entity.item_type.id | mermaid_class_id }} --> {{ target.item_type.id | mermaid_class_id }} : {{ label }}
+{{ top_entity.item_type.id | mermaid_class_id | safe }} --> {{ target.item_type.id | mermaid_class_id | safe }} : {{ label | safe }}
 {% endif -%}
 {%- endfor -%}
 {%- endfor -%}
@@ -51,7 +51,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join -%}
-| [{{ entry.to }}](../__meta_entity/{{ entry.to }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) }}`{% endif %} |
+| [{{ entry.to }}](../__meta_entity/{{ entry.to }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) | safe }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) | safe }}`{% endif %} |
 {% endfor %}
 
 {% endif -%}
@@ -59,7 +59,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 ### Where
 
 ```yaml
-{{ where | to_yaml }}
+{{ where | to_yaml | safe }}
 ```
 
 {% endif -%}
@@ -92,7 +92,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 {% for attribute in entity.item_type.attributes -%}
 {%- set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" -%}
 {%- set type_cell = "`" ~ (attribute.child_item_type or attribute.type) ~ array_suffix ~ "`" -%}
-| `{{ attribute.id }}` | {{ type_cell }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) }}`{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) }}`{% endif %} |
+| `{{ attribute.id | safe }}` | {{ type_cell | safe }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) | safe }}`{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) | safe }}`{% endif %} |
 {% endfor -%}
 {%- else -%}
 (no attributes)
@@ -114,7 +114,7 @@ class {{ entity.item_type.id | mermaid_class_id }}["{{ entity.item_type.id }}"]
 {%- if attribute.child_entity -%}
 *{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
-{{ row | pluck(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}
+{{ row | pluck(attribute.id) | replace("\n", " ") }}
 {%- endif %} | {% endfor %}
 {% endfor -%}
 {%- else -%}

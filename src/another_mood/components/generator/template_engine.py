@@ -1,5 +1,6 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from importlib import resources
@@ -40,7 +41,26 @@ class OutputFormat:
     )
 
 
-_PASSTHROUGH = OutputFormat(name="passthrough", escape=lambda s: s)
+# CommonMark allows any ASCII punctuation to be backslash-escaped, and the
+# rendered output matches the unescaped character — so blanket-escaping every
+# ASCII punctuation byte is safe and prevents accidental syntax (`#`/`-`/`*`
+# at line start, `|` in tables, `_`/`*` emphasis, `<` HTML, `` ` `` code, etc.).
+_MD_ESCAPE_PATTERN = re.compile(r"([!-/:-@\[-`{-~])")
+
+
+def md_escape(text: str) -> str:
+    """Backslash-escape every ASCII punctuation character in ``text``.
+
+    Intended as the ``escape`` of the ``md`` ``OutputFormat`` — applied to bare
+    strings by ``make_environment``'s finalize hook. Code-literal contexts
+    (inline code spans, fenced code blocks, Mermaid fences) must bypass this
+    via ``| safe`` at the template call site, since CommonMark does not
+    process backslash escapes inside those contexts.
+    """
+    return _MD_ESCAPE_PATTERN.sub(r"\\\1", text)
+
+
+MD = OutputFormat(name="md", escape=md_escape)
 
 
 def make_environment(output_format: OutputFormat) -> Environment:
@@ -78,7 +98,7 @@ class TemplateEngine:
         templates_dir: Path | None = None,
         filters: Mapping[str, Callable[..., Any]] | None = None,
     ) -> None:
-        self._env = make_environment(_PASSTHROUGH)
+        self._env = make_environment(MD)
         search_paths: list[str | Path] = [str(_BUILT_IN_TEMPLATES_DIR)]
         if templates_dir is not None:
             search_paths.append(templates_dir)

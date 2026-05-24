@@ -507,7 +507,7 @@ categories:
           ASCII punctuation 一律 backslash escape (CommonMark 許容範囲)。
           finalize から呼ばれる素文字列向け escape。
         phase: 11
-        proposal: design/generator/output-format-spec.md#md-output_format-の具体
+        done: true
       U3:
         title: md 用ラッパーフィルタ整備
         note: |

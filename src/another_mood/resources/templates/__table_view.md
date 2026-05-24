@@ -15,7 +15,7 @@
 {%- if attribute.child_entity -%}
 *{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
-{{ row | pluck(attribute.id) | replace("|", "\|") | replace("\n", "<br>") }}
+{{ row | pluck(attribute.id) | replace("\n", " ") }}
 {%- endif %} | {% endfor %}
 {% endfor -%}
 {%- else -%}

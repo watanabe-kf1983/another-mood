@@ -1,1 +1,1 @@
-{{ body.content }}
+{{ body.content | safe }}
