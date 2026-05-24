@@ -7,7 +7,7 @@
 
 {% if d.snippet %}
 ```
-{{ d.snippet }}
+{{ d.snippet | safe }}
 ```
 
 {% endif %}

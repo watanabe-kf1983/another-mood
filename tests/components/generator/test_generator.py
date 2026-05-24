@@ -15,6 +15,7 @@ from another_mood.components.generator.generator import (
     generate,
     reconcile,
 )
+from another_mood.components.generator.template_engine import md_escape
 from another_mood.components.shared.component.build_report import (
     BuildReport,
     DiagnosticEntry,
@@ -318,9 +319,12 @@ class TestReconcile:
 
         warnings_page = (out_dir / "data" / "__warnings" / "index.md").read_text()
         assert "# Warnings" in warnings_page
-        assert "**albums.yaml:3:5**" in warnings_page
+        # md_escape is applied to bare substitutions by the finalize hook —
+        # punctuation in path / message survives as backslash-escaped source
+        # that CommonMark renders back to the original characters.
+        assert f"**{md_escape('albums.yaml')}:3:5**" in warnings_page
         assert (
-            "x-ref albums.artist_id = 'ghost' has no match in artists.id"
+            md_escape("x-ref albums.artist_id = 'ghost' has no match in artists.id")
             in warnings_page
         )
 

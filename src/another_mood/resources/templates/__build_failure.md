@@ -10,7 +10,7 @@
 
 {% if d.snippet %}
 ```
-{{ d.snippet }}
+{{ d.snippet | safe }}
 ```
 
 {% endif %}
@@ -24,7 +24,7 @@
 
 {% if error.traceback %}
 ```
-{{ error.traceback }}```
+{{ error.traceback | safe }}```
 
 {% endif %}
 {% endfor %}

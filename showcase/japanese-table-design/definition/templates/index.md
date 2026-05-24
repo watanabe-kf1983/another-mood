@@ -7,7 +7,7 @@
 | ID | 名前 | 説明 |
 |----|------|------|
 {% for t in テーブル -%}
-| `{{ t.id }}` | [{{ t.名前 }}](テーブル詳細/{{ t.id }}.md) | {{ t.説明 }} |
+| `{{ t.id | safe }}` | [{{ t.名前 }}](テーブル詳細/{{ t.id }}.md) | {{ t.説明 }} |
 {% endfor %}
 
 {% for t in テーブル -%}
@@ -21,15 +21,15 @@
 ```mermaid
 classDiagram
 {% for tbl_id, rows in 列_with_ドメイン型 | groupby('テーブルID') %}
-class `{{ tbl_id }}` {
+class `{{ tbl_id | safe }}` {
 {%- for row in rows %}
-  {{ row.列.名前 }} : {{ row.型情報.ドメイン型 }}{% if row.列.主キー %} [PK]{% elif row.列.参照 %} [FK]{% endif %}
+  {{ row.列.名前 | safe }} : {{ row.型情報.ドメイン型 | safe }}{% if row.列.主キー %} [PK]{% elif row.列.参照 %} [FK]{% endif %}
 {%- endfor %}
 }
 {%- endfor %}
 {% for t in テーブル -%}
 {% for c in t.列 if c.参照 -%}
-`{{ t.id }}` --> `{{ c.参照.テーブル }}` : {{ c.名前 }}
+`{{ t.id | safe }}` --> `{{ c.参照.テーブル | safe }}` : {{ c.名前 | safe }}
 {% endfor -%}
 {% endfor -%}
 ```
@@ -39,15 +39,15 @@ class `{{ tbl_id }}` {
 ```mermaid
 erDiagram
 {% for t in テーブル -%}
-"{{ t.id }}" {
+"{{ t.id | safe }}" {
 {% for c in t.列 -%}
-  {{ c.型 }} {{ c.名前 }}{% if c.主キー %} PK{% elif c.参照 %} FK{% endif %}
+  {{ c.型 | safe }} {{ c.名前 | safe }}{% if c.主キー %} PK{% elif c.参照 %} FK{% endif %}
 {% endfor -%}
 }
 {% endfor -%}
 {% for t in テーブル -%}
 {% for c in t.列 if c.参照 -%}
-"{{ t.id }}" }o--|| "{{ c.参照.テーブル }}" : "{{ c.名前 }}"
+"{{ t.id | safe }}" }o--|| "{{ c.参照.テーブル | safe }}" : "{{ c.名前 | safe }}"
 {% endfor -%}
 {% endfor -%}
 ```

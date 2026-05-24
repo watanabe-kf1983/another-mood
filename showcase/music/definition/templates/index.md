@@ -97,7 +97,7 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {% for pl in playlists %}
 ### {{ pl.name }}
 
-*Curated by `{{ pl.curator }}`.* {{ pl.description }}
+*Curated by `{{ pl.curator | safe }}`.* {{ pl.description }}
 
 {% set entries = playlist_tracks | selectattr("playlist_id", "equalto", pl.id) | sort(attribute="position") -%}
 {% for entry in entries -%}

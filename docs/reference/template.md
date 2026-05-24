@@ -42,6 +42,59 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 {% endfor %}
 ```
 
+## Markdown escaping
+
+Substituted values can contain characters that look like Markdown syntax. A `|` inside a value will split a table column; an `_` can flip the rest of a line into italics; a leading `#` can promote a value to a heading. To prevent such accidents, the template engine backslash-escapes every ASCII punctuation character emitted from a `{{ expr }}` substitution.
+
+The escape is invisible in the rendered output. Markdown renders backslash-escaped ASCII punctuation as the original character (`\_` displays as `_`, `\|` as `|`, and so on), so the final page is identical to what you'd get without the escape — minus the accidental syntax. Only the emitted Markdown source picks up the backslashes.
+
+Given `product.name = "Acme | Pro"`, this template:
+
+```jinja2
+| Name |
+|------|
+| {{ product.name }} |
+```
+
+emits the Markdown source:
+
+```
+| Name |
+|------|
+| Acme \| Pro |
+```
+
+which renders as a one-cell table containing the literal text `Acme | Pro`.
+
+### When to use `| safe`
+
+The escape backfires inside Markdown's verbatim regions — places where Markdown reproduces the content as-is and does **not** strip backslashes:
+
+- Inline code spans: `` `…` ``
+- Fenced code blocks: ` ```…``` `
+- Mermaid blocks (` ```mermaid `): the fence's content is handed to the Mermaid renderer, which has its own syntax and does not understand Markdown escapes
+
+A substitution `{{ column.type }}` whose value is `VARCHAR(16)` emits `VARCHAR\(16\)`. Outside a verbatim region that renders fine. Inside one, the backslashes show through to the reader (or worse, break the Mermaid parser).
+
+To skip the escape inside a verbatim region, append `| safe`.
+
+Inline code span:
+
+```jinja2
+| {{ column.name }} | `{{ column.type | safe }}` |
+```
+
+Mermaid block:
+
+````jinja2
+```mermaid
+classDiagram
+class {{ entity.id | safe }}
+```
+````
+
+Outside the verbatim regions above, `| safe` is unnecessary and only adds source noise.
+
 ## Jinja2 extension: `mood_view`
 
 `{% mood_view %}` is a custom tag that renders a subtemplate and **writes the result to a separate file**.
