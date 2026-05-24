@@ -3,8 +3,13 @@
 from pathlib import Path
 
 import pytest
+from markupsafe import Markup
 
-from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.generator.template_engine import (
+    OutputFormat,
+    TemplateEngine,
+    make_environment,
+)
 from another_mood.components.shared.diagnostic import FileValidationError
 
 
@@ -36,6 +41,63 @@ class TestFiltersParam:
             filters={"shout": shout},
         )
         assert engine.render("t.md", {}) == "HI!"
+
+
+class TestMakeEnvironment:
+    """`make_environment` wires an OutputFormat's escape into Jinja2's
+    finalize hook and registers the format's filters."""
+
+    def test_applies_escape_to_bare_strings(self) -> None:
+        fmt = OutputFormat(
+            name="upper",
+            escape=lambda s: s.upper(),
+        )
+        env = make_environment(fmt)
+        template = env.from_string("{{ value }}")
+        assert template.render(value="hello") == "HELLO"
+
+    def test_passes_markup_through_without_escape(self) -> None:
+        fmt = OutputFormat(
+            name="upper",
+            escape=lambda s: s.upper(),
+        )
+        env = make_environment(fmt)
+        template = env.from_string("{{ value }}")
+        assert template.render(value=Markup("hello")) == "hello"
+
+    def test_renders_none_as_empty_string(self) -> None:
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        env = make_environment(fmt)
+        template = env.from_string("[{{ value }}]")
+        assert template.render(value=None) == "[]"
+
+    def test_renders_undefined_as_empty_string(self) -> None:
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        env = make_environment(fmt)
+        template = env.from_string("[{{ missing }}]")
+        assert template.render() == "[]"
+
+    def test_registers_format_filters(self) -> None:
+        def shout(v: object) -> str:
+            return str(v).upper() + "!"
+
+        fmt = OutputFormat(name="shout", escape=lambda s: s, filters={"shout": shout})
+        env = make_environment(fmt)
+        template = env.from_string("{{ 'hi' | shout }}")
+        assert template.render() == "HI!"
+
+    def test_filter_returning_markup_bypasses_finalize_escape(self) -> None:
+        def raw(v: object) -> Markup:
+            return Markup(str(v))
+
+        fmt = OutputFormat(
+            name="upper",
+            escape=lambda s: s.upper(),
+            filters={"raw": raw},
+        )
+        env = make_environment(fmt)
+        template = env.from_string("{{ 'hi' | raw }}")
+        assert template.render() == "hi"
 
 
 class TestTemplateSyntaxErrorConversion:

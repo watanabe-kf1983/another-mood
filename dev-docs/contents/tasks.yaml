@@ -500,6 +500,7 @@ categories:
           フィルタは finalize が素通しする契約。
         phase: 11
         proposal: design/generator/output-format-spec.md#実装方針
+        done: true
       U2:
         title: md output_format の escape 関数
         note: |
