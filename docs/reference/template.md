@@ -72,9 +72,10 @@ The escape backfires inside Markdown's verbatim regions — places where Markdow
 
 - Inline code spans: `` `…` ``
 - Fenced code blocks: ` ```…``` `
-- Mermaid blocks (` ```mermaid `): the fence's content is handed to the Mermaid renderer, which has its own syntax and does not understand Markdown escapes
 
-A substitution `{{ column.type }}` whose value is `VARCHAR(16)` emits `VARCHAR\(16\)`. Outside a verbatim region that renders fine. Inside one, the backslashes show through to the reader (or worse, break the Mermaid parser).
+A substitution `{{ column.type }}` whose value is `VARCHAR(16)` emits `VARCHAR\(16\)`. Outside a verbatim region that renders fine. Inside one, the backslashes show through to the reader.
+
+Mermaid blocks (` ```mermaid `) are a fenced code block whose content is then parsed by the Mermaid renderer, which has its own syntax and rejects stray backslashes outright. Missing `| safe` shows up here not as visible `\` in the page but as a `Syntax error in text` placeholder where the diagram should be.
 
 To skip the escape inside a verbatim region, append `| safe`.
 
