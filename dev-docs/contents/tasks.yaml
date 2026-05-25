@@ -509,14 +509,14 @@ categories:
         phase: 11
         done: true
       U3:
-        title: md 用ラッパーフィルタ整備
+        title: md 位置依存ヘルパ整備
         note: |
-          inline_code (backtick 数動的調整) / fenced_code (fence 文字数動的
-          調整) / table_cell (改行 → <br>) / link_url (URL encoding)。
-          フィルタ名はフォーマット中立、実装は md 用 Environment に登録。
-          O4 を吸収できる可能性あり。
+          ビルダ関数 code_inline(x) / code_fenced(x, lang) と transform
+          フィルタ x|in_cell / x|as_url の 4 ヘルパ。env.globals /
+          env.filters に auto-register、テンプレでは import 不要。
+          O4 を吸収、Hugo backslash → %5C バグも as_url で解消。
         phase: 11
-        proposal: design/generator/output-format-spec.md#ラッパーフィルタ
+        proposal: design/generator/output-format-spec.md#markdown-安全化ヘルパ
       U4:
         title: 既存フィルタの output_format モデルへの移行
         note: |
