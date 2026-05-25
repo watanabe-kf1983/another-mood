@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [U1〜U4](../../../tasks.md)（U1: output_format モデル基盤 / U2: md escape / U3: md 位置依存ヘルパ / U4: 既存フィルタ移行）
+> **部分実装** — Phase 11 タスク [U1〜U4](../../../tasks.md) のうち U1〜U3 実装済み、U4 (既存フィルタ移行) 未実装。本節は U4 完了後に External / Internal Design 節へ整理予定。
 
 ### 課題
 
@@ -116,7 +116,7 @@ built-in テンプレ内では予防的に利用する (任意入力に対する
 - **`code_inline(value)`** — value 内の最長 backtick run `n` を見つけ、`n+1` (≥1) 個の backtick で囲む。value が backtick で始まる / 終わる、または全空白の場合は前後にスペース 1 を padding。escape は **入れない** (CommonMark 6.1: code span 内で `\` は literal、入れると逆に壊れる)。`Markup` 返却。
 - **`code_fenced(value, language="")`** — value 内の最長 backtick run `n` を見つけ、`max(3, n+1)` 個の backtick で fence。中身の前後の改行を確保。escape は **入れない**。language は info string として opening fence 直後に出力。`Markup` 返却。
 - **`value | in_cell`** — まず md_escape を内部適用 (`|` 等の表構造記号を escape)、次に `\n` を `<br>` (literal HTML) に置換。`Markup` 返却。※ Markup 返却で finalize がスキップされるため、escape の自前適用が必要。
-- **`value | as_url`** — `urllib.parse.quote(safe="/?#[]@!$&'*+,;=~")` で encode し、追加で `(` `)` を `%28` `%29` に置換。`Markup` 返却。入力は **論理 URL** (URL-encode 前) を想定。これにより md_escape が URL 部分に backslash を混入するのを回避 (Hugo 等の renderer が backslash を `%5C` literal として percent-encode してしまう問題への対策)。
+- **`value | as_url`** — `urllib.parse.quote(safe=":/?#[]@!$&'*+,;=")` (RFC 3986 §2.2 の gen-delims + sub-delims から `(` `)` を除いた集合) で encode し、追加で `(` `)` を `%28` `%29` に置換。`Markup` 返却。入力は **論理 URL** (URL-encode 前) を想定。これにより md_escape が URL 部分に backslash を混入するのを回避 (Hugo 等の renderer が backslash を `%5C` literal として percent-encode してしまう問題への対策)。
 
 各ヘルパは「危ない入力 (backtick run / 改行 / `|` / URL 特殊文字 等) を入れても期待通りに動く」ことをテストで担保する。
 

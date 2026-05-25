@@ -42,60 +42,6 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 {% endfor %}
 ```
 
-## Markdown escaping
-
-Substituted values can contain characters that look like Markdown syntax. A `|` inside a value will split a table column; an `_` can flip the rest of a line into italics; a leading `#` can promote a value to a heading. To prevent such accidents, the template engine backslash-escapes every ASCII punctuation character emitted from a `{{ expr }}` substitution.
-
-The escape is invisible in the rendered output. Markdown renders backslash-escaped ASCII punctuation as the original character (`\_` displays as `_`, `\|` as `|`, and so on), so the final page is identical to what you'd get without the escape — minus the accidental syntax. Only the emitted Markdown source picks up the backslashes.
-
-Given `product.name = "Acme | Pro"`, this template:
-
-```jinja2
-| Name |
-|------|
-| {{ product.name }} |
-```
-
-emits the Markdown source:
-
-```
-| Name |
-|------|
-| Acme \| Pro |
-```
-
-which renders as a one-cell table containing the literal text `Acme | Pro`.
-
-### When to use `| safe`
-
-The escape backfires inside Markdown's verbatim regions — places where Markdown reproduces the content as-is and does **not** strip backslashes:
-
-- Inline code spans: `` `…` ``
-- Fenced code blocks: ` ```…``` `
-
-A substitution `{{ column.type }}` whose value is `VARCHAR(16)` emits `VARCHAR\(16\)`. Outside a verbatim region that renders fine. Inside one, the backslashes show through to the reader.
-
-Mermaid blocks (` ```mermaid `) are a fenced code block whose content is then parsed by the Mermaid renderer, which has its own syntax and rejects stray backslashes outright. Missing `| safe` shows up here not as visible `\` in the page but as a `Syntax error in text` placeholder where the diagram should be.
-
-To skip the escape inside a verbatim region, append `| safe`.
-
-Inline code span:
-
-```jinja2
-| {{ column.name }} | `{{ column.type | safe }}` |
-```
-
-Mermaid block:
-
-````jinja2
-```mermaid
-classDiagram
-class {{ entity.id | safe }}
-```
-````
-
-Outside the verbatim regions above, `| safe` is unnecessary and only adds source noise.
-
 ## Jinja2 extension: `mood_view`
 
 `{% mood_view %}` is a custom tag that renders a subtemplate and **writes the result to a separate file**.
@@ -175,3 +121,112 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 ```
 
 Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__table_view/` and the shape of query results via `__meta_query/`.
+
+## Markdown escaping
+
+Substituted values can contain characters that look like Markdown syntax. A `|` inside a value will split a table column; an `_` can flip the rest of a line into italics; a leading `#` can promote a value to a heading. To prevent such accidents, the template engine backslash-escapes every ASCII punctuation character emitted from a `{{ expr }}` substitution.
+
+The escape is invisible in the rendered output. Markdown renders backslash-escaped ASCII punctuation as the original character (`\_` displays as `_`, `\|` as `|`, and so on), so the final page is identical to what you'd get without the escape — minus the accidental syntax. Only the emitted Markdown source picks up the backslashes.
+
+Given `product.name = "Acme | Pro"`, this template:
+
+```jinja2
+| Name |
+|------|
+| {{ product.name }} |
+```
+
+emits the Markdown source:
+
+```
+| Name |
+|------|
+| Acme \| Pro |
+```
+
+which renders as a one-cell table containing the literal text `Acme | Pro`.
+
+### When to use `| safe`
+
+The escape backfires inside Markdown's verbatim regions — places where Markdown reproduces the content as-is and does **not** strip backslashes:
+
+- Inline code spans: `` `…` ``
+- Fenced code blocks: ` ```…``` `
+
+A substitution `{{ column.type }}` whose value is `VARCHAR(16)` emits `VARCHAR\(16\)`. Outside a verbatim region that renders fine. Inside one, the backslashes show through to the reader.
+
+Mermaid blocks (` ```mermaid `) are a fenced code block whose content is then parsed by the Mermaid renderer, which has its own syntax and rejects stray backslashes outright. Missing `| safe` shows up here not as visible `\` in the page but as a `Syntax error in text` placeholder where the diagram should be.
+
+To skip the escape inside a verbatim region, append `| safe`.
+
+Inline code span:
+
+```jinja2
+| {{ column.name }} | `{{ column.type | safe }}` |
+```
+
+Mermaid block:
+
+````jinja2
+```mermaid
+classDiagram
+class {{ entity.id | safe }}
+```
+````
+
+Outside the verbatim regions above, `| safe` is unnecessary and only adds source noise.
+
+### Position-aware helpers
+
+A few Markdown positions need handling that the default escape alone cannot provide — table cells need `<br>` for newlines, link URLs need percent-encoding, code spans and fences need to handle backticks inside the value. Another Mood ships four built-in helpers for these positions.
+
+| Position | What goes wrong with the default substitution | Helper |
+|---|---|---|
+| Table cell | a value with newlines splits the row | `{{ value \| in_cell }}` |
+| Inline code span | `\` becomes visible inside `` `…` `` | `{{ code_inline(value) }}` |
+| Fenced code block | `\` becomes visible; a value containing ` ``` ` closes the fence early | `{{ code_fenced(value, "lang") }}` |
+| Link URL | the URL isn't percent-encoded | `[label]({{ url \| as_url }})` |
+
+For inline code spans and fenced code blocks, `code_inline` / `code_fenced` are an alternative to the `| safe` recipe above. Reach for the helpers when the value comes from data and may contain stray backticks; `| safe` only works if you can trust the value verbatim.
+
+#### `value | in_cell`
+
+Inserts `value` into a Markdown table cell, turning newlines into `<br>` so the row stays on one source line.
+
+```jinja2
+| Name | Description |
+|------|-------------|
+| {{ product.name | in_cell }} | {{ product.description | in_cell }} |
+```
+
+#### `code_inline(value)`
+
+Wraps `value` in a Markdown code span. Handles any value, including one containing backticks.
+
+```jinja2
+| {{ column.name }} | {{ code_inline(column.type) }} |
+```
+
+emits `` `VARCHAR(16)` `` for `VARCHAR(16)`, and `` `` `nested` `` `` for `` `nested` ``.
+
+#### `code_fenced(value, language="")`
+
+Wraps `value` in a Markdown fenced code block. `language` is the language tag on the opening fence (`yaml`, `python`, `mermaid`, …). Handles any value, including one containing ` ``` `.
+
+```jinja2
+{{ code_fenced(snippet.source, snippet.language) }}
+```
+
+Use this for code blocks whose body comes from data — including Mermaid diagrams whose source is held in data:
+
+```jinja2
+{{ code_fenced(diagram.source, "mermaid") }}
+```
+
+#### `value | as_url`
+
+Inserts `value` as the URL of a Markdown link. Pass the unencoded URL; `as_url` percent-encodes what needs encoding (spaces, parentheses, non-ASCII characters, etc.).
+
+```jinja2
+[{{ link.label }}]({{ link.url | as_url }})
+```
