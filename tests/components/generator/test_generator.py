@@ -15,7 +15,7 @@ from another_mood.components.generator.generator import (
     generate,
     reconcile,
 )
-from another_mood.components.generator.template_engine import md_escape
+from another_mood.components.generator.output_formats.md import md_escape
 from another_mood.components.shared.component.build_report import (
     BuildReport,
     DiagnosticEntry,

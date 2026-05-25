@@ -9,9 +9,7 @@
 {{ d.message }}
 
 {% if d.snippet %}
-```
-{{ d.snippet | safe }}
-```
+{{ code_fenced(d.snippet) }}
 
 {% endif %}
 {% endfor %}
@@ -23,8 +21,7 @@
 {{ error.message }}
 
 {% if error.traceback %}
-```
-{{ error.traceback | safe }}```
+{{ code_fenced(error.traceback) }}
 
 {% endif %}
 {% endfor %}

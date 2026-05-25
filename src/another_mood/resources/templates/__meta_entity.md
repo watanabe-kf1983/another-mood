@@ -1,6 +1,6 @@
 # Entity Definition: {{ id }}{% if builtin %} (built-in){% endif %}
 
-[→ Entity Data](../__table_view/{{ id }}.md)
+[→ Entity Data](../__table_view/{{ id | as_url }}.md)
 
 ## Type Diagram
 
@@ -46,9 +46,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 {% if entity.item_type.metadata -%}
 ### metadata
 
-```yaml
-{{ entity.item_type.metadata | to_yaml | safe }}
-```
+{{ code_fenced(entity.item_type.metadata | to_yaml, "yaml") }}
 
 {% endif -%}
 ### attributes
@@ -58,8 +56,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 |----|------|----------|------------|------------|----------|
 {% for attribute in entity.item_type.attributes -%}
 {%- set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" -%}
-{%- set type_cell = "`" ~ (attribute.child_item_type or attribute.type) ~ array_suffix ~ "`" -%}
-| `{{ attribute.id | safe }}` | {{ type_cell | safe }} | {% if attribute.required %}yes{% endif %} | {% if attribute.x_ref %}[`{{ attribute.x_ref.entity | safe }}.{{ attribute.x_ref.attribute | safe }}`]({{ attribute.x_ref.entity }}.md){% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) | safe }}`{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) | safe }}`{% endif %} |
+| {{ code_inline(attribute.id) }} | {{ code_inline((attribute.child_item_type or attribute.type) ~ array_suffix) }} | {% if attribute.required %}yes{% endif %} | {% if attribute.x_ref %}[{{ code_inline(attribute.x_ref.entity ~ "." ~ attribute.x_ref.attribute) }}]({{ attribute.x_ref.entity | as_url }}.md){% endif %} | {% if attribute.validation %}{{ code_inline(attribute.validation | to_yaml(true)) }}{% endif %} | {% if attribute.metadata %}{{ code_inline(attribute.metadata | to_yaml(true)) }}{% endif %} |
 {% endfor -%}
 {%- else -%}
 (no attributes defined yet)
