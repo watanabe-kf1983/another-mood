@@ -6,9 +6,7 @@
 {% endif %}{{ d.message }}
 
 {% if d.snippet %}
-```
-{{ d.snippet | safe }}
-```
+{{ code_fenced(d.snippet) }}
 
 {% endif %}
 {% endfor %}

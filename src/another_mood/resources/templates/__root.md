@@ -28,7 +28,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 
 {% if __user_entity_roots -%}
 {% for entity in __user_entity_roots -%}
-- [{{ entity.id }}](__meta_entity/{{ entity.id }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
+- [{{ entity.id }}](__meta_entity/{{ entity.id | as_url }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
 {% endfor %}
 {%- else -%}
 (no entities defined yet)
@@ -52,7 +52,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 
 {% if __user_queries -%}
 {% for query in __user_queries -%}
-- [{{ query.id }}](__meta_query/{{ query.id }}.md)
+- [{{ query.id }}](__meta_query/{{ query.id | as_url }}.md)
 {% endfor %}
 {%- else -%}
 (no queries defined yet)

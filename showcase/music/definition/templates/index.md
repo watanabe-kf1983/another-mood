@@ -5,7 +5,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 ## Artists
 
 {%- for artist in artist_discography %}
-- [{{ artist.name }}](artist-detail/{{ artist.id }}.md){% if artist.country %} - {{ artist.country }}{% endif %}
+- [{{ artist.name }}](artist-detail/{{ artist.id | as_url }}.md){% if artist.country %} - {{ artist.country }}{% endif %}
 {%- endfor %}
 
 {%- for artist in artist_discography -%}
@@ -18,7 +18,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 
 ### {{ genres | selectattr("id", "equalto", entry.genre_id) | map(attribute="name") | first }}
 {% for album in entry.albums | sort(attribute="year") %}
-- [{{ album.title }}](album-detail/{{ album.id }}.md) ({{ album.year }})
+- [{{ album.title }}](album-detail/{{ album.id | as_url }}.md) ({{ album.year }})
 {%- endfor %}
 {%- endfor %}
 
@@ -51,7 +51,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 These albums are surfaced by the `live_albums` query (`where: { id: { startswith: live_ } }`).
 
 {% for album in live_albums -%}
-- [{{ album.title }}](album-detail/{{ album.id }}.md) ({{ album.year }})
+- [{{ album.title }}](album-detail/{{ album.id | as_url }}.md) ({{ album.year }})
 {% endfor %}
 
 ## Live tracks
@@ -97,7 +97,7 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {% for pl in playlists %}
 ### {{ pl.name }}
 
-*Curated by `{{ pl.curator | safe }}`.* {{ pl.description }}
+*Curated by {{ code_inline(pl.curator) }}.* {{ pl.description }}
 
 {% set entries = playlist_tracks | selectattr("playlist_id", "equalto", pl.id) | sort(attribute="position") -%}
 {% for entry in entries -%}

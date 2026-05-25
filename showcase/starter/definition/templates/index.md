@@ -5,7 +5,7 @@
 ## Members
 
 {%- for member in members %}
-- [{{ member.name }}](member/{{ member.id }}.md) — {{ member.role }}
+- [{{ member.name }}](member/{{ member.id | as_url }}.md) — {{ member.role }}
 {%- endfor %}
 
 {%- for member in members -%}
@@ -15,7 +15,7 @@
 ## By Role
 
 {%- for entry in by_role %}
-- [{{ entry.role }}](by_role/{{ entry.id }}.md)
+- [{{ entry.role }}](by_role/{{ entry.id | as_url }}.md)
 {%- endfor %}
 
 {%- for entry in by_role -%}

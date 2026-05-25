@@ -33,7 +33,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 
 ### From
 
-[{{ from }}](../__meta_entity/{{ from }}.md)
+[{{ from }}](../__meta_entity/{{ from | as_url }}.md)
 
 {% if flatten -%}
 ### Flatten
@@ -51,16 +51,14 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join -%}
-| [{{ entry.to }}](../__meta_entity/{{ entry.to }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}`{{ entry.where | to_yaml(true) | safe }}`{% endif %} | {% if entry.flatten %}`{{ entry.flatten | to_yaml(true) | safe }}`{% endif %} |
+| [{{ entry.to }}](../__meta_entity/{{ entry.to | as_url }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %} |
 {% endfor %}
 
 {% endif -%}
 {% if where -%}
 ### Where
 
-```yaml
-{{ where | to_yaml | safe }}
-```
+{{ code_fenced(where | to_yaml, "yaml") }}
 
 {% endif -%}
 {% if grouped -%}
@@ -91,8 +89,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 |----|------|----------|------------|----------|
 {% for attribute in entity.item_type.attributes -%}
 {%- set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" -%}
-{%- set type_cell = "`" ~ (attribute.child_item_type or attribute.type) ~ array_suffix ~ "`" -%}
-| `{{ attribute.id | safe }}` | {{ type_cell | safe }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}`{{ attribute.validation | to_yaml(true) | safe }}`{% endif %} | {% if attribute.metadata %}`{{ attribute.metadata | to_yaml(true) | safe }}`{% endif %} |
+| {{ code_inline(attribute.id) }} | {{ code_inline((attribute.child_item_type or attribute.type) ~ array_suffix) }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}{{ code_inline(attribute.validation | to_yaml(true)) }}{% endif %} | {% if attribute.metadata %}{{ code_inline(attribute.metadata | to_yaml(true)) }}{% endif %} |
 {% endfor -%}
 {%- else -%}
 (no attributes)
@@ -114,7 +111,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 {%- if attribute.child_entity -%}
 *{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
-{{ row | pluck(attribute.id) | replace("\n", " ") }}
+{{ row | pluck(attribute.id) | in_cell }}
 {%- endif %} | {% endfor %}
 {% endfor -%}
 {%- else -%}
