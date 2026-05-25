@@ -517,6 +517,7 @@ categories:
           O4 を吸収、Hugo backslash → %5C バグも as_url で解消。
         phase: 11
         proposal: design/generator/output-format-spec.md#markdown-安全化ヘルパ
+        done: true
       U4:
         title: 既存フィルタの output_format モデルへの移行
         note: |
