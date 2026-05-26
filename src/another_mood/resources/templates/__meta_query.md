@@ -6,11 +6,11 @@
 ```mermaid
 classDiagram
 {% for entity in entities if entity.id in node_ids -%}
-class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.id | safe }}"]
+class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
 {% endfor -%}
 {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids -%}
 {%- set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first -%}
-{{ parent.item_type.id | mermaid_class_id | safe }} *-- {{ entity.item_type.id | mermaid_class_id | safe }}
+{{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
 {% endfor -%}
 {% for top_id in node_ids -%}
 {%- set top_entity = entities | selectattr('id', 'eq', top_id) | first -%}
@@ -21,7 +21,7 @@ class {{ entity.item_type.id | mermaid_class_id | safe }}["{{ entity.item_type.i
 {% if target -%}
 {%- set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] -%}
 {%- set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id -%}
-{{ top_entity.item_type.id | mermaid_class_id | safe }} --> {{ target.item_type.id | mermaid_class_id | safe }} : {{ label | safe }}
+{{ top_entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ label | safe }}
 {% endif -%}
 {%- endfor -%}
 {%- endfor -%}

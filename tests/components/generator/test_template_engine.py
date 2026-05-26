@@ -19,7 +19,7 @@ class TestRender:
         templates_dir.mkdir()
         (templates_dir / "hello.md").write_text("# {{ title }}\n")
 
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
+        engine = TemplateEngine(tmp_path, templates_dirs=[templates_dir], filters={})
         result = engine.render("hello.md", {"title": "World"})
         assert result == "# World\n"
 
@@ -37,7 +37,7 @@ class TestFiltersParam:
 
         engine = TemplateEngine(
             tmp_path,
-            templates_dir=templates_dir,
+            templates_dirs=[templates_dir],
             filters={"shout": shout},
         )
         assert engine.render("t.md", {}) == "HI"
@@ -116,14 +116,14 @@ class TestTemplateEngineMdEscape:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text("{{ value }}")
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
+        engine = TemplateEngine(tmp_path, templates_dirs=[templates_dir], filters={})
         assert engine.render("t.md", {"value": "a|b"}) == "a\\|b"
 
     def test_safe_filter_bypasses_escape(self, tmp_path: Path) -> None:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text("{{ value | safe }}")
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
+        engine = TemplateEngine(tmp_path, templates_dirs=[templates_dir], filters={})
         assert engine.render("t.md", {"value": "# heading"}) == "# heading"
 
     def test_md_helpers_are_auto_available(self, tmp_path: Path) -> None:
@@ -132,7 +132,7 @@ class TestTemplateEngineMdEscape:
         (templates_dir / "t.md").write_text(
             "{{ code_inline('x') }}|{{ 'a|b' | in_cell }}|{{ 'a b' | as_url }}"
         )
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
+        engine = TemplateEngine(tmp_path, templates_dirs=[templates_dir], filters={})
         assert engine.render("t.md", {}) == "`x`|a\\|b|a%20b"
 
 
@@ -142,7 +142,7 @@ class TestTemplateSyntaxErrorConversion:
         templates_dir.mkdir()
         (templates_dir / "bad.md").write_text("{% mood_view bad %}")
 
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir)
+        engine = TemplateEngine(tmp_path, templates_dirs=[templates_dir], filters={})
         with pytest.raises(FileValidationError) as exc_info:
             engine.render("bad.md", {})
 

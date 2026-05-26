@@ -520,9 +520,5 @@ categories:
         done: true
       U4:
         title: 既存フィルタの output_format モデルへの移行
-        note: |
-          pluck / walk_entity / to_yaml / mermaid_class_id を output_format
-          別 Environment に登録し直す。mermaid_class_id は Mermaid テンプレート
-          対応時に Mermaid 専用に移す。
         phase: 11
-        proposal: design/generator/output-format-spec.md#既存フィルタの移行
+        done: true

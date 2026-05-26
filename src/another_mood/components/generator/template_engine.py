@@ -1,8 +1,7 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +18,6 @@ from another_mood.components.generator.mood_view_processor import (
     install as install_mood_view_processor,
 )
 from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
-
-_BUILT_IN_TEMPLATES_DIR = resources.files("another_mood.resources") / "templates"
 
 
 @dataclass(frozen=True)
@@ -67,17 +64,13 @@ class TemplateEngine:
         self,
         out_dir: Path,
         *,
-        templates_dir: Path | None = None,
-        filters: Mapping[str, Callable[..., Any]] | None = None,
+        templates_dirs: Sequence[Path],
+        filters: Mapping[str, Callable[..., Any]],
     ) -> None:
         self._env = make_environment(MD)
-        search_paths: list[str | Path] = [str(_BUILT_IN_TEMPLATES_DIR)]
-        if templates_dir is not None:
-            search_paths.append(templates_dir)
-        self._env.loader = FileSystemLoader(search_paths)
-        if filters is not None:
-            for name, func in filters.items():
-                self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
+        self._env.loader = FileSystemLoader([str(d) for d in templates_dirs])
+        for name, func in filters.items():
+            self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
         install_mood_view_processor(self._env, out_dir)
 
     def render(self, template_name: str, data: Mapping[str, object]) -> str:
