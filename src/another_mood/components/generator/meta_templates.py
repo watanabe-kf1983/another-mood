@@ -12,8 +12,8 @@ from jinja2 import Undefined
 
 from another_mood.components.shared.json_data_model import pluck
 
-BUILT_IN_TEMPLATES_DIR = Path(
-    str(resources.files("another_mood.resources") / "templates")
+META_TEMPLATES_DIR = Path(
+    str(resources.files("another_mood.resources") / "templates" / "meta")
 )
 
 
@@ -134,7 +134,7 @@ def _to_yaml(value: object, flow: bool = False) -> str:
     ).rstrip()
 
 
-SYSTEM_FILTERS: Mapping[str, Callable[..., Any]] = {
+META_TEMPLATES_FILTERS: Mapping[str, Callable[..., Any]] = {
     "pluck": _pluck,
     "to_yaml": _to_yaml,
     "walk_entity": _walk_entity,

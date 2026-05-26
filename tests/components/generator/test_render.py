@@ -3,7 +3,10 @@
 from pathlib import Path
 from textwrap import dedent
 
-from another_mood.components.generator.generator import render
+from another_mood.components.generator.generator import (
+    _BUILD_REPORT_TEMPLATES_DIR,  # pyright: ignore[reportPrivateUsage]
+    render,
+)
 from another_mood.components.generator.output_formats.md import md_escape
 
 
@@ -23,7 +26,7 @@ class TestWriteIndex:
 
         out_dir = tmp_path / "output"
         data = {"items": [{"name": "Alice"}, {"name": "Bob"}]}
-        render("__reports.md", data, out_dir, templates_dir=templates_dir)
+        render("index.md", templates_dir, data, out_dir)
 
         assert (out_dir / "index.md").read_text() == dedent("""\
             # List
@@ -50,7 +53,7 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_failure.md", data, out_dir)
+        render("__build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result
@@ -73,7 +76,7 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_failure.md", data, out_dir)
+        render("__build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "```\n> 1 | bad value\n    | ^\n```" in result
@@ -88,7 +91,7 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_failure.md", data, out_dir)
+        render("__build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result

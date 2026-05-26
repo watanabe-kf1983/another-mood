@@ -1,6 +1,6 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -64,11 +64,11 @@ class TemplateEngine:
         self,
         out_dir: Path,
         *,
-        templates_dirs: Sequence[Path],
+        templates_dir: Path,
         filters: Mapping[str, Callable[..., Any]],
     ) -> None:
         self._env = make_environment(MD)
-        self._env.loader = FileSystemLoader([str(d) for d in templates_dirs])
+        self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
         install_mood_view_processor(self._env, out_dir)

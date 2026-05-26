@@ -5,12 +5,14 @@ See: dev-docs/contents/internal/components/generator.md
 """
 
 import shutil
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
+from importlib import resources
 from pathlib import Path
+from typing import Any
 
 from another_mood.components.generator.meta_templates import (
-    BUILT_IN_TEMPLATES_DIR,
-    SYSTEM_FILTERS,
+    META_TEMPLATES_DIR,
+    META_TEMPLATES_FILTERS,
 )
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
@@ -18,14 +20,26 @@ from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
 from another_mood.components.shared.json_data_model import load_model
 
+_BUILD_REPORT_TEMPLATES_DIR = Path(
+    str(resources.files("another_mood.resources") / "templates" / "build_report")
+)
+
+_NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
+
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     data = load_model(data_dir)
     data["__views"] = {k: v for k, v in data.items() if k != "__views"}
-    render("__root.md", data, out_dir)
-    render("__reports.md", data, out_dir / "reports", templates_dir=templates_dir)
+    render(
+        "__root.md",
+        META_TEMPLATES_DIR,
+        data,
+        out_dir,
+        filters=META_TEMPLATES_FILTERS,
+    )
+    render("index.md", templates_dir, data, out_dir / "reports")
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -49,13 +63,19 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
             if warnings:
                 render(
                     "__warnings.md",
+                    _BUILD_REPORT_TEMPLATES_DIR,
                     {"diagnostics": [d.to_data() for d in warnings]},
                     ctx.out / "__warnings",
                 )
                 _append_warnings_link(ctx.out / "index.md", len(warnings))
         else:
             report = BuildReport.collect(data_dir / "reports")
-            render("__build_failure.md", report.to_data(), out_dir / "data")
+            render(
+                "__build_failure.md",
+                _BUILD_REPORT_TEMPLATES_DIR,
+                report.to_data(),
+                out_dir / "data",
+            )
 
 
 def _append_warnings_link(index_md: Path, count: int) -> None:
@@ -67,19 +87,17 @@ def _append_warnings_link(index_md: Path, count: int) -> None:
 
 def render(
     template_name: str,
+    templates_dir: Path,
     data: Mapping[str, object],
     out_dir: Path,
     *,
-    templates_dir: Path | None = None,
+    filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
 ) -> None:
     """Render a template and write the result to out_dir/index.md."""
-    templates_dirs: list[Path] = [BUILT_IN_TEMPLATES_DIR]
-    if templates_dir is not None:
-        templates_dirs.append(templates_dir)
     rendered = TemplateEngine(
         out_dir,
-        templates_dirs=templates_dirs,
-        filters=SYSTEM_FILTERS,
+        templates_dir=templates_dir,
+        filters=filters,
     ).render(template_name, data)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.md").write_text(rendered, encoding="utf-8")

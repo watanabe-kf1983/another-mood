@@ -71,16 +71,16 @@ Jinja2 の autoescape は `markupsafe.escape` (HTML escape) に決め打ちで e
 
 新しい位置依存ヘルパを追加する際の不変条件。各ヘルパの具体的な実装責務 (CommonMark 6.1 制約、padding 規則、safe-set 等) は [md.py](../../../../src/another_mood/components/generator/output_formats/md.py) の docstring と [test_md.py](../../../../tests/components/generator/output_formats/test_md.py) で担保する。
 
-### OutputFormat と system filters の住み分け
+### OutputFormat と meta-template filters の住み分け
 
-OutputFormat 記述子の `globals` / `filters` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ) はフォーマット非依存・位置非依存のドメインヘルパなので、`OutputFormat` ではなく [meta_templates.py](../../../../src/another_mood/components/generator/meta_templates.py) に `SYSTEM_FILTERS` として持ち、`TemplateEngine` 構築時に `filters` 引数で注入する。
+OutputFormat 記述子の `globals` / `filters` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`OutputFormat` ではなく [meta_templates.py](../../../../src/another_mood/components/generator/meta_templates.py) に `META_TEMPLATES_FILTERS` として持ち、メタテンプレート描画時のみ `TemplateEngine` の `filters` 引数で注入する。
 
 新しい補助関数を追加する際の判定:
 
 - フォーマット固有 (位置依存正規化) → OutputFormat
-- フォーマット非依存 (システム共通) → SYSTEM_FILTERS
+- メタテンプレート固有 (catalog 走査・整形) → META_TEMPLATES_FILTERS
 
-境界を曖昧にして OutputFormat に system filter を混ぜると、将来 output_format を追加するたびに同じ filter を再登録する DRY 違反になる。
+境界を曖昧にして OutputFormat にメタ専用 filter を混ぜると、将来 output_format を追加するたびに同じ filter を再登録する DRY 違反になり、メタテンプレートの依存をユーザテンプレートにも漏らしてしまう。
 
 ### mood_view サブテンプレートの output_format 解決
 
