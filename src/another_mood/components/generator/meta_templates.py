@@ -88,6 +88,27 @@ def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[object]:
     return [value]
 
 
+class _FlowDumper(yaml.SafeDumper):
+    """SafeDumper that keeps flow-style output on one source line.
+
+    PyYAML's default str representer picks single-quoted style for
+    scalars containing newlines, which forces a multi-line scalar in
+    flow output (YAML 1.1 folding). This dumper forces double-quoted
+    style so embedded newlines emit as ``\\n`` escapes and the cell
+    stays on one line.
+    """
+
+
+def _flow_str_representer(dumper: yaml.SafeDumper, data: str) -> yaml.ScalarNode:
+    style = '"' if "\n" in data else None
+    return dumper.represent_scalar(  # pyright: ignore[reportUnknownMemberType]
+        "tag:yaml.org,2002:str", data, style=style
+    )
+
+
+_FlowDumper.add_representer(str, _flow_str_representer)
+
+
 def _to_yaml(value: object, flow: bool = False) -> str:
     """Jinja2 filter: dump a value as YAML.
 
@@ -102,8 +123,10 @@ def _to_yaml(value: object, flow: bool = False) -> str:
     # Disable PyYAML's soft line-wrap in flow mode — wrapping inserts
     # newlines that break the surrounding Markdown table row.
     width = math.inf if flow else 80
-    return yaml.safe_dump(
+    dumper = _FlowDumper if flow else yaml.SafeDumper
+    return yaml.dump(
         value,
+        Dumper=dumper,
         allow_unicode=True,
         default_flow_style=flow,
         sort_keys=False,

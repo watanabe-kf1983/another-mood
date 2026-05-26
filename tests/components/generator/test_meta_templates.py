@@ -167,3 +167,12 @@ class TestToYamlFilter:
         )
         result = _to_yaml({"description": long_description, "title": "Prose id"}, True)
         assert "\n" not in result
+
+    def test_flow_style_embedded_newlines_become_escapes(self) -> None:
+        # A string value carrying real newlines would otherwise be emitted
+        # as a multi-line single-quoted scalar, breaking the surrounding
+        # table row. The flow dumper forces double-quoted style so newlines
+        # become `\n` escapes and the cell stays on one line.
+        result = _to_yaml({"description": "first\n\nsecond"}, True)
+        assert "\n" not in result
+        assert "first\\n\\nsecond" in result
