@@ -10,6 +10,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
@@ -30,7 +31,7 @@ _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
     """Render views data through Jinja2 templates to Markdown."""
-    data = load_model(data_dir)
+    data = wrap_tree(load_model(data_dir))
     data["__views"] = {k: v for k, v in data.items() if k != "__views"}
     render(
         "__root.md",
