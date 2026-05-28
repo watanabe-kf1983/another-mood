@@ -10,15 +10,15 @@ from typing import Any, cast
 import yaml
 from jinja2 import Undefined
 
-from another_mood.components.shared.json_data_model import pluck
+from another_mood.components.shared import json_data_model
 
 META_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "meta")
 )
 
 
-def _pluck(row: object, key_path: str) -> object:
-    """Jinja2 filter wrapper around :func:`pluck`.
+def pluck(row: object, key_path: str) -> object:
+    """Jinja2 filter wrapper around :func:`json_data_model.pluck`.
 
     Missing keys and broken intermediate steps yield Jinja2's
     ``Undefined``, which renders as the empty string under the standard
@@ -27,12 +27,12 @@ def _pluck(row: object, key_path: str) -> object:
     if not isinstance(row, Mapping):
         return Undefined()
     try:
-        return pluck(cast(Mapping[str, object], row), key_path)
+        return json_data_model.pluck(cast(Mapping[str, object], row), key_path)
     except KeyError:
         return Undefined()
 
 
-def _walk_entity(
+def walk_entity(
     views: object,
     entity_id: str,
     entities: Sequence[Mapping[str, object]],
@@ -43,9 +43,10 @@ def _walk_entity(
     Descent for child entities follows the catalog's ``parent_entity``
     chain rather than parsing the dotted id, so singleton-traversed
     paths like ``__definition.entities.item_type.attributes`` resolve
-    via :func:`pluck`'s dotted lookup. Missing root key or absent
-    intermediate keys collapse to an empty list — the ``{% if rows %}``
-    guard in built-in templates renders ``(no records)`` either way.
+    via :func:`json_data_model.pluck`'s dotted lookup. Missing root key
+    or absent intermediate keys collapse to an empty list — the
+    ``{% if rows %}`` guard in built-in templates renders ``(no records)``
+    either way.
     """
     if not isinstance(views, Mapping):
         return Undefined()
@@ -65,51 +66,7 @@ def _walk_entity(
     return rows
 
 
-def _ancestor_chain(
-    entity_id: str, by_id: Mapping[str, Mapping[str, object]]
-) -> Sequence[str]:
-    """Walk ``parent_entity`` links upward, returning ids root-first."""
-    chain_: list[str] = []
-    current: str | None = entity_id
-    while current is not None:
-        chain_.insert(0, current)
-        current = cast("str | None", by_id[current].get("parent_entity"))
-    return chain_
-
-
-def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[object]:
-    """``pluck`` returning ``[]`` for missing keys, list-wrapping scalars."""
-    try:
-        value = pluck(row, key_path)
-    except KeyError:
-        return []
-    if isinstance(value, list):
-        return cast(Sequence[object], value)
-    return [value]
-
-
-class _FlowDumper(yaml.SafeDumper):
-    """SafeDumper that keeps flow-style output on one source line.
-
-    PyYAML's default str representer picks single-quoted style for
-    scalars containing newlines, which forces a multi-line scalar in
-    flow output (YAML 1.1 folding). This dumper forces double-quoted
-    style so embedded newlines emit as ``\\n`` escapes and the cell
-    stays on one line.
-    """
-
-
-def _flow_str_representer(dumper: yaml.SafeDumper, data: str) -> yaml.ScalarNode:
-    style = '"' if "\n" in data else None
-    return dumper.represent_scalar(  # pyright: ignore[reportUnknownMemberType]
-        "tag:yaml.org,2002:str", data, style=style
-    )
-
-
-_FlowDumper.add_representer(str, _flow_str_representer)
-
-
-def _to_yaml(value: object, flow: bool = False) -> str:
+def to_yaml(value: object, flow: bool = False) -> str:
     """Jinja2 filter: dump a value as YAML.
 
     Built-in templates use this to render arbitrary Mapping[str, object]
@@ -123,7 +80,7 @@ def _to_yaml(value: object, flow: bool = False) -> str:
     # Disable PyYAML's soft line-wrap in flow mode — wrapping inserts
     # newlines that break the surrounding Markdown table row.
     width = math.inf if flow else 80
-    dumper = _FlowDumper if flow else yaml.SafeDumper
+    dumper = _InlineDumper if flow else _Dumper
     return yaml.dump(
         value,
         Dumper=dumper,
@@ -135,7 +92,91 @@ def _to_yaml(value: object, flow: bool = False) -> str:
 
 
 META_TEMPLATES_FILTERS: Mapping[str, Callable[..., Any]] = {
-    "pluck": _pluck,
-    "to_yaml": _to_yaml,
-    "walk_entity": _walk_entity,
+    "pluck": pluck,
+    "to_yaml": to_yaml,
+    "walk_entity": walk_entity,
 }
+
+
+# ── walk_entity helpers ──────────────────────────────────────────────
+
+
+def _ancestor_chain(
+    entity_id: str, by_id: Mapping[str, Mapping[str, object]]
+) -> Sequence[str]:
+    """Walk ``parent_entity`` links upward, returning ids root-first."""
+    chain_: list[str] = []
+    current: str | None = entity_id
+    while current is not None:
+        chain_.insert(0, current)
+        current = cast("str | None", by_id[current].get("parent_entity"))
+    return chain_
+
+
+def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[object]:
+    """``json_data_model.pluck`` returning ``[]`` for missing keys,
+    list-wrapping scalars."""
+    try:
+        value = json_data_model.pluck(row, key_path)
+    except KeyError:
+        return []
+    if isinstance(value, list):
+        return cast(Sequence[object], value)
+    return [value]
+
+
+# ── to_yaml dumpers and representers ─────────────────────────────────
+
+
+class _Dumper(yaml.SafeDumper):
+    """SafeDumper that accepts ``dict`` / ``list`` subclasses.
+
+    Generator wraps the data tree into :class:`MappingNode` /
+    :class:`ArrayNode` (see ``data_tree.py``) so templates can walk
+    parent references.  SafeDumper rejects subclasses by default;
+    the multi-representer registrations below make any subclass
+    render as its native ``dict`` / ``list`` form.
+    """
+
+
+class _InlineDumper(yaml.SafeDumper):
+    """SafeDumper for one-source-line output contexts.
+
+    Used when the YAML result is interpolated into a single-line
+    context — a Markdown table cell as inline code, etc.  PyYAML's
+    default str representer renders newline-containing scalars as
+    single-quoted folded form that spans multiple source lines,
+    which breaks such embedding.  This variant forces double-quoted
+    style so embedded newlines emit as ``\\n`` escapes and the
+    output stays on one line.
+
+    Carries the same ``dict`` / ``list`` subclass support as
+    :class:`_Dumper` (registered explicitly below).
+    """
+
+
+def _inline_str_representer(dumper: yaml.SafeDumper, data: str) -> yaml.ScalarNode:
+    style = '"' if "\n" in data else None
+    return dumper.represent_scalar(  # pyright: ignore[reportUnknownMemberType]
+        "tag:yaml.org,2002:str", data, style=style
+    )
+
+
+def _represent_dict_subclass(
+    dumper: yaml.SafeDumper, data: Mapping[str, object]
+) -> yaml.MappingNode:
+    return dumper.represent_dict(data)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+
+
+def _represent_list_subclass(
+    dumper: yaml.SafeDumper, data: Sequence[object]
+) -> yaml.SequenceNode:
+    return dumper.represent_list(data)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+
+
+_Dumper.add_multi_representer(dict, _represent_dict_subclass)
+_Dumper.add_multi_representer(list, _represent_list_subclass)
+
+_InlineDumper.add_multi_representer(dict, _represent_dict_subclass)
+_InlineDumper.add_multi_representer(list, _represent_list_subclass)
+_InlineDumper.add_representer(str, _inline_str_representer)

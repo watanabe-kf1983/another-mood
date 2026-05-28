@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B1, B3〜B6](../../../tasks.md)（親参照注入 / `_meta` フィールド注入 / anchor_id → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）
+> **未実装** — Phase 11 タスク [B2〜B6](../../../tasks.md)（`_meta` フィールド注入 / anchor_id → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）。親参照注入 (B1) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
 
 ### 用語
 

@@ -3,9 +3,9 @@
 from jinja2 import Undefined
 
 from another_mood.components.generator.meta_templates import (
-    _pluck,  # pyright: ignore[reportPrivateUsage]
-    _to_yaml,  # pyright: ignore[reportPrivateUsage]
-    _walk_entity,  # pyright: ignore[reportPrivateUsage]
+    pluck,
+    to_yaml,
+    walk_entity,
 )
 
 
@@ -19,12 +19,12 @@ class TestPluckFilter:
         # `length`-count it. Falsy real values must pass through, not
         # be folded into "missing".
         row = {"hobby": {"pets": [{"id": "dog1"}]}, "done": False}
-        assert _pluck(row, "hobby.pets") == [{"id": "dog1"}]
-        assert _pluck(row, "done") is False
+        assert pluck(row, "hobby.pets") == [{"id": "dog1"}]
+        assert pluck(row, "done") is False
 
     def test_unreachable_path_yields_undefined(self) -> None:
-        assert isinstance(_pluck({"x": 1}, "missing"), Undefined)
-        assert isinstance(_pluck({"x": 1}, "x.y"), Undefined)
+        assert isinstance(pluck({"x": 1}, "missing"), Undefined)
+        assert isinstance(pluck({"x": 1}, "x.y"), Undefined)
 
 
 class TestWalkEntityFilter:
@@ -33,7 +33,7 @@ class TestWalkEntityFilter:
     def test_root_entity_returns_views_list(self) -> None:
         views = {"posts": [{"id": "a"}, {"id": "b"}]}
         entities = [{"id": "posts"}]
-        assert _walk_entity(views, "posts", entities) == [{"id": "a"}, {"id": "b"}]
+        assert walk_entity(views, "posts", entities) == [{"id": "a"}, {"id": "b"}]
 
     def test_single_step_child_flattens_array_attribute(self) -> None:
         # A parent entity (`entities`) whose rows carry an array attribute
@@ -50,7 +50,7 @@ class TestWalkEntityFilter:
             {"id": "entities"},
             {"id": "entities.fields", "parent_entity": "entities"},
         ]
-        assert _walk_entity(views, "entities.fields", entities) == [
+        assert walk_entity(views, "entities.fields", entities) == [
             {"id": "id"},
             {"id": "name"},
             {"id": "id"},
@@ -75,7 +75,7 @@ class TestWalkEntityFilter:
                 "parent_entity": "__definition.entities",
             },
         ]
-        assert _walk_entity(
+        assert walk_entity(
             views, "__definition.entities.item_type.attributes", entities
         ) == [{"id": "id"}, {"id": "name"}]
 
@@ -97,7 +97,7 @@ class TestWalkEntityFilter:
             {"id": "erds.entities", "parent_entity": "erds"},
             {"id": "erds.entities.fields", "parent_entity": "erds.entities"},
         ]
-        assert _walk_entity(views, "erds.entities.fields", entities) == [
+        assert walk_entity(views, "erds.entities.fields", entities) == [
             {"id": "id"},
             {"id": "name"},
             {"id": "perm"},
@@ -107,7 +107,7 @@ class TestWalkEntityFilter:
         # An entity declared in the catalog but with no records yet:
         # template's `{% if rows %}` guard renders `(no records)`.
         entities = [{"id": "posts"}]
-        assert _walk_entity({}, "posts", entities) == []
+        assert walk_entity({}, "posts", entities) == []
 
     def test_missing_intermediate_suffix_skips_row(self) -> None:
         # A parent row missing the child array contributes zero children
@@ -123,40 +123,38 @@ class TestWalkEntityFilter:
             {"id": "entities"},
             {"id": "entities.fields", "parent_entity": "entities"},
         ]
-        assert _walk_entity(views, "entities.fields", entities) == [{"id": "id"}]
+        assert walk_entity(views, "entities.fields", entities) == [{"id": "id"}]
 
 
 class TestToYamlFilter:
     """Unit tests for the `to_yaml` filter function."""
 
     def test_flat_mapping(self) -> None:
-        assert _to_yaml({"title": "Hello", "description": "world"}) == (
+        assert to_yaml({"title": "Hello", "description": "world"}) == (
             "title: Hello\ndescription: world"
         )
 
     def test_preserves_key_order(self) -> None:
         # `enum: [easy, medium, hard]` style validation values must keep
         # author-defined ordering.
-        assert _to_yaml({"enum": ["easy", "medium", "hard"]}) == (
+        assert to_yaml({"enum": ["easy", "medium", "hard"]}) == (
             "enum:\n- easy\n- medium\n- hard"
         )
 
     def test_nested(self) -> None:
-        assert _to_yaml({"a": {"b": 1}}) == "a:\n  b: 1"
+        assert to_yaml({"a": {"b": 1}}) == "a:\n  b: 1"
 
     def test_none_yields_empty(self) -> None:
-        assert _to_yaml(None) == ""
+        assert to_yaml(None) == ""
 
     def test_undefined_yields_empty(self) -> None:
-        assert _to_yaml(Undefined()) == ""
+        assert to_yaml(Undefined()) == ""
 
     def test_flow_style_single_line(self) -> None:
         # `flow=True` keeps the output on a single line — used in Markdown
         # table cells where embedded newlines would break the row.
-        assert _to_yaml({"title": "Hi", "n": 1}, True) == "{title: Hi, n: 1}"
-        assert _to_yaml({"enum": ["easy", "medium"]}, True) == (
-            "{enum: [easy, medium]}"
-        )
+        assert to_yaml({"title": "Hi", "n": 1}, True) == "{title: Hi, n: 1}"
+        assert to_yaml({"enum": ["easy", "medium"]}, True) == ("{enum: [easy, medium]}")
 
     def test_flow_style_no_soft_wrap_for_long_values(self) -> None:
         # PyYAML wraps flow output at width=80 by default; that newline would
@@ -165,7 +163,7 @@ class TestToYamlFilter:
             "Stable identifier derived from the Markdown file's path "
             "(without extension)."
         )
-        result = _to_yaml({"description": long_description, "title": "Prose id"}, True)
+        result = to_yaml({"description": long_description, "title": "Prose id"}, True)
         assert "\n" not in result
 
     def test_flow_style_embedded_newlines_become_escapes(self) -> None:
@@ -173,6 +171,6 @@ class TestToYamlFilter:
         # as a multi-line single-quoted scalar, breaking the surrounding
         # table row. The flow dumper forces double-quoted style so newlines
         # become `\n` escapes and the cell stays on one line.
-        result = _to_yaml({"description": "first\n\nsecond"}, True)
+        result = to_yaml({"description": "first\n\nsecond"}, True)
         assert "\n" not in result
         assert "first\\n\\nsecond" in result
