@@ -1,31 +1,47 @@
-# _parent / _parent_record are template-public fields under the reserved
-# `_` prefix, not Python "protected" attributes.
+# _parent / _parent_record / _meta are template-public fields under the
+# reserved `_` prefix, not Python "protected" attributes.
 # pyright: reportPrivateUsage=false
-"""Data-tree wrappers exposing parent references to templates."""
+"""Data-tree wrappers exposing parent references and node metadata to templates."""
 
 from collections.abc import Iterable, Mapping
+from functools import cached_property
 from typing import Any, Protocol, cast
+from urllib.parse import quote
+
+_PROSE_ENTITY_KEY = "prose"
+"""Top-level array key whose elements get the anchor-spec ``prose`` exemption.
+
+Elements under this key keep ``/`` characters in their ``id`` value
+unencoded when composing the anchor ID — see ``anchor-spec.md``.
+"""
 
 
 class Node(Protocol):
     """An anchorable data-tree node that links back to its container."""
 
     _parent: "Node | None"
-    """Reference to the container node, or ``None`` at the root.
+    """Reference to the container node, or ``None`` at the root."""
 
-    The leading underscore reserves a template-side namespace against
-    user data keys (which by convention do not start with ``_``); it
-    does *not* indicate Python-style protected access.  Treat this as
-    a public field of the node API.
+    _segment: str
+    """How the parent reaches this node — used as a path segment in IDs.
+
+    For Mappings/Arrays under a Mapping it is the dict key; for Mapping
+    elements of an Array it is the element's ``id`` field value.  Empty
+    at the root (never composed since ``_parent`` is ``None`` there).
     """
+
+    _meta: "_NodeMeta"
+    """Lazy node-metadata view — anchor_id / object_type_id."""
 
 
 class ArrayNode(list[Any], Node):
     """List subclass holding a ``_parent`` reference to its container."""
 
-    def __init__(self, items: Iterable[Any], *, parent: "Node") -> None:
+    def __init__(self, items: Iterable[Any], *, parent: "Node", segment: str) -> None:
         super().__init__(items)
         self._parent: "Node | None" = parent
+        self._segment = segment
+        self._meta: "_NodeMeta" = _NodeMeta(self)
 
 
 class MappingNode(dict[str, Any], Node):
@@ -36,9 +52,13 @@ class MappingNode(dict[str, Any], Node):
     element resolves directly to the containing record.
     """
 
-    def __init__(self, items: Mapping[str, Any], *, parent: "Node | None") -> None:
+    def __init__(
+        self, items: Mapping[str, Any], *, parent: "Node | None", segment: str
+    ) -> None:
         super().__init__(items)
         self._parent: "Node | None" = parent
+        self._segment = segment
+        self._meta: "_NodeMeta" = _NodeMeta(self)
 
     @property
     def _parent_record(self) -> "MappingNode | None":
@@ -48,47 +68,98 @@ class MappingNode(dict[str, Any], Node):
         return node if isinstance(node, MappingNode) else None
 
 
+class _NodeMeta:
+    """Lazy node-metadata view exposed under ``node._meta``.
+
+    Each property composes its parent's value with this node's
+    ``_segment``; results are cached so repeated access is O(1).
+    """
+
+    def __init__(self, node: Node) -> None:
+        self._node = node
+
+    @cached_property
+    def anchor_id(self) -> str:
+        """Anchor ID per anchor-spec — `/`-joined data-tree path.
+
+        Empty string at the root.  ``urllib.parse.quote`` escapes
+        URL-fragment-unsafe characters; the ``prose`` entity is exempt
+        from ``/`` escaping so that path-shaped prose IDs stay readable.
+        """
+        parent = self._node._parent
+        if parent is None:
+            return ""
+        seg = quote(self._node._segment, safe="/" if self._under_prose else "")
+        parent_id = parent._meta.anchor_id
+        return f"{parent_id}/{seg}" if parent_id else seg
+
+    @cached_property
+    def object_type_id(self) -> str:
+        """Schema-position ID — dotted path with ``.item`` for array elements.
+
+        Empty at the root.  Mirrors the ObjectType naming convention
+        used by ``data_catalog`` (``X.item.yyy.item`` etc.).
+        """
+        parent = self._node._parent
+        if parent is None:
+            return ""
+        # Schema position of an Array element is the constant ``item`` —
+        # the element's ``id`` only matters for anchor identity.
+        seg = "item" if isinstance(parent, ArrayNode) else self._node._segment
+        parent_id = parent._meta.object_type_id
+        return f"{parent_id}.{seg}" if parent_id else seg
+
+    @cached_property
+    def _under_prose(self) -> bool:
+        # Prose entity is the top-level array at key ``prose`` — the flag
+        # propagates to its descendants (anchor-spec.md, prose の例外).
+        parent = self._node._parent
+        if parent is None:
+            return False
+        if parent._parent is None:
+            return self._node._segment == _PROSE_ENTITY_KEY
+        return parent._meta._under_prose
+
+
 def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
     """Wrap ``data`` into a tree of :class:`MappingNode` / :class:`ArrayNode`.
 
-    The root :class:`MappingNode` carries ``_parent = None``.  List
-    elements without an ``id`` key are passed through unwrapped (and
-    their subtrees are not visited), matching the anchor-spec rule
-    that such elements lack an anchor ID and so their descendants
-    have no reachable path either.
+    The root :class:`MappingNode` carries ``_parent = None`` and an
+    empty ``_segment``.  Inside an Array, only Mapping elements with an
+    ``id`` field are wrapped — anchor-spec cannot reach others, so
+    scalars, nested lists, and id-less Mappings pass through raw
+    (along with their subtrees).
     """
-    return _wrap_mapping(data, parent=None)
+    return _wrap_mapping(data, parent=None, segment="")
 
 
-def _wrap_mapping(source: Mapping[str, Any], *, parent: Node | None) -> MappingNode:
-    node = MappingNode({}, parent=parent)
+def _wrap_mapping(
+    source: Mapping[str, Any], *, parent: Node | None, segment: str
+) -> MappingNode:
+    node = MappingNode({}, parent=parent, segment=segment)
     for key, value in source.items():
-        node[key] = _wrap_value(value, parent=node)
-    return node
-
-
-def _wrap_array(source: Iterable[Any], *, parent: Node) -> ArrayNode:
-    node = ArrayNode([], parent=parent)
-    for value in source:
-        if _is_unreachable_record(value):
-            node.append(value)
+        if isinstance(value, Mapping):
+            node[key] = _wrap_mapping(
+                cast(Mapping[str, Any], value), parent=node, segment=key
+            )
+        elif isinstance(value, list):
+            node[key] = _wrap_array(
+                cast(Iterable[Any], value), parent=node, segment=key
+            )
         else:
-            node.append(_wrap_value(value, parent=node))
+            node[key] = value
     return node
 
 
-def _is_unreachable_record(value: object) -> bool:
-    """A list element that anchor-spec cannot reach.
-
-    A Mapping without an ``id`` has no anchor path, and so neither do
-    its descendants.  Such subtrees stay raw.
-    """
-    return isinstance(value, Mapping) and "id" not in value
-
-
-def _wrap_value(value: object, *, parent: Node) -> object:
-    if isinstance(value, Mapping):
-        return _wrap_mapping(cast(Mapping[str, Any], value), parent=parent)
-    if isinstance(value, list):
-        return _wrap_array(cast(Iterable[Any], value), parent=parent)
-    return value
+def _wrap_array(source: Iterable[Any], *, parent: Node, segment: str) -> ArrayNode:
+    node = ArrayNode([], parent=parent, segment=segment)
+    for value in source:
+        if isinstance(value, Mapping) and "id" in value:
+            # Mapping element of an Array — anchor segment is its ``id``.
+            mapping = cast(Mapping[str, Any], value)
+            node.append(_wrap_mapping(mapping, parent=node, segment=str(mapping["id"])))
+        else:
+            # Unreachable per anchor-spec: scalars, lists, and id-less
+            # Mappings have no anchor path, so neither do their subtrees.
+            node.append(value)
+    return node

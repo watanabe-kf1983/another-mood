@@ -57,7 +57,7 @@ categories:
         title: ノードへの `_meta.anchor_id` / `_meta.object_type_id` 注入
         note: anchor-spec の規則に従って各ノードの anchor_id と object_type_id を計算し `_meta` に格納。`_parent` チェーンを使う lazy 評価
         phase: 11
-        proposal: design/generator/generator.md#_meta-フィールド-b3-b6
+        done: true
       B4:
         title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
         note: anchor ID から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
@@ -72,7 +72,7 @@ categories:
         title: "`_meta.page_url` の算出"
         note: paginate 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
         phase: 11
-        proposal: design/generator/generator.md#_meta-フィールド-b3-b6
+        proposal: design/generator/generator.md#_metapage_url-b6
 
   C:
     title: ページ分割 (paging)
