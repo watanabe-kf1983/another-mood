@@ -66,7 +66,7 @@ categories:
 ##### `_meta` の計算
 
 - `_meta` は wrap 時に各ノードへ eager に確保。中身の `anchor_id` / `object_type_id` が `cached_property` で初回のみ「親の同名値 + 自分の `_segment`」という単純な再帰合成で求まる (親側も同様に cached なので全体 amortized O(depth))
-- anchor_id は `_segment` を `urllib.parse.quote` で percent-encode して `/` で join。**prose 例外**: 親チェインを root 直下まで遡って最上位セグメントが `prose` のときに限り `/` を escape **しない** ([anchor-spec.md](anchor-spec.md#prose-の例外))。判定結果も親から伝播する cached flag (`_under_prose`) として持つ
+- anchor_id は `_segment` を `urllib.parse.quote` で percent-encode して `/` で join。**prose 例外** ([anchor-spec.md](anchor-spec.md#prose-の例外)): 自身の `object_type_id == "prose.item"` のときに限り `/` を escape **しない**。escape ルールの差は型レベルの仕様なので、`object_type_id` を直接見るのが素直
 - object_type_id は `.` で join。Mapping element of Array だけ schema 上のスロットが定数 `item` になるので segment を上書きする (それ以外は `_segment` をそのまま使う)
 
 ### Reconcile
