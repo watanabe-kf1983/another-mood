@@ -8,13 +8,6 @@ from functools import cached_property
 from typing import Any, Protocol, cast
 from urllib.parse import quote
 
-_PROSE_ENTITY_KEY = "prose"
-"""Top-level array key whose elements get the anchor-spec ``prose`` exemption.
-
-Elements under this key keep ``/`` characters in their ``id`` value
-unencoded when composing the anchor ID — see ``anchor-spec.md``.
-"""
-
 
 class Node(Protocol):
     """An anchorable data-tree node that links back to its container."""
@@ -80,7 +73,7 @@ class _NodeMeta:
 
     @cached_property
     def anchor_id(self) -> str:
-        """Anchor ID per anchor-spec — `/`-joined data-tree path.
+        """Anchor ID — `/`-joined data-tree path.
 
         Empty string at the root.  ``urllib.parse.quote`` escapes
         URL-fragment-unsafe characters; the ``prose`` entity is exempt
@@ -89,7 +82,10 @@ class _NodeMeta:
         parent = self._node._parent
         if parent is None:
             return ""
-        seg = quote(self._node._segment, safe="/" if self._under_prose else "")
+        # ``prose.item`` keeps ``/`` in id values unencoded so the
+        # path-shaped prose IDs stay readable.
+        safe = "/" if self.object_type_id == "prose.item" else ""
+        seg = quote(self._node._segment, safe=safe)
         parent_id = parent._meta.anchor_id
         return f"{parent_id}/{seg}" if parent_id else seg
 
@@ -109,26 +105,14 @@ class _NodeMeta:
         parent_id = parent._meta.object_type_id
         return f"{parent_id}.{seg}" if parent_id else seg
 
-    @cached_property
-    def _under_prose(self) -> bool:
-        # Prose entity is the top-level array at key ``prose`` — the flag
-        # propagates to its descendants (anchor-spec.md, prose の例外).
-        parent = self._node._parent
-        if parent is None:
-            return False
-        if parent._parent is None:
-            return self._node._segment == _PROSE_ENTITY_KEY
-        return parent._meta._under_prose
-
 
 def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
     """Wrap ``data`` into a tree of :class:`MappingNode` / :class:`ArrayNode`.
 
     The root :class:`MappingNode` carries ``_parent = None`` and an
     empty ``_segment``.  Inside an Array, only Mapping elements with an
-    ``id`` field are wrapped — anchor-spec cannot reach others, so
-    scalars, nested lists, and id-less Mappings pass through raw
-    (along with their subtrees).
+    ``id`` field are wrapped — the others have no anchor path and so
+    do their subtrees, so they pass through raw.
     """
     return _wrap_mapping(data, parent=None, segment="")
 
@@ -159,7 +143,7 @@ def _wrap_array(source: Iterable[Any], *, parent: Node, segment: str) -> ArrayNo
             mapping = cast(Mapping[str, Any], value)
             node.append(_wrap_mapping(mapping, parent=node, segment=str(mapping["id"])))
         else:
-            # Unreachable per anchor-spec: scalars, lists, and id-less
-            # Mappings have no anchor path, so neither do their subtrees.
+            # No anchor path reaches scalars, lists, or id-less Mappings
+            # — leave them (and their subtrees) raw.
             node.append(value)
     return node
