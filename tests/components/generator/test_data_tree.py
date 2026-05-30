@@ -1,6 +1,6 @@
-# _parent / _parent_record are template-public fields, not Python-protected.
+# _parent / _parent_record / _meta are template-public fields, not Python-protected.
 # pyright: reportPrivateUsage=false
-"""Tests for ``data_tree`` — parent-reference wrappers and tree walker."""
+"""Tests for ``data_tree`` — parent-reference wrappers and node metadata."""
 
 import pytest
 
@@ -29,9 +29,19 @@ class TestWrapping:
         root = wrap_tree({"items": [{"id": "x"}]})
         assert isinstance(root["items"][0], MappingNode)
 
-    def test_nested_array_is_wrapped(self) -> None:
+    def test_nested_array_stays_raw(self) -> None:
+        # Array-under-Array has no anchor path — leave it as a plain list
+        # so every wrapped Node has a well-defined position in its parent.
         root = wrap_tree({"grid": [[1, 2]]})
-        assert isinstance(root["grid"][0], ArrayNode)
+        elem = root["grid"][0]
+        assert isinstance(elem, list)
+        assert not isinstance(elem, ArrayNode)
+
+    def test_mapping_under_nested_array_stays_raw(self) -> None:
+        root = wrap_tree({"groups": [[{"id": "x"}]]})
+        inner = root["groups"][0]
+        assert not isinstance(inner, ArrayNode)
+        assert not isinstance(inner[0], MappingNode)
 
     def test_scalar_passes_through(self) -> None:
         root = wrap_tree({"n": 7})
@@ -73,10 +83,6 @@ class TestParent:
         root = wrap_tree({"items": [{"id": "x"}]})
         assert root["items"][0]._parent is root["items"]
 
-    def test_nested_array_parent_is_outer_array(self) -> None:
-        root = wrap_tree({"grid": [[1, 2]]})
-        assert root["grid"][0]._parent is root["grid"]
-
 
 class TestParentRecord:
     """``_parent_record`` skips intervening ``ArrayNode`` layers."""
@@ -97,12 +103,6 @@ class TestParentRecord:
         assert isinstance(task, MappingNode)
         assert task._parent_record is root["cats"][0]
 
-    def test_walks_through_nested_arrays(self) -> None:
-        root = wrap_tree({"groups": [[{"id": "x"}]]})
-        record = root["groups"][0][0]
-        assert isinstance(record, MappingNode)
-        assert record._parent_record is root
-
 
 class TestSurface:
     """Wrapper attributes must not leak into the dict / list surface."""
@@ -111,9 +111,113 @@ class TestSurface:
         root = wrap_tree({"a": 1})
         assert "_parent" not in root
         assert "_parent_record" not in root
+        assert "_meta" not in root
 
     def test_mapping_node_behaves_as_dict(self) -> None:
         node = wrap_tree({"a": 1, "b": 2})
         assert dict(node) == {"a": 1, "b": 2}
         assert set(node.keys()) == {"a", "b"}
         assert sorted(node.items()) == [("a", 1), ("b", 2)]
+
+
+class TestMetaAnchorId:
+    """``_meta.anchor_id`` builds a ``/``-joined data-tree path per anchor-spec."""
+
+    def test_root_is_empty(self) -> None:
+        assert wrap_tree({})._meta.anchor_id == ""
+
+    def test_singleton_mapping(self) -> None:
+        root = wrap_tree({"overview": {"title": "T"}})
+        assert root["overview"]._meta.anchor_id == "overview"
+
+    def test_top_level_array(self) -> None:
+        root = wrap_tree({"erds": []})
+        assert root["erds"]._meta.anchor_id == "erds"
+
+    def test_array_element_uses_id(self) -> None:
+        root = wrap_tree({"erds": [{"id": "user-mgmt"}]})
+        assert root["erds"][0]._meta.anchor_id == "erds/user-mgmt"
+
+    def test_nested_path(self) -> None:
+        root = wrap_tree({"erds": [{"id": "user-mgmt", "entities": [{"id": "user"}]}]})
+        entity = root["erds"][0]["entities"][0]
+        assert entity._meta.anchor_id == "erds/user-mgmt/entities/user"
+
+    def test_nested_array_segment(self) -> None:
+        root = wrap_tree({"erds": [{"id": "user-mgmt", "entities": [{"id": "user"}]}]})
+        entities = root["erds"][0]["entities"]
+        assert entities._meta.anchor_id == "erds/user-mgmt/entities"
+
+    def test_sibling_ids_in_different_arrays_do_not_collide(self) -> None:
+        root = wrap_tree(
+            {
+                "erds": [
+                    {"id": "user-mgmt", "entities": [{"id": "user"}]},
+                    {"id": "order-flow", "entities": [{"id": "user"}]},
+                ]
+            }
+        )
+        a = root["erds"][0]["entities"][0]._meta.anchor_id
+        b = root["erds"][1]["entities"][0]._meta.anchor_id
+        assert a == "erds/user-mgmt/entities/user"
+        assert b == "erds/order-flow/entities/user"
+        assert a != b
+
+    def test_slash_in_id_is_percent_encoded_outside_prose(self) -> None:
+        root = wrap_tree({"items": [{"id": "a/b"}]})
+        assert root["items"][0]._meta.anchor_id == "items/a%2Fb"
+
+    def test_slash_in_id_is_kept_for_prose(self) -> None:
+        root = wrap_tree({"prose": [{"id": "design/architecture"}]})
+        assert root["prose"][0]._meta.anchor_id == "prose/design/architecture"
+
+    def test_space_in_id_is_percent_encoded_even_in_prose(self) -> None:
+        root = wrap_tree({"prose": [{"id": "design/with space"}]})
+        assert root["prose"][0]._meta.anchor_id == "prose/design/with%20space"
+
+    def test_hash_in_id_is_percent_encoded(self) -> None:
+        root = wrap_tree({"items": [{"id": "a#b"}]})
+        assert root["items"][0]._meta.anchor_id == "items/a%23b"
+
+    def test_numeric_id_is_stringified(self) -> None:
+        root = wrap_tree({"items": [{"id": 42}]})
+        assert root["items"][0]._meta.anchor_id == "items/42"
+
+    def test_result_is_cached(self) -> None:
+        root = wrap_tree({"items": [{"id": "x"}]})
+        meta = root["items"][0]._meta
+        assert meta is root["items"][0]._meta
+
+
+class TestMetaObjectTypeId:
+    """``_meta.object_type_id`` mirrors the dotted ObjectType naming."""
+
+    def test_root_is_empty(self) -> None:
+        assert wrap_tree({})._meta.object_type_id == ""
+
+    def test_singleton_mapping(self) -> None:
+        root = wrap_tree({"overview": {}})
+        assert root["overview"]._meta.object_type_id == "overview"
+
+    def test_top_level_array(self) -> None:
+        root = wrap_tree({"categories": []})
+        assert root["categories"]._meta.object_type_id == "categories"
+
+    def test_array_element_appends_item(self) -> None:
+        root = wrap_tree({"categories": [{"id": "G"}]})
+        assert root["categories"][0]._meta.object_type_id == "categories.item"
+
+    def test_nested_array_path(self) -> None:
+        root = wrap_tree({"categories": [{"id": "G", "tasks": []}]})
+        tasks = root["categories"][0]["tasks"]
+        assert tasks._meta.object_type_id == "categories.item.tasks"
+
+    def test_nested_array_element_appends_item_again(self) -> None:
+        root = wrap_tree({"categories": [{"id": "G", "tasks": [{"id": "G1"}]}]})
+        task = root["categories"][0]["tasks"][0]
+        assert task._meta.object_type_id == "categories.item.tasks.item"
+
+    def test_singleton_under_singleton(self) -> None:
+        root = wrap_tree({"meta": {"about": {}}})
+        assert root["meta"]._meta.object_type_id == "meta"
+        assert root["meta"]["about"]._meta.object_type_id == "meta.about"
