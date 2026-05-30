@@ -103,17 +103,16 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 
 {% set rows = __views | walk_entity(entity.id, entities) -%}
 {% set attributes = entity.item_type.attributes | rejectattr('type', 'equalto', 'object') | list -%}
-{% set show_parent = entity.parent_entity -%}
 {% if rows -%}
-| {% if show_parent %}_parent_record | {% endif %}{% for attribute in attributes %}{{ attribute.id }} | {% endfor %}
-|{% if show_parent %}---|{% endif %}{% for attribute in attributes %}---|{% endfor %}
+| {% for attribute in attributes %}{{ attribute.id }} | {% endfor %}_anchor_id |
+|{% for attribute in attributes %}---|{% endfor %}---|
 {% for row in rows -%}
-| {% if show_parent %}{{ row._parent_record.id | in_cell }} | {% endif %}{% for attribute in attributes -%}
+| {% for attribute in attributes -%}
 {%- if attribute.child_entity -%}
 *{{ (row | pluck(attribute.id) or []) | length }} items*
 {%- else -%}
 {{ row | pluck(attribute.id) | in_cell }}
-{%- endif %} | {% endfor %}
+{%- endif %} | {% endfor %}{{ row._meta.anchor_id | in_cell }} |
 {% endfor -%}
 {%- else -%}
 (no records)
