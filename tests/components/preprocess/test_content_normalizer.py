@@ -10,7 +10,7 @@ from another_mood.components.preprocess.content_normalizer import (
     normalize_contents,
 )
 from another_mood.components.preprocess.schema_inspector import inspect_schema
-from another_mood.components.shared.diagnostic import (
+from another_mood.components.shared.user_source.diagnostic import (
     DiagnosticReporter,
     DiagnosticSeverity,
 )
@@ -35,7 +35,7 @@ class TestBuildContentsSchema:
         )
         schema = build_contents_schema(schema_file)
 
-        from another_mood.components.preprocess.validator import Validator
+        from another_mood.components.shared.user_source.validator import Validator
 
         validator = Validator(schema)
 
@@ -59,7 +59,7 @@ class TestBuildContentsSchema:
     def test_missing_schema_file_uses_builtin_only(self, tmp_path: Path) -> None:
         schema = build_contents_schema(tmp_path / "missing.yaml")
 
-        from another_mood.components.preprocess.validator import Validator
+        from another_mood.components.shared.user_source.validator import Validator
 
         validator = Validator(schema)
         # prose still validated

@@ -8,9 +8,9 @@ from typing import cast
 import yaml
 
 from another_mood.components.preprocess.data_fk_validator import check_fk_data
-from another_mood.components.preprocess.source_loader import parse_yaml
+from another_mood.components.shared.user_source.source_loader import parse_yaml
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.diagnostic import Diagnostic
+from another_mood.components.shared.user_source.diagnostic import Diagnostic
 
 
 def _catalog(yaml_text: str) -> Sequence[dc.Entity]:

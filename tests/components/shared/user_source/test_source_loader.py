@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from another_mood.components.preprocess.source_loader import (
+from another_mood.components.shared.user_source.source_loader import (
     Location,
     ProseRecord,
     UserStr,
     parse_markdown,
     parse_yaml,
 )
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
 # ── parse_yaml ─────────────────────────────────────────────────────

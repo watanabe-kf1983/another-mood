@@ -20,7 +20,7 @@ from another_mood.components.preprocess.query_normalizer import (
     normalize_select,
     normalize_sort,
 )
-from another_mood.components.preprocess.source_loader import Location, UserStr
+from another_mood.components.shared.user_source.source_loader import Location, UserStr
 
 
 class TestNormalizeFlatten:

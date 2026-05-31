@@ -17,7 +17,10 @@ from another_mood.components.generator.mood_view_processor import (
     MoodViewExtension,
     install as install_mood_view_processor,
 )
-from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    FileValidationError,
+)
 
 
 @dataclass(frozen=True)

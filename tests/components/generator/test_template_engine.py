@@ -10,7 +10,7 @@ from another_mood.components.generator.template_engine import (
     TemplateEngine,
     make_environment,
 )
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
 class TestRender:

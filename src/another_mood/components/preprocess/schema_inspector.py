@@ -16,11 +16,14 @@ from another_mood.components.preprocess.schema_tree import (
     build_schema_tree,
     collect_entities,
 )
-from another_mood.components.preprocess.source_loader import UserStr, parse_yaml
-from another_mood.components.preprocess.validator import Validator
+from another_mood.components.shared.user_source.source_loader import UserStr, parse_yaml
+from another_mood.components.shared.user_source.validator import Validator
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
-from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    FileValidationError,
+)
 from another_mood.components.shared.json_data_model import load_model, save_model
 from another_mood.components.shared.query import Query
 

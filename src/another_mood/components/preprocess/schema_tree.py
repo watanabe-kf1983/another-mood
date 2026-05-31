@@ -11,7 +11,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, assert_never, cast
 
-from another_mood.components.preprocess.source_loader import UserStr
+from another_mood.components.shared.user_source.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
 
 # ── Node definitions ─────────────────────────────────────────────────

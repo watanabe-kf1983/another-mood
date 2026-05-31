@@ -9,7 +9,7 @@ from another_mood.components.shared.component.build_report import (
     DiagnosticEntry,
     ErrorEntry,
 )
-from another_mood.components.shared.diagnostic import (
+from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     DiagnosticReporter,
     DiagnosticSeverity,

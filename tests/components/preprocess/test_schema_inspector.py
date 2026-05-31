@@ -13,9 +13,9 @@ from another_mood.components.preprocess.schema_inspector import (
     check_schema,
     inspect_schema,
 )
-from another_mood.components.preprocess.source_loader import Location, UserStr
+from another_mood.components.shared.user_source.source_loader import Location, UserStr
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
 # ── build_schema_validator ──────────────────────────────────────────

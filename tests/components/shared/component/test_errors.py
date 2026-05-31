@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import yaml
 
-from another_mood.components.shared.diagnostic import (
+from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     DiagnosticSeverity,
     FileValidationError,

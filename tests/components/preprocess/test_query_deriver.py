@@ -12,7 +12,7 @@ from another_mood.components.preprocess.query_deriver import (
     derive_queries,
 )
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
 from another_mood.components.shared.query import Query
 
@@ -65,7 +65,7 @@ class TestBuildQuerySchema:
     """build_query_schema: validate against built-in QuerySchema."""
 
     def _validate(self, data: Mapping[str, object]) -> list[object]:
-        from another_mood.components.preprocess.validator import Validator
+        from another_mood.components.shared.user_source.validator import Validator
 
         validator = Validator(build_query_schema())
         return list(validator.validate(data))
