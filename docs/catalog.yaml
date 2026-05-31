@@ -34,6 +34,10 @@ resources:
   - path: reference/template.md
     description: >-
       Template syntax reference — Jinja2 plus the `{% mood_view %}` extension.
+  - path: reference/reports.md
+    description: >-
+      Report output configuration reference — `definition/reports.yaml`
+      and `file_per:`.
   - path: reference/schemas/content-schema.yaml
     description: >-
       Built-in meta-schema merged with the user's schema.yaml at validation
@@ -46,3 +50,7 @@ resources:
     description: >-
       Built-in meta-schema validating the user's schema.yaml — defines the
       JSON Schema subset that user schemas may use.
+  - path: reference/schemas/reports-schema.yaml
+    description: >-
+      Built-in meta-schema validating the user's reports.yaml — defines
+      the file_per list shape.

@@ -70,7 +70,7 @@ categories:
         proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B6:
         title: "`_meta.page_url` の算出"
-        note: paginate 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
+        note: file_per 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
         phase: 11
         proposal: design/generator/generator.md#_metapage_url-b6
 
@@ -82,11 +82,11 @@ categories:
     spec: design/generator/paging-spec.md
     tasks:
       C1:
-        title: profilesFile の読み込み・パース
+        title: reports.yaml の読み込み・パース
         phase: 11
-        proposal: design/generator/paging-spec.md#proposals
+        done: true
       C2:
-        title: paginate 設定の評価
+        title: file_per 設定の評価
         note: クラスが分割対象か判定
         phase: 11
         proposal: design/generator/paging-spec.md#proposals

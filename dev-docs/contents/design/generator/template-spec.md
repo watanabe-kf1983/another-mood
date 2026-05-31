@@ -14,6 +14,6 @@ Jinja2 は `undefined` クラスを差し替え可能で、厳密な `StrictUnde
 
 ## Proposals
 
-### C4 (paginate 自動判定) との関係
+### C4 (file_per 自動判定) との関係
 
-C4 では `paginate` 設定を見て `mood_view` が自動的に inline / 分割を判定する予定。現在の `inline` キーワードはその自動判定を上書きする明示指定として位置付けられる。C4 導入後も「常に inline を強制する escape hatch」として残すか、深い統合で吸収するかは C4 実装時に判断。
+C4 では `file_per` 設定を見て `mood_view` が自動的に inline / 分割を判定する予定。現在の `inline` キーワードはその自動判定を上書きする明示指定として位置付けられる。C4 導入後も「常に inline を強制する escape hatch」として残すか、深い統合で吸収するかは C4 実装時に判断。

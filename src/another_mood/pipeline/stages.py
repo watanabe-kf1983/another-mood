@@ -88,11 +88,12 @@ def generator_stage(config: ProjectConfig) -> Task:
     call = generate.bind(
         data_dir=compose_out.dir,
         templates_dir=config.templates_dir,
+        reports_file=config.reports_file,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.templates_dir],
+        watch_paths=[config.templates_dir, config.reports_file],
         upstreams=[compose_out],
     )
 
