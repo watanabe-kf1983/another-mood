@@ -28,6 +28,7 @@ class ProjectConfig(BaseSettings):
 
     # Input (user-edited)
     schema_file: Path = Field(default=Path(""))
+    reports_file: Path = Field(default=Path(""))
     contents_dir: Path = Field(default=Path(""))
     queries_dir: Path = Field(default=Path(""))
     templates_dir: Path = Field(default=Path(""))
@@ -66,6 +67,7 @@ class ProjectConfig(BaseSettings):
         }
         file_sources = {
             "schema_file": self.schema_file,
+            "reports_file": self.reports_file,
         }
         missing = [(name, p) for name, p in dir_sources.items() if not p.is_dir()] + [
             (name, p) for name, p in file_sources.items() if not p.is_file()
@@ -81,6 +83,8 @@ class ProjectConfig(BaseSettings):
         rb = _another_mood_root(pd)
         if not values.get("schema_file"):
             values["schema_file"] = pd / "definition" / "schema.yaml"
+        if not values.get("reports_file"):
+            values["reports_file"] = pd / "definition" / "reports.yaml"
         if not values.get("contents_dir"):
             values["contents_dir"] = pd / "contents"
         if not values.get("queries_dir"):

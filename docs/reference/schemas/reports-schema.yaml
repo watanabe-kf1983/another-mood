@@ -1,0 +1,25 @@
+title: ReportsSchema
+description: >-
+  Meta-schema validating the user's definition/reports.yaml. The file
+  configures report output.
+
+type: object
+properties:
+  file_per:
+    title: file_per list
+    description: >-
+      ObjectType IDs whose nodes are split out as separate files by the
+      generator — read as "one file per instance of these ObjectTypes".
+      An empty list (or omitted file_per:) means "no splitting —
+      everything inlines into a single index.md". Each entry is matched
+      verbatim against the runtime `_meta.object_type_id` of each view
+      node.
+    type: array
+    items:
+      title: ObjectType ID
+      description: >-
+        Dotted ObjectType ID — segments separated by `.`, each segment
+        is a Unicode identifier. Example: `erds.item.entities.item`.
+      type: string
+      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{N}_]*)*$"
+additionalProperties: false

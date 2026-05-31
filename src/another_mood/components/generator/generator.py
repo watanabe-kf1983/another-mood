@@ -15,6 +15,7 @@ from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
 )
+from another_mood.components.generator.reports_config import load_reports_config
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
@@ -29,8 +30,13 @@ _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
-def generate(data_dir: Path, templates_dir: Path, *, out_dir: Path) -> None:
+def generate(
+    data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
+) -> None:
     """Render views data through Jinja2 templates to Markdown."""
+    # Parsed file_per is captured but not yet evaluated — C2/C4 will
+    # consume it to drive {% mood_view %} split/inline behaviour.
+    _ = load_reports_config(reports_file)
     data = wrap_tree(load_model(data_dir))
     data["__views"] = {k: v for k, v in data.items() if k != "__views"}
     render(

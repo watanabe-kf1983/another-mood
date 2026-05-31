@@ -33,9 +33,12 @@ class TestGenerate:
         (templates_dir / "index.md").write_text("# {{ title }}\n")
 
         out_dir = tmp_path / "output"
+        reports_file = tmp_path / "reports.yaml"
+        reports_file.write_text("file_per: []\n")
         generate(
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
+            reports_file=reports_file,
             out_dir=out_dir,
         )
 
@@ -56,9 +59,12 @@ class TestGenerate:
         )
 
         out_dir = tmp_path / "output"
+        reports_file = tmp_path / "reports.yaml"
+        reports_file.write_text("file_per: []\n")
         generate(
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
+            reports_file=reports_file,
             out_dir=out_dir,
         )
 
@@ -74,9 +80,12 @@ class TestGenerate:
         (templates_dir / "index.md").write_text('{% mood_view "bad.md" with x %}')
 
         out_dir = tmp_path / "output"
+        reports_file = tmp_path / "reports.yaml"
+        reports_file.write_text("file_per: []\n")
         generate(
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
+            reports_file=reports_file,
             out_dir=out_dir,
         )
 
