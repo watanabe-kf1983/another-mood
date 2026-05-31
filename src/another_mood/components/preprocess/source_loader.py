@@ -16,7 +16,7 @@ preprocess pipeline:
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from markdown_it import MarkdownIt
 from markdown_it.tree import SyntaxTreeNode
@@ -82,21 +82,21 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
 
 
 def parse_yaml(src: Path) -> Mapping[str, object]:
-    """Parse a YAML file with ruamel.yaml, preserving source positions.
+    """Parse a YAML file with ruamel.yaml.
 
-    Scalar string values in the loaded tree are wrapped as ``UserStr``
-    carrying their source ``Location``, so downstream identifier-integrity
-    checks can point diagnostics back at the originating YAML position.
-    Dict keys are not wrapped (no current consumer needs them).
+    Scalar strings are wrapped as ``UserStr`` carrying their source
+    ``Location`` so downstream diagnostics can point back at the
+    originating YAML position. Dict keys are not wrapped.
 
-    On parse error, raises FileValidationError with a Diagnostic
-    containing line/column from the YAML error mark.
-
-    Uses a fresh YAML instance per call because ruamel.yaml's YAML()
-    is not thread-safe (see components/shared/json_data_model.py).
+    Empty (or whitespace-only) files load as ``{}``. A non-mapping
+    root (sequence, scalar) or a YAML parse error raises
+    FileValidationError with line/column.
     """
     try:
-        data: Mapping[str, object] = YAML().load(  # type: ignore[no-untyped-call]
+        # Fresh YAML() per call: caching at module scope is not safe
+        # because ruamel's YAML() shares mutable internal state across
+        # invocations (see components/shared/json_data_model.py).
+        loaded = YAML().load(  # type: ignore[no-untyped-call]
             src.read_text(encoding="utf-8")
         )
     except YAMLError as exc:
@@ -112,8 +112,27 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
                 )
             ]
         ) from exc
-    _tag_user_strings(data, src)
-    return data
+    if isinstance(loaded, Mapping):
+        data = cast(Mapping[str, object], loaded)
+        _tag_user_strings(data, src)
+        return data
+    elif loaded is None:
+        return {}
+    else:
+        raise FileValidationError(
+            diagnostics=[
+                Diagnostic(
+                    file=src,
+                    line=1,
+                    column=1,
+                    message=(
+                        f"Expected a YAML mapping at the root, "
+                        f"got {type(loaded).__name__}"
+                    ),
+                    source="ruamel.yaml",
+                )
+            ]
+        )
 
 
 def _tag_user_strings(node: object, file: Path) -> None:

@@ -26,6 +26,39 @@ class TestParseYaml:
         result = parse_yaml(f)
         assert result["key"] == "value"
 
+    def test_empty_file_returns_empty_mapping(self, tmp_path: Path) -> None:
+        # ruamel returns None for empty input; parse_yaml normalises that
+        # to {} so callers can keep using the documented Mapping shape.
+        f = tmp_path / "empty.yaml"
+        f.write_text("")
+        assert parse_yaml(f) == {}
+
+    def test_whitespace_only_file_returns_empty_mapping(self, tmp_path: Path) -> None:
+        f = tmp_path / "ws.yaml"
+        f.write_text("\n  \n")
+        assert parse_yaml(f) == {}
+
+    @pytest.mark.parametrize(
+        ("source", "expected_type"),
+        [
+            ("- a\n- b\n", "CommentedSeq"),
+            ("42\n", "int"),
+            ('"just a string"\n', "str"),
+            ("true\n", "bool"),
+        ],
+    )
+    def test_non_mapping_root_rejected(
+        self, source: str, expected_type: str, tmp_path: Path
+    ) -> None:
+        f = tmp_path / "non_mapping.yaml"
+        f.write_text(source)
+        with pytest.raises(FileValidationError) as exc_info:
+            parse_yaml(f)
+        diag = exc_info.value.diagnostics[0]
+        assert diag.file == f
+        assert "Expected a YAML mapping" in diag.message
+        assert expected_type in diag.message
+
     def test_broken_yaml_raises_diagnostic(self, tmp_path: Path) -> None:
         f = tmp_path / "broken.yaml"
         f.write_text("a: [unterminated\n")
