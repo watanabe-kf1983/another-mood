@@ -1,47 +1,37 @@
-"""Mood-view processor — {% mood_view %} tag and page writing.
+"""Mood-view processor — {% mood_view %} tag parsing and dispatch."""
 
-Owns the entire mood_view concept: Jinja2 tag parsing, data validation,
-template rendering, and file output.
-"""
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from jinja2 import Environment, nodes
+from jinja2 import nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
+
+if TYPE_CHECKING:
+    from another_mood.components.generator.template_engine import TemplateEngine
 
 PROCESSOR_KEY = "_mood_view_processor"
 
 
-def install(env: Environment, out_dir: Path) -> None:
-    """Wire mood_view processing into a Jinja2 Environment.
-
-    Must be called after env.loader is set, since the processor
-    uses the environment to render sub-templates.
-    """
-    env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(env=env, out_dir=out_dir)  # type: ignore[assignment]
-
-
 @dataclass(frozen=True)
 class MoodViewProcessorImpl:
-    env: Environment
-    out_dir: Path
+    """Routes {% mood_view %} invocations to TemplateEngine."""
+
+    engine: TemplateEngine
 
     def __call__(
         self, template_name: str, data: dict[str, Any], *, inline: bool = False
     ) -> str:
-        rendered = self.env.get_template(template_name).render(data)
         if inline:
-            return rendered
-        stem = Path(template_name).stem
+            return self.engine.render(template_name, data)
         if "id" in data:
-            out_file = self.out_dir / stem / f"{data['id']}.md"
+            out_path = Path(Path(template_name).stem) / f"{data['id']}.md"
         else:
-            out_file = self.out_dir / template_name
-        out_file.parent.mkdir(parents=True, exist_ok=True)
-        out_file.write_text(rendered, encoding="utf-8")
+            out_path = Path(template_name)
+        self.engine.render_to_file(template_name, data, out_path)
         return ""
 
 
