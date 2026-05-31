@@ -76,18 +76,10 @@ class TemplateEngine:
         self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
-        self._source_stack: list[Path] = []
         # The mood_view extension dispatches via env.globals[PROCESSOR_KEY].
         self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(engine=self)  # pyright: ignore[reportArgumentType]
 
-    def current_source(self) -> Path | None:
-        """out_dir-relative path of the page currently being rendered, or
-        None outside any ``render_to_file`` call."""
-        return self._source_stack[-1] if self._source_stack else None
-
     def render(self, template_name: str, data: Mapping[str, object]) -> str:
-        """Render and return the result. Inherits the source stack — does
-        not push, so this is for fragments inside an enclosing render_to_file."""
         return self._render(template_name, data)
 
     def render_to_file(
@@ -96,14 +88,9 @@ class TemplateEngine:
         data: Mapping[str, object],
         out_path: Path,
     ) -> None:
-        """Render and write to ``out_dir / out_path``. The out_dir-relative
-        ``out_path`` is pushed onto the source stack for the duration of
-        the render. Nothing is written if rendering fails."""
-        self._source_stack.append(out_path)
-        try:
-            rendered = self._render(template_name, data)
-        finally:
-            self._source_stack.pop()
+        """Render and write to ``out_dir / out_path``. Nothing is written
+        if rendering fails."""
+        rendered = self._render(template_name, data)
         out_file = self._out_dir / out_path
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(rendered, encoding="utf-8")
