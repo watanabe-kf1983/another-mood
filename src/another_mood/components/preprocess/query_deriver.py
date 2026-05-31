@@ -15,10 +15,16 @@ from typing import cast
 
 from another_mood.components.preprocess.normalize_core import check
 from another_mood.components.preprocess.query_normalizer import normalize_query
-from another_mood.components.preprocess.source_loader import UserStr, load_source
+from another_mood.components.shared.user_source.source_loader import (
+    UserStr,
+    load_source,
+)
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
-from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    FileValidationError,
+)
 from another_mood.components.shared.json_data_model import load_model, save_model
 from another_mood.components.shared.query import Query, QueryDeriveError
 

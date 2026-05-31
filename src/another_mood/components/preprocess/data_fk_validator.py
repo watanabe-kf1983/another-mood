@@ -20,9 +20,12 @@ Each violation is returned as a :class:`Diagnostic` with
 from collections.abc import Iterator, Mapping, Sequence
 from typing import cast
 
-from another_mood.components.preprocess.source_loader import UserStr
+from another_mood.components.shared.user_source.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.diagnostic import Diagnostic, DiagnosticSeverity
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    DiagnosticSeverity,
+)
 
 #: Attribute types whose values can serve as FK targets.  Non-scalar
 #: types (``object``, ``object[]``) carry dict / list values that are

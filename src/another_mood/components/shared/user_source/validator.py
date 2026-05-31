@@ -14,8 +14,10 @@ import jsonschema
 import regex
 from jsonschema.exceptions import best_match  # type: ignore[reportUnknownVariableType]
 
-from another_mood.components.preprocess.position_resolver import resolve_position
-from another_mood.components.shared.diagnostic import Diagnostic
+from another_mood.components.shared.user_source.position_resolver import (
+    resolve_position,
+)
+from another_mood.components.shared.user_source.diagnostic import Diagnostic
 
 
 @dataclass(frozen=True)

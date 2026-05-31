@@ -7,7 +7,7 @@ import yaml
 
 
 from another_mood.components.shared.component.component import Component, ComponentCall
-from another_mood.components.shared.diagnostic import (
+from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     DiagnosticReporter,
     DiagnosticSeverity,

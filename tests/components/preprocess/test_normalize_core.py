@@ -7,7 +7,7 @@ import yaml
 
 from another_mood.components.preprocess.content_normalizer import build_contents_schema
 from another_mood.components.preprocess.normalize_core import check, iter_normalized
-from another_mood.components.shared.diagnostic import FileValidationError
+from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import save_model
 
 

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 
-from another_mood.components.preprocess.validator import Validator
+from another_mood.components.shared.user_source.validator import Validator
 
 _ruamel = YAML()
 

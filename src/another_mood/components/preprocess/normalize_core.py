@@ -13,9 +13,12 @@ from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import cast
 
-from another_mood.components.preprocess.source_loader import load_source
-from another_mood.components.preprocess.validator import Validator
-from another_mood.components.shared.diagnostic import Diagnostic, FileValidationError
+from another_mood.components.shared.user_source.source_loader import load_source
+from another_mood.components.shared.user_source.validator import Validator
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    FileValidationError,
+)
 
 # JSON-like str-keyed mappings.
 type Schema = Mapping[str, object]

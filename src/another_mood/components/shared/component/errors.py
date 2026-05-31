@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from another_mood.components.shared.component.build_report import BuildReport
-from another_mood.components.shared.diagnostic import DiagnosticReporter
+from another_mood.components.shared.user_source.diagnostic import DiagnosticReporter
 
 _logger = getLogger(__name__)
 
