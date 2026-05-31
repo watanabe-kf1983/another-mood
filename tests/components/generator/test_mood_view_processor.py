@@ -5,13 +5,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jinja2 import DictLoader, Environment, TemplateSyntaxError
+from jinja2 import Environment, TemplateSyntaxError
 
 from another_mood.components.generator.mood_view_processor import (
     PROCESSOR_KEY,
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
+from another_mood.components.generator.template_engine import TemplateEngine
 
 
 # -- Helpers --
@@ -163,79 +164,90 @@ class TestMoodViewDataValidation:
 # -- MoodViewProcessorImpl --
 
 
-class TestMoodViewProcessorImpl:
-    def test_writes_file_to_correct_path(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
+@dataclass
+class _MockEngine:
+    """Captures calls to render / render_to_file for routing assertions."""
+
+    rendered: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
+    written: list[tuple[str, dict[str, Any], Path]] = field(default_factory=lambda: [])
+    render_return: str = "INLINED"
+
+    def render(self, template_name: str, data: dict[str, Any]) -> str:
+        self.rendered.append((template_name, data))
+        return self.render_return
+
+    def render_to_file(
+        self, template_name: str, data: dict[str, Any], out_path: Path
+    ) -> None:
+        self.written.append((template_name, data, out_path))
+
+
+class TestMoodViewProcessorImplRouting:
+    """Processor computes the out_dir-relative out_path and delegates to engine."""
+
+    def test_non_inline_with_id_writes_to_stem_subdirectory(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
         processor("profile.md", {"id": "alice", "name": "Alice"})
 
-        assert (tmp_path / "profile" / "alice.md").exists()
+        assert engine.written == [
+            (
+                "profile.md",
+                {"id": "alice", "name": "Alice"},
+                Path("profile/alice.md"),
+            ),
+        ]
+        assert engine.rendered == []
 
-    def test_file_contains_rendered_content(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("profile.md", {"id": "alice", "name": "Alice"})
+    def test_non_inline_without_id_writes_to_template_name(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor("summary.md", {"items": [1, 2, 3]})
 
-        assert (tmp_path / "profile" / "alice.md").read_text() == "hi alice"
+        assert engine.written == [
+            ("summary.md", {"items": [1, 2, 3]}, Path("summary.md")),
+        ]
 
-    def test_returns_empty_string(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"profile.md": "content"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
+    def test_non_inline_returns_empty_string(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("profile.md", {"id": "alice"})
 
         assert result == ""
 
-    def test_creates_subdirectory(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"entity-detail.md": ""})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("entity-detail.md", {"id": "user"})
+    def test_inline_delegates_to_render(self) -> None:
+        engine = _MockEngine(render_return="hi alice")
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        result = processor("profile.md", {"id": "alice"}, inline=True)
 
-        assert (tmp_path / "entity-detail").is_dir()
+        assert engine.rendered == [("profile.md", {"id": "alice"})]
+        assert engine.written == []
+        assert result == "hi alice"
 
-    def test_multiple_pages_in_same_directory(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"detail.md": "{{ id }}"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("detail.md", {"id": "a"})
-        processor("detail.md", {"id": "b"})
 
-        assert (tmp_path / "detail" / "a.md").read_text() == "a"
-        assert (tmp_path / "detail" / "b.md").read_text() == "b"
+class TestMoodViewProcessorImplViaEngine:
+    """End-to-end via a real TemplateEngine — exercises the integration."""
 
-    def test_no_id_writes_flat_file(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"summary.md": "count={{ items|length }}"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("summary.md", {"items": [1, 2, 3]})
+    def _make_engine(self, tmp_path: Path, templates: dict[str, str]) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        for name, body in templates.items():
+            (templates_dir / name).write_text(body)
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        return TemplateEngine(out_dir, templates_dir=templates_dir, filters={})
 
-        assert (tmp_path / "summary.md").read_text() == "count=3"
+    def test_writes_file_with_rendered_content(self, tmp_path: Path) -> None:
+        engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
+        processor = MoodViewProcessorImpl(engine=engine)
+        processor("profile.md", {"id": "alice", "name": "Alice"})
 
-    def test_no_id_does_not_create_subdirectory(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"report.md": "ok"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("report.md", {"data": "value"})
+        assert (tmp_path / "out" / "profile" / "alice.md").read_text() == "hi alice"
 
-        assert (tmp_path / "report.md").exists()
-        assert not (tmp_path / "report").exists()
-
-    def test_inline_returns_rendered_content(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
+    def test_inline_does_not_write_file(self, tmp_path: Path) -> None:
+        engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
+        processor = MoodViewProcessorImpl(engine=engine)
         result = processor("profile.md", {"id": "alice"}, inline=True)
 
         assert result == "hi alice"
-
-    def test_inline_does_not_write_file(self, tmp_path: Path) -> None:
-        env = Environment(keep_trailing_newline=True)
-        env.loader = DictLoader({"profile.md": "hi {{ id }}"})
-        processor = MoodViewProcessorImpl(env=env, out_dir=tmp_path)
-        processor("profile.md", {"id": "alice"}, inline=True)
-
-        assert not (tmp_path / "profile" / "alice.md").exists()
-        assert not (tmp_path / "profile").exists()
+        assert not (tmp_path / "out" / "profile" / "alice.md").exists()

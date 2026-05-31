@@ -101,10 +101,8 @@ def render(
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
 ) -> None:
     """Render a template and write the result to out_dir/index.md."""
-    rendered = TemplateEngine(
+    TemplateEngine(
         out_dir,
         templates_dir=templates_dir,
         filters=filters,
-    ).render(template_name, data)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "index.md").write_text(rendered, encoding="utf-8")
+    ).render_to_file(template_name, data, Path("index.md"))

@@ -14,8 +14,9 @@ from jinja2 import (
 )
 
 from another_mood.components.generator.mood_view_processor import (
+    PROCESSOR_KEY,
     MoodViewExtension,
-    install as install_mood_view_processor,
+    MoodViewProcessorImpl,
 )
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -70,13 +71,44 @@ class TemplateEngine:
         templates_dir: Path,
         filters: Mapping[str, Callable[..., Any]],
     ) -> None:
+        self._out_dir = out_dir
         self._env = make_environment(MD)
         self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
-        install_mood_view_processor(self._env, out_dir)
+        self._source_stack: list[Path] = []
+        # The mood_view extension dispatches via env.globals[PROCESSOR_KEY].
+        self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(engine=self)  # pyright: ignore[reportArgumentType]
+
+    def current_source(self) -> Path | None:
+        """out_dir-relative path of the page currently being rendered, or
+        None outside any ``render_to_file`` call."""
+        return self._source_stack[-1] if self._source_stack else None
 
     def render(self, template_name: str, data: Mapping[str, object]) -> str:
+        """Render and return the result. Inherits the source stack — does
+        not push, so this is for fragments inside an enclosing render_to_file."""
+        return self._render(template_name, data)
+
+    def render_to_file(
+        self,
+        template_name: str,
+        data: Mapping[str, object],
+        out_path: Path,
+    ) -> None:
+        """Render and write to ``out_dir / out_path``. The out_dir-relative
+        ``out_path`` is pushed onto the source stack for the duration of
+        the render. Nothing is written if rendering fails."""
+        self._source_stack.append(out_path)
+        try:
+            rendered = self._render(template_name, data)
+        finally:
+            self._source_stack.pop()
+        out_file = self._out_dir / out_path
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(rendered, encoding="utf-8")
+
+    def _render(self, template_name: str, data: Mapping[str, object]) -> str:
         try:
             return self._env.get_template(template_name).render(data)
         except TemplateSyntaxError as exc:
