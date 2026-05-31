@@ -146,7 +146,17 @@ prose body 等の Markdown 本文では `toc:` プレフィックス記法でア
 - **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor ID から Markdown リンク / display text / URL を生成
 - **prose body 処理フィルタ (仮称 `resolve`)**: prose body 中の `toc:` URL を実 URL に置換。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタ
 
-いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_id → ノードのマップと paging 設定 ([paging-spec.md](paging-spec.md)) を引いて実 URL を構築する。例: `[ユーザー](../erds/user-management.md#erds/user-management/entities/user)`。
+出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#erds/user-management/entities/user)`。
+
+resolver とフィルタは **out_dir-relative 座標系**で動く。source / target を同じ座標系に揃えれば、フィルタは単純に差分を取るだけで済み、resolver もファイルシステム上の絶対位置に依存しない:
+
+- **source**: `TemplateEngine.current_source()` から取得。`render_to_file` が out_dir-relative なページパスを push する
+- **target**: anchor_id → ノードマップ + paging 設定 ([paging-spec.md](paging-spec.md)) から out_dir-relative な target path を構築
+- **差分**: フィルタが `os.path.relpath(target, source.parent)` で計算
+
+いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_id → ノードのマップを引いて URL を組み立てる。
+
+**Jinja2 オプティマイザの fold 抑止**: anchor 系フィルタは `@pass_eval_context` 等で volatile マークする必要がある。Jinja2 はテンプレートコンパイル時に定数引数のフィルタ呼び出しを定数畳み込みする — これを許すと `{{ "erds/x" | anchor_link }}` がコンパイル時に評価され、そのときの `current_source()` を baked-in した URL がキャッシュに焼かれる。同テンプレートを別ページから再利用したときに相対 URL が壊れる。
 
 prose 例外の resolver 側挙動: アンカー ID を path 区切り文字 `/` で分割しつつ走査するが、`prose/` を先頭セグメントに見たときは残り全体を単一の id とみなして flat list を引く。例外はアンカー ID 構築側 (escape 省略) と整合する形で resolver にも 1 箇所だけ規則を入れる。
 
