@@ -28,7 +28,7 @@ categories:
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
       A5:
         title: ソース内相対リンク → toc 記法への変換
-        note: contents_dir 基点パス解決が必要。出力する anchor_id の形式は anchor-spec.md の規則に従う
+        note: contents_dir 基点パス解決が必要。出力する anchor_path の形式は anchor-spec.md の規則に従う
         phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
@@ -49,18 +49,18 @@ categories:
         phase: 11
         done: true
       B2:
-        title: anchor_id → ノード マップ構築
+        title: anchor_path → ノード マップ構築
         note: 走査用 lookup を pre-render 時に構築。anchor フィルタおよび resolve フィルタが共有
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B3:
-        title: ノードへの `_meta.anchor_id` / `_meta.object_type_id` 注入
-        note: anchor-spec の規則に従って各ノードの anchor_id と object_type_id を計算し `_meta` に格納。`_parent` チェーンを使う lazy 評価
+        title: ノードへの `_meta.anchor_path` / `_meta.object_type_id` 注入
+        note: anchor-spec の規則に従って各ノードの anchor_path と object_type_id を計算し `_meta` に格納。`_parent` チェーンを使う lazy 評価
         phase: 11
         done: true
       B4:
         title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
-        note: anchor ID から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
+        note: anchor path から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b2-b4-b5
       B5:
@@ -92,7 +92,7 @@ categories:
         proposal: design/generator/paging-spec.md#proposals
       C3:
         title: パス自動導出
-        note: アンカー ID に `.md` を付けたものを paging file path とする ({anchor_id}.md)
+        note: アンカーパスに `.md` を付けたものを paging file path とする ({anchor_path}.md)
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C4:

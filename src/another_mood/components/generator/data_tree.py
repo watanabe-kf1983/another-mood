@@ -24,7 +24,7 @@ class Node(Protocol):
     """
 
     _meta: "_NodeMeta"
-    """Lazy node-metadata view — anchor_id / object_type_id."""
+    """Lazy node-metadata view — anchor_path / object_type_id."""
 
 
 class ArrayNode(list[Any], Node):
@@ -72,37 +72,45 @@ class _NodeMeta:
         self._node = node
 
     @cached_property
-    def anchor_id(self) -> str:
-        """Anchor ID — `/`-joined data-tree path.
+    def anchor_path(self) -> str:
+        """Anchor path — absolute, `/`-rooted data-tree path.
 
-        Empty string at the root.  ``urllib.parse.quote`` escapes
-        URL-fragment-unsafe characters; the ``prose`` entity is exempt
-        from ``/`` escaping so that path-shaped prose IDs stay readable.
+        ``/`` at the root; every other node is the parent's path plus
+        its escaped segment.  The leading ``/`` marks the path as
+        absolute within the page's data tree (distinct from a relative
+        reference).  ``urllib.parse.quote`` escapes URL-fragment-unsafe
+        characters; the ``prose`` entity is exempt from ``/`` escaping
+        so that path-shaped prose ids stay readable.
         """
         parent = self._node._parent
         if parent is None:
-            return ""
+            return "/"
         # ``prose.item`` keeps ``/`` in id values unencoded so the
-        # path-shaped prose IDs stay readable.
+        # path-shaped prose ids stay readable.
         safe = "/" if self.object_type_id == "prose.item" else ""
         seg = quote(self._node._segment, safe=safe)
-        parent_id = parent._meta.anchor_id
-        return f"{parent_id}/{seg}" if parent_id else seg
+        parent_path = parent._meta.anchor_path
+        # The root path already ends in ``/``; avoid doubling it.
+        sep = "" if parent_path == "/" else "/"
+        return f"{parent_path}{sep}{seg}"
 
     @cached_property
     def object_type_id(self) -> str:
         """Schema-position ID — dotted path with ``.item`` for array elements.
 
-        Empty at the root.  Mirrors the ObjectType naming convention
-        used by ``data_catalog`` (``X.item.yyy.item`` etc.).
+        ``.item`` at the root — the value ``data_catalog._item_type_id``
+        yields for the empty edge path, i.e. the root object's type.
+        Top-level entities are catalog roots (``parent_entity=None``), so
+        the root's id is deliberately not a prefix of theirs; the root
+        contributes an empty prefix in the composition below.
         """
         parent = self._node._parent
         if parent is None:
-            return ""
+            return ".item"
         # Schema position of an Array element is the constant ``item`` —
         # the element's ``id`` only matters for anchor identity.
         seg = "item" if isinstance(parent, ArrayNode) else self._node._segment
-        parent_id = parent._meta.object_type_id
+        parent_id = "" if parent._parent is None else parent._meta.object_type_id
         return f"{parent_id}.{seg}" if parent_id else seg
 
 

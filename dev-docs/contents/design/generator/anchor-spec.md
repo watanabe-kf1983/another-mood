@@ -1,19 +1,19 @@
 # Anchor Specification
 
-アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。アンカーを一意に指す文字列を **アンカー ID** と呼ぶ。
+アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。アンカーを一意に指す文字列を **アンカーパス** と呼ぶ。
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B2, B4, B5, B6](../../../tasks.md)（anchor_id → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）。親参照注入 (B1) と `_meta.anchor_id` / `_meta.object_type_id` 注入 (B3) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
+> **未実装** — Phase 11 タスク [B2, B4, B5, B6](../../../tasks.md)（anchor_path → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）。親参照注入 (B1) と `_meta.anchor_path` / `_meta.object_type_id` 注入 (B3) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
 
 ### 用語
 
 - **アンカー (anchor)**: リンクされ得る位置・対象。HTML/Markdown の anchor target と同義。本ツールではデータツリー上の各ノードがアンカーとなる
-- **アンカー ID (anchor ID)**: そのアンカーを一意に識別する文字列。本ツールが生成する。URL fragment として URL に埋め込まれる
+- **アンカーパス (anchor path)**: そのアンカーを一意に識別する文字列。本ツールが生成する。URL fragment として URL に埋め込まれる
 
 ### ID 体系
 
-アンカー ID は **データツリー上のパス** を `/` 区切りで表現した文字列。
+アンカーパスは **データツリー上のパス** を `/` 区切りで表現した文字列。root を `/` とする **絶対パス形式**で、先頭の `/` が「データツリー root を起点とする絶対座標」であることを示す（相対参照と区別される）。
 
 #### セグメント構成
 
@@ -22,17 +22,17 @@
 - **dict キー（singleton 配下のキー）**: そのキーをそのまま使う
 - **リスト要素**: その要素の `id` フィールドの値を使う
 
-リスト要素に `id` フィールドが無い場合（Array pattern で id を schema 上要求していない場合、[schema-spec.md](../normalizer/schema-spec.md) 参照）、その要素はアンカー ID を持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカー ID を持たない。
+リスト要素に `id` フィールドが無い場合（Array pattern で id を schema 上要求していない場合、[schema-spec.md](../normalizer/schema-spec.md) 参照）、その要素はアンカーパスを持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカーパスを持たない。
 
 #### Escape 規則
 
-アンカー ID は URL fragment として埋め込まれる文字列。`/` を path 区切り文字として予約しているため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**。
+アンカーパスは URL fragment として埋め込まれる文字列。`/` を path 区切り文字として予約しているため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**。
 
-その他の URL-fragment-unsafe な文字（空白、`#` 等）も percent-encoding する。HTML5 の `id` 属性が空白を許容しないため、空白を含む id を持つレコードは技術的にアンカー ID 化不可（[未決事項](#未決事項)参照）。
+その他の URL-fragment-unsafe な文字（空白、`#` 等）も percent-encoding する。HTML5 の `id` 属性が空白を許容しないため、空白を含む id を持つレコードは技術的にアンカーパス化不可（[未決事項](#未決事項)参照）。
 
 #### Prose の例外
 
-`prose` entity に限り、id 内の `/` を escape **せず** にアンカー ID へ素通しで埋め込む。
+`prose` entity に限り、id 内の `/` を escape **せず** にアンカーパスへ素通しで埋め込む。
 
 理由:
 
@@ -74,55 +74,56 @@ prose:                             # flat list、id はファイル相対パス
     title: Schema Specification
 ```
 
-| アンカー ID | 指す対象 |
+| アンカーパス | 指す対象 |
 |---|---|
-| `overview` | overview singleton |
-| `erds/user-management` | user-management の ER図 |
-| `erds/user-management/entities/user` | user-management 配下の user エンティティ |
-| `erds/order-flow/entities/user` | order-flow 配下の user エンティティ（衝突しない） |
-| `screens/user-list` | user-list 画面 |
-| `prose/design/architecture` | Architecture 散文（id 内 `/` を素通し） |
-| `prose/design/normalizer/schema-spec` | Schema Specification 散文 |
+| `/` | root（views 全体） |
+| `/overview` | overview singleton |
+| `/erds/user-management` | user-management の ER図 |
+| `/erds/user-management/entities/user` | user-management 配下の user エンティティ |
+| `/erds/order-flow/entities/user` | order-flow 配下の user エンティティ（衝突しない） |
+| `/screens/user-list` | user-list 画面 |
+| `/prose/design/architecture` | Architecture 散文（id 内 `/` を素通し） |
+| `/prose/design/normalizer/schema-spec` | Schema Specification 散文 |
 
-旧仕様（`{class}.item.{id}` 形式）と異なり、新仕様ではアンカー ID が **データツリー上の到達経路そのもの** で構成されるため、ネストしたリスト要素間で id が重複してもアンカー ID が衝突しない。
+旧仕様（`{class}.item.{id}` 形式）と異なり、新仕様ではアンカーパスが **データツリー上の到達経路そのもの** で構成されるため、ネストしたリスト要素間で id が重複してもアンカーパスが衝突しない。
 
 #### クラスとの関係
 
-class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカー ID とは直交する概念:
+class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
 
 - **class**: schema 上の位置を示す path-based 名（例: `categories.tasks`, `categories.item.tasks.item`）。クエリ DSL の `from:`、paging 設定、FK 解決、表示見出しで参照される
-- **アンカー ID**: データツリー上の実体パス（例: `categories/web/tasks/foo`）。リンク解決でのみ使われる
+- **アンカーパス**: データツリー上の実体パス（例: `/categories/web/tasks/foo`）。リンク解決でのみ使われる
 
-旧仕様ではアンカー ID を `{class}.{id}` と class 名込みで構築していたが、新仕様ではアンカー ID は実体パスのみで構成する。class はアンカー ID 構築には登場しない。
+旧仕様ではアンカーパスを `{class}.{id}` と class 名込みで構築していたが、新仕様ではアンカーパスは実体パスのみで構成する。class はアンカーパス構築には登場しない。
 
 ### リンク記法
 
 #### テンプレート内のアンカー参照
 
-テンプレート内では anchor ID から 3 種類のフィルタを使い分ける:
+テンプレート内では anchor path から 3 種類のフィルタを使い分ける:
 
 ```jinja2
-{{ "erds/user-management/entities/user" | anchor_link }}
+{{ "/erds/user-management/entities/user" | anchor_link }}
 {# → [<display>](<URL>) 形式の Markdown リンク #}
 
-{{ "erds/user-management/entities/user" | anchor_link("ER 図") }}
+{{ "/erds/user-management/entities/user" | anchor_link("ER 図") }}
 {# → display text を明示。[ER 図](<URL>) #}
 
-{{ "erds/user-management/entities/user" | anchor_title }}
+{{ "/erds/user-management/entities/user" | anchor_title }}
 {# → display 文字列のみ #}
 
-{{ "erds/user-management/entities/user" | anchor_url }}
+{{ "/erds/user-management/entities/user" | anchor_url }}
 {# → URL 文字列のみ #}
 ```
 
-display text は対象ノードから `title` → `name` → `id` → anchor_id 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`anchor_link(arg)` のように引数で渡せば override。
+display text は対象ノードから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`anchor_link(arg)` のように引数で渡せば override。
 
 #### Markdown 本文中のアンカー参照
 
-prose body 等の Markdown 本文では `toc:` プレフィックス記法でアンカー ID を URL として埋め込む:
+prose body 等の Markdown 本文では `toc:` プレフィックス記法でアンカーパスを URL として埋め込む:
 
 ```markdown
-ユーザーの詳細は[ユーザー](toc:erds/user-management/entities/user)を参照。
+ユーザーの詳細は[ユーザー](toc:/erds/user-management/entities/user)を参照。
 ```
 
 この記法は二役を兼ねる:
@@ -136,31 +137,31 @@ prose body 等の Markdown 本文では `toc:` プレフィックス記法でア
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
 [Composer](../composer/composer.md)
 ↓ Normalizer が変換 ↓
-[Composer](toc:prose/design/composer/composer)
+[Composer](toc:/prose/design/composer/composer)
 ```
 
 ### リンク解決
 
 リンク解決は Generator の **pre-render 段階で完結**する。post-render での文字列置換は行わない。
 
-- **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor ID から Markdown リンク / display text / URL を生成
+- **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor path から Markdown リンク / display text / URL を生成
 - **prose body 処理フィルタ (仮称 `resolve`)**: prose body 中の `toc:` URL を実 URL に置換。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタ
 
-出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#erds/user-management/entities/user)`。
+出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
 
 resolver とフィルタは **out_dir-relative 座標系**で動く:
 
 - **source**: render に渡された node の `_meta.page_url` ([B6](../../../tasks.md))。`@pass_context` フィルタが `ctx["_meta"]["page_url"]` として読む
-- **target**: anchor_id → ノードマップで target ノードを引いて `_meta.page_url` を取得
+- **target**: anchor_path → ノードマップで target ノードを引いて `_meta.page_url` を取得
 - **差分**: フィルタが `os.path.relpath(target, source.parent)` で計算
 
-フィルタは `@pass_context` で受ける必要がある。理由は二つ: (1) ctx 経由で source 側 URL を読む、(2) Jinja2 オプティマイザの定数畳み込みを抑止する — 定数引数の `{{ "erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。
+フィルタは `@pass_context` で受ける必要がある。理由は二つ: (1) ctx 経由で source 側 URL を読む、(2) Jinja2 オプティマイザの定数畳み込みを抑止する — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。
 
-いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_id → ノードのマップを引いて URL を組み立てる。
+いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_path → ノードのマップを引いて URL を組み立てる。
 
-prose 例外の resolver 側挙動: アンカー ID を path 区切り文字 `/` で分割しつつ走査するが、`prose/` を先頭セグメントに見たときは残り全体を単一の id とみなして flat list を引く。例外はアンカー ID 構築側 (escape 省略) と整合する形で resolver にも 1 箇所だけ規則を入れる。
+prose 例外の resolver 側挙動: アンカーパスを path 区切り文字 `/` で分割しつつ走査するが、先頭セグメントが `prose`（先頭 `/` の次）のときは残り全体を単一の id とみなして flat list を引く。例外はアンカーパス構築側 (escape 省略) と整合する形で resolver にも 1 箇所だけ規則を入れる。
 
 ### 未決事項
 
-- **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカー ID 化不可。ビルド時に警告して当該 id 配下をアンカー ID 無し扱いとする方針（[F4 / D 群と連携、未タスク化](../../../tasks.md)）
+- **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（[F4 / D 群と連携、未タスク化](../../../tasks.md)）
 - **`toc:` プレフィックスの名前**: 実態は「アンカー参照」で TOC ではない。実装時（[B4, B5](../../../tasks.md)）に再検討する

@@ -120,33 +120,33 @@ class TestSurface:
         assert sorted(node.items()) == [("a", 1), ("b", 2)]
 
 
-class TestMetaAnchorId:
-    """``_meta.anchor_id`` builds a ``/``-joined data-tree path per anchor-spec."""
+class TestMetaAnchorPath:
+    """``_meta.anchor_path`` builds an absolute ``/``-rooted data-tree path."""
 
-    def test_root_is_empty(self) -> None:
-        assert wrap_tree({})._meta.anchor_id == ""
+    def test_root_is_slash(self) -> None:
+        assert wrap_tree({})._meta.anchor_path == "/"
 
     def test_singleton_mapping(self) -> None:
         root = wrap_tree({"overview": {"title": "T"}})
-        assert root["overview"]._meta.anchor_id == "overview"
+        assert root["overview"]._meta.anchor_path == "/overview"
 
     def test_top_level_array(self) -> None:
         root = wrap_tree({"erds": []})
-        assert root["erds"]._meta.anchor_id == "erds"
+        assert root["erds"]._meta.anchor_path == "/erds"
 
     def test_array_element_uses_id(self) -> None:
         root = wrap_tree({"erds": [{"id": "user-mgmt"}]})
-        assert root["erds"][0]._meta.anchor_id == "erds/user-mgmt"
+        assert root["erds"][0]._meta.anchor_path == "/erds/user-mgmt"
 
     def test_nested_path(self) -> None:
         root = wrap_tree({"erds": [{"id": "user-mgmt", "entities": [{"id": "user"}]}]})
         entity = root["erds"][0]["entities"][0]
-        assert entity._meta.anchor_id == "erds/user-mgmt/entities/user"
+        assert entity._meta.anchor_path == "/erds/user-mgmt/entities/user"
 
     def test_nested_array_segment(self) -> None:
         root = wrap_tree({"erds": [{"id": "user-mgmt", "entities": [{"id": "user"}]}]})
         entities = root["erds"][0]["entities"]
-        assert entities._meta.anchor_id == "erds/user-mgmt/entities"
+        assert entities._meta.anchor_path == "/erds/user-mgmt/entities"
 
     def test_sibling_ids_in_different_arrays_do_not_collide(self) -> None:
         root = wrap_tree(
@@ -157,31 +157,31 @@ class TestMetaAnchorId:
                 ]
             }
         )
-        a = root["erds"][0]["entities"][0]._meta.anchor_id
-        b = root["erds"][1]["entities"][0]._meta.anchor_id
-        assert a == "erds/user-mgmt/entities/user"
-        assert b == "erds/order-flow/entities/user"
+        a = root["erds"][0]["entities"][0]._meta.anchor_path
+        b = root["erds"][1]["entities"][0]._meta.anchor_path
+        assert a == "/erds/user-mgmt/entities/user"
+        assert b == "/erds/order-flow/entities/user"
         assert a != b
 
     def test_slash_in_id_is_percent_encoded_outside_prose(self) -> None:
         root = wrap_tree({"items": [{"id": "a/b"}]})
-        assert root["items"][0]._meta.anchor_id == "items/a%2Fb"
+        assert root["items"][0]._meta.anchor_path == "/items/a%2Fb"
 
     def test_slash_in_id_is_kept_for_prose(self) -> None:
         root = wrap_tree({"prose": [{"id": "design/architecture"}]})
-        assert root["prose"][0]._meta.anchor_id == "prose/design/architecture"
+        assert root["prose"][0]._meta.anchor_path == "/prose/design/architecture"
 
     def test_space_in_id_is_percent_encoded_even_in_prose(self) -> None:
         root = wrap_tree({"prose": [{"id": "design/with space"}]})
-        assert root["prose"][0]._meta.anchor_id == "prose/design/with%20space"
+        assert root["prose"][0]._meta.anchor_path == "/prose/design/with%20space"
 
     def test_hash_in_id_is_percent_encoded(self) -> None:
         root = wrap_tree({"items": [{"id": "a#b"}]})
-        assert root["items"][0]._meta.anchor_id == "items/a%23b"
+        assert root["items"][0]._meta.anchor_path == "/items/a%23b"
 
     def test_numeric_id_is_stringified(self) -> None:
         root = wrap_tree({"items": [{"id": 42}]})
-        assert root["items"][0]._meta.anchor_id == "items/42"
+        assert root["items"][0]._meta.anchor_path == "/items/42"
 
     def test_result_is_cached(self) -> None:
         root = wrap_tree({"items": [{"id": "x"}]})
@@ -192,8 +192,9 @@ class TestMetaAnchorId:
 class TestMetaObjectTypeId:
     """``_meta.object_type_id`` mirrors the dotted ObjectType naming."""
 
-    def test_root_is_empty(self) -> None:
-        assert wrap_tree({})._meta.object_type_id == ""
+    def test_root_is_item(self) -> None:
+        # ``_item_type_id([])`` — the root object's type id.
+        assert wrap_tree({})._meta.object_type_id == ".item"
 
     def test_singleton_mapping(self) -> None:
         root = wrap_tree({"overview": {}})
