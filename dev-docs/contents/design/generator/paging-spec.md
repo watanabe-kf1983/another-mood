@@ -51,12 +51,12 @@ profiles:
 
 ### パス自動導出
 
-分割対象 ObjectType のページパスはアンカー ID から直接導出される — **アンカー ID に `.md` を付けたものがファイルパス**（[anchor-spec](anchor-spec.md) 参照）:
+分割対象 ObjectType のページパスはアンカーパスから直接導出される — **アンカーパスに `.md` を付けたものがファイルパス**（[anchor-spec](anchor-spec.md) 参照）:
 
-- リスト要素: `{anchor_id}.md`（例: `erds/user-management.md`、`erds/user-management/entities/user.md`）
-- シングルトン: `{anchor_id}.md`（例: `overview.md`）
+- リスト要素: `{anchor_path}.md`（例: `/erds/user-management.md`、`/erds/user-management/entities/user.md`）
+- シングルトン: `{anchor_path}.md`（例: `/overview.md`）
 
-アンカー ID は `/` 区切りの path 形式なので、そのままファイルシステム上のパスとして使える。これによりアンカー ID 規則と paging path 規則が同じ shape で表現される。
+アンカーパスは root を `/` とする絶対パス形式なので、先頭の `/` を out_dir 起点とみなして解決する（`out_dir` への join 時に先頭 `/` を除く）。これによりアンカーパス規則と paging path 規則が同じ shape で表現される。
 
 ### 分割ルール
 
