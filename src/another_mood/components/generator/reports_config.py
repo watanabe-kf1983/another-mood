@@ -42,6 +42,17 @@ class ReportsConfig:
         file_per_raw = cast(Sequence[object], data.get("file_per") or ())
         return cls(file_per=tuple(str(p) for p in file_per_raw))
 
+    def is_split_target(self, object_type_id: str) -> bool:
+        """Whether nodes of ``object_type_id`` are split into their own page.
+
+        A node is a split target when its ``_meta.object_type_id``
+        (:mod:`another_mood.components.generator.data_tree`) is listed in
+        ``file_per``.  Takes the id string rather than a node to keep this
+        config decoupled from the node tree.  ``file_per`` is small, so a
+        linear membership test is fine.
+        """
+        return object_type_id in self.file_per
+
 
 def load_reports_config(reports_file: Path) -> ReportsConfig:
     """Validate ``reports.yaml`` against ReportsSchema and return the parsed config.

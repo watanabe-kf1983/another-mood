@@ -58,3 +58,23 @@ def test_load_empty_file_per(tmp_path: Path) -> None:
     assert load_reports_config(_write(tmp_path, "file_per: []\n")) == ReportsConfig(
         file_per=()
     )
+
+
+# ── is_split_target ────────────────────────────────────────────────
+
+
+def test_is_split_target_listed() -> None:
+    config = ReportsConfig(file_per=("erds.item", "erds.item.entities.item"))
+    assert config.is_split_target("erds.item")
+    assert config.is_split_target("erds.item.entities.item")
+
+
+def test_is_split_target_not_listed() -> None:
+    config = ReportsConfig(file_per=("erds.item",))
+    assert not config.is_split_target("screens.item")
+    # A prefix of a listed id is not itself a target.
+    assert not config.is_split_target("erds")
+
+
+def test_is_split_target_empty_file_per() -> None:
+    assert not ReportsConfig(file_per=()).is_split_target("erds.item")
