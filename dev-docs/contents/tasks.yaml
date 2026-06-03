@@ -69,10 +69,10 @@ categories:
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b4-b5
       B6:
-        title: "`_meta.page_path` の算出"
-        note: page_path を完全導出。file_per を参照し、非 root の分割対象は anchor_path 先頭 / を落とし .md、root は index.md 固定、非分割対象は親を遡る。レポートルート相対 (reports/・profile 段は書き出し側 C3 が付与)。fragment は anchor_path 由来で resolver 側合成のため、ノードには path のみ持たせる
+        title: ページパスの導出 (ReportsConfig.page_path)
+        note: page_path は (node, file_per) の関数なのでノードに焼かず ReportsConfig.page_path(node) に置く。非 root の分割対象は anchor_path 先頭 / を落とし .md、root は index.md、非分割対象は最寄りの分割境界に解決。レポートルート相対 (reports/・profile 段は書き出し側 C3 が付与)。木の遡上は data_tree の free function nearest_ancestor(node, match) に切り出し、消費は B4/C4
         phase: 11
-        proposal: design/generator/generator.md#_metapage_path-b6
+        proposal: design/generator/generator.md#ページパスの導出-b6
 
   C:
     title: ページ分割 (paging)

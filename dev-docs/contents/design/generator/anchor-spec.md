@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B4, B5, B6](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_path` 算出）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
+> **未実装** — Phase 11 タスク [B4, B5, B6](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ / page_path 導出）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
 
 ### 用語
 
@@ -154,16 +154,16 @@ URL は **path 部 + fragment 部** に分けて組み立てる:
 - **path 部**: source ページから target ページへの相対パス
 - **fragment 部**: target ノードの `_meta.anchor_path` をそのまま使う (full anchor_path 形式)。HTML id 側も同じ文字列で発行する ([generator.md](generator.md) の id 発行と対応)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
 
-resolver とフィルタは **レポートルート相対 座標系**で動く (`_meta.page_path` の定義に同じ — [generator.md](generator.md#_metapage_path-b6) 参照。`reports/`・profile 段は付かない):
+resolver とフィルタは **レポートルート相対 座標系**で動く (page_path の定義に同じ — [generator.md](generator.md#ページパスの導出-b6) 参照。`reports/`・profile 段は付かない)。ページパスは `config.page_path(node)` ([B6](../../../tasks.md)) で算出する。page_path はノードに焼かず、resolver が必要時に config から引く:
 
-- **source ページパス**: render に渡された node の `_meta.page_path` ([B6](../../../tasks.md))。`@pass_context` フィルタが `ctx["_meta"]["page_path"]` として読む
-- **target ページパス**: anchor_path → ノードマップで target ノードを引いて `_meta.page_path` を取得
+- **source ページパス**: resolver に render 単位で束縛された source node から `config.page_path(source_node)`
+- **target ページパス**: anchor_path → ノードマップで target ノードを引いて `config.page_path(target_node)`
 - **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算。source/target が同一レポート内なら共通のマウント先 (`reports/[{profile}/]`) は相殺されるので、原点をレポートルートに取って差し支えない
 - **最終 URL**: `{path 部}#{target._meta.anchor_path}`
 
-`_meta` に持たせるのは **path のみ** (`_meta.page_url` のような結合済み URL 文字列はノードに持たない)。fragment は常に anchor_path から派生するので、結合は URL を必要とするフィルタ側でその場で行う。
+ノードには page_path も結合済み URL も焼かない。fragment は常に anchor_path から派生し、page_path は config 依存なので、いずれも URL を必要とするフィルタ側でその場で組む。
 
-フィルタは `@pass_context` で受ける必要がある。理由は二つ: (1) ctx 経由で source 側 page path を読む、(2) Jinja2 オプティマイザの定数畳み込みを抑止する — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。
+フィルタは `@pass_context` で受ける必要がある。理由は Jinja2 オプティマイザの定数畳み込みを抑止するため — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。`@pass_context` は context 依存フィルタとしてマークし、この畳み込みを防ぐ (source node は ctx ではなく resolver の closure binding から取る)。
 
 いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_path → ノードのマップを引いて URL を組み立てる。
 
