@@ -1,3 +1,6 @@
+# ``page_path`` reads ``node._meta`` — a template-public field under the
+# reserved ``_`` prefix (see data_tree.py), not a Python-protected attr.
+# pyright: reportPrivateUsage=false
 """Reports config — validate and parse definition/reports.yaml for the generator.
 
 Reads the user's `reports.yaml`, validates it against the built-in
@@ -15,6 +18,7 @@ from importlib import resources
 from pathlib import Path
 from typing import cast
 
+from another_mood.components.generator.data_tree import Node, nearest_ancestor
 from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.user_source.source_loader import parse_yaml
@@ -47,11 +51,25 @@ class ReportsConfig:
 
         A node is a split target when its ``_meta.object_type_id``
         (:mod:`another_mood.components.generator.data_tree`) is listed in
-        ``file_per``.  Takes the id string rather than a node to keep this
-        config decoupled from the node tree.  ``file_per`` is small, so a
+        ``file_per``.  Takes the id string rather than a node since the
+        membership test needs only the id.  ``file_per`` is small, so a
         linear membership test is fine.
         """
         return object_type_id in self.file_per
+
+    def page_path(self, node: Node) -> str:
+        """Report-root-relative page path the ``node`` is rendered on.
+
+        The nearest split-target ``self``-or-ancestor's own page
+        (``{anchor_path}.md``), or ``index.md`` when no ancestor is a
+        split boundary (including the root).
+        """
+        page = nearest_ancestor(
+            node, lambda n: self.is_split_target(n._meta.object_type_id)
+        )
+        if page is None:
+            return "index.md"
+        return page._meta.anchor_path.removeprefix("/") + ".md"
 
 
 def load_reports_config(reports_file: Path) -> ReportsConfig:

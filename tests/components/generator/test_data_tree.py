@@ -7,8 +7,10 @@ import pytest
 from another_mood.components.generator.data_tree import (
     ArrayNode,
     MappingNode,
+    Node,
     build_anchor_map,
     iter_nodes,
+    nearest_ancestor,
     wrap_tree,
 )
 
@@ -278,3 +280,29 @@ class TestBuildAnchorMap:
         anchors = build_anchor_map({"overview": {}})
         assert isinstance(anchors["/"], MappingNode)
         assert anchors["/"]._parent is None
+
+
+class TestNearestAncestor:
+    """``nearest_ancestor`` walks ``_parent`` up, ``self`` first."""
+
+    def test_match_on_self_returns_self(self) -> None:
+        root = wrap_tree({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
+        entity = root["erds"][0]["entities"][0]
+        assert nearest_ancestor(entity, lambda _: True) is entity
+
+    def test_returns_nearest_matching_ancestor(self) -> None:
+        root = wrap_tree({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
+        entity = root["erds"][0]["entities"][0]
+
+        def is_erd_element(n: Node) -> bool:
+            return n._meta.object_type_id == "erds.item"
+
+        assert nearest_ancestor(entity, is_erd_element) is root["erds"][0]
+
+    def test_none_when_no_ancestor_matches(self) -> None:
+        root = wrap_tree({"erds": [{"id": "u"}]})
+        assert nearest_ancestor(root["erds"][0], lambda _: False) is None
+
+    def test_root_matches_itself(self) -> None:
+        root = wrap_tree({})
+        assert nearest_ancestor(root, lambda n: n._parent is None) is root
