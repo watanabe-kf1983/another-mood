@@ -50,9 +50,9 @@ categories:
         done: true
       B2:
         title: anchor_path → ノード マップ構築
-        note: 走査用 lookup を pre-render 時に構築。anchor フィルタおよび resolve フィルタが共有
+        note: full anchor_path をキーにしたフラットマップを wrap の 1 パスで構築 (`build_anchor_map`)。anchor フィルタおよび resolve フィルタが共有
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
+        done: true
       B3:
         title: ノードへの `_meta.anchor_path` / `_meta.object_type_id` 注入
         note: anchor-spec の規則に従って各ノードの anchor_path と object_type_id を計算し `_meta` に格納。`_parent` チェーンを使う lazy 評価
@@ -62,12 +62,12 @@ categories:
         title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
         note: anchor path から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
+        proposal: design/generator/generator.md#リンク解決-b4-b5
       B5:
         title: prose body 処理フィルタ (`resolve`)
         note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b2-b4-b5
+        proposal: design/generator/generator.md#リンク解決-b4-b5
       B6:
         title: "`_meta.page_url` の算出"
         note: file_per 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携

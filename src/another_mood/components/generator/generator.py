@@ -8,9 +8,9 @@ import shutil
 from collections.abc import Callable, Mapping
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from another_mood.components.generator.data_tree import wrap_tree
+from another_mood.components.generator.data_tree import MappingNode, build_anchor_map
 from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
@@ -37,7 +37,10 @@ def generate(
     # Parsed file_per is captured but not yet evaluated — C2/C4 will
     # consume it to drive {% mood_view %} split/inline behaviour.
     _ = load_reports_config(reports_file)
-    data = wrap_tree(load_model(data_dir))
+    # Build the anchor_path -> node map (consumed by the B4/B5 link
+    # resolver); the root is the "/" entry.
+    anchors = build_anchor_map(load_model(data_dir))
+    data = cast(MappingNode, anchors["/"])
     data["__views"] = {k: v for k, v in data.items() if k != "__views"}
     render(
         "__root.md",

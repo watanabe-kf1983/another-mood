@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B2, B4, B5, B6](../../../tasks.md)（anchor_path → ノードマップ / anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）。親参照注入 (B1) と `_meta.anchor_path` / `_meta.object_type_id` 注入 (B3) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
+> **未実装** — Phase 11 タスク [B4, B5, B6](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
 
 ### 用語
 
@@ -159,7 +159,7 @@ resolver とフィルタは **out_dir-relative 座標系**で動く:
 
 いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_path → ノードのマップを引いて URL を組み立てる。
 
-prose 例外の resolver 側挙動: アンカーパスを path 区切り文字 `/` で分割しつつ走査するが、先頭セグメントが `prose`（先頭 `/` の次）のときは残り全体を単一の id とみなして flat list を引く。例外はアンカーパス構築側 (escape 省略) と整合する形で resolver にも 1 箇所だけ規則を入れる。
+prose 例外の resolver 側挙動: マップは full anchor_path をキーにするフラットな dict ([generator.md](generator.md#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) の B2) なので、resolver はアンカーパスを分割せず**そのままキーで引く**。prose の `/` 素通しはアンカーパス構築側で吸収済みのため、resolver 側に prose 例外の特別扱いは要らない（例: `/prose/design/architecture` はそのキーで直に当たる）。
 
 ### 未決事項
 

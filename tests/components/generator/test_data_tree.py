@@ -7,6 +7,8 @@ import pytest
 from another_mood.components.generator.data_tree import (
     ArrayNode,
     MappingNode,
+    build_anchor_map,
+    iter_nodes,
     wrap_tree,
 )
 
@@ -222,3 +224,57 @@ class TestMetaObjectTypeId:
         root = wrap_tree({"meta": {"about": {}}})
         assert root["meta"]._meta.object_type_id == "meta"
         assert root["meta"]["about"]._meta.object_type_id == "meta.about"
+
+
+class TestIterNodes:
+    """``iter_nodes`` walks exactly the wrapped (anchorable) nodes."""
+
+    def test_root_yielded_first(self) -> None:
+        root = wrap_tree({"a": {}})
+        assert next(iter(iter_nodes(root))) is root
+
+    def test_visits_every_wrapped_node(self) -> None:
+        root = wrap_tree({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
+        paths = {n._meta.anchor_path for n in iter_nodes(root)}
+        assert paths == {
+            "/",
+            "/erds",
+            "/erds/u",
+            "/erds/u/entities",
+            "/erds/u/entities/x",
+        }
+
+    def test_skips_idless_element_and_its_subtree(self) -> None:
+        root = wrap_tree({"items": [{"text": "no-id", "child": {"id": "deep"}}]})
+        paths = {n._meta.anchor_path for n in iter_nodes(root)}
+        assert paths == {"/", "/items"}
+
+    def test_skips_nested_array(self) -> None:
+        root = wrap_tree({"grid": [[{"id": "x"}]]})
+        paths = {n._meta.anchor_path for n in iter_nodes(root)}
+        assert paths == {"/", "/grid"}
+
+
+class TestBuildAnchorMap:
+    """``build_anchor_map`` keys each wrapped node by its own anchor_path.
+
+    Which nodes are anchorable is ``iter_nodes``' contract (see
+    :class:`TestIterNodes`); the anchor_path value — prose exception
+    included — is ``_meta``'s (see :class:`TestMetaAnchorPath`).  Here we
+    only pin what this function itself adds: the path-keyed index and the
+    ``"/"`` root entry.
+    """
+
+    def test_each_node_keyed_by_its_anchor_path(self) -> None:
+        anchors = build_anchor_map({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
+        for path, node in anchors.items():
+            assert node._meta.anchor_path == path
+        # The value is the identical wrapped node, reachable via the tree.
+        u = anchors["/erds/u"]
+        assert isinstance(u, MappingNode)
+        assert anchors["/erds/u/entities/x"] is u["entities"][0]
+
+    def test_root_is_the_slash_entry(self) -> None:
+        anchors = build_anchor_map({"overview": {}})
+        assert isinstance(anchors["/"], MappingNode)
+        assert anchors["/"]._parent is None
