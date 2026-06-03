@@ -21,7 +21,7 @@ file_per:
 
 ## Proposals
 
-> **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1 で `reports.yaml` の読み込み・形式検証は完了。以下は `file_per` 設定を実際に評価してページ分割を駆動する未実装部分。現在の `{% mood_view %}` は常に分割で、`file_per` 設定は読まれない。
+> **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1 で `reports.yaml` の読み込み・形式検証、C2 で `file_per` 評価 (`ReportsConfig.is_split_target`) は完了。以下は評価結果で実際にページ分割を駆動する未実装部分 (C3〜C6)。現在の `{% mood_view %}` は常に分割で、`file_per` 設定はまだ出力に反映されない。
 
 ### 複数プロファイル
 

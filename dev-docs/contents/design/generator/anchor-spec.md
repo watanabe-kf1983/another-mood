@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B4, B5, B6](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ / page_path 導出）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
+> **未実装** — Phase 11 タスク [B4, B5](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2)・page_path 導出 (B6) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
 
 ### 用語
 
