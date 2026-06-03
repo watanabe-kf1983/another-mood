@@ -4,7 +4,7 @@
 
 ## Proposals
 
-> **未実装** — Phase 11 タスク [B4, B5, B6](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_url` 算出）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
+> **未実装** — Phase 11 タスク [B4, B5, B6](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ / `_meta.page_path` 算出）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
 
 ### 用語
 
@@ -149,13 +149,21 @@ prose body 等の Markdown 本文では `toc:` プレフィックス記法でア
 
 出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
 
+URL は **path 部 + fragment 部** に分けて組み立てる:
+
+- **path 部**: source ページから target ページへの相対パス
+- **fragment 部**: target ノードの `_meta.anchor_path` をそのまま使う (full anchor_path 形式)。HTML id 側も同じ文字列で発行する ([generator.md](generator.md) の id 発行と対応)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
+
 resolver とフィルタは **out_dir-relative 座標系**で動く:
 
-- **source**: render に渡された node の `_meta.page_url` ([B6](../../../tasks.md))。`@pass_context` フィルタが `ctx["_meta"]["page_url"]` として読む
-- **target**: anchor_path → ノードマップで target ノードを引いて `_meta.page_url` を取得
-- **差分**: フィルタが `os.path.relpath(target, source.parent)` で計算
+- **source ページパス**: render に渡された node の `_meta.page_path` ([B6](../../../tasks.md))。`@pass_context` フィルタが `ctx["_meta"]["page_path"]` として読む
+- **target ページパス**: anchor_path → ノードマップで target ノードを引いて `_meta.page_path` を取得
+- **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算
+- **最終 URL**: `{path 部}#{target._meta.anchor_path}`
 
-フィルタは `@pass_context` で受ける必要がある。理由は二つ: (1) ctx 経由で source 側 URL を読む、(2) Jinja2 オプティマイザの定数畳み込みを抑止する — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。
+`_meta` に持たせるのは **path のみ** (`_meta.page_url` のような結合済み URL 文字列はノードに持たない)。fragment は常に anchor_path から派生するので、結合は URL を必要とするフィルタ側でその場で行う。
+
+フィルタは `@pass_context` で受ける必要がある。理由は二つ: (1) ctx 経由で source 側 page path を読む、(2) Jinja2 オプティマイザの定数畳み込みを抑止する — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。
 
 いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_path → ノードのマップを引いて URL を組み立てる。
 
