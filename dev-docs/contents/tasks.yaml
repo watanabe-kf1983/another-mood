@@ -69,10 +69,10 @@ categories:
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b4-b5
       B6:
-        title: "`_meta.page_url` の算出"
-        note: file_per 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携
+        title: "`_meta.page_path` の算出"
+        note: file_per 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携。fragment は anchor_path 由来で resolver 側合成のため、ノードには path のみ持たせる
         phase: 11
-        proposal: design/generator/generator.md#_metapage_url-b6
+        proposal: design/generator/generator.md#_metapage_path-b6
 
   C:
     title: ページ分割 (paging)
