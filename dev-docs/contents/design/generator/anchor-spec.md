@@ -154,11 +154,11 @@ URL は **path 部 + fragment 部** に分けて組み立てる:
 - **path 部**: source ページから target ページへの相対パス
 - **fragment 部**: target ノードの `_meta.anchor_path` をそのまま使う (full anchor_path 形式)。HTML id 側も同じ文字列で発行する ([generator.md](generator.md) の id 発行と対応)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
 
-resolver とフィルタは **out_dir-relative 座標系**で動く:
+resolver とフィルタは **レポートルート相対 座標系**で動く (`_meta.page_path` の定義に同じ — [generator.md](generator.md#_metapage_path-b6) 参照。`reports/`・profile 段は付かない):
 
 - **source ページパス**: render に渡された node の `_meta.page_path` ([B6](../../../tasks.md))。`@pass_context` フィルタが `ctx["_meta"]["page_path"]` として読む
 - **target ページパス**: anchor_path → ノードマップで target ノードを引いて `_meta.page_path` を取得
-- **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算
+- **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算。source/target が同一レポート内なら共通のマウント先 (`reports/[{profile}/]`) は相殺されるので、原点をレポートルートに取って差し支えない
 - **最終 URL**: `{path 部}#{target._meta.anchor_path}`
 
 `_meta` に持たせるのは **path のみ** (`_meta.page_url` のような結合済み URL 文字列はノードに持たない)。fragment は常に anchor_path から派生するので、結合は URL を必要とするフィルタ側でその場で行う。

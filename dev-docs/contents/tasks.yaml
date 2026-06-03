@@ -70,7 +70,7 @@ categories:
         proposal: design/generator/generator.md#リンク解決-b4-b5
       B6:
         title: "`_meta.page_path` の算出"
-        note: file_per 設定を参照。自身が分割対象なら自ページ、でなければ親側に遡って解決。C3 と連携。fragment は anchor_path 由来で resolver 側合成のため、ノードには path のみ持たせる
+        note: page_path を完全導出。file_per を参照し、非 root の分割対象は anchor_path 先頭 / を落とし .md、root は index.md 固定、非分割対象は親を遡る。レポートルート相対 (reports/・profile 段は書き出し側 C3 が付与)。fragment は anchor_path 由来で resolver 側合成のため、ノードには path のみ持たせる
         phase: 11
         proposal: design/generator/generator.md#_metapage_path-b6
 
@@ -91,8 +91,8 @@ categories:
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C3:
-        title: パス自動導出
-        note: アンカーパスに `.md` を付けたものを paging file path とする ({anchor_path}.md)
+        title: page_path を実ファイルへ適用
+        note: mood_view が B6 の _meta.page_path を読み、出力ディレクトリ規約のマウント先 (reports/[{profile}/]) を被せて分割ファイルを書き出す。showcase 等に実際の file_per 設定を埋め、分割を実機で可視化する。導出規則自体は B6 が持つ
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C4:

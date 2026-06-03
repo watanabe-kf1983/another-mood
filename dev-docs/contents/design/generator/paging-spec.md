@@ -51,12 +51,17 @@ profiles:
 
 ### パス自動導出
 
-分割対象 ObjectType のページパスはアンカーパスから直接導出される — **アンカーパスに `.md` を付けたものがファイルパス**（[anchor-spec](anchor-spec.md) 参照）:
+ページパスはアンカーパスから直接導出される。導出規則はノードの `_meta.page_path` (B6) が持ち、その定義は [generator.md](generator.md#_metapage_path-b6) を正本とする。要点:
 
-- リスト要素: `{anchor_path}.md`（例: `/erds/user-management.md`、`/erds/user-management/entities/user.md`）
-- シングルトン: `{anchor_path}.md`（例: `/overview.md`）
+- **非 root**: anchor_path の先頭 `/` を落として `.md` を付けたもの（例: `/erds/user-management` → `erds/user-management.md`、`/erds/user-management/entities/user` → `erds/user-management/entities/user.md`、シングルトン `/overview` → `overview.md`）
+- **root (`anchor_path == "/"`)**: `index.md` 固定（file_per 不問）
 
-アンカーパスは root を `/` とする絶対パス形式なので、先頭の `/` を out_dir 起点とみなして解決する（`out_dir` への join 時に先頭 `/` を除く）。これによりアンカーパス規則と paging path 規則が同じ shape で表現される。
+これによりアンカーパス規則と paging path 規則が同じ shape で表現される。
+
+`_meta.page_path` は **レポートルート相対**。実ファイルの書き出し位置は、mood_view (C3) が出力ディレクトリ規約のマウント先を被せて決める:
+
+- トップ直書き form: `{outDir}/reports/{page_path}`
+- `profiles:` あり: `{outDir}/reports/{profile_name}/{page_path}`
 
 ### 分割ルール
 
