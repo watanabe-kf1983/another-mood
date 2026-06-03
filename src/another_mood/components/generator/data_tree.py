@@ -3,7 +3,7 @@
 # pyright: reportPrivateUsage=false
 """Data-tree wrappers exposing parent references and node metadata to templates."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from functools import cached_property
 from typing import Any, Protocol, cast
 from urllib.parse import quote
@@ -123,6 +123,40 @@ def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
     do their subtrees, so they pass through raw.
     """
     return _wrap_mapping(data, parent=None, segment="")
+
+
+def build_anchor_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
+    """Index a wrapped data tree by anchor path in a single wrap pass.
+
+    Maps each anchorable node's ``_meta.anchor_path`` to the node; the
+    root is reachable as ``result["/"]``.  Only wrapped nodes appear —
+    id-less Array elements and nested Arrays pass through raw (see
+    :func:`wrap_tree`) and carry no anchor path.  Built on a flat
+    full-path key so the ``prose`` ``/``-keeping exception needs no
+    special case here: each node's own ``anchor_path`` already encodes
+    it.
+    """
+    return {node._meta.anchor_path: node for node in iter_nodes(wrap_tree(data))}
+
+
+def iter_nodes(node: Node) -> Iterator[Node]:
+    """Walk every wrapped node depth-first, ``node`` itself first.
+
+    Descends only into child :class:`Node` instances, so raw
+    pass-through dicts/lists (and their subtrees) are skipped.  The
+    wrapped tree already records anchorability as ``isinstance(_, Node)``,
+    so no wrapping rule is re-derived during the walk.
+    """
+    yield node
+    if isinstance(node, MappingNode):
+        children: Iterable[Any] = node.values()
+    elif isinstance(node, ArrayNode):
+        children = node
+    else:
+        children = ()
+    for child in children:
+        if isinstance(child, (MappingNode, ArrayNode)):
+            yield from iter_nodes(child)
 
 
 def _wrap_mapping(
