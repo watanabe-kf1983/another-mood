@@ -3,7 +3,7 @@
 # pyright: reportPrivateUsage=false
 """Data-tree wrappers exposing parent references and node metadata to templates."""
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
 from typing import Any, Protocol, cast
 from urllib.parse import quote
@@ -157,6 +157,21 @@ def iter_nodes(node: Node) -> Iterator[Node]:
     for child in children:
         if isinstance(child, (MappingNode, ArrayNode)):
             yield from iter_nodes(child)
+
+
+def nearest_ancestor(node: Node, match: Callable[[Node], bool]) -> Node | None:
+    """Nearest ``self``-or-ancestor satisfying ``match``, or ``None``.
+
+    Ascending counterpart to :func:`iter_nodes`: walks ``_parent`` from
+    ``node`` upward, returning the first node ``match`` accepts and
+    ``None`` once it falls off past the root.
+    """
+    current: Node | None = node
+    while current is not None:
+        if match(current):
+            return current
+        current = current._parent
+    return None
 
 
 def _wrap_mapping(

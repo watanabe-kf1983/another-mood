@@ -5,6 +5,7 @@ from textwrap import dedent
 
 import pytest
 
+from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.reports_config import (
     ReportsConfig,
     load_reports_config,
@@ -58,3 +59,54 @@ def test_load_empty_file_per(tmp_path: Path) -> None:
     assert load_reports_config(_write(tmp_path, "file_per: []\n")) == ReportsConfig(
         file_per=()
     )
+
+
+# ── is_split_target ────────────────────────────────────────────────
+
+
+def test_is_split_target_listed() -> None:
+    config = ReportsConfig(file_per=("erds.item", "erds.item.entities.item"))
+    assert config.is_split_target("erds.item")
+    assert config.is_split_target("erds.item.entities.item")
+
+
+def test_is_split_target_not_listed() -> None:
+    config = ReportsConfig(file_per=("erds.item",))
+    assert not config.is_split_target("screens.item")
+    # A prefix of a listed id is not itself a target.
+    assert not config.is_split_target("erds")
+
+
+def test_is_split_target_empty_file_per() -> None:
+    assert not ReportsConfig(file_per=()).is_split_target("erds.item")
+
+
+# ── page_path ──────────────────────────────────────────────────────
+
+
+class TestPagePath:
+    """``page_path`` formats the page-owning node's path.
+
+    Finding that node (self / ancestor / none) is ``nearest_ancestor``'s
+    contract (see its tests); here we only pin what page_path itself
+    adds: the ``None`` -> ``index.md`` mapping and the
+    ``{anchor_path sans leading /}.md`` formatting, plus that the split
+    predicate is keyed on ``object_type_id`` against ``file_per``.
+    """
+
+    _TREE = {"erds": [{"id": "user-mgmt", "entities": [{"id": "user"}]}]}
+
+    def test_no_split_boundary_is_index(self) -> None:
+        # Empty file_per -> nearest_ancestor finds nothing -> index.md.
+        root = wrap_tree(self._TREE)
+        assert ReportsConfig(file_per=()).page_path(root["erds"][0]) == "index.md"
+
+    def test_match_formats_anchor_path_as_md(self) -> None:
+        # object_type_id "erds.item" is in file_per, so the erd is its own
+        # page: leading "/" dropped, inner "/" kept (removeprefix, not
+        # lstrip), ".md" appended.
+        root = wrap_tree(self._TREE)
+        erd = root["erds"][0]
+        assert (
+            ReportsConfig(file_per=("erds.item",)).page_path(erd) == "erds/user-mgmt.md"
+        )
