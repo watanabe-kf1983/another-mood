@@ -73,6 +73,14 @@ categories:
         note: page_path は (node, file_per) の関数なのでノードに焼かず ReportsConfig.page_path(node) に置く。非 root の分割対象は anchor_path 先頭 / を落とし .md、root は index.md、非分割対象は最寄りの分割境界に解決。レポートルート相対 (reports/・profile 段は書き出し側 C3 が付与)。木の遡上は data_tree の free function nearest_ancestor(node, match) に切り出し、消費は B4/C4
         phase: 11
         done: true
+      B7:
+        title: IRI エスケープ関数 (anchor_path / as_url の共通化)
+        note: >-
+          エスケープを IRI 形 (RFC 3987 ucschar 生通し) に変更する共通関数 iri_escape を実装し、
+          data_tree の anchor_path 構築と md の as_url を差し替える。設計・根拠・検証は
+          anchor-spec.md#escape-規則 を正本とする。C3 が依存。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#escape-規則
 
   C:
     title: ページ分割 (paging)
@@ -92,7 +100,11 @@ categories:
         done: true
       C3:
         title: page_path を実ファイルへ適用
-        note: mood_view が B6 の _meta.page_path を読み、出力ディレクトリ規約のマウント先 (reports/[{profile}/]) を被せて分割ファイルを書き出す。showcase 等に実際の file_per 設定を埋め、分割を実機で可視化する。導出規則自体は B6 が持つ
+        note: >-
+          mood_view が ReportsConfig.page_path(node) を読み、reports/[{profile}/] を被せて分割書き出し
+          (導出は B6)。showcase に file_per を設定し手書きリンクを anchor 由来パスへ調整。
+          B7 に依存。出力パス決定の 3 分岐 (interim の合成 dict フォールバック) と P3/E12 との関係は
+          paging-spec.md#proposals を参照。
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
       C4:
@@ -109,6 +121,13 @@ categories:
         title: 複数プロファイルの並列ビルド
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
+      C7:
+        title: FS-safe パス書き出しの堅牢化 (write 時例外 → 改名診断)
+        note: >-
+          IRI エスケープ (B7) で潰せない FS 固有問題 (パス長/予約名/末尾文字/正規化等) を、write 時の
+          OSError → ユーザ改名診断で扱う。対象と方針は anchor-spec.md#escape-規則 を参照。優先度低。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#escape-規則
 
   D:
     title: ユーザコンテンツバリデーション
@@ -203,6 +222,14 @@ categories:
         title: singleton-flatten 内の object[] を child entity link として保持
         phase: 10
         done: true
+      E12:
+        title: meta 診断データの query 合成 (テンプレート内合成 dict の解消)
+        note: >-
+          meta 診断テンプレート (__meta_entity / __table_view / __meta_query) が __root.md 内で組む合成 dict を、
+          query で実ノードとして合成し anchor を持たせる。P3 と揃えば __views を退役できる。実例が meta 診断
+          だけなので優先度低。位置づけは paging-spec.md#proposals を参照。
+        phase: 11
+        proposal: design/generator/paging-spec.md#proposals
 
   F:
     title: メタドキュメンテーション拡張
@@ -418,6 +445,15 @@ categories:
           ユーザの全 mood_view 使用箇所に影響する破壊的変更。
         phase: 11
         done: true
+      P3:
+        title: mood_view 主題の this 束縛 (ノード受け取り + ページ identity 安定化)
+        note: >-
+          mood_view が主題を合成 dict でなくツリーノードとして受け取り、サブテンプレートに固定名 this で
+          束縛する (naming=this / spread=True 確定)。ページ identity が主題ノードの anchor_path で安定し、
+          B4/B5 の source-node プラミングや __views も簡約できる。設計・狙い・naming 根拠は
+          paging-spec.md#proposals を正本とする。最優先。C3 と相互作用、E12 と組んで __views 退役。
+        phase: 11
+        proposal: design/generator/paging-spec.md#proposals
 
   Q:
     title: 公開

@@ -26,9 +26,34 @@
 
 #### Escape 規則
 
-アンカーパスは URL fragment として埋め込まれる文字列。`/` を path 区切り文字として予約しているため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**。
+アンカーパスは **IRI**（RFC 3987）として扱う。URL fragment / パスとして使う以上 `/` を区切りに予約するため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**（prose は例外、下記）。
 
-その他の URL-fragment-unsafe な文字（空白、`#` 等）も percent-encoding する。HTML5 の `id` 属性が空白を許容しないため、空白を含む id を持つレコードは技術的にアンカーパス化不可（[未決事項](#未決事項)参照）。
+それ以外の文字は **IRI エスケープ**で正規化する:
+
+- **生のまま残す**: ASCII の unreserved (`A–Za–z0–9-._~`) と、**非 ASCII の `ucschar`**（RFC 3987 が IRI で許す Unicode 範囲。漢字・かな・非 ASCII 句読点・記号等。例: `書籍`、`モーニング娘。` の `。`、`藤岡弘、` の `、`）
+- **percent-encode する**: ASCII の予約・特殊文字（空白 → `%20`、`# ? : * | \ " < >` 等）と、`ucschar` 外の非 ASCII（制御・format・surrogate・private-use・noncharacter）
+
+つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパス（および由来する page_path）は **URL であると同時に出力ファイルのパス**でもあるため、IRI 形にすることで「人が読めるパス（`書籍.md`）」「URL として正当」「主要 OS で生成可能なファイル名」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の link render hook・ブラウザ・静的サーバ）が行う（Hugo + 素の静的サーバで end-to-end 確認済み）。
+
+エスケープは **encode 片道**で、生の segment/id 値に 1 回だけ適用する（既存の `%XX` を decode・二重 encode しない。`%` 自体は ASCII 特殊文字なので `%25` に encode される）。FS で危険な ASCII（`: * | \` 等）は上記のとおり encode 側に残るため Windows でも安全。
+
+なお id value（データ側セグメント）は無制約だが、attr name（構造側セグメント）はスキーマの `^[\p{L}_][\p{L}\p{N}_]*$` で識別子状に制約済みで、ucschar/unreserved を素通りする。HTML5 の `id` 属性は空白を許容しないため、空白を含む id を持つレコードは技術的にアンカーパス化不可（[未決事項](#未決事項)参照）。
+
+> **背景: IRI 採用の経緯と実装メモ.** 当初は全非 ASCII を percent-encode する `quote()` ベース（`書籍`→`%E6…`）だったが、page_path がファイル名にも使われるため CJK プロジェクトで `%E3…` の読めないファイル名になる問題が C3 着手時に表面化。「URL 安全 ≠ ファイル名安全」「IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当」という分析の結果、生 Unicode を残す IRI 形を採用した。keep-raw 集合をカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）にしたのは、`モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。実装は共通関数 `iri_escape(s, safe="")`（ASCII 処理は `urllib.parse.quote` に委譲し、`ucschar` のみ生で上書き）として `anchor_path` 構築（data_tree）と `as_url` フィルタ（md）が共有する想定。IRI 化は Phase 11 タスク [B7](../../../tasks.md)。
+
+`iri_escape` は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**は別タスク [C7](../../../tasks.md) で扱う — 事前の encode/validation で防ぐのではなく、`mkdir`/`open` の `OSError` を捕まえて**ユーザに改名を促す診断**を出す方針。対象:
+
+- **パス長**（Windows `MAX_PATH`=260。anchor_path は階層を畳んだパスになるため、深いツリー + 長い id で**最も現実的に当たりやすい主リスク**）
+- Windows 予約名（CON / NUL / COM1…）、末尾のドット・空白
+- macOS の NFC/NFD 正規化、`ucschar` 内の Unicode 空白（U+3000 等）
+
+`ucschar`（RFC 3987）のレンジ:
+
+```
+A0–D7FF, F900–FDCF, FDF0–FFEF,
+10000–1FFFD, 20000–2FFFD, …, D0000–DFFFD, E1000–EFFFD
+（サロゲート・noncharacter・private-use を除外）
+```
 
 #### Prose の例外
 
