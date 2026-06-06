@@ -8,6 +8,7 @@ from another_mood.components.shared.component.build_report import (
     BuildReport,
     ErrorEntry,
 )
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 
 
@@ -85,18 +86,27 @@ class TestWithException:
     is user-facing (exposes ``user_error_message``)."""
 
     def test_user_facing_error_summary_without_traceback(self) -> None:
-        # Exposes user_error_message + diagnostic_entries -> a summary
-        # ErrorEntry (no traceback) and the carried diagnostics.
+        # A UserError with diagnostic_entries -> a summary ErrorEntry (no
+        # traceback) plus the carried diagnostics.
         diag = DiagnosticEntry(file="a.yaml", line=1, column=None, message="bad")
 
-        class _UserFacing(Exception):
-            user_error_message = "do this to fix it"
+        class _UserFacing(UserError):
             diagnostic_entries = (diag,)
 
         report = BuildReport().with_exception(_UserFacing("1 problem"))
 
         assert list(report.errors) == [ErrorEntry(message="_UserFacing: 1 problem")]
         assert list(report.diagnostics) == [diag]
+
+    def test_plain_user_error_has_no_diagnostics(self) -> None:
+        # A UserError without diagnostic_entries still suppresses the
+        # traceback; its guidance is the message alone.
+        report = BuildReport().with_exception(UserError("run mood init first"))
+
+        assert list(report.errors) == [
+            ErrorEntry(message="UserError: run mood init first")
+        ]
+        assert list(report.diagnostics) == []
 
     def test_bug_carries_traceback(self) -> None:
         try:

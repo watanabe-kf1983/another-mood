@@ -10,6 +10,8 @@ from enum import Enum
 from logging import getLogger
 from pathlib import Path
 
+from another_mood.components.shared.user_error import UserError
+
 _logger = getLogger(__name__)
 
 
@@ -151,7 +153,7 @@ class DiagnosticReporter:
         return tuple(self._diagnostics)
 
 
-class FileValidationError(Exception):
+class FileValidationError(UserError):
     """Raised when input files contain validation errors.
 
     Carries structured diagnostics that can be rendered to the user.

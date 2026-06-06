@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticReporter
 
 _logger = getLogger(__name__)
@@ -72,11 +73,10 @@ def error_propagation(
 def _log_error(exc: Exception) -> None:
     """Log a stage error.
 
-    Uses user_error_message if the exception provides one,
-    otherwise falls back to the full traceback.
+    A user error logs its guidance message; any other exception is a bug,
+    so its full traceback is logged.
     """
-    msg = getattr(exc, "user_error_message", None)
-    if msg is not None:
-        _logger.error("%s", msg)
+    if isinstance(exc, UserError):
+        _logger.error("%s", exc.user_error_message)
     else:
         _logger.error("%s", traceback.format_exc())

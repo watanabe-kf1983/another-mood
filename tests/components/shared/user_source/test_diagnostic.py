@@ -5,6 +5,7 @@ from textwrap import dedent
 
 import pytest
 
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     DiagnosticEntry,
@@ -89,6 +90,9 @@ class TestSnippet:
 
 
 class TestFileValidationError:
+    def test_is_a_user_error(self) -> None:
+        assert isinstance(FileValidationError([]), UserError)
+
     def test_message_singular(self) -> None:
         exc = FileValidationError(
             [

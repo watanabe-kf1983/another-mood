@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 
 _REPORT_KEY = "__build_report"
@@ -195,13 +196,13 @@ def _entries_from_exception(
 ) -> tuple[Sequence[ErrorEntry], Sequence[DiagnosticEntry]]:
     """Pull typed entries from an exception.
 
-    A user-facing error (one exposing ``user_error_message``) yields a
-    summary ErrorEntry without a traceback; its details, if any, ride in
-    ``diagnostic_entries``.  Any other exception is treated as a bug:
-    a generic ErrorEntry carrying the Python traceback.
+    A :class:`UserError` yields a summary ErrorEntry without a traceback;
+    its details, if any, ride in ``diagnostic_entries`` (optional — only
+    file-anchored user errors carry them).  Any other exception is treated
+    as a bug: a generic ErrorEntry carrying the Python traceback.
     """
     summary = ErrorEntry(message=f"{type(exc).__name__}: {exc}")
-    if getattr(exc, "user_error_message", None) is not None:
+    if isinstance(exc, UserError):
         diagnostic_entries = getattr(exc, "diagnostic_entries", None)
         return (summary,), tuple(diagnostic_entries or ())
     return (replace(summary, traceback=_traceback.format_exc()),), ()
