@@ -4,6 +4,6 @@
 {% mood_view "prose.md" with record %}
 {%- endfor %}
 
-{% mood_view "tasks.md" with categories %}
+{% mood_view "tasks.md" with tasks %}
 
-{% mood_view "roadmap.md" with tasks_by_phase %}
+{% mood_view "roadmap.md" with roadmap %}
