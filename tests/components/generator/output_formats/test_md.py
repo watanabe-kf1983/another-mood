@@ -190,8 +190,9 @@ class TestAsUrl:
     def test_preserves_unreserved(self) -> None:
         assert as_url("AZaz09-._~") == "AZaz09-._~"
 
-    def test_encodes_non_ascii(self) -> None:
-        assert as_url("見") == "%E8%A6%8B"
+    def test_keeps_ucschar_raw(self) -> None:
+        # IRI form: ucschar pass through so CJK URLs stay readable.
+        assert as_url("見") == "見"
 
     def test_coerces_non_string_to_str(self) -> None:
         assert as_url(42) == "42"

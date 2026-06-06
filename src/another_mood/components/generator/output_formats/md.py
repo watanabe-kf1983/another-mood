@@ -1,11 +1,11 @@
 """`md` OutputFormat — see design/generator/output-format-spec.md."""
 
 import re
-from urllib.parse import quote
 
 from markupsafe import Markup
 
 from another_mood.components.generator.template_engine import OutputFormat
+from another_mood.components.generator.url import url_escape
 
 # CommonMark renders any escaped ASCII punctuation identically to the
 # unescaped form, so a blanket escape is invisible in the output and
@@ -53,13 +53,14 @@ def in_cell(value: object) -> Markup:
 
 
 def as_url(value: object) -> Markup:
-    # Safe set = RFC 3986 gen-delims + sub-delims minus `(` `)`, which would
-    # otherwise close the Markdown link target prematurely.
-    encoded = quote(str(value), safe=":/?#[]@!$&'*+,;=")
+    # Keep URL-structural punctuation raw so the link survives, but escape
+    # `(` `)` by leaving them out of `safe` — raw, they would close the
+    # Markdown link target `[...](...)` early.
+    encoded = url_escape(str(value), safe=":/?#[]@!$&'*+,;=")
     # Markup-returned to bypass finalize (md_escape would inject backslashes
     # into the URL; Hugo treats those as literal and percent-encodes them to
     # %5C, corrupting the link).
-    return Markup(encoded.replace("(", "%28").replace(")", "%29"))
+    return Markup(encoded)
 
 
 def _longest_backtick_run(text: str) -> int:
