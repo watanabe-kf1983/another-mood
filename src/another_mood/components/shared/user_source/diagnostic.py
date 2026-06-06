@@ -4,16 +4,13 @@ Based on the Diagnostic model from Language Server Protocol Specification 3.17:
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from logging import getLogger
 from pathlib import Path
 
-from another_mood.components.shared.component.build_report import (
-    DiagnosticEntry,
-    ErrorEntry,
-)
+from another_mood.components.shared.user_error import UserError
 
 _logger = getLogger(__name__)
 
@@ -25,6 +22,49 @@ class DiagnosticSeverity(Enum):
     warning = "warning"
     information = "information"
     hint = "hint"
+
+
+@dataclass(frozen=True)
+class DiagnosticEntry:
+    """A file-scoped validation diagnostic captured at report-write time.
+
+    The serialized, report-side form of a :class:`Diagnostic`: lives with
+    the diagnostic model (a diagnostic always points at a user source
+    file) and is consumed by ``build_report`` rather than the reverse.
+    """
+
+    file: str
+    line: int | None
+    column: int | None
+    message: str
+    severity: str = "error"
+    source: str = ""
+    snippet: str = ""
+
+    @classmethod
+    def from_data(cls, raw: Mapping[str, object]) -> "DiagnosticEntry":
+        line = raw.get("line")
+        column = raw.get("column")
+        return cls(
+            file=str(raw.get("file", "")),
+            line=line if isinstance(line, int) else None,
+            column=column if isinstance(column, int) else None,
+            message=str(raw.get("message", "")),
+            severity=str(raw.get("severity", "error")),
+            source=str(raw.get("source", "")),
+            snippet=str(raw.get("snippet", "")),
+        )
+
+    def to_data(self) -> Mapping[str, object]:
+        return {
+            "file": self.file,
+            "line": self.line,
+            "column": self.column,
+            "message": self.message,
+            "severity": self.severity,
+            "source": self.source,
+            "snippet": self.snippet,
+        }
 
 
 @dataclass(frozen=True)
@@ -113,7 +153,7 @@ class DiagnosticReporter:
         return tuple(self._diagnostics)
 
 
-class FileValidationError(Exception):
+class FileValidationError(UserError):
     """Raised when input files contain validation errors.
 
     Carries structured diagnostics that can be rendered to the user.
@@ -131,13 +171,15 @@ class FileValidationError(Exception):
         return f"Found {self}:\n" + "\n".join(details)
 
     @property
-    def error_entries(self) -> Sequence[ErrorEntry]:
-        """Typed errors for pipeline report propagation."""
-        return [ErrorEntry(message=f"FileValidationError: {self}")]
-
-    @property
     def diagnostic_entries(self) -> Sequence[DiagnosticEntry]:
-        """Typed diagnostics for pipeline report propagation."""
+        """Typed diagnostics for pipeline report propagation.
+
+        The report-side ErrorEntry summary is synthesized by the
+        aggregator (``build_report._entries_from_exception``) from
+        ``user_error_message``; the exception only carries its semantic
+        payload, so the diagnostic model needs no dependency on
+        ``build_report``.
+        """
         return [d.to_entry() for d in self.diagnostics]
 
 

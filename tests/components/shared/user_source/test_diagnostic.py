@@ -5,12 +5,10 @@ from textwrap import dedent
 
 import pytest
 
-from another_mood.components.shared.component.build_report import (
-    DiagnosticEntry,
-    ErrorEntry,
-)
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
+    DiagnosticEntry,
     DiagnosticReporter,
     DiagnosticSeverity,
     FileValidationError,
@@ -92,6 +90,9 @@ class TestSnippet:
 
 
 class TestFileValidationError:
+    def test_is_a_user_error(self) -> None:
+        assert isinstance(FileValidationError([]), UserError)
+
     def test_message_singular(self) -> None:
         exc = FileValidationError(
             [
@@ -108,15 +109,6 @@ class TestFileValidationError:
             ]
         )
         assert str(exc) == "2 validation errors"
-
-    def test_error_entries(self) -> None:
-        diags = [
-            Diagnostic(file=Path("a.yaml"), line=5, column=2, message="bad"),
-        ]
-        exc = FileValidationError(diags)
-        assert list(exc.error_entries) == [
-            ErrorEntry(message="FileValidationError: 1 validation error"),
-        ]
 
     def test_diagnostic_entries(self) -> None:
         rel = Path("a.yaml")
