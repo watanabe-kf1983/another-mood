@@ -28,9 +28,7 @@ file_per:
 - スカラ主題は、分割（別ページ書き出し）時のみエラー — ページはアンカー可能なノードであるべきだから。inline 展開は単なる差し込みなので任意の値を許す
 - `this` は型不問で **常に主題ノード自身**（`_meta` アクセス・配列反復の handle）
 
-**束縛はレンダリング境界（`template_engine._bind`）の単一規則**として、root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一に適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる（これは `__views` 役割(1)「現在ノードを値として露出（root の自己参照）」の一般化 — [→ `__views` 退役](#非ツリーノードページ--__views-退役)）。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築は持たない。
-
-主題をノードのまま渡せるので、配列主題を合成 dict に詰め直す回避策が不要になり、anchor を持つ ArrayNode を直接渡せる。
+**束縛はレンダリング境界（`template_engine._bind`）の単一規則**として、root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一に適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築は持たない。
 
 ## Proposals
 
@@ -90,14 +88,14 @@ profiles:
 
 テンプレート作者はページ分割を意識しない。同じテンプレートが Web 用（分割）でも PDF 用（全部インライン）でもそのまま動く。
 
-### 非ツリーノードページ / `__views` 退役
+### meta 子テンプレートへの root threading
 
-> P3（`this` 束縛 / 主題ノード受け取り）は実装済み — [mood_view 主題のノード受け取りと `this` 束縛](#mood_view-主題のノード受け取りと-this-束縛) を参照。残るのは下記の出力パス統一（C3）と `__views` 退役（E12 と連動）。
+> P3（`this` 束縛 / 主題ノード受け取り）は実装済み — [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛) を参照。残るのは出力パス統一（C3）・B4/B5 簡約・meta 子テンプレートへの root threading 解消（E12）。
 
-`this` 束縛で主題がノードになったことを足場に、まだ残る簡約が二つある:
+`this` 束縛で主題がノードになったことを足場に、まだ残る簡約が三つある:
 
 1. **出力パスの page_path 統一（C3）.** 現状の出力パス決定は暫定（id 付き Mapping → `{stem}/{id}.md`、それ以外 → `template_name`）で、anchor map に載らずリンク先として参照しづらい。meta 診断の合成 dict（[E12](../../../tasks.md)）がノード化され全主題がノードになると、C3 が mood_view のパス決定を `ReportsConfig.page_path(node)` 一本に畳める（ページの anchor / page_path が主題ノードの anchor_path で安定し anchor map に載る）。ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する（＝「ディレクトリ名 = ビュー名」と同じ筋）。
 
 2. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, anchor_map)` だけ束縛すればよくなる（B4/B5 実装時に取り込む）。
 
-3. **`__views` の退役.** [generator.py](../../../../src/another_mood/components/generator/generator.py) の `__views` は 2 役 — (1)「現在ノードを値として露出」（root の自己参照）、(2)「子テンプレートが root の全ビュー集合を横断」（meta 診断）。(1) は `this` が一般化済み、(2) は **E12（meta 診断データを query で実ノード化）**が引き取る。E12 が揃うと `__views` を退役できる。
+3. **meta 子テンプレートへの root threading 解消.** meta 子テンプレート（`__table_view` / `__meta_query`）は `walk_entity` の入力に root の全ビュー集合を要するが、主題が合成 dict（非ツリーノード）で親チェーンを持たないため、`__root.md` が root ノードを `root` キーで明示的に渡している。**E12（meta 診断データを query で実ノード化）**で子が実ノードになれば、親チェーン経由で root に届き、この threading は不要になる。
