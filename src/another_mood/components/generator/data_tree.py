@@ -6,7 +6,8 @@
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
 from typing import Any, Protocol, cast
-from urllib.parse import quote
+
+from another_mood.components.generator.url import url_escape
 
 
 class Node(Protocol):
@@ -78,9 +79,9 @@ class _NodeMeta:
         ``/`` at the root; every other node is the parent's path plus
         its escaped segment.  The leading ``/`` marks the path as
         absolute within the page's data tree (distinct from a relative
-        reference).  ``urllib.parse.quote`` escapes URL-fragment-unsafe
-        characters; the ``prose`` entity is exempt from ``/`` escaping
-        so that path-shaped prose ids stay readable.
+        reference).  Each segment is IRI-escaped via ``url_escape``; the
+        ``prose`` entity is exempt from ``/`` escaping so that path-shaped
+        prose ids stay readable.
         """
         parent = self._node._parent
         if parent is None:
@@ -88,7 +89,7 @@ class _NodeMeta:
         # ``prose.item`` keeps ``/`` in id values unencoded so the
         # path-shaped prose ids stay readable.
         safe = "/" if self.object_type_id == "prose.item" else ""
-        seg = quote(self._node._segment, safe=safe)
+        seg = url_escape(self._node._segment, safe=safe)
         parent_path = parent._meta.anchor_path
         # The root path already ends in ``/``; avoid doubling it.
         sep = "" if parent_path == "/" else "/"

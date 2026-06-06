@@ -236,7 +236,7 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 
 #### `value | as_url`
 
-Inserts `value` as the URL of a Markdown link. Pass the unencoded URL; `as_url` percent-encodes what needs encoding (spaces, parentheses, non-ASCII characters, etc.).
+Inserts `value` as the URL of a Markdown link. Pass the unencoded URL; `as_url` percent-encodes what needs encoding (spaces, parentheses, etc.) but leaves non-ASCII letters and punctuation readable.
 
 ```jinja2
 [{{ link.label }}]({{ link.url | as_url }})
