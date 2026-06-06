@@ -183,6 +183,11 @@ class TestMetaAnchorPath:
         root = wrap_tree({"items": [{"id": "a#b"}]})
         assert root["items"][0]._meta.anchor_path == "/items/a%23b"
 
+    def test_ucschar_in_id_is_kept_raw(self) -> None:
+        # IRI form: non-ASCII ucschar pass through unencoded.
+        root = wrap_tree({"items": [{"id": "書籍"}]})
+        assert root["items"][0]._meta.anchor_path == "/items/書籍"
+
     def test_numeric_id_is_stringified(self) -> None:
         root = wrap_tree({"items": [{"id": 42}]})
         assert root["items"][0]._meta.anchor_path == "/items/42"
