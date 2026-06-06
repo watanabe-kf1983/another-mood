@@ -7,9 +7,12 @@ from markupsafe import Markup
 
 from another_mood.components.generator.template_engine import (
     OutputFormat,
+    PageCollisionError,
+    PathRegistry,
     TemplateEngine,
     make_environment,
 )
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
@@ -163,6 +166,82 @@ class TestTemplateEngineMdEscape:
         )
         engine = TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
         assert engine.render("t.md", {}) == "`x`|a\\|b|a%20b"
+
+
+class TestPathRegistry:
+    """The bookkeeping behind one-page-per-path: a fresh out_path is
+    claimable, an identical re-claim is a no-op, any other re-claim is a
+    :class:`PageCollisionError`."""
+
+    def test_first_claim_returns_true(self) -> None:
+        assert PathRegistry().claim(Path("p.md"), {"id": "x"}, "a.md") is True
+
+    def test_same_subject_and_template_is_noop(self) -> None:
+        registry = PathRegistry()
+        subject = {"id": "x"}
+        registry.claim(Path("p.md"), subject, "a.md")
+        # Same object (identity) and template: idempotent, do not rewrite.
+        assert registry.claim(Path("p.md"), subject, "a.md") is False
+
+    def test_different_subject_raises(self) -> None:
+        registry = PathRegistry()
+        registry.claim(Path("p.md"), {"id": "x"}, "a.md")
+        # Equal-but-distinct object: identity differs, so it is a collision.
+        with pytest.raises(PageCollisionError, match="p.md"):
+            registry.claim(Path("p.md"), {"id": "x"}, "a.md")
+
+    def test_different_template_raises(self) -> None:
+        registry = PathRegistry()
+        subject = {"id": "x"}
+        registry.claim(Path("p.md"), subject, "a.md")
+        with pytest.raises(PageCollisionError, match="'a.md' and 'b.md'"):
+            registry.claim(Path("p.md"), subject, "b.md")
+
+    def test_distinct_paths_are_independent(self) -> None:
+        registry = PathRegistry()
+        assert registry.claim(Path("p.md"), {"id": "x"}, "a.md") is True
+        assert registry.claim(Path("q.md"), {"id": "y"}, "a.md") is True
+
+    def test_collision_is_a_user_error_without_diagnostics(self) -> None:
+        # A UserError so the pipeline renders its guidance, not a traceback;
+        # no source anchor, so no diagnostic_entries.
+        registry = PathRegistry()
+        registry.claim(Path("p.md"), {"id": "x"}, "a.md")
+        with pytest.raises(UserError) as exc_info:
+            registry.claim(Path("p.md"), {"id": "x"}, "b.md")
+        assert not hasattr(exc_info.value, "diagnostic_entries")
+        assert exc_info.value.user_error_message == str(exc_info.value)
+
+
+class TestRenderToFileIdempotency:
+    """``render_to_file`` is wired to the registry: a fresh page is
+    written, an identical repeat is skipped, a clobbering repeat raises."""
+
+    def _engine(self, tmp_path: Path) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "a.md").write_text("A:{{ id }}")
+        (templates_dir / "b.md").write_text("B:{{ id }}")
+        return TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+
+    def test_writes_new_path(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path)
+        engine.render_to_file("a.md", {"id": "x"}, Path("p.md"))
+        assert (tmp_path / "p.md").read_text() == "A:x"
+
+    def test_idempotent_repeat_is_noop(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path)
+        subject = {"id": "x"}
+        engine.render_to_file("a.md", subject, Path("p.md"))
+        engine.render_to_file("a.md", subject, Path("p.md"))
+        assert (tmp_path / "p.md").read_text() == "A:x"
+
+    def test_collision_propagates(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path)
+        subject = {"id": "x"}
+        engine.render_to_file("a.md", subject, Path("p.md"))
+        with pytest.raises(PageCollisionError):
+            engine.render_to_file("b.md", subject, Path("p.md"))
 
 
 class TestTemplateSyntaxErrorConversion:

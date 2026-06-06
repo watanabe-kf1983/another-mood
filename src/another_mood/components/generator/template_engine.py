@@ -18,6 +18,7 @@ from another_mood.components.generator.mood_view_processor import (
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
@@ -77,6 +78,70 @@ def _bind(subject: object) -> Mapping[str, object]:
         return {"this": subject}
 
 
+class PageCollisionError(UserError):
+    """Two distinct pages resolved to the same output file.
+
+    Raised by the engine when a ``{% mood_view %}`` page would overwrite
+    one already written this build under a different subject or template —
+    distinct pages must not share an output path, or one silently clobbers
+    the other.  The guidance is the exception's ``args[0]`` so it surfaces
+    verbatim in the build report and CLI log (the ``UserError`` contract).
+    """
+
+    def __init__(self, out_path: Path, prev_template: str, new_template: str) -> None:
+        origin = (
+            f"template {prev_template!r} rendered it twice"
+            if prev_template == new_template
+            else f"templates {prev_template!r} and {new_template!r}"
+        )
+        super().__init__(
+            f"Two pages resolved to the same output file {out_path} "
+            f"({origin}). Each page needs a unique path — this usually means "
+            f"two records share an id, or one record is rendered as a page "
+            f"more than once. Give the records distinct ids, or render the "
+            f"duplicate {{% mood_view %}} inline."
+        )
+
+
+@dataclass(frozen=True)
+class _Claim:
+    """Who holds an out_path: the rendered subject and its template."""
+
+    subject: object
+    template: str
+
+
+class PathRegistry:
+    """Tracks which page holds each output path within one render tree.
+
+    Keeps one page from silently clobbering another: each path is
+    claimable once, an identical re-claim is a no-op, and a conflicting
+    claim raises.  Owns no rendering — just the bookkeeping — so it is
+    unit-testable on its own.
+    """
+
+    def __init__(self) -> None:
+        self._claimed: dict[Path, _Claim] = {}
+
+    def claim(self, out_path: Path, subject: object, template_name: str) -> bool:
+        """Reserve ``out_path`` for this page; return whether to write it.
+
+        First claim records the ``(subject, template_name)`` and returns
+        ``True``.  A repeat by the same subject (identity) and template is
+        an idempotent no-op (``False``).  Any other repeat raises
+        :class:`PageCollisionError` rather than let one page clobber
+        another.
+        """
+        if prior := self._claimed.get(out_path):
+            if prior.subject is subject and prior.template == template_name:
+                return False
+            else:
+                raise PageCollisionError(out_path, prior.template, template_name)
+        else:
+            self._claimed[out_path] = _Claim(subject, template_name)
+            return True
+
+
 class TemplateEngine:
     def __init__(
         self,
@@ -86,6 +151,7 @@ class TemplateEngine:
         filters: Mapping[str, Callable[..., Any]],
     ) -> None:
         self._out_dir = out_dir
+        self._paths = PathRegistry()
         self._env = make_environment(MD)
         self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
@@ -102,8 +168,11 @@ class TemplateEngine:
         subject: object,
         out_path: Path,
     ) -> None:
-        """Render and write to ``out_dir / out_path``. Nothing is written
-        if rendering fails."""
+        """Render ``subject`` through ``template_name`` and write it to
+        ``out_dir / out_path``.  Nothing is written if rendering fails.
+        """
+        if not self._paths.claim(out_path, subject, template_name):
+            return
         rendered = self._render(template_name, subject)
         out_file = self._out_dir / out_path
         out_file.parent.mkdir(parents=True, exist_ok=True)
