@@ -6,8 +6,9 @@ import yaml
 
 from another_mood.components.shared.component.build_report import (
     BuildReport,
-    DiagnosticEntry,
+    ErrorEntry,
 )
+from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 
 
 def _write_report(dir_: Path, content: dict[str, object]) -> None:
@@ -77,3 +78,33 @@ class TestHasWarnings:
             )
         )
         assert report.has_warnings() is True
+
+
+class TestWithException:
+    """``with_exception`` keys traceback inclusion on whether the exception
+    is user-facing (exposes ``user_error_message``)."""
+
+    def test_user_facing_error_summary_without_traceback(self) -> None:
+        # Exposes user_error_message + diagnostic_entries -> a summary
+        # ErrorEntry (no traceback) and the carried diagnostics.
+        diag = DiagnosticEntry(file="a.yaml", line=1, column=None, message="bad")
+
+        class _UserFacing(Exception):
+            user_error_message = "do this to fix it"
+            diagnostic_entries = (diag,)
+
+        report = BuildReport().with_exception(_UserFacing("1 problem"))
+
+        assert list(report.errors) == [ErrorEntry(message="_UserFacing: 1 problem")]
+        assert list(report.diagnostics) == [diag]
+
+    def test_bug_carries_traceback(self) -> None:
+        try:
+            raise ValueError("boom")
+        except ValueError as exc:
+            report = BuildReport().with_exception(exc)
+
+        (error,) = report.errors
+        assert error.message == "ValueError: boom"
+        assert error.traceback is not None and "ValueError: boom" in error.traceback
+        assert list(report.diagnostics) == []

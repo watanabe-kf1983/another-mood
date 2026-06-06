@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 
 _REPORT_KEY = "__build_report"
 _STAGES_KEY = "stages"
@@ -67,44 +68,6 @@ class ErrorEntry:
         if self.traceback is None:
             return {"message": self.message}
         return {"message": self.message, "traceback": self.traceback}
-
-
-@dataclass(frozen=True)
-class DiagnosticEntry:
-    """A file-scoped validation diagnostic captured at report-write time."""
-
-    file: str
-    line: int | None
-    column: int | None
-    message: str
-    severity: str = "error"
-    source: str = ""
-    snippet: str = ""
-
-    @classmethod
-    def from_data(cls, raw: Mapping[str, object]) -> "DiagnosticEntry":
-        line = raw.get("line")
-        column = raw.get("column")
-        return cls(
-            file=str(raw.get("file", "")),
-            line=line if isinstance(line, int) else None,
-            column=column if isinstance(column, int) else None,
-            message=str(raw.get("message", "")),
-            severity=str(raw.get("severity", "error")),
-            source=str(raw.get("source", "")),
-            snippet=str(raw.get("snippet", "")),
-        )
-
-    def to_data(self) -> Mapping[str, object]:
-        return {
-            "file": self.file,
-            "line": self.line,
-            "column": self.column,
-            "message": self.message,
-            "severity": self.severity,
-            "source": self.source,
-            "snippet": self.snippet,
-        }
 
 
 # -- Build report ------------------------------------------------------------
@@ -232,16 +195,13 @@ def _entries_from_exception(
 ) -> tuple[Sequence[ErrorEntry], Sequence[DiagnosticEntry]]:
     """Pull typed entries from an exception.
 
-    Falls back to a single generic ErrorEntry with a Python traceback when the
-    exception does not expose ``error_entries`` / ``diagnostic_entries``.
+    A user-facing error (one exposing ``user_error_message``) yields a
+    summary ErrorEntry without a traceback; its details, if any, ride in
+    ``diagnostic_entries``.  Any other exception is treated as a bug:
+    a generic ErrorEntry carrying the Python traceback.
     """
-    error_entries = getattr(exc, "error_entries", None)
-    diagnostic_entries = getattr(exc, "diagnostic_entries", None)
-    if error_entries is not None or diagnostic_entries is not None:
-        return tuple(error_entries or ()), tuple(diagnostic_entries or ())
-    return (
-        ErrorEntry(
-            message=f"{type(exc).__name__}: {exc}",
-            traceback=_traceback.format_exc(),
-        ),
-    ), ()
+    summary = ErrorEntry(message=f"{type(exc).__name__}: {exc}")
+    if getattr(exc, "user_error_message", None) is not None:
+        diagnostic_entries = getattr(exc, "diagnostic_entries", None)
+        return (summary,), tuple(diagnostic_entries or ())
+    return (replace(summary, traceback=_traceback.format_exc()),), ()

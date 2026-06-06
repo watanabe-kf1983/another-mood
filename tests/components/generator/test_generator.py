@@ -12,9 +12,9 @@ from another_mood.components.generator.generator import (
 from another_mood.components.generator.output_formats.md import md_escape
 from another_mood.components.shared.component.build_report import (
     BuildReport,
-    DiagnosticEntry,
     ErrorEntry,
 )
+from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:

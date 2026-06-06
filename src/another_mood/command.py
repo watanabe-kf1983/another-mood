@@ -29,9 +29,9 @@ from another_mood.components.scaffold.blueprints import (
 )
 from another_mood.components.shared.component.build_report import (
     BuildReport,
-    DiagnosticEntry,
     ErrorEntry,
 )
+from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.config import ProjectConfig
 from another_mood.pipeline.render import (
     HugoServerStartupError as WatchStartupError,
