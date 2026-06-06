@@ -2,4 +2,7 @@
 #
 # `file_per:` lists ObjectType IDs whose nodes are split into separate
 # files. An empty list keeps everything in a single index.md.
-file_per: []
+file_per:
+  - artist_discography.item
+  - album_tracklist.item
+  - prose.item
