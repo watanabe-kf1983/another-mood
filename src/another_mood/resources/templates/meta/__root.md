@@ -44,7 +44,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {% mood_view "__table_view.md" with {
   "id": entity.id,
   "entities": __definition.entities,
-  "__views": __views,
+  "root": this,
 } %}
 {%- endfor %}
 
@@ -67,7 +67,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
   "grouped": query.grouped,
   "select": query.select,
   "entities": __definition.entities,
-  "__views": __views,
+  "root": this,
 } %}
 {%- endfor %}
 

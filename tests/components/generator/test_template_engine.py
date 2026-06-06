@@ -24,6 +24,35 @@ class TestRender:
         assert result == "# World\n"
 
 
+class TestThisBinding:
+    """The render boundary binds the subject as ``this`` uniformly — the
+    root template and mood_view subtemplates see data the same way."""
+
+    def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text(body)
+        return TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+
+    def test_mapping_subject_is_spread_and_bound_as_this(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "{{ name }}/{{ this.name }}")
+        assert engine.render("t.md", {"name": "Alice"}) == "Alice/Alice"
+
+    def test_non_mapping_subject_is_iterated_via_this(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "{% for x in this %}{{ x }}{% endfor %}")
+        assert engine.render("t.md", ["a", "b", "c"]) == "abc"
+
+    def test_subject_key_named_this_is_shadowed_by_the_node(
+        self, tmp_path: Path
+    ) -> None:
+        # ``this`` is reserved: a subject field of that name loses to the
+        # node binding (here the string "ignored" is dropped, so
+        # ``this.name`` resolves on the node, not on "ignored").
+        engine = self._engine(tmp_path, "{{ this.name }}/{{ name }}")
+        subject = {"name": "Bob", "this": "ignored"}
+        assert engine.render("t.md", subject) == "Bob/Bob"
+
+
 class TestFiltersParam:
     """TemplateEngine forwards a `filters` mapping to the Jinja2 environment."""
 

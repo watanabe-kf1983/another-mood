@@ -53,9 +53,9 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 | Part | Description |
 |---|---|
 | `NAME` | The subtemplate's filename including the extension (e.g. `"product-detail.md"`), given as a string. |
-| `DATA` | The data passed to the subtemplate (a map object). |
+| `DATA` | The subject passed to the subtemplate — a map (a record) or a list (a collection). |
 
-An error is raised if `DATA` is not a map.
+An error is raised if `DATA` is a scalar (neither a map nor a list).
 
 ### Automatic output path
 
@@ -84,10 +84,12 @@ To link from a parent page to a subpage, write Markdown link syntax separately, 
 
 ### Subtemplate side
 
-Inside a subtemplate, the fields of the map passed via `with` are accessible as top-level variables.
+The subject passed via `with` is always bound under the fixed name `this`, so a subtemplate can reach the subject itself regardless of its type.
+
+When the subject is a **map**, its fields are *also* spread as top-level variables, so bare access keeps working — `{{ name }}` and `{{ this.name }}` are equivalent.
 
 ```jinja2
-{# templates/product-detail.md #}
+{# templates/product-detail.md — map subject #}
 # {{ name }}
 
 {{ description }}
@@ -96,6 +98,15 @@ Inside a subtemplate, the fields of the map passed via `with` are accessible as 
 |------|-----|
 {% for spec in specs -%}
 | {{ spec.label }} | {{ spec.value }} |
+{% endfor %}
+```
+
+When the subject is a **list**, there are no fields to spread, so iterate `this`:
+
+```jinja2
+{# templates/product-list.md — list subject #}
+{% for product in this %}
+- {{ product.name }}
 {% endfor %}
 ```
 

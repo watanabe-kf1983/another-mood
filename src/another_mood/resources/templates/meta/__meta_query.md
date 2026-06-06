@@ -101,7 +101,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) -%}
 ### {{ entity.id }}
 
-{% set rows = __views | walk_entity(entity.id, entities) -%}
+{% set rows = root | walk_entity(entity.id, entities) -%}
 {% set attributes = entity.item_type.attributes | rejectattr('type', 'equalto', 'object') | list -%}
 {% if rows -%}
 | {% for attribute in attributes %}{{ attribute.id }} | {% endfor %}_anchor_path |

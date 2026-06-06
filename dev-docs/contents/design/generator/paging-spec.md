@@ -19,6 +19,17 @@ file_per:
 
 形式検証は内蔵の `reports-schema.yaml` で行う。
 
+### テンプレート主題のノード受け取りと `this` 束縛
+
+テンプレートの主題（subject）は **データツリーのノード**（Mapping = レコード / Array = コレクション）として渡し、コンテキストに **固定名 `this` で束縛**する:
+
+- **Mapping 主題**: キーを spread し `{{ 名前 }}` で bare アクセス（`this.` 税ゼロ）。加えて `this` も束縛（`{{ this.名前 }}` ≡ `{{ 名前 }}`）
+- **非 Mapping 主題（Array）**: spread するフィールドがないので `this` のみ（`{% for e in this %}`）
+- スカラ主題は、分割（別ページ書き出し）時のみエラー — ページはアンカー可能なノードであるべきだから。inline 展開は単なる差し込みなので任意の値を許す
+- `this` は型不問で **常に主題ノード自身**（`_meta` アクセス・配列反復の handle）
+
+**束縛はレンダリング境界（`template_engine._bind`）の単一規則**として、root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一に適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築は持たない。
+
 ## Proposals
 
 > **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1 で `reports.yaml` の読み込み・形式検証、C2 で `file_per` 評価 (`ReportsConfig.is_split_target`) は完了。以下は評価結果で実際にページ分割を駆動する未実装部分 (C3〜C6)。現在の `{% mood_view %}` は常に分割で、`file_per` 設定はまだ出力に反映されない。
@@ -77,26 +88,14 @@ profiles:
 
 テンプレート作者はページ分割を意識しない。同じテンプレートが Web 用（分割）でも PDF 用（全部インライン）でもそのまま動く。
 
-### mood_view 主題の `this` 束縛 / 非ツリーノードページ / `__views` 退役
+### meta 子テンプレートへの root threading
 
-> Phase 11 タスク [P3](../../../tasks.md)（`this` 束縛）/ [E12](../../../tasks.md)（meta 診断の query 合成）。C3 と相互作用。
+> P3（`this` 束縛 / 主題ノード受け取り）は実装済み — [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛) を参照。残るのは出力パス統一（C3）・B4/B5 簡約・meta 子テンプレートへの root threading 解消（E12）。
 
-`{% mood_view %}` の主題（subject）を、サブテンプレートのコンテキストに **固定名 `this` で普遍束縛**する（`this` / spread=True で確定）:
+`this` 束縛で主題がノードになったことを足場に、まだ残る簡約が三つある:
 
-- **Mapping 主題**: 従来どおりキーを spread し `{{ 名前 }}` で bare アクセス（`this.` 税ゼロ）。加えて `this` も束縛
-- **非 Mapping 主題（ArrayNode 等）**: `this` のみ（`{% for e in this %}`、反復が読みにくければ局所 `{% set xs = this %}`）
-- `this` は型不問で **常に主題ノード自身** = `_meta`（anchor_path）アクセス・リンク解決の source・配列反復の handle
+1. **出力パスの page_path 統一（C3）.** 現状の出力パス決定は暫定（id 付き Mapping → `{stem}/{id}.md`、それ以外 → `template_name`）で、anchor map に載らずリンク先として参照しづらい。meta 診断の合成 dict（[E12](../../../tasks.md)）がノード化され全主題がノードになると、C3 が mood_view のパス決定を `ReportsConfig.page_path(node)` 一本に畳める（ページの anchor / page_path が主題ノードの anchor_path で安定し anchor map に載る）。ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する（＝「ディレクトリ名 = ビュー名」と同じ筋）。
 
-**解く問題:**
+2. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, anchor_map)` だけ束縛すればよくなる（B4/B5 実装時に取り込む）。
 
-1. **テンプレ名依存パスの不安定さ.** 現状 mood_view は「合成 dict」を受け取り、出力パスを `{stem}/{id}.md` か `template_name` で決めている（テンプレ名依存・リンク先として参照しづらい）。`this` 束縛は mood_view が **ノードを受け取る**前提なので、ページの anchor / page_path が**主題ノードの anchor_path で安定**し、anchor map にも載って**リンク可能**になる。
-
-   - dev-docs の `tasks.md` 等が `{% set tc = {"categories": categories} %}` と**合成 dict に詰め直している**のは「Jinja の render context は namespace(dict) でなければならず、配列をそのまま context にできない」ための回避策。`categories` は既に anchor `/categories` を持つ ArrayNode なので、ノードのまま渡して `this` で受ければ詰め直しは不要（ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する＝「ディレクトリ名 = ビュー名」と同じ筋）。
-
-2. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, anchor_map)` だけ束縛すればよくなる。
-
-3. **`__views` の退役.** [generator.py](../../../../src/another_mood/components/generator/generator.py) の `__views` は 2 役 — (1)「現在ノードを値として露出」（root の自己参照）、(2)「子テンプレートが root の全ビュー集合を横断」（meta 診断）。(1) は `this` が一般化し、(2) は **E12（meta 診断データを query で実ノード化）**が引き取る。両者が揃うと `__views` を退役できる。
-
-**naming の根拠**: `this` は指示代名詞で「レコード（`this.名前`）」「コレクション（`for e in this`）」の両役を最も中立にこなす（人称系 `me`/`us` は反復で不格好、`context` は「変数名前空間」の既定語と衝突、`data` は identity を背負う `this._meta` で語義がぼやける）。spread を残すので Mapping の bare アクセスは保たれ、`this` の文字数も問題にならない。
-
-**C3 との関係**: C3 は interim として合成 dict フォールバック（id 付き → `{stem}/{id}.md`、id なし → `template_name`）を持つが、P3 + E12 が揃うと全主題がノード化され、mood_view のパス決定は `page_path(node)` 一本になる。P3 を C3 より先に着地させると C3 が簡潔になる（着手順は要調整）。
+3. **meta 子テンプレートへの root threading 解消.** meta 子テンプレート（`__table_view` / `__meta_query`）は `walk_entity` の入力に root の全ビュー集合を要するが、主題が合成 dict（非ツリーノード）で親チェーンを持たないため、`__root.md` が root ノードを `root` キーで明示的に渡している。**E12（meta 診断データを query で実ノード化）**で子が実ノードになれば、親チェーン経由で root に届き、この threading は不要になる。

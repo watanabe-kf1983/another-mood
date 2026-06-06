@@ -453,6 +453,7 @@ categories:
           B4/B5 の source-node プラミングや __views も簡約できる。設計・狙い・naming 根拠は
           paging-spec.md#proposals を正本とする。最優先。C3 と相互作用、E12 と組んで __views 退役。
         phase: 11
+        done: true
         proposal: design/generator/paging-spec.md#proposals
 
   Q:

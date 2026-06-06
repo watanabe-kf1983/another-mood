@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -18,21 +19,42 @@ PROCESSOR_KEY = "_mood_view_processor"
 
 @dataclass(frozen=True)
 class MoodViewProcessorImpl:
-    """Routes {% mood_view %} invocations to TemplateEngine."""
+    """Routes a {% mood_view %} invocation: inline expansion, or its own
+    page via the engine at the subject's output path."""
 
     engine: TemplateEngine
 
     def __call__(
-        self, template_name: str, data: dict[str, Any], *, inline: bool = False
+        self, template_name: str, subject: object, *, inline: bool = False
     ) -> str:
         if inline:
-            return self.engine.render(template_name, data)
-        if "id" in data:
-            out_path = Path(Path(template_name).stem) / f"{data['id']}.md"
+            return self.engine.render(template_name, subject)
         else:
-            out_path = Path(template_name)
-        self.engine.render_to_file(template_name, data, out_path)
-        return ""
+            self.engine.render_to_file(
+                template_name, subject, self._out_path(template_name, subject)
+            )
+            return ""
+
+    @staticmethod
+    def _out_path(template_name: str, subject: object) -> Path:
+        """Out_dir-relative page path for a split subject.
+
+        ``{stem}/{id}.md`` for an id-bearing record, else ``template_name``
+        for any other node (a record without ``id``, or a collection).  A
+        scalar has no page, so it is rejected here — the only place that
+        maps a subject to a page.  Interim until paging routes every
+        subject through ``ReportsConfig.page_path(node)`` (paging-spec C3).
+        """
+        if isinstance(subject, Mapping) and "id" in subject:
+            return Path(Path(template_name).stem) / f"{subject['id']}.md"
+        elif isinstance(subject, (Mapping, list)):
+            return Path(template_name)
+        else:
+            raise TypeError(
+                f'{{% mood_view "{template_name}" with ... %}} writes a page, '
+                f"so its subject must be a Mapping or Array, "
+                f"got: {type(subject).__name__}"
+            )
 
 
 class MoodViewExtension(Extension):
@@ -57,14 +79,9 @@ class MoodViewExtension(Extension):
     def _render(
         self,
         template_name: str,
-        data: dict[str, Any],
+        subject: object,
         inline: bool,
         caller: Any,
     ) -> str:
-        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-            raise TypeError(
-                f'{{% mood_view "{template_name}" with ... %}} requires a dict, '
-                f"got: {type(data).__name__}"
-            )
         processor = self.environment.globals[PROCESSOR_KEY]
-        return processor(template_name, data, inline=inline)  # type: ignore[return-value]
+        return processor(template_name, subject, inline=inline)  # type: ignore[return-value]
