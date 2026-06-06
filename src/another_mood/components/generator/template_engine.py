@@ -18,6 +18,7 @@ from another_mood.components.generator.mood_view_processor import (
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
+from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -149,6 +150,7 @@ class TemplateEngine:
         *,
         templates_dir: Path,
         filters: Mapping[str, Callable[..., Any]],
+        reports_config: ReportsConfig = ReportsConfig(file_per=()),
     ) -> None:
         self._out_dir = out_dir
         self._paths = PathRegistry()
@@ -157,7 +159,9 @@ class TemplateEngine:
         for name, func in filters.items():
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
         # The mood_view extension dispatches via env.globals[PROCESSOR_KEY].
-        self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(engine=self)  # pyright: ignore[reportArgumentType]
+        self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(  # pyright: ignore[reportArgumentType]
+            engine=self, reports_config=reports_config
+        )
 
     def render(self, template_name: str, subject: object) -> str:
         return self._render(template_name, subject)
