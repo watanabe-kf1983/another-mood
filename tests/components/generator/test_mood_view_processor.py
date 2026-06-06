@@ -142,25 +142,6 @@ class TestMoodViewSyntaxError:
             env.from_string('{% mood_view "profile.md" user %}')
 
 
-class TestMoodViewDataValidation:
-    def test_accepts_dict_without_id(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile.md" with user %}')
-        template.render(user={"name": "Alice"})
-
-        assert len(mock.calls) == 1
-        assert mock.calls[0][1] == {"name": "Alice"}
-
-    def test_raises_on_non_dict(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile.md" with user %}')
-
-        with pytest.raises(TypeError, match="got: str"):
-            template.render(user="not a dict")
-
-
 # -- MoodViewProcessorImpl --
 
 
@@ -183,30 +164,34 @@ class _MockEngine:
 
 
 class TestMoodViewProcessorImplRouting:
-    """Processor computes the out_dir-relative out_path and delegates to engine."""
+    """Processor computes the out_path and passes the subject through
+    unchanged (the ``this`` binding is the engine's rule — see
+    ``test_template_engine``)."""
 
-    def test_non_inline_with_id_writes_to_stem_subdirectory(self) -> None:
+    def test_mapping_with_id_writes_to_stem_subdirectory(self) -> None:
         engine = _MockEngine()
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        processor("profile.md", {"id": "alice", "name": "Alice"})
+        subject = {"id": "alice", "name": "Alice"}
+        processor("profile.md", subject)
 
-        assert engine.written == [
-            (
-                "profile.md",
-                {"id": "alice", "name": "Alice"},
-                Path("profile/alice.md"),
-            ),
-        ]
+        assert engine.written == [("profile.md", subject, Path("profile/alice.md"))]
         assert engine.rendered == []
 
-    def test_non_inline_without_id_writes_to_template_name(self) -> None:
+    def test_array_subject_writes_to_template_name(self) -> None:
         engine = _MockEngine()
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        processor("summary.md", {"items": [1, 2, 3]})
+        subject = [{"id": "a"}, {"id": "b"}]
+        processor("list.md", subject)
 
-        assert engine.written == [
-            ("summary.md", {"items": [1, 2, 3]}, Path("summary.md")),
-        ]
+        assert engine.written == [("list.md", subject, Path("list.md"))]
+
+    def test_mapping_without_id_writes_to_template_name(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        subject = {"items": [1, 2, 3]}
+        processor("summary.md", subject)
+
+        assert engine.written == [("summary.md", subject, Path("summary.md"))]
 
     def test_non_inline_returns_empty_string(self) -> None:
         engine = _MockEngine()
@@ -218,11 +203,33 @@ class TestMoodViewProcessorImplRouting:
     def test_inline_delegates_to_render(self) -> None:
         engine = _MockEngine(render_return="hi alice")
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        result = processor("profile.md", {"id": "alice"}, inline=True)
+        subject = {"id": "alice"}
+        result = processor("profile.md", subject, inline=True)
 
-        assert engine.rendered == [("profile.md", {"id": "alice"})]
+        assert engine.rendered == [("profile.md", subject)]
         assert engine.written == []
         assert result == "hi alice"
+
+
+class TestMoodViewProcessorImplPageSubject:
+    """A split subject becomes a page, so it must be a Mapping or Array;
+    inline expansion accepts any value."""
+
+    def test_split_raises_on_scalar_subject(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+
+        with pytest.raises(TypeError, match="got: str"):
+            processor("profile.md", "not a node")
+        assert engine.written == []
+
+    def test_inline_allows_scalar_subject(self) -> None:
+        engine = _MockEngine(render_return="hello")
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        result = processor("x.md", "just a string", inline=True)
+
+        assert engine.rendered == [("x.md", "just a string")]
+        assert result == "hello"
 
 
 class TestMoodViewProcessorImplViaEngine:
