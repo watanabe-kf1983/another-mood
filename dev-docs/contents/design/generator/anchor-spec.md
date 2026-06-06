@@ -39,7 +39,7 @@
 
 なお id value（データ側セグメント）は無制約だが、attr name（構造側セグメント）はスキーマの `^[\p{L}_][\p{L}\p{N}_]*$` で識別子状に制約済みで、ucschar/unreserved を素通りする。HTML5 の `id` 属性は空白を許容しないため、空白を含む id を持つレコードは技術的にアンカーパス化不可（[未決事項](#未決事項)参照）。
 
-> **背景: IRI 採用の経緯と実装メモ.** 当初は全非 ASCII を percent-encode する `quote()` ベース（`書籍`→`%E6…`）だったが、page_path がファイル名にも使われるため CJK プロジェクトで `%E3…` の読めないファイル名になる問題が C3 着手時に表面化。「URL 安全 ≠ ファイル名安全」「IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当」という分析の結果、生 Unicode を残す IRI 形を採用した。keep-raw 集合をカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）にしたのは、`モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。実装は共通関数 `iri_escape(s, safe="")`（ASCII 処理は `urllib.parse.quote` に委譲し、`ucschar` のみ生で上書き）として `anchor_path` 構築（data_tree）と `as_url` フィルタ（md）が共有する想定。IRI 化は Phase 11 タスク [B7](../../../tasks.md)。
+> **背景: なぜ IRI 形か.** エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
 
 `iri_escape` は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**は別タスク [C7](../../../tasks.md) で扱う — 事前の encode/validation で防ぐのではなく、`mkdir`/`open` の `OSError` を捕まえて**ユーザに改名を促す診断**を出す方針。対象:
 
