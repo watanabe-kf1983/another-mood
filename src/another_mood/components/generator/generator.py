@@ -41,7 +41,6 @@ def generate(
     # resolver); the root is the "/" entry.
     anchors = build_anchor_map(load_model(data_dir))
     data = cast(MappingNode, anchors["/"])
-    data["__views"] = {k: v for k, v in data.items() if k != "__views"}
     render(
         "__root.md",
         META_TEMPLATES_DIR,
