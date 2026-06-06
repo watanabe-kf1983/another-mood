@@ -462,6 +462,8 @@ Templates called by `{% mood_view %}`. The fields of the map passed in via `with
 Role: {{ role }}
 ```
 
+The subject is also bound as `this`, so `{{ this.name }}` is the same as `{{ name }}`.
+
 ### Embedding a Markdown body
 
 The `body` field of a prose record is a map with `mime_type` and `content`. To embed the body in a template, reference `.content`:
