@@ -188,14 +188,21 @@ resolver とフィルタは **レポートルート相対 座標系**で動く (
 
 - **source ページパス**: テンプレートコンテキストの `this`（主題ノード）から `config.page_path(this)`。`@pass_context` フィルタが context 経由で取る
 - **target ページパス**: anchor_path → ノードマップで target ノードを引いて `config.page_path(target_node)`
-- **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算。source/target が同一レポート内なら共通のマウント先 (`reports/[{profile}/]`) は相殺されるので、原点をレポートルートに取って差し支えない
+- **path 部の算出**: フィルタが `posixpath.relpath(target_page_path, source ページのディレクトリ)` で計算（page_path は `/` 区切りなので `posixpath` で OS 非依存に保つ）。source/target が同一レポート内なら共通のマウント先 (`reports/[{profile}/]`) は相殺されるので、原点をレポートルートに取って差し支えない
 - **最終 URL**: `{path 部}#{target._meta.anchor_path}`
 
 ノードには page_path も結合済み URL も焼かない。fragment は常に anchor_path から派生し、page_path は config 依存なので、いずれも URL を必要とするフィルタ側でその場で組む。
 
 path を組む `link` / `href` は `@pass_context` で受ける必要がある。理由は二つ — (1) source node を context の `this`（主題ノード）から取るため、(2) Jinja2 オプティマイザの定数畳み込みを抑止するため（定数引数の `{{ anchor("/erds/x") | href }}` がコンパイル時に評価されると相対 URL がキャッシュに焼かれ、同テンプレートを別ページから使ったとき壊れる）。source 非依存の `label` / `anchor` は `@pass_context` 不要。
 
-resolver は静的に `(ReportsConfig, build_anchor_map の戻り)` を closure binding で共有する（source node は焼かず `this` から取る）。`anchor` がアンカーパス → アンカーを引き、整形フィルタが URL を組み立てる。
+フィルタは依存方向で 2 群に分かれる:
+
+- **フォーマット非依存の中立フィルタ** (`anchor` / `anchor_path` / `label`): anchor マップだけに束縛され、ノード・パス文字列・表示テキストを返す。出力フォーマットも render context も要らない。`anchor.make_anchor_filters(anchor_map)` が供給する
+- **フォーマット固有の整形フィルタ** (`link` / `href`): 出力フォーマットが所有し `ReportsConfig` に束縛されて Markdown リンク / URL を組む。source node は焼かず `@pass_context` が `this` から取る。`md.make_link_filters(config)` が供給し、`OutputFormat.link_filters` 経由でフォーマットに属する（Environment 構築時に config で配線。フォーマットが自分のフィルタ面全体を所有する — [output-format-spec.md](output-format-spec.md) 参照）
+
+`anchor` がアンカーパス → アンカーを引き、整形フィルタが URL を組み立てる。
+
+**未解決参照の扱い**: `anchor()` の組んだパスがマップに無いとき、解決失敗を `MissingAnchor`（試行パスを保持）として返す（例外は投げない）。整形側は壊れたリンクを「動くリンクの偽装」にせず **素テキストで可視化**する — `link` は `[..](..)` で包まずエスケープ済み表示テキストのみ、`href` は空文字列を返す。表示テキストは残るので author は壊れた参照に気づいて直せる。なお `anchor_href` は解決済みノード専用で、`MissingAnchor` は整形フィルタ側が捌くため `anchor_href` には渡らない。
 
 prose 例外の resolver 側挙動: マップは full anchor_path をキーにするフラットな dict ([generator.md](generator.md#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) の B2) なので、resolver はアンカーパスを分割せず**そのままキーで引く**。prose の `/` 素通しはアンカーパス構築側で吸収済みのため、resolver 側に prose 例外の特別扱いは要らない（例: `/prose/design/architecture` はそのキーで直に当たる）。
 
