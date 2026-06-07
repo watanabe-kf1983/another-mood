@@ -101,12 +101,12 @@ categories:
       C3:
         title: page_path を実ファイルへ適用
         note: >-
-          mood_view が ReportsConfig.page_path(node) を読み、reports/[{profile}/] を被せて分割書き出し
-          (導出は B6)。showcase に file_per を設定し手書きリンクを anchor 由来パスへ調整。
-          B7 に依存。出力パス決定の 3 分岐 (interim の合成 dict フォールバック) と P3/E12 との関係は
-          paging-spec.md#proposals を参照。
+          実ツリーノードの mood_view は ReportsConfig.page_path(node) で anchor 由来パスに分割出力
+          (reports/ 配下、導出は B6)。合成 dict (meta 診断) は暫定 fallback のまま (E12 で解消)。
+          starter/music/japanese/dev-docs に file_per を設定し手書きリンクを anchor 由来パスへ調整。
+          書き出し衝突は #258 の PageCollisionError が捕捉。
         phase: 11
-        proposal: design/generator/paging-spec.md#proposals
+        done: true
       C4:
         title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
         note: 現在は常に分割。インライン展開モードの新設になる
@@ -258,6 +258,14 @@ categories:
         title: __definition の自己記述カタログを built-in に追加
         phase: 10
         done: true
+      F9:
+        title: システムメタ出力を単一ディレクトリ配下に集約
+        note: >-
+          システム生成のメタドキュメント (__meta_entity / __table_view / __meta_query 等) を
+          output/ 直下に横並びさせず、index.md (概要) を除いて一つのディレクトリ配下にまとめる。
+          output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
+          ディレクトリ名・対象範囲は実装時に確定。
+        phase: 13
 
   G:
     title: CLI / 設定システム

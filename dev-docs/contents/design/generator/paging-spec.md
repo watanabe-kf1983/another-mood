@@ -32,7 +32,7 @@ file_per:
 
 ## Proposals
 
-> **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1 で `reports.yaml` の読み込み・形式検証、C2 で `file_per` 評価 (`ReportsConfig.is_split_target`) は完了。以下は評価結果で実際にページ分割を駆動する未実装部分 (C3〜C6)。現在の `{% mood_view %}` は常に分割で、`file_per` 設定はまだ出力に反映されない。
+> **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1（`reports.yaml` の読み込み・形式検証）・C2（`file_per` 評価 `ReportsConfig.is_split_target`）・C3（`page_path` による分割書き出し）は完了。`file_per` に挙げた ObjectType は anchor 由来パス（`reports/` 配下）に分割出力される。残りは split / inline の判定を `file_per` に寄せる部分 (C4) と複数プロファイル (C5/C6)。現状の `{% mood_view %}` は `inline` 指定が無ければ常に分割する（分割する ObjectType は `file_per` に挙げる必要がある）。
 
 ### 複数プロファイル
 
@@ -90,11 +90,11 @@ profiles:
 
 ### meta 子テンプレートへの root threading
 
-> P3（`this` 束縛 / 主題ノード受け取り）は実装済み — [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛) を参照。残るのは出力パス統一（C3）・B4/B5 簡約・meta 子テンプレートへの root threading 解消（E12）。
+> P3（`this` 束縛 / 主題ノード受け取り）・出力パス統一（C3）は実装済み — [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛) を参照。残るのは B4/B5 簡約・meta 子テンプレートへの root threading 解消（E12）。
 
-`this` 束縛で主題がノードになったことを足場に、まだ残る簡約が三つある:
+`this` 束縛で主題がノードになったことを足場に、まだ残る簡約がある:
 
-1. **出力パスの page_path 統一（C3）.** 現状の出力パス決定は暫定（id 付き Mapping → `{stem}/{id}.md`、それ以外 → `template_name`）で、anchor map に載らずリンク先として参照しづらい。meta 診断の合成 dict（[E12](../../../tasks.md)）がノード化され全主題がノードになると、C3 が mood_view のパス決定を `ReportsConfig.page_path(node)` 一本に畳める（ページの anchor / page_path が主題ノードの anchor_path で安定し anchor map に載る）。ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する（＝「ディレクトリ名 = ビュー名」と同じ筋）。
+1. **出力パスの page_path 統一（C3、実装済み）.** 実ツリーノードは `ReportsConfig.page_path(node)` で anchor 由来パスに分割出力され、anchor map に載る。ページ名は主題ノードの view 名（データツリーのキー）に従うので、ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する（＝「ディレクトリ名 = ビュー名」と同じ筋）。**残る検討**: meta 診断の合成 dict（非ツリーノード）は暫定 fallback（id 付き → `{stem}/{id}.md`、他 → `template_name`）のまま。[E12](../../../tasks.md) が合成 dict をノード化すれば、この fallback を畳んで page_path 一本にできる。
 
 2. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, anchor_map)` だけ束縛すればよくなる（B4/B5 実装時に取り込む）。
 

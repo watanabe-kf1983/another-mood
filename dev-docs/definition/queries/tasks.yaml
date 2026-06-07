@@ -1,0 +1,7 @@
+# Pass-through view of the task catalog. Defined so the rendered page is
+# named `tasks.md`: the page path follows the view name (paging-spec
+# page-path derivation), and the underlying entity is `categories`.
+# Omitting `select:` passes each category record through unchanged,
+# including its nested `tasks`.
+tasks:
+  from: categories

@@ -7,7 +7,7 @@
 | ID | 名前 | 説明 |
 |----|------|------|
 {% for t in テーブル -%}
-| {{ code_inline(t.id) }} | [{{ t.名前 }}](テーブル詳細/{{ t.id | as_url }}.md) | {{ t.説明 }} |
+| {{ code_inline(t.id) }} | [{{ t.名前 }}](テーブル/{{ t.id | as_url }}.md) | {{ t.説明 }} |
 {% endfor %}
 
 {% for t in テーブル -%}

@@ -15,7 +15,10 @@ from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
 )
-from another_mood.components.generator.reports_config import load_reports_config
+from another_mood.components.generator.reports_config import (
+    ReportsConfig,
+    load_reports_config,
+)
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
@@ -34,13 +37,13 @@ def generate(
     data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
-    # Parsed file_per is captured but not yet evaluated — C2/C4 will
-    # consume it to drive {% mood_view %} split/inline behaviour.
-    _ = load_reports_config(reports_file)
+    config = load_reports_config(reports_file)
     # Build the anchor_path -> node map (consumed by the B4/B5 link
     # resolver); the root is the "/" entry.
     anchors = build_anchor_map(load_model(data_dir))
     data = cast(MappingNode, anchors["/"])
+    # The meta render only feeds mood_view synthetic dicts (no _meta), so
+    # it keeps the interim fallback path and needs no reports_config.
     render(
         "__root.md",
         META_TEMPLATES_DIR,
@@ -48,7 +51,13 @@ def generate(
         out_dir,
         filters=META_TEMPLATES_FILTERS,
     )
-    render("index.md", templates_dir, data, out_dir / "reports")
+    render(
+        "index.md",
+        templates_dir,
+        data,
+        out_dir / "reports",
+        reports_config=config,
+    )
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -101,10 +110,12 @@ def render(
     out_dir: Path,
     *,
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
+    reports_config: ReportsConfig = ReportsConfig(file_per=()),
 ) -> None:
     """Render a template and write the result to out_dir/index.md."""
     TemplateEngine(
         out_dir,
         templates_dir=templates_dir,
         filters=filters,
+        reports_config=reports_config,
     ).render_to_file(template_name, data, Path("index.md"))

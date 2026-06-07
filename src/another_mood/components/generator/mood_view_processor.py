@@ -1,3 +1,6 @@
+# ``_out_path`` reads ``node._meta`` — a template-public field under the
+# reserved ``_`` prefix (see data_tree.py), not a Python-protected attr.
+# pyright: reportPrivateUsage=false
 """Mood-view processor — {% mood_view %} tag parsing and dispatch."""
 
 from __future__ import annotations
@@ -11,6 +14,9 @@ from jinja2 import nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
 
+from another_mood.components.generator.data_tree import ArrayNode, MappingNode
+from another_mood.components.generator.reports_config import ReportsConfig
+
 if TYPE_CHECKING:
     from another_mood.components.generator.template_engine import TemplateEngine
 
@@ -23,6 +29,7 @@ class MoodViewProcessorImpl:
     page via the engine at the subject's output path."""
 
     engine: TemplateEngine
+    reports_config: ReportsConfig = ReportsConfig(file_per=())
 
     def __call__(
         self, template_name: str, subject: object, *, inline: bool = False
@@ -35,17 +42,13 @@ class MoodViewProcessorImpl:
             )
             return ""
 
-    @staticmethod
-    def _out_path(template_name: str, subject: object) -> Path:
-        """Out_dir-relative page path for a split subject.
-
-        ``{stem}/{id}.md`` for an id-bearing record, else ``template_name``
-        for any other node (a record without ``id``, or a collection).  A
-        scalar has no page, so it is rejected here — the only place that
-        maps a subject to a page.  Interim until paging routes every
-        subject through ``ReportsConfig.page_path(node)`` (paging-spec C3).
-        """
-        if isinstance(subject, Mapping) and "id" in subject:
+    def _out_path(self, template_name: str, subject: object) -> Path:
+        if isinstance(subject, (MappingNode, ArrayNode)):
+            return Path(self.reports_config.page_path(subject))
+        # A non-node subject (a plain mapping/list assembled in a template)
+        # has no anchor path, so fall back to a template-derived name.
+        # Transitional; see paging-spec.
+        elif isinstance(subject, Mapping) and "id" in subject:
             return Path(Path(template_name).stem) / f"{subject['id']}.md"
         elif isinstance(subject, (Mapping, list)):
             return Path(template_name)

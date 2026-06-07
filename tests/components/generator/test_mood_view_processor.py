@@ -7,11 +7,13 @@ from typing import Any
 import pytest
 from jinja2 import Environment, TemplateSyntaxError
 
+from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.mood_view_processor import (
     PROCESSOR_KEY,
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
+from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import TemplateEngine
 
 
@@ -209,6 +211,39 @@ class TestMoodViewProcessorImplRouting:
         assert engine.rendered == [("profile.md", subject)]
         assert engine.written == []
         assert result == "hi alice"
+
+
+class TestMoodViewProcessorImplPagePath:
+    """How a split subject maps to its output path.
+
+    A real data-tree node uses ``ReportsConfig.page_path`` (paging C3),
+    so its directory is the view name.  A plain dict (the meta
+    diagnostics) keeps the older ``{stem}/{id}.md`` fallback.
+    """
+
+    _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
+
+    def test_tree_node_uses_anchor_derived_page_path(self) -> None:
+        engine = _MockEngine()
+        config = ReportsConfig(file_per=("members.item",))
+        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
+        member = wrap_tree(self._TREE)["members"][0]
+        processor("member.md", member)
+
+        # Directory is the view name (``members``), not the template stem.
+        assert engine.written == [("member.md", member, Path("members/alice.md"))]
+
+    def test_synthetic_dict_uses_interim_fallback(self) -> None:
+        # A plain dict is not a tree node, so page_path is bypassed and the
+        # path stays template-stem-derived (the meta diagnostics' shape).
+        engine = _MockEngine()
+        config = ReportsConfig(file_per=("members.item",))
+        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
+        processor("member.md", {"id": "alice"})
+
+        assert engine.written == [
+            ("member.md", {"id": "alice"}, Path("member/alice.md"))
+        ]
 
 
 class TestMoodViewProcessorImplPageSubject:
