@@ -13,6 +13,7 @@ from another_mood.components.generator.mood_view_processor import (
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
+from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import TemplateEngine
 
@@ -277,7 +278,9 @@ class TestMoodViewProcessorImplViaEngine:
             (templates_dir / name).write_text(body)
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        return TemplateEngine(out_dir, templates_dir=templates_dir, filters={})
+        return TemplateEngine(
+            out_dir, templates_dir=templates_dir, output_format=MD, filters={}
+        )
 
     def test_writes_file_with_rendered_content(self, tmp_path: Path) -> None:
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})

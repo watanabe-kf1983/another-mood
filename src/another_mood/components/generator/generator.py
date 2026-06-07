@@ -1,7 +1,5 @@
 """Generator — render views data through Jinja2 templates to Markdown,
 and reconcile the output with the propagated BuildReport.
-
-See: dev-docs/contents/internal/components/generator.md
 """
 
 import shutil
@@ -10,11 +8,13 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
+from another_mood.components.generator.anchor import make_anchor_filters
 from another_mood.components.generator.data_tree import MappingNode, build_anchor_map
 from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
 )
+from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.reports_config import (
     ReportsConfig,
     load_reports_config,
@@ -38,24 +38,29 @@ def generate(
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     config = load_reports_config(reports_file)
-    # Build the anchor_path -> node map (consumed by the B4/B5 link
-    # resolver); the root is the "/" entry.
+    # anchor_path -> node map; the root node is the "/" entry.
     anchors = build_anchor_map(load_model(data_dir))
     data = cast(MappingNode, anchors["/"])
-    # The meta render only feeds mood_view synthetic dicts (no _meta), so
-    # it keeps the interim fallback path and needs no reports_config.
+    # Both renders walk the data tree, so both get the format-neutral anchor
+    # filters; the markdown href / link come from the md format via the engine.
+    anchor_globals, anchor_filters = make_anchor_filters(anchors)
+    # Meta render keeps the default (no-split) config: its mood_view subjects
+    # are synthetic dicts that take the fallback page path, not config paging.
     render(
         "__root.md",
         META_TEMPLATES_DIR,
         data,
         out_dir,
-        filters=META_TEMPLATES_FILTERS,
+        filters={**META_TEMPLATES_FILTERS, **anchor_filters},
+        globals=anchor_globals,
     )
     render(
         "index.md",
         templates_dir,
         data,
         out_dir / "reports",
+        filters=anchor_filters,
+        globals=anchor_globals,
         reports_config=config,
     )
 
@@ -110,12 +115,15 @@ def render(
     out_dir: Path,
     *,
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
+    globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     reports_config: ReportsConfig = ReportsConfig(file_per=()),
 ) -> None:
     """Render a template and write the result to out_dir/index.md."""
     TemplateEngine(
         out_dir,
         templates_dir=templates_dir,
+        output_format=MD,
         filters=filters,
+        globals=globals,
         reports_config=reports_config,
     ).render_to_file(template_name, data, Path("index.md"))

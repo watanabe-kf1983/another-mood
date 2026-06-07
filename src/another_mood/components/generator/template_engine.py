@@ -26,6 +26,10 @@ from another_mood.components.shared.user_source.diagnostic import (
 )
 
 
+def _no_link_filters(reports_config: ReportsConfig) -> Mapping[str, Callable[..., Any]]:
+    return {}
+
+
 @dataclass(frozen=True)
 class OutputFormat:
     name: str
@@ -36,9 +40,17 @@ class OutputFormat:
     filters: Mapping[str, Callable[..., Any]] = field(
         default_factory=lambda: {},
     )
+    # Link filters depend on the paging config, so the format supplies them
+    # as a factory the environment calls with the build's config.
+    link_filters: Callable[[ReportsConfig], Mapping[str, Callable[..., Any]]] = (
+        _no_link_filters
+    )
 
 
-def make_environment(output_format: OutputFormat) -> Environment:
+def make_environment(
+    output_format: OutputFormat,
+    reports_config: ReportsConfig = ReportsConfig(file_per=()),
+) -> Environment:
     # Jinja2's autoescape is hard-coded to HTML, so per-format escaping
     # is implemented via a finalize hook; Markup values are passed through.
     def _finalize(value: object) -> object:
@@ -56,13 +68,10 @@ def make_environment(output_format: OutputFormat) -> Environment:
     )
     for name, func in output_format.globals.items():
         env.globals[name] = func  # pyright: ignore[reportArgumentType]
-    for name, func in output_format.filters.items():
+    filters = {**output_format.filters, **output_format.link_filters(reports_config)}
+    for name, func in filters.items():
         env.filters[name] = func  # pyright: ignore[reportArgumentType]
     return env
-
-
-# Imported after OutputFormat is defined to break a circular import.
-from another_mood.components.generator.output_formats.md import MD  # noqa: E402
 
 
 def _bind(subject: object) -> Mapping[str, object]:
@@ -149,15 +158,19 @@ class TemplateEngine:
         out_dir: Path,
         *,
         templates_dir: Path,
+        output_format: OutputFormat,
         filters: Mapping[str, Callable[..., Any]],
+        globals: Mapping[str, Callable[..., Any]] = {},
         reports_config: ReportsConfig = ReportsConfig(file_per=()),
     ) -> None:
         self._out_dir = out_dir
         self._paths = PathRegistry()
-        self._env = make_environment(MD)
+        self._env = make_environment(output_format, reports_config)
         self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
+        for name, func in globals.items():
+            self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
         # The mood_view extension dispatches via env.globals[PROCESSOR_KEY].
         self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(  # pyright: ignore[reportArgumentType]
             engine=self, reports_config=reports_config
