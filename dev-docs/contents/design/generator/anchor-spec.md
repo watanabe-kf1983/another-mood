@@ -125,23 +125,28 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 
 #### テンプレート内のアンカー参照
 
-テンプレート内では anchor path から 3 種類のフィルタを使い分ける:
+テンプレート内では **アンカー** を `anchor()` で得て、整形フィルタで仕上げる:
 
 ```jinja2
-{{ "/erds/user-management/entities/user" | anchor_link }}
-{# → [<display>](<URL>) 形式の Markdown リンク #}
+{{ anchor("erds", erd.id, "entities", entity.id) | link }}
+{# segments からアンカーを組み立て解決 → [<display>](<URL>) の Markdown リンク #}
 
-{{ "/erds/user-management/entities/user" | anchor_link("ER 図") }}
-{# → display text を明示。[ER 図](<URL>) #}
+{{ anchor("/erds/user-management/entities/user") | link }}
+{# 第一引数が `/` 始まり → 出来合いのアンカーパスとして解決（prose / 定数）#}
 
-{{ "/erds/user-management/entities/user" | anchor_title }}
-{# → display 文字列のみ #}
+{{ member | link }}
+{# すでに手にあるノード（＝アンカー）はそのまま整形できる #}
 
-{{ "/erds/user-management/entities/user" | anchor_url }}
-{# → URL 文字列のみ #}
+{{ anchor("erds", erd.id) | label }}   {# 表示文字列のみ #}
+{{ anchor("erds", erd.id) | href }}    {# URL のみ #}
+{{ member | link("ER 図") }}           {# display text を明示 override #}
 ```
 
-display text は対象ノードから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`anchor_link(arg)` のように引数で渡せば override。
+- `anchor(seg, *segs)` — segments（各セグメントを escape）か、`/` 始まりの出来合いアンカーパスから、**アンカー**（リンク可能なオブジェクト）を得る。関数形・フィルタ形（`"/..." | anchor`）の両用。第一引数の `/` 始まりで raw 判定するのは安全 — エンティティ/クエリ名は識別子パターン（`/` 始まり不可、schema-schema / query-schema の `propertyNames`）に縛られるため。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
+- `link` / `label` / `href` — アンカー → Markdown リンク / 表示文字列 / URL。
+- `anchor_path(seg, *segs)` — 解決せずアンカーパス**文字列**のみ欲しいとき（fragment や `toc:` 組み立て等）。入力規則は `anchor` と同じ。
+
+display text は対象アンカーから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`link(arg)` のように引数で渡せば override。
 
 #### Markdown 本文中のアンカー参照
 
@@ -169,7 +174,7 @@ prose body 等の Markdown 本文では `toc:` プレフィックス記法でア
 
 リンク解決は Generator の **pre-render 段階で完結**する。post-render での文字列置換は行わない。
 
-- **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor path から Markdown リンク / display text / URL を生成
+- **`anchor()` + `link` / `label` / `href` フィルタ**: `anchor()` でアンカーを得て、`link` / `label` / `href` が Markdown リンク / display text / URL を生成
 - **prose body 処理フィルタ (仮称 `resolve`)**: prose body 中の `toc:` URL を実 URL に置換。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタ
 
 出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
@@ -181,16 +186,16 @@ URL は **path 部 + fragment 部** に分けて組み立てる:
 
 resolver とフィルタは **レポートルート相対 座標系**で動く (page_path の定義に同じ — [generator.md](generator.md#ページパスの導出-b6) 参照。`reports/`・profile 段は付かない)。ページパスは `config.page_path(node)` ([B6](../../../tasks.md)) で算出する。page_path はノードに焼かず、resolver が必要時に config から引く:
 
-- **source ページパス**: resolver に render 単位で束縛された source node から `config.page_path(source_node)`
+- **source ページパス**: テンプレートコンテキストの `this`（主題ノード）から `config.page_path(this)`。`@pass_context` フィルタが context 経由で取る
 - **target ページパス**: anchor_path → ノードマップで target ノードを引いて `config.page_path(target_node)`
 - **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算。source/target が同一レポート内なら共通のマウント先 (`reports/[{profile}/]`) は相殺されるので、原点をレポートルートに取って差し支えない
 - **最終 URL**: `{path 部}#{target._meta.anchor_path}`
 
 ノードには page_path も結合済み URL も焼かない。fragment は常に anchor_path から派生し、page_path は config 依存なので、いずれも URL を必要とするフィルタ側でその場で組む。
 
-フィルタは `@pass_context` で受ける必要がある。理由は Jinja2 オプティマイザの定数畳み込みを抑止するため — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。`@pass_context` は context 依存フィルタとしてマークし、この畳み込みを防ぐ (source node は ctx ではなく resolver の closure binding から取る)。
+path を組む `link` / `href` は `@pass_context` で受ける必要がある。理由は二つ — (1) source node を context の `this`（主題ノード）から取るため、(2) Jinja2 オプティマイザの定数畳み込みを抑止するため（定数引数の `{{ anchor("/erds/x") | href }}` がコンパイル時に評価されると相対 URL がキャッシュに焼かれ、同テンプレートを別ページから使ったとき壊れる）。source 非依存の `label` / `anchor` は `@pass_context` 不要。
 
-いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_path → ノードのマップを引いて URL を組み立てる。
+resolver は静的に `(ReportsConfig, build_anchor_map の戻り)` を closure binding で共有する（source node は焼かず `this` から取る）。`anchor` がアンカーパス → アンカーを引き、整形フィルタが URL を組み立てる。
 
 prose 例外の resolver 側挙動: マップは full anchor_path をキーにするフラットな dict ([generator.md](generator.md#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) の B2) なので、resolver はアンカーパスを分割せず**そのままキーで引く**。prose の `/` 素通しはアンカーパス構築側で吸収済みのため、resolver 側に prose 例外の特別扱いは要らない（例: `/prose/design/architecture` はそのキーで直に当たる）。
 

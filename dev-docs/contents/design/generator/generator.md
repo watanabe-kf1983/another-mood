@@ -128,15 +128,15 @@ page_path も結合済み URL もノードに焼かないのは同じ理由 — 
 
 > **未実装** — Phase 11 タスク [B4, B5](../../../tasks.md)。anchor_path → ノードマップ (B2) は実装済 — [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) 参照。アンカーの仕様 (リンク記法 / フィルタ API / 解決のタイミング) は [anchor-spec.md](anchor-spec.md) を参照。
 
-リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。各テンプレート render 用の TemplateEngine インスタンスに対し、resolver を closure binding で渡し、各種フィルタが共有する。resolver は render 単位で `(ReportsConfig, build_anchor_map の戻り, source node)` を束縛する。source / target いずれのページパスも `config.page_path(node)` (B6) で算出する — source は束縛された source node から、target は anchor マップで引いたノードから (詳細は [anchor-spec.md#リンク解決](anchor-spec.md#リンク解決))。フィルタ・resolver は B2 の `build_anchor_map` を共有し、anchor path をキーに直接ノードを引く。
+リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。各テンプレート render 用の TemplateEngine インスタンスに対し、resolver を closure binding で渡し、各種フィルタが共有する。resolver は `(ReportsConfig, build_anchor_map の戻り)` を束縛する（静的）。source / target のページパスは `config.page_path(node)` (B6) で算出する — source は `@pass_context` フィルタがコンテキストの `this`（主題ノード）から、target は anchor マップで引いたアンカーから (詳細は [anchor-spec.md#リンク解決](anchor-spec.md#リンク解決))。フィルタ・resolver は B2 の `build_anchor_map` を共有し、anchor path をキーに直接ノードを引く。
 
-#### anchor フィルタ (B4)
+#### anchor 解決・整形フィルタ (B4)
 
-テンプレート内で anchor path から `[<display>](<URL>)` / display 文字列 / URL 文字列 を生成する 3 つのフィルタ:
+`anchor()` で **アンカー**（リンク可能なオブジェクト）を得て、整形フィルタで Markdown リンク / display 文字列 / URL を生成する:
 
-- `anchor_link(anchor_path, [override_text])` — Markdown リンク全体
-- `anchor_title(anchor_path)` — display text のみ (`title` → `name` → `id` → anchor_path 全体 のチェイン)
-- `anchor_url(anchor_path)` — URL のみ
+- `anchor(seg, *segs)` — segments（各 escape）か `/` 始まりの出来合いアンカーパスから、アンカーを得る（関数・フィルタ両用）
+- `link` / `label` / `href` — アンカー → `[<display>](<URL>)` / display 文字列 / URL（`link(text)` で override）
+- `anchor_path(seg, *segs)` — 解決せずアンカーパス文字列を返す
 
 仕様は [anchor-spec.md](anchor-spec.md#リンク記法) を参照。
 
