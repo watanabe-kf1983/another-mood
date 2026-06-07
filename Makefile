@@ -1,4 +1,4 @@
-.PHONY: ci format-check lint typecheck test secrets build-projects format mirror-schemas
+.PHONY: ci format-check lint typecheck test secrets build-projects format mirror-schemas stats
 
 ci: format-check lint typecheck test secrets build-projects
 
@@ -29,3 +29,16 @@ format:
 
 mirror-schemas:
 	cp src/another_mood/resources/schemas/*.yaml docs/reference/schemas/
+
+# Project-size overview. cloc (the de-facto line counter) is run via the
+# bundled `cloc-python`, fetched and cached by `uvx` — no system install.
+# `--vcs=git` with a path counts only git-tracked files under that area.
+STAT_AREAS = src tests
+
+stats:
+	@uvx cloc-python --vcs=git .
+	@for d in $(STAT_AREAS); do \
+		echo ""; \
+		echo "== $$d =="; \
+		uvx cloc-python --vcs=git "$$d"; \
+	done
