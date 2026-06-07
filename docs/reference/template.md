@@ -15,7 +15,7 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 ## Products
 
 {%- for product in products %}
-- [{{ product.name }}](product-detail/{{ product.id }}.md)
+- [{{ product.name }}](products/{{ product.id }}.md)
 {%- endfor %}
 
 {%- for product in products -%}
@@ -59,12 +59,9 @@ An error is raised if `DATA` is a scalar (neither a map nor a list).
 
 ### Automatic output path
 
-The output path is determined by whether `DATA` has an `id` field.
+A split page's path mirrors where the subject sits in the data: it is the subject's `_anchor_path` with `.md` appended, written under `reports/`. A record with `_anchor_path` `/products/foo` is written to `reports/products/foo.md`; a singleton at `/overview`, to `reports/overview.md`. Each node's `_anchor_path` is shown in the `__table_view/` and `__meta_query/` diagnostics.
 
-| `DATA` | Output (when `NAME` is `"product-detail.md"`) |
-|---|---|
-| Includes `{ id: "foo", ... }` | `{outDir}/product-detail/foo.md` |
-| No `id` field | `{outDir}/product-detail.md` |
+To split a node into its own page, list its ObjectType ID in [`file_per`](reports.md). Two pages that resolve to the same path make the build fail rather than silently overwrite one another.
 
 ### Return value of the tag
 
@@ -74,7 +71,7 @@ To link from a parent page to a subpage, write Markdown link syntax separately, 
 
 ```jinja2
 {%- for product in products %}
-- [{{ product.name }}](product-detail/{{ product.id }}.md)
+- [{{ product.name }}](products/{{ product.id }}.md)
 {%- endfor %}
 
 {%- for product in products -%}
