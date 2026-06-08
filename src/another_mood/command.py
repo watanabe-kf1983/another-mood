@@ -9,7 +9,7 @@ example, per-rebuild reports during watch) is delivered via callback
 arguments (e.g. ``watch(..., on_report=...)``) — never via ``print``.
 """
 
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -178,7 +178,7 @@ def build(
 def watch(
     config: ProjectConfig,
     on_report: Callable[[BuildResult], None],
-) -> Iterator[WatchSession]:
+) -> Generator[WatchSession]:
     """Start the pipeline in watch mode.
 
     Yields a :class:`WatchSession` once the live preview server is confirmed
