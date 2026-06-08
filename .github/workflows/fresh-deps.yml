@@ -1,0 +1,37 @@
+name: Fresh dependency check
+
+# Early-warning, non-blocking counterpart to ci.yml. ci.yml gates PRs against
+# the committed uv.lock; this workflow re-resolves dependencies to the latest
+# versions our constraints allow, mirroring what end users get from
+# `uv tool install` (which ignores uv.lock). It runs on a schedule so an
+# upstream release never reds an unrelated PR — failures here are a signal to
+# bump or cap a dependency before users hit the breakage.
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Mondays 00:00 UTC
+  workflow_dispatch:
+
+jobs:
+  # The essential check: reproduce the isolated, freshly-resolved environment
+  # of `uv tool install`. Only this path exercises entry-point shim behaviour,
+  # so it catches binary-resolution bugs that ci.yml (running via `uv run` in
+  # the project .venv) cannot.
+  install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - name: Build via the `uv tool install` resolution path
+        run: uvx --from . --refresh-package another-mood mood build showcase/starter
+
+  # Complementary: run the full test suite against the latest allowed versions
+  # to surface upstream API breakage early.
+  fresh-resolution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - name: Resolve to the latest versions our constraints allow
+        run: uv sync --upgrade
+      - run: make ci
