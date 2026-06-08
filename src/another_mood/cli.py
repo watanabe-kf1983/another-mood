@@ -14,7 +14,11 @@ from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import ScaffoldResult
 from another_mood.config import ConfigValidationError, ProjectConfig
 
-app = typer.Typer()
+# add_completion=False drops typer's `--install-completion` / `--show-completion`
+# options. Shell completion is rarely set up for a `uv tool install`-distributed
+# CLI, and the two options only clutter the `mood --help` surface that readers
+# (humans and coding agents alike) scan to discover commands.
+app = typer.Typer(add_completion=False)
 blueprint_app = typer.Typer(help="Manage built-in blueprints (sample projects).")
 app.add_typer(blueprint_app, name="blueprint")
 docs_app = typer.Typer(help="Inspect bundled documentation (also exposed via MCP).")
@@ -23,7 +27,11 @@ app.add_typer(docs_app, name="docs")
 
 @app.callback()
 def callback() -> None:
-    """Another Mood: a processor of source-based databases, keeping related documents in sync."""
+    """Another Mood: a processor of source-based databases, keeping related documents in sync.
+
+    Before authoring or editing schema, queries, or templates, read the spec:
+    run `mood docs list`, then `mood docs read <uri>` for the relevant page.
+    """
 
 
 def _load_config(**kwargs: object) -> ProjectConfig:
