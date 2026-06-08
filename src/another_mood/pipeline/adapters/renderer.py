@@ -4,13 +4,16 @@ import subprocess
 from importlib.resources import files
 from pathlib import Path
 
-from hugo.cli import HUGO_EXECUTABLE  # pyright: ignore[reportMissingTypeStubs]
+import hugo.cli as _hugo_cli  # pyright: ignore[reportMissingTypeStubs]
 
 _HUGO_SOURCE_DIR = files("another_mood.resources") / "hugo"
 # Resolve the bundled Hugo binary directly. `uv tool install` exposes only
 # entry-point shims on PATH, so a bare `["hugo", ...]` would not find the
-# bin/ inside the tool's isolated environment.
-_HUGO = str(HUGO_EXECUTABLE)
+# binary inside the tool's isolated environment.
+_hugo_path = Path(_hugo_cli.__file__).parent / _hugo_cli.HUGO_BINARY_PATH
+if not _hugo_path.is_file():
+    raise FileNotFoundError(f"Bundled Hugo binary not found at {_hugo_path}")
+_HUGO = str(_hugo_path)
 
 
 def build(content_dir: Path, out_dir: Path) -> None:
