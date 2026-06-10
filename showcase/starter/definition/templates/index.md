@@ -5,19 +5,13 @@
 ## Members
 
 {%- for member in members %}
+{%- mood_view "member.md" with member %}
 - {{ member | link }} — {{ member.role }}
-{%- endfor %}
-
-{%- for member in members -%}
-{% mood_view "member.md" with member %}
 {%- endfor %}
 
 ## By Role
 
 {%- for entry in by_role %}
+{%- mood_view "by_role.md" with entry %}
 - {{ entry | link }}
-{%- endfor %}
-
-{%- for entry in by_role -%}
-{% mood_view "by_role.md" with entry %}
 {%- endfor %}

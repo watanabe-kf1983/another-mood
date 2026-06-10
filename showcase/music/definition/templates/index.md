@@ -5,11 +5,8 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 ## Artists
 
 {%- for artist in artist_discography %}
+{%- mood_view "artist-detail.md" with artist %}
 - {{ artist | link }}{% if artist.country %} - {{ artist.country }}{% endif %}
-{%- endfor %}
-
-{%- for artist in artist_discography -%}
-{% mood_view "artist-detail.md" with artist %}
 {%- endfor %}
 
 ## Albums by genre

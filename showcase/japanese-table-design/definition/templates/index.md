@@ -7,11 +7,8 @@
 | ID | 名前 | 説明 |
 |----|------|------|
 {% for t in テーブル -%}
+{% mood_view "テーブル詳細.md" with t -%}
 | {{ code_inline(t.id) }} | {{ t | link(t.名前) }} | {{ t.説明 }} |
-{% endfor %}
-
-{% for t in テーブル -%}
-{% mood_view "テーブル詳細.md" with t %}
 {% endfor %}
 
 ## ドメインモデル図 (Mermaid classDiagram)
