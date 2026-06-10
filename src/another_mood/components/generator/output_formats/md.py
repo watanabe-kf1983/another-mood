@@ -89,10 +89,14 @@ def make_link_filters(
     ``config``; the format-neutral filters come from
     :func:`..anchor.make_anchor_filters`.
 
-    ``@pass_context`` reads the source page from the render context's
-    ``this``.  An unresolved reference renders as plain visible text instead
-    of a link to a dead URL — ``href`` yields empty, ``link`` the escaped
-    display text alone.
+    ``@pass_context`` serves two purposes: it reads the source page from the
+    render context's ``this``, and it stops Jinja2's optimizer from
+    constant-folding constant-argument calls — a compile-time-evaluated
+    ``{{ anchor("/x") | href }}`` would bake one source page's relative URL
+    into the compiled template and break the same template rendered from
+    another page.  An unresolved reference renders as plain visible text
+    instead of a link to a dead URL — ``href`` yields empty, ``link`` the
+    escaped display text alone.
     """
 
     @pass_context

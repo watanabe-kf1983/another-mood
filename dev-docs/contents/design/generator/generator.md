@@ -120,15 +120,15 @@ def page_path(self, node: Node) -> str:
 
 「root が常にページ」という paging 事実は config 側の `None`→`index.md` 解釈に閉じ込め、`nearest_ancestor` は構造的な「最寄り一致」だけを返す。
 
-座標系は **レポートルート相対**。`reports/` および profile 段 ([paging-spec.md](paging-spec.md#出力ディレクトリ規約)) は実ファイルを書き出す mood_view 側 (C3) が被せるマウント先で、page_path には含めない。リンク解決は source/target 双方の page_path の相対差 (`os.path.relpath`) のみを使うため、共通のマウント先は相殺され、原点をレポートルートに取って問題ない。
+座標系は **レポートルート相対**。`reports/` および profile 段 ([paging-spec.md](paging-spec.md#出力ディレクトリ規約)) は実ファイルを書き出す mood_view 側 (C3) が被せるマウント先で、page_path には含めない。リンク解決は source/target 双方の page_path の相対差 (`posixpath.relpath` — page_path は `/` 区切りなので OS 非依存に保つ) のみを使うため、共通のマウント先は相殺され、原点をレポートルートに取って問題ない。
 
-page_path も結合済み URL もノードに焼かないのは同じ理由 — どちらも config やリンク文脈に依存し、ノード単体には属さない。URL は `(source page_path, target page_path, target anchor_path)` の三項で決まるので、anchor 解決フィルタが必要時にその場で組む (詳細は [anchor-spec.md#リンク解決](anchor-spec.md#%E3%83%AA%E3%83%B3%E3%82%AF%E8%A7%A3%E6%B1%BA) 参照)。
+page_path も結合済み URL もノードに焼かないのは同じ理由 — どちらも config やリンク文脈に依存し、ノード単体には属さない。URL は `(source page_path, target page_path, target anchor_path)` の三項で決まるので、anchor 解決フィルタが必要時にその場で組む (URL の外形は [anchor-spec.md#出力-url-の形式](anchor-spec.md#出力-url-の形式) 参照)。
 
 ### リンク解決 (B4, B5)
 
 > **B4 実装済 / B5 未実装** — anchor 解決・整形フィルタ (B4) は実装済み。prose body `resolve` フィルタ (B5) は未実装。anchor_path → ノードマップ (B2) も実装済 — [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) 参照。アンカーの仕様 (リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動) は [anchor-spec.md](anchor-spec.md) を参照。
 
-リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。フィルタは依存方向で 2 群に分かれる: フォーマット非依存の中立フィルタ (`anchor` / `anchor_path` / `label`) は anchor マップだけに束縛され `anchor.make_anchor_filters(anchor_map)` が供給する。フォーマット固有の `link` / `href` は `ReportsConfig` に束縛され `md.make_link_filters(config)` が供給する（`OutputFormat.link_filters` 経由でフォーマットに属し、Environment 構築時に config で配線される）。source / target のページパスは `config.page_path(node)` (B6) で算出する — source は `@pass_context` フィルタがコンテキストの `this`（主題ノード）から、target は anchor マップで引いたアンカーから (詳細は [anchor-spec.md#リンク解決](anchor-spec.md#リンク解決))。
+リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。フィルタは依存方向で 2 群に分かれる: フォーマット非依存の中立フィルタ (`anchor` / `anchor_path` / `label`) は anchor マップだけに束縛され `anchor.make_anchor_filters(anchor_map)` が供給する。フォーマット固有の `link` / `href` は `ReportsConfig` に束縛され `md.make_link_filters(config)` が供給する（`OutputFormat.link_filters` 経由でフォーマットに属し、Environment 構築時に config で配線される）。source / target のページパスは `config.page_path(node)` (B6) で算出する — source は `@pass_context` フィルタがコンテキストの `this`（主題ノード）から、target は anchor マップで引いたアンカーから（`@pass_context` が要る二つ目の理由＝定数畳み込み抑止を含め、実装契約は `md.make_link_filters` の docstring を参照）。
 
 #### anchor 解決・整形フィルタ (B4)
 

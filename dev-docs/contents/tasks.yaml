@@ -62,7 +62,7 @@ categories:
         title: anchor 解決・整形フィルタ (`anchor` / `link` / `label` / `href`)
         note: '`anchor()` でアンカーパス/segments からアンカーを得て `link` / `label` / `href` が Markdown リンク / display text / URL を生成。source は `this`、resolver は静的 `(ReportsConfig, anchor_map)`'
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b4-b5
+        done: true
       B5:
         title: prose body 処理フィルタ (`resolve`)
         note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
