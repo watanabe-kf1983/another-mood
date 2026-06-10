@@ -15,6 +15,11 @@ properties:
             type: string
         spec:
           type: string
+          description: |
+            対応する設計仕様 prose ドキュメントの id（contents 相対パス、拡張子なし）。
+          x-ref:
+            entity: prose
+            attribute: id
         tasks:
           type: object
           additionalProperties:

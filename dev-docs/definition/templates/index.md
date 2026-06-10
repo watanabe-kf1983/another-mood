@@ -1,4 +1,4 @@
-[Documentation](prose/index.md)
+{{ anchor("/prose/index") | link }}
 
 {%- for record in prose -%}
 {% mood_view "prose.md" with record %}

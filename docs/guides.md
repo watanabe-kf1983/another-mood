@@ -396,16 +396,18 @@ For full syntax and examples, see [Query](reference/query.md).
 
 ## Templates
 
-Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template engine this tool builds on — with the tool's own additions (the `{% mood_view %}` tag for splitting output across files).
+Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template engine this tool builds on — with the tool's own additions (custom filters such as `link`, and the `{% mood_view %}` tag for splitting output across files).
 
 ### Jinja2 basics
 
 At a minimum, know these:
 
 - `{{ x }}` — embed a value
+- `{{ x | f }}` — pass the value through a **filter** before embedding; Another Mood adds its own filters (such as `link`) to Jinja2's built-ins
 - `{% for x in xs %}...{% endfor %}` — loop
 - `{% if x %}...{% endif %}` — branch
 - `{# ... #}` — comment
+- `{%- ... -%}` — a `-` against either delimiter trims the adjacent whitespace and newline on that side (keeps loops from leaving blank lines)
 
 For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/).
 
@@ -421,37 +423,31 @@ Sample `definition/templates/index.md`:
 ## Members
 
 {%- for member in members %}
-- [{{ member.name }}](members/{{ member.id }}.md)
-{%- endfor %}
-
-{%- for member in members -%}
-{% mood_view "member.md" with member %}
+{%- mood_view "member.md" with member %}
+- {{ member | link }}
 {%- endfor %}
 
 ## By Role
 
 {%- for entry in by_role %}
-- [{{ entry.role }}](by_role/{{ entry.id }}.md)
-{%- endfor %}
-
-{%- for entry in by_role -%}
-{% mood_view "by_role.md" with entry %}
+{%- mood_view "by_role.md" with entry %}
+- {{ entry | link }}
 {%- endfor %}
 ```
 
-Each section has two `for` loops. The first **emits index links**; the second **writes the subpage bodies**.
+Each loop does two things per record: it **writes that record's subpage** and **emits an index link** to it. The sections below take the machinery apart: writing subpages, the subtemplates that render them, where the pages land, and the `link` that points at them.
 
-This split comes from how `{% mood_view %}` behaves. `{% mood_view "TEMPLATE_NAME.md" with DATA %}` is a tag that evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA` and writes the result to a separate file; the tag itself **returns the empty string** (the write is a side effect). Because the parent page's index links must be written separately in Markdown link syntax, the loops split into one for links and one for body generation.
+### Subpages: the `{% mood_view %}` tag
 
-A split page mirrors the record's place in the data, under `reports/`: its path is the record's `_anchor_path` with `.md` appended. So the `members` entity's records become `reports/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `reports/by_role/engineer.md`. You can check each record's `_anchor_path` in `__table_view/` and `__meta_query/`.
+`{% mood_view "TEMPLATE_NAME.md" with DATA %}` evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA` and writes the result to a separate file.
 
-To make a record split into its own page, list its ObjectType in `definition/reports.yaml` (see [Reports](reference/reports.md)).
+`{% mood_view %}` inserts **nothing** into the page it appears on: everything it renders goes into the separate file. All it would leave at its spot is a blank line, and the leading `{%-` trims even that. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
 
-`{% mood_view %}` can also be called from subtemplates (subpages can generate further subpages within them). For the full tag specification, see [Template — Jinja2 extensions](reference/template.md#jinja2-extension-mood_view).
+For the full tag specification, see [Template — `mood_view`](reference/template.md#mood_view).
 
 ### Subtemplates
 
-Templates called by `{% mood_view %}`. The fields of the map passed in via `with` are available directly as top-level variables:
+Templates called by `{% mood_view %}`. The record passed in via `with` — the **subject** — has its fields available directly as top-level variables:
 
 ```jinja2
 {# definition/templates/member.md #}
@@ -462,9 +458,30 @@ Role: {{ role }}
 
 The subject is also bound as `this`, so `{{ this.name }}` is the same as `{{ name }}`.
 
+A subtemplate can itself call `{% mood_view %}`, so a subpage can generate further subpages of its own.
+
+### Where subpages land
+
+A subpage mirrors the record's place in the data, under `reports/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `reports/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `reports/by_role/engineer.md`. You can check each record's address in `__table_view/` and `__meta_query/`, where it appears as `_anchor_path`.
+
+A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
+
+### Linking to subpages: the `link` filter
+
+Look again at the pair of lines inside the sample's loops:
+
+```jinja2
+{%- mood_view "member.md" with member %}
+- {{ member | link }}
+```
+
+`{{ member | link }}` turns the record into a Markdown link to the very subpage that the `{% mood_view %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
+
+The pairing is a convenience, not a rule — links and `{% mood_view %}` calls can live in separate loops when a page calls for a different arrangement (the [music sample](../showcase/music/) does this).
+
 ### Embedding a Markdown body
 
-The `body` field of a prose record is a map with `mime_type` and `content`. To embed the body in a template, reference `.content`:
+The `body` field of a prose record holds two subfields, `mime_type` and `content`. To embed the body in a template, reference `.content`:
 
 ```jinja2
 {# embed the prose body #}

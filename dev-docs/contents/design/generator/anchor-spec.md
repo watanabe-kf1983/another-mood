@@ -2,9 +2,7 @@
 
 アンカー（リンク可能なオブジェクト）の識別とリンク解決の仕様。アンカーを一意に指す文字列を **アンカーパス** と呼ぶ。
 
-## Proposals
-
-> **未実装** — Phase 11 タスク [B4, B5](../../../tasks.md)（anchor フィルタ群 / prose body `resolve` フィルタ）。親参照注入 (B1)・`_meta.anchor_path` / `_meta.object_type_id` 注入 (B3)・anchor_path → ノードマップ (B2)・page_path 導出 (B6) は実装済み — [generator.md](generator.md#%E3%83%8E%E3%83%BC%E3%83%89%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF) 参照。
+## External Design
 
 ### 用語
 
@@ -123,27 +121,51 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 
 ### リンク記法
 
-#### テンプレート内のアンカー参照
-
-テンプレート内では anchor path から 3 種類のフィルタを使い分ける:
+テンプレート内では **アンカー** を `anchor()` で得て、整形フィルタで仕上げる:
 
 ```jinja2
-{{ "/erds/user-management/entities/user" | anchor_link }}
-{# → [<display>](<URL>) 形式の Markdown リンク #}
+{{ anchor("erds", erd.id, "entities", entity.id) | link }}
+{# segments からアンカーを組み立て解決 → [<display>](<URL>) の Markdown リンク #}
 
-{{ "/erds/user-management/entities/user" | anchor_link("ER 図") }}
-{# → display text を明示。[ER 図](<URL>) #}
+{{ anchor("/erds/user-management/entities/user") | link }}
+{# 第一引数が `/` 始まり → 出来合いのアンカーパスとして解決（prose / 定数）#}
 
-{{ "/erds/user-management/entities/user" | anchor_title }}
-{# → display 文字列のみ #}
+{{ member | link }}
+{# すでに手にあるノード（＝アンカー）はそのまま整形できる #}
 
-{{ "/erds/user-management/entities/user" | anchor_url }}
-{# → URL 文字列のみ #}
+{{ anchor("erds", erd.id) | label }}   {# 表示文字列のみ #}
+{{ anchor("erds", erd.id) | href }}    {# URL のみ #}
+{{ member | link("ER 図") }}           {# display text を明示 override #}
 ```
 
-display text は対象ノードから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`anchor_link(arg)` のように引数で渡せば override。
+- `anchor(seg, *segs)` — segments（各セグメントを escape）か、`/` 始まりの出来合いアンカーパスから、**アンカー**（リンク可能なオブジェクト）を得る。関数形・フィルタ形（`"/..." | anchor`）の両用。第一引数の `/` 始まりで raw 判定するのは安全 — エンティティ/クエリ名は識別子パターン（`/` 始まり不可、schema-schema / query-schema の `propertyNames`）に縛られるため。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
+- `link` / `label` / `href` — アンカー → Markdown リンク / 表示文字列 / URL。
+- `anchor_path(seg, *segs)` — 解決せずアンカーパス**文字列**のみ欲しいとき（fragment 組み立て等）。入力規則は `anchor` と同じ。
 
-#### Markdown 本文中のアンカー参照
+display text は対象アンカーから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`link(arg)` のように引数で渡せば override。
+
+#### 出力 URL の形式
+
+出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
+
+- **path 部**: source ページから target ページへの相対パス
+- **fragment 部**: target ノードの anchor_path をそのまま使う (full anchor_path 形式)。HTML id 側も同じ文字列で発行する ([generator.md](generator.md) の id 発行と対応)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
+
+#### 未解決参照の扱い
+
+`anchor()` の組んだパスがマップに無いとき、解決失敗を `MissingAnchor`（試行パスを保持）として返す（例外は投げない）。整形側は壊れたリンクを「動くリンクの偽装」にせず **素テキストで可視化**する — `link` は `[..](..)` で包まずエスケープ済み表示テキストのみ、`href` は空文字列を返す。表示テキストは残るので author は壊れた参照に気づいて直せる。
+
+## Internal Design
+
+### リンク解決
+
+リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `anchor` / `anchor_path` / `label` とフォーマット固有 `link` / `href`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`MissingAnchor` を整形フィルタ側で捌き `anchor_href` には渡さないこと — は `generator/anchor.py` と `generator/output_formats/md.py` の docstring に残している。
+
+## Proposals
+
+> **未実装** — Phase 11 タスク [B5](../../../tasks.md)（prose body `resolve` フィルタ）。anchor 解決・整形フィルタ (B4) までは実装済み — External / Internal Design 節を参照。
+
+### Markdown 本文中のアンカー参照
 
 prose body 等の Markdown 本文では `toc:` プレフィックス記法でアンカーパスを URL として埋め込む:
 
@@ -165,36 +187,11 @@ prose body 等の Markdown 本文では `toc:` プレフィックス記法でア
 [Composer](toc:/prose/design/composer/composer)
 ```
 
-### リンク解決
+### prose body 処理フィルタ（仮称 `resolve`）
 
-リンク解決は Generator の **pre-render 段階で完結**する。post-render での文字列置換は行わない。
-
-- **`anchor_link` / `anchor_title` / `anchor_url` フィルタ**: テンプレート内で anchor path から Markdown リンク / display text / URL を生成
-- **prose body 処理フィルタ (仮称 `resolve`)**: prose body 中の `toc:` URL を実 URL に置換。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタ
-
-出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
-
-URL は **path 部 + fragment 部** に分けて組み立てる:
-
-- **path 部**: source ページから target ページへの相対パス
-- **fragment 部**: target ノードの `_meta.anchor_path` をそのまま使う (full anchor_path 形式)。HTML id 側も同じ文字列で発行する ([generator.md](generator.md) の id 発行と対応)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
-
-resolver とフィルタは **レポートルート相対 座標系**で動く (page_path の定義に同じ — [generator.md](generator.md#ページパスの導出-b6) 参照。`reports/`・profile 段は付かない)。ページパスは `config.page_path(node)` ([B6](../../../tasks.md)) で算出する。page_path はノードに焼かず、resolver が必要時に config から引く:
-
-- **source ページパス**: resolver に render 単位で束縛された source node から `config.page_path(source_node)`
-- **target ページパス**: anchor_path → ノードマップで target ノードを引いて `config.page_path(target_node)`
-- **path 部の算出**: フィルタが `os.path.relpath(target_page_path, source_page_path.parent)` で計算。source/target が同一レポート内なら共通のマウント先 (`reports/[{profile}/]`) は相殺されるので、原点をレポートルートに取って差し支えない
-- **最終 URL**: `{path 部}#{target._meta.anchor_path}`
-
-ノードには page_path も結合済み URL も焼かない。fragment は常に anchor_path から派生し、page_path は config 依存なので、いずれも URL を必要とするフィルタ側でその場で組む。
-
-フィルタは `@pass_context` で受ける必要がある。理由は Jinja2 オプティマイザの定数畳み込みを抑止するため — 定数引数の `{{ "/erds/x" | anchor_link }}` を許すとコンパイル時に評価されて URL がキャッシュに焼かれ、同テンプレートを別ページから使ったときに相対 URL が壊れる。`@pass_context` は context 依存フィルタとしてマークし、この畳み込みを防ぐ (source node は ctx ではなく resolver の closure binding から取る)。
-
-いずれのフィルタも内部で同じ resolver を共有 (closure binding 経由)、anchor_path → ノードのマップを引いて URL を組み立てる。
-
-prose 例外の resolver 側挙動: マップは full anchor_path をキーにするフラットな dict ([generator.md](generator.md#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) の B2) なので、resolver はアンカーパスを分割せず**そのままキーで引く**。prose の `/` 素通しはアンカーパス構築側で吸収済みのため、resolver 側に prose 例外の特別扱いは要らない（例: `/prose/design/architecture` はそのキーで直に当たる）。
+prose body 中の `toc:` URL を実 URL に置換する pre-render フィルタ。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタとする。
 
 ### 未決事項
 
 - **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（[F4 / D 群と連携、未タスク化](../../../tasks.md)）
-- **`toc:` プレフィックスの名前**: 実態は「アンカー参照」で TOC ではない。実装時（[B4, B5](../../../tasks.md)）に再検討する
+- **`toc:` プレフィックスの名前**: 実態は「アンカー参照」で TOC ではない。実装時（[B5](../../../tasks.md)）に再検討する

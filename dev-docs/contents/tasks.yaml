@@ -4,7 +4,7 @@ categories:
     impl_paths:
       - src/another_mood/components/preprocess/prose.py
       - src/another_mood/components/generator/
-    spec: design/normalizer/markdown-parser-spec.md
+    spec: design/normalizer/markdown-parser-spec
     tasks:
       A1:
         title: "{#id} 付き見出しの検出"
@@ -41,7 +41,7 @@ categories:
     title: アンカー / リンク解決
     impl_paths:
       - src/another_mood/components/generator/
-    spec: design/generator/anchor-spec.md
+    spec: design/generator/anchor-spec
     tasks:
       B1:
         title: 親参照の注入 (`_parent` / `_parent_record`)
@@ -59,10 +59,10 @@ categories:
         phase: 11
         done: true
       B4:
-        title: anchor フィルタ (`anchor_link` / `anchor_title` / `anchor_url`)
-        note: anchor path から Markdown リンク / display text / URL を生成。closure-bound な resolver にアクセス
+        title: anchor 解決・整形フィルタ (`anchor` / `link` / `label` / `href`)
+        note: '`anchor()` でアンカーパス/segments からアンカーを得て `link` / `label` / `href` が Markdown リンク / display text / URL を生成。source は `this`、resolver は静的 `(ReportsConfig, anchor_map)`'
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b4-b5
+        done: true
       B5:
         title: prose body 処理フィルタ (`resolve`)
         note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
@@ -87,7 +87,7 @@ categories:
     impl_paths:
       - src/another_mood/components/generator/
       - src/another_mood/components/generator/mood_view_processor.py
-    spec: design/generator/paging-spec.md
+    spec: design/generator/paging-spec
     tasks:
       C1:
         title: reports.yaml の読み込み・パース
@@ -138,7 +138,7 @@ categories:
       - src/another_mood/resources/schemas/schema-schema.yaml
       - src/another_mood/config.py
       - src/another_mood/cli.py
-    spec: design/normalizer/schema-spec.md
+    spec: design/normalizer/schema-spec
     tasks:
       D1:
         title: Meta-schema 拡張 — x-ref キーワードの受理
@@ -184,7 +184,7 @@ categories:
     impl_paths:
       - src/another_mood/components/composer/query.py
       - src/another_mood/resources/schemas/
-    spec: design/composer/queries-spec.md
+    spec: design/composer/queries-spec
     tasks:
       E1:
         title: where 句の仕様詰め + 実装
@@ -236,7 +236,7 @@ categories:
     impl_paths:
       - src/another_mood/resources/
       - src/another_mood/components/generator/
-    spec: design/app/meta-documentation.md
+    spec: design/app/meta-documentation
     tasks:
       F4a:
         title: ER 図テンプレート — 全体図 + 基盤
@@ -272,7 +272,7 @@ categories:
     impl_paths:
       - src/another_mood/cli.py
       - src/another_mood/config.py
-    spec: design/app/config-spec.md
+    spec: design/app/config-spec
     tasks:
       G2:
         title: another-mood.config.json 読み込み
@@ -302,7 +302,7 @@ categories:
       - src/another_mood/components/preprocess/normalizer.py
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
-    spec: design/normalizer/normalizer.md
+    spec: design/normalizer/normalizer
     tasks:
       H1:
         title: 仕様確定
@@ -357,7 +357,7 @@ categories:
       - src/another_mood/components/shared/json_data_model.py
       - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/shared/data_catalog.py
-    spec: design/json-data-model.md
+    spec: design/json-data-model
     tasks:
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
@@ -433,7 +433,7 @@ categories:
     impl_paths:
       - src/another_mood/components/generator/mood_view_processor.py
       - src/another_mood/components/generator/template_engine.py
-    spec: design/generator/template-spec.md
+    spec: design/generator/template-spec
     tasks:
       P1:
         title: "{% mood_view %} タグの拡張文法"
@@ -490,7 +490,7 @@ categories:
     impl_paths:
       - showcase/
       - src/another_mood/resources/
-    spec: design/app/system-dev-docs.md
+    spec: design/app/system-dev-docs
     tasks:
       S1:
         title: "showcase/japanese-table-design — テーブル定義から 2 種類のスキーマ図を描く PoC"
@@ -534,7 +534,7 @@ categories:
     impl_paths:
       - src/another_mood/components/generator/template_engine.py
       - src/another_mood/components/generator/generator.py
-    spec: design/generator/output-format-spec.md
+    spec: design/generator/output-format-spec
     tasks:
       U1:
         title: output_format モデル基盤

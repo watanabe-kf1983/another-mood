@@ -1,5 +1,5 @@
 # {{ role }}
 
 {% for member in members %}
-- [{{ member.name }}](../members/{{ member.id | as_url }}.md)
+- {{ anchor("members", member.id) | link }}
 {%- endfor %}

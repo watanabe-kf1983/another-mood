@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from markupsafe import Markup
 
+from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.template_engine import (
     OutputFormat,
     PageCollisionError,
@@ -22,7 +23,9 @@ class TestRender:
         templates_dir.mkdir()
         (templates_dir / "hello.md").write_text("# {{ title }}\n")
 
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
         result = engine.render("hello.md", {"title": "World"})
         assert result == "# World\n"
 
@@ -35,7 +38,9 @@ class TestThisBinding:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text(body)
-        return TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        return TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
 
     def test_mapping_subject_is_spread_and_bound_as_this(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "{{ name }}/{{ this.name }}")
@@ -70,6 +75,7 @@ class TestFiltersParam:
         engine = TemplateEngine(
             tmp_path,
             templates_dir=templates_dir,
+            output_format=MD,
             filters={"shout": shout},
         )
         assert engine.render("t.md", {}) == "HI"
@@ -148,14 +154,18 @@ class TestTemplateEngineMdEscape:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text("{{ value }}")
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
         assert engine.render("t.md", {"value": "a|b"}) == "a\\|b"
 
     def test_safe_filter_bypasses_escape(self, tmp_path: Path) -> None:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text("{{ value | safe }}")
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
         assert engine.render("t.md", {"value": "# heading"}) == "# heading"
 
     def test_md_helpers_are_auto_available(self, tmp_path: Path) -> None:
@@ -164,7 +174,9 @@ class TestTemplateEngineMdEscape:
         (templates_dir / "t.md").write_text(
             "{{ code_inline('x') }}|{{ 'a|b' | in_cell }}|{{ 'a b' | as_url }}"
         )
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
         assert engine.render("t.md", {}) == "`x`|a\\|b|a%20b"
 
 
@@ -222,7 +234,9 @@ class TestRenderToFileIdempotency:
         templates_dir.mkdir()
         (templates_dir / "a.md").write_text("A:{{ id }}")
         (templates_dir / "b.md").write_text("B:{{ id }}")
-        return TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        return TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
 
     def test_writes_new_path(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path)
@@ -250,7 +264,9 @@ class TestTemplateSyntaxErrorConversion:
         templates_dir.mkdir()
         (templates_dir / "bad.md").write_text("{% mood_view bad %}")
 
-        engine = TemplateEngine(tmp_path, templates_dir=templates_dir, filters={})
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
         with pytest.raises(FileValidationError) as exc_info:
             engine.render("bad.md", {})
 

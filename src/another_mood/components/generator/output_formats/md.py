@@ -1,9 +1,18 @@
-"""`md` OutputFormat — see design/generator/output-format-spec.md."""
+"""The ``md`` output format: escape, markdown helpers, and anchor link filters."""
 
 import re
+from collections.abc import Callable, Mapping
 
+from jinja2 import pass_context
+from jinja2.runtime import Context
 from markupsafe import Markup
 
+from another_mood.components.generator.anchor import (
+    MissingAnchor,
+    anchor_href,
+    anchor_label,
+)
+from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import OutputFormat
 from another_mood.components.generator.url import url_escape
 
@@ -63,8 +72,48 @@ def as_url(value: object) -> Markup:
     return Markup(encoded)
 
 
+def md_link(display: str, url: str) -> Markup:
+    # Escape the display text (the Markup return bypasses finalize); the url
+    # is trusted as already URL-safe, so escaping it would corrupt it.
+    return Markup(f"[{md_escape(display)}]({url})")
+
+
 def _longest_backtick_run(text: str) -> int:
     return max((len(run) for run in _BACKTICK_RUN_PATTERN.findall(text)), default=0)
+
+
+def make_link_filters(
+    config: ReportsConfig,
+) -> Mapping[str, Callable[..., object]]:
+    """The markdown rendering of an anchor (``href`` / ``link``), bound to
+    ``config``; the format-neutral filters come from
+    :func:`..anchor.make_anchor_filters`.
+
+    ``@pass_context`` serves two purposes: it reads the source page from the
+    render context's ``this``, and it stops Jinja2's optimizer from
+    constant-folding constant-argument calls — a compile-time-evaluated
+    ``{{ anchor("/x") | href }}`` would bake one source page's relative URL
+    into the compiled template and break the same template rendered from
+    another page.  An unresolved reference renders as plain visible text
+    instead of a link to a dead URL — ``href`` yields empty, ``link`` the
+    escaped display text alone.
+    """
+
+    @pass_context
+    def href(context: Context, a: object) -> Markup:
+        if isinstance(a, MissingAnchor):
+            return Markup("")
+        # Markup so finalize does not corrupt the URL (see `as_url`).
+        return Markup(anchor_href(config, context["this"], a))
+
+    @pass_context
+    def link(context: Context, a: object, text: object = None) -> Markup:
+        display = str(text) if text is not None else anchor_label(a)
+        if isinstance(a, MissingAnchor):
+            return Markup(md_escape(display))
+        return md_link(display, anchor_href(config, context["this"], a))
+
+    return {"href": href, "link": link}
 
 
 MD = OutputFormat(
@@ -78,4 +127,5 @@ MD = OutputFormat(
         "in_cell": in_cell,
         "as_url": as_url,
     },
+    link_filters=make_link_filters,
 )
