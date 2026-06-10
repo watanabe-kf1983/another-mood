@@ -443,7 +443,7 @@ Each loop does two things per record: it **writes that record's subpage** and **
 
 `{% mood_view %}` inserts **nothing** into the page it appears on: everything it renders goes into the separate file. All it would leave at its spot is a blank line, and the leading `{%-` trims even that. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
 
-For the full tag specification, see [Template — Jinja2 extensions](reference/template.md#jinja2-extension-mood_view).
+For the full tag specification, see [Template — `mood_view`](reference/template.md#mood_view).
 
 ### Subtemplates
 
@@ -475,7 +475,7 @@ Look again at the pair of lines inside the sample's loops:
 - {{ member | link }}
 ```
 
-`{{ member | link }}` turns the record into a Markdown link to the very subpage that the `{% mood_view %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see [Template — Linking between pages](reference/template.md#linking-between-pages).
+`{{ member | link }}` turns the record into a Markdown link to the very subpage that the `{% mood_view %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
 
 The pairing is a convenience, not a rule — links and `{% mood_view %}` calls can live in separate loops when a page calls for a different arrangement (the [music sample](../showcase/music/) does this).
 
