@@ -81,6 +81,15 @@ categories:
           設計・根拠・検証は anchor-spec.md#escape-規則 を正本とする。C3 が依存。
         phase: 11
         done: true
+      B8:
+        title: リンク語彙の振り直し (anchor → node rename)
+        note: >-
+          テンプレート公開名 anchor → node、anchor_path フィルタ削除。内部は「実体 → node /
+          住所文字列 → anchor_path / <a> 標識 → anchor」の原則で機械改名し、docs/reference/template.md を
+          同期。出力はバイト同一のはずなので showcase / dev-docs のビルド出力一致で検証する。
+          対応表は proposal の節を正本とする。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#語彙の振り直しと-rename-b8
 
   C:
     title: ページ分割 (paging)
@@ -226,7 +235,7 @@ categories:
         title: meta 診断データの query 合成 (テンプレート内合成 dict の解消)
         note: >-
           meta 診断テンプレート (__meta_entity / __table_view / __meta_query) が __root.md 内で組む合成 dict を、
-          query で実ノードとして合成し anchor を持たせる。P3 と揃えば __views を退役できる。実例が meta 診断
+          query で実ノードとして合成しアンカーパスを持たせる。P3 と揃えば __views を退役できる。実例が meta 診断
           だけなので優先度低。位置づけは paging-spec.md#proposals を参照。
         phase: 11
         proposal: design/generator/paging-spec.md#proposals
