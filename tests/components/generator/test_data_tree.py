@@ -199,7 +199,8 @@ class TestMetaAnchorPath:
 
 
 class TestMetaObjectTypeId:
-    """``_meta.object_type_id`` mirrors the dotted ObjectType naming."""
+    """``_meta.object_type_id`` mirrors the dotted catalog naming —
+    ``X.item`` for a record, ``X.item[]`` for the array of those records."""
 
     def test_root_is_item(self) -> None:
         # ``_item_type_id([])`` — the root object's type id.
@@ -211,7 +212,7 @@ class TestMetaObjectTypeId:
 
     def test_top_level_array(self) -> None:
         root = wrap_tree({"categories": []})
-        assert root["categories"]._meta.object_type_id == "categories"
+        assert root["categories"]._meta.object_type_id == "categories.item[]"
 
     def test_array_element_appends_item(self) -> None:
         root = wrap_tree({"categories": [{"id": "G"}]})
@@ -220,7 +221,7 @@ class TestMetaObjectTypeId:
     def test_nested_array_path(self) -> None:
         root = wrap_tree({"categories": [{"id": "G", "tasks": []}]})
         tasks = root["categories"][0]["tasks"]
-        assert tasks._meta.object_type_id == "categories.item.tasks"
+        assert tasks._meta.object_type_id == "categories.item.tasks.item[]"
 
     def test_nested_array_element_appends_item_again(self) -> None:
         root = wrap_tree({"categories": [{"id": "G", "tasks": [{"id": "G1"}]}]})

@@ -18,7 +18,8 @@ classDiagram
 {% for entity in entities if entity.id in ns.subtree_ids -%}
 class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"] {
 {% for attr in entity.item_type.attributes -%}
-{{ "  " }}{% if attr.required %}*{% endif %}{{ attr.id | safe }} : {{ (attr.child_item_type or attr.type) | safe }}{% if attr.x_ref %} [FK]{% endif %}
+{%- set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" -%}
+{{ "  " }}{% if attr.required %}*{% endif %}{{ attr.id | safe }} : {{ ((attr.child_item_type or attr.type) ~ array_suffix) | safe }}{% if attr.x_ref %} [FK]{% endif %}
 {% endfor -%}
 }
 {% endfor -%}
