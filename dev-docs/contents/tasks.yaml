@@ -132,7 +132,7 @@ categories:
           (two-loop パターン)。判定は二段: 実ノード → file_per / 合成 dict (meta 診断) → 既定インライン、
           _split マーカーで分割 (template-keyed fallback 温存、E12 で解消)。inline キーワードは存続 (廃止は C8)。
         phase: 11
-        proposal: design/generator/paging-spec.md#分割ルール
+        done: true
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
