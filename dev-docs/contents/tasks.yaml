@@ -119,7 +119,7 @@ categories:
         title: page_path を実ファイルへ適用
         note: >-
           実ツリーノードの mood_view は ReportsConfig.page_path(node) で anchor 由来パスに分割出力
-          (reports/ 配下、導出は B6)。合成 dict (meta 診断) は暫定 fallback のまま (E12 で解消)。
+          (reports/ 配下、導出は B6)。合成 dict (meta 診断) は暫定 fallback のまま (C11 で解消)。
           starter/music/japanese/dev-docs に file_per を設定し手書きリンクを anchor 由来パスへ調整。
           書き出し衝突は #258 の PageCollisionError が捕捉。
         phase: 11
@@ -130,7 +130,7 @@ categories:
           主題ノードの object_type_id を file_per と照合し、含まれれば分割（呼び出し位置に何も残さない）・
           含まれなければインライン展開。親リンクは mood_view が出さず author が | link で別途書く
           (two-loop パターン)。判定は二段: 実ノード → file_per / 合成 dict (meta 診断) → 既定インライン、
-          _split マーカーで分割 (template-keyed fallback 温存、E12 で解消)。
+          _split マーカーで分割 (template-keyed fallback 温存、C11 で解消)。
         phase: 11
         done: true
       C5:
@@ -166,6 +166,23 @@ categories:
           B9 と C4 に依存。設計は anchor-spec.md#アンカー発行フィルタ-b9--c9。
         phase: 11
         proposal: design/generator/anchor-spec.md#アンカー発行フィルタ-b9--c9
+      C10:
+        title: meta 子テンプレへの root/entities threading 撤去
+        note: >-
+          meta 子テンプレ (__table_view / __meta_query) が __root.md から root / entities を明示
+          threading されているのを廃し、node("/") 由来 (root = node("/")、schema =
+          node("/").__definition.entities) へ寄せる。合成 dict は _split + identity に痩せる。
+          主題のノード化 (C11) を待たず独立に出せる。先行・低リスク。
+        phase: 11
+        proposal: design/generator/paging-spec.md#meta-子テンプレートへの-root-threading-解消
+      C11:
+        title: meta 主題の実ノード化 → _split マーカー撤去・page_path 一本化
+        note: >-
+          __root.md 内で組む合成 dict (アンカーパスを持たない) を実ノード化して clean な anchor_path を
+          与え、template-keyed fallback と _split マーカーを撤去、one-node-one-page へ戻す。
+          F9 (システムメタ出力の単一ディレクトリ集約) と同クラスタ。
+        phase: 11
+        proposal: design/generator/paging-spec.md#meta-診断の分割--マーカー方式
 
   D:
     title: ユーザコンテンツバリデーション
@@ -260,17 +277,6 @@ categories:
         title: singleton-flatten 内の object[] を child entity link として保持
         phase: 10
         done: true
-      E12:
-        title: meta 診断データの query 合成 (テンプレート内合成 dict の解消)
-        note: >-
-          meta 診断テンプレート (__meta_entity / __table_view / __meta_query) が __root.md 内で組む合成 dict を、
-          query で実ノードとして合成しアンカーパスを持たせる。「同一 entity を複数テンプレートで複数ページ」=
-          one-node-one-page 違反の確定負債で、F9 (出力の単一ディレクトリ集約) と同クラスタ。難所は walk_entity 相当
-          (__definition.entities を live ビューへ entity.id 動的キーで reflective join) を query で表現すること。
-          多段に分割して対応。paging 基盤が固まる C4/C5 後に着手。位置づけは
-          paging-spec.md#meta-診断の分割--マーカー方式。
-        phase: 11
-        proposal: design/generator/paging-spec.md#meta-診断の分割--マーカー方式
 
   F:
     title: メタドキュメンテーション拡張
@@ -306,7 +312,7 @@ categories:
           output/ 直下に横並びさせず、index.md (概要) を除いて一つのディレクトリ配下にまとめる。
           output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
           ディレクトリ名・対象範囲は実装時に確定。C4 の template-keyed fallback (合成 dict 分割) が
-          output 直下に散らす __xxx/ を所有・集約する、meta 負債クラスタ (C4 fallback → F9 → E12) の中間ステップ。
+          output 直下に散らす __xxx/ を所有・集約する、meta 負債クラスタ (C4 fallback → F9 → C11) の中間ステップ。
         phase: 13
 
   G:
@@ -493,7 +499,7 @@ categories:
           mood_view が主題を合成 dict でなくツリーノードとして受け取り、サブテンプレートに固定名 this で
           束縛する (naming=this / spread=True 確定)。ページ identity が主題ノードの anchor_path で安定し、
           B4/B5 の source-node プラミングや __views も簡約できる。設計・狙い・naming 根拠は
-          paging-spec.md#proposals を正本とする。最優先。C3 と相互作用、E12 と組んで __views 退役。
+          paging-spec.md#proposals を正本とする。最優先。C3 と相互作用、C11 と組んで __views 退役。
         phase: 11
         done: true
         proposal: design/generator/paging-spec.md#proposals
