@@ -35,6 +35,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {%- endif %}
 {% for entity in __entity_roots -%}
 {% mood_view "__meta_entity.md" with {
+  "_split": true,
   "id": entity.id,
   "builtin": entity.builtin,
   "entities": __definition.entities,
@@ -42,6 +43,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {%- endfor %}
 {% for entity in __entity_roots -%}
 {% mood_view "__table_view.md" with {
+  "_split": true,
   "id": entity.id,
   "entities": __definition.entities,
   "root": this,
@@ -59,6 +61,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {%- endif %}
 {% for query in __definition.queries -%}
 {% mood_view "__meta_query.md" with {
+  "_split": true,
   "id": query.id,
   "from": query.from,
   "flatten": query.flatten,

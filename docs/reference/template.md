@@ -4,7 +4,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 
 | Addition | Kind | Purpose |
 |---|---|---|
-| [`mood_view`](#mood_view) | tag | render a subtemplate and write the result as its own page |
+| [`mood_view`](#mood_view) | tag | render a subtemplate, as its own page or inline |
 | [`link`](#link) | filter | Markdown link to a node's page |
 | [`href`](#href) | filter | the URL of a node's page, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
@@ -65,7 +65,7 @@ Anchor paths drive both ends of a link: a node's page is written at its anchor p
 
 ### `mood_view`
 
-A custom tag that renders a subtemplate and **writes the result to a separate file**.
+A custom tag that renders a subtemplate, **either as its own page (split) or expanded in place (inline)**.
 
 ```jinja2
 {% mood_view "NAME" with DATA %}
@@ -74,19 +74,23 @@ A custom tag that renders a subtemplate and **writes the result to a separate fi
 | Part | Description |
 |---|---|
 | `NAME` | The subtemplate's filename including the extension (e.g. `"product-detail.md"`), given as a string. |
-| `DATA` | The subject passed to the subtemplate — a map (a record) or a list (a collection). |
+| `DATA` | The subject passed to the subtemplate. |
 
-An error is raised if `DATA` is a scalar (neither a map nor a list).
+#### Split vs inline
+
+Whether the subtemplate becomes its own page or expands in place is driven by [`file_per`](reports.md): if the subject's [type ID](reports.md#type-ids) is listed there, the subtemplate is **split** into its own file; otherwise it expands **inline** at the call site (like `{% include %}`). The same template therefore works either way — list the type in `file_per` for a multi-page (web) build, omit it for a single-page build.
+
+A *split* subject must be an addressable node, so a scalar raises an error; inline expansion accepts any value.
 
 #### Output path
 
 A split page's path mirrors where the subject sits in the data: it is the subject's [anchor path](#anchor-paths) with `.md` appended, written under `reports/`. A record with anchor path `/products/foo` is written to `reports/products/foo.md`; a singleton at `/overview`, to `reports/overview.md`.
 
-To split a node into its own page, list its ObjectType ID in [`file_per`](reports.md). Two pages that resolve to the same path make the build fail rather than silently overwrite one another.
+Two pages that resolve to the same path make the build fail rather than silently overwrite one another.
 
 #### Return value of the tag
 
-The `{% mood_view %}` tag itself **returns the empty string**. The output file is written as a side effect, so nothing appears at the position where `{% mood_view %}` was placed in the parent template (just whitespace, which the surrounding whitespace-control dashes normally trim).
+When the subject is **split**, the tag **returns the empty string**: the output file is written as a side effect, so nothing appears at the position where `{% mood_view %}` was placed in the parent template (just whitespace, which the surrounding whitespace-control dashes normally trim). When **inline**, the tag returns the rendered text, which appears at the call site.
 
 To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `{% mood_view %}` call:
 
@@ -127,13 +131,13 @@ When the subject is a **list**, there are no fields to spread, so iterate `this`
 
 #### The `inline` option
 
-Adding `inline` after `with DATA` causes the subtemplate's result to **not be written to a separate file**; instead it expands inline at the call site (similar to `{% include %}`).
+Adding `inline` after `with DATA` **forces inline expansion** regardless of `file_per`, overriding the [split-vs-inline](#split-vs-inline) decision: the subtemplate always expands at the call site rather than becoming its own page.
 
 ```jinja2
 {% mood_view "NAME" with DATA inline %}
 ```
 
-Use this when the default `{% mood_view %}` behavior (separate-file output) would scatter multiple sections across separate pages, but you want them collected into a single page.
+Use this to inline a single instance of a type that is otherwise split. Note that `file_per` already expresses inlining per type — leaving a type out of `file_per` inlines it everywhere — so prefer that for the common case; reach for `inline` only to override a split type at one call site.
 
 ## Filters
 

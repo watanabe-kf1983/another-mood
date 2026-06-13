@@ -439,9 +439,9 @@ Each loop does two things per record: it **writes that record's subpage** and **
 
 ### Subpages: the `{% mood_view %}` tag
 
-`{% mood_view "TEMPLATE_NAME.md" with DATA %}` evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA` and writes the result to a separate file.
+`{% mood_view "TEMPLATE_NAME.md" with DATA %}` evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA`, and writes the result to its own file when `DATA`'s type is listed in `definition/reports.yaml` (the sample lists every type shown here). A type that isn't listed expands in place instead.
 
-`{% mood_view %}` inserts **nothing** into the page it appears on: everything it renders goes into the separate file. All it would leave at its spot is a blank line, and the leading `{%-` trims even that. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
+When it writes a separate file, `{% mood_view %}` inserts **nothing** into the page it appears on: everything it renders goes into that file. All it would leave at its spot is a blank line, and the leading `{%-` trims even that. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
 
 For the full tag specification, see [Template — `mood_view`](reference/template.md#mood_view).
 

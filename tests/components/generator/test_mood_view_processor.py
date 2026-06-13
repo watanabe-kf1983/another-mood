@@ -10,6 +10,7 @@ from jinja2 import Environment, TemplateSyntaxError
 from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.mood_view_processor import (
     PROCESSOR_KEY,
+    SPLIT_MARKER,
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
@@ -166,60 +167,90 @@ class _MockEngine:
         self.written.append((template_name, data, out_path))
 
 
-class TestMoodViewProcessorImplRouting:
-    """Processor computes the out_path and passes the subject through
-    unchanged (the ``this`` binding is the engine's rule — see
-    ``test_template_engine``)."""
+class TestMoodViewProcessorImplFilePerRouting:
+    """A real node's split-vs-inline decision follows ``file_per`` (C4);
+    the ``inline`` keyword forces inline regardless."""
 
-    def test_mapping_with_id_writes_to_stem_subdirectory(self) -> None:
+    _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
+
+    def _member(self) -> object:
+        return wrap_tree(self._TREE)["members"][0]
+
+    def test_node_in_file_per_splits(self) -> None:
         engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = {"id": "alice", "name": "Alice"}
-        processor("profile.md", subject)
+        config = ReportsConfig(file_per=("members.item",))
+        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
+        member = self._member()
+        result = processor("member.md", member)
 
-        assert engine.written == [("profile.md", subject, Path("profile/alice.md"))]
+        assert engine.written == [("member.md", member, Path("members/alice.md"))]
         assert engine.rendered == []
-
-    def test_array_subject_writes_to_template_name(self) -> None:
-        engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = [{"id": "a"}, {"id": "b"}]
-        processor("list.md", subject)
-
-        assert engine.written == [("list.md", subject, Path("list.md"))]
-
-    def test_mapping_without_id_writes_to_template_name(self) -> None:
-        engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = {"items": [1, 2, 3]}
-        processor("summary.md", subject)
-
-        assert engine.written == [("summary.md", subject, Path("summary.md"))]
-
-    def test_non_inline_returns_empty_string(self) -> None:
-        engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        result = processor("profile.md", {"id": "alice"})
-
         assert result == ""
 
-    def test_inline_delegates_to_render(self) -> None:
-        engine = _MockEngine(render_return="hi alice")
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = {"id": "alice"}
-        result = processor("profile.md", subject, inline=True)
+    def test_node_absent_from_file_per_inlines(self) -> None:
+        engine = _MockEngine(render_return="inlined alice")
+        config = ReportsConfig(file_per=())  # members.item not listed
+        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
+        member = self._member()
+        result = processor("member.md", member)
 
-        assert engine.rendered == [("profile.md", subject)]
+        assert engine.rendered == [("member.md", member)]
         assert engine.written == []
-        assert result == "hi alice"
+        assert result == "inlined alice"
+
+    def test_inline_keyword_overrides_split_target(self) -> None:
+        engine = _MockEngine(render_return="inlined alice")
+        config = ReportsConfig(file_per=("members.item",))  # would otherwise split
+        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
+        member = self._member()
+        result = processor("member.md", member, inline=True)
+
+        assert engine.rendered == [("member.md", member)]
+        assert engine.written == []
+        assert result == "inlined alice"
+
+
+class TestMoodViewProcessorImplMarkerRouting:
+    """A non-node subject (a plain dict/list, e.g. the meta diagnostics)
+    inlines unless it carries ``SPLIT_MARKER`` — the transitional opt-in
+    to a page for subjects that are not yet real nodes."""
+
+    def test_unmarked_dict_inlines(self) -> None:
+        engine = _MockEngine(render_return="inlined")
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        result = processor("summary.md", {"id": "alice", "name": "Alice"})
+
+        assert engine.rendered == [("summary.md", {"id": "alice", "name": "Alice"})]
+        assert engine.written == []
+        assert result == "inlined"
+
+    def test_unmarked_list_inlines(self) -> None:
+        # A list cannot carry the marker, so a non-node list always inlines.
+        engine = _MockEngine(render_return="inlined")
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        result = processor("list.md", [{"id": "a"}, {"id": "b"}])
+
+        assert engine.rendered == [("list.md", [{"id": "a"}, {"id": "b"}])]
+        assert engine.written == []
+        assert result == "inlined"
+
+    def test_marked_dict_splits_and_returns_empty(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        subject = {SPLIT_MARKER: True, "id": "alice"}
+        result = processor("member.md", subject)
+
+        assert engine.written == [("member.md", subject, Path("member/alice.md"))]
+        assert engine.rendered == []
+        assert result == ""
 
 
 class TestMoodViewProcessorImplPagePath:
     """How a split subject maps to its output path.
 
     A real data-tree node uses ``ReportsConfig.page_path`` (paging C3),
-    so its directory is the view name.  A plain dict (the meta
-    diagnostics) keeps the older ``{stem}/{id}.md`` fallback.
+    so its directory is the view name.  A marked dict (the meta
+    diagnostics) keeps the older template-stem-derived fallback.
     """
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
@@ -234,30 +265,37 @@ class TestMoodViewProcessorImplPagePath:
         # Directory is the view name (``members``), not the template stem.
         assert engine.written == [("member.md", member, Path("members/alice.md"))]
 
-    def test_synthetic_dict_uses_interim_fallback(self) -> None:
-        # A plain dict is not a tree node, so page_path is bypassed and the
+    def test_marked_dict_with_id_uses_stem_id_fallback(self) -> None:
+        # A marked dict is not a tree node, so page_path is bypassed and the
         # path stays template-stem-derived (the meta diagnostics' shape).
         engine = _MockEngine()
-        config = ReportsConfig(file_per=("members.item",))
-        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
-        processor("member.md", {"id": "alice"})
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        subject = {SPLIT_MARKER: True, "id": "alice"}
+        processor("member.md", subject)
 
-        assert engine.written == [
-            ("member.md", {"id": "alice"}, Path("member/alice.md"))
-        ]
+        assert engine.written == [("member.md", subject, Path("member/alice.md"))]
+
+    def test_marked_dict_without_id_uses_template_name(self) -> None:
+        engine = _MockEngine()
+        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        subject = {SPLIT_MARKER: True, "items": [1, 2, 3]}
+        processor("summary.md", subject)
+
+        assert engine.written == [("summary.md", subject, Path("summary.md"))]
 
 
 class TestMoodViewProcessorImplPageSubject:
-    """A split subject becomes a page, so it must be a Mapping or Array;
-    inline expansion accepts any value."""
+    """A scalar is never a split target (it is neither a real node nor
+    markable), so it inlines — both by default and under ``inline``."""
 
-    def test_split_raises_on_scalar_subject(self) -> None:
-        engine = _MockEngine()
+    def test_unmarked_scalar_inlines(self) -> None:
+        engine = _MockEngine(render_return="hello")
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        result = processor("x.md", "just a string")
 
-        with pytest.raises(TypeError, match="got: str"):
-            processor("profile.md", "not a node")
+        assert engine.rendered == [("x.md", "just a string")]
         assert engine.written == []
+        assert result == "hello"
 
     def test_inline_allows_scalar_subject(self) -> None:
         engine = _MockEngine(render_return="hello")
@@ -285,7 +323,7 @@ class TestMoodViewProcessorImplViaEngine:
     def test_writes_file_with_rendered_content(self, tmp_path: Path) -> None:
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(engine=engine)
-        processor("profile.md", {"id": "alice", "name": "Alice"})
+        processor("profile.md", {SPLIT_MARKER: True, "id": "alice", "name": "Alice"})
 
         assert (tmp_path / "out" / "profile" / "alice.md").read_text() == "hi alice"
 
