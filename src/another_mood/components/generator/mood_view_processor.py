@@ -22,11 +22,24 @@ if TYPE_CHECKING:
 
 PROCESSOR_KEY = "_mood_view_processor"
 
+SPLIT_MARKER = "_split"
+"""Reserved key a synthetic (non-node) subject sets to request its own page.
+
+Only the meta-diagnostics templates use it (the dicts assembled in
+``meta/__root.md``). A real data-tree node is routed by ``file_per``
+instead; this marker is the transitional escape hatch for subjects that
+are not yet real nodes. See paging-spec; removed when E12 turns the meta
+diagnostics into real nodes."""
+
 
 @dataclass(frozen=True)
 class MoodViewProcessorImpl:
     """Routes a {% mood_view %} invocation: inline expansion, or its own
-    page via the engine at the subject's output path."""
+    page via the engine at the subject's output path.
+
+    Whether a subject splits is driven by ``file_per`` (see
+    :meth:`_splits`); the ``inline`` keyword forces inline expansion
+    regardless."""
 
     engine: TemplateEngine
     reports_config: ReportsConfig = ReportsConfig(file_per=())
@@ -34,13 +47,26 @@ class MoodViewProcessorImpl:
     def __call__(
         self, template_name: str, subject: object, *, inline: bool = False
     ) -> str:
-        if inline:
+        if inline or not self._splits(subject):
             return self.engine.render(template_name, subject)
         else:
             self.engine.render_to_file(
                 template_name, subject, self._out_path(template_name, subject)
             )
             return ""
+
+    def _splits(self, subject: object) -> bool:
+        """Whether the subject becomes its own page (else inlined).
+
+        A real data-tree node defers to ``reports_config``. A non-node
+        subject inlines unless it carries the ``SPLIT_MARKER`` key, which
+        the meta diagnostics set to opt into a page. Transitional; see
+        paging-spec.
+        """
+        if isinstance(subject, (MappingNode, ArrayNode)):
+            return self.reports_config.is_split_target(subject._meta.object_type_id)
+        else:
+            return isinstance(subject, Mapping) and SPLIT_MARKER in subject
 
     def _out_path(self, template_name: str, subject: object) -> Path:
         if isinstance(subject, (MappingNode, ArrayNode)):
