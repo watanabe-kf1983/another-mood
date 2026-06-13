@@ -78,7 +78,7 @@ A custom tag that renders a subtemplate, **either as its own page (split) or exp
 
 #### Split vs inline
 
-Whether the subtemplate becomes its own page or expands in place is driven by [`file_per`](reports.md): if the subject's ObjectType ID is listed there, the subtemplate is **split** into its own file; otherwise it expands **inline** at the call site (like `{% include %}`). The same template therefore works either way — list the type in `file_per` for a multi-page (web) build, omit it for a single-page build.
+Whether the subtemplate becomes its own page or expands in place is driven by [`file_per`](reports.md): if the subject's [type ID](reports.md#type-ids) is listed there, the subtemplate is **split** into its own file; otherwise it expands **inline** at the call site (like `{% include %}`). The same template therefore works either way — list the type in `file_per` for a multi-page (web) build, omit it for a single-page build.
 
 A *split* subject must be an addressable node, so a scalar raises an error; inline expansion accepts any value.
 
