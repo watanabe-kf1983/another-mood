@@ -90,6 +90,14 @@ categories:
           対応表は proposal の節を正本とする。
         phase: 11
         done: true
+      B9:
+        title: アンカー発行フィルタ (`| anchor`)
+        note: >-
+          ノードを受けて <a id="{anchor_path}"> を描画する受け側原始機能。href が常時付ける fragment の
+          受け側 (契約の残り半分)。author が手書きレンダリングで手置きする。md 側 (OutputFormat.link_filters)。
+          mood_view 自動刻印 (C9) がこれを再利用。設計は anchor-spec.md#アンカー発行フィルタ-b9--c9。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#アンカー発行フィルタ-b9--c9
 
   C:
     title: ページ分割 (paging)
@@ -118,9 +126,13 @@ categories:
         done: true
       C4:
         title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
-        note: 現在は常に分割。インライン展開モードの新設になる
+        note: >-
+          主題ノードの object_type_id を file_per と照合し、含まれれば分割（呼び出し位置に何も残さない）・
+          含まれなければインライン展開。親リンクは mood_view が出さず author が | link で別途書く
+          (two-loop パターン)。判定は二段: 実ノード → file_per / 合成 dict (meta 診断) → 常時分割
+          (template-keyed fallback 温存、E12 で解消)。inline キーワードは存続 (廃止は C8)。
         phase: 11
-        proposal: design/generator/paging-spec.md#proposals
+        proposal: design/generator/paging-spec.md#分割ルールc4
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
@@ -137,6 +149,23 @@ categories:
           OSError → ユーザ改名診断で扱う。対象と方針は anchor-spec.md#escape-規則 を参照。優先度低。
         phase: 11
         proposal: design/generator/anchor-spec.md#escape-規則
+      C8:
+        title: inline キーワードの廃止
+        note: >-
+          file_per 機構導入後は型単位ポリシー (file_per から外す) でインライン意図を表現でき、
+          inline keyword との併存は「file_per 対象を call-site で inline 強制 → ページと本文の二重出力」
+          footgun を生む。前提: inline 利用 (現状 starter の about-prose 1 箇所) を file_per omission へ移行。
+          C4 後。詳細は paging-spec.md#inline-キーワード暫定c8-で廃止。
+        phase: 11
+        proposal: design/generator/paging-spec.md#inline-キーワード暫定c8-で廃止
+      C9:
+        title: mood_view 自動アンカー刻印
+        note: >-
+          mood_view が描画ノードのアンカー (<a id="{anchor_path}">) を B9 の機能で自動発行
+          (インラインはその場・分割はページ先頭)。two-loop パターンの同ページ内 fragment 着地を成立させる。
+          B9 と C4 に依存。設計は anchor-spec.md#アンカー発行フィルタ-b9--c9。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#アンカー発行フィルタ-b9--c9
 
   D:
     title: ユーザコンテンツバリデーション
@@ -235,10 +264,13 @@ categories:
         title: meta 診断データの query 合成 (テンプレート内合成 dict の解消)
         note: >-
           meta 診断テンプレート (__meta_entity / __table_view / __meta_query) が __root.md 内で組む合成 dict を、
-          query で実ノードとして合成しアンカーパスを持たせる。P3 と揃えば __views を退役できる。実例が meta 診断
-          だけなので優先度低。位置づけは paging-spec.md#proposals を参照。
+          query で実ノードとして合成しアンカーパスを持たせる。「同一 entity を複数テンプレートで複数ページ」=
+          one-node-one-page 違反の確定負債で、F9 (出力の単一ディレクトリ集約) と同クラスタ。難所は walk_entity 相当
+          (__definition.entities を live ビューへ entity.id 動的キーで reflective join) を query で表現すること。
+          多段に分割して対応。paging 基盤が固まる C4/C5 後に着手。位置づけは
+          paging-spec.md#meta-診断合成-dict-の扱い--二段判定。
         phase: 11
-        proposal: design/generator/paging-spec.md#proposals
+        proposal: design/generator/paging-spec.md#meta-診断合成-dict-の扱い--二段判定
 
   F:
     title: メタドキュメンテーション拡張
@@ -273,7 +305,8 @@ categories:
           システム生成のメタドキュメント (__meta_entity / __table_view / __meta_query 等) を
           output/ 直下に横並びさせず、index.md (概要) を除いて一つのディレクトリ配下にまとめる。
           output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
-          ディレクトリ名・対象範囲は実装時に確定。
+          ディレクトリ名・対象範囲は実装時に確定。C4 の template-keyed fallback (合成 dict 分割) が
+          output 直下に散らす __xxx/ を所有・集約する、meta 負債クラスタ (C4 fallback → F9 → E12) の中間ステップ。
         phase: 13
 
   G:
@@ -444,14 +477,6 @@ categories:
       - src/another_mood/components/generator/template_engine.py
     spec: design/generator/template-spec
     tasks:
-      P1:
-        title: "{% mood_view %} タグの拡張文法"
-        note: |
-          現状は {% mood_view EXPR with EXPR %} 形式のみ対応。
-          template-spec.md の例示で使われている以下 2 形式を追加する。
-            - for 形式:    {% mood_view "NAME" for SEQ %}
-            - filter 形式: {% mood_view NAME[id="..."] %}
-        phase: 13
       P2:
         title: テンプレート参照の拡張子明示化
         note: |
