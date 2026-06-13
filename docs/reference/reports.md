@@ -9,14 +9,10 @@ file_per:
   - erds.item.entities.item
 ```
 
-`file_per:` lists the ObjectType IDs whose nodes will be split out as separate files (read as "one file per ObjectType instance"). An empty list (or an omitted `file_per:`) means "no splitting — everything inlines into a single `index.md`".
+`file_per:` lists the ObjectType IDs whose nodes are split out as separate files (read as "one file per ObjectType instance"). A node whose type is not listed expands inline instead; an empty list (or an omitted `file_per:`) inlines everything into a single `index.md`. See [Template — Split vs inline](template.md#split-vs-inline) for how a subtemplate chooses between the two.
 
 ## Schema
 
 The built-in meta-schema is mirrored at [schemas/reports-schema.yaml](schemas/reports-schema.yaml) for direct reference.
 
 A split page is written at its **anchor-derived path** under the report root: the directory follows the view the node came from and the filename is the record's `id` (so a record from the `erds` view lands at `reports/erds/{id}.md`). See [Template — Output path](template.md#output-path).
-
-## Status
-
-Validation and parsing of `reports.yaml` are wired into the build, and `file_per:` now drives **where** a split page is written (its anchor-derived path). The remaining piece is the automatic split-vs-inline decision: today a `{% mood_view %}` splits unless marked `inline`, so an ObjectType you split must appear in `file_per:`. Folding the split/inline choice onto `file_per:` itself — so an unlisted node inlines automatically — is still being landed.
