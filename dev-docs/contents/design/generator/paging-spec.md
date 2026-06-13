@@ -25,14 +25,14 @@ file_per:
 
 - **Mapping 主題**: キーを spread し `{{ 名前 }}` で bare アクセス（`this.` 税ゼロ）。加えて `this` も束縛（`{{ this.名前 }}` ≡ `{{ 名前 }}`）
 - **非 Mapping 主題（Array）**: spread するフィールドがないので `this` のみ（`{% for e in this %}`）
-- スカラ主題は、分割（別ページ書き出し）時のみエラー — ページはアンカー可能なノードであるべきだから。inline 展開は単なる差し込みなので任意の値を許す
+- スカラ主題は、分割（別ページ書き出し）時のみエラー — ページはアンカーパスを持つノードであるべきだから。inline 展開は単なる差し込みなので任意の値を許す
 - `this` は型不問で **常に主題ノード自身**（`_meta` アクセス・配列反復の handle）
 
 **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として、root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一に適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築は持たない。
 
 ## Proposals
 
-> **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1（`reports.yaml` の読み込み・形式検証）・C2（`file_per` 評価 `ReportsConfig.is_split_target`）・C3（`page_path` による分割書き出し）は完了。`file_per` に挙げた ObjectType は anchor 由来パス（`reports/` 配下）に分割出力される。残りは split / inline の判定を `file_per` に寄せる部分 (C4) と複数プロファイル (C5/C6)。現状の `{% mood_view %}` は `inline` 指定が無ければ常に分割する（分割する ObjectType は `file_per` に挙げる必要がある）。
+> **部分実装** — Phase 11 タスク [C1〜C6](../../../tasks.md)。C1（`reports.yaml` の読み込み・形式検証）・C2（`file_per` 評価 `ReportsConfig.is_split_target`）・C3（`page_path` による分割書き出し）は完了。`file_per` に挙げた ObjectType は anchor_path 由来パス（`reports/` 配下）に分割出力される。残りは split / inline の判定を `file_per` に寄せる部分 (C4) と複数プロファイル (C5/C6)。現状の `{% mood_view %}` は `inline` 指定が無ければ常に分割する（分割する ObjectType は `file_per` に挙げる必要がある）。
 
 ### 複数プロファイル
 
@@ -94,8 +94,8 @@ profiles:
 
 `this` 束縛で主題がノードになったことを足場に、まだ残る簡約がある:
 
-1. **出力パスの page_path 統一（C3、実装済み）.** 実ツリーノードは `ReportsConfig.page_path(node)` で anchor 由来パスに分割出力され、anchor map に載る。ページ名は主題ノードの view 名（データツリーのキー）に従うので、ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する（＝「ディレクトリ名 = ビュー名」と同じ筋）。**残る検討**: meta 診断の合成 dict（非ツリーノード）は暫定 fallback（id 付き → `{stem}/{id}.md`、他 → `template_name`）のまま。[E12](../../../tasks.md) が合成 dict をノード化すれば、この fallback を畳んで page_path 一本にできる。
+1. **出力パスの page_path 統一（C3、実装済み）.** 実ツリーノードは `ReportsConfig.page_path(node)` で anchor_path 由来パスに分割出力され、ノードマップに載る。ページ名は主題ノードの view 名（データツリーのキー）に従うので、ページ名を「データ名」でなく「ページ概念」にしたい場合は、その名前のビュー（query）を定義する（＝「ディレクトリ名 = ビュー名」と同じ筋）。**残る検討**: meta 診断の合成 dict（非ツリーノード）は暫定 fallback（id 付き → `{stem}/{id}.md`、他 → `template_name`）のまま。[E12](../../../tasks.md) が合成 dict をノード化すれば、この fallback を畳んで page_path 一本にできる。
 
-2. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, anchor_map)` だけ束縛すればよくなる（B4/B5 実装時に取り込む）。
+2. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, node_map)` だけ束縛すればよくなる（B4/B5 実装時に取り込む）。
 
 3. **meta 子テンプレートへの root threading 解消.** meta 子テンプレート（`__table_view` / `__meta_query`）は `walk_entity` の入力に root の全ビュー集合を要するが、主題が合成 dict（非ツリーノード）で親チェーンを持たないため、`__root.md` が root ノードを `root` キーで明示的に渡している。**E12（meta 診断データを query で実ノード化）**で子が実ノードになれば、親チェーン経由で root に届き、この threading は不要になる。

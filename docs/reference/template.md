@@ -8,8 +8,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`link`](#link) | filter | Markdown link to a node's page |
 | [`href`](#href) | filter | the URL of a node's page, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
-| [`anchor`](#anchor) | function, filter | resolve an anchor path to its node |
-| [`anchor_path`](#anchor_path) | function, filter | build an anchor-path string without resolving it |
+| [`node`](#node) | function, filter | resolve an anchor path to its node |
 | [`in_cell`](#in_cell) | filter | insert a value into a Markdown table cell |
 | [`code_inline`](#code_inline) | function | wrap a value in a Markdown code span |
 | [`code_fenced`](#code_fenced) | function | wrap a value in a Markdown fenced code block |
@@ -60,7 +59,7 @@ A subtemplate additionally sees its subject — the data passed to the `mood_vie
 
 Every node in the data — a record, a query group, a singleton, a nested object — has an **anchor path**: its address in the data tree, built from the keys and record `id`s on the way to it. `/members/alice` is the record `alice` of the `members` entity; `/by_role/engineer/members/alice` is the copy of that record sitting inside a `by_role` group. The `__table_view/` and `__meta_query/` diagnostics show each node's anchor path as `_anchor_path`.
 
-Anchor paths drive both ends of a link: a node's page is written at its anchor path ([Output path](#output-path)), and the linking filters resolve an anchor path back to a node and render a link to it ([`anchor`](#anchor), [`link`](#link)) — URLs between pages never need to be written by hand.
+Anchor paths drive both ends of a link: a node's page is written at its anchor path ([Output path](#output-path)), and the linking filters resolve an anchor path back to a node and render a link to it ([`node`](#node), [`link`](#link)) — URLs between pages never need to be written by hand.
 
 ## Tags
 
@@ -138,7 +137,7 @@ Use this when the default `{% mood_view %}` behavior (separate-file output) woul
 
 ## Filters
 
-`anchor` and `anchor_path` can also be piped as filters; they are documented under [Functions](#functions). The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
+`node` can also be piped as a filter; it is documented under [Functions](#functions). The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
 
 ### `link`
 
@@ -150,13 +149,13 @@ Use this when the default `{% mood_view %}` behavior (separate-file output) woul
 
 renders `[Alice](members/alice.md#/members/alice)`. An optional argument overrides the display text: `{{ member | link("the author") }}`.
 
-To link a node other than the one at hand, resolve its anchor first with [`anchor`](#anchor):
+To link a node other than the one at hand, resolve it first with [`node`](#node):
 
 ```jinja2
-{{ anchor("members", member.id) | link }}
+{{ node("members", member.id) | link }}
 ```
 
-For an unresolved target, `link` renders the display text alone with no link around it (for an unresolved `anchor()`, the attempted path), keeping the broken reference visible on the page.
+For an unresolved target, `link` renders the display text alone with no link around it (for an unresolved `node()`, the attempted path), keeping the broken reference visible on the page.
 
 ### `href`
 
@@ -199,14 +198,14 @@ Links between pages never need it — [`link`](#link) / [`href`](#href) produce 
 
 ## Functions
 
-### `anchor`
+### `node`
 
-`anchor(seg, *segs)` builds an anchor path from segments and resolves it to its node, ready for [`link`](#link) / [`href`](#href) / [`label`](#label):
+`node(seg, *segs)` builds an anchor path from segments and resolves it to its node, ready for [`link`](#link) / [`href`](#href) / [`label`](#label):
 
 ```jinja2
 {# inside a by_role group: this member copy lives at /by_role/…, but the
    member's own page is at /members/{id} #}
-{{ anchor("members", member.id) | link }}
+{{ node("members", member.id) | link }}
 ```
 
 One argument is one path segment. Each segment is escaped, so a `/` inside a value does not act as a separator.
@@ -214,17 +213,13 @@ One argument is one path segment. Each segment is escaped, so a `/` inside a val
 A single argument that starts with `/` is instead taken as a complete, ready-made anchor path and used verbatim. Use this form for constant paths, and for `prose` records — their `id` is a relative file path whose `/` must stay a separator:
 
 ```jinja2
-{{ anchor("/prose/design/architecture") | link }}
-{{ anchor("/overview") | link("About this site") }}
+{{ node("/prose/design/architecture") | link }}
+{{ node("/overview") | link("About this site") }}
 ```
 
-`anchor` also works as a filter: `{{ "/prose/index" | anchor | link }}`.
+`node` also works as a filter: `{{ "/prose/index" | node | link }}`.
 
-A path that matches no node resolves to a **missing anchor** rather than raising an error; the rendering filters keep it visible — [`link`](#link) renders the attempted path as plain text, [`href`](#href) the empty string — so you can spot the broken reference and fix the source.
-
-### `anchor_path`
-
-`anchor_path(seg, *segs)` builds the escaped anchor-path string without resolving it to a node — for when you need the address itself rather than a link. Input rules are the same as [`anchor`](#anchor), including the ready-made `/`-leading form; also usable as a filter.
+A path that matches no node resolves to a **missing node** rather than raising an error; the rendering filters keep it visible — [`link`](#link) renders the attempted path as plain text, [`href`](#href) the empty string — so you can spot the broken reference and fix the source.
 
 ### `code_inline`
 

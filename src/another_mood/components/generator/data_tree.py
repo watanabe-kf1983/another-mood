@@ -126,7 +126,7 @@ def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
     return _wrap_mapping(data, parent=None, segment="")
 
 
-def build_anchor_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
+def build_node_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
     """Index a wrapped data tree by anchor path in a single wrap pass.
 
     Maps each anchorable node's ``_meta.anchor_path`` to the node; the

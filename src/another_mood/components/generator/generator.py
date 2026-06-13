@@ -8,8 +8,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from another_mood.components.generator.anchor import make_anchor_filters
-from another_mood.components.generator.data_tree import MappingNode, build_anchor_map
+from another_mood.components.generator.data_tree import MappingNode, build_node_map
+from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
@@ -39,11 +39,11 @@ def generate(
     """Render views data through Jinja2 templates to Markdown."""
     config = load_reports_config(reports_file)
     # anchor_path -> node map; the root node is the "/" entry.
-    anchors = build_anchor_map(load_model(data_dir))
-    data = cast(MappingNode, anchors["/"])
-    # Both renders walk the data tree, so both get the format-neutral anchor
+    node_map = build_node_map(load_model(data_dir))
+    data = cast(MappingNode, node_map["/"])
+    # Both renders walk the data tree, so both get the format-neutral
     # filters; the markdown href / link come from the md format via the engine.
-    anchor_globals, anchor_filters = make_anchor_filters(anchors)
+    node_globals, node_filters = make_data_tree_filters(node_map)
     # Meta render keeps the default (no-split) config: its mood_view subjects
     # are synthetic dicts that take the fallback page path, not config paging.
     render(
@@ -51,16 +51,16 @@ def generate(
         META_TEMPLATES_DIR,
         data,
         out_dir,
-        filters={**META_TEMPLATES_FILTERS, **anchor_filters},
-        globals=anchor_globals,
+        filters={**META_TEMPLATES_FILTERS, **node_filters},
+        globals=node_globals,
     )
     render(
         "index.md",
         templates_dir,
         data,
         out_dir / "reports",
-        filters=anchor_filters,
-        globals=anchor_globals,
+        filters=node_filters,
+        globals=node_globals,
         reports_config=config,
     )
 

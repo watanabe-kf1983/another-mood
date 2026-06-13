@@ -7,10 +7,10 @@ from jinja2 import pass_context
 from jinja2.runtime import Context
 from markupsafe import Markup
 
-from another_mood.components.generator.anchor import (
-    MissingAnchor,
-    anchor_href,
-    anchor_label,
+from another_mood.components.generator.data_tree_filters import (
+    MissingNode,
+    node_href,
+    node_label,
 )
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import OutputFormat
@@ -85,9 +85,9 @@ def _longest_backtick_run(text: str) -> int:
 def make_link_filters(
     config: ReportsConfig,
 ) -> Mapping[str, Callable[..., object]]:
-    """The markdown rendering of an anchor (``href`` / ``link``), bound to
+    """The markdown rendering of a node (``href`` / ``link``), bound to
     ``config``; the format-neutral filters come from
-    :func:`..anchor.make_anchor_filters`.
+    :func:`..data_tree_filters.make_data_tree_filters`.
 
     ``@pass_context`` serves two purposes: it reads the source page from the
     render context's ``this``, and it stops Jinja2's optimizer from
@@ -101,17 +101,17 @@ def make_link_filters(
 
     @pass_context
     def href(context: Context, a: object) -> Markup:
-        if isinstance(a, MissingAnchor):
+        if isinstance(a, MissingNode):
             return Markup("")
         # Markup so finalize does not corrupt the URL (see `as_url`).
-        return Markup(anchor_href(config, context["this"], a))
+        return Markup(node_href(config, context["this"], a))
 
     @pass_context
     def link(context: Context, a: object, text: object = None) -> Markup:
-        display = str(text) if text is not None else anchor_label(a)
-        if isinstance(a, MissingAnchor):
+        display = str(text) if text is not None else node_label(a)
+        if isinstance(a, MissingNode):
             return Markup(md_escape(display))
-        return md_link(display, anchor_href(config, context["this"], a))
+        return md_link(display, node_href(config, context["this"], a))
 
     return {"href": href, "link": link}
 

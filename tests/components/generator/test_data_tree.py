@@ -8,7 +8,7 @@ from another_mood.components.generator.data_tree import (
     ArrayNode,
     MappingNode,
     Node,
-    build_anchor_map,
+    build_node_map,
     iter_nodes,
     nearest_ancestor,
     wrap_tree,
@@ -262,8 +262,8 @@ class TestIterNodes:
         assert paths == {"/", "/grid"}
 
 
-class TestBuildAnchorMap:
-    """``build_anchor_map`` keys each wrapped node by its own anchor_path.
+class TestBuildNodeMap:
+    """``build_node_map`` keys each wrapped node by its own anchor_path.
 
     Which nodes are anchorable is ``iter_nodes``' contract (see
     :class:`TestIterNodes`); the anchor_path value — prose exception
@@ -273,18 +273,18 @@ class TestBuildAnchorMap:
     """
 
     def test_each_node_keyed_by_its_anchor_path(self) -> None:
-        anchors = build_anchor_map({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
-        for path, node in anchors.items():
+        nodes = build_node_map({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
+        for path, node in nodes.items():
             assert node._meta.anchor_path == path
         # The value is the identical wrapped node, reachable via the tree.
-        u = anchors["/erds/u"]
+        u = nodes["/erds/u"]
         assert isinstance(u, MappingNode)
-        assert anchors["/erds/u/entities/x"] is u["entities"][0]
+        assert nodes["/erds/u/entities/x"] is u["entities"][0]
 
     def test_root_is_the_slash_entry(self) -> None:
-        anchors = build_anchor_map({"overview": {}})
-        assert isinstance(anchors["/"], MappingNode)
-        assert anchors["/"]._parent is None
+        nodes = build_node_map({"overview": {}})
+        assert isinstance(nodes["/"], MappingNode)
+        assert nodes["/"]._parent is None
 
 
 class TestNearestAncestor:

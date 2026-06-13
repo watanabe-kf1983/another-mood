@@ -1,14 +1,14 @@
 # ``_meta`` is a template-public node field under the reserved ``_`` prefix
 # (see data_tree.py), not a Python-protected attribute.
 # pyright: reportPrivateUsage=false
-"""Anchor resolution — turning a reference into a linkable node, its display
-text, and the page-relative URL to it.
+"""Data-tree Jinja2 filters — turning a reference into a linkable node, its
+display text, and the page-relative URL to it.
 
 All output-format-neutral: the filters that render these as markdown
-(``href`` / ``link``) live with the md format; :func:`make_anchor_filters`
-here exposes only the neutral ones (``anchor`` / ``anchor_path`` /
-``label``).  An unresolved reference becomes a :class:`MissingAnchor` rather
-than an error, so a broken link can render visibly instead of crashing.
+(``href`` / ``link``) live with the md format; :func:`make_data_tree_filters`
+here exposes only the neutral ones (``node`` / ``label``).  An unresolved
+reference becomes a :class:`MissingNode` rather than an error, so a broken
+link can render visibly instead of crashing.
 """
 
 import posixpath
@@ -16,48 +16,39 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import cast
 
-from markupsafe import Markup
-
 from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.url import url_escape
 
 
-def make_anchor_filters(
-    anchor_map: Mapping[str, Node],
+def make_data_tree_filters(
+    node_map: Mapping[str, Node],
 ) -> tuple[
     Mapping[str, Callable[..., object]],
     Mapping[str, Callable[..., object]],
 ]:
-    """The format-neutral anchor filters, bound to one build's anchor map.
+    """The format-neutral data-tree filters, bound to one build's node map.
 
-    Returns ``(globals, filters)``: ``anchor`` / ``anchor_path`` work both
-    as calls (``anchor("a", b)``) and pipes (``"/a/b" | anchor``) so appear
-    in both; ``label`` is a filter only.
+    Returns ``(globals, filters)``: ``node`` works both as a call
+    (``node("a", b)``) and a pipe (``"/a/b" | node``) so appears in both;
+    ``label`` is a filter only.
     """
 
-    def anchor(seg: object, *segs: object) -> object:
-        return resolve_anchor(anchor_map, seg, *segs)
-
-    def anchor_path(seg: object, *segs: object) -> Markup:
-        # The path is already escaped; Markup stops finalize from escaping it
-        # again (Markup is the engine's generic "already safe" marker).
-        return Markup(build_anchor_path(seg, *segs))
+    def node(seg: object, *segs: object) -> object:
+        return resolve_node(node_map, seg, *segs)
 
     globals_map: Mapping[str, Callable[..., object]] = {
-        "anchor": anchor,
-        "anchor_path": anchor_path,
+        "node": node,
     }
     filters_map: Mapping[str, Callable[..., object]] = {
-        "anchor": anchor,
-        "anchor_path": anchor_path,
-        "label": anchor_label,
+        "node": node,
+        "label": node_label,
     }
     return globals_map, filters_map
 
 
 @dataclass(frozen=True)
-class MissingAnchor:
+class MissingNode:
     """Stands in for a reference that did not resolve, carrying the attempted
     path so a renderer can show it visibly."""
 
@@ -67,13 +58,11 @@ class MissingAnchor:
         return self.anchor_path
 
 
-def resolve_anchor(
-    anchor_map: Mapping[str, Node], seg: object, *segs: object
-) -> object:
-    """Resolve segments / a ready-made path to its node, or a MissingAnchor."""
+def resolve_node(node_map: Mapping[str, Node], seg: object, *segs: object) -> object:
+    """Resolve segments / a ready-made path to its node, or a MissingNode."""
     path = build_anchor_path(seg, *segs)
-    node = anchor_map.get(path)
-    return node if node is not None else MissingAnchor(path)
+    node = node_map.get(path)
+    return node if node is not None else MissingNode(path)
 
 
 def build_anchor_path(seg: object, *segs: object) -> str:
@@ -89,14 +78,14 @@ def build_anchor_path(seg: object, *segs: object) -> str:
     return "/" + "/".join(url_escape(str(p), safe="") for p in (seg, *segs))
 
 
-def anchor_label(a: object) -> str:
-    """Display text for an anchor: first of ``title`` / ``name`` / ``id``
+def node_label(a: object) -> str:
+    """Display text for a node: first of ``title`` / ``name`` / ``id``
     present, else its anchor path.
 
     The trailing path segment is deliberately not a fallback — it is
     meaningful only for list elements / nested objects.
     """
-    if isinstance(a, MissingAnchor):
+    if isinstance(a, MissingNode):
         return a.anchor_path
     if isinstance(a, Mapping):
         fields = cast(Mapping[str, object], a)
@@ -106,11 +95,11 @@ def anchor_label(a: object) -> str:
     return cast(Node, a)._meta.anchor_path
 
 
-def anchor_href(config: ReportsConfig, source: object, a: object) -> str:
+def node_href(config: ReportsConfig, source: object, a: object) -> str:
     """Page-relative URL — path to the target's page plus its anchor-path
     fragment — from the ``source`` node's page.
 
-    ``a`` must be a resolved node: a :class:`MissingAnchor` has no page, so
+    ``a`` must be a resolved node: a :class:`MissingNode` has no page, so
     the rendering filters intercept that case and never call this for one.
     """
     target = cast(Node, a)
