@@ -129,16 +129,6 @@ When the subject is a **list**, there are no fields to spread, so iterate `this`
 {% endfor %}
 ```
 
-#### The `inline` option
-
-Adding `inline` after `with DATA` **forces inline expansion** regardless of `file_per`, overriding the [split-vs-inline](#split-vs-inline) decision: the subtemplate always expands at the call site rather than becoming its own page.
-
-```jinja2
-{% mood_view "NAME" with DATA inline %}
-```
-
-Use this to inline a single instance of a type that is otherwise split. Note that `file_per` already expresses inlining per type — leaving a type out of `file_per` inlines it everywhere — so prefer that for the common case; reach for `inline` only to override a split type at one call site.
-
 ## Filters
 
 `node` can also be piped as a filter; it is documented under [Functions](#functions). The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).

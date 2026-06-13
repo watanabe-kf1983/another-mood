@@ -1,6 +1,6 @@
 # Project Members
 
-{% mood_view "prose.md" with (prose | selectattr("id", "equalto", "about") | first) inline %}
+{% mood_view "prose.md" with (prose | selectattr("id", "equalto", "about") | first) %}
 
 ## Members
 
