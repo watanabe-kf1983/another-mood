@@ -19,7 +19,9 @@ properties:
       title: ObjectType ID
       description: >-
         Dotted ObjectType ID — segments separated by `.`, each segment
-        is a Unicode identifier. Example: `erds.item.entities.item`.
+        is a Unicode identifier. A record type ends in `.item` (e.g.
+        `erds.item.entities.item`); the array *of* those records takes a
+        trailing `[]` (e.g. `erds.item.entities.item[]`).
       type: string
-      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{N}_]*)*$"
+      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{N}_]*)*(\\[\\])?$"
 additionalProperties: false

@@ -5,5 +5,5 @@
 # files. An empty list keeps everything in a single index.md.
 file_per:
   - prose.item
-  - tasks
-  - roadmap
+  - tasks.item[]
+  - roadmap.item[]
