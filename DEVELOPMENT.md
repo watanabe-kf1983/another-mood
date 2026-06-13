@@ -75,6 +75,7 @@ another_mood/
 - **命名はモジュール名に合わせる**: `source` モジュールなら `is_source_file`, `build_source`
 - **関数の並び順（Newspaper style）**: 公開 API を先頭、ヘルパーを後ろ。ヘルパーはパイプライン順
 - **`@dataclass` は `frozen=True`**: `__init__` ボイラープレート削減目的、immutable がデフォルト
+- **制御フローは論理の形に合わせる**: 両枝が対等な結果を返す *対称な分岐* は `if/else`（両枝が `return` でも `else` を畳まない）。前提失敗・エラー・エッジを先頭で剥がす *非対称な bail-out* のみ guard clause（早期 `return`）。`else` とインデントは条件付き領域の境界情報なので、機能的に冗長でも残す（*explicit is better than implicit*）。`else` を機械的に除去させる pylint `no-else-return` / ruff `RET505` は採らない（RET は `select` 外）
 
 #### テスト
 
