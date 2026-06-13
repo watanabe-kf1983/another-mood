@@ -169,7 +169,7 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 ### アンカー発行フィルタ (B9 → C9)
 
-> **タスク化済（未実装）** — Phase 11。受け側の原始機能 `| anchor`（B9）→ mood_view 自動刻印（C9）の二段。実需は two-loop パターンの PDF 化（同ページ内 fragment 着地）で発生する（[paging-spec.md 分割ルール](paging-spec.md#分割ルールc4)）。
+> **タスク化済（未実装）** — Phase 11。受け側の原始機能 `| anchor`（B9）→ mood_view 自動刻印（C9）の二段。実需は two-loop パターンの PDF 化（同ページ内 fragment 着地）で発生する（[paging-spec.md 分割ルール](paging-spec.md#分割ルール)）。
 
 `data | anchor` — ノードを受けて、その場にアンカーターゲット（`<a id="{anchor_path}">`）を描画するフィルタ。`link` / `label` / `href` と同じ「ノードを受けて描画する」族に対称的に収まり、`href` が常時付与している fragment（[出力 URL の形式](#出力-url-の形式)）の受け側を発行する — 片側だけ実装済みの契約の残り半分。出力はフォーマット固有なので md 側（`OutputFormat.link_filters` 経由）に属する。
 

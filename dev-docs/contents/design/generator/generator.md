@@ -120,7 +120,7 @@ def page_path(self, node: Node) -> str:
 
 「root が常にページ」という paging 事実は config 側の `None`→`index.md` 解釈に閉じ込め、`nearest_ancestor` は構造的な「最寄り一致」だけを返す。
 
-座標系は **レポートルート相対**。`reports/` および profile 段 ([paging-spec.md](paging-spec.md#出力ディレクトリ規約)) は実ファイルを書き出す mood_view 側 (C3) が被せるマウント先で、page_path には含めない。リンク解決は source/target 双方の page_path の相対差 (`posixpath.relpath` — page_path は `/` 区切りなので OS 非依存に保つ) のみを使うため、共通のマウント先は相殺され、原点をレポートルートに取って問題ない。
+座標系は **レポートルート相対**。`reports/` および profile 段 ([paging-spec.md](paging-spec.md#ページパスと出力ディレクトリ)) は実ファイルを書き出す mood_view 側 (C3) が被せるマウント先で、page_path には含めない。リンク解決は source/target 双方の page_path の相対差 (`posixpath.relpath` — page_path は `/` 区切りなので OS 非依存に保つ) のみを使うため、共通のマウント先は相殺され、原点をレポートルートに取って問題ない。
 
 page_path も結合済み URL もノードに焼かないのは同じ理由 — どちらも config やリンク文脈に依存し、ノード単体には属さない。URL は `(source page_path, target page_path, target anchor_path)` の三項で決まるので、リンク解決フィルタが必要時にその場で組む (URL の外形は [anchor-spec.md#出力-url-の形式](anchor-spec.md#出力-url-の形式) 参照)。
 
