@@ -38,22 +38,19 @@ class MoodViewProcessorImpl:
     page via the engine at the subject's output path.
 
     Whether a subject splits is driven by ``file_per`` (see
-    :meth:`_splits`); the ``inline`` keyword forces inline expansion
-    regardless."""
+    :meth:`_splits`)."""
 
     engine: TemplateEngine
     reports_config: ReportsConfig = ReportsConfig(file_per=())
 
-    def __call__(
-        self, template_name: str, subject: object, *, inline: bool = False
-    ) -> str:
-        if inline or not self._splits(subject):
-            return self.engine.render(template_name, subject)
-        else:
+    def __call__(self, template_name: str, subject: object) -> str:
+        if self._splits(subject):
             self.engine.render_to_file(
                 template_name, subject, self._out_path(template_name, subject)
             )
             return ""
+        else:
+            return self.engine.render(template_name, subject)
 
     def _splits(self, subject: object) -> bool:
         """Whether the subject becomes its own page (else inlined).
@@ -87,7 +84,7 @@ class MoodViewProcessorImpl:
 
 
 class MoodViewExtension(Extension):
-    """Jinja2 extension for {% mood_view "template" with data [inline] %} tag."""
+    """Jinja2 extension for {% mood_view "template" with data %} tag."""
 
     tags = {"mood_view"}
 
@@ -96,10 +93,9 @@ class MoodViewExtension(Extension):
         template_name = parser.parse_expression()
         parser.stream.expect("name:with")
         data = parser.parse_expression()
-        inline = parser.stream.skip_if("name:inline")
 
         return nodes.CallBlock(
-            self.call_method("_render", [template_name, data, nodes.Const(inline)]),
+            self.call_method("_render", [template_name, data]),
             [],
             [],
             [],
@@ -109,8 +105,7 @@ class MoodViewExtension(Extension):
         self,
         template_name: str,
         subject: object,
-        inline: bool,
         caller: Any,
     ) -> str:
         processor = self.environment.globals[PROCESSOR_KEY]
-        return processor(template_name, subject, inline=inline)  # type: ignore[return-value]
+        return processor(template_name, subject)  # type: ignore[return-value]

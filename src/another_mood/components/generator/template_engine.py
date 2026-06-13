@@ -108,8 +108,8 @@ class PageCollisionError(UserError):
             f"Two pages resolved to the same output file {out_path} "
             f"({origin}). Each page needs a unique path — this usually means "
             f"two records share an id, or one record is rendered as a page "
-            f"more than once. Give the records distinct ids, or render the "
-            f"duplicate {{% mood_view %}} inline."
+            f"more than once. Give the records distinct ids, or drop the "
+            f"duplicate {{% mood_view %}} call."
         )
 
 

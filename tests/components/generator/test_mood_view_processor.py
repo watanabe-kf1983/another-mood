@@ -26,13 +26,11 @@ from another_mood.components.generator.template_engine import TemplateEngine
 class MockProcessor:
     """Records calls and returns a fixed string."""
 
-    calls: list[tuple[str, dict[str, Any], bool]] = field(default_factory=lambda: [])
+    calls: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
     return_value: str = ""
 
-    def __call__(
-        self, template_name: str, data: dict[str, Any], *, inline: bool = False
-    ) -> str:
-        self.calls.append((template_name, data, inline))
+    def __call__(self, template_name: str, data: dict[str, Any]) -> str:
+        self.calls.append((template_name, data))
         return self.return_value
 
 
@@ -91,34 +89,6 @@ class TestMoodViewParsing:
         assert [c[1]["id"] for c in mock.calls] == ["a", "b", "c"]
 
 
-class TestMoodViewInlineKeyword:
-    """The optional `inline` keyword forces the processor into inline mode."""
-
-    def test_default_is_not_inline(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile.md" with user %}')
-        template.render(user={"id": "alice"})
-
-        assert mock.calls[0][2] is False
-
-    def test_inline_keyword_sets_flag(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile.md" with user inline %}')
-        template.render(user={"id": "alice"})
-
-        assert mock.calls[0][2] is True
-
-    def test_inline_return_value_appears_in_output(self) -> None:
-        mock = MockProcessor(return_value="INLINED")
-        env = _make_extension_env(mock)
-        template = env.from_string('before{% mood_view "x.md" with d inline %}after')
-        result = template.render(d={"id": "1"})
-
-        assert result == "beforeINLINEDafter"
-
-
 class TestMoodViewOutput:
     """Extension returns renderer's output into the Jinja2 result."""
 
@@ -168,8 +138,7 @@ class _MockEngine:
 
 
 class TestMoodViewProcessorImplFilePerRouting:
-    """A real node's split-vs-inline decision follows ``file_per`` (C4);
-    the ``inline`` keyword forces inline regardless."""
+    """A real node's split-vs-inline decision follows ``file_per`` (C4)."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
 
@@ -193,17 +162,6 @@ class TestMoodViewProcessorImplFilePerRouting:
         processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
         member = self._member()
         result = processor("member.md", member)
-
-        assert engine.rendered == [("member.md", member)]
-        assert engine.written == []
-        assert result == "inlined alice"
-
-    def test_inline_keyword_overrides_split_target(self) -> None:
-        engine = _MockEngine(render_return="inlined alice")
-        config = ReportsConfig(file_per=("members.item",))  # would otherwise split
-        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)  # type: ignore[arg-type]
-        member = self._member()
-        result = processor("member.md", member, inline=True)
 
         assert engine.rendered == [("member.md", member)]
         assert engine.written == []
@@ -286,7 +244,7 @@ class TestMoodViewProcessorImplPagePath:
 
 class TestMoodViewProcessorImplPageSubject:
     """A scalar is never a split target (it is neither a real node nor
-    markable), so it inlines — both by default and under ``inline``."""
+    markable), so it inlines."""
 
     def test_unmarked_scalar_inlines(self) -> None:
         engine = _MockEngine(render_return="hello")
@@ -295,14 +253,6 @@ class TestMoodViewProcessorImplPageSubject:
 
         assert engine.rendered == [("x.md", "just a string")]
         assert engine.written == []
-        assert result == "hello"
-
-    def test_inline_allows_scalar_subject(self) -> None:
-        engine = _MockEngine(render_return="hello")
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        result = processor("x.md", "just a string", inline=True)
-
-        assert engine.rendered == [("x.md", "just a string")]
         assert result == "hello"
 
 
@@ -327,10 +277,11 @@ class TestMoodViewProcessorImplViaEngine:
 
         assert (tmp_path / "out" / "profile" / "alice.md").read_text() == "hi alice"
 
-    def test_inline_does_not_write_file(self, tmp_path: Path) -> None:
+    def test_unmarked_dict_does_not_write_file(self, tmp_path: Path) -> None:
+        # An unmarked (non-node) dict inlines, so no page is written.
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(engine=engine)
-        result = processor("profile.md", {"id": "alice"}, inline=True)
+        result = processor("profile.md", {"id": "alice"})
 
         assert result == "hi alice"
         assert not (tmp_path / "out" / "profile" / "alice.md").exists()

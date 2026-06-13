@@ -130,7 +130,7 @@ categories:
           主題ノードの object_type_id を file_per と照合し、含まれれば分割（呼び出し位置に何も残さない）・
           含まれなければインライン展開。親リンクは mood_view が出さず author が | link で別途書く
           (two-loop パターン)。判定は二段: 実ノード → file_per / 合成 dict (meta 診断) → 既定インライン、
-          _split マーカーで分割 (template-keyed fallback 温存、E12 で解消)。inline キーワードは存続 (廃止は C8)。
+          _split マーカーで分割 (template-keyed fallback 温存、E12 で解消)。
         phase: 11
         done: true
       C5:
@@ -154,10 +154,10 @@ categories:
         note: >-
           file_per 機構導入後は型単位ポリシー (file_per から外す) でインライン意図を表現でき、
           inline keyword との併存は「file_per 対象を call-site で inline 強制 → ページと本文の二重出力」
-          footgun を生む。前提: inline 利用 (現状 starter の about-prose 1 箇所) を file_per omission へ移行。
-          C4 後。詳細は paging-spec.md#inline-キーワード暫定--c8-で廃止予定。
+          footgun を生む。starter の about-prose 1 箇所を file_per omission へ移行して廃止。
+          設計判断は paging-spec.md#ページパスと出力ディレクトリ 直前の背景注を参照。
         phase: 11
-        proposal: design/generator/paging-spec.md#inline-キーワード暫定--c8-で廃止予定
+        done: true
       C9:
         title: mood_view 自動アンカー刻印
         note: >-

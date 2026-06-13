@@ -36,7 +36,6 @@ file_per:
 
 - **`file_per` の分割単位に含まれる** → 別ページに書き出し、**呼び出し位置には何も残さない**（`render_to_file` して空文字列を返す）
 - **含まれない** → その場にインライン展開（`{% include %}` 相当）
-- **明示インライン** `{% mood_view "tpl" with NODE inline %}` → file_per 不問で常にインライン（[inline キーワード](#inline-キーワード暫定--c8-で廃止予定) 参照）
 
 親ページ側に出すリンクや目次は **mood_view が自動生成しない**。author が `| link`（[B4](../../../tasks.md)）で別途書く。`| link` は target の page_path（[B6](generator.md#ページパスの導出-b6)）で解決されるので、**分割なら別ページ URL・インラインなら同ページ内 `#fragment`** に自動で適応する。これにより author は分割/インラインを意識せず、同じテンプレートが Web 用（分割）でも PDF 用（全インライン）でも動く。
 
@@ -58,11 +57,7 @@ file_per:
 
 > **注: インライン展開時の fragment 着地は未完（C9）.** `| link` のインライン解決は `#anchor_path` を指すが、受け側 `<a id>` の発行は未実装（[anchor-spec.md のアンカー発行フィルタ](anchor-spec.md#アンカー発行フィルタ-b9--c9)、B9→C9）。two-loop の PDF 体験（同ページ内ジャンプ）が完成するのは C9 まで行ってから。分割側のページ単位リンクは path 部で機能する。
 
-#### inline キーワード（暫定 — C8 で廃止予定）
-
-`{% mood_view "tpl" with NODE inline %}` の `inline` は file_per 機構が無かった時代の唯一のインライン手段だった。file_per 導入後は **型単位ポリシー（file_per から外す）で同じ意図を表現でき**、併存は footgun を生む: file_per 対象の型を call-site で `inline` 強制すると、そのノードが「自前ページ」と「インライン本文」に**二重出力**され、`| link` の指す先と内容の所在がずれる。
-
-よって `inline` キーワードは **C8 で廃止予定**。移行対象は現状 [starter](../../../../showcase/starter/definition/templates/index.md) の about-prose **1 箇所のみ**（`prose` は starter の file_per に無いので、キーワードを外すだけで default インラインになる）。廃止で失うのは per-call-site のインライン上書き（同型を所により分割/インライン）だが、現 showcase に実需はない。将来 per-instance 需要が出たら別機構で入れ直す。
+> **背景: per-call-site インライン上書きは持たない（C8 で `inline` キーワードを廃止）.** 旧 `{% mood_view ... inline %}` は file_per 機構導入前の唯一のインライン手段だったが、file_per 導入後はインライン意図を **型単位ポリシー（file_per から外す）**で表現でき、call-site 上書きとの併存は footgun を生んだ: file_per 対象の型を call-site で `inline` 強制すると、そのノードが「自前ページ」と「インライン本文」に**二重出力**され、`| link` の指す先と内容の所在がずれる。よってインラインは型単位の一手段に統一した。将来 per-instance 需要が出たら別機構で入れ直す。
 
 ### ページパスと出力ディレクトリ
 
@@ -94,7 +89,7 @@ file_per:
 
 ## Proposals
 
-> 残タスク（Phase 11/13）: 複数プロファイル (C5/C6)、`inline` キーワード廃止 (C8、正本は [inline キーワード](#inline-キーワード暫定--c8-で廃止予定))、アンカー発行 (B9→C9、[anchor-spec.md](anchor-spec.md#アンカー発行フィルタ-b9--c9))、meta 診断負債の解消 (E12/F9)、prose body フィルタ (B5)。
+> 残タスク（Phase 11/13）: 複数プロファイル (C5/C6)、アンカー発行 (B9→C9、[anchor-spec.md](anchor-spec.md#アンカー発行フィルタ-b9--c9))、meta 診断負債の解消 (E12/F9)、prose body フィルタ (B5)。
 
 ### 複数プロファイル
 
