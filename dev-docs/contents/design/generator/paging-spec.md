@@ -85,11 +85,11 @@ file_per:
 
 `_split` は meta 診断テンプレート（`__meta_entity` / `__table_view` / `__meta_query`）専用の暫定オプトイン。これらは `__root.md` 内で組む合成 dict（アンカーパスを持たない）を主題に、**同一 entity を複数テンプレートで複数ページ**（`__meta_entity/{id}.md` と `__table_view/{id}.md`）へ出すため `_split` を立てている。1 ノードは anchor_path も page_path も 1 つなので、これは **one-node-one-page ポリシー違反**であり、fallback がテンプレート名をパスに焼いて曖昧性を割っている。
 
-> **位置づけ: これは確定した負債.** 別ページが要るならクエリを一本増やすのが本ツールの筋であり、「1 ノード→複数ページ」は畳むべき誤魔化し。解消は同一 meta クラスタの **F9（meta 出力を単一ディレクトリへ集約・所有）→ E12（各ビューを別クエリで実ノード化し page_path 一本に）** で行う。E12 で合成 dict が実ノードになれば `_split` マーカーは不要になり撤去する。詳細は [meta 子テンプレートへの root threading 解消](#meta-子テンプレートへの-root-threading-解消e12) を参照。
+> **位置づけ: これは確定した負債.** 別ページが要るならノードを一つ立てるのが本ツールの筋であり、「1 ノード→複数ページ」は畳むべき誤魔化し。解消は 2 段: ① 子テンプレへの `root` / `entities` threading を `node("/")` 由来へ寄せ、合成 dict を `_split` + identity に痩せさせる（先行可・低リスク）、② 主題を実ノード化して clean な anchor_path を与え、`_split` マーカーを撤去・page_path を一本化する（F9 と協調）。詳細は [meta 子テンプレートへの root threading 解消](#meta-子テンプレートへの-root-threading-解消) を参照。
 
 ## Proposals
 
-> 残タスク（Phase 11/13）: 複数プロファイル (C5/C6)、アンカー発行 (B9→C9、[anchor-spec.md](anchor-spec.md#アンカー発行フィルタ-b9--c9))、meta 診断負債の解消 (E12/F9)、prose body フィルタ (B5)。
+> 残タスク（Phase 11/13）: 複数プロファイル (C5/C6)、アンカー発行 (B9→C9、[anchor-spec.md](anchor-spec.md#アンカー発行フィルタ-b9--c9))、meta 診断負債の解消 (C10/C11/F9)、prose body フィルタ (B5)。
 
 ### 複数プロファイル
 
@@ -115,12 +115,12 @@ profiles:
 
 `{outDir}` 直下の診断系出力はプロファイル横断で常に同じ位置に出る。プロファイル概念は **レポートの中** にのみ存在する。
 
-### meta 子テンプレートへの root threading 解消（E12）
+### meta 子テンプレートへの root threading 解消
 
-> [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛)・出力パス統一（C3）は実装済み。残るのは B5 簡約・meta 子テンプレートへの root threading 解消（E12）。
+> [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛)・出力パス統一（C3）は実装済み。残るのは B5 簡約・meta 子テンプレートへの root threading 解消（C10/C11）。
 
 `this` 束縛で主題がノードになったことを足場に、まだ残る簡約がある:
 
 1. **B4/B5 の source-node プラミング簡約.** リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, node_map)` だけ束縛すればよくなる（B4 実装済み、B5 実装時に取り込む）。
 
-2. **meta 子テンプレートへの root threading 解消.** meta 子テンプレート（`__table_view` / `__meta_query`）は `walk_entity` の入力に root の全ビュー集合を要するが、主題が合成 dict（非ツリーノード）で親チェーンを持たないため、`__root.md` が root ノードを `root` キーで明示的に渡している。**E12（meta 診断データを query で実ノード化）**で子が実ノードになれば、親チェーン経由で root に届き、この threading は不要になる（同時に [`_split` マーカー](#meta-診断の分割--マーカー方式)も撤去される）。
+2. **meta 子テンプレートへの root/entities threading 解消.** meta 子テンプレート（`__table_view` / `__meta_query`）は `walk_entity` の入力に data root と schema（`entities`）を要し、主題が合成 dict（非ツリーノード）なので `__root.md` が `root` / `entities` キーで明示的に渡している。だがこの 2 つは **generate 時に既に `node("/")` 経由で全テンプレートから取れる**（root = `node("/")`、schema = `node("/").__definition.entities`）。`node` は anchor_path→node 解決の global（B8）で、`build_node_map` が `node_map["/"]` を root に据えるため、子テンプレが `node("/") | walk_entity(...)` を直接呼べる。よって threading は **主題の実ノード化を待たず独立に撤去できる**（先行可・低リスク）。残る `_split` は、主題を実ノード化して clean な anchor_path を与えれば落ちる（[マーカー方式](#meta-診断の分割--マーカー方式)）。threading 撤去（①）と実ノード化（②）は **別々の関心ごと**に分離できる。
