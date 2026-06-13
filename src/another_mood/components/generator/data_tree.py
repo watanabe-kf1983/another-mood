@@ -97,7 +97,21 @@ class _NodeMeta:
 
     @cached_property
     def object_type_id(self) -> str:
-        """Schema-position ID — dotted path with ``.item`` for array elements.
+        """Schema-position ID in catalog notation.
+
+        A record/singleton node is its dotted path (``X.item`` for an
+        array element, ``X`` for a singleton); an Array node is the
+        catalog ``X.item[]`` form — the array *of* that element type. The
+        ``[]`` marker is appended only here, on the public id, so an
+        Array's descendants compose against the plain :attr:`_type_path`
+        and stay ``…item`` rather than ``…item[].item``.
+        """
+        path = self._type_path
+        return f"{path}.item[]" if isinstance(self._node, ArrayNode) else path
+
+    @cached_property
+    def _type_path(self) -> str:
+        """Dotted schema path, sans array marker — composed by descendants.
 
         ``.item`` at the root — the value ``data_catalog._item_type_id``
         yields for the empty edge path, i.e. the root object's type.
@@ -111,8 +125,8 @@ class _NodeMeta:
         # Schema position of an Array element is the constant ``item`` —
         # the element's ``id`` only matters for anchor identity.
         seg = "item" if isinstance(parent, ArrayNode) else self._node._segment
-        parent_id = "" if parent._parent is None else parent._meta.object_type_id
-        return f"{parent_id}.{seg}" if parent_id else seg
+        parent_path = "" if parent._parent is None else parent._meta._type_path
+        return f"{parent_path}.{seg}" if parent_path else seg
 
 
 def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
