@@ -1,5 +1,5 @@
 # {{ role }}
 
 {% for member in members %}
-- {{ anchor("members", member.id) | link }}
+- {{ node("members", member.id) | link }}
 {%- endfor %}

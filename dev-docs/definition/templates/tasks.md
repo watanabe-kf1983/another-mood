@@ -1,6 +1,6 @@
 # タスクカタログ
 
-残タスクを機能カテゴリ別に整理したもの。各タスクは実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は {{ anchor("/roadmap") | link("ロードマップ") }} を参照。完了済みタスクは記載しない（git log を参照）。
+残タスクを機能カテゴリ別に整理したもの。各タスクは実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は {{ node("/roadmap") | link("ロードマップ") }} を参照。完了済みタスクは記載しない（git log を参照）。
 
 {% for category in this %}
 ## {{ category.id }}. {{ category.title }}
@@ -10,7 +10,7 @@
 - {{ code_inline(path) }}
 {%- endfor %}
 {% if category.spec %}
-**仕様:** {{ anchor("/prose/" ~ category.spec) | link }}
+**仕様:** {{ node("/prose/" ~ category.spec) | link }}
 {% endif %}
 
 | ID | タスク | Proposal | 備考 | Phase | Done |

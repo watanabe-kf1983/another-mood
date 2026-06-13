@@ -4,8 +4,8 @@ from pathlib import Path
 
 from markupsafe import Markup
 
-from another_mood.components.generator.anchor import make_anchor_filters
-from another_mood.components.generator.data_tree import Node, build_anchor_map
+from another_mood.components.generator.data_tree import Node, build_node_map
+from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.output_formats.md import (
     MD,
     as_url,
@@ -265,7 +265,7 @@ _ANCHOR_FILE_PER = ("members.item", "by_role.item")
 
 
 def _anchors() -> dict[str, Node]:
-    return dict(build_anchor_map(_ANCHOR_DATA))
+    return dict(build_node_map(_ANCHOR_DATA))
 
 
 def _config() -> ReportsConfig:
@@ -289,46 +289,46 @@ class TestLinkFilterWiring:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text(body)
-        # Like the generator: pass the format-neutral filters from `anchor`;
+        # Like the generator: pass the format-neutral filters from data_tree_filters;
         # the `href` / `link` filters come from MD itself, wired by the
         # engine from `reports_config`.
-        globals_map, anchor_filters = make_anchor_filters(_anchors())
+        globals_map, node_filters = make_data_tree_filters(_anchors())
         return TemplateEngine(
             tmp_path,
             templates_dir=templates_dir,
             output_format=MD,
-            filters=anchor_filters,
+            filters=node_filters,
             globals=globals_map,
             reports_config=_config(),
         )
 
     def test_link_resolves_source_from_context(self, tmp_path: Path) -> None:
-        # Exercises the whole chain: anchor() global, link filter, and
+        # Exercises the whole chain: node() global, link filter, and
         # @pass_context reading the source page from the `this` subject.
-        engine = self._engine(tmp_path, "{{ anchor('members', 'alice') | link }}")
+        engine = self._engine(tmp_path, "{{ node('members', 'alice') | link }}")
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == "[Alice](../members/alice.md#/members/alice)"
 
     def test_href_emits_bare_url(self, tmp_path: Path) -> None:
-        engine = self._engine(tmp_path, "{{ anchor('members', 'alice') | href }}")
+        engine = self._engine(tmp_path, "{{ node('members', 'alice') | href }}")
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == "../members/alice.md#/members/alice"
 
     def test_link_display_override(self, tmp_path: Path) -> None:
         engine = self._engine(
-            tmp_path, "{{ anchor('members', 'alice') | link('the dev') }}"
+            tmp_path, "{{ node('members', 'alice') | link('the dev') }}"
         )
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == "[the dev](../members/alice.md#/members/alice)"
 
     def test_unresolved_link_renders_as_plain_text(self, tmp_path: Path) -> None:
-        engine = self._engine(tmp_path, "{{ anchor('members', 'ghost') | link }}")
+        engine = self._engine(tmp_path, "{{ node('members', 'ghost') | link }}")
         result = engine.render("t.md", _anchors()["/"])
         # A broken reference is plain visible text, not a `[..](..)` to a dead
         # URL (the `\/` is md-escaping that CommonMark renders back to `/`).
         assert result == "\\/members\\/ghost"
 
     def test_unresolved_href_is_empty(self, tmp_path: Path) -> None:
-        engine = self._engine(tmp_path, "[x]({{ anchor('members', 'ghost') | href }})")
+        engine = self._engine(tmp_path, "[x]({{ node('members', 'ghost') | href }})")
         result = engine.render("t.md", _anchors()["/"])
         assert result == "[x]()"

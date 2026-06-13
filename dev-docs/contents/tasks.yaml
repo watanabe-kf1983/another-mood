@@ -89,7 +89,7 @@ categories:
           同期。出力はバイト同一のはずなので showcase / dev-docs のビルド出力一致で検証する。
           対応表は proposal の節を正本とする。
         phase: 11
-        proposal: design/generator/anchor-spec.md#語彙の振り直しと-rename-b8
+        done: true
 
   C:
     title: ページ分割 (paging)

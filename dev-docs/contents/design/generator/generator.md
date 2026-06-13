@@ -126,7 +126,7 @@ page_path も結合済み URL もノードに焼かないのは同じ理由 — 
 
 ### リンク解決 (B4, B5)
 
-> **B4 実装済 (B8 rename 未適用) / B5 未実装** — node 解決・整形フィルタ (B4) は実装済み。本節は語彙振り直し後の名前で記述している — 適用は [B8](../../../tasks.md)、対応表は [anchor-spec.md の Proposals](anchor-spec.md#語彙の振り直しと-rename-b8) を参照。prose body `resolve` フィルタ (B5) は未実装。anchor_path → ノードマップ (B2) も実装済 — [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) 参照。リンクの仕様 (リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動) は [anchor-spec.md](anchor-spec.md) を参照。
+> **B4 実装済 / B5 未実装** — node 解決・整形フィルタ (B4) は実装済み。prose body `resolve` フィルタ (B5) は未実装。anchor_path → ノードマップ (B2) も実装済 — [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) 参照。リンクの仕様 (リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動) は [anchor-spec.md](anchor-spec.md) を参照。
 
 リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。フィルタは依存方向で 2 群に分かれる: フォーマット非依存の中立フィルタ (`node` / `label`) はノードマップだけに束縛され `data_tree_filters.make_data_tree_filters(node_map)` が供給する。フォーマット固有の `link` / `href` は `ReportsConfig` に束縛され `md.make_link_filters(config)` が供給する（`OutputFormat.link_filters` 経由でフォーマットに属し、Environment 構築時に config で配線される）。source / target のページパスは `config.page_path(node)` (B6) で算出する — source は `@pass_context` フィルタがコンテキストの `this`（主題ノード）から、target はノードマップで引いたノードから（`@pass_context` が要る二つ目の理由＝定数畳み込み抑止を含め、実装契約は `md.make_link_filters` の docstring を参照）。
 

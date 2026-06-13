@@ -19,7 +19,7 @@ _No active line-up on record._
 ## Discography
 {% if albums %}
 {% for album in albums | sort(attribute="year") -%}
-- {{ anchor("album_tracklist", album.id) | link }} ({{ album.year }})
+- {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
 {% endfor %}
 {% else %}
 _No releases yet._

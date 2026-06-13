@@ -173,49 +173,6 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 `data | anchor` — ノードを受けて、その場にアンカーターゲット（`<a id="{anchor_path}">`）を描画するフィルタ。`link` / `label` / `href` と同じ「ノードを受けて描画する」族に対称的に収まり、`href` が常時付与している fragment（[出力 URL の形式](#出力-url-の形式)）の受け側を発行する — 片側だけ実装済みの契約の残り半分。ノードの内容がページ上のどこに描かれたかはテンプレートしか知らないため、システムの自動発行ではなく author がフィルタで置く。出力はフォーマット固有なので md 側（`OutputFormat.link_filters` 経由）に属する。
 
-### 語彙の振り直しと rename (B8)
-
-> **設計合意済・未適用** — Phase 11 タスク [B8](../../../tasks.md)。実装セッションは本節の対応表を正本として適用し、完了時に本節を削除する。本文書と generator.md の External / Internal Design は振り直し後の語彙で記述済み（適用までコードと一時的に不一致）。
-
-[用語](#用語)の背景に記した語彙の振り直しに伴う rename。**出力はバイト同一のはず** — showcase 3 種（starter / music / japanese-table-design）と dev-docs をビルドし、適用前と一致することを検証する。
-
-#### テンプレート公開名
-
-| 現在 | 変更後 |
-|---|---|
-| `anchor(seg, *segs)`（関数・フィルタ） | `node(seg, *segs)`（入力規則は据え置き） |
-| `anchor_path(seg, *segs)`（関数・フィルタ） | 削除（実需が出たら同名で再導入） |
-| `link` / `label` / `href` | 据え置き |
-
-#### 内部名
-
-原則: **実体を指す名前は node に従い、住所文字列を指す名前は anchor_path に残り、`<a>` 標識を指すときだけ anchor を使う**。
-
-| 現在 | 変更後 |
-|---|---|
-| `generator/anchor.py` | `generator/data_tree_filters.py`（data_tree 上のテンプレートフィルタ、の意） |
-| `make_anchor_filters` | `make_data_tree_filters` |
-| `resolve_anchor` | `resolve_node` |
-| `MissingAnchor` | `MissingNode` |
-| `anchor_label` / `anchor_href` | `node_label` / `node_href` |
-| `build_anchor_map`（data_tree.py） | `build_node_map` |
-| `anchor_map`（引数・変数。generator.py のローカル `anchors` 含む） | `node_map` |
-| `build_anchor_path` | **据え置き**（作るものが anchor path 文字列そのもの） |
-
-#### 触らないもの
-
-- `_NodeMeta.anchor_path` / `_meta.anchor_path` / 診断列ラベル `_anchor_path`（meta テンプレート含む）— anchor path は概念として存続（[用語](#用語)）。`anchor_` 接頭辞は page path との判別に実働している
-- ID 体系・エスケープ規則（本文書 External Design）と `generator/url.py` の `url_escape`
-- B5 の仮称 `resolve`（`node` 採用で語彙衝突は消滅。名前の再検討は B5 実装時のまま）
-
-#### 追従箇所
-
-- テンプレート呼び出し 8 箇所 — showcase: starter/by_role.md、music/index.md ×2、music/artist-detail.md / dev-docs: index.md、roadmap.md、tasks.md ×2
-- `docs/reference/template.md` — カタログ表と Functions 節（`anchor` → `node`、`anchor_path` 項の削除、Filters 節導入行）。docs/ は実装済み機能のみを載せるため、rename 適用と同じ PR で更新する
-- `docs/guides.md` / `docs/reference/reports.md` のインバウンド参照（`#anchor` 系見出しアンカー等）の確認
-- テスト — `tests/components/generator/test_anchor.py` → `test_data_tree_filters.py`、`test_md.py` / `test_template_engine.py` 内の参照
-- 検証 — `make ci` + showcase / dev-docs ビルド出力の同一性確認
-
 ### Markdown 本文中のアンカー参照
 
 > **未実装** — Phase 11 タスク [B5](../../../tasks.md)（prose body `resolve` フィルタ）。リンク解決・整形フィルタ (B4) は実装済み — External / Internal Design 節を参照。
