@@ -13,14 +13,14 @@
         class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
     {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids %}
-        {% set parent = node("__definition", "entities", entity.parent_entity) %}
+        {% set parent = entities | child(entity.parent_entity) %}
         {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
     {% for top_id in node_ids %}
-        {% set top_entity = node("__definition", "entities", top_id) %}
+        {% set top_entity = entities | child(top_id) %}
         {% for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") %}
             {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
-                {% set target = node("__definition", "entities", attr.x_ref.entity) %}
+                {% set target = entities | child(attr.x_ref.entity) %}
                 {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
                 {% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
                 {{ mermaid_type_id(top_entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ label | safe }}

@@ -31,12 +31,12 @@
     {% endfor %}
     {% set draw_ids = ns.subtree_ids + ns.fk_target_ids %}
     {% for entity in entities if entity.id in ns.subtree_ids and entity.parent_entity and entity.parent_entity in draw_ids %}
-        {% set parent = node("__definition", "entities", entity.parent_entity) %}
+        {% set parent = entities | child(entity.parent_entity) %}
         {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
     {% for entity in entities if entity.id in ns.subtree_ids %}
         {% for attr in entity.item_type.attributes if attr.x_ref %}
-            {% set target = node("__definition", "entities", attr.x_ref.entity) %}
+            {% set target = entities | child(attr.x_ref.entity) %}
             {{ mermaid_type_id(entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ attr.id | safe }}
         {% endfor %}
     {% endfor %}
