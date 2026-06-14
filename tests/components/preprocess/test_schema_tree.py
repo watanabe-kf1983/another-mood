@@ -105,6 +105,33 @@ class TestBuildSchemaTree:
         assert isinstance(tree, ObjectNode)
         assert tree.metadata == {"title": "My Object", "description": "A test object"}
 
+    def test_metadata_preserves_schema_key_order(self) -> None:
+        """metadata keys keep the schema's authoring order, not the keyword
+        set's hash order — otherwise the emitted order varies per process
+        (PYTHONHASHSEED) and builds are non-deterministic."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: object
+            description: D
+            title: T
+            properties:
+              x: { type: string }
+        """))
+        assert isinstance(tree, ObjectNode)
+        assert tree.metadata is not None
+        assert list(tree.metadata.keys()) == ["description", "title"]
+
+    def test_validation_preserves_schema_key_order(self) -> None:
+        """validation keys keep the schema's authoring order (see
+        ``test_metadata_preserves_schema_key_order``)."""
+        tree = build_schema_tree(yaml.safe_load("""
+            type: string
+            maxLength: 9
+            minLength: 1
+        """))
+        assert isinstance(tree, ValueNode)
+        assert tree.validation is not None
+        assert list(tree.validation.keys()) == ["maxLength", "minLength"]
+
     def test_metadata_on_value(self) -> None:
         """metadata and validation on ValueNode."""
         tree = build_schema_tree(yaml.safe_load("""

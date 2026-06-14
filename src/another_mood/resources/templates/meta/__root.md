@@ -38,15 +38,12 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
   "_split": true,
   "id": entity.id,
   "builtin": entity.builtin,
-  "entities": __definition.entities,
 } %}
 {%- endfor %}
 {% for entity in __entity_roots -%}
 {% mood_view "__table_view.md" with {
   "_split": true,
   "id": entity.id,
-  "entities": __definition.entities,
-  "root": this,
 } %}
 {%- endfor %}
 
@@ -69,8 +66,6 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
   "where": query.where,
   "grouped": query.grouped,
   "select": query.select,
-  "entities": __definition.entities,
-  "root": this,
 } %}
 {%- endfor %}
 

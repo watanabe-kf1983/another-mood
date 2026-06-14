@@ -1,3 +1,4 @@
+{% set entities = node("/__definition/entities") -%}
 # Entity Definition: {{ id }}{% if builtin %} (built-in){% endif %}
 
 [→ Entity Data](../__table_view/{{ id | as_url }}.md)

@@ -168,16 +168,20 @@ def _build_array_from_additional(
 def _extract_metadata(
     schema: Mapping[str, object],
 ) -> Mapping[str, object] | None:
-    """Extract metadata keywords from a schema node."""
-    meta = {k: schema[k] for k in _METADATA_KEYS if k in schema}
+    """Extract metadata keywords from a schema node, in the schema's key order."""
+    # Iterate the schema, not _METADATA_KEYS: a frozenset orders its members by
+    # hash, randomized per process (PYTHONHASHSEED), so keying off it would make
+    # the emitted order differ build-to-build.
+    meta = {k: schema[k] for k in schema if k in _METADATA_KEYS}
     return meta or None
 
 
 def _extract_validation(
     schema: Mapping[str, object],
 ) -> Mapping[str, object] | None:
-    """Extract validation keywords from a schema node."""
-    val = {k: schema[k] for k in _VALIDATION_KEYS if k in schema}
+    """Extract validation keywords from a schema node, in the schema's key order."""
+    # Schema order, not _VALIDATION_KEYS order — see _extract_metadata.
+    val = {k: schema[k] for k in schema if k in _VALIDATION_KEYS}
     return val or None
 
 

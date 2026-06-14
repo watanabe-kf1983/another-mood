@@ -28,7 +28,7 @@ SPLIT_MARKER = "_split"
 Only the meta-diagnostics templates use it (the dicts assembled in
 ``meta/__root.md``). A real data-tree node is routed by ``file_per``
 instead; this marker is the transitional escape hatch for subjects that
-are not yet real nodes. See paging-spec; removed when E12 turns the meta
+are not yet real nodes. See paging-spec; removed when C11 turns the meta
 diagnostics into real nodes."""
 
 

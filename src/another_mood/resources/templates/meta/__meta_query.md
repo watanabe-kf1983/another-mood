@@ -1,3 +1,5 @@
+{% set root = node("/") -%}
+{% set entities = node("/__definition/entities") -%}
 # Query: {{ id }}
 
 ## Source Diagram
