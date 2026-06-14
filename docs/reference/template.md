@@ -28,10 +28,10 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 
 ## Products
 
-{%- for product in products %}
-{%- mood_view "product-detail.md" with product %}
+{% for product in products %}
+{% mood_view "product-detail.md" with product %}
 - {{ product | link }}
-{%- endfor %}
+{% endfor %}
 ```
 
 ## Template context
@@ -90,15 +90,15 @@ Two pages that resolve to the same path make the build fail rather than silently
 
 #### Return value of the tag
 
-When the subject is **split**, the tag **returns the empty string**: the output file is written as a side effect, so nothing appears at the position where `{% mood_view %}` was placed in the parent template (just whitespace, which the surrounding whitespace-control dashes normally trim). When **inline**, the tag returns the rendered text, which appears at the call site.
+When the subject is **split**, the tag **returns the empty string**: the output file is written as a side effect, so nothing appears at the position where `{% mood_view %}` was placed in the parent template (a tag alone on its line emits nothing under block trimming — see [Whitespace](#whitespace)). When **inline**, the tag returns the rendered text, which appears at the call site.
 
 To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `{% mood_view %}` call:
 
 ```jinja2
-{%- for product in products %}
-{%- mood_view "product-detail.md" with product %}
+{% for product in products %}
+{% mood_view "product-detail.md" with product %}
 - {{ product | link }}
-{%- endfor %}
+{% endfor %}
 ```
 
 #### Subtemplate side
@@ -115,7 +115,7 @@ When the subject is a **map**, its fields are *also* spread as top-level variabl
 
 | Field | Value |
 |------|-----|
-{% for spec in specs -%}
+{% for spec in specs %}
 | {{ spec.label }} | {{ spec.value }} |
 {% endfor %}
 ```
@@ -238,6 +238,12 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 ```jinja2
 {{ code_fenced(diagram.source, "mermaid") }}
 ```
+
+## Whitespace
+
+Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% mood_view %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. Write the structure plainly and indent tags for readability; the literal blank lines you leave in the template are the ones that survive into the Markdown.
+
+To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x %}` keeps the leading indentation, and `{% endif +%}` keeps the trailing newline — useful when an inline `{% if %}…{% endif %}` ends a content line and its line break must be preserved.
 
 ## Handling undefined access
 
