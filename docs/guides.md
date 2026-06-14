@@ -407,9 +407,10 @@ At a minimum, know these:
 - `{% for x in xs %}...{% endfor %}` — loop
 - `{% if x %}...{% endif %}` — branch
 - `{# ... #}` — comment
-- `{%- ... -%}` — a `-` against either delimiter trims the adjacent whitespace and newline on that side (keeps loops from leaving blank lines)
 
 For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/).
+
+Templates render with whitespace trimming on, so a control tag alone on its line leaves no blank line in the output and you can indent tags freely for readability — see [Template — Whitespace](reference/template.md#whitespace) to fine-tune spacing.
 
 ### Root template
 
@@ -422,17 +423,17 @@ Sample `definition/templates/index.md`:
 
 ## Members
 
-{%- for member in members %}
-{%- mood_view "member.md" with member %}
+{% for member in members %}
+{% mood_view "member.md" with member %}
 - {{ member | link }}
-{%- endfor %}
+{% endfor %}
 
 ## By Role
 
-{%- for entry in by_role %}
-{%- mood_view "by_role.md" with entry %}
+{% for entry in by_role %}
+{% mood_view "by_role.md" with entry %}
 - {{ entry | link }}
-{%- endfor %}
+{% endfor %}
 ```
 
 Each loop does two things per record: it **writes that record's subpage** and **emits an index link** to it. The sections below take the machinery apart: writing subpages, the subtemplates that render them, where the pages land, and the `link` that points at them.
@@ -441,7 +442,7 @@ Each loop does two things per record: it **writes that record's subpage** and **
 
 `{% mood_view "TEMPLATE_NAME.md" with DATA %}` evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA`, and writes the result to its own file when `DATA`'s type is listed in `definition/reports.yaml` (the sample lists every type shown here). A type that isn't listed expands in place instead.
 
-When it writes a separate file, `{% mood_view %}` inserts **nothing** into the page it appears on: everything it renders goes into that file. All it would leave at its spot is a blank line, and the leading `{%-` trims even that. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
+When it writes a separate file, `{% mood_view %}` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
 
 For the full tag specification, see [Template — `mood_view`](reference/template.md#mood_view).
 
@@ -471,7 +472,7 @@ A record only gets a subpage of its own if its type is listed in `definition/rep
 Look again at the pair of lines inside the sample's loops:
 
 ```jinja2
-{%- mood_view "member.md" with member %}
+{% mood_view "member.md" with member %}
 - {{ member | link }}
 ```
 

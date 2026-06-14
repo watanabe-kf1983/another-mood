@@ -6,16 +6,19 @@
 ## {{ category.id }}. {{ category.title }}
 
 **実装箇所:**
+
 {% for path in category.impl_paths %}
 - {{ code_inline(path) }}
-{%- endfor %}
+{% endfor %}
+
 {% if category.spec %}
 **仕様:** {{ node("/prose/" ~ category.spec) | link }}
 {% endif %}
 
 | ID | タスク | Proposal | 備考 | Phase | Done |
 |---|---|---|---|---|---|
-{% for task in category.tasks -%}
+{% for task in category.tasks %}
 | {{ task.id }} | {{ task.title }} | {% if task.proposal %}[→](prose/{{ task.proposal | as_url }}){% endif %} | {{ task.note | replace('\n', ' ') | trim }} | {{ task.phase }} | {{ "✅" if task.done else "" }} |
 {% endfor %}
+
 {% endfor %}

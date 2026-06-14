@@ -119,6 +119,15 @@ def make_link_filters(
 MD = OutputFormat(
     name="md",
     escape=md_escape,
+    # Markdown is whitespace-significant, so render with both block-trimming
+    # options on.  lstrip_blocks drops the indentation before a line's `{% %}`
+    # tag; trim_blocks drops the newline after it — together a control tag can
+    # sit on its own indented line and emit nothing, so templates show their
+    # structure plainly.  Templates are written for this regime: a tag that
+    # must keep its surrounding whitespace opts out per-tag with `+`
+    # (`{%+ if %}` / `{% if +%}`).
+    trim_blocks=True,
+    lstrip_blocks=True,
     globals={
         "code_inline": code_inline,
         "code_fenced": code_fenced,

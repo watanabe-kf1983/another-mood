@@ -2,56 +2,56 @@
 
 ## Entity Relationships
 
-{% if __user_content_entities -%}
+{% if __user_content_entities %}
 ```mermaid
 classDiagram
-{% for entity in __user_content_entities -%}
+{% for entity in __user_content_entities %}
 class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
-{% endfor -%}
-{% for entity in __user_content_entities if entity.parent_entity -%}
-{%- set parent = __user_content_entities | selectattr('id', 'eq', entity.parent_entity) | first -%}
+{% endfor %}
+{% for entity in __user_content_entities if entity.parent_entity %}
+{% set parent = __user_content_entities | selectattr('id', 'eq', entity.parent_entity) | first %}
 {{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
-{% endfor -%}
-{% set node_ids = __user_content_entities | map(attribute='id') | list -%}
-{% for entity in __user_content_entities -%}
-{% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids -%}
-{%- set target = __user_content_entities | selectattr('id', 'eq', attr.x_ref.entity) | first -%}
+{% endfor %}
+{% set node_ids = __user_content_entities | map(attribute='id') | list %}
+{% for entity in __user_content_entities %}
+{% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
+{% set target = __user_content_entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
 {{ entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ attr.id | safe }}
-{% endfor -%}
-{% endfor -%}
+{% endfor %}
+{% endfor %}
 ```
-{%- else -%}
+{% else %}
 (no entities defined yet)
-{%- endif %}
+{% endif %}
 
 ## Entities
 
-{% if __user_entity_roots -%}
-{% for entity in __user_entity_roots -%}
-- [{{ entity.id }}]({{ node("__meta_entity", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
+{% if __user_entity_roots %}
+{% for entity in __user_entity_roots %}
+- [{{ entity.id }}]({{ node("__meta_entity", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
 {% endfor %}
-{%- else -%}
+{% else %}
 (no entities defined yet)
-{%- endif %}
-{% for entity in __meta_entity -%}
+{% endif %}
+{% for entity in __meta_entity %}
 {% mood_view "entity.md" with entity %}
-{%- endfor %}
-{% for entity in __table_view -%}
+{% endfor %}
+{% for entity in __table_view %}
 {% mood_view "table_view.md" with entity %}
-{%- endfor %}
+{% endfor %}
 
 ## Queries
 
-{% if __user_queries -%}
-{% for query in __user_queries -%}
+{% if __user_queries %}
+{% for query in __user_queries %}
 - [{{ query.id }}]({{ node("__meta_query", query.id) | href }})
 {% endfor %}
-{%- else -%}
+{% else %}
 (no queries defined yet)
-{%- endif %}
-{% for query in __meta_query -%}
+{% endif %}
+{% for query in __meta_query %}
 {% mood_view "query.md" with query %}
-{%- endfor %}
+{% endfor %}
 
 ## Reports
 
