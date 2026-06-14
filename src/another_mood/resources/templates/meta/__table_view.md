@@ -1,3 +1,5 @@
+{% set root = node("/") -%}
+{% set entities = node("/__definition/entities") -%}
 # Entity Data: {{ id }}
 
 [← Entity Definition](../__meta_entity/{{ id | as_url }}.md)

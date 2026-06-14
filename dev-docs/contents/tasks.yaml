@@ -174,7 +174,7 @@ categories:
           node("/").__definition.entities) へ寄せる。合成 dict は _split + identity に痩せる。
           主題のノード化 (C11) を待たず独立に出せる。先行・低リスク。
         phase: 11
-        proposal: design/generator/paging-spec.md#meta-子テンプレートへの-root-threading-解消
+        done: true
       C11:
         title: meta 主題の実ノード化 → _split マーカー撤去・page_path 一本化
         note: >-
