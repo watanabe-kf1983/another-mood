@@ -57,14 +57,15 @@
 {% if entity.item_type.attributes %}
 | id | type | required | references | validation | metadata |
 |----|------|----------|------------|------------|----------|
-{% for attribute in entity.item_type.attributes %}
-    {% set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" %}
-    {{- "" }}| {{ code_inline(attribute.id) }}
-    {{- "" }} | {{ code_inline((attribute.child_item_type or attribute.type) ~ array_suffix) }}
-    {{- "" }} | {% if attribute.required %}yes{% endif %}
-    {{- "" }} | {% if attribute.x_ref %}[{{ code_inline(attribute.x_ref.entity ~ "." ~ attribute.x_ref.attribute) }}]({{ node("__meta_entity", attribute.x_ref.entity) | href }}){% endif %}
-    {{- "" }} | {% if attribute.validation %}{{ code_inline(attribute.validation | to_yaml(true)) }}{% endif %}
-    {{- "" }} | {% if attribute.metadata %}{{ code_inline(attribute.metadata | to_yaml(true)) }}{% endif %}
+{% for attr in entity.item_type.attributes %}
+    {% set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" %}
+    {% set xr = attr.x_ref %}
+    {{- "" }}| {{ code_inline(attr.id) }}
+    {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}
+    {{- "" }} | {% if attr.required %}yes{% endif %}
+    {{- "" }} | {% if xr %}[{{ code_inline(xr.entity ~ "." ~ xr.attribute) }}]({{ node("__meta_entity", xr.entity) | href }}){% endif %}
+    {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
+    {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
     {{- "" }} |
 {% endfor %}
 {% else %}
