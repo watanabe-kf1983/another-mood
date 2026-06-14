@@ -74,22 +74,24 @@ file_per:
 
 ## Internal Design
 
-### meta 診断の分割 — マーカー方式
+### meta 診断の分割
 
-`{% mood_view %}` の分割/インライン判定は **主題が実ツリーノードか否か**で二段になる:
+meta 診断ページ（`__meta_entity` / `__table_view` / `__meta_query`）の主題は **実データツリーノード**で、専用のビルトインクエリ（`src/another_mood/resources/queries/`）が生む。`{% mood_view %}` の分割判定は一様で、[分割ルール](#分割ルール)そのもの — **主題が実ノードかつ `object_type_id` が file_per 対象なら分割、それ以外はインライン**（予約マーカーも template-keyed fallback も無い）。
 
-- **実ノード**（`MappingNode` / `ArrayNode`）→ [分割ルール](#分割ルール) の file_per 判定
-- **非ノード（合成 dict）→ 既定はインライン。予約キー `_split` を持つときだけ分割**（template-keyed fallback パス `{template_stem}/{id}.md`）
+主題ノードを生む 3 クエリ:
 
-> **背景: なぜ常時分割でなくマーカーか.** 素直なルールでは「file_per に載らない非ノードはインライン」が自然（合成 dict は `object_type_id` を持たず file_per に載りようがない）。当初実装は非ノードを一律分割していたが、それは meta 診断を通すためだけの不自然な既定で、読み手に「なぜこの非ノードが分割されるのか」が伝わらない。`_split` を meta テンプレ側に明示させることで既定を自然な「インライン」に戻し、過渡的な負債を **マーカーを立てた箇所＝負債** として可視化する。
+- `__meta_entity` / `__table_view` — どちらも `from: __definition.entities`（`view: false`・ルート entity）で**同じ entity 集合**を引くが、**別クエリ＝別アンカールート**（`/__meta_entity/{id}` と `/__table_view/{id}`）。同一 entity を Definition と Data の **2 ページ**に出すのに、クエリ名でアンカーを分けることで one-node-two-pages 衝突を避ける（差は select のみ: 前者 `id`+`builtin`、後者 `id`）。
+- `__meta_query` — `__definition.queries` の passthrough（`select` 省略）。各アイテムが query 定義の全フィールドを持ち、テンプレートがそのまま描画する。
 
-`_split` は meta 診断テンプレート（`__meta_entity` / `__table_view` / `__meta_query`）専用の暫定オプトイン。これらは `__root.md` 内で組む合成 dict（アンカーパスを持たない）を主題に、**同一 entity を複数テンプレートで複数ページ**（`__meta_entity/{id}.md` と `__table_view/{id}.md`）へ出すため `_split` を立てている。合成 dict は **`_split` ＋ identity だけ**（`id`・entity 用の `builtin`・query 用の定義フィールド）を持つ。共有コンテキストである data root と schema は、子テンプレが anchor_path で直接引く（root = `node("/")`、schema = `node("/__definition/entities")`。`node` は anchor_path→node 解決の global（B8）で、`build_node_map` が全 wrap ノードを anchor_path で索けるようにするため成り立つ）。1 ノードは anchor_path も page_path も 1 つなので、複数ページ化は **one-node-one-page ポリシー違反**であり、fallback がテンプレート名をパスに焼いて曖昧性を割っている。
+meta レンダリングには利用者の `reports.yaml` が無いので、分割は **固定の内部 file_per**（`meta_templates.META_REPORTS_CONFIG` = `__meta_entity.item` / `__table_view.item` / `__meta_query.item`）で駆動する。各結果アイテムの anchor_path `/{view}/{id}` から通常の page_path 規則で `{view}/{id}.md` が導かれる — **1 ノード 1 ページ**。共有コンテキストである data root と schema は、子テンプレが anchor_path で直接引く（root = `node("/")`、schema = `node("/__definition/entities")`。`node` は anchor_path→node 解決の global（B8）で、`build_node_map` が全 wrap ノードを anchor_path で索けるようにするため成り立つ — C10）ので、主題ノードは identity フィールドだけを持てばよい。
 
-> **位置づけ: これは確定した負債（解消は 2 段）.** 別ページが要るならノードを一つ立てるのが本ツールの筋であり、「1 ノード→複数ページ」は畳むべき誤魔化し。① 子テンプレへの `root` / `entities` threading を `node("/")` 由来へ寄せ、合成 dict を `_split` + identity に痩せさせる（**C10 完了**）。残る ② は主題を実ノード化して clean な anchor_path を与え、`_split` マーカーを撤去・page_path を一本化する（C11、F9 と協調）。
+> **背景: 別ページが要るならノードを一つ立てる.** 旧実装は `__root.md` 内で合成 dict（アンカーパス無し）を組み、予約キー `_split` ＋ template-keyed fallback（`{template_stem}/{id}.md`）で分割していた。これは「1 ノード→複数ページ」を fallback がテンプレート名で曖昧性を割る誤魔化しで、**one-node-one-page ポリシー違反**だった。別ページが要るならノードを一つ立てる — 同一 entity に 2 ページ要るなら `__meta_entity` と `__table_view` の 2 ノードを立てる、というのがこの原則の実践で、`_split` マーカーと fallback は撤去された（C11）。
+
+> **残: 出力ディレクトリの集約（F9）.** これら `__{view}/` は今も output 直下に横並びで散る。単一ディレクトリ配下への集約は F9 が担う。
 
 ## Proposals
 
-> 残タスク（Phase 11/13）: 複数プロファイル (C5/C6)、アンカー発行 (B9→C9、[anchor-spec.md](anchor-spec.md#アンカー発行フィルタ-b9--c9))、meta 診断負債の解消 (C11/F9)、prose body フィルタ (B5)。
+> 残タスク（Phase 11/13）: 複数プロファイル (C5/C6)、アンカー発行 (B9→C9、[anchor-spec.md](anchor-spec.md#アンカー発行フィルタ-b9--c9))、meta 出力ディレクトリの集約 (F9)、prose body フィルタ (B5)。
 
 ### 複数プロファイル
 
@@ -117,6 +119,6 @@ profiles:
 
 ### source-node プラミング簡約（B4/B5）
 
-> [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛)・出力パス統一（C3）・meta 子テンプレへの root/entities threading 撤去（C10、[マーカー方式](#meta-診断の分割--マーカー方式)）は実装済み。残るのは B5 簡約。
+> [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛)・出力パス統一（C3）・meta 子テンプレへの root/entities threading 撤去（C10）・meta 主題の実ノード化（C11、[meta 診断の分割](#meta-診断の分割)）は実装済み。残るのは B5 簡約。
 
 `this` 束縛で主題がノードになったことを足場に、まだ残る簡約がある: リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, node_map)` だけ束縛すればよくなる（B4 実装済み、B5 実装時に取り込む）。

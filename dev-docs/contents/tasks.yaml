@@ -119,7 +119,7 @@ categories:
         title: page_path を実ファイルへ適用
         note: >-
           実ツリーノードの mood_view は ReportsConfig.page_path(node) で anchor 由来パスに分割出力
-          (reports/ 配下、導出は B6)。合成 dict (meta 診断) は暫定 fallback のまま (C11 で解消)。
+          (reports/ 配下、導出は B6)。合成 dict (meta 診断) は当時 fallback だった (C11 で実ノード化・解消済み)。
           starter/music/japanese/dev-docs に file_per を設定し手書きリンクを anchor 由来パスへ調整。
           書き出し衝突は #258 の PageCollisionError が捕捉。
         phase: 11
@@ -129,8 +129,8 @@ categories:
         note: >-
           主題ノードの object_type_id を file_per と照合し、含まれれば分割（呼び出し位置に何も残さない）・
           含まれなければインライン展開。親リンクは mood_view が出さず author が | link で別途書く
-          (two-loop パターン)。判定は二段: 実ノード → file_per / 合成 dict (meta 診断) → 既定インライン、
-          _split マーカーで分割 (template-keyed fallback 温存、C11 で解消)。
+          (two-loop パターン)。判定は当時二段だった: 実ノード → file_per / 合成 dict (meta 診断) → 既定
+          インライン、_split マーカーで分割 (template-keyed fallback)。C11 で meta も実ノード化し一段に統一済み。
         phase: 11
         done: true
       C5:
@@ -178,11 +178,12 @@ categories:
       C11:
         title: meta 主題の実ノード化 → _split マーカー撤去・page_path 一本化
         note: >-
-          __root.md 内で組む合成 dict (アンカーパスを持たない) を実ノード化して clean な anchor_path を
-          与え、template-keyed fallback と _split マーカーを撤去、one-node-one-page へ戻す。
-          F9 (システムメタ出力の単一ディレクトリ集約) と同クラスタ。
+          合成 dict を専用ビルトインクエリ (__meta_entity / __table_view / __meta_query) の結果ノードに
+          置き換え、meta レンダリングを固定の内部 file_per (META_REPORTS_CONFIG) で分割。
+          template-keyed fallback と _split マーカーを撤去し、page_path 一本化・one-node-one-page を回復。
+          設計は paging-spec.md#meta-診断の分割。残る出力ディレクトリ集約は F9。
         phase: 11
-        proposal: design/generator/paging-spec.md#meta-診断の分割--マーカー方式
+        done: true
 
   D:
     title: ユーザコンテンツバリデーション
@@ -311,8 +312,8 @@ categories:
           システム生成のメタドキュメント (__meta_entity / __table_view / __meta_query 等) を
           output/ 直下に横並びさせず、index.md (概要) を除いて一つのディレクトリ配下にまとめる。
           output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
-          ディレクトリ名・対象範囲は実装時に確定。C4 の template-keyed fallback (合成 dict 分割) が
-          output 直下に散らす __xxx/ を所有・集約する、meta 負債クラスタ (C4 fallback → F9 → C11) の中間ステップ。
+          ディレクトリ名・対象範囲は実装時に確定。C11 で meta は実ノード化され各 __{view}/ は anchor 由来の
+          page_path で出るので、F9 はそのアンカールート (= 出力ディレクトリ) を単一親の下へ寄せる。
         phase: 13
 
   G:
