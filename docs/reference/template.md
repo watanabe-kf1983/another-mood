@@ -241,7 +241,7 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 
 ## Whitespace
 
-Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% mood_view %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. Write the structure plainly and indent tags for readability; the literal blank lines you leave in the template are the ones that survive into the Markdown.
+Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% mood_view %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
 
 To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x %}` keeps the leading indentation, and `{% endif +%}` keeps the trailing newline — useful when an inline `{% if %}…{% endif %}` ends a content line and its line break must be preserved.
 

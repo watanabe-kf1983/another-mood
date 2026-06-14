@@ -410,7 +410,7 @@ At a minimum, know these:
 
 For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/).
 
-Templates render with whitespace trimming on, so a control tag alone on its line leaves no blank line in the output and you can indent tags freely for readability — see [Template — Whitespace](reference/template.md#whitespace) to fine-tune spacing.
+Templates render with whitespace trimming on, so a control tag alone on its line leaves no blank line in the output. See [Template — Whitespace](reference/template.md#whitespace) for how tag indentation and blank lines carry through.
 
 ### Root template
 
