@@ -10,7 +10,6 @@ from jinja2 import Environment, TemplateSyntaxError
 from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.mood_view_processor import (
     PROCESSOR_KEY,
-    SPLIT_MARKER,
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
@@ -168,12 +167,11 @@ class TestMoodViewProcessorImplFilePerRouting:
         assert result == "inlined alice"
 
 
-class TestMoodViewProcessorImplMarkerRouting:
-    """A non-node subject (a plain dict/list, e.g. the meta diagnostics)
-    inlines unless it carries ``SPLIT_MARKER`` — the transitional opt-in
-    to a page for subjects that are not yet real nodes."""
+class TestMoodViewProcessorImplNonNodeInlines:
+    """Only a real data-tree node can split; any non-node subject (a plain
+    dict or list, not wrapped with an anchor path) always inlines."""
 
-    def test_unmarked_dict_inlines(self) -> None:
+    def test_plain_dict_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined")
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("summary.md", {"id": "alice", "name": "Alice"})
@@ -182,8 +180,7 @@ class TestMoodViewProcessorImplMarkerRouting:
         assert engine.written == []
         assert result == "inlined"
 
-    def test_unmarked_list_inlines(self) -> None:
-        # A list cannot carry the marker, so a non-node list always inlines.
+    def test_plain_list_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined")
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("list.md", [{"id": "a"}, {"id": "b"}])
@@ -192,24 +189,10 @@ class TestMoodViewProcessorImplMarkerRouting:
         assert engine.written == []
         assert result == "inlined"
 
-    def test_marked_dict_splits_and_returns_empty(self) -> None:
-        engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = {SPLIT_MARKER: True, "id": "alice"}
-        result = processor("member.md", subject)
-
-        assert engine.written == [("member.md", subject, Path("member/alice.md"))]
-        assert engine.rendered == []
-        assert result == ""
-
 
 class TestMoodViewProcessorImplPagePath:
-    """How a split subject maps to its output path.
-
-    A real data-tree node uses ``ReportsConfig.page_path`` (paging C3),
-    so its directory is the view name.  A marked dict (the meta
-    diagnostics) keeps the older template-stem-derived fallback.
-    """
+    """A split subject maps to its output path via ``ReportsConfig.page_path``
+    (paging C3), so its directory is the view name."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
 
@@ -223,30 +206,11 @@ class TestMoodViewProcessorImplPagePath:
         # Directory is the view name (``members``), not the template stem.
         assert engine.written == [("member.md", member, Path("members/alice.md"))]
 
-    def test_marked_dict_with_id_uses_stem_id_fallback(self) -> None:
-        # A marked dict is not a tree node, so page_path is bypassed and the
-        # path stays template-stem-derived (the meta diagnostics' shape).
-        engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = {SPLIT_MARKER: True, "id": "alice"}
-        processor("member.md", subject)
-
-        assert engine.written == [("member.md", subject, Path("member/alice.md"))]
-
-    def test_marked_dict_without_id_uses_template_name(self) -> None:
-        engine = _MockEngine()
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
-        subject = {SPLIT_MARKER: True, "items": [1, 2, 3]}
-        processor("summary.md", subject)
-
-        assert engine.written == [("summary.md", subject, Path("summary.md"))]
-
 
 class TestMoodViewProcessorImplPageSubject:
-    """A scalar is never a split target (it is neither a real node nor
-    markable), so it inlines."""
+    """A scalar is never a real node, so it can never split and inlines."""
 
-    def test_unmarked_scalar_inlines(self) -> None:
+    def test_scalar_inlines(self) -> None:
         engine = _MockEngine(render_return="hello")
         processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("x.md", "just a string")
@@ -259,7 +223,14 @@ class TestMoodViewProcessorImplPageSubject:
 class TestMoodViewProcessorImplViaEngine:
     """End-to-end via a real TemplateEngine — exercises the integration."""
 
-    def _make_engine(self, tmp_path: Path, templates: dict[str, str]) -> TemplateEngine:
+    _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
+
+    def _make_engine(
+        self,
+        tmp_path: Path,
+        templates: dict[str, str],
+        reports_config: ReportsConfig = ReportsConfig(file_per=()),
+    ) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         for name, body in templates.items():
@@ -267,18 +238,23 @@ class TestMoodViewProcessorImplViaEngine:
         out_dir = tmp_path / "out"
         out_dir.mkdir()
         return TemplateEngine(
-            out_dir, templates_dir=templates_dir, output_format=MD, filters={}
+            out_dir,
+            templates_dir=templates_dir,
+            output_format=MD,
+            filters={},
+            reports_config=reports_config,
         )
 
     def test_writes_file_with_rendered_content(self, tmp_path: Path) -> None:
-        engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
-        processor = MoodViewProcessorImpl(engine=engine)
-        processor("profile.md", {SPLIT_MARKER: True, "id": "alice", "name": "Alice"})
+        config = ReportsConfig(file_per=("members.item",))
+        engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"}, config)
+        processor = MoodViewProcessorImpl(engine=engine, reports_config=config)
+        processor("profile.md", wrap_tree(self._TREE)["members"][0])
 
-        assert (tmp_path / "out" / "profile" / "alice.md").read_text() == "hi alice"
+        assert (tmp_path / "out" / "members" / "alice.md").read_text() == "hi alice"
 
-    def test_unmarked_dict_does_not_write_file(self, tmp_path: Path) -> None:
-        # An unmarked (non-node) dict inlines, so no page is written.
+    def test_non_node_dict_does_not_write_file(self, tmp_path: Path) -> None:
+        # A non-node dict inlines, so no page is written.
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
         processor = MoodViewProcessorImpl(engine=engine)
         result = processor("profile.md", {"id": "alice"})

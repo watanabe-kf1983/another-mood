@@ -1,12 +1,29 @@
 """Tests for the system-only Jinja2 filters used by built-in templates."""
 
+import pytest
 from jinja2 import Undefined
 
+from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.meta_templates import (
+    META_REPORTS_CONFIG,
     pluck,
     to_yaml,
     walk_entity,
 )
+
+
+class TestMetaReportsConfig:
+    """The meta render's fixed ``file_per`` splits each built-in meta
+    query's result items onto their own anchor-derived ``{view}/{id}.md``
+    page.  This is the contract that keeps the diagnostics from inlining
+    back into ``index.md`` — ``page_path`` returns ``index.md`` for a
+    non-split node, so asserting the path covers both the split decision
+    and its derivation."""
+
+    @pytest.mark.parametrize("view", ["__meta_entity", "__table_view", "__meta_query"])
+    def test_meta_query_item_splits_to_its_page(self, view: str) -> None:
+        node = wrap_tree({view: [{"id": "sample"}]})[view][0]
+        assert META_REPORTS_CONFIG.page_path(node) == f"{view}/sample.md"
 
 
 class TestPluckFilter:

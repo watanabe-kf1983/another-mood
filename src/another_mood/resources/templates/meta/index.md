@@ -28,45 +28,29 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 
 {% if __user_entity_roots -%}
 {% for entity in __user_entity_roots -%}
-- [{{ entity.id }}](__meta_entity/{{ entity.id | as_url }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
+- [{{ entity.id }}]({{ node("__meta_entity", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
 {% endfor %}
 {%- else -%}
 (no entities defined yet)
 {%- endif %}
-{% for entity in __entity_roots -%}
-{% mood_view "__meta_entity.md" with {
-  "_split": true,
-  "id": entity.id,
-  "builtin": entity.builtin,
-} %}
+{% for entity in __meta_entity -%}
+{% mood_view "entity.md" with entity %}
 {%- endfor %}
-{% for entity in __entity_roots -%}
-{% mood_view "__table_view.md" with {
-  "_split": true,
-  "id": entity.id,
-} %}
+{% for entity in __table_view -%}
+{% mood_view "table_view.md" with entity %}
 {%- endfor %}
 
 ## Queries
 
 {% if __user_queries -%}
 {% for query in __user_queries -%}
-- [{{ query.id }}](__meta_query/{{ query.id | as_url }}.md)
+- [{{ query.id }}]({{ node("__meta_query", query.id) | href }})
 {% endfor %}
 {%- else -%}
 (no queries defined yet)
 {%- endif %}
-{% for query in __definition.queries -%}
-{% mood_view "__meta_query.md" with {
-  "_split": true,
-  "id": query.id,
-  "from": query.from,
-  "flatten": query.flatten,
-  "join": query.join,
-  "where": query.where,
-  "grouped": query.grouped,
-  "select": query.select,
-} %}
+{% for query in __meta_query -%}
+{% mood_view "query.md" with query %}
 {%- endfor %}
 
 ## Reports

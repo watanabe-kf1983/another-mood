@@ -3,15 +3,21 @@
 # pyright: reportPrivateUsage=false
 """Data-tree wrappers exposing parent references and node metadata to templates."""
 
+from abc import ABC
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 from another_mood.components.generator.url import url_escape
 
 
-class Node(Protocol):
-    """An anchorable data-tree node that links back to its container."""
+class Node(ABC):
+    """An anchorable data-tree node that links back to its container.
+
+    Its members are instance attributes set in ``__init__``, so they are
+    declared here as annotations rather than ``@abstractmethod`` (which
+    would block subclasses from instantiating).
+    """
 
     _parent: "Node | None"
     """Reference to the container node, or ``None`` at the root."""
@@ -170,7 +176,7 @@ def iter_nodes(node: Node) -> Iterator[Node]:
     else:
         children = ()
     for child in children:
-        if isinstance(child, (MappingNode, ArrayNode)):
+        if isinstance(child, Node):
             yield from iter_nodes(child)
 
 

@@ -35,7 +35,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 
 ### From
 
-[{{ from }}](../__meta_entity/{{ from | as_url }}.md)
+[{{ from }}]({{ node("__meta_entity", from) | href }})
 
 {% if flatten -%}
 ### Flatten
@@ -53,7 +53,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join -%}
-| [{{ entry.to }}](../__meta_entity/{{ entry.to | as_url }}.md) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %} |
+| [{{ entry.to }}]({{ node("__meta_entity", entry.to) | href }}) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %} |
 {% endfor %}
 
 {% endif -%}

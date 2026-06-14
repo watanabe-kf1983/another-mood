@@ -10,11 +10,23 @@ from typing import Any, cast
 import yaml
 from jinja2 import Undefined
 
+from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.shared import json_data_model
 
 META_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "meta")
 )
+
+META_REPORTS_CONFIG = ReportsConfig(
+    file_per=("__meta_entity.item", "__table_view.item", "__meta_query.item")
+)
+"""Fixed split policy for the meta render.
+
+The meta diagnostics have no user ``reports.yaml``; their page split is
+internal.  Each built-in query (``__meta_entity`` / ``__table_view`` /
+``__meta_query``) yields one result item per entity/query, and listing
+the item object-type ids here routes those item nodes to their own
+``{query}/{id}.md`` page via the ordinary ``page_path`` derivation."""
 
 
 def pluck(row: object, key_path: str) -> object:

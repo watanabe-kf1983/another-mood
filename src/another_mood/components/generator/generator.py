@@ -11,6 +11,7 @@ from typing import Any, cast
 from another_mood.components.generator.data_tree import MappingNode, build_node_map
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.meta_templates import (
+    META_REPORTS_CONFIG,
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
 )
@@ -44,15 +45,17 @@ def generate(
     # Both renders walk the data tree, so both get the format-neutral
     # filters; the markdown href / link come from the md format via the engine.
     node_globals, node_filters = make_data_tree_filters(node_map)
-    # Meta render keeps the default (no-split) config: its mood_view subjects
-    # are synthetic dicts that take the fallback page path, not config paging.
+    # Meta render splits its real-node subjects (the __meta_entity /
+    # __table_view / __meta_query query results) via a fixed internal
+    # file_per, so each lands on its own anchor-derived page.
     render(
-        "__root.md",
+        "index.md",
         META_TEMPLATES_DIR,
         data,
         out_dir,
         filters={**META_TEMPLATES_FILTERS, **node_filters},
         globals=node_globals,
+        reports_config=META_REPORTS_CONFIG,
     )
     render(
         "index.md",
