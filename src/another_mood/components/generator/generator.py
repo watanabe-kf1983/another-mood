@@ -49,7 +49,7 @@ def generate(
     # __table_view / __meta_query query results) via a fixed internal
     # file_per, so each lands on its own anchor-derived page.
     render(
-        "__root.md",
+        "index.md",
         META_TEMPLATES_DIR,
         data,
         out_dir,

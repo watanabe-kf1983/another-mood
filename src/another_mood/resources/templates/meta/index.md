@@ -34,10 +34,10 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 (no entities defined yet)
 {%- endif %}
 {% for entity in __meta_entity -%}
-{% mood_view "__meta_entity.md" with entity %}
+{% mood_view "entity.md" with entity %}
 {%- endfor %}
 {% for entity in __table_view -%}
-{% mood_view "__table_view.md" with entity %}
+{% mood_view "table_view.md" with entity %}
 {%- endfor %}
 
 ## Queries
@@ -50,7 +50,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 (no queries defined yet)
 {%- endif %}
 {% for query in __meta_query -%}
-{% mood_view "__meta_query.md" with query %}
+{% mood_view "query.md" with query %}
 {%- endfor %}
 
 ## Reports
