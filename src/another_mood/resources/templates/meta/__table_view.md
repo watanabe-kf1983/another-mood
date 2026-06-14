@@ -2,7 +2,7 @@
 {% set entities = node("/__definition/entities") -%}
 # Entity Data: {{ id }}
 
-[← Entity Definition](../__meta_entity/{{ id | as_url }}.md)
+[← Entity Definition]({{ node("__meta_entity", id) | href }})
 
 {% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") -%}
 ## {{ entity.id }}

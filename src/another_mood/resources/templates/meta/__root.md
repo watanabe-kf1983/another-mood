@@ -28,7 +28,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 
 {% if __user_entity_roots -%}
 {% for entity in __user_entity_roots -%}
-- [{{ entity.id }}](__meta_entity/{{ entity.id | as_url }}.md){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
+- [{{ entity.id }}]({{ node("__meta_entity", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif %}
 {% endfor %}
 {%- else -%}
 (no entities defined yet)
@@ -44,7 +44,7 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 
 {% if __user_queries -%}
 {% for query in __user_queries -%}
-- [{{ query.id }}](__meta_query/{{ query.id | as_url }}.md)
+- [{{ query.id }}]({{ node("__meta_query", query.id) | href }})
 {% endfor %}
 {%- else -%}
 (no queries defined yet)
