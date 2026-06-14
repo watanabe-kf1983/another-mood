@@ -26,8 +26,7 @@ The meta diagnostics have no user ``reports.yaml``; their page split is
 internal.  Each built-in query (``__meta_entity`` / ``__table_view`` /
 ``__meta_query``) yields one result item per entity/query, and listing
 the item object-type ids here routes those item nodes to their own
-``{query}/{id}.md`` page via the ordinary ``page_path`` derivation —
-the same path the older ``_split`` marker produced, now anchor-driven."""
+``{query}/{id}.md`` page via the ordinary ``page_path`` derivation."""
 
 
 def pluck(row: object, key_path: str) -> object:
