@@ -13,7 +13,7 @@ from jinja2 import nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
 
-from another_mood.components.generator.data_tree import ArrayNode, MappingNode
+from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.reports_config import ReportsConfig
 
 if TYPE_CHECKING:
@@ -34,30 +34,23 @@ class MoodViewProcessorImpl:
     reports_config: ReportsConfig = ReportsConfig(file_per=())
 
     def __call__(self, template_name: str, subject: object) -> str:
-        if self._splits(subject):
+        # Only a real data-tree node can become its own page; anything else
+        # inlines.  The is-node check at the boundary lets _splits / _out_path
+        # take a Node directly.
+        if isinstance(subject, Node) and self._splits(subject):
             self.engine.render_to_file(template_name, subject, self._out_path(subject))
             return ""
         else:
             return self.engine.render(template_name, subject)
 
-    def _splits(self, subject: object) -> bool:
-        """Whether the subject becomes its own page (else inlined).
+    def _splits(self, node: Node) -> bool:
+        """Whether the node becomes its own page (else inlined): its
+        ``object_type_id`` is a ``file_per`` split target."""
+        return self.reports_config.is_split_target(node._meta.object_type_id)
 
-        Only a real data-tree node can split: its ``object_type_id`` is
-        matched against ``file_per``.  Any non-node subject inlines.
-        """
-        return isinstance(
-            subject, (MappingNode, ArrayNode)
-        ) and self.reports_config.is_split_target(subject._meta.object_type_id)
-
-    def _out_path(self, subject: object) -> Path:
-        """Anchor-derived page path of a split subject.
-
-        Only reached for subjects ``_splits`` accepted, i.e. real nodes,
-        so the page path comes straight from ``ReportsConfig.page_path``.
-        """
-        assert isinstance(subject, (MappingNode, ArrayNode))
-        return Path(self.reports_config.page_path(subject))
+    def _out_path(self, node: Node) -> Path:
+        """Anchor-derived page path of a split node."""
+        return Path(self.reports_config.page_path(node))
 
 
 class MoodViewExtension(Extension):
