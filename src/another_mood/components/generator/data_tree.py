@@ -1,9 +1,11 @@
-# _parent / _parent_record / _meta are template-public fields under the
-# reserved `_` prefix, not Python "protected" attributes.
+# _parent / _parent_record / _meta / _children are template-public node
+# fields under the reserved `_` prefix — reserved precisely so they never
+# shadow a data key on the dict/list-subclass nodes — not Python
+# "protected" attributes.
 # pyright: reportPrivateUsage=false
 """Data-tree wrappers exposing parent references and node metadata to templates."""
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
 from typing import Any, cast
@@ -33,6 +35,13 @@ class Node(ABC):
     _meta: "_NodeMeta"
     """Lazy node-metadata view — anchor_path / object_type_id."""
 
+    @abstractmethod
+    def _children(self) -> "Iterator[Node]":
+        """The anchorable child nodes, in document order — the one
+        container-shape-specific primitive that the free functions
+        :func:`child` and :func:`iter_nodes` build on.
+        """
+
 
 class ArrayNode(list[Any], Node):
     """List subclass holding a ``_parent`` reference to its container."""
@@ -42,6 +51,10 @@ class ArrayNode(list[Any], Node):
         self._parent: "Node | None" = parent
         self._segment = segment
         self._meta: "_NodeMeta" = _NodeMeta(self)
+
+    def _children(self) -> "Iterator[Node]":
+        """The element nodes; id-less elements pass through raw and are skipped."""
+        return (item for item in self if isinstance(item, Node))
 
 
 class MappingNode(dict[str, Any], Node):
@@ -66,6 +79,10 @@ class MappingNode(dict[str, Any], Node):
         while isinstance(node, ArrayNode):
             node = node._parent
         return node if isinstance(node, MappingNode) else None
+
+    def _children(self) -> "Iterator[Node]":
+        """The node-valued entries; raw scalar / pass-through values are skipped."""
+        return (value for value in self.values() if isinstance(value, Node))
 
 
 class _NodeMeta:
@@ -163,21 +180,13 @@ def build_node_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
 def iter_nodes(node: Node) -> Iterator[Node]:
     """Walk every wrapped node depth-first, ``node`` itself first.
 
-    Descends only into child :class:`Node` instances, so raw
-    pass-through dicts/lists (and their subtrees) are skipped.  The
-    wrapped tree already records anchorability as ``isinstance(_, Node)``,
-    so no wrapping rule is re-derived during the walk.
+    Descends via each node's :meth:`Node._children`, which already yields
+    only anchorable :class:`Node` instances — raw pass-through dicts/lists
+    (and their subtrees) are skipped without re-deriving any wrapping rule.
     """
     yield node
-    if isinstance(node, MappingNode):
-        children: Iterable[Any] = node.values()
-    elif isinstance(node, ArrayNode):
-        children = node
-    else:
-        children = ()
-    for child in children:
-        if isinstance(child, Node):
-            yield from iter_nodes(child)
+    for c in node._children():
+        yield from iter_nodes(c)
 
 
 def nearest_ancestor(node: Node, match: Callable[[Node], bool]) -> Node | None:
@@ -193,6 +202,20 @@ def nearest_ancestor(node: Node, match: Callable[[Node], bool]) -> Node | None:
             return current
         current = current._parent
     return None
+
+
+def child(node: Node, seg: object) -> Node | None:
+    """The child of ``node`` whose anchor segment equals ``seg``, or ``None``.
+
+    ``seg`` is a record's ``id`` (array element) or a key (mapping entry) —
+    both recorded on the child as ``_segment``, so a single match resolves
+    either container kind, and a path-shaped id (e.g. a ``prose`` record)
+    matches its raw value without escaping.  A free function over the node
+    tree like :func:`iter_nodes` / :func:`nearest_ancestor`, rather than a
+    method, so it cannot shadow a data key on the dict/list-subclass nodes.
+    """
+    key = str(seg)
+    return next((c for c in node._children() if c._segment == key), None)
 
 
 def _wrap_mapping(

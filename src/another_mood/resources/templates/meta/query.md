@@ -1,5 +1,6 @@
 {% set root = node("/") %}
 {% set entities = node("/__definition/entities") %}
+{% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 # Query: {{ id }}
 
 ## Source Diagram
@@ -9,26 +10,22 @@
     ```mermaid
     classDiagram
     {% for entity in entities if entity.id in node_ids %}
-        class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
+        class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
     {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids %}
-        {% set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first %}
-        {{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
+        {% set parent = entities | child(entity.parent_entity) %}
+        {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
     {% for top_id in node_ids %}
-        {% set top_entity = entities | selectattr('id', 'eq', top_id) | first %}
-        {% if top_entity %}
-            {% for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") %}
-                {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
-                    {% set target = entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
-                    {% if target %}
-                        {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
-                        {% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
-                        {{ top_entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ label | safe }}
-                    {% endif %}
-                {% endfor %}
+        {% set top_entity = entities | child(top_id) %}
+        {% for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") %}
+            {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
+                {% set target = entities | child(attr.x_ref.entity) %}
+                {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
+                {% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
+                {{ mermaid_type_id(top_entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ label | safe }}
             {% endfor %}
-        {% endif %}
+        {% endfor %}
     {% endfor %}
     ```
 {% endfilter %}
@@ -55,7 +52,12 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join %}
-| [{{ entry.to }}]({{ node("__meta_entity", entry.to) | href }}) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %} |
+    {{- "" }}| [{{ entry.to }}]({{ node("__meta_entity", entry.to) | href }})
+    {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
+    {{- "" }} | {{ entry.as }}
+    {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
+    {{- "" }} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %}
+    {{- "" }} |
 {% endfor %}
 
 {% endif %}
@@ -91,9 +93,14 @@
 {% if entity.item_type.attributes %}
 | id | type | required | validation | metadata |
 |----|------|----------|------------|----------|
-{% for attribute in entity.item_type.attributes %}
-{% set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" %}
-| {{ code_inline(attribute.id) }} | {{ code_inline((attribute.child_item_type or attribute.type) ~ array_suffix) }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}{{ code_inline(attribute.validation | to_yaml(true)) }}{% endif %} | {% if attribute.metadata %}{{ code_inline(attribute.metadata | to_yaml(true)) }}{% endif %} |
+{% for attr in entity.item_type.attributes %}
+    {% set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" %}
+    {{- "" }}| {{ code_inline(attr.id) }}
+    {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}
+    {{- "" }} | {% if attr.required %}yes{% endif %}
+    {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
+    {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
+    {{- "" }} |
 {% endfor %}
 {% else %}
 (no attributes)

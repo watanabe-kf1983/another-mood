@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from another_mood.components.generator.data_tree import Node
+from another_mood.components.generator.data_tree import child as node_child
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.url import url_escape
 
@@ -43,6 +44,7 @@ def make_data_tree_filters(
     filters_map: Mapping[str, Callable[..., object]] = {
         "node": node,
         "label": node_label,
+        "child": child,
     }
     return globals_map, filters_map
 
@@ -76,6 +78,31 @@ def build_anchor_path(seg: object, *segs: object) -> str:
     if not segs and isinstance(seg, str) and seg.startswith("/"):
         return seg
     return "/" + "/".join(url_escape(str(p), safe="") for p in (seg, *segs))
+
+
+def child(parent: object, seg: object) -> object:
+    """The ``child`` filter (``parent | child(seg)``): the relative
+    counterpart to ``node``'s absolute lookup.
+
+    Wraps :func:`data_tree.child`, mapping an unresolved step — a non-node
+    parent or no matching child — to a :class:`MissingNode` carrying the
+    attempted path, so it renders visibly instead of raising.
+    """
+    if not isinstance(parent, Node):
+        # Nothing to step from (e.g. a chained-off MissingNode); the
+        # attempted path is just the bare segment.
+        return MissingNode(str(seg))
+    if (found := node_child(parent, seg)) is not None:
+        return found
+    else:
+        return MissingNode(_child_path(parent, seg))
+
+
+def _child_path(parent: Node, seg: object) -> str:
+    """The anchor path the unresolved child would have had, for its MissingNode."""
+    base = parent._meta.anchor_path
+    sep = "" if base == "/" else "/"
+    return f"{base}{sep}{seg}"
 
 
 def node_label(a: object) -> str:

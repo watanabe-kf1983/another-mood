@@ -9,6 +9,7 @@ from another_mood.components.generator.data_tree import (
     MappingNode,
     Node,
     build_node_map,
+    child,
     iter_nodes,
     nearest_ancestor,
     wrap_tree,
@@ -106,6 +107,27 @@ class TestParentRecord:
         task = root["cats"][0]["tasks"][0]
         assert isinstance(task, MappingNode)
         assert task._parent_record is root["cats"][0]
+
+
+class TestChild:
+    """``child(node, seg)`` derives a node from its parent by anchor segment.
+
+    (``_children`` is exercised through this and :class:`TestIterNodes`.)
+    """
+
+    def test_array_element_by_raw_id(self) -> None:
+        # Matches the element's raw `id`, so a path-shaped id (with `/`)
+        # resolves without escaping.
+        root = wrap_tree({"prose": [{"id": "a/b"}]})
+        assert child(root["prose"], "a/b") is root["prose"][0]
+
+    def test_mapping_value_by_key(self) -> None:
+        root = wrap_tree({"overview": {"title": "T"}})
+        assert child(root, "overview") is root["overview"]
+
+    def test_no_match_is_none(self) -> None:
+        root = wrap_tree({"items": [{"id": "x"}]})
+        assert child(root["items"], "nope") is None
 
 
 class TestSurface:

@@ -9,6 +9,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`href`](#href) | filter | the URL of a node's page, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
 | [`node`](#node) | function, filter | resolve an anchor path to its node |
+| [`child`](#child) | filter | step from a node to one of its children |
 | [`in_cell`](#in_cell) | filter | insert a value into a Markdown table cell |
 | [`code_inline`](#code_inline) | function | wrap a value in a Markdown code span |
 | [`code_fenced`](#code_fenced) | function | wrap a value in a Markdown fenced code block |
@@ -132,6 +133,17 @@ When the subject is a **list**, there are no fields to spread, so iterate `this`
 ## Filters
 
 `node` can also be piped as a filter; it is documented under [Functions](#functions). The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
+
+### `child`
+
+`parent | child(seg)` steps from a resolved node to one of its children: for an array, `seg` is a record's `id`; for a mapping, a key. It is the relative counterpart to [`node`](#node)'s absolute lookup — reach for it when you already hold the parent node, instead of respelling the parent's whole path.
+
+```jinja2
+{# track.genre_id references a record in the `genres` array #}
+{{ genres | child(track.genre_id) | link }}
+```
+
+Matching is on the raw `id`, so a path-shaped `prose` id (whose `/` would otherwise need the ready-made `node("/…")` form) resolves directly. A `seg` that matches no child resolves to a **missing node**, kept visible exactly as [`node`](#node)'s.
 
 ### `link`
 

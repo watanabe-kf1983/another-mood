@@ -1,3 +1,5 @@
+{% set entities = node("/__definition/entities") %}
+{% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 # Another Mood
 
 ## Entity Relationships
@@ -7,17 +9,17 @@
     ```mermaid
     classDiagram
     {% for entity in __user_content_entities %}
-        class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
+        class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
     {% for entity in __user_content_entities if entity.parent_entity %}
-        {% set parent = __user_content_entities | selectattr('id', 'eq', entity.parent_entity) | first %}
-        {{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
+        {% set parent = entities | child(entity.parent_entity) %}
+        {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
     {% set node_ids = __user_content_entities | map(attribute='id') | list %}
     {% for entity in __user_content_entities %}
         {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
-            {% set target = __user_content_entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
-            {{ entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ attr.id | safe }}
+            {% set target = entities | child(attr.x_ref.entity) %}
+            {{ mermaid_type_id(entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ attr.id | safe }}
         {% endfor %}
     {% endfor %}
     ```

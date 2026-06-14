@@ -10,6 +10,7 @@ from another_mood.components.generator.data_tree import Node, build_node_map
 from another_mood.components.generator.data_tree_filters import (
     MissingNode,
     build_anchor_path,
+    child,
     make_data_tree_filters,
     node_href,
     node_label,
@@ -111,6 +112,33 @@ class TestResolveNode:
         assert resolve_node(nodes, "/") is nodes["/"]
 
 
+# ── child ────────────────────────────────────────────────────────
+
+
+class TestChild:
+    """The filter wraps ``data_tree.child``, turning a miss into a MissingNode.
+
+    Resolution semantics are covered in ``test_data_tree.py``; these cover
+    the adapter: a hit passes through, a miss/non-node becomes a MissingNode
+    carrying the attempted path.
+    """
+
+    def test_resolves_to_node(self) -> None:
+        nodes = _node_map()
+        assert child(nodes["/members"], "alice") is nodes["/members/alice"]
+
+    def test_missing_extends_parent_path(self) -> None:
+        result = child(_node_map()["/members"], "nobody")
+        assert result == MissingNode("/members/nobody")
+
+    def test_missing_at_root_is_rooted(self) -> None:
+        result = child(_node_map()["/"], "nope")
+        assert result == MissingNode("/nope")
+
+    def test_non_node_parent_yields_bare_segment(self) -> None:
+        assert child("not a node", "x") == MissingNode("x")
+
+
 # ── node_label ───────────────────────────────────────────────────
 
 
@@ -191,7 +219,7 @@ class TestMakeDataTreeFilters:
     def test_returns_globals_and_filters(self) -> None:
         globals_map, filters_map = make_data_tree_filters(_node_map())
         assert set(globals_map) == {"node"}
-        assert set(filters_map) == {"node", "label"}
+        assert set(filters_map) == {"node", "label", "child"}
 
     def test_node_filter_resolves_to_node(self) -> None:
         nodes = _node_map()

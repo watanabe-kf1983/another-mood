@@ -12,7 +12,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 ## Albums by genre
 
 {% for entry in albums_by_genre %}
-### {{ genres | selectattr("id", "equalto", entry.genre_id) | map(attribute="name") | first }}
+### {{ node("genres", entry.genre_id).name }}
 
 {% for album in entry.albums | sort(attribute="year") %}
 - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
@@ -98,7 +98,7 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 
 {% set entries = playlist_tracks | selectattr("playlist_id", "equalto", pl.id) | sort(attribute="position") %}
 {% for entry in entries %}
-{{ entry.position }}. {{ tracks | selectattr("id", "equalto", entry.track_id) | map(attribute="title") | first }}
+{{ entry.position }}. {{ node("tracks", entry.track_id).title }}
 {% endfor %}
 
 {% endfor %}
