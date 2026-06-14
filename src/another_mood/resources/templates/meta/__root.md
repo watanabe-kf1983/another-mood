@@ -33,18 +33,11 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {%- else -%}
 (no entities defined yet)
 {%- endif %}
-{% for entity in __entity_roots -%}
-{% mood_view "__meta_entity.md" with {
-  "_split": true,
-  "id": entity.id,
-  "builtin": entity.builtin,
-} %}
+{% for entity in __meta_entity -%}
+{% mood_view "__meta_entity.md" with entity %}
 {%- endfor %}
-{% for entity in __entity_roots -%}
-{% mood_view "__table_view.md" with {
-  "_split": true,
-  "id": entity.id,
-} %}
+{% for entity in __table_view -%}
+{% mood_view "__table_view.md" with entity %}
 {%- endfor %}
 
 ## Queries
@@ -56,17 +49,8 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 {%- else -%}
 (no queries defined yet)
 {%- endif %}
-{% for query in __definition.queries -%}
-{% mood_view "__meta_query.md" with {
-  "_split": true,
-  "id": query.id,
-  "from": query.from,
-  "flatten": query.flatten,
-  "join": query.join,
-  "where": query.where,
-  "grouped": query.grouped,
-  "select": query.select,
-} %}
+{% for query in __meta_query -%}
+{% mood_view "__meta_query.md" with query %}
 {%- endfor %}
 
 ## Reports

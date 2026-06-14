@@ -1,0 +1,8 @@
+# Subject nodes for the per-query __meta_query pages.  One result item
+# per catalog query (built-in queries included); the item's anchor path
+# (/__meta_query/{id}) is the page path the built-in __root template
+# splits it to.  Passthrough (no select) so each item carries the full
+# query definition the __meta_query template renders (from / flatten /
+# join / where / grouped / select).
+__meta_query:
+  from: __definition.queries
