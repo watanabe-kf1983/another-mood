@@ -190,6 +190,20 @@ Links between pages never need it — [`link`](#link) / [`href`](#href) produce 
 [{{ site.label }}]({{ site.url | as_url }})
 ```
 
+### `dedent`
+
+`{% filter dedent %}…{% endfilter %}` strips the common leading whitespace from the block's rendered text, so you can indent the block's body — tags and content alike — for readability and have that shared indentation removed from the output:
+
+```jinja2
+{% filter dedent %}
+    {% for row in rows %}
+        - {{ row.name }}
+    {% endfor %}
+{% endfilter %}
+```
+
+It removes only the *common* minimum, so lines nested deeper than their siblings keep the difference. That fully flattens a block whose emitted lines sit at one level; for uneven nesting it suits whitespace-insensitive output (e.g. a Mermaid diagram) rather than significant-whitespace Markdown such as list or table rows.
+
 ## Functions
 
 ### `node`
@@ -242,6 +256,8 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 ## Whitespace
 
 Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% mood_view %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
+
+To indent a block's body — tags and content together — and strip that indentation back out of the output, wrap it in the [`dedent`](#dedent) filter (best where the output tolerates leftover indentation, such as a Mermaid diagram).
 
 To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x %}` keeps the leading indentation, and `{% endif +%}` keeps the trailing newline — useful when an inline `{% if %}…{% endif %}` ends a content line and its line break must be preserved.
 

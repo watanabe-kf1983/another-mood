@@ -1,6 +1,7 @@
 """The ``md`` output format: escape, markdown helpers, and anchor link filters."""
 
 import re
+import textwrap
 from collections.abc import Callable, Mapping
 
 from jinja2 import pass_context
@@ -51,6 +52,22 @@ def code_fenced(value: object, language: str = "") -> Markup:
     # Closing fence needs its own line — guarantee a trailing newline.
     body = text if text.endswith("\n") else text + "\n"
     return Markup(f"{fence}{language}\n{body}{fence}")
+
+
+def dedent(text: str) -> str:
+    """Strip the common leading whitespace from a rendered block.
+
+    Registered as a filter so a template can indent the body of a
+    ``{% filter dedent %}`` block — tags and content alike — for
+    readability, then have that shared indentation removed from the
+    output.  Owned by the format because, like ``trim_blocks`` /
+    ``lstrip_blocks``, it only matters where output whitespace is
+    significant (Markdown).  Keys off the *common* minimum
+    (``textwrap.dedent``), so lines nested deeper than their siblings
+    keep the difference: it fully flattens single-level blocks and
+    suits whitespace-insensitive output (e.g. Mermaid) otherwise.
+    """
+    return textwrap.dedent(text)
 
 
 def in_cell(value: object) -> Markup:
@@ -135,6 +152,7 @@ MD = OutputFormat(
     filters={
         "in_cell": in_cell,
         "as_url": as_url,
+        "dedent": dedent,
     },
     link_filters=make_link_filters,
 )

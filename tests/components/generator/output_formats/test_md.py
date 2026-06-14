@@ -11,6 +11,7 @@ from another_mood.components.generator.output_formats.md import (
     as_url,
     code_fenced,
     code_inline,
+    dedent,
     in_cell,
     make_link_filters,
     md_escape,
@@ -82,6 +83,22 @@ class TestMdOutputFormat:
         env = make_environment(MD)
         template = env.from_string("{{ value | as_url }}")
         assert template.render(value="a b") == "a%20b"
+
+    def test_registers_dedent_as_filter(self) -> None:
+        env = make_environment(MD)
+        template = env.from_string("{% filter dedent %}\n    a\n    b\n{% endfilter %}")
+        assert template.render() == "a\nb\n"
+
+
+class TestDedent:
+    def test_strips_common_leading_whitespace(self) -> None:
+        assert dedent("    a\n    b\n") == "a\nb\n"
+
+    def test_keeps_relative_indentation(self) -> None:
+        assert dedent("    a\n        b\n") == "a\n    b\n"
+
+    def test_ignores_blank_lines_in_common_prefix(self) -> None:
+        assert dedent("    a\n\n    b\n") == "a\n\nb\n"
 
 
 class TestCodeInline:
