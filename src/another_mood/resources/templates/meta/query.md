@@ -5,31 +5,33 @@
 ## Source Diagram
 
 {% set node_ids = ([from] + (join | map(attribute='to') | list)) | unique | list %}
-```mermaid
-classDiagram
-{% for entity in entities if entity.id in node_ids %}
-class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
-{% endfor %}
-{% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids %}
-{% set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first %}
-{{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
-{% endfor %}
-{% for top_id in node_ids %}
-{% set top_entity = entities | selectattr('id', 'eq', top_id) | first %}
-{% if top_entity %}
-{% for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") %}
-{% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
-{% set target = entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
-{% if target %}
-{% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
-{% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
-{{ top_entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ label | safe }}
-{% endif %}
-{% endfor %}
-{% endfor %}
-{% endif %}
-{% endfor %}
-```
+{% filter dedent %}
+    ```mermaid
+    classDiagram
+    {% for entity in entities if entity.id in node_ids %}
+        class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
+    {% endfor %}
+    {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids %}
+        {% set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first %}
+        {{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
+    {% endfor %}
+    {% for top_id in node_ids %}
+        {% set top_entity = entities | selectattr('id', 'eq', top_id) | first %}
+        {% if top_entity %}
+            {% for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") %}
+                {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
+                    {% set target = entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
+                    {% if target %}
+                        {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
+                        {% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
+                        {{ top_entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ label | safe }}
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+    ```
+{% endfilter %}
 
 ## Definition
 
@@ -110,11 +112,11 @@ class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.
 |{% for attribute in attributes %}---|{% endfor %}---|
 {% for row in rows %}
 | {% for attribute in attributes -%}
-{%- if attribute.child_entity -%}
-*{{ (row | pluck(attribute.id) or []) | length }} items*
-{%- else -%}
-{{ row | pluck(attribute.id) | in_cell }}
-{%- endif %} | {% endfor %}{{ row._meta.anchor_path | in_cell }} |
+    {%- if attribute.child_entity -%}
+        *{{ (row | pluck(attribute.id) or []) | length }} items*
+    {%- else -%}
+        {{ row | pluck(attribute.id) | in_cell }}
+    {%- endif %} | {% endfor %}{{ row._meta.anchor_path | in_cell }} |
 {% endfor %}
 {% else %}
 (no records)
