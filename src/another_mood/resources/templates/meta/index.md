@@ -11,13 +11,13 @@
         class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
     {% for entity in __user_content_entities if entity.parent_entity %}
-        {% set parent = __user_content_entities | selectattr('id', 'eq', entity.parent_entity) | first %}
+        {% set parent = node("__definition", "entities", entity.parent_entity) %}
         {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
     {% set node_ids = __user_content_entities | map(attribute='id') | list %}
     {% for entity in __user_content_entities %}
         {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
-            {% set target = __user_content_entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
+            {% set target = node("__definition", "entities", attr.x_ref.entity) %}
             {{ mermaid_type_id(entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ attr.id | safe }}
         {% endfor %}
     {% endfor %}
