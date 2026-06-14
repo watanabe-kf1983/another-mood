@@ -28,12 +28,13 @@ class TestWriteIndex:
         data = {"items": [{"name": "Alice"}, {"name": "Bob"}]}
         render("index.md", templates_dir, data, out_dir)
 
+        # MD enables trim_blocks, so the newline after `{% endfor %}` is
+        # dropped: the loop leaves no trailing blank line.
         assert (out_dir / "index.md").read_text() == dedent("""\
             # List
 
             - Alice
             - Bob
-
         """)
 
     def test_renders_build_failure_with_diagnostics(self, tmp_path: Path) -> None:

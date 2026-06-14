@@ -2,4 +2,4 @@
 
 {% for member in members %}
 - {{ node("members", member.id) | link }}
-{%- endfor %}
+{% endfor %}

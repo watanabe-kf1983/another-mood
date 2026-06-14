@@ -45,6 +45,14 @@ class OutputFormat:
     link_filters: Callable[[ReportsConfig], Mapping[str, Callable[..., Any]]] = (
         _no_link_filters
     )
+    # Jinja2 block whitespace control, owned by the format because whitespace
+    # significance is format-dependent.  lstrip_blocks drops the indentation
+    # before a line's `{% %}` tag; trim_blocks drops the newline after it —
+    # together they let a control tag sit on its own indented line and emit
+    # nothing, so templates can show their structure without leaking spaces or
+    # blank lines.  Defaults match Jinja2's own (off); a format opts in.
+    trim_blocks: bool = False
+    lstrip_blocks: bool = False
 
 
 def make_environment(
@@ -63,6 +71,8 @@ def make_environment(
     env = Environment(
         extensions=[MoodViewExtension],
         keep_trailing_newline=True,
+        trim_blocks=output_format.trim_blocks,
+        lstrip_blocks=output_format.lstrip_blocks,
         undefined=ChainableUndefined,
         finalize=_finalize,
     )

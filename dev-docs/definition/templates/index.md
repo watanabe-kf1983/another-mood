@@ -1,8 +1,8 @@
 {{ node("/prose/index") | link }}
 
-{%- for record in prose -%}
+{% for record in prose %}
 {% mood_view "prose.md" with record %}
-{%- endfor %}
+{% endfor %}
 
 {% mood_view "tasks.md" with tasks %}
 
