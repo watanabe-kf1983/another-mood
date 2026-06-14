@@ -1,4 +1,5 @@
 {% set entities = node("/__definition/entities") %}
+{% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 # Entity Definition: {{ id }}{% if builtin %} (built-in){% endif +%}
 
 [→ Entity Data]({{ node("__table_view", id) | href }})
@@ -18,7 +19,7 @@
     ```mermaid
     classDiagram
     {% for entity in entities if entity.id in ns.subtree_ids %}
-        class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"] {
+        class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"] {
         {% for attr in entity.item_type.attributes %}
             {% set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" %}
             {{ "  " }}{% if attr.required %}*{% endif %}{{ attr.id | safe }} : {{ ((attr.child_item_type or attr.type) ~ array_suffix) | safe }}{% if attr.x_ref %} [FK]{% endif +%}
@@ -26,18 +27,18 @@
         }
     {% endfor %}
     {% for entity in entities if entity.id in ns.fk_target_ids %}
-        class {{ entity.item_type.id | replace(".", "_") | safe }}["{{ entity.item_type.id | safe }}"]
+        class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
     {% set draw_ids = ns.subtree_ids + ns.fk_target_ids %}
     {% for entity in entities if entity.id in ns.subtree_ids and entity.parent_entity and entity.parent_entity in draw_ids %}
         {% set parent = entities | selectattr('id', 'eq', entity.parent_entity) | first %}
-        {{ parent.item_type.id | replace(".", "_") | safe }} *-- {{ entity.item_type.id | replace(".", "_") | safe }}
+        {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
     {% for entity in entities if entity.id in ns.subtree_ids %}
         {% for attr in entity.item_type.attributes if attr.x_ref %}
             {% set target = entities | selectattr('id', 'eq', attr.x_ref.entity) | first %}
             {% if target %}
-                {{ entity.item_type.id | replace(".", "_") | safe }} --> {{ target.item_type.id | replace(".", "_") | safe }} : {{ attr.id | safe }}
+                {{ mermaid_type_id(entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ attr.id | safe }}
             {% endif %}
         {% endfor %}
     {% endfor %}
