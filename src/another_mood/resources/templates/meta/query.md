@@ -52,7 +52,12 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join %}
-| [{{ entry.to }}]({{ node("__meta_entity", entry.to) | href }}) | {{ entry.on.left }} = {{ entry.on.right }} | {{ entry.as }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %} |
+    {{- "" }}| [{{ entry.to }}]({{ node("__meta_entity", entry.to) | href }})
+    {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
+    {{- "" }} | {{ entry.as }}
+    {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
+    {{- "" }} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %}
+    {{- "" }} |
 {% endfor %}
 
 {% endif %}
@@ -89,8 +94,13 @@
 | id | type | required | validation | metadata |
 |----|------|----------|------------|----------|
 {% for attribute in entity.item_type.attributes %}
-{% set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" %}
-| {{ code_inline(attribute.id) }} | {{ code_inline((attribute.child_item_type or attribute.type) ~ array_suffix) }} | {% if attribute.required %}yes{% endif %} | {% if attribute.validation %}{{ code_inline(attribute.validation | to_yaml(true)) }}{% endif %} | {% if attribute.metadata %}{{ code_inline(attribute.metadata | to_yaml(true)) }}{% endif %} |
+    {% set array_suffix = "[]" if attribute.child_item_type and attribute.type.endswith("[]") else "" %}
+    {{- "" }}| {{ code_inline(attribute.id) }}
+    {{- "" }} | {{ code_inline((attribute.child_item_type or attribute.type) ~ array_suffix) }}
+    {{- "" }} | {% if attribute.required %}yes{% endif %}
+    {{- "" }} | {% if attribute.validation %}{{ code_inline(attribute.validation | to_yaml(true)) }}{% endif %}
+    {{- "" }} | {% if attribute.metadata %}{{ code_inline(attribute.metadata | to_yaml(true)) }}{% endif %}
+    {{- "" }} |
 {% endfor %}
 {% else %}
 (no attributes)
