@@ -32,10 +32,10 @@ categories:
         phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
-        title: shiftHeadings(n) Jinja2 フィルタ
-        note: テンプレート側で使用
+        title: under_heading フィルタ（見出し深さ調整）
+        note: 埋め込み Markdown を囲うレベルに合わせて下げる。prose body もブロック埋め込みも同一。生成側に実装
         phase: 11
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
+        proposal: design/generator/generator.md#見出し深さの調整フィルタ-a6
 
   B:
     title: アンカー / リンク解決
