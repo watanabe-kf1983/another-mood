@@ -88,7 +88,7 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
             ]
             if warnings:
                 render(
-                    "__warnings.md",
+                    "warnings.md",
                     _BUILD_REPORT_TEMPLATES_DIR,
                     {"diagnostics": [d.to_data() for d in warnings]},
                     ctx.out / "__warnings",
@@ -97,7 +97,7 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
         else:
             report = BuildReport.collect(data_dir / "reports")
             render(
-                "__build_failure.md",
+                "build_failure.md",
                 _BUILD_REPORT_TEMPLATES_DIR,
                 report.to_data(),
                 out_dir / "data",
