@@ -38,10 +38,10 @@
 (no entities defined yet)
 {% endif %}
 {% for entity in __meta_entity %}
-{% mood_view "entity.md" with entity %}
+{% mood_view "entity_def.md" with entity %}
 {% endfor %}
 {% for entity in __table_view %}
-{% mood_view "table_view.md" with entity %}
+{% mood_view "entity_data.md" with entity %}
 {% endfor %}
 
 ## Queries
