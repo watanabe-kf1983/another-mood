@@ -408,7 +408,7 @@ For `from: members` with three records `[{name: alice, age: 30}, {name: bob}, {n
 
 ## Inspecting a view
 
-Each query's result is exposed via an auto-generated meta page at `output/__meta_query/<query>.md`. While writing a query, you can verify the result in real time on `mood watch`.
+Each query's result is exposed via an auto-generated meta page at `output/__queries/<query>.md`. While writing a query, you can verify the result in real time on `mood watch`.
 
 ## Full query-schema
 

@@ -153,7 +153,7 @@ Markdown データソースの body には、Normalizer がソース内の相対
 
 > **未実装** — Phase 10 タスク [O4](../../../tasks.md)。
 
-内蔵テンプレート（`__meta_entity` の attributes 表など）は、`metadata` / `validation` のような任意 Mapping を Markdown テーブルセルに `{{ value | to_yaml(true) }}` でダンプし、結果をインラインコードとして表示している。現在は単一バッククォートで囲んでいるが、値そのものにバッククォートが含まれると CommonMark のフェンスが内側で早期終了してセルが崩れる。
+内蔵テンプレート（`__entity_defs` の attributes 表など）は、`metadata` / `validation` のような任意 Mapping を Markdown テーブルセルに `{{ value | to_yaml(true) }}` でダンプし、結果をインラインコードとして表示している。現在は単一バッククォートで囲んでいるが、値そのものにバッククォートが含まれると CommonMark のフェンスが内側で早期終了してセルが崩れる。
 
 例: 値の中に `` `text/markdown` `` が含まれていると、
 
