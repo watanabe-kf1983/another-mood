@@ -20,7 +20,7 @@ class TestMetaReportsConfig:
     non-split node, so asserting the path covers both the split decision
     and its derivation."""
 
-    @pytest.mark.parametrize("view", ["__meta_entity", "__table_view", "__meta_query"])
+    @pytest.mark.parametrize("view", ["__entity_defs", "__entity_data", "__queries"])
     def test_meta_query_item_splits_to_its_page(self, view: str) -> None:
         node = wrap_tree({view: [{"id": "sample"}]})[view][0]
         assert META_REPORTS_CONFIG.page_path(node) == f"{view}/sample.md"

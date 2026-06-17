@@ -18,13 +18,13 @@ META_TEMPLATES_DIR = Path(
 )
 
 META_REPORTS_CONFIG = ReportsConfig(
-    file_per=("__meta_entity.item", "__table_view.item", "__meta_query.item")
+    file_per=("__entity_defs.item", "__entity_data.item", "__queries.item")
 )
 """Fixed split policy for the meta render.
 
 The meta diagnostics have no user ``reports.yaml``; their page split is
-internal.  Each built-in query (``__meta_entity`` / ``__table_view`` /
-``__meta_query``) yields one result item per entity/query, and listing
+internal.  Each built-in query (``__entity_defs`` / ``__entity_data`` /
+``__queries``) yields one result item per entity/query, and listing
 the item object-type ids here routes those item nodes to their own
 ``{query}/{id}.md`` page via the ordinary ``page_path`` derivation."""
 

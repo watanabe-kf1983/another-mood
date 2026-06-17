@@ -32,15 +32,15 @@
 
 {% if __user_entity_roots %}
 {% for entity in __user_entity_roots %}
-- [{{ entity.id }}]({{ node("__meta_entity", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
+- [{{ entity.id }}]({{ node("__entity_defs", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
 {% endfor %}
 {% else %}
 (no entities defined yet)
 {% endif %}
-{% for entity in __meta_entity %}
+{% for entity in __entity_defs %}
 {% mood_view "entity_def.md" with entity %}
 {% endfor %}
-{% for entity in __table_view %}
+{% for entity in __entity_data %}
 {% mood_view "entity_data.md" with entity %}
 {% endfor %}
 
@@ -48,12 +48,12 @@
 
 {% if __user_queries %}
 {% for query in __user_queries %}
-- [{{ query.id }}]({{ node("__meta_query", query.id) | href }})
+- [{{ query.id }}]({{ node("__queries", query.id) | href }})
 {% endfor %}
 {% else %}
 (no queries defined yet)
 {% endif %}
-{% for query in __meta_query %}
+{% for query in __queries %}
 {% mood_view "query.md" with query %}
 {% endfor %}
 

@@ -45,8 +45,8 @@ def generate(
     # Both renders walk the data tree, so both get the format-neutral
     # filters; the markdown href / link come from the md format via the engine.
     node_globals, node_filters = make_data_tree_filters(node_map)
-    # Meta render splits its real-node subjects (the __meta_entity /
-    # __table_view / __meta_query query results) via a fixed internal
+    # Meta render splits its real-node subjects (the __entity_defs /
+    # __entity_data / __queries query results) via a fixed internal
     # file_per, so each lands on its own anchor-derived page.
     render(
         "index.md",

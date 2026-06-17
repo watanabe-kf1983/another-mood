@@ -1,10 +1,10 @@
-# Subject nodes for the per-entity __meta_entity pages (Entity
+# Subject nodes for the per-entity __entity_defs pages (Entity
 # Definition).  One result item per root content entity; the item's
-# anchor path (/__meta_entity/{id}) is the page path the built-in
-# __root template splits it to.  Deliberately parallel to __table_view
+# anchor path (/__entity_defs/{id}) is the page path the built-in
+# __root template splits it to.  Deliberately parallel to __entity_data
 # (same entity set, a distinct anchor root) so the two entity views land
 # on separate pages without a one-node-two-pages collision.
-__meta_entity:
+__entity_defs:
   from: __definition.entities
   where:
     view: false

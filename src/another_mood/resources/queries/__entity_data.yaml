@@ -1,10 +1,10 @@
-# Subject nodes for the per-entity __table_view pages (Entity Data).
+# Subject nodes for the per-entity __entity_data pages (Entity Data).
 # One result item per root content entity; the item's anchor path
-# (/__table_view/{id}) is the page path the built-in __root template
-# splits it to.  Deliberately parallel to __meta_entity (same entity
+# (/__entity_data/{id}) is the page path the built-in __root template
+# splits it to.  Deliberately parallel to __entity_defs (same entity
 # set, a distinct anchor root) so the two entity views land on separate
 # pages without a one-node-two-pages collision.
-__table_view:
+__entity_data:
   from: __definition.entities
   where:
     view: false

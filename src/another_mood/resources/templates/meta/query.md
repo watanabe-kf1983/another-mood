@@ -33,7 +33,7 @@
 
 ### From
 
-[{{ from }}]({{ node("__meta_entity", from) | href }})
+[{{ from }}]({{ node("__entity_defs", from) | href }})
 
 {% if flatten %}
 ### Flatten
@@ -51,7 +51,7 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join %}
-    {{- "" }}| [{{ entry.to }}]({{ node("__meta_entity", entry.to) | href }})
+    {{- "" }}| [{{ entry.to }}]({{ node("__entity_defs", entry.to) | href }})
     {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
     {{- "" }} | {{ entry.as }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}

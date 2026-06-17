@@ -1,6 +1,6 @@
 # User-defined queries (excludes built-in queries whose ids start with
 # "__").  Drives the Queries list in the built-in __root template; the
-# per-query __meta_query loop iterates __definition.queries directly so
+# per-query __queries loop iterates __definition.queries directly so
 # built-in queries also get a meta page.
 __user_queries:
   from: __definition.queries

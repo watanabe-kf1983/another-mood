@@ -3,7 +3,7 @@
 User-facing YAML accepts shape sugar (bare-string flatten, single
 mapping join, ``flatten: true`` shorthand) and omitted defaults; the
 persisted ``__definition.queries`` carries the canonical mapping that
-downstream consumers (``parse_query``, ``__meta_query`` template)
+downstream consumers (``parse_query``, ``__queries`` template)
 read.  Per-clause shape and defaults are documented on each helper.
 """
 

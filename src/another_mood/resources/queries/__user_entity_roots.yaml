@@ -1,6 +1,6 @@
 # Root entities surfaced in the built-in __root template's Entity list
 # (excludes catalog-internal entities whose ids start with "__").  The
-# per-entity __meta_entity / __table_view queries cover the full root
+# per-entity __entity_defs / __entity_data queries cover the full root
 # entity set directly so the hidden built-in entities still get meta pages.
 __user_entity_roots:
   from: __definition.entities
