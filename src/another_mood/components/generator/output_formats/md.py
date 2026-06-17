@@ -13,6 +13,9 @@ from another_mood.components.generator.data_tree_filters import (
     node_href,
     node_label,
 )
+from another_mood.components.generator.output_formats.heading_shift import (
+    under_heading as _under_heading,
+)
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import OutputFormat
 from another_mood.components.generator.url import url_escape
@@ -68,6 +71,17 @@ def dedent(text: str) -> str:
     suits whitespace-insensitive output (e.g. Mermaid) otherwise.
     """
     return textwrap.dedent(text)
+
+
+def under_heading(value: object, marker: str) -> Markup:
+    """Filter adapter for :func:`.heading_shift.under_heading` (A6).
+
+    The filter boundary is this format's concern, not the transform's: Jinja
+    pipes in arbitrary values, so coerce to ``str``; the shifted Markdown is
+    returned as Markup so the format's finalize hook does not re-escape it (it
+    is already valid output, like the other markdown-emitting filters here).
+    """
+    return Markup(_under_heading(str(value), marker))
 
 
 def in_cell(value: object) -> Markup:
@@ -153,6 +167,7 @@ MD = OutputFormat(
         "in_cell": in_cell,
         "as_url": as_url,
         "dedent": dedent,
+        "under_heading": under_heading,
     },
     link_filters=make_link_filters,
 )
