@@ -4,7 +4,9 @@
 
 ## Entity Relationships
 
-{% if __entity_tree %}
+{# `prose` is always a built-in root entity, so __entity_tree / __entity_defs
+   are never empty — no empty-state branch here (cf. ## Queries, which keeps
+   one: user queries can be absent). #}
 {% filter dedent %}
     ```mermaid
     classDiagram
@@ -24,38 +26,32 @@
     {% endfor %}
     ```
 {% endfilter %}
-{% else %}
-(no entities defined yet)
-{% endif %}
 
 ## Entities
 
-{% if __entity_defs %}
-{% for entity in __entity_defs %}
-- [{{ entity.id }}]({{ node("__entity_defs", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
-{% endfor %}
-{% else %}
-(no entities defined yet)
-{% endif %}
-{% for entity in __entity_defs %}
-{% mood_view "entity_def.md" with entity %}
-{% endfor %}
-{% for entity in __entity_data %}
-{% mood_view "entity_data.md" with entity %}
-{% endfor %}
+{# never empty: `prose` is always a built-in root entity (see ## Entity Relationships). #}
+{% filter dedent %}
+    {% for entity in __entity_defs %}
+        - {{ entity | link }}{% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
+        {% mood_view "entity_def.md" with entity %}
+    {% endfor %}
+    {% for entity in __entity_data %}
+        {% mood_view "entity_data.md" with entity %}
+    {% endfor %}
+{% endfilter %}
 
 ## Queries
 
 {% if __queries %}
-{% for query in __queries %}
-- [{{ query.id }}]({{ node("__queries", query.id) | href }})
-{% endfor %}
+{% filter dedent %}
+    {% for query in __queries %}
+        - {{ query | link }}
+        {% mood_view "query.md" with query %}
+    {% endfor %}
+{% endfilter %}
 {% else %}
 (no queries defined yet)
 {% endif %}
-{% for query in __queries %}
-{% mood_view "query.md" with query %}
-{% endfor %}
 
 ## Reports
 
