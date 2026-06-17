@@ -10,32 +10,35 @@ categories:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
         phase: 13
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
         phase: 13
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
         phase: 13
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
         phase: 13
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
+        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A5:
         title: ソース内相対リンク → toc 記法への変換
         note: contents_dir 基点パス解決が必要。出力する anchor_path の形式は anchor-spec.md の規則に従う
         phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
-        title: shiftHeadings(n) Jinja2 フィルタ
-        note: テンプレート側で使用
+        title: under_heading フィルタ（見出し深さ調整）
+        note: >-
+          埋め込み Markdown の見出しを囲うレベルに合わせて下げるフィルタ。生成側に実装
+          (output_formats/heading_shift.py の純変換 + md.py のフィルタアダプタ)。文書直下の
+          ATX 見出しのみシフトし H6 で clamp。仕様は docs/reference/template.md#under_heading。
         phase: 11
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4-a6
+        done: true
 
   B:
     title: アンカー / リンク解決
