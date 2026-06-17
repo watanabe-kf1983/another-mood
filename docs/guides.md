@@ -63,9 +63,9 @@ What the tool generates (under `.another-mood/my-project/`):
 │   │   ├── members/{alice,bob,carol}.md
 │   │   └── by_role/{engineer,designer}.md
 │   ├── index.md                              # auto overview (entities + queries)
-│   ├── __meta_entity/                        # described later
-│   ├── __table_view/                         # described later
-│   └── __meta_query/                         # described later
+│   ├── __entity_defs/                        # described later
+│   ├── __entity_data/                         # described later
+│   └── __queries/                         # described later
 └── render/                                   # HTML
 ```
 
@@ -104,9 +104,9 @@ In the table below, "where to write" paths are relative to the project directory
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | Schema | `definition/schema.yaml` | `output/__meta_entity/<entity>.md` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__table_view/<entity>.md` |
-| 3 | Query | `definition/queries/**/*.yaml` | `output/__meta_query/<query>.md` |
+| 1 | Schema | `definition/schema.yaml` | `output/__entity_defs/<entity>.md` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__entity_data/<entity>.md` |
+| 3 | Query | `definition/queries/**/*.yaml` | `output/__queries/<query>.md` |
 | 4 | Template | `definition/templates/**/*.md` | `output/reports/index.md` and below |
 
 Schema and content are required; queries are optional; templates are required for the final output. `schema.yaml` is the only fixed single file — everything else can be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
@@ -203,7 +203,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via `output/__meta_entity/<entity>.md` (how the tool interpreted the declared type) and `output/__table_view/<entity>.md` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via `output/__entity_defs/<entity>.md` (how the tool interpreted the declared type) and `output/__entity_data/<entity>.md` (whether the data is being loaded as expected).
 
 There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
 
@@ -463,7 +463,7 @@ A subtemplate can itself call `{% mood_view %}`, so a subpage can generate furth
 
 ### Where subpages land
 
-A subpage mirrors the record's place in the data, under `reports/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `reports/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `reports/by_role/engineer.md`. You can check each record's address in `__table_view/` and `__meta_query/`, where it appears as `_anchor_path`.
+A subpage mirrors the record's place in the data, under `reports/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `reports/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `reports/by_role/engineer.md`. You can check each record's address in `__entity_data/` and `__queries/`, where it appears as `_anchor_path`.
 
 A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
 
@@ -499,7 +499,7 @@ For details, see [Schema — Built-in schema: prose](reference/schema.md#built-i
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__table_view/` and the shape of query results in `__meta_query/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__entity_data/` and the shape of query results in `__queries/` ([Workflow](#workflow)).
 
 ## Further reading
 

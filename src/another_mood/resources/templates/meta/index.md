@@ -4,19 +4,21 @@
 
 ## Entity Relationships
 
-{% if __user_content_entities %}
+{# `prose` is always a built-in root entity, so __entity_tree / __entity_defs
+   are never empty — no empty-state branch here (cf. ## Queries, which keeps
+   one: user queries can be absent). #}
 {% filter dedent %}
     ```mermaid
     classDiagram
-    {% for entity in __user_content_entities %}
+    {% for entity in __entity_tree %}
         class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
-    {% for entity in __user_content_entities if entity.parent_entity %}
+    {% for entity in __entity_tree if entity.parent_entity %}
         {% set parent = entities | child(entity.parent_entity) %}
         {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
-    {% set node_ids = __user_content_entities | map(attribute='id') | list %}
-    {% for entity in __user_content_entities %}
+    {% set node_ids = __entity_tree | map(attribute='id') | list %}
+    {% for entity in __entity_tree %}
         {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
             {% set target = entities | child(attr.x_ref.entity) %}
             {{ mermaid_type_id(entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ attr.id | safe }}
@@ -24,38 +26,32 @@
     {% endfor %}
     ```
 {% endfilter %}
-{% else %}
-(no entities defined yet)
-{% endif %}
 
 ## Entities
 
-{% if __user_entity_roots %}
-{% for entity in __user_entity_roots %}
-- [{{ entity.id }}]({{ node("__meta_entity", entity.id) | href }}){% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
-{% endfor %}
-{% else %}
-(no entities defined yet)
-{% endif %}
-{% for entity in __meta_entity %}
-{% mood_view "entity_def.md" with entity %}
-{% endfor %}
-{% for entity in __table_view %}
-{% mood_view "entity_data.md" with entity %}
-{% endfor %}
+{# never empty: `prose` is always a built-in root entity (see ## Entity Relationships). #}
+{% filter dedent %}
+    {% for entity in __entity_defs %}
+        - {{ entity | link }}{% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
+        {% mood_view "entity_def.md" with entity %}
+    {% endfor %}
+    {% for entity in __entity_data %}
+        {% mood_view "entity_data.md" with entity %}
+    {% endfor %}
+{% endfilter %}
 
 ## Queries
 
-{% if __user_queries %}
-{% for query in __user_queries %}
-- [{{ query.id }}]({{ node("__meta_query", query.id) | href }})
-{% endfor %}
+{% if __queries %}
+{% filter dedent %}
+    {% for query in __queries %}
+        - {{ query | link }}
+        {% mood_view "query.md" with query %}
+    {% endfor %}
+{% endfilter %}
 {% else %}
 (no queries defined yet)
 {% endif %}
-{% for query in __meta_query %}
-{% mood_view "query.md" with query %}
-{% endfor %}
 
 ## Reports
 

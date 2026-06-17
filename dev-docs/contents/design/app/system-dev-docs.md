@@ -61,7 +61,7 @@ PoC で Mermaid v11 (CDN 経由、Chromium ヘッドレス + Noto CJK) に対し
 | erDiagram 型表記 | `VARCHAR(16)` `VARCHAR(255)` | OK (括弧入り) |
 | erDiagram relationship label | `"A" }o--|| "B" : "日本語ラベル"` | OK |
 | erDiagram キー指定 (PK/FK/UK) | ASCII のみ | docs に明記: Unicode 非対応 |
-| 日本語 entity ID を含む出力ファイルパス | `__meta_entity/テーブル.md` 等 | OK (mood build 通過) |
+| 日本語 entity ID を含む出力ファイルパス | `__entity_defs/テーブル.md` 等 | OK (mood build 通過) |
 
 #### user-accessible primitive のみで 2 図が描けるか
 
@@ -79,7 +79,7 @@ PoC で Mermaid v11 (CDN 経由、Chromium ヘッドレス + Noto CJK) に対し
 #### F4 への含意
 
 - F4 (built-in) の **classDiagram 採用は維持**。catalog 由来の型 (`string` / `integer` / `object`) は括弧無しの論理型なので、S1 で発覚した「括弧入り型 → method 誤判定」問題は起きない
-- F4 の `__user_content_entities` クエリの蓋然性が S1 で間接的に裏付けられた (flatten + join + nested key を持つクエリが user-land でも素直に書ける)
+- F4 の `__entity_tree` クエリの蓋然性が S1 で間接的に裏付けられた (flatten + join + nested key を持つクエリが user-land でも素直に書ける)
 - ヘッダのみの全体図 (`F4a`) は実機ではかなり「ガラ空き」の見た目になる。実装は予定通り進めつつ、`F4b` 近傍図と並べて読み心地を判断する
 - 不足プリミティブは見つからなかった (新規 Jinja2 フィルタ追加なし)
 

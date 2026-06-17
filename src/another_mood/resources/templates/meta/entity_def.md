@@ -2,7 +2,7 @@
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 # Entity Definition: {{ id }}{% if builtin %} (built-in){% endif +%}
 
-[→ Entity Data]({{ node("__table_view", id) | href }})
+[→ Entity Data]({{ node("__entity_data", id) | href }})
 
 ## Type Diagram
 
@@ -63,7 +63,7 @@
     {{- "" }}| {{ code_inline(attr.id) }}
     {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}
     {{- "" }} | {% if attr.required %}yes{% endif %}
-    {{- "" }} | {% if xr %}[{{ code_inline(xr.entity ~ "." ~ xr.attribute) }}]({{ node("__meta_entity", xr.entity) | href }}){% endif %}
+    {{- "" }} | {% if xr %}[{{ code_inline(xr.entity ~ "." ~ xr.attribute) }}]({{ node("__entity_defs", xr.entity) | href }}){% endif %}
     {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
     {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
     {{- "" }} |

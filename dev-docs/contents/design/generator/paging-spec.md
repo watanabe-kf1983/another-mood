@@ -70,7 +70,7 @@ file_per:
 
 これによりアンカーパス規則と paging path 規則が同じ shape で表現される。
 
-`page_path` は **レポートルート相対**。実ファイルの書き出し位置は mood_view が出力ディレクトリ規約のマウント先（`{outDir}/reports/`）を被せて決める（`{outDir}/reports/{page_path}`）。`{outDir}` 直下の診断系出力（`index.md`、`__meta_entity/` 等）はマウント先と無関係に常に同じ位置に出る。
+`page_path` は **レポートルート相対**。実ファイルの書き出し位置は mood_view が出力ディレクトリ規約のマウント先（`{outDir}/reports/`）を被せて決める（`{outDir}/reports/{page_path}`）。`{outDir}` 直下の診断系出力（`index.md`、`__entity_defs/` 等）はマウント先と無関係に常に同じ位置に出る。
 
 > 複数プロファイル（[Proposals](#複数プロファイル)）を入れると、`reports/` の下に `{profile_name}` 軸が一段挟まる（`{outDir}/reports/{profile_name}/{page_path}`）。
 
@@ -78,16 +78,16 @@ file_per:
 
 ### meta 診断の分割
 
-meta 診断ページ（`__meta_entity` / `__table_view` / `__meta_query`）の主題は **実データツリーノード**で、専用のビルトインクエリ（`src/another_mood/resources/queries/`）が生む。`{% mood_view %}` の分割判定は一様で、[分割ルール](#分割ルール)そのもの — **主題が実ノードかつ `object_type_id` が file_per 対象なら分割、それ以外はインライン**（予約マーカーも template-keyed fallback も無い）。
+meta 診断ページ（`__entity_defs` / `__entity_data` / `__queries`）の主題は **実データツリーノード**で、専用のビルトインクエリ（`src/another_mood/resources/queries/`）が生む。`{% mood_view %}` の分割判定は一様で、[分割ルール](#分割ルール)そのもの — **主題が実ノードかつ `object_type_id` が file_per 対象なら分割、それ以外はインライン**（予約マーカーも template-keyed fallback も無い）。
 
 主題ノードを生む 3 クエリ:
 
-- `__meta_entity` / `__table_view` — どちらも `from: __definition.entities`（`view: false`・ルート entity）で**同じ entity 集合**を引くが、**別クエリ＝別アンカールート**（`/__meta_entity/{id}` と `/__table_view/{id}`）。同一 entity を Definition と Data の **2 ページ**に出すのに、クエリ名でアンカーを分けることで one-node-two-pages 衝突を避ける（差は select のみ: 前者 `id`+`builtin`、後者 `id`）。
-- `__meta_query` — `__definition.queries` の passthrough（`select` 省略）。各アイテムが query 定義の全フィールドを持ち、テンプレートがそのまま描画する。
+- `__entity_defs` / `__entity_data` — どちらも `from: __definition.entities`（`view: false`・ルート entity）で**同じ entity 集合**を引くが、**別クエリ＝別アンカールート**（`/__entity_defs/{id}` と `/__entity_data/{id}`）。同一 entity を Definition と Data の **2 ページ**に出すのに、クエリ名でアンカーを分けることで one-node-two-pages 衝突を避ける（差は select のみ: 前者 `id`+`builtin`、後者 `id`）。
+- `__queries` — `__definition.queries` の passthrough（`select` 省略）。各アイテムが query 定義の全フィールドを持ち、テンプレートがそのまま描画する。
 
-meta レンダリングには利用者の `reports.yaml` が無いので、分割は **固定の内部 file_per**（`meta_templates.META_REPORTS_CONFIG` = `__meta_entity.item` / `__table_view.item` / `__meta_query.item`）で駆動する。各結果アイテムの anchor_path `/{view}/{id}` から通常の page_path 規則で `{view}/{id}.md` が導かれる — **1 ノード 1 ページ**。共有コンテキストである data root と schema は、子テンプレが anchor_path で直接引く（root = `node("/")`、schema = `node("/__definition/entities")`。`node` は anchor_path→node 解決の global（B8）で、`build_node_map` が全 wrap ノードを anchor_path で索けるようにするため成り立つ — C10）ので、主題ノードは identity フィールドだけを持てばよい。
+meta レンダリングには利用者の `reports.yaml` が無いので、分割は **固定の内部 file_per**（`meta_templates.META_REPORTS_CONFIG` = `__entity_defs.item` / `__entity_data.item` / `__queries.item`）で駆動する。各結果アイテムの anchor_path `/{view}/{id}` から通常の page_path 規則で `{view}/{id}.md` が導かれる — **1 ノード 1 ページ**。共有コンテキストである data root と schema は、子テンプレが anchor_path で直接引く（root = `node("/")`、schema = `node("/__definition/entities")`。`node` は anchor_path→node 解決の global（B8）で、`build_node_map` が全 wrap ノードを anchor_path で索けるようにするため成り立つ — C10）ので、主題ノードは identity フィールドだけを持てばよい。
 
-> **背景: 別ページが要るならノードを一つ立てる.** 旧実装は `__root.md` 内で合成 dict（アンカーパス無し）を組み、予約キー `_split` ＋ template-keyed fallback（`{template_stem}/{id}.md`）で分割していた。これは「1 ノード→複数ページ」を fallback がテンプレート名で曖昧性を割る誤魔化しで、**one-node-one-page ポリシー違反**だった。別ページが要るならノードを一つ立てる — 同一 entity に 2 ページ要るなら `__meta_entity` と `__table_view` の 2 ノードを立てる、というのがこの原則の実践で、`_split` マーカーと fallback は撤去された（C11）。
+> **背景: 別ページが要るならノードを一つ立てる.** 旧実装は `__root.md` 内で合成 dict（アンカーパス無し）を組み、予約キー `_split` ＋ template-keyed fallback（`{template_stem}/{id}.md`）で分割していた。これは「1 ノード→複数ページ」を fallback がテンプレート名で曖昧性を割る誤魔化しで、**one-node-one-page ポリシー違反**だった。別ページが要るならノードを一つ立てる — 同一 entity に 2 ページ要るなら `__entity_defs` と `__entity_data` の 2 ノードを立てる、というのがこの原則の実践で、`_split` マーカーと fallback は撤去された（C11）。
 
 > **残: 出力ディレクトリの集約（F9）.** これら `__{view}/` は今も output 直下に横並びで散る。単一ディレクトリ配下への集約は F9 が担う。
 

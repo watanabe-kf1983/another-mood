@@ -10,8 +10,8 @@ Entity と Query でページ分け方が異なる:
 
 | 種別 | ページ構成 |
 |---|---|
-| Entity | `__meta_entity` (Schema) と `__table_view` (Data) の **2 ページ**、相互リンクで往復 |
-| Query | `__meta_query` に Definition / Shape / Results の **3 セクション 1 ページ** |
+| Entity | `__entity_defs` (Schema) と `__entity_data` (Data) の **2 ページ**、相互リンクで往復 |
+| Query | `__queries` に Definition / Shape / Results の **3 セクション 1 ページ** |
 
 #### 背景: なぜ非対称か
 
@@ -64,12 +64,12 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 メタドキュメンテーションには 3 つの Mermaid classDiagram が登場する:
 
 - `__root` 全体図 (F4a) — カタログ全体の関係を俯瞰
-- `__meta_entity/<id>.md` 近傍図 (F4b) — focus entity の周辺
-- `__meta_query/<id>.md` Source Diagram (F4c) — クエリのソース entity 群
+- `__entity_defs/<id>.md` 近傍図 (F4b) — focus entity の周辺
+- `__queries/<id>.md` Source Diagram (F4c) — クエリのソース entity 群
 
 3 図の variation:
 
-| 観点 | `__root` 全体図 (F4a) | `__meta_entity` 近傍図 (F4b) | `__meta_query` Source Diagram (F4c) |
+| 観点 | `__root` 全体図 (F4a) | `__entity_defs` 近傍図 (F4b) | `__queries` Source Diagram (F4c) |
 |---|---|---|---|
 | node 集合 | user 領域 + `prose` 全体 | focus + descendants + focus subtree からの FK out 先 | `query.from` ∪ `query.join[].to` (top-level entity に閉じる) |
 | 属性表示 | 全 node ヘッダのみ | focus + descendants は全属性、FK out 先はヘッダのみ | 全 node ヘッダのみ |
@@ -93,13 +93,13 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 各クラスのラベル (および sanitize した alias) は **entity.id ではなく `entity.item_type.id` (= ObjectType id)** から組む。例: entity `artists` → class `artists.item`、descendant entity `artists.members` → class `artists.item.members.item`。
 
-理由は UML / ER 用語との整合。UML の class 名は型 (= 1 件分のもの) を指すので単数形が原則であり、本ツールの 2 階層 (Entity = collection identity 複数形 / ObjectType = item identity `.item` 付き) のうち ObjectType 側がそれにあたる。`__meta_entity/<id>.md` ページが既に `## Type: artists.item` を見出しに出しているのと表記が揃う。
+理由は UML / ER 用語との整合。UML の class 名は型 (= 1 件分のもの) を指すので単数形が原則であり、本ツールの 2 階層 (Entity = collection identity 複数形 / ObjectType = item identity `.item` 付き) のうち ObjectType 側がそれにあたる。`__entity_defs/<id>.md` ページが既に `## Type: artists.item` を見出しに出しているのと表記が揃う。
 
 ### `__root` の Entity Relationship 図
 
-トップページ (`__root`) に「全 entity の関係を俯瞰する」図を出す。ノード集合は user 領域 + `prose` (descendant 含む)、composition は親子、association は両端がノード集合に入る FK のみ。各クラスはヘッダのみ (属性内訳は `__meta_entity` 側の表が担う)。
+トップページ (`__root`) に「全 entity の関係を俯瞰する」図を出す。ノード集合は user 領域 + `prose` (descendant 含む)、composition は親子、association は両端がノード集合に入る FK のみ。各クラスはヘッダのみ (属性内訳は `__entity_defs` 側の表が担う)。
 
-### `__meta_entity/<id>.md` の近傍 ER 図
+### `__entity_defs/<id>.md` の近傍 ER 図
 
 各 entity ページの先頭 (タイトル直下、`[→ Entity Data]` リンクの直下) に、focus entity + その descendants + focus subtree が FK 参照する先だけを描く小さな classDiagram を出す。各 variation は ER 図シリーズ節の表を参照。
 
@@ -112,7 +112,7 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 役割が分かれており、片方を削ると失われる読者の問いがある。S1 / showcase/music の実機検証でも視覚的にうるさく感じなかったため、いったん両方を残す。
 
-### `__meta_query/<id>.md` の Source Diagram
+### `__queries/<id>.md` の Source Diagram
 
 各 query ページの先頭 (タイトル直下、`## Definition` の直前) に、クエリのソース entity 群とその関係を示す classDiagram を出す。MS Access のクエリデザインビュー上部に並ぶ「テーブルとそれを結ぶ関係線」に相当するビュー。各 variation は ER 図シリーズ節の表を参照。
 
@@ -124,7 +124,7 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 #### 背景: 属性表示はヘッダのみ
 
-per-query 図の目的は「このクエリがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= apply_to_catalog による出力形状) や `__meta_entity/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
+per-query 図の目的は「このクエリがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= apply_to_catalog による出力形状) や `__entity_defs/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
 
 ## Internal Design
 
@@ -151,11 +151,29 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### メタドキュメンテーションの DSL 化境界
 
-built-in メタドキュメンテーション (`__meta_entity` / `__table_view` / `__meta_query` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名クエリと、一覧用の `__user_entity_roots` / `__user_queries` 等がそれ)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
+built-in メタドキュメンテーション (`__entity_defs` / `__entity_data` / `__queries` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名クエリがそれ。同じクエリが index の一覧も駆動する — [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) 参照)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
 
 #### 背景
 
 メタカタログは `parent_entity` リンクのツリーで、relational/tabular な DSL とは噛み合わない。ツリー descent を DSL で表現するには SQL の `WITH RECURSIVE` や Cypher のパス構文相当 (推移閉包 / 非 equi join) が要り、YAML DSL に押し込むと確実に式言語的な異物になる。
 
 leaf データの集計・整形は DSL の母語、tree descent は Python (Jinja2 フィルタ) の母語、という住み分けに留めるのが、DSL の単純さとテンプレートの可読性の両方に効く。
+
+### 診断対象は user コンテンツに限定
+
+ページ生成クエリ (`__entity_defs` / `__entity_data` / `__queries`) は、id が `__` で始まる catalog-internal なエンティティ・クエリを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.queries`) や built-in メタクエリ自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
+
+これらのクエリは index の一覧 (Entities / Queries) と各 per-item ページの両方を 1 本で駆動する。以前は一覧用 (`__user_entity_roots` / `__user_queries`、user 限定) とページ生成用 (内部オブジェクト込みの全件) を別クエリに分け、内部オブジェクトのページも生成していた。
+
+#### 背景: なぜ内部オブジェクトのページを出さないか
+
+`__definition.*` やメタクエリ自身のページは meta-meta な診断で、日常の編集では参照されない。出力ツリーに常時並ぶと、利用者が見たい自分のエンティティ・クエリのページが埋もれる。カタログの「データ」自体は composer の上流出力として常に存在し ([自己記述カタログ](#自己記述カタログ-__definition)) テンプレートを駆動し続けるので、抑止するのは診断「ページ」だけで、機能は失われない。
+
+一覧用クエリとページ生成用クエリは user フィルタを足すと `from` / `where` がほぼ一致するため、1 本に統合した (`__entity_defs` が `__user_entity_roots` を、`__queries` が `__user_queries` を吸収)。ER 図用の `__entity_tree` は descendant を含む別形なので残す。
+
+## Proposals
+
+### 内部オブジェクト診断の `--debug` 復活スイッチ
+
+[診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) で `__definition.*` やメタクエリ自身のページを抑止したが、カタログ自体をデバッグしたい場面 (built-in の挙動を疑うとき等) では見たくなりうる。その際は `mood build --debug` 相当のスイッチで `where.not` を外し、内部オブジェクトのページも出す案。常時は出さず opt-in にすることで、通常出力のノイズと debug 時の網羅性を両立する。スイッチの粒度 (build 全体か meta だけか) は実装時に確定。
 

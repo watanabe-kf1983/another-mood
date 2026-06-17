@@ -92,7 +92,7 @@ $defs:
     ...
 ```
 
-メタドキュメント (`__meta_entity`) で blob 属性の表示形式を整え、`docs/reference/schema.md` に解説追加。
+メタドキュメント (`__entity_defs`) で blob 属性の表示形式を整え、`docs/reference/schema.md` に解説追加。
 
 実需確認 (showcase / dev-docs での「ここは blob にしたい」具体ニーズ、または user からのリクエスト) が surface してから着手。現時点では明確な user requirement なし、design 議論のみ完了。
 

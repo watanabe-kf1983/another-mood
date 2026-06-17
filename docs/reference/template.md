@@ -59,7 +59,7 @@ A subtemplate additionally sees its subject — the data passed to the `mood_vie
 
 ## Anchor paths
 
-Every node in the data — a record, a query group, a singleton, a nested object — has an **anchor path**: its address in the data tree, built from the keys and record `id`s on the way to it. `/members/alice` is the record `alice` of the `members` entity; `/by_role/engineer/members/alice` is the copy of that record sitting inside a `by_role` group. The `__table_view/` and `__meta_query/` diagnostics show each node's anchor path as `_anchor_path`.
+Every node in the data — a record, a query group, a singleton, a nested object — has an **anchor path**: its address in the data tree, built from the keys and record `id`s on the way to it. `/members/alice` is the record `alice` of the `members` entity; `/by_role/engineer/members/alice` is the copy of that record sitting inside a `by_role` group. The `__entity_data/` and `__queries/` diagnostics show each node's anchor path as `_anchor_path`.
 
 Anchor paths drive both ends of a link: a node's page is written at its anchor path ([Output path](#output-path)), and the linking filters resolve an anchor path back to a node and render a link to it ([`node`](#node), [`link`](#link)) — URLs between pages never need to be written by hand.
 
@@ -303,7 +303,7 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 | {{ spec.id }} | {{ spec.metadata.title }} |
 ```
 
-Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__table_view/` and the shape of query results via `__meta_query/`.
+Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__entity_data/` and the shape of query results via `__queries/`.
 
 ## Markdown escaping
 

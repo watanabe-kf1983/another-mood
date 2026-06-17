@@ -172,7 +172,7 @@ categories:
       C10:
         title: meta 子テンプレへの root/entities threading 撤去
         note: >-
-          meta 子テンプレ (__table_view / __meta_query) が __root.md から root / entities を明示
+          meta 子テンプレ (__entity_data / __queries) が __root.md から root / entities を明示
           threading されているのを廃し、node("/") 由来 (root = node("/")、schema =
           node("/").__definition.entities) へ寄せる。合成 dict は _split + identity に痩せる。
           主題のノード化 (C11) を待たず独立に出せる。先行・低リスク。
@@ -181,7 +181,7 @@ categories:
       C11:
         title: meta 主題の実ノード化 → _split マーカー撤去・page_path 一本化
         note: >-
-          合成 dict を専用ビルトインクエリ (__meta_entity / __table_view / __meta_query) の結果ノードに
+          合成 dict を専用ビルトインクエリ (__entity_defs / __entity_data / __queries) の結果ノードに
           置き換え、meta レンダリングを固定の内部 file_per (META_REPORTS_CONFIG) で分割。
           template-keyed fallback と _split マーカーを撤去し、page_path 一本化・one-node-one-page を回復。
           設計は paging-spec.md#meta-診断の分割。残る出力ディレクトリ集約は F9。
@@ -312,7 +312,7 @@ categories:
       F9:
         title: システムメタ出力を単一ディレクトリ配下に集約
         note: >-
-          システム生成のメタドキュメント (__meta_entity / __table_view / __meta_query 等) を
+          システム生成のメタドキュメント (__entity_defs / __entity_data / __queries 等) を
           output/ 直下に横並びさせず、index.md (概要) を除いて一つのディレクトリ配下にまとめる。
           output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
           ディレクトリ名・対象範囲は実装時に確定。C11 で meta は実ノード化され各 __{view}/ は anchor 由来の
@@ -435,7 +435,7 @@ categories:
         note: |
           design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
           段階 3。schema-schema.yaml に if/then で blob サブツリーを許容する
-          ルールを追加し、__meta_entity / docs/reference/schema.md を更新。
+          ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
           実需が surface してから着手。前提 M6。
         phase: 13
         proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
@@ -472,7 +472,7 @@ categories:
       O4:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
         note: |
-          内蔵テンプレート (__meta_entity の attributes 表など) が任意
+          内蔵テンプレート (__entity_defs の attributes 表など) が任意
           Mapping を Markdown テーブルセルにダンプしているが、値にバック
           クォートが含まれるとフェンスが内側で早期終了してセルが崩れる。
           詳細仕様は design/generator/generator.md「インラインコードの
