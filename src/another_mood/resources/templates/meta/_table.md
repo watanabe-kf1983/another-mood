@@ -1,4 +1,6 @@
 {% set entity = this %}
+# {{ entity.id }}
+
 {% set root = node("/") %}
 {% set entities = node("/__definition/entities") %}
 {% set rows = root | walk_entity(entity.id, entities) %}

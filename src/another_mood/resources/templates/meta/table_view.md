@@ -3,9 +3,9 @@
 
 [← Entity Definition]({{ node("__meta_entity", id) | href }})
 
-{% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") %}
-## {{ entity.id }}
+{% filter under_heading("#") %}
+    {% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") %}
+        {% mood_view "_table.md" with entity %}
 
-{% mood_view "_table.md" with entity %}
-
-{% endfor %}
+    {% endfor %}
+{% endfilter %}

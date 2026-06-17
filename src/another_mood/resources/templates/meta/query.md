@@ -108,9 +108,9 @@
 {% endfor %}
 ## Results
 
-{% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) %}
-### {{ entity.id }}
+{% filter under_heading("##") %}
+    {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) %}
+        {% mood_view "_table.md" with entity %}
 
-{% mood_view "_table.md" with entity %}
-
-{% endfor %}
+    {% endfor %}
+{% endfilter %}
