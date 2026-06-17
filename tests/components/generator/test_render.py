@@ -54,7 +54,7 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
+        render("build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result
@@ -77,7 +77,7 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
+        render("build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "```\n> 1 | bad value\n    | ^\n```" in result
@@ -92,7 +92,7 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("__build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
+        render("build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result

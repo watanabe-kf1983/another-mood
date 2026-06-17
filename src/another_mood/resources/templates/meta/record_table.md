@@ -1,12 +1,8 @@
+{% set entity = this %}
+# {{ entity.id }}
+
 {% set root = node("/") %}
 {% set entities = node("/__definition/entities") %}
-# Entity Data: {{ id }}
-
-[← Entity Definition]({{ node("__meta_entity", id) | href }})
-
-{% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") %}
-## {{ entity.id }}
-
 {% set rows = root | walk_entity(entity.id, entities) %}
 {% set attributes = entity.item_type.attributes | rejectattr('type', 'equalto', 'object') | list %}
 {% if rows %}
@@ -23,5 +19,3 @@
 {% else %}
 (no records)
 {% endif %}
-
-{% endfor %}
