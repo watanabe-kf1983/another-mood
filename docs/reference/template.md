@@ -14,6 +14,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`code_inline`](#code_inline) | function | wrap a value in a Markdown code span |
 | [`code_fenced`](#code_fenced) | function | wrap a value in a Markdown fenced code block |
 | [`as_url`](#as_url) | filter | percent-encode a hand-written link URL |
+| [`under_heading`](#under_heading) | filter | shift an embedded fragment's headings to nest under a heading |
 
 Two evaluation rules also differ from stock Jinja2: [accessing an undefined name renders as the empty string](#handling-undefined-access), and [every substituted value is Markdown-escaped](#markdown-escaping).
 
@@ -215,6 +216,24 @@ Links between pages never need it — [`link`](#link) / [`href`](#href) produce 
 ```
 
 It removes only the *common* minimum, so lines nested deeper than their siblings keep the difference. That fully flattens a block whose emitted lines sit at one level; for uneven nesting it suits whitespace-insensitive output (e.g. a Mermaid diagram) rather than significant-whitespace Markdown such as list or table rows.
+
+### `under_heading`
+
+`value | under_heading("##")` shifts the headings in an embedded Markdown fragment down so they nest under an enclosing heading. The argument is that enclosing level *as you see it at the call site* — a run of `#` — so every heading in the fragment moves down by that many levels: a fragment's own `#` title becomes `###`, nesting as a subsection directly under the `## …` heading above it. Levels never exceed `######` (H6), so a fragment shifted past the bottom collapses onto it.
+
+Use it as a block filter wrapping embedded output, or piped on a prose body:
+
+```jinja2
+## Members
+
+{% filter under_heading("##") %}
+{% mood_view "member.md" with member %}
+{% endfilter %}
+
+{{ body.content | under_heading("##") }}
+```
+
+Only the fragment's own top-level headings move. A heading quoted inside a blockquote or nested in a list item, a setext heading (the `===` / `---` underline style), and `#` inside a code fence are all left untouched. Like the other Markdown-emitting filters here, it inserts its result as-is — no `| safe` needed.
 
 ## Functions
 

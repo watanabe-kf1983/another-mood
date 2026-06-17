@@ -16,6 +16,7 @@ from another_mood.components.generator.output_formats.md import (
     make_link_filters,
     md_escape,
     md_link,
+    under_heading,
 )
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import (
@@ -349,3 +350,27 @@ class TestLinkFilterWiring:
         engine = self._engine(tmp_path, "[x]({{ node('members', 'ghost') | href }})")
         result = engine.render("t.md", _anchors()["/"])
         assert result == "[x]()"
+
+
+class TestUnderHeadingFilter:
+    """The md.py filter adapter: str coercion, Markup wrapping, template use."""
+
+    def test_wraps_result_as_markup(self) -> None:
+        assert isinstance(under_heading("# A", "#"), Markup)
+
+    def test_coerces_a_non_str_piped_value(self) -> None:
+        # Jinja can pipe in a Markup (or any object); the adapter str-coerces it.
+        assert under_heading(Markup("# A"), "#") == "## A"
+
+    def test_pipe_form_keeps_shifted_markdown_unescaped(self) -> None:
+        env = make_environment(MD)
+        template = env.from_string('{{ body | under_heading("##") }}')
+        # Without the Markup wrap, finalize would backslash-escape the `#`.
+        assert template.render(body="# A\n## B") == "### A\n#### B"
+
+    def test_block_filter_form_wraps_embedded_output(self) -> None:
+        env = make_environment(MD)
+        template = env.from_string(
+            '{% filter under_heading("##") %}# Embedded{% endfilter %}'
+        )
+        assert template.render() == "### Embedded"
