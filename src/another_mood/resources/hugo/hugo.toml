@@ -3,3 +3,11 @@ uglyURLs = true
 
 [markup.goldmark.renderHooks.link]
 useEmbedded = "fallback"
+
+[markup.goldmark.renderer]
+# Render raw HTML instead of dropping it (Goldmark's default). Anchor targets
+# (`<a id>`, the receiving end of a link's URL fragment) are emitted as raw
+# HTML and would otherwise become `<!-- raw HTML omitted -->`. Safe here
+# because Another Mood renders a database the author owns; trust rationale in
+# dev-docs design/generator/anchor-spec.md.
+unsafe = true

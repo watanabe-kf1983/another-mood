@@ -166,11 +166,13 @@ categories:
       C9:
         title: mood_view 自動アンカー刻印
         note: >-
-          mood_view が描画ノードのアンカー (<a id="{anchor_path}">) を B9 の機能で自動発行
-          (インラインはその場・分割はページ先頭)。two-loop パターンの同ページ内 fragment 着地を成立させる。
-          B9 と C4 に依存。設計は anchor-spec.md#mood_view-自動アンカー刻印-c9。
+          mood_view（およびルートテンプレート）が描画する主題ノードのアンカー (<a id="{anchor_path}">) を
+          自動発行 (インラインはその場・分割/ルートはページ先頭)。two-loop パターンの同ページ内 fragment
+          着地を成立させる。実装は出力 format の post_process フック (md は stamp_anchor) を、全レンダ経路が
+          通る単一漏斗 TemplateEngine._render に置く。Hugo は raw HTML を既定で捨てるため hugo.toml の
+          unsafe=true も併せて要る。B9 と C4 に依存。設計は anchor-spec.md#mood_view-自動アンカー刻印。
         phase: 11
-        proposal: design/generator/anchor-spec.md#mood_view-自動アンカー刻印-c9
+        done: true
       C10:
         title: meta 子テンプレへの root/entities threading 撤去
         note: >-

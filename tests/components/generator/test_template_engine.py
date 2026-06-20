@@ -180,6 +180,39 @@ class TestTemplateEngineMdEscape:
         assert engine.render("t.md", {}) == "`x`|a\\|b|a%20b"
 
 
+class TestPostProcess:
+    """The engine applies the format's ``post_process`` to a rendered output,
+    with the subject in hand.  Tested with a stand-in format to pin the seam
+    independently of md's anchor stamp; the md behavior and both render paths
+    are covered end-to-end in the md / mood_view / generator tests."""
+
+    def test_post_process_is_applied_to_render_output(self, tmp_path: Path) -> None:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text("body:{{ this }}")
+        # A stand-in post-pass that wraps the output and echoes the subject.
+        fmt = OutputFormat(
+            name="wrap",
+            escape=lambda s: s,
+            post_process=lambda rendered, subject: f"[{subject}]{rendered}",
+        )
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=fmt, filters={}
+        )
+        assert engine.render("t.md", "X") == "[X]body:X"
+
+    def test_default_post_process_is_identity(self, tmp_path: Path) -> None:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text("plain")
+        # A bare format (no post_process set) leaves the output untouched.
+        fmt = OutputFormat(name="bare", escape=lambda s: s)
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=fmt, filters={}
+        )
+        assert engine.render("t.md", {}) == "plain"
+
+
 class TestPathRegistry:
     """The bookkeeping behind one-page-per-path: a fresh out_path is
     claimable, an identical re-claim is a no-op, any other re-claim is a

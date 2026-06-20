@@ -8,7 +8,7 @@
 
 - **ノード (node)**: データツリー上の一点 — レコード・クエリのグループ・シングルトン・ネストしたオブジェクト。リンクの宛先となる実体で、テンプレートでは `node()` で取得し `link` / `label` / `href` で整形する
 - **アンカーパス (anchor path)**: そのノードを一意に識別する文字列（データツリー上の住所）。本ツールが生成する。URL fragment として URL に埋め込まれる
-- **アンカー (anchor)**: HTML/Markdown の anchor target（`<a id="…">`）。リンクを受け止めるページ上の標識で、id にはアンカーパスを使う。`node | anchor` フィルタで発行する（[リンク記法](#リンク記法) 参照）。mood_view による自動刻印は未実装 — [mood_view 自動アンカー刻印 (構想)](#mood_view-自動アンカー刻印-c9) を参照
+- **アンカー (anchor)**: HTML/Markdown の anchor target（`<a id="…">`）。リンクを受け止めるページ上の標識で、id にはアンカーパスを使う。mood_view が描画ノード（主題）に自動で刻むほか、`node | anchor` フィルタで手置きもできる（[リンク記法](#リンク記法) 参照）
 
 > **背景: 語彙の振り直し — 旧「ノード = アンカー」定義の廃止.** 当初は「リンクされ得る対象」をアンカーと呼んでデータツリー上の各ノードと同一視し、リゾルバ関数も `anchor()` と命名していた。しかし `link` / `label` / `href` は「ノードを受けて、そのノードの何かを描画する」フィルタ族で、アンカーターゲット (`<a id>`) を描画する将来フィルタの自然な名前は `data | anchor` — `<a id>` / `<a href>` の両面が `anchor` / `href` という対の名前で揃う。そこで anchor の語は HTML 本来の意味（受け側の標識）に予約し、リゾルバは「アンカーパスを解決して得られるもの」の名 — ノード — で `node()` とした。node / data tree は利用者向けリファレンス (docs/reference/template.md の Anchor paths 節) が先行して採用していた語彙でもある。rename の対応表は [語彙の振り直しと rename (B8)](#語彙の振り直しと-rename-b8) を参照。
 
@@ -34,7 +34,7 @@
 - **生のまま残す**: ASCII の unreserved (`A–Za–z0–9-._~`) と、**非 ASCII の `ucschar`**（RFC 3987 が IRI で許す Unicode 範囲。漢字・かな・非 ASCII 句読点・記号等。例: `書籍`、`モーニング娘。` の `。`、`藤岡弘、` の `、`）
 - **percent-encode する**: ASCII の予約・特殊文字（空白 → `%20`、`# ? : * | \ " < >` 等）と、`ucschar` 外の非 ASCII（制御・format・surrogate・private-use・noncharacter）
 
-つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパス（および由来する page_path）は **URL であると同時に出力ファイルのパス**でもあるため、IRI 形にすることで「人が読めるパス（`書籍.md`）」「URL として正当」「主要 OS で生成可能なファイル名」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の link render hook・ブラウザ・静的サーバ）が行う（Hugo + 素の静的サーバで end-to-end 確認済み）。
+つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパス（および由来する page_path）は **URL であると同時に出力ファイルのパス**でもあるため、IRI 形にすることで「人が読めるパス（`書籍.md`）」「URL として正当」「主要 OS で生成可能なファイル名」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の link render hook・ブラウザ・静的サーバ）が行う（URL の直列化自体は Hugo + 素の静的サーバで確認済み。リンクの着地に要る `<a id>` の描画は別問題で Hugo の raw HTML 許可を要する — Internal Design の「アンカーの raw HTML レンダリング」節を参照）。
 
 エスケープは **encode 片道**で、生の segment/id 値に 1 回だけ適用する（既存の `%XX` を decode・二重 encode しない。`%` 自体は ASCII 特殊文字なので `%25` に encode される）。FS で危険な ASCII（`: * | \` 等）は上記のとおり encode 側に残るため Windows でも安全。
 
@@ -144,18 +144,24 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 
 - `node(seg, *segs)` — segments（各セグメントを escape）か、`/` 始まりの出来合いアンカーパスから、**ノード**を得る。関数形・フィルタ形（`"/..." | node`）の両用。第一引数の `/` 始まりで raw 判定するのは安全 — エンティティ/クエリ名は識別子パターン（`/` 始まり不可、schema-schema / query-schema の `propertyNames`）に縛られるため。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
 - `link` / `label` / `href` — ノード → Markdown リンク / 表示文字列 / URL。
-- `anchor` — ノード → そのノードの着地点 `<a id="{anchor_path}">`。`href` が常時付ける fragment（[出力 URL の形式](#出力-url-の形式)）の受け側。id にはノード自身の anchor_path をそのまま使う（href の fragment と同一文字列なので両端が構築上一致する）。author が手書きレンダリングの中で着地点を手置きするための原始機能。未解決参照（MissingNode）には何も発行しない（`href` が空を返すのと対称）。
+- `anchor` — ノード → そのノードの着地点 `<a id="{anchor_path}">`。`href` が常時付ける fragment（[出力 URL の形式](#出力-url-の形式)）の受け側。id にはノード自身の anchor_path をそのまま使う（href の fragment と同一文字列なので両端が構築上一致する）。通常は mood_view が主題に自動で刻む（[mood_view 自動アンカー刻印](#mood_view-自動アンカー刻印)）ため、本フィルタは主題以外のノードに着地点を手置きするための原始機能。未解決参照（MissingNode）には何も発行しない（`href` が空を返すのと対称）。
 
 アンカーパス**文字列**だけを返す公開フィルタは置かない。当初 `anchor_path(seg, *segs)` として公開していたが実需が一度も現れなかったため公開名から外した — 実需が出たら概念名と同じ `anchor_path` の名で再導入する（構築関数は内部に保持）。
 
 display text は対象ノードから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`link(arg)` のように引数で渡せば override。
+
+#### mood_view 自動アンカー刻印
+
+一般のノードはページ上のどこに描かれるかをテンプレートしか知らないため、システムが着地点を任意に自動発行することはできない。ただし `{% mood_view %}`（およびルートテンプレート）は「この主題ノードを今ここに描く」ことを**システムが知っている唯一の経路**である。そこで描画はその主題のアンカーを出力の冒頭に自動で刻む（インラインはその場・分割/ルートはページ先頭）。これにより two-loop パターン（親が `| link`、子が分割/インライン）が、author の手置きなしに同ページ内 fragment 着地を成立させる。`| anchor` の手置きは、主題にせず本文で参照するだけのノード（テーブル行・リスト項目等）に着地点を与えるための escape hatch として残る。
+
+実装は出力 format の post_process フックに置き、全レンダ経路が通る単一の漏斗（`TemplateEngine._render`）で主題が Node のとき刻む。フォーマット非依存の抽象スロットとし、`md` は `stamp_anchor` を束ねる。詳細は `output_formats/md.py` / `template_engine.py` の docstring。
 
 #### 出力 URL の形式
 
 出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
 
 - **path 部**: source ページから target ページへの相対パス
-- **fragment 部**: target ノードの anchor_path をそのまま使う (full anchor_path 形式)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)。受け側の HTML id は `node | anchor` フィルタ（[リンク記法](#リンク記法)）が同じ文字列で `<a id>` を置く。fragment がページ内ジャンプとして機能するのは着地点が置かれた箇所のみ — 現状 author が `| anchor` で手置きした位置に限る（mood_view による自動刻印 C9 は未実装）。ページ単位のリンクは path 部で機能する
+- **fragment 部**: target ノードの anchor_path をそのまま使う (full anchor_path 形式)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)。受け側の HTML id は `node | anchor` フィルタ（[リンク記法](#リンク記法)）が同じ文字列で `<a id>` を置く。fragment がページ内ジャンプとして機能するのは着地点が置かれた箇所のみ — mood_view が主題に自動で刻む（[mood_view 自動アンカー刻印](#mood_view-自動アンカー刻印)）か、author が `| anchor` で手置きした位置。ページ単位のリンクは path 部で機能する
 
 #### 未解決参照の扱い
 
@@ -167,13 +173,13 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `node` / `label` とフォーマット固有 `link` / `href` / `anchor`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `link` / `href` に `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`anchor` は両方とも不要（id はノード自身の anchor_path だけで決まりページ非依存）、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
 
+### アンカー (`<a id>`) の raw HTML レンダリング (Hugo unsafe)
+
+`node | anchor`（B9）と mood_view 自動刻印（C9）が出す着地点は **raw HTML** の `<a id="…">`。Hugo の Goldmark は既定（`markup.goldmark.renderer.unsafe = false`）で raw HTML を `<!-- raw HTML omitted -->` に潰すため、bundled `resources/hugo/hugo.toml` で **`unsafe = true`** を設定している。これが無いと fragment の着地点が描画されず、リンクはページには着くがノード位置までジャンプしない。
+
+> **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
+
 ## Proposals
-
-### mood_view 自動アンカー刻印 (C9)
-
-> **タスク化済（未実装）** — Phase 11。受け側の原始機能 `| anchor`（B9）は実装済み（[リンク記法](#リンク記法) 参照）。本節はその再利用先 — mood_view 自動刻印（C9）のみ残る。実需は two-loop パターンの PDF 化（同ページ内 fragment 着地）で発生する（[paging-spec.md 分割ルール](paging-spec.md#分割ルール)）。
-
-一般のノード内容はページ上のどこに描かれたかをテンプレートしか知らないため、システムは着地点を自動発行できない — そのため B9 は author の手置き原始機能として用意した。ただし `{% mood_view %}` のインライン展開は「このノードを今ここに描く」ことを**システムが知っている唯一の経路**。そこで mood_view は描画ノードのアンカーを B9 の `anchor` 機能で**自動的に刻む**（インラインならその場、分割ならページ先頭）。これで two-loop パターンが author に手置きを強いずに成立する。`| anchor` 手置きは非 mood_view レンダリング用の escape hatch として残る。
 
 ### Markdown 本文中のアンカー参照
 

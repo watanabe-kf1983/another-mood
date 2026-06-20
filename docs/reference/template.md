@@ -5,8 +5,8 @@ A **template** is the presentation layer that turns data and views into Markdown
 | Addition | Kind | Purpose |
 |---|---|---|
 | [`mood_view`](#mood_view) | tag | render a subtemplate, as its own page or inline |
-| [`link`](#link) | filter | Markdown link to a node's page |
-| [`href`](#href) | filter | the URL of a node's page, alone |
+| [`link`](#link) | filter | Markdown link to a node |
+| [`href`](#href) | filter | the URL targeting a node, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
 | [`anchor`](#anchor) | filter | emit a node's link target (`<a id>`) |
 | [`node`](#node) | function, filter | resolve an anchor path to its node |
@@ -58,11 +58,32 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 
 A subtemplate additionally sees its subject — the data passed to the `mood_view` call that rendered it — as `this` and as spread top-level variables ([Subtemplate side](#subtemplate-side)).
 
-## Anchor paths
+## Linking
 
-Every node in the data — a record, a query group, a singleton, a nested object — has an **anchor path**: its address in the data tree, built from the keys and record `id`s on the way to it. `/members/alice` is the record `alice` of the `members` entity; `/by_role/engineer/members/alice` is the copy of that record sitting inside a `by_role` group. The `__entity_data/` and `__queries/` diagnostics show each node's anchor path as `_anchor_path`.
+A link names a node — a record, a query group, a singleton, a nested object — and resolves to wherever that node is rendered. The [`link`](#link) / [`href`](#href) / [`anchor`](#anchor) filters build it for you; this section is the model they rest on.
 
-Anchor paths drive both ends of a link: a node's page is written at its anchor path ([Output path](#output-path)), and the linking filters resolve an anchor path back to a node and render a link to it ([`node`](#node), [`link`](#link)) — URLs between pages never need to be written by hand.
+### Where a node is rendered
+
+A link lands in-page only where the node's [`anchor`](#anchor) (`<a id>`) sits, and an anchor is placed in one of two ways:
+
+**On a subject, automatically.** Every template render opens with its subject's anchor — for the root template that subject is the data root, for a [`mood_view`](#mood_view) subtemplate it is the node passed to it. A link to a subject lands where it renders: the top of its own page when split, or its place in the page when inline.
+
+**On any other node, by hand.** A node a template only refers to — shown in a table, linked in a list — is not a subject, so it carries no anchor until the author adds one with `| anchor`.
+
+### Building the link
+
+[`link`](#link) / [`href`](#href) return the URL pointing at the node's [`anchor`](#anchor). A node with no anchor of its own still resolves to its nearest ancestor's page, so the link lands nearby rather than nowhere.
+
+### Anchor paths
+
+The node a link points at is often not in the template's context — a foreign key, a related record. To reach it, you look it up by its **anchor path**: the node's address in the data tree, built from the keys and record `id`s on the way to it (`/members/alice` is the record `alice` of `members`). [`node`](#node) does the lookup, resolving an anchor path — usually from plain segments, not a written-out string — to its node, ready to link:
+
+```jinja2
+{# product.category_id is just an id; the category node is elsewhere in the tree #}
+{{ node("categories", product.category_id) | link }}
+```
+
+A path matching no node is a **missing node**, kept visible rather than a dead link. The `__entity_data/` and `__queries/` diagnostics show each node's as `_anchor_path`.
 
 ## Tags
 
@@ -103,6 +124,8 @@ To link from a parent page to a subpage, emit the link as a separate expression 
 - {{ product | link }}
 {% endfor %}
 ```
+
+The subpage opens with the subject's own anchor automatically ([Linking](#where-a-node-is-rendered)), so this link lands on it — you write no `| anchor` for a `mood_view` subject.
 
 #### Subtemplate side
 
@@ -149,7 +172,7 @@ Matching is on the raw `id`, so a path-shaped `prose` id (whose `/` would otherw
 
 ### `link`
 
-`node | link` renders a Markdown link to the node's page — the display text per [`label`](#label), the URL per [`href`](#href):
+`node | link` renders a Markdown link to the node — the display text per [`label`](#label), the URL per [`href`](#href):
 
 ```jinja2
 {{ member | link }}
@@ -163,22 +186,22 @@ To link a node other than the one at hand, resolve it first with [`node`](#node)
 {{ node("members", member.id) | link }}
 ```
 
-For an unresolved target, `link` renders the display text alone with no link around it (for an unresolved `node()`, the attempted path), keeping the broken reference visible on the page.
+For a [missing node](#node), the display text alone, with no link around it.
 
 ### `href`
 
-`node | href` renders the URL alone: the relative path from the current page to the page the target lands on, plus the target's anchor path as the URL fragment.
+`node | href` renders the URL alone — a relative path to the target, ready to drop into a link you write by hand:
 
 ```
 members/alice.md#/members/alice      (from the root page)
 ../members/alice.md#/members/alice   (from a by_role/… page)
 ```
 
-The fragment is always appended, even when the target is the page's own root. A node without a page of its own yields the page it is inlined into, with the fragment addressing the node there. The fragment lands on the matching [`anchor`](#anchor) — the `<a id>` placed where the target is rendered. For an unresolved target, `href` renders the empty string.
+How that URL lands — and the page-level fallback when the node has no anchor — is covered under [Building the link](#building-the-link). For a [missing node](#node), `href` renders the empty string.
 
 ### `label`
 
-`node | label` renders the display text alone: the node's `title`, `name`, or `id` — the first field present — falling back to its anchor path. For an unresolved target, the attempted anchor path.
+`node | label` renders the display text alone: the node's `title`, `name`, or `id` — the first field present — falling back to its anchor path. For a [missing node](#node), the attempted anchor path.
 
 ```jinja2
 [{{ entity | label }} (ER diagram)]({{ entity | href }})
@@ -186,13 +209,15 @@ The fragment is always appended, even when the target is the page's own root. A 
 
 ### `anchor`
 
-`node | anchor` emits the node's link target — `<a id="…">` carrying the node's anchor path — at the point it is written. It is the receiving end of [`href`](#href): `href` always appends the anchor path as a URL fragment, and `anchor` is where that fragment lands. Without it, a fragment pointing into a page has nothing to jump to.
+`node | anchor` emits the node's link target — `<a id="…">` carrying the node's anchor path — at the point it is written. It is the receiving end of [`href`](#href): the URL `href` builds for a node arrives at this `<a id>`.
 
 ```jinja2
 {{ member | anchor }}
 ```
 
-emits `<a id="/members/alice"></a>`. Place it where the node's content is rendered, so a link to that node arrives at the right spot on the page. For an unresolved target, `anchor` emits nothing.
+emits `<a id="/members/alice"></a>`.
+
+Use `| anchor` to give a node a landing spot where you render it — a child node shown in a table row or list item, say — so links to it arrive there. A [`mood_view`](#mood_view) subject gets one [automatically](#where-a-node-is-rendered) and needs none. For a [missing node](#node), `anchor` emits nothing.
 
 ### `in_cell`
 

@@ -30,6 +30,10 @@ def _no_link_filters(reports_config: ReportsConfig) -> Mapping[str, Callable[...
     return {}
 
 
+def _identity_post_process(rendered: str, subject: object) -> str:
+    return rendered
+
+
 @dataclass(frozen=True)
 class OutputFormat:
     name: str
@@ -53,6 +57,11 @@ class OutputFormat:
     # blank lines.  Defaults match Jinja2's own (off); a format opts in.
     trim_blocks: bool = False
     lstrip_blocks: bool = False
+    # A format's final pass over a rendered output, given the subject. Runs
+    # once per render via the engine's single render funnel — e.g. md stamps
+    # the subject node's anchor at the top. Defaults to identity; a format
+    # opts in.
+    post_process: Callable[[str, object], str] = _identity_post_process
 
 
 def make_environment(
@@ -175,6 +184,7 @@ class TemplateEngine:
     ) -> None:
         self._out_dir = out_dir
         self._paths = PathRegistry()
+        self._output_format = output_format
         self._env = make_environment(output_format, reports_config)
         self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
@@ -207,7 +217,7 @@ class TemplateEngine:
 
     def _render(self, template_name: str, subject: object) -> str:
         try:
-            return self._env.get_template(template_name).render(_bind(subject))
+            rendered = self._env.get_template(template_name).render(_bind(subject))
         except TemplateSyntaxError as exc:
             raise FileValidationError(
                 [
@@ -220,3 +230,4 @@ class TemplateEngine:
                     )
                 ]
             ) from exc
+        return self._output_format.post_process(rendered, subject)

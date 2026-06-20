@@ -133,6 +133,21 @@ def md_anchor(a: object) -> Markup:
     return Markup(f'<a id="{a._meta.anchor_path}"></a>')
 
 
+def stamp_anchor(rendered: str, subject: object) -> str:
+    """Stamp the subject node's anchor at the top of its rendered output (C9).
+
+    A render is the one point where the system knows a node is drawn here, so
+    it drops the ``| anchor`` landing point automatically (split page: top;
+    inline: the spot). A non-node subject yields nothing and is returned
+    untouched; a real node gets a trailing newline so its anchor cannot glue
+    onto a following heading.
+    """
+    anchor = md_anchor(subject)
+    if not anchor:
+        return rendered
+    return f"{anchor}\n{rendered}"
+
+
 def _longest_backtick_run(text: str) -> int:
     return max((len(run) for run in _BACKTICK_RUN_PATTERN.findall(text)), default=0)
 
@@ -195,4 +210,5 @@ MD = OutputFormat(
         "under_heading": under_heading,
     },
     link_filters=make_link_filters,
+    post_process=stamp_anchor,
 )
