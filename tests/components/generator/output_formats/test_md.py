@@ -5,7 +5,10 @@ from pathlib import Path
 from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import Node, build_node_map
-from another_mood.components.generator.data_tree_filters import make_data_tree_filters
+from another_mood.components.generator.data_tree_filters import (
+    MissingNode,
+    make_data_tree_filters,
+)
 from another_mood.components.generator.output_formats.md import (
     MD,
     as_url,
@@ -14,6 +17,7 @@ from another_mood.components.generator.output_formats.md import (
     dedent,
     in_cell,
     make_link_filters,
+    md_anchor,
     md_escape,
     md_link,
     under_heading,
@@ -244,6 +248,24 @@ class TestMdLink:
         assert md_link("t", "a/b#c") == "[t](a/b#c)"
 
 
+class TestMdAnchor:
+    def test_returns_markup(self) -> None:
+        assert isinstance(
+            md_anchor(build_node_map(_ANCHOR_DATA)["/members/alice"]), Markup
+        )
+
+    def test_emits_closed_anchor_with_node_anchor_path(self) -> None:
+        node = build_node_map(_ANCHOR_DATA)["/members/alice"]
+        # The id reuses the node's anchor path — the same string href puts in
+        # the fragment — so the two ends of a link match by construction.
+        assert md_anchor(node) == '<a id="/members/alice"></a>'
+
+    def test_missing_node_emits_nothing(self) -> None:
+        # A non-node has no anchor path for any href to target, so anchoring it
+        # would be unreachable; like href, it renders empty.
+        assert md_anchor(MissingNode("/members/ghost")) == ""
+
+
 class TestHelpersBypassFinalizeEscape:
     """Markup return must survive the finalize hook's md_escape."""
 
@@ -291,11 +313,11 @@ def _config() -> ReportsConfig:
 
 
 class TestMakeLinkFilters:
-    """md owns the source-relative link filters (``href`` / ``link``)."""
+    """md owns the node-rendering link filters (``href`` / ``link`` / ``anchor``)."""
 
-    def test_returns_href_and_link(self) -> None:
+    def test_returns_href_link_and_anchor(self) -> None:
         filters_map = make_link_filters(_config())
-        assert set(filters_map) == {"href", "link"}
+        assert set(filters_map) == {"href", "link", "anchor"}
 
 
 class TestLinkFilterWiring:
@@ -350,6 +372,13 @@ class TestLinkFilterWiring:
         engine = self._engine(tmp_path, "[x]({{ node('members', 'ghost') | href }})")
         result = engine.render("t.md", _anchors()["/"])
         assert result == "[x]()"
+
+    def test_anchor_emits_target_unescaped(self, tmp_path: Path) -> None:
+        # Registered as a filter, and the `<a id>` Markup survives finalize
+        # (md_escape would backslash-escape the `/` and `"`).
+        engine = self._engine(tmp_path, "{{ node('members', 'alice') | anchor }}")
+        result = engine.render("t.md", _anchors()["/"])
+        assert result == '<a id="/members/alice"></a>'
 
 
 class TestUnderHeadingFilter:

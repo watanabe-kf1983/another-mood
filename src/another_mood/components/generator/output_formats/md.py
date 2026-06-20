@@ -1,5 +1,9 @@
 """The ``md`` output format: escape, markdown helpers, and anchor link filters."""
 
+# ``_meta`` is a template-public node field under the reserved ``_`` prefix
+# (see data_tree.py), not a Python-protected attribute.
+# pyright: reportPrivateUsage=false
+
 import re
 import textwrap
 from collections.abc import Callable, Mapping
@@ -8,6 +12,7 @@ from jinja2 import pass_context
 from jinja2.runtime import Context
 from markupsafe import Markup
 
+from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.data_tree_filters import (
     MissingNode,
     node_href,
@@ -109,6 +114,25 @@ def md_link(display: str, url: str) -> Markup:
     return Markup(f"[{md_escape(display)}]({url})")
 
 
+def md_anchor(a: object) -> Markup:
+    """The receiving half of the link contract: an ``<a id>`` target carrying
+    the node's anchor path, where the fragment that ``href`` always appends
+    lands.
+
+    The id reuses ``_meta.anchor_path`` verbatim — the same string ``node_href``
+    puts in the fragment — so the two ends match by construction.  It is already
+    IRI-escaped (``"`` / ``<`` / ``>`` are percent-encoded), so it is safe raw
+    in a quoted attribute; the Markup return keeps finalize from backslash-
+    escaping it.  The element is closed so it cannot swallow following inline
+    content.  Only a node is anchored — a :class:`MissingNode`, or any non-node
+    piped in, has no anchor path, so no ``href`` could ever target it and an
+    anchor there would be unreachable; it emits nothing (mirroring ``href``).
+    """
+    if not isinstance(a, Node):
+        return Markup("")
+    return Markup(f'<a id="{a._meta.anchor_path}"></a>')
+
+
 def _longest_backtick_run(text: str) -> int:
     return max((len(run) for run in _BACKTICK_RUN_PATTERN.findall(text)), default=0)
 
@@ -116,18 +140,19 @@ def _longest_backtick_run(text: str) -> int:
 def make_link_filters(
     config: ReportsConfig,
 ) -> Mapping[str, Callable[..., object]]:
-    """The markdown rendering of a node (``href`` / ``link``), bound to
-    ``config``; the format-neutral filters come from
+    """The markdown rendering of a node (``href`` / ``link`` / ``anchor``),
+    bound to ``config``; the format-neutral filters come from
     :func:`..data_tree_filters.make_data_tree_filters`.
 
-    ``@pass_context`` serves two purposes: it reads the source page from the
-    render context's ``this``, and it stops Jinja2's optimizer from
-    constant-folding constant-argument calls — a compile-time-evaluated
-    ``{{ anchor("/x") | href }}`` would bake one source page's relative URL
-    into the compiled template and break the same template rendered from
-    another page.  An unresolved reference renders as plain visible text
-    instead of a link to a dead URL — ``href`` yields empty, ``link`` the
-    escaped display text alone.
+    ``href`` / ``link`` take ``@pass_context`` for two purposes: it reads the
+    source page from the render context's ``this``, and it stops Jinja2's
+    optimizer from constant-folding constant-argument calls — a
+    compile-time-evaluated ``{{ node("/x") | href }}`` would bake one source
+    page's relative URL into the compiled template and break the same template
+    rendered from another page.  ``anchor`` needs neither (its id is the node's
+    own page-independent anchor path), so it is the bare :func:`md_anchor`.  An
+    unresolved reference renders as plain visible text instead of a link to a
+    dead URL — ``href`` yields empty, ``link`` the escaped display text alone.
     """
 
     @pass_context
@@ -144,7 +169,7 @@ def make_link_filters(
             return Markup(md_escape(display))
         return md_link(display, node_href(config, context["this"], a))
 
-    return {"href": href, "link": link}
+    return {"href": href, "link": link, "anchor": md_anchor}
 
 
 MD = OutputFormat(
