@@ -476,7 +476,7 @@ Look again at the pair of lines inside the sample's loops:
 - {{ member | link }}
 ```
 
-`{{ member | link }}` turns the record into a Markdown link to the very subpage that the `{% mood_view %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
+`{{ member | link }}` turns the record into a Markdown link to that record — here landing at the top of the very subpage the `{% mood_view %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
 
 The pairing is a convenience, not a rule — links and `{% mood_view %}` calls can live in separate loops when a page calls for a different arrangement (the [music sample](../showcase/music/) does this).
 
