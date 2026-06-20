@@ -82,8 +82,8 @@ class TestFiltersParam:
 
 
 class TestMakeEnvironment:
-    """`make_environment` wires an OutputFormat's escape into Jinja2's
-    finalize hook and registers the format's globals and filters."""
+    """`make_environment` wires an OutputFormat's escape into Jinja2's finalize
+    hook.  It registers no filters / globals — the caller supplies those."""
 
     def test_applies_escape_to_bare_strings(self) -> None:
         fmt = OutputFormat(
@@ -115,34 +115,15 @@ class TestMakeEnvironment:
         template = env.from_string("[{{ missing }}]")
         assert template.render() == "[]"
 
-    def test_registers_format_filters(self) -> None:
-        def shout(v: object) -> str:
-            return str(v).upper() + "!"
-
-        fmt = OutputFormat(name="shout", escape=lambda s: s, filters={"shout": shout})
-        env = make_environment(fmt)
-        template = env.from_string("{{ 'hi' | shout }}")
-        assert template.render() == "HI!"
-
-    def test_registers_format_globals(self) -> None:
-        def greet(name: object) -> str:
-            return f"hello {name}"
-
-        fmt = OutputFormat(name="g", escape=lambda s: s, globals={"greet": greet})
-        env = make_environment(fmt)
-        template = env.from_string("{{ greet('world') }}")
-        assert template.render() == "hello world"
-
     def test_filter_returning_markup_bypasses_finalize_escape(self) -> None:
+        # The finalize hook escapes bare strings but passes Markup through; a
+        # filter (registered by the caller, not the env) that returns Markup
+        # must therefore survive unescaped.
         def raw(v: object) -> Markup:
             return Markup(str(v))
 
-        fmt = OutputFormat(
-            name="upper",
-            escape=lambda s: s.upper(),
-            filters={"raw": raw},
-        )
-        env = make_environment(fmt)
+        env = make_environment(OutputFormat(name="upper", escape=lambda s: s.upper()))
+        env.filters["raw"] = raw
         template = env.from_string("{{ 'hi' | raw }}")
         assert template.render() == "hi"
 
@@ -167,17 +148,6 @@ class TestTemplateEngineMdEscape:
             tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
         )
         assert engine.render("t.md", {"value": "# heading"}) == "# heading"
-
-    def test_md_helpers_are_auto_available(self, tmp_path: Path) -> None:
-        templates_dir = tmp_path / "templates"
-        templates_dir.mkdir()
-        (templates_dir / "t.md").write_text(
-            "{{ code_inline('x') }}|{{ 'a|b' | in_cell }}|{{ 'a b' | as_url }}"
-        )
-        engine = TemplateEngine(
-            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
-        )
-        assert engine.render("t.md", {}) == "`x`|a\\|b|a%20b"
 
 
 class TestPostProcess:

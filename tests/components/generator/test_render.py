@@ -37,6 +37,18 @@ class TestWriteIndex:
             - Bob
         """)
 
+    def test_injects_the_md_format_helpers(self, tmp_path: Path) -> None:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text(
+            "{{ code_inline('x') }}|{{ 'a|b' | in_cell }}"
+        )
+        out_dir = tmp_path / "output"
+        render("index.md", templates_dir, {}, out_dir)
+        # render() injects the md format's own helpers — a global and a filter —
+        # so every render has them without the caller listing them.
+        assert (out_dir / "index.md").read_text() == "`x`|a\\|b"
+
     def test_renders_build_failure_with_diagnostics(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "output"
         data = {

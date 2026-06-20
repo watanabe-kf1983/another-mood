@@ -1,7 +1,7 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
@@ -26,29 +26,18 @@ from another_mood.components.shared.user_source.diagnostic import (
 )
 
 
-def _no_link_filters(reports_config: ReportsConfig) -> Mapping[str, Callable[..., Any]]:
-    return {}
-
-
 def _identity_post_process(rendered: str, subject: object) -> str:
     return rendered
 
 
 @dataclass(frozen=True)
 class OutputFormat:
+    """A format's render policy — all the engine needs to know about it.  The
+    template helpers (filters / globals) are not policy: the caller assembles
+    and injects them via ``TemplateEngine``'s ``filters`` / ``globals``."""
+
     name: str
     escape: Callable[[str], str]
-    globals: Mapping[str, Callable[..., Any]] = field(
-        default_factory=lambda: {},
-    )
-    filters: Mapping[str, Callable[..., Any]] = field(
-        default_factory=lambda: {},
-    )
-    # Link filters depend on the paging config, so the format supplies them
-    # as a factory the environment calls with the build's config.
-    link_filters: Callable[[ReportsConfig], Mapping[str, Callable[..., Any]]] = (
-        _no_link_filters
-    )
     # Jinja2 block whitespace control, owned by the format because whitespace
     # significance is format-dependent.  lstrip_blocks drops the indentation
     # before a line's `{% %}` tag; trim_blocks drops the newline after it —
@@ -64,10 +53,7 @@ class OutputFormat:
     post_process: Callable[[str, object], str] = _identity_post_process
 
 
-def make_environment(
-    output_format: OutputFormat,
-    reports_config: ReportsConfig = ReportsConfig(file_per=()),
-) -> Environment:
+def make_environment(output_format: OutputFormat) -> Environment:
     # Jinja2's autoescape is hard-coded to HTML, so per-format escaping
     # is implemented via a finalize hook; Markup values are passed through.
     def _finalize(value: object) -> object:
@@ -77,7 +63,10 @@ def make_environment(
             return str(value)
         return output_format.escape(str(value))
 
-    env = Environment(
+    # No filters / globals are registered here: the caller assembles them (the
+    # format's own helpers plus its config / node-map-bound ones) and passes
+    # them to TemplateEngine, which registers them on this env.
+    return Environment(
         extensions=[MoodViewExtension],
         keep_trailing_newline=True,
         trim_blocks=output_format.trim_blocks,
@@ -85,12 +74,6 @@ def make_environment(
         undefined=ChainableUndefined,
         finalize=_finalize,
     )
-    for name, func in output_format.globals.items():
-        env.globals[name] = func  # pyright: ignore[reportArgumentType]
-    filters = {**output_format.filters, **output_format.link_filters(reports_config)}
-    for name, func in filters.items():
-        env.filters[name] = func  # pyright: ignore[reportArgumentType]
-    return env
 
 
 def _bind(subject: object) -> Mapping[str, object]:
@@ -185,7 +168,7 @@ class TemplateEngine:
         self._out_dir = out_dir
         self._paths = PathRegistry()
         self._output_format = output_format
-        self._env = make_environment(output_format, reports_config)
+        self._env = make_environment(output_format)
         self._env.loader = FileSystemLoader(str(templates_dir))
         for name, func in filters.items():
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
