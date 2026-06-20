@@ -482,11 +482,11 @@ The pairing is a convenience, not a rule — links and `{% mood_view %}` calls c
 
 ### Embedding a Markdown body
 
-The `body` field of a prose record holds two subfields, `mime_type` and `content`. To embed the body in a template, reference `.content`:
+The `body` field of a prose record holds two subfields, `mime_type` and `content`. To embed the body in a template, pipe `.content` through [`relink`](reference/template.md#relink) — it emits the Markdown as-is and resolves any `node:` cross-references the body links to:
 
 ```jinja2
 {# embed the prose body #}
-{{ body.content }}
+{{ body.content | relink }}
 ```
 
 For details, see [Schema — Built-in schema: prose](reference/schema.md#built-in-schema-prose).

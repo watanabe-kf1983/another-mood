@@ -30,6 +30,8 @@ file_per:
 
 **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として、root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一に適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築は持たない。
 
+加えて、主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(ReportsConfig, node_map)` だけを束縛すればよい（[generator.md のリンク解決](generator.md#リンク解決-b4-b5)）。
+
 ### 分割ルール
 
 `{% mood_view "tpl" with NODE %}` は主題ノードの `_meta.object_type_id`（[generator.md](generator.md#ノードメタデータ)）を `file_per` と照合して振る舞いを決める:
@@ -118,9 +120,3 @@ profiles:
 - `profiles:` あり → `{outDir}/reports/{profile_name}/{page_path}`（プロファイル軸が一段挟まる）
 
 `{outDir}` 直下の診断系出力はプロファイル横断で常に同じ位置に出る。プロファイル概念は **レポートの中** にのみ存在する。
-
-### source-node プラミング簡約（B4/B5）
-
-> [テンプレート主題のノード受け取りと `this` 束縛](#テンプレート主題のノード受け取りと-this-束縛)・出力パス統一（C3）・meta 子テンプレへの root/entities threading 撤去（C10）・meta 主題の実ノード化（C11、[meta 診断の分割](#meta-診断の分割)）は実装済み。残るのは B5 簡約。
-
-`this` 束縛で主題がノードになったことを足場に、まだ残る簡約がある: リンク解決の「いま自分はどのページか（source node）」を `this` から取れるので、[generator.md](generator.md#リンク解決-b4-b5) が想定する **per-render の resolver closure-binding（source node 束縛）が不要**になり、resolver は静的な `(ReportsConfig, node_map)` だけ束縛すればよくなる（B4 実装済み、B5 実装時に取り込む）。

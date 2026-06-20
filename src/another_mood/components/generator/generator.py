@@ -15,7 +15,12 @@ from another_mood.components.generator.meta_templates import (
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
 )
-from another_mood.components.generator.output_formats.md import MD
+from another_mood.components.generator.output_formats.md import (
+    MD,
+    MD_FILTERS,
+    MD_GLOBALS,
+    make_link_filters,
+)
 from another_mood.components.generator.reports_config import (
     ReportsConfig,
     load_reports_config,
@@ -42,8 +47,10 @@ def generate(
     # anchor_path -> node map; the root node is the "/" entry.
     node_map = build_node_map(load_model(data_dir))
     data = cast(MappingNode, node_map["/"])
-    # Both renders walk the data tree, so both get the format-neutral
-    # filters; the markdown href / link come from the md format via the engine.
+    # Both renders walk the data tree, so both get the format-neutral filters
+    # plus the markdown link filters (href / link / anchor / relink).  These are
+    # the config / node-map-bound filters, assembled here where both are in
+    # scope; the engine adds only the format's binding-free filters.
     node_globals, node_filters = make_data_tree_filters(node_map)
     # Meta render splits its real-node subjects (the __entity_defs /
     # __entity_data / __queries query results) via a fixed internal
@@ -53,7 +60,11 @@ def generate(
         META_TEMPLATES_DIR,
         data,
         out_dir,
-        filters={**META_TEMPLATES_FILTERS, **node_filters},
+        filters={
+            **META_TEMPLATES_FILTERS,
+            **node_filters,
+            **make_link_filters(META_REPORTS_CONFIG, node_map),
+        },
         globals=node_globals,
         reports_config=META_REPORTS_CONFIG,
     )
@@ -62,7 +73,7 @@ def generate(
         templates_dir,
         data,
         out_dir / "reports",
-        filters=node_filters,
+        filters={**node_filters, **make_link_filters(config, node_map)},
         globals=node_globals,
         reports_config=config,
     )
@@ -121,12 +132,16 @@ def render(
     globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     reports_config: ReportsConfig = ReportsConfig(file_per=()),
 ) -> None:
-    """Render a template and write the result to out_dir/index.md."""
+    """Render a template and write the result to out_dir/index.md.
+
+    The md format's own helpers are injected here so every render gets them; the
+    caller adds any config / node-map-bound filters on top via ``filters``.
+    """
     TemplateEngine(
         out_dir,
         templates_dir=templates_dir,
         output_format=MD,
-        filters=filters,
-        globals=globals,
+        filters={**MD_FILTERS, **filters},
+        globals={**MD_GLOBALS, **globals},
         reports_config=reports_config,
     ).render_to_file(template_name, data, Path("index.md"))

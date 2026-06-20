@@ -1,1 +1,1 @@
-{{ body.content | safe }}
+{{ body.content | relink }}

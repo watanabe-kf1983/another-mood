@@ -21,6 +21,7 @@ from another_mood.components.generator.data_tree_filters import (
 from another_mood.components.generator.output_formats.heading_shift import (
     under_heading as _under_heading,
 )
+from another_mood.components.generator.output_formats.link_resolve import resolve_links
 from another_mood.components.generator.reports_config import ReportsConfig
 from another_mood.components.generator.template_engine import OutputFormat
 from another_mood.components.generator.url import url_escape
@@ -153,21 +154,26 @@ def _longest_backtick_run(text: str) -> int:
 
 
 def make_link_filters(
-    config: ReportsConfig,
+    config: ReportsConfig, node_map: Mapping[str, Node]
 ) -> Mapping[str, Callable[..., object]]:
-    """The markdown rendering of a node (``href`` / ``link`` / ``anchor``),
-    bound to ``config``; the format-neutral filters come from
-    :func:`..data_tree_filters.make_data_tree_filters`.
+    """The markdown link filters, bound to ``config`` and the build's node map:
+    ``href`` / ``link`` / ``anchor`` render a resolved node, and ``relink``
+    rewrites a prose body's inline ``node:`` destinations.
 
-    ``href`` / ``link`` take ``@pass_context`` for two purposes: it reads the
-    source page from the render context's ``this``, and it stops Jinja2's
-    optimizer from constant-folding constant-argument calls — a
+    ``href`` / ``link`` / ``relink`` take ``@pass_context`` for two purposes: it
+    reads the source page from the render context's ``this``, and it stops
+    Jinja2's optimizer from constant-folding constant-argument calls — a
     compile-time-evaluated ``{{ node("/x") | href }}`` would bake one source
     page's relative URL into the compiled template and break the same template
     rendered from another page.  ``anchor`` needs neither (its id is the node's
-    own page-independent anchor path), so it is the bare :func:`md_anchor`.  An
-    unresolved reference renders as plain visible text instead of a link to a
-    dead URL — ``href`` yields empty, ``link`` the escaped display text alone.
+    own page-independent anchor path), so it is the bare :func:`md_anchor`.
+
+    An unresolved reference never renders a link to a dead URL: ``href`` yields
+    empty, while ``link`` and ``relink`` both leave a conspicuous bracketed
+    ``[text]`` — ``link`` brackets the escaped display text, ``relink`` drops the
+    destination from the source ``[text](node:…)``.  Only ``relink`` needs
+    ``node_map`` — it resolves anchor-path strings itself; the others receive a
+    resolved node.
     """
 
     @pass_context
@@ -181,10 +187,27 @@ def make_link_filters(
     def link(context: Context, a: object, text: object = None) -> Markup:
         display = str(text) if text is not None else node_label(a)
         if isinstance(a, MissingNode):
-            return Markup(md_escape(display))
+            # A broken reference is left as a conspicuous bracketed `[text]`,
+            # never a `[..](..)` to a dead URL — the same shape `relink` leaves
+            # a dropped `node:` destination, so both broken-link forms read alike.
+            return Markup(f"[{md_escape(display)}]")
         return md_link(display, node_href(config, context["this"], a))
 
-    return {"href": href, "link": link, "anchor": md_anchor}
+    @pass_context
+    def relink(context: Context, value: object) -> Markup:
+        source = context["this"]
+
+        def render_dest(anchor_path: str) -> str:
+            target = node_map.get(anchor_path)
+            if target is None:
+                # Unresolved: drop the destination, leaving the same conspicuous
+                # bracketed `[text]` `link` leaves, never leaking `node:` to output.
+                return ""
+            return f"({node_href(config, source, target)})"
+
+        return Markup(resolve_links(str(value), render_dest))
+
+    return {"href": href, "link": link, "anchor": md_anchor, "relink": relink}
 
 
 MD = OutputFormat(
@@ -199,16 +222,18 @@ MD = OutputFormat(
     # (`{%+ if %}` / `{% if +%}`).
     trim_blocks=True,
     lstrip_blocks=True,
-    globals={
-        "code_inline": code_inline,
-        "code_fenced": code_fenced,
-    },
-    filters={
-        "in_cell": in_cell,
-        "as_url": as_url,
-        "dedent": dedent,
-        "under_heading": under_heading,
-    },
-    link_filters=make_link_filters,
     post_process=stamp_anchor,
 )
+
+# The format's binding-free template helpers, for the caller to inject (the
+# config / node-map-bound ones come from `make_link_filters`).
+MD_GLOBALS: Mapping[str, Callable[..., object]] = {
+    "code_inline": code_inline,
+    "code_fenced": code_fenced,
+}
+MD_FILTERS: Mapping[str, Callable[..., object]] = {
+    "in_cell": in_cell,
+    "as_url": as_url,
+    "dedent": dedent,
+    "under_heading": under_heading,
+}

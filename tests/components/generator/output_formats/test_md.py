@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from jinja2 import Environment
 from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import Node, build_node_map
@@ -11,6 +12,8 @@ from another_mood.components.generator.data_tree_filters import (
 )
 from another_mood.components.generator.output_formats.md import (
     MD,
+    MD_FILTERS,
+    MD_GLOBALS,
     as_url,
     code_fenced,
     code_inline,
@@ -28,6 +31,15 @@ from another_mood.components.generator.template_engine import (
     TemplateEngine,
     make_environment,
 )
+
+
+def _md_env() -> Environment:
+    """An env with MD's escape / whitespace plus its injected static helpers —
+    what a render gets, since the generator injects ``MD_FILTERS`` / ``MD_GLOBALS``."""
+    env = make_environment(MD)
+    env.filters.update(MD_FILTERS)
+    env.globals.update(MD_GLOBALS)  # pyright: ignore[reportCallIssue, reportArgumentType]
+    return env
 
 
 class TestMdEscape:
@@ -70,30 +82,11 @@ class TestMdOutputFormat:
         template = env.from_string("{{ value | safe }}")
         assert template.render(value="# heading") == "# heading"
 
-    def test_registers_code_inline_as_global(self) -> None:
-        env = make_environment(MD)
-        template = env.from_string("{{ code_inline(value) }}")
-        assert template.render(value="x") == "`x`"
+    def test_globals_are_the_call_style_helpers(self) -> None:
+        assert set(MD_GLOBALS) == {"code_inline", "code_fenced"}
 
-    def test_registers_code_fenced_as_global(self) -> None:
-        env = make_environment(MD)
-        template = env.from_string("{{ code_fenced(value, 'py') }}")
-        assert template.render(value="x = 1") == "```py\nx = 1\n```"
-
-    def test_registers_in_cell_as_filter(self) -> None:
-        env = make_environment(MD)
-        template = env.from_string("{{ value | in_cell }}")
-        assert template.render(value="a|b") == "a\\|b"
-
-    def test_registers_as_url_as_filter(self) -> None:
-        env = make_environment(MD)
-        template = env.from_string("{{ value | as_url }}")
-        assert template.render(value="a b") == "a%20b"
-
-    def test_registers_dedent_as_filter(self) -> None:
-        env = make_environment(MD)
-        template = env.from_string("{% filter dedent %}\n    a\n    b\n{% endfilter %}")
-        assert template.render() == "a\nb\n"
+    def test_filters_are_the_binding_free_helpers(self) -> None:
+        assert set(MD_FILTERS) == {"in_cell", "as_url", "dedent", "under_heading"}
 
 
 class TestDedent:
@@ -292,22 +285,22 @@ class TestHelpersBypassFinalizeEscape:
     """Markup return must survive the finalize hook's md_escape."""
 
     def test_code_inline_backticks_survive_finalize(self) -> None:
-        env = make_environment(MD)
+        env = _md_env()
         template = env.from_string("{{ code_inline(value) }}")
         assert template.render(value="x") == "`x`"
 
     def test_code_fenced_backticks_survive_finalize(self) -> None:
-        env = make_environment(MD)
+        env = _md_env()
         template = env.from_string("{{ code_fenced(value) }}")
         assert template.render(value="x") == "```\nx\n```"
 
     def test_in_cell_br_survives_finalize(self) -> None:
-        env = make_environment(MD)
+        env = _md_env()
         template = env.from_string("{{ value | in_cell }}")
         assert template.render(value="a\nb") == "a<br>b"
 
     def test_as_url_percent_survives_finalize(self) -> None:
-        env = make_environment(MD)
+        env = _md_env()
         template = env.from_string("[label]({{ value | as_url }})")
         assert template.render(value="a b") == "[label](a%20b)"
 
@@ -335,11 +328,12 @@ def _config() -> ReportsConfig:
 
 
 class TestMakeLinkFilters:
-    """md owns the node-rendering link filters (``href`` / ``link`` / ``anchor``)."""
+    """md owns the markdown link filters (``href`` / ``link`` / ``anchor`` /
+    ``relink``)."""
 
-    def test_returns_href_link_and_anchor(self) -> None:
-        filters_map = make_link_filters(_config())
-        assert set(filters_map) == {"href", "link", "anchor"}
+    def test_returns_href_link_anchor_and_relink(self) -> None:
+        filters_map = make_link_filters(_config(), _anchors())
+        assert set(filters_map) == {"href", "link", "anchor", "relink"}
 
 
 class TestLinkFilterWiring:
@@ -348,22 +342,21 @@ class TestLinkFilterWiring:
     ``href`` / ``link`` closure branches (override, broken reference).
 
     Each rendered output opens with the subject node's own anchor — the
-    engine's ``post_process`` stamp (C9) — so the expectations carry that
-    leading ``<a id="{source}"></a>`` line."""
+    engine's ``post_process`` stamp — so the expectations carry that leading
+    ``<a id="{source}"></a>`` line."""
 
     def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         (templates_dir / "t.md").write_text(body)
-        # Like the generator: pass the format-neutral filters from data_tree_filters;
-        # the `href` / `link` filters come from MD itself, wired by the
-        # engine from `reports_config`.
+        # Like the generator: assemble the bound filters (node-map filters and
+        # the markdown link filters) and pass them in.
         globals_map, node_filters = make_data_tree_filters(_anchors())
         return TemplateEngine(
             tmp_path,
             templates_dir=templates_dir,
             output_format=MD,
-            filters=node_filters,
+            filters={**node_filters, **make_link_filters(_config(), _anchors())},
             globals=globals_map,
             reports_config=_config(),
         )
@@ -391,12 +384,13 @@ class TestLinkFilterWiring:
             '<a id="/by_role/dev"></a>\n[the dev](../members/alice.md#/members/alice)'
         )
 
-    def test_unresolved_link_renders_as_plain_text(self, tmp_path: Path) -> None:
+    def test_unresolved_link_keeps_bracketed_text(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "{{ node('members', 'ghost') | link }}")
         result = engine.render("t.md", _anchors()["/"])
-        # A broken reference is plain visible text, not a `[..](..)` to a dead
-        # URL (the `\/` is md-escaping that CommonMark renders back to `/`).
-        assert result == '<a id="/"></a>\n\\/members\\/ghost'
+        # A broken reference is a conspicuous bracketed `[text]`, not a `[..](..)`
+        # to a dead URL — the same shape `relink` leaves (the `\/` is md-escaping
+        # that CommonMark renders back to `/`).
+        assert result == '<a id="/"></a>\n[\\/members\\/ghost]'
 
     def test_unresolved_href_is_empty(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "[x]({{ node('members', 'ghost') | href }})")
@@ -424,14 +418,58 @@ class TestUnderHeadingFilter:
         assert under_heading(Markup("# A"), "#") == "## A"
 
     def test_pipe_form_keeps_shifted_markdown_unescaped(self) -> None:
-        env = make_environment(MD)
+        env = _md_env()
         template = env.from_string('{{ body | under_heading("##") }}')
         # Without the Markup wrap, finalize would backslash-escape the `#`.
         assert template.render(body="# A\n## B") == "### A\n#### B"
 
     def test_block_filter_form_wraps_embedded_output(self) -> None:
-        env = make_environment(MD)
+        env = _md_env()
         template = env.from_string(
             '{% filter under_heading("##") %}# Embedded{% endfilter %}'
         )
         assert template.render() == "### Embedded"
+
+
+class TestRelinkFilterWiring:
+    """End-to-end through TemplateEngine: registration, ``@pass_context``
+    feeding the source page (``this``), node-map resolution, and the Markup wrap.
+
+    Each output opens with the subject's anchor (the engine's post_process
+    stamp), so the expectations carry that leading ``<a id="{source}"></a>``
+    line."""
+
+    def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text(body)
+        globals_map, node_filters = make_data_tree_filters(_anchors())
+        return TemplateEngine(
+            tmp_path,
+            templates_dir=templates_dir,
+            output_format=MD,
+            filters={**node_filters, **make_link_filters(_config(), _anchors())},
+            globals=globals_map,
+            reports_config=_config(),
+        )
+
+    def test_resolves_a_node_link_relative_to_the_source_page(
+        self, tmp_path: Path
+    ) -> None:
+        # The body's `node:` link resolves the same way `node(...) | link` would
+        # from this page, and the Markup keeps finalize from escaping `[](...)`.
+        engine = self._engine(
+            tmp_path, '{{ "see [Alice](node:/members/alice)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == (
+            '<a id="/by_role/dev"></a>\nsee [Alice](../members/alice.md#/members/alice)'
+        )
+
+    def test_unresolved_node_link_keeps_bracketed_text(self, tmp_path: Path) -> None:
+        engine = self._engine(
+            tmp_path, '{{ "see [ghost](node:/members/ghost)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        # The destination is dropped, leaving the link text visibly bracketed.
+        assert result == '<a id="/by_role/dev"></a>\nsee [ghost]'

@@ -77,27 +77,9 @@ categories:
 - **アンカーパス付与集合の再導出をしない**。`iter_nodes` はラップ済みツリーを舐め、子が `Node` (= `MappingNode` / `ArrayNode`) のときだけ降りる。id 無し Array 要素・ネスト Array は素の dict / list なので自然に除外され、「どれがアンカーパスを持つか」の判定は wrapping 側の 1 箇所に保たれる
 - **`iter_nodes` は free function**。`_` プレフィックスはノードのテンプレート公開フィールド専用 ([data_tree.py](../../../../src/another_mood/components/generator/data_tree.py) 冒頭参照) なので、内部専用の走査をノードのメソッドにすると命名規約と衝突する。同じ理由で、上昇方向の走査 (`_parent` を遡る `nearest_ancestor`、[ページパスの導出](#ページパスの導出-b6) B6) も free function にする
 
-### Reconcile
-
-Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
-
-- エラー無し: Generator の出力をそのまま `reconcile_dir` に通す（pass-through）
-- エラー有り: Generator の出力を破棄し、`__build_failure` テンプレートでエラーページをレンダリングして `reconcile_dir` に書き出す
-
-この分離により以下が成立する:
-
-- Generator は「views を Markdown に変換する」純粋な責務に集中できる（エラー時の出力差し替えロジックを持たない）
-- 下流の Render / publish_stage は `reconcile_dir`（= Reconcile の出力）の単一視点を持てばよく、エラー時と正常時の分岐を知らなくてよい
-
-#### 命名について
-
-「reconcile（突き合わせる）」は本リポジトリ独自の語ではなく一般的な英単語だが、ドキュメントビルダーの文脈では珍しい語であり、馴染みのある語が引き起こす意味の取り違えを避ける狙いで採用した。読み手はこの定義に立ち戻ることで、Reconcile ステージの責務を一意に把握できる。
-
-## Proposals
-
 ### ページパスの導出 (B6)
 
-> **実装済** — Phase 11 タスク [B6](../../../tasks.md)。`ReportsConfig.page_path` / `nearest_ancestor` として実装。消費側はリンク解決フィルタ (B4) が実装済み、prose body フィルタ (B5) が未実装。
+> Phase 11 タスク [B6](../../../tasks.md) で実装。`ReportsConfig.page_path` / `nearest_ancestor`。消費側のリンク解決フィルタ (B4) / prose body `relink` (B5) も実装済み。
 
 ノードの **表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per 設定)` の関数**であってノード単体の内在属性ではないため、`_meta` には焼かない。消費側 (リンク解決フィルタ B4/B5、`{% mood_view %}` C4) はいずれも render ごとに config を closure binding で受け取る ([リンク解決](#リンク解決-b4-b5)) ので、必要時に `config.page_path(node)` を呼べば足り、全ノードへ事前計算して配る必要がない。
 
@@ -126,7 +108,7 @@ page_path も結合済み URL もノードに焼かないのは同じ理由 — 
 
 ### リンク解決 (B4, B5)
 
-> **B4 実装済 / B5 未実装** — node 解決・整形フィルタ (B4) は実装済み。prose body `resolve` フィルタ (B5) は未実装。anchor_path → ノードマップ (B2) も実装済 — [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) 参照。リンクの仕様 (リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動) は [anchor-spec.md](anchor-spec.md) を参照。
+> Phase 11 タスク [B4](../../../tasks.md)（node 解決・整形）/ [B5](../../../tasks.md)（prose body `relink`）で実装。基盤の [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) (B2) を使う。リンクの仕様（リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動）は [anchor-spec.md](anchor-spec.md) を参照。
 
 リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。フィルタは依存方向で 2 群に分かれる: フォーマット非依存の中立フィルタ (`node` / `label`) はノードマップだけに束縛され `data_tree_filters.make_data_tree_filters(node_map)` が供給する。フォーマット固有の `link` / `href` は `ReportsConfig` に束縛され `md.make_link_filters(config)` が供給する（`OutputFormat.link_filters` 経由でフォーマットに属し、Environment 構築時に config で配線される）。source / target のページパスは `config.page_path(node)` (B6) で算出する — source は `@pass_context` フィルタがコンテキストの `this`（主題ノード）から、target はノードマップで引いたノードから（`@pass_context` が要る二つ目の理由＝定数畳み込み抑止を含め、実装契約は `md.make_link_filters` の docstring を参照）。
 
@@ -141,13 +123,43 @@ page_path も結合済み URL もノードに焼かないのは同じ理由 — 
 
 #### prose body 処理フィルタ (B5)
 
-Markdown データソースの body には、Normalizer がソース内の相対リンクを `toc:` 記法に変換済みのリンクが含まれる ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照)。仮称 `resolve` フィルタが body 内の `toc:` URL を実 URL に置換する。
+Markdown データソースの body には、Normalizer がソース内の相対リンクを `node:` 記法に変換済みのリンクが含まれる ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照)。`relink` フィルタが body 内の `node:` リンク先を表示先ページからの相対 URL に置換する。**リンク解決の単一責務**に絞り、見出し深さ調整は `under_heading` (A6) と合成する (記法・対象範囲・未解決契約は [anchor-spec.md](anchor-spec.md#prose-body-処理フィルタ-relink) が正本)。
 
-このフィルタはリンク解決以外にも、見出しレベル正規化やエスケープ調整等の prose body 固有処理を兼ねる総合処理フィルタとして位置付ける (具体仕様は別途)。
+`href` / `link` と同じく `ReportsConfig` に束縛され、`@pass_context` で source ページ (`this`) を得て `node_map` / `node_href` を再利用する。戻り値は `Markup` (body は既に妥当な Markdown 出力なので finalize の再エスケープを通さない。`under_heading` と同型)。
 
-##### 暗黙適用は別途検討
+##### 解決機構: AST が判定、文字列が位置決め
 
-`{{ prose.body | resolve }}` を author に書かせるか、システムが自動的に処理を挟むかは、ノードメタデータ機構 (B1, B3) の延長で検討する余地がある (例: schema が prose body 型を宣言してあればアクセス時に自動処理)。本タスクの最低線は明示適用で、暗黙適用は別タスクとして切り出す。
+body 内のどこが本物の `node:` リンクかは markdown-it でパースして判定し、置換は元文字列への splice で行う (markdown-it をレンダラには使わず、位置特定のための読み取り専用パーサとして使う):
+
+- **専用 MarkdownIt の `normalizeLink` を恒等にする** — 既定では link destination を URI 正規化 (ucschar → `%XX`) して href に入れるため、`node:/prose/書籍` が `node:/prose/%E6%9B%B8%E7%B1%8D` になり、(1) 生 body の部分文字列に一致せず splice できない・(2) IRI 形の `node_map` キーとも一致せず引けない、の二重の不一致を起こす。恒等化すると href が **生のまま** 返り、両方が同時に解ける (`node:` を剥がした生 href = IRI 形アンカーパス = `node_map` キー)
+- **本物のリンクだけが `link_open` になる** — フェンス/インデントコードは `fence` / `code_block`、行内コードは `code_inline` の content になり `link_open` に現れない。よって「コード中の `node:` 例示は触らない」が AST 上自然に成立する (A6 `under_heading` が ATX 見出しだけを AST で選ぶのと同じ方針)
+- **置換はブロックの行範囲に限定** — 親 `inline` トークンの `.map` (行範囲) 内で、その link の生 href について `](href)` → `](url)` を splice する。行範囲限定により「同一パスがコードフェンスにも本物リンクにも在る」衝突を避ける。残るエッジは「同一ブロック内で同じ `](node:…)` が本物リンクとしても行内コードとしても出る」病的ケースのみ — docstring に明記する
+
+未解決時は表示テキストだけ残す ([anchor-spec.md](anchor-spec.md#prose-body-処理フィルタ-relink) 参照)。`node_href` を呼ぶのは解決できたノードに対してだけ、という `href` / `link` と同じ契約。
+
+### Reconcile
+
+Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
+
+- エラー無し: Generator の出力をそのまま `reconcile_dir` に通す（pass-through）
+- エラー有り: Generator の出力を破棄し、`__build_failure` テンプレートでエラーページをレンダリングして `reconcile_dir` に書き出す
+
+この分離により以下が成立する:
+
+- Generator は「views を Markdown に変換する」純粋な責務に集中できる（エラー時の出力差し替えロジックを持たない）
+- 下流の Render / publish_stage は `reconcile_dir`（= Reconcile の出力）の単一視点を持てばよく、エラー時と正常時の分岐を知らなくてよい
+
+#### 命名について
+
+「reconcile（突き合わせる）」は本リポジトリ独自の語ではなく一般的な英単語だが、ドキュメントビルダーの文脈では珍しい語であり、馴染みのある語が引き起こす意味の取り違えを避ける狙いで採用した。読み手はこの定義に立ち戻ることで、Reconcile ステージの責務を一意に把握できる。
+
+## Proposals
+
+### relink の暗黙適用
+
+> **未実装** — 別タスクとして切り出し（未タスク化）。
+
+`{{ prose.body | relink }}` を author に明示的に書かせる（B5 で実装済み）か、システムが自動的に処理を挟むかは、ノードメタデータ機構 (B1, B3) の延長で検討する余地がある (例: schema が prose body 型を宣言してあればアクセス時に自動処理)。B5 の最低線は明示適用とし、暗黙適用は別タスクとして切り出す。
 
 ### インラインコードのフェンス長 (O4)
 
