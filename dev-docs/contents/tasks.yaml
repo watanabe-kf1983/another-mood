@@ -491,12 +491,12 @@ categories:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
         note: |
           内蔵テンプレート (__entity_defs の attributes 表など) が任意
-          Mapping を Markdown テーブルセルにダンプしているが、値にバック
+          Mapping を Markdown テーブルセルにダンプする際、値にバック
           クォートが含まれるとフェンスが内側で早期終了してセルが崩れる。
-          詳細仕様は design/generator/generator.md「インラインコードの
-          フェンス長 (O4)」。
+          md output_format の code_inline / code_fenced が連続バック
+          クォートの最長 + 1 でフェンス長を動的に決めることで解消した。
         phase: 13
-        proposal: design/generator/generator.md#インラインコードのフェンス長-o4
+        done: true
 
   P:
     title: テンプレートエンジン拡張
