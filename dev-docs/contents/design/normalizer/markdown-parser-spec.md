@@ -142,7 +142,7 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 [スキーマ仕様](node:/prose/design/normalizer/schema-spec)に従って検証する。
 ```
 
-アンカーパスの形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカーパスの例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカーパスの一部として埋め込まれる。`node:` リンクの解決は Document Generator が pre-render フィルタ `relink` で行う（[generator.md](../generator/generator.md#リンク解決-b4-b5) 参照）。
+アンカーパスの形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカーパスの例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカーパスの一部として埋め込まれる。`node:` リンクの解決は Document Generator が pre-render フィルタ `relink` で行う（[generator.md](../generator/generator.md#リンク解決) 参照）。
 
 #### 背景: ソースの可搬性
 
