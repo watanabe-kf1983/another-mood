@@ -8,6 +8,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`link`](#link) | filter | Markdown link to a node's page |
 | [`href`](#href) | filter | the URL of a node's page, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
+| [`anchor`](#anchor) | filter | emit a node's link target (`<a id>`) |
 | [`node`](#node) | function, filter | resolve an anchor path to its node |
 | [`child`](#child) | filter | step from a node to one of its children |
 | [`in_cell`](#in_cell) | filter | insert a value into a Markdown table cell |
@@ -173,7 +174,7 @@ members/alice.md#/members/alice      (from the root page)
 ../members/alice.md#/members/alice   (from a by_role/… page)
 ```
 
-The fragment is always appended, even when the target is the page's own root. A node without a page of its own yields the page it is inlined into, with the fragment addressing the node there. For an unresolved target, `href` renders the empty string.
+The fragment is always appended, even when the target is the page's own root. A node without a page of its own yields the page it is inlined into, with the fragment addressing the node there. The fragment lands on the matching [`anchor`](#anchor) — the `<a id>` placed where the target is rendered. For an unresolved target, `href` renders the empty string.
 
 ### `label`
 
@@ -182,6 +183,16 @@ The fragment is always appended, even when the target is the page's own root. A 
 ```jinja2
 [{{ entity | label }} (ER diagram)]({{ entity | href }})
 ```
+
+### `anchor`
+
+`node | anchor` emits the node's link target — `<a id="…">` carrying the node's anchor path — at the point it is written. It is the receiving end of [`href`](#href): `href` always appends the anchor path as a URL fragment, and `anchor` is where that fragment lands. Without it, a fragment pointing into a page has nothing to jump to.
+
+```jinja2
+{{ member | anchor }}
+```
+
+emits `<a id="/members/alice"></a>`. Place it where the node's content is rendered, so a link to that node arrives at the right spot on the page. For an unresolved target, `anchor` emits nothing.
 
 ### `in_cell`
 

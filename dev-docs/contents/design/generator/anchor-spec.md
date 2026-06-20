@@ -8,7 +8,7 @@
 
 - **ノード (node)**: データツリー上の一点 — レコード・クエリのグループ・シングルトン・ネストしたオブジェクト。リンクの宛先となる実体で、テンプレートでは `node()` で取得し `link` / `label` / `href` で整形する
 - **アンカーパス (anchor path)**: そのノードを一意に識別する文字列（データツリー上の住所）。本ツールが生成する。URL fragment として URL に埋め込まれる
-- **アンカー (anchor)**: HTML/Markdown の anchor target（`<a id="…">`）。リンクを受け止めるページ上の標識で、id にはアンカーパスを使う。発行は未実装 — [アンカー発行フィルタ (構想)](#アンカー発行フィルタ-構想) を参照
+- **アンカー (anchor)**: HTML/Markdown の anchor target（`<a id="…">`）。リンクを受け止めるページ上の標識で、id にはアンカーパスを使う。`node | anchor` フィルタで発行する（[リンク記法](#リンク記法) 参照）。mood_view による自動刻印は未実装 — [mood_view 自動アンカー刻印 (構想)](#mood_view-自動アンカー刻印-c9) を参照
 
 > **背景: 語彙の振り直し — 旧「ノード = アンカー」定義の廃止.** 当初は「リンクされ得る対象」をアンカーと呼んでデータツリー上の各ノードと同一視し、リゾルバ関数も `anchor()` と命名していた。しかし `link` / `label` / `href` は「ノードを受けて、そのノードの何かを描画する」フィルタ族で、アンカーターゲット (`<a id>`) を描画する将来フィルタの自然な名前は `data | anchor` — `<a id>` / `<a href>` の両面が `anchor` / `href` という対の名前で揃う。そこで anchor の語は HTML 本来の意味（受け側の標識）に予約し、リゾルバは「アンカーパスを解決して得られるもの」の名 — ノード — で `node()` とした。node / data tree は利用者向けリファレンス (docs/reference/template.md の Anchor paths 節) が先行して採用していた語彙でもある。rename の対応表は [語彙の振り直しと rename (B8)](#語彙の振り直しと-rename-b8) を参照。
 
@@ -139,10 +139,12 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 {{ node("erds", erd.id) | label }}   {# 表示文字列のみ #}
 {{ node("erds", erd.id) | href }}    {# URL のみ #}
 {{ member | link("ER 図") }}         {# display text を明示 override #}
+{{ member | anchor }}                {# <a id="…"> 着地点を発行 #}
 ```
 
 - `node(seg, *segs)` — segments（各セグメントを escape）か、`/` 始まりの出来合いアンカーパスから、**ノード**を得る。関数形・フィルタ形（`"/..." | node`）の両用。第一引数の `/` 始まりで raw 判定するのは安全 — エンティティ/クエリ名は識別子パターン（`/` 始まり不可、schema-schema / query-schema の `propertyNames`）に縛られるため。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
 - `link` / `label` / `href` — ノード → Markdown リンク / 表示文字列 / URL。
+- `anchor` — ノード → そのノードの着地点 `<a id="{anchor_path}">`。`href` が常時付ける fragment（[出力 URL の形式](#出力-url-の形式)）の受け側。id にはノード自身の anchor_path をそのまま使う（href の fragment と同一文字列なので両端が構築上一致する）。author が手書きレンダリングの中で着地点を手置きするための原始機能。未解決参照（MissingNode）には何も発行しない（`href` が空を返すのと対称）。
 
 アンカーパス**文字列**だけを返す公開フィルタは置かない。当初 `anchor_path(seg, *segs)` として公開していたが実需が一度も現れなかったため公開名から外した — 実需が出たら概念名と同じ `anchor_path` の名で再導入する（構築関数は内部に保持）。
 
@@ -153,7 +155,7 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
 
 - **path 部**: source ページから target ページへの相対パス
-- **fragment 部**: target ノードの anchor_path をそのまま使う (full anchor_path 形式)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)。受け側の HTML id は未発行 — [アンカー発行フィルタ (構想)](#アンカー発行フィルタ-構想) が同じ文字列で `<a id>` を置く想定で、それまで fragment はページ内ジャンプとしては機能しない（ページ単位のリンクは path 部で機能する）
+- **fragment 部**: target ノードの anchor_path をそのまま使う (full anchor_path 形式)。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)。受け側の HTML id は `node | anchor` フィルタ（[リンク記法](#リンク記法)）が同じ文字列で `<a id>` を置く。fragment がページ内ジャンプとして機能するのは着地点が置かれた箇所のみ — 現状 author が `| anchor` で手置きした位置に限る（mood_view による自動刻印 C9 は未実装）。ページ単位のリンクは path 部で機能する
 
 #### 未解決参照の扱い
 
@@ -163,22 +165,15 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 ### リンク解決
 
-リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `node` / `label` とフォーマット固有 `link` / `href`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
+リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `node` / `label` とフォーマット固有 `link` / `href` / `anchor`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `link` / `href` に `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`anchor` は両方とも不要（id はノード自身の anchor_path だけで決まりページ非依存）、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
 
 ## Proposals
 
-### アンカー発行フィルタ (B9 → C9)
+### mood_view 自動アンカー刻印 (C9)
 
-> **タスク化済（未実装）** — Phase 11。受け側の原始機能 `| anchor`（B9）→ mood_view 自動刻印（C9）の二段。実需は two-loop パターンの PDF 化（同ページ内 fragment 着地）で発生する（[paging-spec.md 分割ルール](paging-spec.md#分割ルール)）。
+> **タスク化済（未実装）** — Phase 11。受け側の原始機能 `| anchor`（B9）は実装済み（[リンク記法](#リンク記法) 参照）。本節はその再利用先 — mood_view 自動刻印（C9）のみ残る。実需は two-loop パターンの PDF 化（同ページ内 fragment 着地）で発生する（[paging-spec.md 分割ルール](paging-spec.md#分割ルール)）。
 
-`data | anchor` — ノードを受けて、その場にアンカーターゲット（`<a id="{anchor_path}">`）を描画するフィルタ。`link` / `label` / `href` と同じ「ノードを受けて描画する」族に対称的に収まり、`href` が常時付与している fragment（[出力 URL の形式](#出力-url-の形式)）の受け側を発行する — 片側だけ実装済みの契約の残り半分。出力はフォーマット固有なので md 側（`OutputFormat.link_filters` 経由）に属する。
-
-段階:
-
-- **B9 — `| anchor` 発行フィルタ.** author が手書きレンダリングの中で `<a id>` を明示的に置く原始機能。一般のノード内容はページ上のどこに描かれたかをテンプレートしか知らないため、システムは自動発行できない。
-- **C9 — mood_view 自動刻印.** ただし `{% mood_view %}` のインライン展開は「このノードを今ここに描く」ことを**システムが知っている唯一の経路**。そこで mood_view は描画ノードのアンカーを B9 の機能で**自動的に刻む**（インラインならその場、分割ならページ先頭）。これで two-loop パターンが author に手置きを強いずに成立する。`| anchor` 手置きは非 mood_view レンダリング用の escape hatch として残る。
-
-> **依存順.** B9（受け側原始機能）を先に作り、C9（mood_view 自動刻印）がそれを再利用する。先に mood_view へ刻印を入れると原始機能不在のまま `<a id>` 生成が mood_view 内に生えるため、順序を守る。
+一般のノード内容はページ上のどこに描かれたかをテンプレートしか知らないため、システムは着地点を自動発行できない — そのため B9 は author の手置き原始機能として用意した。ただし `{% mood_view %}` のインライン展開は「このノードを今ここに描く」ことを**システムが知っている唯一の経路**。そこで mood_view は描画ノードのアンカーを B9 の `anchor` 機能で**自動的に刻む**（インラインならその場、分割ならページ先頭）。これで two-loop パターンが author に手置きを強いずに成立する。`| anchor` 手置きは非 mood_view レンダリング用の escape hatch として残る。
 
 ### Markdown 本文中のアンカー参照
 
