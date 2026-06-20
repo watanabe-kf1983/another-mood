@@ -169,23 +169,9 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 > **背景: 素テキストでなく角括弧を残す.** リンクを外して素テキストにすると解決成功時の通常テキストと見分けがつかず、失敗が出力に埋もれる。`[text]` は対応する参照定義を持たない shortcut reference として CommonMark が角括弧ごとそのまま描画するため、壊れた参照が目立つ。表示テキストは常に残るので author は気づいて直せる。当初は `link` を素テキスト・`relink` を `[text]` と割っていたが、両者を `[text]` に統一した。
 
-## Internal Design
-
-### リンク解決
-
-リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `node` / `label` とフォーマット固有 `link` / `href` / `anchor`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `link` / `href` に `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`anchor` は両方とも不要（id はノード自身の anchor_path だけで決まりページ非依存）、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
-
-### アンカー (`<a id>`) の raw HTML レンダリング (Hugo unsafe)
-
-`node | anchor`（B9）と mood_view 自動刻印（C9）が出す着地点は **raw HTML** の `<a id="…">`。Hugo の Goldmark は既定（`markup.goldmark.renderer.unsafe = false`）で raw HTML を `<!-- raw HTML omitted -->` に潰すため、bundled `resources/hugo/hugo.toml` で **`unsafe = true`** を設定している。これが無いと fragment の着地点が描画されず、リンクはページには着くがノード位置までジャンプしない。
-
-> **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
-
-## Proposals
-
 ### Markdown 本文中のアンカー参照
 
-> **未実装** — Phase 11 タスク [B5](../../../tasks.md)（prose body `relink` フィルタ）。リンク解決・整形フィルタ (B4) は実装済み — External / Internal Design 節を参照。
+> Phase 11 タスク [B5](../../../tasks.md) で実装（prose body `relink` フィルタ）。テンプレート側のリンク解決・整形フィルタ (B4) は [リンク記法](#リンク記法) を参照。
 
 prose body 等の Markdown 本文では、リンク先に `node:` スキーム + アンカーパスを書いてノードを参照する。**インラインリンク形のみ**を対象とする:
 
@@ -230,6 +216,20 @@ prose body 中の `node:` リンク先を、表示先ページからの相対 UR
 author の明示適用を最低線とする（schema が prose body 型を宣言していればアクセス時に自動処理する暗黙適用は別タスク）。
 
 未解決の `node:` 参照（マップに無いアンカーパス）は、`link` フィルタの MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）に倣い、**表示テキストを角括弧で囲んでリンク先を外す**（`[text](node:/missing)` → `[text]`）。死んだ `node:` リンクとして出力して「動くリンクの偽装」にしない。ビルドレポートへの警告は `link` 側と揃えて [B10](../../../tasks.md) で後日扱う。実装機構は [generator.md の B5](generator.md#prose-body-処理フィルタ-b5) を正本とする。
+
+## Internal Design
+
+### リンク解決
+
+リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `node` / `label` とフォーマット固有 `link` / `href` / `anchor`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `link` / `href` に `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`anchor` は両方とも不要（id はノード自身の anchor_path だけで決まりページ非依存）、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
+
+### アンカー (`<a id>`) の raw HTML レンダリング (Hugo unsafe)
+
+`node | anchor`（B9）と mood_view 自動刻印（C9）が出す着地点は **raw HTML** の `<a id="…">`。Hugo の Goldmark は既定（`markup.goldmark.renderer.unsafe = false`）で raw HTML を `<!-- raw HTML omitted -->` に潰すため、bundled `resources/hugo/hugo.toml` で **`unsafe = true`** を設定している。これが無いと fragment の着地点が描画されず、リンクはページには着くがノード位置までジャンプしない。
+
+> **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
+
+## Proposals
 
 ### 未決事項
 

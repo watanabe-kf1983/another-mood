@@ -74,7 +74,7 @@ categories:
           (link と同契約、警告は B10)。専用 MarkdownIt の normalizeLink 恒等化で生 href を得て splice。
           設計は anchor-spec.md (prose body 処理フィルタ relink) / generator.md (B5)。
         phase: 11
-        proposal: design/generator/generator.md#リンク解決-b4-b5
+        done: true
       B6:
         title: ページパスの導出 (ReportsConfig.page_path)
         note: page_path は (node, file_per) の関数なのでノードに焼かず ReportsConfig.page_path(node) に置く。非 root の分割対象は anchor_path 先頭 / を落とし .md、root は index.md、非分割対象は最寄りの分割境界に解決。レポートルート相対 (reports/・profile 段は書き出し側 C3 が付与)。木の遡上は data_tree の free function nearest_ancestor(node, match) に切り出し、消費は B4/C4
@@ -521,10 +521,9 @@ categories:
           mood_view が主題を合成 dict でなくツリーノードとして受け取り、サブテンプレートに固定名 this で
           束縛する (naming=this / spread=True 確定)。ページ identity が主題ノードの anchor_path で安定し、
           B4/B5 の source-node プラミングや __views も簡約できる。設計・狙い・naming 根拠は
-          paging-spec.md#proposals を正本とする。最優先。C3 と相互作用、C11 と組んで __views 退役。
+          paging-spec.md の「テンプレート主題のノード受け取りと this 束縛」(External Design) を正本とする。C3 と相互作用、C11 と組んで __views 退役。
         phase: 11
         done: true
-        proposal: design/generator/paging-spec.md#proposals
 
   Q:
     title: 公開
@@ -606,7 +605,6 @@ categories:
           構成し、素文字列に escape を適用する基盤を作る。Markup を返した
           フィルタは finalize が素通しする契約。
         phase: 11
-        proposal: design/generator/output-format-spec.md#実装方針
         done: true
       U2:
         title: md output_format の escape 関数
@@ -623,7 +621,6 @@ categories:
           env.filters に auto-register、テンプレでは import 不要。
           O4 を吸収、Hugo backslash → %5C バグも as_url で解消。
         phase: 11
-        proposal: design/generator/output-format-spec.md#markdown-安全化ヘルパ
         done: true
       U4:
         title: 既存フィルタの output_format モデルへの移行
