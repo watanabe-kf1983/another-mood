@@ -251,7 +251,10 @@ class TestMoodViewProcessorImplViaEngine:
         processor = MoodViewProcessorImpl(engine=engine, reports_config=config)
         processor("profile.md", wrap_tree(self._TREE)["members"][0])
 
-        assert (tmp_path / "out" / "members" / "alice.md").read_text() == "hi alice"
+        # The split page opens with the subject node's own anchor (C9).
+        assert (tmp_path / "out" / "members" / "alice.md").read_text() == (
+            '<a id="/members/alice"></a>\nhi alice'
+        )
 
     def test_non_node_dict_does_not_write_file(self, tmp_path: Path) -> None:
         # A non-node dict inlines, so no page is written.

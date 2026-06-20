@@ -20,6 +20,7 @@ from another_mood.components.generator.output_formats.md import (
     md_anchor,
     md_escape,
     md_link,
+    stamp_anchor,
     under_heading,
 )
 from another_mood.components.generator.reports_config import ReportsConfig
@@ -266,6 +267,27 @@ class TestMdAnchor:
         assert md_anchor(MissingNode("/members/ghost")) == ""
 
 
+class TestMdPostProcess:
+    """The format's render post-pass stamps a node subject's own anchor at the
+    top of its output (C9), and leaves a non-node render untouched."""
+
+    def test_stamps_node_subject_anchor_on_its_own_line(self) -> None:
+        node = build_node_map(_ANCHOR_DATA)["/members/alice"]
+        # Newline-separated so the anchor cannot glue onto a following heading.
+        assert (
+            stamp_anchor("# Alice\n", node) == '<a id="/members/alice"></a>\n# Alice\n'
+        )
+
+    def test_stamps_root_node_anchor(self) -> None:
+        root = build_node_map(_ANCHOR_DATA)["/"]
+        assert stamp_anchor("# Index\n", root) == '<a id="/"></a>\n# Index\n'
+
+    def test_non_node_subject_is_returned_untouched(self) -> None:
+        # The root render's mapping or a build-report dict has no anchor path,
+        # so the output is passed through with nothing prepended.
+        assert stamp_anchor("# Hello\n", {"title": "Hello"}) == "# Hello\n"
+
+
 class TestHelpersBypassFinalizeEscape:
     """Markup return must survive the finalize hook's md_escape."""
 
@@ -323,7 +345,11 @@ class TestMakeLinkFilters:
 class TestLinkFilterWiring:
     """End-to-end through TemplateEngine, covering only what the unit tests
     can't: filter registration, ``@pass_context`` feeding ``this``, and the
-    ``href`` / ``link`` closure branches (override, broken reference)."""
+    ``href`` / ``link`` closure branches (override, broken reference).
+
+    Each rendered output opens with the subject node's own anchor — the
+    engine's ``post_process`` stamp (C9) — so the expectations carry that
+    leading ``<a id="{source}"></a>`` line."""
 
     def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
@@ -347,38 +373,44 @@ class TestLinkFilterWiring:
         # @pass_context reading the source page from the `this` subject.
         engine = self._engine(tmp_path, "{{ node('members', 'alice') | link }}")
         result = engine.render("t.md", _anchors()["/by_role/dev"])
-        assert result == "[Alice](../members/alice.md#/members/alice)"
+        assert result == (
+            '<a id="/by_role/dev"></a>\n[Alice](../members/alice.md#/members/alice)'
+        )
 
     def test_href_emits_bare_url(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "{{ node('members', 'alice') | href }}")
         result = engine.render("t.md", _anchors()["/by_role/dev"])
-        assert result == "../members/alice.md#/members/alice"
+        assert result == '<a id="/by_role/dev"></a>\n../members/alice.md#/members/alice'
 
     def test_link_display_override(self, tmp_path: Path) -> None:
         engine = self._engine(
             tmp_path, "{{ node('members', 'alice') | link('the dev') }}"
         )
         result = engine.render("t.md", _anchors()["/by_role/dev"])
-        assert result == "[the dev](../members/alice.md#/members/alice)"
+        assert result == (
+            '<a id="/by_role/dev"></a>\n[the dev](../members/alice.md#/members/alice)'
+        )
 
     def test_unresolved_link_renders_as_plain_text(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "{{ node('members', 'ghost') | link }}")
         result = engine.render("t.md", _anchors()["/"])
         # A broken reference is plain visible text, not a `[..](..)` to a dead
         # URL (the `\/` is md-escaping that CommonMark renders back to `/`).
-        assert result == "\\/members\\/ghost"
+        assert result == '<a id="/"></a>\n\\/members\\/ghost'
 
     def test_unresolved_href_is_empty(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "[x]({{ node('members', 'ghost') | href }})")
         result = engine.render("t.md", _anchors()["/"])
-        assert result == "[x]()"
+        assert result == '<a id="/"></a>\n[x]()'
 
     def test_anchor_emits_target_unescaped(self, tmp_path: Path) -> None:
         # Registered as a filter, and the `<a id>` Markup survives finalize
-        # (md_escape would backslash-escape the `/` and `"`).
+        # (md_escape would backslash-escape the `/` and `"`).  The leading
+        # `<a id="/">` is the page's own post_process stamp; the body anchor
+        # is the manual `| anchor` for a different node.
         engine = self._engine(tmp_path, "{{ node('members', 'alice') | anchor }}")
         result = engine.render("t.md", _anchors()["/"])
-        assert result == '<a id="/members/alice"></a>'
+        assert result == '<a id="/"></a>\n<a id="/members/alice"></a>'
 
 
 class TestUnderHeadingFilter:

@@ -42,8 +42,11 @@ class TestGenerate:
             out_dir=out_dir,
         )
 
-        # User reports are rendered under reports/.
-        assert (out_dir / "data" / "reports" / "index.md").read_text() == "# Hello\n"
+        # User reports are rendered under reports/; the root node's own
+        # anchor is stamped at the top of index.md (C9 post_process).
+        assert (out_dir / "data" / "reports" / "index.md").read_text() == (
+            '<a id="/"></a>\n# Hello\n'
+        )
         # Metadata root is always rendered at the site root.
         assert (out_dir / "data" / "index.md").exists()
 
