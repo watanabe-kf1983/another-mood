@@ -384,12 +384,13 @@ class TestLinkFilterWiring:
             '<a id="/by_role/dev"></a>\n[the dev](../members/alice.md#/members/alice)'
         )
 
-    def test_unresolved_link_renders_as_plain_text(self, tmp_path: Path) -> None:
+    def test_unresolved_link_keeps_bracketed_text(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "{{ node('members', 'ghost') | link }}")
         result = engine.render("t.md", _anchors()["/"])
-        # A broken reference is plain visible text, not a `[..](..)` to a dead
-        # URL (the `\/` is md-escaping that CommonMark renders back to `/`).
-        assert result == '<a id="/"></a>\n\\/members\\/ghost'
+        # A broken reference is a conspicuous bracketed `[text]`, not a `[..](..)`
+        # to a dead URL — the same shape `relink` leaves (the `\/` is md-escaping
+        # that CommonMark renders back to `/`).
+        assert result == '<a id="/"></a>\n[\\/members\\/ghost]'
 
     def test_unresolved_href_is_empty(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "[x]({{ node('members', 'ghost') | href }})")

@@ -186,7 +186,7 @@ To link a node other than the one at hand, resolve it first with [`node`](#node)
 {{ node("members", member.id) | link }}
 ```
 
-For a [missing node](#node), the display text alone, with no link around it.
+For a [missing node](#node), the display text in brackets — `[text]` with no URL — so the broken reference stays visible rather than becoming a link to nowhere.
 
 ### `href`
 
@@ -294,7 +294,7 @@ A single argument that starts with `/` is instead taken as a complete, ready-mad
 
 `node` also works as a filter: `{{ "/prose/index" | node | link }}`.
 
-A path that matches no node resolves to a **missing node** rather than raising an error; the rendering filters keep it visible — [`link`](#link) renders the attempted path as plain text, [`href`](#href) the empty string — so you can spot the broken reference and fix the source.
+A path that matches no node resolves to a **missing node** rather than raising an error; the rendering filters keep it visible — [`link`](#link) brackets the attempted path as `[text]`, [`href`](#href) renders the empty string — so you can spot the broken reference and fix the source.
 
 ### `code_inline`
 

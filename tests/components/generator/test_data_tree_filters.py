@@ -205,8 +205,8 @@ class TestNodeHref:
         # alice is itself a page root, yet the fragment is not dropped.
         assert node_href(_config(), source, target).endswith("#/members/alice")
         # A MissingNode has no page/URL — the rendering filters handle that
-        # (a broken reference is shown as plain text), so node_href is only
-        # ever called for resolved nodes and carries no MissingNode branch.
+        # (a broken reference is shown as a bracketed `[text]`), so node_href is
+        # only ever called for resolved nodes and carries no MissingNode branch.
 
 
 # ── make_data_tree_filters (format-neutral, context-free) ─────────────

@@ -169,9 +169,11 @@ def make_link_filters(
     own page-independent anchor path), so it is the bare :func:`md_anchor`.
 
     An unresolved reference never renders a link to a dead URL: ``href`` yields
-    empty, ``link`` the escaped display text, and ``relink`` drops the
-    destination to leave a plain ``[text]``.  Only ``relink`` needs ``node_map``
-    — it resolves anchor-path strings itself; the others receive a resolved node.
+    empty, while ``link`` and ``relink`` both leave a conspicuous bracketed
+    ``[text]`` — ``link`` brackets the escaped display text, ``relink`` drops the
+    destination from the source ``[text](node:…)``.  Only ``relink`` needs
+    ``node_map`` — it resolves anchor-path strings itself; the others receive a
+    resolved node.
     """
 
     @pass_context
@@ -185,7 +187,10 @@ def make_link_filters(
     def link(context: Context, a: object, text: object = None) -> Markup:
         display = str(text) if text is not None else node_label(a)
         if isinstance(a, MissingNode):
-            return Markup(md_escape(display))
+            # A broken reference is left as a conspicuous bracketed `[text]`,
+            # never a `[..](..)` to a dead URL — the same shape `relink` leaves
+            # a dropped `node:` destination, so both broken-link forms read alike.
+            return Markup(f"[{md_escape(display)}]")
         return md_link(display, node_href(config, context["this"], a))
 
     @pass_context
@@ -195,8 +200,8 @@ def make_link_filters(
         def render_dest(anchor_path: str) -> str:
             target = node_map.get(anchor_path)
             if target is None:
-                # Unresolved: drop the destination, leaving a conspicuous
-                # `[text]` rather than leaking the `node:` scheme into output.
+                # Unresolved: drop the destination, leaving the same conspicuous
+                # bracketed `[text]` `link` leaves, never leaking `node:` to output.
                 return ""
             return f"({node_href(config, source, target)})"
 
