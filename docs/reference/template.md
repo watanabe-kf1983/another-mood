@@ -16,6 +16,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`code_fenced`](#code_fenced) | function | wrap a value in a Markdown fenced code block |
 | [`as_url`](#as_url) | filter | percent-encode a hand-written link URL |
 | [`under_heading`](#under_heading) | filter | shift an embedded fragment's headings to nest under a heading |
+| [`relink`](#relink) | filter | resolve a prose body's `node:` links to their targets |
 
 Two evaluation rules also differ from stock Jinja2: [accessing an undefined name renders as the empty string](#handling-undefined-access), and [every substituted value is Markdown-escaped](#markdown-escaping).
 
@@ -270,6 +271,22 @@ Use it as a block filter wrapping embedded output, or piped on a prose body:
 ```
 
 Only the fragment's own top-level headings move. A heading quoted inside a blockquote or nested in a list item, a setext heading (the `===` / `---` underline style), and `#` inside a code fence are all left untouched. Like the other Markdown-emitting filters here, it inserts its result as-is — no `| safe` needed.
+
+### `relink`
+
+`body | relink` resolves the `node:` links in a prose body to working URLs. A prose body refers to another node by linking to its [anchor path](#anchor-paths) under the `node:` scheme — `[text](node:/anchor/path)` — and `relink` rewrites each to the same relative URL [`link`](#link) would build for that node:
+
+```jinja2
+{{ prose.body.content | relink }}
+```
+
+This is the standard way to embed a prose body: it emits the Markdown as-is (no [escaping](#markdown-escaping), like the other Markdown-emitting filters here — so no `| safe`) and resolves any cross-references it carries. Link resolution is its only job, so compose it with [`under_heading`](#under_heading) to also nest the body's headings under an enclosing one:
+
+```jinja2
+{{ prose.body.content | relink | under_heading("##") }}
+```
+
+Only inline links are rewritten; a `node:` written inside a code span or fence is left untouched. An unresolved `node:` reference drops its destination and keeps the link text as a conspicuous `[text]`, the same as [`link`](#link) for a [missing node](#node).
 
 ## Functions
 
