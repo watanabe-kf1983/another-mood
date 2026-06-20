@@ -183,33 +183,52 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 ### Markdown 本文中のアンカー参照
 
-> **未実装** — Phase 11 タスク [B5](../../../tasks.md)（prose body `resolve` フィルタ）。リンク解決・整形フィルタ (B4) は実装済み — External / Internal Design 節を参照。
+> **未実装** — Phase 11 タスク [B5](../../../tasks.md)（prose body `relink` フィルタ）。リンク解決・整形フィルタ (B4) は実装済み — External / Internal Design 節を参照。
 
-prose body 等の Markdown 本文では `toc:` プレフィックス記法でアンカーパスを URL として埋め込む:
+prose body 等の Markdown 本文では、リンク先に `node:` スキーム + アンカーパスを書いてノードを参照する。**インラインリンク形のみ**を対象とする:
 
 ```markdown
-ユーザーの詳細は[ユーザー](toc:/erds/user-management/entities/user)を参照。
+ユーザーの詳細は[ユーザー](node:/erds/user-management/entities/user)を参照。
 ```
 
 この記法は二役を兼ねる:
 
-1. **author 向け sugar** — author が anchor で明示的に参照したいときの書き方
+1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node("/…") | link`（[リンク記法](#リンク記法)）の本文版で、解決後は同じ `[display](URL)` になる
 2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
 
-ソース Markdown では普通の相対パスで書け、Normalizer が `toc:` 記法に変換する ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照):
+ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
 [Composer](../composer/composer.md)
 ↓ Normalizer が変換 ↓
-[Composer](toc:/prose/design/composer/composer)
+[Composer](node:/prose/design/composer/composer)
 ```
 
-### prose body 処理フィルタ（仮称 `resolve`）
+#### 対象はインラインリンク形のみ
 
-prose body 中の `toc:` URL を実 URL に置換する pre-render フィルタ。anchor 解決以外にも見出しレベル正規化やエスケープ調整等を兼ねる総合処理フィルタとする。
+`[text](node:…)` のインライン形だけを解決する。参照形（`[text][label]` + 別行 `[label]: node:…`）と autolink（`<node:…>`）は **恒久的に非対応**（後回しの deferral でなく非ゴール）。理由:
+
+- A5 が生成するのはインライン形のみ。参照・autolink が出るのは手書きの場合だけで、実利用上の頻度はきわめて小さい（インライン ≫ 参照 > autolink）
+- autolink は素だと表示テキストが URL になり、参照形は未解決時の plain 化が「リンク位置」と「定義行」に跨って綺麗に畳めない — どちらも対応コストに対し需要が薄い
+- 利用者には「手書きの `node:` 参照はインライン形で書く」と案内すれば足りる
+
+#### scheme 名を `node:` とする背景
+
+リンク先の実体をテンプレートでは `node()` で解決する（B8 の語彙振り直し）。本文側の scheme も同じ語に揃え、`[x](node:/…)` ↔ `node("/…") | link` を一目で対応づけられるようにする。`anchor` は受け側（`<a id>`）に予約済みなので scheme には使わない。`node:` は実在 URI スキームと衝突しない。アンカーパス参照以外の内部 URL を将来挟む場合は、傘名前空間（`mood:` 等）でなく種類ごとに別 scheme を立てる方針。
+
+### prose body 処理フィルタ `relink`
+
+prose body 中の `node:` リンク先を、表示先ページからの相対 URL（[出力 URL の形式](#出力-url-の形式)）に置換する pre-render フィルタ。**リンク解決の単一責務**に絞る — 見出し深さ調整は別フィルタ `under_heading`（[docs/reference/template.md](../../../../docs/reference/template.md#under_heading)）と合成する:
+
+```jinja2
+{{ prose.body.content | relink | under_heading("##") }}
+```
+
+author の明示適用を最低線とする（schema が prose body 型を宣言していればアクセス時に自動処理する暗黙適用は別タスク）。
+
+未解決の `node:` 参照（マップに無いアンカーパス）は、`link` フィルタの MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）に倣い、**表示テキストだけ残してリンクを外す**（`[text](node:/missing)` → `text`）。死んだ `node:` リンクとして出力して「動くリンクの偽装」にしない。ビルドレポートへの警告は `link` 側と揃えて [B10](../../../tasks.md) で後日扱う。実装機構は [generator.md の B5](generator.md#prose-body-処理フィルタ-b5) を正本とする。
 
 ### 未決事項
 
 - **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（[F4 / D 群と連携、未タスク化](../../../tasks.md)）
-- **`toc:` プレフィックスの名前**: 実態は「アンカーパス参照」で TOC ではない。実装時（[B5](../../../tasks.md)）に再検討する

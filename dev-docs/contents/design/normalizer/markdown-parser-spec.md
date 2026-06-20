@@ -118,13 +118,13 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 
 > **未実装** — Phase 11 タスク [A5](../../../tasks.md)
 
-ソース Markdown 内の相対リンクを `toc:` アンカーパス記法に変換する。
+ソース Markdown 内の相対リンクを `node:` アンカーパス記法（インラインリンク形）に変換する。
 
 #### 変換ルール
 
 1. Markdown リンク `[text](relative/path.md)` を検出
 2. 相対パスを `contents_dir` 基点の正規化パスに解決
-3. 対応する prose レコードのアンカーパス記法 (`toc:...`) に変換
+3. 対応する prose レコードのアンカーパス記法 (`node:/...`) に変換
 
 #### 例
 
@@ -138,11 +138,11 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 ↓ 正規化 ↓
 
 ```markdown
-処理フローの詳細は[Composer](toc:prose/design/composer/composer)を参照。
-[スキーマ仕様](toc:prose/design/normalizer/schema-spec)に従って検証する。
+処理フローの詳細は[Composer](node:/prose/design/composer/composer)を参照。
+[スキーマ仕様](node:/prose/design/normalizer/schema-spec)に従って検証する。
 ```
 
-アンカーパスの形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカーパスの例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカーパスの一部として埋め込まれる。`toc:` リンクの解決は Document Generator が pre-render フィルタ (仮称 `resolve`) で行う（[generator.md](../generator/generator.md#リンク解決-b2-b4-b5) 参照）。
+アンカーパスの形式は [anchor-spec.md](../generator/anchor-spec.md) に準拠する。prose はアンカーパスの例外（id 内の `/` を escape せず素通し）が適用されるため、ファイル相対パスがそのままアンカーパスの一部として埋め込まれる。`node:` リンクの解決は Document Generator が pre-render フィルタ `relink` で行う（[generator.md](../generator/generator.md#リンク解決-b4-b5) 参照）。
 
 #### 背景: ソースの可搬性
 
@@ -152,4 +152,4 @@ Pandoc/kramdown 互換の見出し属性記法を使用する:
 - エディタのリンクジャンプが機能する
 - 独自記法によるソース汚染がない
 
-`toc:` 記法への変換は Normalizer が自動的に行うため、ユーザがリンク記法を意識する必要はない。
+`node:` 記法への変換は Normalizer が自動的に行うため、ユーザがリンク記法を意識する必要はない。

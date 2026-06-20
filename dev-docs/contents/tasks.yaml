@@ -27,8 +27,8 @@ categories:
         phase: 13
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A5:
-        title: ソース内相対リンク → toc 記法への変換
-        note: contents_dir 基点パス解決が必要。出力する anchor_path の形式は anchor-spec.md の規則に従う
+        title: ソース内相対リンク → node 記法への変換
+        note: contents_dir 基点パス解決が必要。出力は `node:` インライン形リンク、anchor_path の形式は anchor-spec.md の規則に従う
         phase: 11
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
@@ -67,8 +67,12 @@ categories:
         phase: 11
         done: true
       B5:
-        title: prose body 処理フィルタ (`resolve`)
-        note: body 内の `toc:` URL を実 URL に置換。pre-render 適用。見出しレベル正規化等の総合処理も担う想定 (具体は別途)
+        title: prose body 処理フィルタ (`relink`)
+        note: >-
+          body 内の `node:` リンク (インライン形のみ) を表示先ページ相対 URL に置換する relink フィルタ。
+          pre-render・リンク解決の単一責務 (見出しは under_heading と合成)。未解決は表示テキストのみ残す
+          (link と同契約、警告は B10)。専用 MarkdownIt の normalizeLink 恒等化で生 href を得て splice。
+          設計は anchor-spec.md (prose body 処理フィルタ relink) / generator.md (B5)。
         phase: 11
         proposal: design/generator/generator.md#リンク解決-b4-b5
       B6:
@@ -103,6 +107,16 @@ categories:
           mood_view 自動刻印 (C9) がこれを再利用。設計は anchor-spec.md#リンク記法。
         phase: 11
         done: true
+      B10:
+        title: 未解決リンク参照のビルドレポート警告 (link / resolve 共通)
+        note: >-
+          link / href (B4) と resolve (B5) は未解決参照 (MissingNode / 解決できない node: URL) を
+          素テキストで可視化するのみで BuildReport には積まない。author が壊れた参照に気づけるよう、
+          未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
+          一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
+          現状でも表示テキストは残り可視なので優先度低。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#未解決参照の扱い
 
   C:
     title: ページ分割 (paging)
