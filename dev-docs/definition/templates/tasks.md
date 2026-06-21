@@ -22,7 +22,7 @@
     {{- "" }} | {{ task.title }}
     {{- "" }} | {% if task.proposal %}[→](prose/{{ task.proposal | as_url }}){% endif %}
     {{- "" }} | {{ task.note | replace('\n', ' ') | trim }}
-    {{- "" }} | {{ task.phase }}
+    {{- "" }} | {{ node("roadmap", task.phase) | link(task.phase) }}
     {{- "" }} | {{ "✅" if task.done else "" }}
     {{- "" }} |
 {% endfor %}
