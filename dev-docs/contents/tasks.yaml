@@ -7,34 +7,39 @@ categories:
     spec: design/normalizer/markdown-parser-spec
     tasks:
       A1:
-        title: "{#id} 付き見出しの検出"
-        note: markdown-it-py の AST 走査
+        title: 見出し抽出 → prose.headings 生成
+        note: prose body から見出しを採り nested な headings リストを生成。id=github-slug（dedup）、title=見出しテキスト、level。{#id} は使わない
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
+        proposal: design/normalizer/markdown-parser-spec.md#見出し抽出-a1-a2
       A2:
-        title: セクション本文範囲の切り出し
-        note: 次の同レベル以上の {#id} までを本文とする
+        title: prose_headings 派生トップレベル entity の生成
+        note: 見出しを <prose-id>#<slug> を id とするトップレベル派生 entity として materialize。prose を x-ref。FK ターゲット兼横断クエリ用の索引
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
+        proposal: design/normalizer/markdown-parser-spec.md#見出し抽出-a1-a2
       A3:
-        title: ファイル単位 + セクション単位のダブル出力
-        note: 既存の parse_markdown 拡張
+        title: 見出しノードの anchor_path 構築（#-形）
+        note: nested 見出しの anchor_path を /prose/X#slug に組む分岐。prose の /-例外の隣。# は構造的セパレータで escape しない
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
+        proposal: design/generator/anchor-spec.md#見出しノード-a3-a4
       A4:
-        title: セクション内見出しレベル正規化
-        note: 最小レベルを H1 にシフト
+        title: 出力 URL fragment 規則の一般化 + 見出しは stamp しない
+        note: "fragment = anchor_path の最後の `#` 以降（無ければ全体）。見出しは Goldmark/GitHub の native id に着地し自前では刻まない"
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
+        proposal: design/generator/anchor-spec.md#見出しノード-a3-a4
       A5:
-        title: ソース内相対リンク → node 記法への変換
-        note: contents_dir 基点パス解決が必要。出力は `node:` インライン形リンク、anchor_path の形式は anchor-spec.md の規則に従う
+        title: ソース内相対リンク → node 記法への変換（基本）
+        note: "contents_dir 基点パス解決。出力は `node:` インライン形リンク。anchor_path の形式は anchor-spec.md に従う。見出し抽出に依存せず単独実装可"
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
+        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5-a7
       A6:
         title: under_heading フィルタ（見出し深さ調整）
         phase: 11
         done: true
+      A7:
+        title: "node 記法変換の `#fragment` 対応（見出しリンク）"
+        note: "A5 の変換で `path.md#見出し-slug` の `#見出し-slug` を `node:` URI の fragment として素通し。見出しノード（A1〜A4）が解決可能になってから。fragment は再 slug せず素通し"
+        phase: 12
+        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5-a7
 
   B:
     title: アンカー / リンク解決
@@ -88,6 +93,16 @@ categories:
           現状でも表示テキストは残り可視なので優先度低。
         phase: 15
         proposal: design/generator/anchor-spec.md#未解決参照の扱い
+      B11:
+        title: node() のモード分離（segments escape / literal verbatim の API 分割）
+        note: >-
+          node() は「生セグメント（escape 要）」と「/-leading な出来合いパス（verbatim）」を
+          1 関数で兼ね、escape の有無が呼び出し側から見えない。A 群（見出しリンク, phase 12）が
+          verbatim 形 node("/prose/" ~ value) への依存を増やす前に、モードを別名へ分離して
+          escape 挙動を surface する。対象は build_anchor_path（/-leading 分岐）と全テンプレートの
+          node() 利用。A 群に着手する前に行う前提タスク。
+        phase: 11
+        proposal: design/generator/anchor-spec.md#node-のモード分離
 
   C:
     title: ページ分割 (paging)
