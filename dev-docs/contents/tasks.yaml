@@ -9,34 +9,30 @@ categories:
       A1:
         title: "{#id} 付き見出しの検出"
         note: markdown-it-py の AST 走査
-        phase: 13
+        phase: 12
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A2:
         title: セクション本文範囲の切り出し
         note: 次の同レベル以上の {#id} までを本文とする
-        phase: 13
+        phase: 12
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A3:
         title: ファイル単位 + セクション単位のダブル出力
         note: 既存の parse_markdown 拡張
-        phase: 13
+        phase: 12
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A4:
         title: セクション内見出しレベル正規化
         note: 最小レベルを H1 にシフト
-        phase: 13
+        phase: 12
         proposal: design/normalizer/markdown-parser-spec.md#セクション単位抽出-a1-a4
       A5:
         title: ソース内相対リンク → node 記法への変換
         note: contents_dir 基点パス解決が必要。出力は `node:` インライン形リンク、anchor_path の形式は anchor-spec.md の規則に従う
-        phase: 11
+        phase: 12
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5
       A6:
         title: under_heading フィルタ（見出し深さ調整）
-        note: >-
-          埋め込み Markdown の見出しを囲うレベルに合わせて下げるフィルタ。生成側に実装
-          (output_formats/heading_shift.py の純変換 + md.py のフィルタアダプタ)。文書直下の
-          ATX 見出しのみシフトし H6 で clamp。仕様は docs/reference/template.md#under_heading。
         phase: 11
         done: true
 
@@ -48,63 +44,38 @@ categories:
     tasks:
       B1:
         title: 親参照の注入 (`_parent` / `_parent_record`)
-        note: anchor 可能な全 Mapping / Array ノードに親参照を生やす。Mapping のみ `_parent_record` を併設
         phase: 11
         done: true
       B2:
         title: anchor_path → ノード マップ構築
-        note: full anchor_path をキーにしたフラットマップを wrap の 1 パスで構築 (`build_anchor_map`)。anchor フィルタおよび resolve フィルタが共有
         phase: 11
         done: true
       B3:
         title: ノードへの `_meta.anchor_path` / `_meta.object_type_id` 注入
-        note: anchor-spec の規則に従って各ノードの anchor_path と object_type_id を計算し `_meta` に格納。`_parent` チェーンを使う lazy 評価
         phase: 11
         done: true
       B4:
         title: anchor 解決・整形フィルタ (`anchor` / `link` / `label` / `href`)
-        note: '`anchor()` でアンカーパス/segments からアンカーを得て `link` / `label` / `href` が Markdown リンク / display text / URL を生成。source は `this`、resolver は静的 `(ReportsConfig, anchor_map)`'
         phase: 11
         done: true
       B5:
         title: prose body 処理フィルタ (`relink`)
-        note: >-
-          body 内の `node:` リンク (インライン形のみ) を表示先ページ相対 URL に置換する relink フィルタ。
-          pre-render・リンク解決の単一責務 (見出しは under_heading と合成)。未解決は表示テキストのみ残す
-          (link と同契約、警告は B10)。専用 MarkdownIt の normalizeLink 恒等化で生 href を得て splice。
-          設計は anchor-spec.md (prose body 処理フィルタ relink) / generator.md (B5)。
         phase: 11
         done: true
       B6:
         title: ページパスの導出 (ReportsConfig.page_path)
-        note: page_path は (node, file_per) の関数なのでノードに焼かず ReportsConfig.page_path(node) に置く。非 root の分割対象は anchor_path 先頭 / を落とし .md、root は index.md、非分割対象は最寄りの分割境界に解決。レポートルート相対 (reports/・profile 段は書き出し側 C3 が付与)。木の遡上は data_tree の free function nearest_ancestor(node, match) に切り出し、消費は B4/C4
         phase: 11
         done: true
       B7:
         title: IRI エスケープ関数 (anchor_path / as_url の共通化)
-        note: >-
-          エスケープを IRI 形 (RFC 3987 ucschar 生通し) にする共通関数 url_escape を generator/url.py に実装し、
-          data_tree の anchor_path 構築と md の as_url を差し替えた。関数名は方式 (IRI) でなく行き先 (URL) で命名。
-          設計・根拠・検証は anchor-spec.md#escape-規則 を正本とする。C3 が依存。
         phase: 11
         done: true
       B8:
         title: リンク語彙の振り直し (anchor → node rename)
-        note: >-
-          テンプレート公開名 anchor → node、anchor_path フィルタ削除。内部は「実体 → node /
-          住所文字列 → anchor_path / <a> 標識 → anchor」の原則で機械改名し、docs/reference/template.md を
-          同期。出力はバイト同一のはずなので showcase / dev-docs のビルド出力一致で検証する。
-          対応表は proposal の節を正本とする。
         phase: 11
         done: true
       B9:
         title: アンカー発行フィルタ (`| anchor`)
-        note: >-
-          ノードを受けて <a id="{anchor_path}"></a> を描画する受け側原始機能 (md_anchor、md 側
-          OutputFormat.link_filters)。href が常時付ける fragment の受け側 (契約の残り半分)。id は
-          ノード自身の anchor_path を流用し両端が構築上一致。MissingNode には何も発行しない (href と対称)。
-          config / @pass_context 不要 (ページ非依存)。author が手書きレンダリングで手置きする escape hatch。
-          mood_view 自動刻印 (C9) がこれを再利用。設計は anchor-spec.md#リンク記法。
         phase: 11
         done: true
       B10:
@@ -115,7 +86,7 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
-        phase: 11
+        phase: 15
         proposal: design/generator/anchor-spec.md#未解決参照の扱い
 
   C:
@@ -131,78 +102,46 @@ categories:
         done: true
       C2:
         title: file_per 設定の評価
-        note: クラスが分割対象か判定 (ReportsConfig.is_split_target)
         phase: 11
         done: true
       C3:
         title: page_path を実ファイルへ適用
-        note: >-
-          実ツリーノードの mood_view は ReportsConfig.page_path(node) で anchor 由来パスに分割出力
-          (reports/ 配下、導出は B6)。合成 dict (meta 診断) は当時 fallback だった (C11 で実ノード化・解消済み)。
-          starter/music/japanese/dev-docs に file_per を設定し手書きリンクを anchor 由来パスへ調整。
-          書き出し衝突は #258 の PageCollisionError が捕捉。
         phase: 11
         done: true
       C4:
         title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
-        note: >-
-          主題ノードの object_type_id を file_per と照合し、含まれれば分割（呼び出し位置に何も残さない）・
-          含まれなければインライン展開。親リンクは mood_view が出さず author が | link で別途書く
-          (two-loop パターン)。判定は当時二段だった: 実ノード → file_per / 合成 dict (meta 診断) → 既定
-          インライン、_split マーカーで分割 (template-keyed fallback)。C11 で meta も実ノード化し一段に統一済み。
         phase: 11
         done: true
       C5:
         title: プロファイル別の出力ディレクトリ規約
         note: "{outDir}/{profile}/index.md"
-        phase: 11
+        phase: 12
         proposal: design/generator/paging-spec.md#proposals
       C6:
         title: 複数プロファイルの並列ビルド
-        phase: 11
+        phase: 12
         proposal: design/generator/paging-spec.md#proposals
       C7:
         title: FS-safe パス書き出しの堅牢化 (write 時例外 → 改名診断)
         note: >-
           IRI エスケープ (B7) で潰せない FS 固有問題 (パス長/予約名/末尾文字/正規化等) を、write 時の
           OSError → ユーザ改名診断で扱う。対象と方針は anchor-spec.md#escape-規則 を参照。優先度低。
-        phase: 11
+        phase: 13
         proposal: design/generator/anchor-spec.md#escape-規則
       C8:
         title: inline キーワードの廃止
-        note: >-
-          file_per 機構導入後は型単位ポリシー (file_per から外す) でインライン意図を表現でき、
-          inline keyword との併存は「file_per 対象を call-site で inline 強制 → ページと本文の二重出力」
-          footgun を生む。starter の about-prose 1 箇所を file_per omission へ移行して廃止。
-          設計判断は paging-spec.md#ページパスと出力ディレクトリ 直前の背景注を参照。
         phase: 11
         done: true
       C9:
         title: mood_view 自動アンカー刻印
-        note: >-
-          mood_view（およびルートテンプレート）が描画する主題ノードのアンカー (<a id="{anchor_path}">) を
-          自動発行 (インラインはその場・分割/ルートはページ先頭)。two-loop パターンの同ページ内 fragment
-          着地を成立させる。実装は出力 format の post_process フック (md は stamp_anchor) を、全レンダ経路が
-          通る単一漏斗 TemplateEngine._render に置く。Hugo は raw HTML を既定で捨てるため hugo.toml の
-          unsafe=true も併せて要る。B9 と C4 に依存。設計は anchor-spec.md#mood_view-自動アンカー刻印。
         phase: 11
         done: true
       C10:
         title: meta 子テンプレへの root/entities threading 撤去
-        note: >-
-          meta 子テンプレ (__entity_data / __queries) が __root.md から root / entities を明示
-          threading されているのを廃し、node("/") 由来 (root = node("/")、schema =
-          node("/").__definition.entities) へ寄せる。合成 dict は _split + identity に痩せる。
-          主題のノード化 (C11) を待たず独立に出せる。先行・低リスク。
         phase: 11
         done: true
       C11:
         title: meta 主題の実ノード化 → _split マーカー撤去・page_path 一本化
-        note: >-
-          合成 dict を専用ビルトインクエリ (__entity_defs / __entity_data / __queries) の結果ノードに
-          置き換え、meta レンダリングを固定の内部 file_per (META_REPORTS_CONFIG) で分割。
-          template-keyed fallback と _split マーカーを撤去し、page_path 一本化・one-node-one-page を回復。
-          設計は paging-spec.md#meta-診断の分割。残る出力ディレクトリ集約は F9。
         phase: 11
         done: true
 
@@ -248,12 +187,12 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 13
+        phase: 15
         proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 13
+        phase: 15
         proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
 
   E:
@@ -335,7 +274,7 @@ categories:
           output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
           ディレクトリ名・対象範囲は実装時に確定。C11 で meta は実ノード化され各 __{view}/ は anchor 由来の
           page_path で出るので、F9 はそのアンカールート (= 出力ディレクトリ) を単一親の下へ寄せる。
-        phase: 13
+        phase: 15
 
   G:
     title: CLI / 設定システム
@@ -347,12 +286,12 @@ categories:
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
-        phase: 13
+        phase: 15
         proposal: design/app/config-spec.md#設定ファイル-g2
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
-        phase: 13
+        phase: 15
         proposal: design/app/config-spec.md#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
@@ -399,11 +338,11 @@ categories:
       J1:
         title: 計算機能プラグインの I/F 仕様検討
         note: 入出力 / 登録方法 / Composer か Generator のどこに挿すか
-        phase: 13
+        phase: 15
       J2:
         title: サンプル実装で I/F 検証
         note: 例 — ファンクションポイント算出
-        phase: 13
+        phase: 15
 
   L:
     title: dog-fooding リファクタ
@@ -432,7 +371,7 @@ categories:
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
-        phase: 13
+        phase: 15
         proposal: design/normalizer/schema-spec.md#title-キーワード-m4
       M5:
         title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
@@ -446,7 +385,7 @@ categories:
           normalize_data がそれを認識する形に拡張。query-schema.yaml の whereClause
           等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
           schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
-        phase: 13
+        phase: 15
         proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
       M7:
         title: user schema からの blob 型宣言の解放 (段階 3)
@@ -455,7 +394,7 @@ categories:
           段階 3。schema-schema.yaml に if/then で blob サブツリーを許容する
           ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
           実需が surface してから着手。前提 M6。
-        phase: 13
+        phase: 15
         proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
       M8:
         title: derive_queries 出力を canonical 形式で流す
@@ -470,10 +409,10 @@ categories:
     tasks:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
-        phase: 13
+        phase: 15
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 13
+        phase: 15
 
   O:
     title: バグ修正
@@ -489,13 +428,7 @@ categories:
         done: true
       O4:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
-        note: |
-          内蔵テンプレート (__entity_defs の attributes 表など) が任意
-          Mapping を Markdown テーブルセルにダンプする際、値にバック
-          クォートが含まれるとフェンスが内側で早期終了してセルが崩れる。
-          md output_format の code_inline / code_fenced が連続バック
-          クォートの最長 + 1 でフェンス長を動的に決めることで解消した。
-        phase: 13
+        phase: 11
         done: true
 
   P:
@@ -507,21 +440,10 @@ categories:
     tasks:
       P2:
         title: テンプレート参照の拡張子明示化
-        note: |
-          {% mood_view "name" %} 形式から {% mood_view "name.md" %} 形式へ
-          変更。コード側 (template_engine / mood_view_processor) は .md 付与を
-          止め、テンプレート著者がフルファイル名を書く。output_format 別
-          Environment 対応の前提整備を兼ねる。showcase / dev-docs / docs と
-          ユーザの全 mood_view 使用箇所に影響する破壊的変更。
         phase: 11
         done: true
       P3:
         title: mood_view 主題の this 束縛 (ノード受け取り + ページ identity 安定化)
-        note: >-
-          mood_view が主題を合成 dict でなくツリーノードとして受け取り、サブテンプレートに固定名 this で
-          束縛する (naming=this / spread=True 確定)。ページ identity が主題ノードの anchor_path で安定し、
-          B4/B5 の source-node プラミングや __views も簡約できる。設計・狙い・naming 根拠は
-          paging-spec.md の「テンプレート主題のノード受け取りと this 束縛」(External Design) を正本とする。C3 と相互作用、C11 と組んで __views 退役。
         phase: 11
         done: true
 
@@ -533,7 +455,7 @@ categories:
       Q1:
         title: PyPI 公開
         note: 詳細タスクは別途切り出す（ライセンス / README / メタデータ整備など）
-        phase: 12
+        phase: 14
 
   R:
     title: ユーザドキュメント・サンプルプロジェクト改善
@@ -599,27 +521,14 @@ categories:
     tasks:
       U1:
         title: output_format モデル基盤
-        note: |
-          OutputFormat 記述子 (name / escape / filters) と make_environment
-          factory を導入。Environment を autoescape=False + finalize フックで
-          構成し、素文字列に escape を適用する基盤を作る。Markup を返した
-          フィルタは finalize が素通しする契約。
         phase: 11
         done: true
       U2:
         title: md output_format の escape 関数
-        note: |
-          ASCII punctuation 一律 backslash escape (CommonMark 許容範囲)。
-          finalize から呼ばれる素文字列向け escape。
         phase: 11
         done: true
       U3:
         title: md 位置依存ヘルパ整備
-        note: |
-          ビルダ関数 code_inline(x) / code_fenced(x, lang) と transform
-          フィルタ x|in_cell / x|as_url の 4 ヘルパ。env.globals /
-          env.filters に auto-register、テンプレでは import 不要。
-          O4 を吸収、Hugo backslash → %5C バグも as_url で解消。
         phase: 11
         done: true
       U4:
