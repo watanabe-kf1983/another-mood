@@ -7,7 +7,7 @@
 - [product.md](background/product.md) — 製品ビジョンとコア設計判断
 - [another-mood-original.md](background/another-mood-original.md) — 初期構想（要件定義ツール時代）
 
-ロードマップ（Phase 8 以降の計画）は生成物の [roadmap.md](node:/roadmap) を参照。
+Phase 10 以降のロードマップは[こちら](node:/roadmap)を参照。
 
 ## design
 

@@ -123,5 +123,5 @@ properties:
 
 ### `title:` キーワード (M4)
 
-ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](../../../tasks.md)。
+ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](node:/tasks/M/tasks/M4)。
 

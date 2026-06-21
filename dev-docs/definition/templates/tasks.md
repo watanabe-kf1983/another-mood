@@ -3,7 +3,7 @@
 残タスクを機能カテゴリ別に整理したもの。各タスクは実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は {{ node("/roadmap") | link("ロードマップ") }} を参照。完了済みタスクは記載しない（git log を参照）。
 
 {% for category in this %}
-## {{ category.id }}. {{ category.title }}
+## {{ category.id }}. {{ category.title }}{{ category | anchor }}
 
 **実装箇所:**
 
@@ -18,11 +18,11 @@
 | ID | タスク | Proposal | 備考 | Phase | Done |
 |---|---|---|---|---|---|
 {% for task in category.tasks %}
-    {{- "" }}| {{ task.id }}
+    {{- "" }}| {{ task.id }}{{ task | anchor }}
     {{- "" }} | {{ task.title }}
     {{- "" }} | {% if task.proposal %}[→](prose/{{ task.proposal | as_url }}){% endif %}
     {{- "" }} | {{ task.note | replace('\n', ' ') | trim }}
-    {{- "" }} | {{ task.phase }}
+    {{- "" }} | {{ node("roadmap", task.phase) | link(task.phase) }}
     {{- "" }} | {{ "✅" if task.done else "" }}
     {{- "" }} |
 {% endfor %}

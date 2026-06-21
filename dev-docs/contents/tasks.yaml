@@ -271,20 +271,8 @@ categories:
         title: sort 句の仕様詰め + 実装
         phase: 10
         done: true
-      E11:
-        title: クエリ DSL 拡充前半 (flatten 句導入 + from 厳密化)
-        phase: 10
-        done: true
       E3:
         title: クエリ DSL 拡充後半 (join 句導入 + where 射程統一)
-        phase: 10
-        done: true
-      E9:
-        title: catalog データモデルの依存方向反転 (Node primary)
-        phase: 10
-        done: true
-      E8:
-        title: "`from:` パス解決の最長一致化"
         phase: 10
         done: true
       E6:
@@ -295,8 +283,20 @@ categories:
           上書きする事故が起きる。重複を検知してエラーにする。
         phase: 13
         proposal: design/composer/queries-spec.md#同名禁止-e6
+      E8:
+        title: "`from:` パス解決の最長一致化"
+        phase: 10
+        done: true
+      E9:
+        title: catalog データモデルの依存方向反転 (Node primary)
+        phase: 10
+        done: true
       E10:
         title: singleton-flatten 内の object[] を child entity link として保持
+        phase: 10
+        done: true
+      E11:
+        title: クエリ DSL 拡充前半 (flatten 句導入 + from 厳密化)
         phase: 10
         done: true
 

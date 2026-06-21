@@ -7,7 +7,7 @@
 設定は以下の順序でマージされる（後のものが優先）:
 
 1. デフォルト値
-2. 設定ファイル（未実装 — [G2](../../../tasks.md)）
+2. 設定ファイル（未実装 — [G2](node:/tasks/G/tasks/G2)）
 3. 環境変数
 4. CLI 引数
 
@@ -21,13 +21,13 @@
 
 ### render.customServer.command (G3)
 
-> **未実装** — Phase 10 タスク [G3](../../../tasks.md)。
+> **未実装** — Phase 10 タスク [G3](node:/tasks/G/tasks/G3)。
 
 カスタムレンダリングサーバのコマンドを設定すると、Hugo の代わりに使用される。詳細は下表。
 
 ### 処理対象ディレクトリの CWD 配下制約 (G8)
 
-> **未実装** — タスク [G8](../../../tasks.md)。
+> **未実装** — タスク [G8](node:/tasks/G/tasks/G8)。
 
 `<projectDir>` 引数および `RB_*` で渡されるパスは、CWD 配下のみを許可する。CWD 外のパス（`../other-repo/docs` や絶対パス `/some/elsewhere/docs` 等）はエラーとして拒否する。
 
