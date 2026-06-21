@@ -231,6 +231,61 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 ## Proposals
 
+### node() のモード分離
+
+> **未実装** — Phase 11 タスク [B11](node:/tasks/B/tasks/B11)。A 群（見出しリンク）に着手する前に行う前提。
+
+`node()` は二種類の入力を1関数で兼ねている:
+
+- **生セグメント値**（`node("erds", id)`）→ パス安全化のため各セグメントを `url_escape`
+- **`/`-leading な出来合いパス**（`node("/prose/X")`）→ 既にアドレスなので **verbatim**（`data_tree_filters.py` の `build_anchor_path`）
+
+escape の有無が **入力の種類で決まるのに呼び出し側から見えない**（`/` 始まりか否かの暗黙ルールでしか判別できない）。見出しリンクが verbatim 形 `node("/prose/" ~ value)`（`#` 入りパス）への依存を増やすため、A 群の前に **モードを別名へ分離**し、escape 挙動を呼び出し側に surface する案。
+
+当初 `anchor_path(seg, *segs)` を別名で公開していたが実需が出ず外した経緯（[リンク記法](#リンク記法)）もあり、命名は再検討する。全テンプレートの `node()` 利用が対象で blast radius は広い。
+
+### 見出しノード (A3, A4)
+
+> **未実装** — [markdown-parser-spec.md の見出し抽出](../normalizer/markdown-parser-spec.md#見出し抽出-a1-a2)（タスク [A1〜A5](node:/tasks/A/tasks/A1)）で導入。本節は anchor 側の住所付けとリンク解決への波及を定める。
+
+prose 本文中の見出しを **node（リンクの宛先）** として扱う。データツリー上は prose レコード配下の `headings` リスト要素なので、既存の「ネストしたリスト要素 = node」規則にそのまま乗る。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
+
+#### アンカーパス: `/prose/X#slug`
+
+見出しノードの anchor_path は **`<prose レコードの anchor_path>#<github-slug>`**（例 `/prose/design/normalizer/architecture#エラー処理`）。
+
+- `#` は **構造的セパレータ**で、`/` と同様に raw で挿入し `url_escape` に通さない。slug は github 互換で `#` を含まず、prose id はファイルパスで `#` は `%23` に escape される。したがって anchor_path 中のリテラル `#` は **見出し区切りの一個だけ** で、`rsplit("#", 1)` が常にページ部と見出し slug に割れる
+- 中間の `headings` セグメントは畳む（`/prose/X/headings/slug` でなく `/prose/X#slug`）。[anchor_path 構築](#id-体系) で、[Prose の例外](#prose-の例外)（`safe="/"` 分岐）の隣にもう一つ分岐を置き、見出しノードは親 prose レコードの anchor_path に `#` + slug を繋ぐ
+
+resolver は無変更 — anchor_path 文字列をキーにした辞書引き（`build_node_map`）のまま、見出しノードもそのキーで解決される。
+
+#### Prose の例外への追補
+
+[Prose の例外](#prose-の例外) は「prose は sub-entity を持たない」を前提に `prose/` 以降を単一 id として扱うが、見出し導入で prose は派生 sub-entity（`headings`）を持つ。不変条件は **`#` が境界** であることで保たれる: `prose/<id>` から `#` の手前までが単一 id（従来どおり）、`#` 以降がページ内見出し。`/`-曖昧性は生じない。
+
+#### 出力 URL の fragment 規則の一般化
+
+[出力 URL の形式](#出力-url-の形式) の「fragment = target ノードの anchor_path 全体」を次に一般化する:
+
+> **fragment = anchor_path の最後の `#` 以降。`#` が無ければ anchor_path 全体。**
+
+- データノード `/prose/X` → fragment `/prose/X`（全体。mood_view が刻む `<a id="/prose/X">` に着地）
+- 見出しノード `/prose/X#エラー処理` → fragment `エラー処理`（`#` 以降。Goldmark/GitHub が見出しに打つ native id `<h2 id="エラー処理">` に着地）
+
+#### 見出しは stamp しない（native id 着地）
+
+データノードのアンカー（`<a id="{anchor_path}">`）は mood_view / `| anchor` が **刻む** — 合成 id はどのレンダラも自動生成しないため。見出しの id は逆に **Goldmark/GitHub が native で打つ** ので刻まない（自前で刻むと native id と重複 id になる）。住み分け: **合成 id（ノード）は刻む／自然 id（見出し）は renderer 任せ**。したがって見出しノードは [mood_view 自動アンカー刻印](#mood_view-自動アンカー刻印) や `| anchor` の対象外。
+
+#### node: 本文参照の fragment
+
+[Markdown 本文中のアンカー参照](#markdown-本文中のアンカー参照) の `node:` 記法は、見出しを URI の fragment で運ぶ:
+
+```markdown
+[エラー処理](node:/prose/design/normalizer/architecture#エラー処理)
+```
+
+path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す。`relink` はページをノード解決し、上記 fragment 規則で `#エラー処理` を出力 URL に乗せる。これは A7（見出し fragment 対応）がソース相対リンク `[t](architecture.md#エラー処理)` から生成する中間形でもある（[markdown-parser-spec.md のリンク正規化](../normalizer/markdown-parser-spec.md#リンク正規化-a5-a7)）。見出しが対象 prose に無ければ MissingNode として可視化（[未解決参照の扱い](#未解決参照の扱い)）。
+
 ### 未決事項
 
 - **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（[F4 / D 群と連携、未タスク化](node:/tasks/F/tasks/F4a)）
