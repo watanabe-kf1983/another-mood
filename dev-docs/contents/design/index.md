@@ -14,21 +14,21 @@
 
 ## normalizer
 
-- [schema-spec.md](normalizer/schema-spec.md) — スキーマの設計判断（Entity/ObjectType、コンポジション vs 集約）と未実装 references
-- [markdown-parser-spec.md](normalizer/markdown-parser-spec.md) — Markdown パーサーの設計判断と未実装機能（A1〜A5；A6 見出し深さフィルタは generator.md）
+- [schema-spec.md](normalizer/schema-spec.md) — スキーマの設計判断（Entity/ObjectType、x-ref 参照整合性、コンポジション vs 集約）と未実装の表示名 title（M4）
+- [markdown-parser-spec.md](normalizer/markdown-parser-spec.md) — Markdown パーサーの設計判断と未実装機能（セクション抽出 A1〜A4、リンク正規化 A5）
 - [normalizer.md](normalizer/normalizer.md) — Normalizer 全般の未実装機能（H1, H2 / D8, D9）
 
 ## composer
 
-- [queries-spec.md](composer/queries-spec.md) — クエリ DSL の設計判断と未実装機能（E1〜E6）
+- [queries-spec.md](composer/queries-spec.md) — クエリ DSL の設計判断と未実装機能（同名禁止 E6）
 
 ## generator
 
-- [template-spec.md](generator/template-spec.md) — テンプレートの設計判断（ChainableUndefined）と未実装機能（C4）
+- [template-spec.md](generator/template-spec.md) — テンプレートの設計判断（ChainableUndefined）
 - [anchor-spec.md](generator/anchor-spec.md) — アンカー（アンカーパス体系、リンク記法、リンク解決）
 - [paging-spec.md](generator/paging-spec.md) — ページ分割（paging.yaml、プロファイル、分割ルール）
-- [generator.md](generator/generator.md) — Generator 内部設計（内蔵ルートテンプレート、Reconcile）と未実装機能（B1, B3〜B6 ノードメタデータ・リンク解決、A6 見出し深さフィルタ等）
-- [output-format-spec.md](generator/output-format-spec.md) — テンプレートエンジンの出力フォーマット別 escape 機構（output_format モデル、ラッパーフィルタ）の未実装設計
+- [generator.md](generator/generator.md) — Generator 内部設計（内蔵ルートテンプレート、ノードメタデータ、リンク解決、ページパス、Reconcile）と未実装機能（relink の暗黙適用）
+- [output-format-spec.md](generator/output-format-spec.md) — テンプレートエンジンの出力フォーマット別 escape 機構（output_format モデル、ラッパーフィルタ）の設計と未実装の将来フォーマット（html / adoc / mermaid 等）
 
 ## app
 

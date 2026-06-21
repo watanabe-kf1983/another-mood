@@ -10,7 +10,7 @@
 - **アンカーパス (anchor path)**: そのノードを一意に識別する文字列（データツリー上の住所）。本ツールが生成する。URL fragment として URL に埋め込まれる
 - **アンカー (anchor)**: HTML/Markdown の anchor target（`<a id="…">`）。リンクを受け止めるページ上の標識で、id にはアンカーパスを使う。mood_view が描画ノード（主題）に自動で刻むほか、`node | anchor` フィルタで手置きもできる（[リンク記法](#リンク記法) 参照）
 
-> **背景: 語彙の振り直し — 旧「ノード = アンカー」定義の廃止.** 当初は「リンクされ得る対象」をアンカーと呼んでデータツリー上の各ノードと同一視し、リゾルバ関数も `anchor()` と命名していた。しかし `link` / `label` / `href` は「ノードを受けて、そのノードの何かを描画する」フィルタ族で、アンカーターゲット (`<a id>`) を描画する将来フィルタの自然な名前は `data | anchor` — `<a id>` / `<a href>` の両面が `anchor` / `href` という対の名前で揃う。そこで anchor の語は HTML 本来の意味（受け側の標識）に予約し、リゾルバは「アンカーパスを解決して得られるもの」の名 — ノード — で `node()` とした。node / data tree は利用者向けリファレンス (docs/reference/template.md の Anchor paths 節) が先行して採用していた語彙でもある。rename の対応表は [語彙の振り直しと rename (B8)](#語彙の振り直しと-rename-b8) を参照。
+> **背景: なぜリゾルバを `node()` と呼ぶか.** `link` / `label` / `href` は「ノードを受けて、そのノードの何かを描画する」フィルタ族で、アンカーターゲット (`<a id>`) を描画するフィルタの自然な名前は `data | anchor` — `<a id>` / `<a href>` の両面が `anchor` / `href` という対の名前で揃う。そこで anchor の語は HTML 本来の意味（受け側の標識）に予約し、リゾルバは「アンカーパスを解決して得られるもの」の名 — ノード — で `node()` とした。node / data tree は利用者向けリファレンス ([docs/reference/template.md](../../../../docs/reference/template.md) の Anchor paths 節) が先行して採用していた語彙でもある。
 
 ### ID 体系
 
@@ -171,7 +171,7 @@ display text は対象ノードから `title` → `name` → `id` → anchor_pat
 
 ### Markdown 本文中のアンカー参照
 
-> Phase 11 タスク [B5](../../../tasks.md) で実装（prose body `relink` フィルタ）。テンプレート側のリンク解決・整形フィルタ (B4) は [リンク記法](#リンク記法) を参照。
+> テンプレート側のリンク解決・整形フィルタは [リンク記法](#リンク記法) を参照。
 
 prose body 等の Markdown 本文では、リンク先に `node:` スキーム + アンカーパスを書いてノードを参照する。**インラインリンク形のみ**を対象とする:
 
@@ -203,7 +203,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 #### scheme 名を `node:` とする背景
 
-リンク先の実体をテンプレートでは `node()` で解決する（B8 の語彙振り直し）。本文側の scheme も同じ語に揃え、`[x](node:/…)` ↔ `node("/…") | link` を一目で対応づけられるようにする。`anchor` は受け側（`<a id>`）に予約済みなので scheme には使わない。`node:` は実在 URI スキームと衝突しない。アンカーパス参照以外の内部 URL を将来挟む場合は、傘名前空間（`mood:` 等）でなく種類ごとに別 scheme を立てる方針。
+リンク先の実体をテンプレートでは `node()` で解決する。本文側の scheme も同じ語に揃え、`[x](node:/…)` ↔ `node("/…") | link` を一目で対応づけられるようにする。`anchor` は受け側（`<a id>`）に予約済みなので scheme には使わない。`node:` は実在 URI スキームと衝突しない。アンカーパス参照以外の内部 URL を将来挟む場合は、傘名前空間（`mood:` 等）でなく種類ごとに別 scheme を立てる方針。
 
 ### prose body 処理フィルタ `relink`
 
@@ -215,17 +215,17 @@ prose body 中の `node:` リンク先を、表示先ページからの相対 UR
 
 author の明示適用を最低線とする（schema が prose body 型を宣言していればアクセス時に自動処理する暗黙適用は別タスク）。
 
-未解決の `node:` 参照（マップに無いアンカーパス）は、`link` フィルタの MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）に倣い、**表示テキストを角括弧で囲んでリンク先を外す**（`[text](node:/missing)` → `[text]`）。死んだ `node:` リンクとして出力して「動くリンクの偽装」にしない。ビルドレポートへの警告は `link` 側と揃えて [B10](../../../tasks.md) で後日扱う。実装機構は [generator.md の B5](generator.md#prose-body-処理フィルタ-b5) を正本とする。
+未解決の `node:` 参照（マップに無いアンカーパス）は、`link` フィルタの MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）に倣い、**表示テキストを角括弧で囲んでリンク先を外す**（`[text](node:/missing)` → `[text]`）。死んだ `node:` リンクとして出力して「動くリンクの偽装」にしない。ビルドレポートへの警告は `link` 側と揃えて [B10](../../../tasks.md) で後日扱う。実装機構は [generator.md の prose body 処理フィルタ](generator.md#prose-body-処理フィルタ) を正本とする。
 
 ## Internal Design
 
 ### リンク解決
 
-リンク解決の内部配線はこの文書では持たない。フィルタの 2 群構成（中立 `node` / `label` とフォーマット固有 `link` / `href` / `anchor`）・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断は [generator.md のリンク解決](generator.md#リンク解決-b4-b5) と [ページパスの導出](generator.md#ページパスの導出-b6) を正本とする。実装レベルの契約 — `link` / `href` に `@pass_context` が要る二つの理由（source 取得と定数畳み込み抑止）、`anchor` は両方とも不要（id はノード自身の anchor_path だけで決まりページ非依存）、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
+リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](generator.md#リンク解決) と [ページパスの導出](generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_context` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
 
 ### アンカー (`<a id>`) の raw HTML レンダリング (Hugo unsafe)
 
-`node | anchor`（B9）と mood_view 自動刻印（C9）が出す着地点は **raw HTML** の `<a id="…">`。Hugo の Goldmark は既定（`markup.goldmark.renderer.unsafe = false`）で raw HTML を `<!-- raw HTML omitted -->` に潰すため、bundled `resources/hugo/hugo.toml` で **`unsafe = true`** を設定している。これが無いと fragment の着地点が描画されず、リンクはページには着くがノード位置までジャンプしない。
+`node | anchor` と mood_view 自動刻印が出す着地点は **raw HTML** の `<a id="…">`。Hugo の Goldmark は既定（`markup.goldmark.renderer.unsafe = false`）で raw HTML を `<!-- raw HTML omitted -->` に潰すため、bundled `resources/hugo/hugo.toml` で **`unsafe = true`** を設定している。これが無いと fragment の着地点が描画されず、リンクはページには着くがノード位置までジャンプしない。
 
 > **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
 

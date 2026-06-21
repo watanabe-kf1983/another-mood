@@ -1,15 +1,15 @@
-"""Shift a Markdown fragment's headings to nest under an enclosing level (A6).
+"""Shift a Markdown fragment's headings to nest under an enclosing level.
 
 This is the string transform; ``md.py`` exposes it as the ``under_heading``
 template filter, adapting the filter boundary (coercing the piped value to
 ``str``, marking the result safe).
 
-The generation-time counterpart of the parser's H1 normalization (A4): A4
-levels a fragment's headings so its top is H1; this shifts that fragment down
-to sit under the heading the author wrote it beneath.  The shift composes
-additively across nested embeds — each boundary shifts only its own direct
-output by one level's worth, so cumulative depth never has to be threaded
-through.
+The generation-time counterpart of the parser's H1 normalization: that
+normalization levels a fragment's headings so its top is H1; this shifts
+that fragment down to sit under the heading the author wrote it beneath.
+The shift composes additively across nested embeds — each boundary shifts
+only its own direct output by one level's worth, so cumulative depth never
+has to be threaded through.
 
 The shift works off the Markdown AST (markdown-it-py), not a raw ``^#+``
 substitution: only real ATX heading nodes are rewritten, which is what lets

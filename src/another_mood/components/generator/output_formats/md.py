@@ -80,7 +80,7 @@ def dedent(text: str) -> str:
 
 
 def under_heading(value: object, marker: str) -> Markup:
-    """Filter adapter for :func:`.heading_shift.under_heading` (A6).
+    """Filter adapter for :func:`.heading_shift.under_heading`.
 
     The filter boundary is this format's concern, not the transform's: Jinja
     pipes in arbitrary values, so coerce to ``str``; the shifted Markdown is
@@ -135,7 +135,7 @@ def md_anchor(a: object) -> Markup:
 
 
 def stamp_anchor(rendered: str, subject: object) -> str:
-    """Stamp the subject node's anchor at the top of its rendered output (C9).
+    """Stamp the subject node's anchor at the top of its rendered output.
 
     A render is the one point where the system knows a node is drawn here, so
     it drops the ``| anchor`` landing point automatically (split page: top;
