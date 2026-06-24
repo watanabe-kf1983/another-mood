@@ -15,7 +15,7 @@
 ## normalizer
 
 - [schema-spec.md](normalizer/schema-spec.md) — スキーマの設計判断（Entity/ObjectType、x-ref 参照整合性、コンポジション vs 集約）と未実装の表示名 title（M4）
-- [markdown-parser-spec.md](normalizer/markdown-parser-spec.md) — Markdown パーサーの設計判断と未実装機能（見出し抽出・参照整合性 A1〜A2、リンク正規化 A5。見出しノードの住所付けは anchor-spec.md A3〜A4）
+- [markdown-parser-spec.md](normalizer/markdown-parser-spec.md) — Markdown パーサーの設計判断と未実装機能（見出し抽出 A1、リンク正規化 A5/A7。見出しノードの住所付けは anchor-spec.md A3〜A4）
 - [normalizer.md](normalizer/normalizer.md) — Normalizer 全般の未実装機能（H1, H2 / D8, D9）
 
 ## composer

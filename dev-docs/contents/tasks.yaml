@@ -8,14 +8,9 @@ categories:
     tasks:
       A1:
         title: 見出し抽出 → prose.headings 生成
-        note: prose body から見出しを採り nested な headings リストを生成。id=github-slug（dedup）、title=見出しテキスト、level。{#id} は使わない
+        note: prose body から見出しを採り nested な headings リストを生成。id=github-slug（dedup）、title=見出しテキスト、level。{#id} は使わない。FK 用の派生 entity は作らず、見出しリンクの妥当性は Generate で検証する
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#見出し抽出-a1-a2
-      A2:
-        title: prose_headings 派生トップレベル entity の生成
-        note: 見出しを <prose-id>#<slug> を id とするトップレベル派生 entity として materialize。prose を x-ref。FK ターゲット兼横断クエリ用の索引
-        phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#見出し抽出-a1-a2
+        proposal: design/normalizer/markdown-parser-spec.md#見出し抽出-a1
       A3:
         title: 見出しノードの anchor_path 構築（#-形）
         note: nested 見出しの anchor_path を /prose/X#slug に組む分岐。prose の /-例外の隣。# は構造的セパレータで escape しない
@@ -37,7 +32,7 @@ categories:
         done: true
       A7:
         title: "node 記法変換の `#fragment` 対応（見出しリンク）"
-        note: "A5 の変換で `path.md#見出し-slug` の `#見出し-slug` を `node:` URI の fragment として素通し。見出しノード（A1〜A4）が解決可能になってから。fragment は再 slug せず素通し"
+        note: "A5 の変換で `path.md#見出し-slug` の `#見出し-slug` を `node:` URI の fragment として素通し。見出しノード（A1, A3, A4）が解決可能になってから。fragment は再 slug せず素通し"
         phase: 12
         proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5-a7
 
