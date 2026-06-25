@@ -233,16 +233,68 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 ### node() のモード分離
 
-> **未実装** — Phase 11 タスク [B11](node:/tasks/B/tasks/B11)。A 群（見出しリンク）に着手する前に行う前提。
+> **未実装** — Phase 11 タスク [B11](node:/tasks/B/tasks/B11)。A 群（見出しリンク）に着手する前の前提タスク。方針は合意済みで、実装は別セッションで行う。本節はその引き継ぎメモ。
 
-`node()` は二種類の入力を1関数で兼ねている:
+#### 解く問題
+
+現状 `node()` は二種類の入力を 1 関数で兼ねている（実装は `data_tree_filters.py` の `build_anchor_path`）:
 
 - **生セグメント値**（`node("erds", id)`）→ パス安全化のため各セグメントを `url_escape`
-- **`/`-leading な出来合いパス**（`node("/prose/X")`）→ 既にアドレスなので **verbatim**（`data_tree_filters.py` の `build_anchor_path`）
+- **`/`-leading な出来合いパス**（`node("/prose/X")`）→ 既にアドレスなので **verbatim**
 
-escape の有無が **入力の種類で決まるのに呼び出し側から見えない**（`/` 始まりか否かの暗黙ルールでしか判別できない）。見出しリンクが verbatim 形 `node("/prose/" ~ value)`（`#` 入りパス）への依存を増やすため、A 群の前に **モードを別名へ分離**し、escape 挙動を呼び出し側に surface する案。
+判別は「第 1 引数が `/` 始まりか」という暗黙ルールだけで、**escape の有無が呼び出し側から見えない**。A 群（見出しリンク）が verbatim 形（`#` 入りパス）への依存を増やす前に、モードを呼び出し側に surface する。
 
-当初 `anchor_path(seg, *segs)` を別名で公開していたが実需が出ず外した経緯（[リンク記法](#リンク記法)）もあり、命名は再検討する。全テンプレートの `node()` 利用が対象で blast radius は広い。
+#### 決定: 位置引数 = セグメント / キーワード = verbatim
+
+別名関数（`node_at` 等）を立てず、**同じ `node` をキーワード引数で多態**させる:
+
+```jinja2
+node("members", id)                          {# segments: 各 url_escape → 引く。最多の既定 #}
+node(path="/prose/X")                        {# verbatim: 出来合いアンカーパスを素通し #}
+node(path="/prose/X", fragment="エラー処理")  {# path + "#" + slug。見出しノード（A 群で追加）#}
+```
+
+契約:
+
+- **位置 `segs` と `path=` は排他**（両方指定・どちらも無し はエラー）。
+- **位置引数に `/` 始まりが来たらエラー**にして `path=` を案内する。これが旧来の暗黙の `/` 判定の置き換え本体 — エンティティ/クエリ名は識別子パターンで `/` 始まり不可（[リンク記法](#リンク記法)）なので、`/` 始まりの位置引数は誤用と断定できる。
+- `fragment` は `path` とセットのみ（`fragment` 単独はエラー）。
+- `path` / `fragment` は **`url_escape` しない**（既に address 形）。`fragment` は `#` を **raw** で前置して `path` に繋ぐ。`#` は構造的セパレータで slug は github 互換ゆえ `#` を含まない（見出しノードの anchor_path 規約。本節下の [見出しノード (A3, A4)](#見出しノード-a3-a4) を参照）。
+- 結果のアンカーパス文字列で `node_map` を辞書引きする点は不変（`resolve_node` / `build_node_map` は無変更でよい。差し替えるのは `build_anchor_path` の `/` 判定分岐だけ）。
+
+#### なぜ別名でなく kwargs か（検討の結論）
+
+- **単一名を保てる** — `[x](node:/…)` ↔ `node(...)` のスキーム↔リゾルバ対応が完全に残る（[scheme 名を node: とする背景](#scheme-名を-node-とする背景) の設計判断を崩さない）。
+- **引数の“形”を部品ごとに名指す** — 接尾辞案 `node_at` は「at（どこに）」という関係を表すだけで、括弧に何を入れるか（セグメント列か 1 本のパスか）を説明しない。`path=` / `fragment=` は各部品の役割を直接名指すので、surface の目的に最も叶う。
+- **見出しへ前方互換** — 見出しは anchor_path 上 `headings` を畳んだ `/prose/X#slug` 形（[見出しノード (A3, A4)](#見出しノード-a3-a4)）で、セグメント形では原理的に届かない（`#` が `%23` に escape され `node_map` に無い）。`node(path=, fragment=)` なら新関数を足さず **kwarg 一個**で A 群が乗る。
+- **pipe 形の障害が無い** — kwarg はパイプ（`x | node`）では割れないが、`| node` のフィルタ実利用はテンプレ全数 grep でゼロ。実装で `node` のフィルタ登録を外し **global 専用**にすれば、障害自体が消える。
+
+棄却した案（蒸し返し防止に記録）:
+
+- `node_at("/…")` — `at` が引数の形を説明しない（落選の決め手）。
+- `node_by_path` / `node_from_path` — 形は名指せるが、見出しで `path` 文字列連結に逆戻りし、kwarg の `fragment=` 合成に劣る。
+- `node` を verbatim 既定にしてセグメント側を `node_segs` に — 鏡は完全だが、最多操作（セグメント）が長い名になり既定が裏返る。
+
+#### 実装セッション向けチェックリスト
+
+B11 で行う:
+
+1. `build_anchor_path`（`data_tree_filters.py`）の `/`-leading 分岐を `node(*segs, path=None)` のシグネチャに置換。位置 `segs` は従来どおり各 `url_escape`、`path` は verbatim。排他・`/`-始まり位置引数エラーを実装。
+2. `node` を globals 専用に（`filters_map` から `node` を外す。`label` / `child` はフィルタのまま）。
+3. テンプレートの **verbatim 利用を全て `node(path="…")` へ移行**:
+    - dev-docs テンプレート: `definition/templates/index.md`・`tasks.md`（`node("/roadmap")`, `node("/prose/" ~ category.spec)`）・`roadmap.md`（`node("/tasks")`）
+    - meta テンプレート（`resources/templates/meta/`）: `node("/__definition/entities")`, `node("/")` 各所
+    - セグメント形（`node("members", id)` 等）は無改修。showcase はほぼ無改修。
+4. External Design の追従:
+    - [リンク記法](#リンク記法) の `node(seg, *segs)` 記述と「関数形・フィルタ形（`"/..." | node`）の両用」を、kwarg 契約・global 専用に書き換える。
+    - 利用者向け `docs/reference/template.md` の Anchor paths / `node` 節を同期。
+5. テスト追加（`components/generator`）: 位置=escape / `path=`=verbatim / 排他エラー / `/`-始まり位置引数エラー。
+
+A 群（見出し）で行う（B11 では**やらない**）:
+
+- `fragment=` を `node()` に追加（`path` に `#` + slug を raw 連結）。見出しノードが `node_map` に載ってから実装・テストできる。本節のシグネチャはこの追加を素直に受けられる形にしておく。
+
+実装が済んだらこの Proposals 節は削除し、確定仕様は [リンク記法](#リンク記法)（External Design）と `data_tree_filters.py` の docstring に移す。
 
 ### 見出しノード (A3, A4)
 
