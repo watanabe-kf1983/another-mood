@@ -128,10 +128,10 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 
 ```jinja2
 {{ node("erds", erd.id, "entities", entity.id) | link }}
-{# segments からノードを解決 → [<display>](<URL>) の Markdown リンク #}
+{# 位置引数 = 生セグメント（各 escape）→ ノード解決 → [<display>](<URL>) #}
 
-{{ node("/erds/user-management/entities/user") | link }}
-{# 第一引数が `/` 始まり → 出来合いのアンカーパスとして解決（prose / 定数）#}
+{{ node(path="/erds/user-management/entities/user") | link }}
+{# path= = 出来合いのアンカーパスを verbatim 解決（prose / 定数）#}
 
 {{ member | link }}
 {# すでに手にあるノードはそのまま整形できる #}
@@ -142,7 +142,11 @@ class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および O
 {{ member | anchor }}                {# <a id="…"> 着地点を発行 #}
 ```
 
-- `node(seg, *segs)` — segments（各セグメントを escape）か、`/` 始まりの出来合いアンカーパスから、**ノード**を得る。関数形・フィルタ形（`"/..." | node`）の両用。第一引数の `/` 始まりで raw 判定するのは安全 — エンティティ/クエリ名は識別子パターン（`/` 始まり不可、schema-schema / query-schema の `propertyNames`）に縛られるため。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
+- `node(*segs, path=None)` — **ノード**を得る global 関数。引くアンカーパスを位置引数と `path=` の二部品から組み、**どちらが escape されるかが呼び出し側から見える**:
+    - **位置引数 `segs`**: 生の値を各 **escape** し、`/seg` の形で後置する（最多の既定）。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
+    - **`path=`**: 出来合いのパス（prose id・定数・root `/`）を **verbatim** に前置する。
+    - **併用**: `path=` を base に `segs` でその子を掘れる（`node("y", path="/prose/x")` → `/prose/x/y`）。片方だけでもよい。
+    - **誤用は例外にしない**: 解決できないアンカーパスは MissingNode として可視化する（例: `/` 始まりの値を位置引数に渡すと `/%2F…` に escape され一致しない。[未解決参照の扱い](#未解決参照の扱い)）。
 - `link` / `label` / `href` — ノード → Markdown リンク / 表示文字列 / URL。
 - `anchor` — ノード → そのノードの着地点 `<a id="{anchor_path}">`。`href` が常時付ける fragment（[出力 URL の形式](#出力-url-の形式)）の受け側。id にはノード自身の anchor_path をそのまま使う（href の fragment と同一文字列なので両端が構築上一致する）。通常は mood_view が主題に自動で刻む（[mood_view 自動アンカー刻印](#mood_view-自動アンカー刻印)）ため、本フィルタは主題以外のノードに着地点を手置きするための原始機能。未解決参照（MissingNode）には何も発行しない（`href` が空を返すのと対称）。
 
@@ -181,7 +185,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 この記法は二役を兼ねる:
 
-1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node("/…") | link`（[リンク記法](#リンク記法)）の本文版で、解決後は同じ `[display](URL)` になる
+1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node(path="/…") | link`（[リンク記法](#リンク記法)）の本文版で、解決後は同じ `[display](URL)` になる
 2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
 
 ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照):
@@ -203,7 +207,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 #### scheme 名を `node:` とする背景
 
-リンク先の実体をテンプレートでは `node()` で解決する。本文側の scheme も同じ語に揃え、`[x](node:/…)` ↔ `node("/…") | link` を一目で対応づけられるようにする。`anchor` は受け側（`<a id>`）に予約済みなので scheme には使わない。`node:` は実在 URI スキームと衝突しない。アンカーパス参照以外の内部 URL を将来挟む場合は、傘名前空間（`mood:` 等）でなく種類ごとに別 scheme を立てる方針。
+リンク先の実体をテンプレートでは `node()` で解決する。本文側の scheme も同じ語に揃え、`[x](node:/…)` ↔ `node(path="/…") | link` を一目で対応づけられるようにする。`anchor` は受け側（`<a id>`）に予約済みなので scheme には使わない。`node:` は実在 URI スキームと衝突しない。アンカーパス参照以外の内部 URL を将来挟む場合は、傘名前空間（`mood:` 等）でなく種類ごとに別 scheme を立てる方針。
 
 ### prose body 処理フィルタ `relink`
 
@@ -230,71 +234,6 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 > **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
 
 ## Proposals
-
-### node() のモード分離
-
-> **未実装** — Phase 11 タスク [B11](node:/tasks/B/tasks/B11)。A 群（見出しリンク）に着手する前の前提タスク。方針は合意済みで、実装は別セッションで行う。本節はその引き継ぎメモ。
-
-#### 解く問題
-
-現状 `node()` は二種類の入力を 1 関数で兼ねている（実装は `data_tree_filters.py` の `build_anchor_path`）:
-
-- **生セグメント値**（`node("erds", id)`）→ パス安全化のため各セグメントを `url_escape`
-- **`/`-leading な出来合いパス**（`node("/prose/X")`）→ 既にアドレスなので **verbatim**
-
-判別は「第 1 引数が `/` 始まりか」という暗黙ルールだけで、**escape の有無が呼び出し側から見えない**。A 群（見出しリンク）が verbatim 形（`#` 入りパス）への依存を増やす前に、モードを呼び出し側に surface する。
-
-#### 決定: 位置引数 = セグメント / キーワード = verbatim
-
-別名関数（`node_at` 等）を立てず、**同じ `node` をキーワード引数で多態**させる:
-
-```jinja2
-node("members", id)                          {# segments: 各 url_escape → 引く。最多の既定 #}
-node(path="/prose/X")                        {# verbatim: 出来合いアンカーパスを素通し #}
-node(path="/prose/X", fragment="エラー処理")  {# path + "#" + slug。見出しノード（A 群で追加）#}
-```
-
-契約:
-
-- **位置 `segs` と `path=` は排他**（両方指定・どちらも無し はエラー）。
-- **位置引数に `/` 始まりが来たらエラー**にして `path=` を案内する。これが旧来の暗黙の `/` 判定の置き換え本体 — エンティティ/クエリ名は識別子パターンで `/` 始まり不可（[リンク記法](#リンク記法)）なので、`/` 始まりの位置引数は誤用と断定できる。
-- `fragment` は `path` とセットのみ（`fragment` 単独はエラー）。
-- `path` / `fragment` は **`url_escape` しない**（既に address 形）。`fragment` は `#` を **raw** で前置して `path` に繋ぐ。`#` は構造的セパレータで slug は github 互換ゆえ `#` を含まない（見出しノードの anchor_path 規約。本節下の [見出しノード (A3, A4)](#見出しノード-a3-a4) を参照）。
-- 結果のアンカーパス文字列で `node_map` を辞書引きする点は不変（`resolve_node` / `build_node_map` は無変更でよい。差し替えるのは `build_anchor_path` の `/` 判定分岐だけ）。
-
-#### なぜ別名でなく kwargs か（検討の結論）
-
-- **単一名を保てる** — `[x](node:/…)` ↔ `node(...)` のスキーム↔リゾルバ対応が完全に残る（[scheme 名を node: とする背景](#scheme-名を-node-とする背景) の設計判断を崩さない）。
-- **引数の“形”を部品ごとに名指す** — 接尾辞案 `node_at` は「at（どこに）」という関係を表すだけで、括弧に何を入れるか（セグメント列か 1 本のパスか）を説明しない。`path=` / `fragment=` は各部品の役割を直接名指すので、surface の目的に最も叶う。
-- **見出しへ前方互換** — 見出しは anchor_path 上 `headings` を畳んだ `/prose/X#slug` 形（[見出しノード (A3, A4)](#見出しノード-a3-a4)）で、セグメント形では原理的に届かない（`#` が `%23` に escape され `node_map` に無い）。`node(path=, fragment=)` なら新関数を足さず **kwarg 一個**で A 群が乗る。
-- **pipe 形の障害が無い** — kwarg はパイプ（`x | node`）では割れないが、`| node` のフィルタ実利用はテンプレ全数 grep でゼロ。実装で `node` のフィルタ登録を外し **global 専用**にすれば、障害自体が消える。
-
-棄却した案（蒸し返し防止に記録）:
-
-- `node_at("/…")` — `at` が引数の形を説明しない（落選の決め手）。
-- `node_by_path` / `node_from_path` — 形は名指せるが、見出しで `path` 文字列連結に逆戻りし、kwarg の `fragment=` 合成に劣る。
-- `node` を verbatim 既定にしてセグメント側を `node_segs` に — 鏡は完全だが、最多操作（セグメント）が長い名になり既定が裏返る。
-
-#### 実装セッション向けチェックリスト
-
-B11 で行う:
-
-1. `build_anchor_path`（`data_tree_filters.py`）の `/`-leading 分岐を `node(*segs, path=None)` のシグネチャに置換。位置 `segs` は従来どおり各 `url_escape`、`path` は verbatim。排他・`/`-始まり位置引数エラーを実装。
-2. `node` を globals 専用に（`filters_map` から `node` を外す。`label` / `child` はフィルタのまま）。
-3. テンプレートの **verbatim 利用を全て `node(path="…")` へ移行**:
-    - dev-docs テンプレート: `definition/templates/index.md`・`tasks.md`（`node("/roadmap")`, `node("/prose/" ~ category.spec)`）・`roadmap.md`（`node("/tasks")`）
-    - meta テンプレート（`resources/templates/meta/`）: `node("/__definition/entities")`, `node("/")` 各所
-    - セグメント形（`node("members", id)` 等）は無改修。showcase はほぼ無改修。
-4. External Design の追従:
-    - [リンク記法](#リンク記法) の `node(seg, *segs)` 記述と「関数形・フィルタ形（`"/..." | node`）の両用」を、kwarg 契約・global 専用に書き換える。
-    - 利用者向け `docs/reference/template.md` の Anchor paths / `node` 節を同期。
-5. テスト追加（`components/generator`）: 位置=escape / `path=`=verbatim / 排他エラー / `/`-始まり位置引数エラー。
-
-A 群（見出し）で行う（B11 では**やらない**）:
-
-- `fragment=` を `node()` に追加（`path` に `#` + slug を raw 連結）。見出しノードが `node_map` に載ってから実装・テストできる。本節のシグネチャはこの追加を素直に受けられる形にしておく。
-
-実装が済んだらこの Proposals 節は削除し、確定仕様は [リンク記法](#リンク記法)（External Design）と `data_tree_filters.py` の docstring に移す。
 
 ### 見出しノード (A3, A4)
 
@@ -337,6 +276,16 @@ resolver は無変更 — anchor_path 文字列をキーにした辞書引き（
 ```
 
 path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す。`relink` はページをノード解決し、上記 fragment 規則で `#エラー処理` を出力 URL に乗せる。これは A7（見出し fragment 対応）がソース相対リンク `[t](architecture.md#エラー処理)` から生成する中間形でもある（[markdown-parser-spec.md のリンク正規化](../normalizer/markdown-parser-spec.md#リンク正規化-a5-a7)）。見出しが対象 prose に無ければ MissingNode として可視化（[未解決参照の扱い](#未解決参照の扱い)）。
+
+#### テンプレートからの見出しリンク（`node(fragment=)`）
+
+テンプレートが見出しノードを引くときは、[リンク記法](#リンク記法) の `node` に `fragment=` を加える（B11 で入った `path=` の上に A 群で乗せる三つめの kwarg）:
+
+```jinja2
+{{ node(path="/prose/design/normalizer/architecture", fragment="エラー処理") | link }}
+```
+
+`path` に `#` + slug を **raw** で連結して anchor_path を組む（`fragment` は `url_escape` しない — slug は github 互換で `#` を含まず、`#` は構造的セパレータ）。現行シグネチャ `node(*segs, path=None)` に `fragment=None` を足し、`resolve_node`（`data_tree_filters.py`）が組む anchor 文字列の末尾（`path` 前置 + `segs` 後置の後ろ）に `#` + fragment を繋ぐよう拡張すればよい。`fragment` 単独など解決できない組み合わせは、他と同じく MissingNode として可視化される（例外にしない）。見出しノードが `node_map` に載ってから実装・テストできる。
 
 ### 未決事項
 
