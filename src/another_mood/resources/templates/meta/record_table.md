@@ -1,8 +1,8 @@
 {% set entity = this %}
 # {{ entity.id }}
 
-{% set root = node("/") %}
-{% set entities = node("/__definition/entities") %}
+{% set root = node(path="/") %}
+{% set entities = node(path="/__definition/entities") %}
 {% set rows = root | walk_entity(entity.id, entities) %}
 {% set attributes = entity.item_type.attributes | rejectattr('type', 'equalto', 'object') | list %}
 {% if rows %}

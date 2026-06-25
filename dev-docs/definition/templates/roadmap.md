@@ -2,7 +2,7 @@
 
 Phase 1〜9 で TypeScript 実装からの移行、自己ドッグフーディング基盤、Hugo 連携、利用者リファレンス、メタドキュメンテーション、MCP サーバまでを完了した（詳細は git 履歴参照）。残タスクをフェーズ別に示す。
 
-タスクを機能カテゴリ別に見る場合は {{ node("/tasks") | link("タスクカタログ") }} を参照。タスク ID の先頭文字が機能カテゴリに対応する。
+タスクを機能カテゴリ別に見る場合は {{ node(path="/tasks") | link("タスクカタログ") }} を参照。タスク ID の先頭文字が機能カテゴリに対応する。
 
 {% for group in this | sort(attribute='phase') %}
 ## Phase {{ group.phase }}{{ group | anchor }}

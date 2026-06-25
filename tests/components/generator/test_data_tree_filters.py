@@ -48,6 +48,10 @@ def _config() -> ReportsConfig:
 
 
 class TestBuildAnchorPath:
+    """The segment part of an anchor path: each value escaped, `/`-prefixed
+    and joined.  A verbatim ``path`` never reaches here — ``resolve_node``
+    prepends it (see TestAnchorPathMode)."""
+
     def test_single_segment(self) -> None:
         assert build_anchor_path("overview") == "/overview"
 
@@ -56,36 +60,59 @@ class TestBuildAnchorPath:
 
     def test_segment_with_slash_is_escaped(self) -> None:
         # A `/` inside one built segment is percent-encoded — authors use
-        # the ready-made form for path-shaped ids (prose).
+        # path= for path-shaped ids (prose), which is taken verbatim.
         assert build_anchor_path("prose", "a/b") == "/prose/a%2Fb"
 
     def test_non_string_segment_is_stringified(self) -> None:
         assert build_anchor_path("members", 7) == "/members/7"
 
-    def test_ready_made_path_passes_through(self) -> None:
-        assert build_anchor_path("/prose/design/architecture") == (
-            "/prose/design/architecture"
-        )
-
-    def test_root_path_passes_through(self) -> None:
-        assert build_anchor_path("/") == "/"
-
-    def test_ready_made_form_needs_a_lone_argument(self) -> None:
-        # With extra segments the first arg is treated as a segment, not a
-        # ready-made path — and escaped, so the `/` does not split.
-        assert build_anchor_path("/a", "b") == "/%2Fa/b"
+    def test_no_segments_is_empty(self) -> None:
+        # Contributes nothing without segments, so a verbatim path prefix
+        # stands alone instead of gaining a trailing `/`.
+        assert build_anchor_path() == ""
 
 
-class TestRawBuildDiscrimination:
-    """The leading-`/` raw/build split is unambiguous: a segment built
-    from an entity name (never `/`-leading) and the ready-made path of the
-    same value resolve to the same node."""
+class TestAnchorPathMode:
+    """Positional segments (each escaped) and a verbatim ``path=`` prefix are
+    the two modes, surfaced at the call instead of inferred from a leading
+    `/`; either alone works and the two compose."""
 
-    def test_built_and_ready_made_agree(self) -> None:
+    def test_segments_and_path_reach_the_same_node(self) -> None:
         nodes = _node_map()
         built = resolve_node(nodes, "members", "alice")
-        ready = resolve_node(nodes, "/members/alice")
+        ready = resolve_node(nodes, path="/members/alice")
         assert built is ready is nodes["/members/alice"]
+
+    def test_path_is_verbatim(self) -> None:
+        # A prose id carries `/`; path= passes it through unescaped.
+        nodes = _node_map()
+        assert (
+            resolve_node(nodes, path="/prose/design/architecture")
+            is (nodes["/prose/design/architecture"])
+        )
+
+    def test_segments_escape_each_value(self) -> None:
+        # The same path-shaped value as a positional segment is escaped, so
+        # it does not reach the prose node.
+        nodes = _node_map()
+        assert resolve_node(nodes, "prose", "design/architecture") == MissingNode(
+            "/prose/design%2Farchitecture"
+        )
+
+    def test_path_prefix_and_segments_compose(self) -> None:
+        # path= is a verbatim prefix; positional segs dig into its children.
+        nodes = _node_map()
+        assert (
+            resolve_node(nodes, "alice", path="/members") is (nodes["/members/alice"])
+        )
+
+    def test_leading_slash_positional_degrades_visibly(self) -> None:
+        # A `/`-leading positional is a misuse, but it is not an error: it is
+        # escaped (the `/` → `%2F`) and, not matching, shows as a MissingNode.
+        nodes = _node_map()
+        assert resolve_node(nodes, "/members/alice") == MissingNode(
+            "/%2Fmembers%2Falice"
+        )
 
 
 # ── resolve_node ─────────────────────────────────────────────────
@@ -96,10 +123,10 @@ class TestResolveNode:
         nodes = _node_map()
         assert resolve_node(nodes, "members", "alice") is (nodes["/members/alice"])
 
-    def test_resolves_ready_made_prose_path(self) -> None:
+    def test_resolves_verbatim_prose_path(self) -> None:
         nodes = _node_map()
         assert (
-            resolve_node(nodes, "/prose/design/architecture")
+            resolve_node(nodes, path="/prose/design/architecture")
             is (nodes["/prose/design/architecture"])
         )
 
@@ -109,7 +136,7 @@ class TestResolveNode:
 
     def test_root_resolves(self) -> None:
         nodes = _node_map()
-        assert resolve_node(nodes, "/") is nodes["/"]
+        assert resolve_node(nodes, path="/") is nodes["/"]
 
 
 # ── child ────────────────────────────────────────────────────────
@@ -219,12 +246,20 @@ class TestMakeDataTreeFilters:
     def test_returns_globals_and_filters(self) -> None:
         globals_map, filters_map = make_data_tree_filters(_node_map())
         assert set(globals_map) == {"node"}
-        assert set(filters_map) == {"node", "label", "child"}
+        assert set(filters_map) == {"label", "child"}
 
-    def test_node_filter_resolves_to_node(self) -> None:
+    def test_node_global_resolves_segments(self) -> None:
         nodes = _node_map()
-        _, filters_map = make_data_tree_filters(nodes)
-        assert filters_map["node"]("members", "alice") is nodes["/members/alice"]
+        globals_map, _ = make_data_tree_filters(nodes)
+        assert globals_map["node"]("members", "alice") is nodes["/members/alice"]
+
+    def test_node_global_resolves_path(self) -> None:
+        nodes = _node_map()
+        globals_map, _ = make_data_tree_filters(nodes)
+        assert (
+            globals_map["node"](path="/prose/design/architecture")
+            is (nodes["/prose/design/architecture"])
+        )
 
     def test_label_filter_selects_display_text(self) -> None:
         nodes = _node_map()

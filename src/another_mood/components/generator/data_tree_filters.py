@@ -30,19 +30,18 @@ def make_data_tree_filters(
 ]:
     """The format-neutral data-tree filters, bound to one build's node map.
 
-    Returns ``(globals, filters)``: ``node`` works both as a call
-    (``node("a", b)``) and a pipe (``"/a/b" | node``) so appears in both;
-    ``label`` is a filter only.
+    Returns ``(globals, filters)``.  ``node`` is a global only: it tells
+    escaped positional segments from a verbatim ``path=`` by keyword, which a
+    pipe (``x | node``) cannot carry.  ``label`` / ``child`` are filters.
     """
 
-    def node(seg: object, *segs: object) -> object:
-        return resolve_node(node_map, seg, *segs)
+    def node(*segs: object, path: object = None) -> object:
+        return resolve_node(node_map, *segs, path=path)
 
     globals_map: Mapping[str, Callable[..., object]] = {
         "node": node,
     }
     filters_map: Mapping[str, Callable[..., object]] = {
-        "node": node,
         "label": node_label,
         "child": child,
     }
@@ -60,24 +59,30 @@ class MissingNode:
         return self.anchor_path
 
 
-def resolve_node(node_map: Mapping[str, Node], seg: object, *segs: object) -> object:
-    """Resolve segments / a ready-made path to its node, or a MissingNode."""
-    path = build_anchor_path(seg, *segs)
-    node = node_map.get(path)
-    return node if node is not None else MissingNode(path)
+def resolve_node(
+    node_map: Mapping[str, Node], *segs: object, path: object = None
+) -> object:
+    """Resolve an anchor path to its node, or a :class:`MissingNode`.
 
-
-def build_anchor_path(seg: object, *segs: object) -> str:
-    """Anchor path from segments (each escaped), or a ready-made ``/``-leading
-    path returned verbatim (e.g. a prose id or constant).
-
-    A built segment is always an entity or query name, which cannot start
-    with ``/``, so the leading-``/`` test separates ready-made from built
-    unambiguously.
+    ``path`` (a ready-made address) is a verbatim prefix; positional ``segs``
+    are each escaped and appended, so the escape mode is visible at the call.
+    Either alone works, and they compose — ``segs`` dig into ``path``'s
+    children (``node("y", path="/prose/x")`` → ``/prose/x/y``).  A misused
+    input is never an error: a ``/``-leading positional is escaped to
+    ``/%2F…`` and, not matching, surfaces as a visible MissingNode — the same
+    way any unresolved reference does, rather than crashing the page.
     """
-    if not segs and isinstance(seg, str) and seg.startswith("/"):
-        return seg
-    return "/" + "/".join(url_escape(str(p), safe="") for p in (seg, *segs))
+    prefix = "" if path is None else str(path)
+    anchor = prefix + build_anchor_path(*segs)
+    node = node_map.get(anchor)
+    return node if node is not None else MissingNode(anchor)
+
+
+def build_anchor_path(*segs: object) -> str:
+    """The segment part of an anchor path — each raw value IRI-escaped and
+    ``/``-prefixed, joined.  Empty for no segments, so a verbatim ``path``
+    prefix stands alone (see :func:`resolve_node`)."""
+    return "".join("/" + url_escape(str(p), safe="") for p in segs)
 
 
 def child(parent: object, seg: object) -> object:

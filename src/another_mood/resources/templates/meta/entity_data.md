@@ -1,4 +1,4 @@
-{% set entities = node("/__definition/entities") %}
+{% set entities = node(path="/__definition/entities") %}
 # Entity Data: {{ id }}
 
 [← Entity Definition]({{ node("__entity_defs", id) | href }})

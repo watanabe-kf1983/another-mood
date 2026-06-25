@@ -1,4 +1,4 @@
-{% set entities = node("/__definition/entities") %}
+{% set entities = node(path="/__definition/entities") %}
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 # Query: {{ id }}
 
