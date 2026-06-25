@@ -1,4 +1,4 @@
-{{ node("/prose/index") | link }}
+{{ node(path="/prose/index") | link }}
 
 {% for record in prose %}
 {% mood_view "prose.md" with record %}

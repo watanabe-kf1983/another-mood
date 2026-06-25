@@ -89,15 +89,9 @@ categories:
         phase: 15
         proposal: design/generator/anchor-spec.md#未解決参照の扱い
       B11:
-        title: node() のモード分離（segments escape / literal verbatim の API 分割）
-        note: >-
-          node() は「生セグメント（escape 要）」と「/-leading な出来合いパス（verbatim）」を
-          1 関数で兼ね、escape の有無が呼び出し側から見えない。A 群（見出しリンク, phase 12）が
-          verbatim 形 node("/prose/" ~ value) への依存を増やす前に、モードを別名へ分離して
-          escape 挙動を surface する。対象は build_anchor_path（/-leading 分岐）と全テンプレートの
-          node() 利用。A 群に着手する前に行う前提タスク。
+        title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
         phase: 11
-        proposal: design/generator/anchor-spec.md#node-のモード分離
+        done: true
 
   C:
     title: ページ分割 (paging)
