@@ -9,7 +9,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`href`](#href) | filter | the URL targeting a node, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
 | [`anchor`](#anchor) | filter | emit a node's link target (`<a id>`) |
-| [`node`](#node) | function, filter | resolve an anchor path to its node |
+| [`node`](#node) | function | resolve an anchor path to its node |
 | [`child`](#child) | filter | step from a node to one of its children |
 | [`in_cell`](#in_cell) | filter | insert a value into a Markdown table cell |
 | [`code_inline`](#code_inline) | function | wrap a value in a Markdown code span |
@@ -84,7 +84,7 @@ The node a link points at is often not in the template's context — a foreign k
 {{ node("categories", product.category_id) | link }}
 ```
 
-A path matching no node is a **missing node**, kept visible rather than a dead link. The `__entity_data/` and `__queries/` diagnostics show each node's as `_anchor_path`.
+A path matching no node is a **missing node**, kept visible rather than a dead link. The `__entity_data/` and `__queries/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
 
 ## Tags
 
@@ -158,7 +158,7 @@ When the subject is a **list**, there are no fields to spread, so iterate `this`
 
 ## Filters
 
-`node` can also be piped as a filter; it is documented under [Functions](#functions). The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
+The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
 
 ### `child`
 
@@ -169,7 +169,7 @@ When the subject is a **list**, there are no fields to spread, so iterate `this`
 {{ genres | child(track.genre_id) | link }}
 ```
 
-Matching is on the raw `id`, so a path-shaped `prose` id (whose `/` would otherwise need the ready-made `node("/…")` form) resolves directly. A `seg` that matches no child resolves to a **missing node**, kept visible exactly as [`node`](#node)'s.
+A `seg` that matches no child resolves to a **missing node**, kept visible exactly as [`node`](#node)'s.
 
 ### `link`
 
@@ -292,7 +292,7 @@ Only inline links are rewritten; a `node:` written inside a code span or fence i
 
 ### `node`
 
-`node(seg, *segs)` builds an anchor path from segments and resolves it to its node, ready for [`link`](#link) / [`href`](#href) / [`label`](#label):
+`node(*segs, path=None)` resolves an anchor path to its node, ready for [`link`](#link) / [`href`](#href) / [`label`](#label):
 
 ```jinja2
 {# inside a by_role group: this member copy lives at /by_role/…, but the
@@ -300,16 +300,16 @@ Only inline links are rewritten; a `node:` written inside a code span or fence i
 {{ node("members", member.id) | link }}
 ```
 
-One argument is one path segment. Each segment is escaped, so a `/` inside a value does not act as a separator.
+**Positional segments** are raw values: one argument is one path segment, percent-encoded so a `/` inside a value does not split it into two segments. This is the common form.
 
-A single argument that starts with `/` is instead taken as a complete, ready-made anchor path and used verbatim. Use this form for constant paths, and for `prose` records — their `id` is a relative file path whose `/` must stay a separator:
+**`path=`** takes a complete, ready-made anchor path and uses it exactly as written — not encoded. Use it for constant paths, and for `prose` records — their `id` is a relative file path whose `/` must stay a separator:
 
 ```jinja2
-{{ node("/prose/design/architecture") | link }}
-{{ node("/overview") | link("About this site") }}
+{{ node(path="/prose/design/architecture") | link }}
+{{ node(path="/overview") | link("About this site") }}
 ```
 
-`node` also works as a filter: `{{ "/prose/index" | node | link }}`.
+The two compose: `path=` is a verbatim prefix and the positional segments are percent-encoded and appended, so you can take a ready-made path and dig into its children — `node("y", path="/prose/x")` resolves `/prose/x/y`.
 
 A path that matches no node resolves to a **missing node** rather than raising an error; the rendering filters keep it visible — [`link`](#link) brackets the attempted path as `[text]`, [`href`](#href) renders the empty string — so you can spot the broken reference and fix the source.
 
