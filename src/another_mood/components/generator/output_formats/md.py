@@ -21,8 +21,8 @@ from another_mood.components.generator.data_tree_filters import (
 from another_mood.components.generator.output_formats.heading_shift import (
     under_heading as _under_heading,
 )
-from another_mood.components.generator.output_formats.link_resolve import resolve_links
 from another_mood.components.generator.reports_config import ReportsConfig
+from another_mood.components.shared.markdown.inline_link import rewrite_inline_links
 from another_mood.components.generator.template_engine import OutputFormat
 from another_mood.components.generator.url import url_escape
 
@@ -32,6 +32,9 @@ from another_mood.components.generator.url import url_escape
 _MD_ESCAPE_PATTERN = re.compile(r"([!-/:-@\[-`{-~])")
 
 _BACKTICK_RUN_PATTERN = re.compile(r"`+")
+
+# Scheme that a prose body's inline links use to point at a node (see `relink`).
+_NODE_SCHEME = "node:"
 
 
 def md_escape(text: str) -> str:
@@ -197,15 +200,17 @@ def make_link_filters(
     def relink(context: Context, value: object) -> Markup:
         source = context["this"]
 
-        def render_dest(anchor_path: str) -> str:
-            target = node_map.get(anchor_path)
+        def resolve(href: str) -> str | None:
+            if not href.startswith(_NODE_SCHEME):
+                return href  # not a `node:` link: keep it unchanged
+            target = node_map.get(href[len(_NODE_SCHEME) :])
             if target is None:
                 # Unresolved: drop the destination, leaving the same conspicuous
                 # bracketed `[text]` `link` leaves, never leaking `node:` to output.
-                return ""
-            return f"({node_href(config, source, target)})"
+                return None
+            return node_href(config, source, target)
 
-        return Markup(resolve_links(str(value), render_dest))
+        return Markup(rewrite_inline_links(str(value), resolve))
 
     return {"href": href, "link": link, "anchor": md_anchor, "relink": relink}
 
