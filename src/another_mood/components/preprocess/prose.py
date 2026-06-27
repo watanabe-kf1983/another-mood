@@ -1,73 +1,127 @@
 """Prose preprocessing — derive prose record fields from the Markdown body.
 
-The source loader wraps a Markdown file into a path-derived ``id`` and a
-raw ``body`` (``mime_type`` + ``content``); it does not interpret the
-Markdown.  Interpreting that body — currently extracting a display
-``title`` from the first H1 — is a data-driven concern, so it lives here
-in preprocess.  This keeps the loader free of AST handling and keeps
-preprocess free of file paths: detection is by ``body.mime_type``, never
-by ``src_file`` extension, and both the ``id`` and the ``content`` are
-read off the record.
-
-Scope is limited to the ``prose`` collection for now; H3 generalizes
-title derivation to every entity carrying a Markdown body.
+The source loader wraps a Markdown file into a path-derived ``id`` and a raw
+``body``; it does not interpret the Markdown.  ``preprocess_prose`` does: for
+each Markdown prose record it derives a ``title`` from the first H1 and rewrites
+the body's relative links to ``node:/prose/<id>`` form.  A record's body is
+detected by ``body.mime_type``, never by file extension.
 """
 
-from collections.abc import Mapping
+import posixpath
+from collections.abc import Callable, Mapping
 from typing import cast
+from urllib.parse import SplitResult, urlsplit
 
-from markdown_it import MarkdownIt
-from markdown_it.tree import SyntaxTreeNode
+from another_mood.components.shared.markdown import (
+    first_h1,
+    parse,
+    rewrite_inline_links,
+)
 
-# Module-level parser, reused across calls (matches heading_shift._MD).
-_MD = MarkdownIt()
+
+def preprocess_prose(data: Mapping[str, object]) -> Mapping[str, object]:
+    """Return ``data`` with each Markdown prose record's body interpreted.
+
+    For every ``prose`` record with a ``text/markdown`` body, derive a ``title``
+    (first H1, unless one is already set) and rewrite the body's relative links
+    to ``node:/prose/<id>`` form.  Records without a Markdown body, and data
+    without a list-valued ``prose`` collection, pass through unchanged.
+    """
+    return _map_prose_records(data, _interpret)
 
 
-def derive_prose_titles(data: Mapping[str, object]) -> Mapping[str, object]:
-    """Return ``data`` with a ``title`` derived for each Markdown prose record.
+def normalize_links(content: str, doc_id: str) -> str:
+    """Rewrite each relative Markdown link in ``content`` to its ``node:`` form.
 
-    For every record under ``prose`` whose ``body.mime_type`` is
-    ``text/markdown``, a ``title`` is taken from the first H1 of
-    ``body.content``.  Records that already carry a ``title``, lack a
-    Markdown body, or have no H1 are left untouched.  Data without a
-    list-valued ``prose`` collection passes through unchanged.
+    An inline link ``[text](relative/path.md)`` whose target resolves to a prose
+    document inside the contents tree becomes ``node:/prose/<resolved-id>``,
+    resolved lexically against ``doc_id`` (this document's contents-relative
+    path, without extension).  Links that don't name an in-tree prose document
+    are left byte-for-byte (see :func:`_resolver`).
+    """
+    return rewrite_inline_links(parse(content), _resolver(doc_id))
+
+
+def _map_prose_records(
+    data: Mapping[str, object],
+    transform: Callable[[object], object],
+) -> Mapping[str, object]:
+    """Apply ``transform`` to every record under a list-valued ``prose`` key.
+
+    Data without such a collection passes through unchanged.
     """
     match data:
         case {"prose": list()}:
             records = cast(list[object], data["prose"])
-            return {**data, "prose": [_with_title(record) for record in records]}
+            return {**data, "prose": [transform(record) for record in records]}
         case _:
             return data
 
 
-def _with_title(record: object) -> object:
-    """Attach a first-H1 ``title`` to an untitled Markdown prose record.
+def _interpret(record: object) -> object:
+    """Derive a record's title and normalized links from a single parse.
 
-    Only a Markdown ``body`` (``mime_type`` text/markdown with string
-    ``content``) is processed: an existing ``title`` key (any value) is
-    kept, otherwise the first H1 of the content becomes the title (no H1
-    → stays untitled).  Everything else — non-mapping, non-Markdown,
-    malformed — falls through unchanged.
-
-    The ``cast`` is sound because the mapping pattern has already
-    confirmed a mapping at runtime; pyright simply does not narrow the
-    ``match`` subject itself, so the type must be restated.
+    Records that aren't a Markdown prose record (``id`` + Markdown body) fall
+    through unchanged.  A first-H1 ``title`` is added only when the record has
+    none; an existing one (any value) is kept.
     """
     match record:
-        case {"body": {"mime_type": "text/markdown", "content": str(content)}}:
+        case {
+            "id": str(doc_id),
+            "body": {"mime_type": "text/markdown", "content": str(content)},
+        }:
             mapping = cast(Mapping[str, object], record)
-            title = (
-                mapping["title"] if "title" in mapping else _extract_h1_title(content)
-            )
-            return {**mapping, "title": title} if title is not None else mapping
+            body = cast(Mapping[str, object], mapping["body"])
+            doc = parse(content)
+            normalized = rewrite_inline_links(doc, _resolver(doc_id))
+            new_title = None if "title" in mapping else first_h1(doc)
+            return {
+                **mapping,
+                "body": {**body, "content": normalized},
+                **({"title": new_title} if new_title is not None else {}),
+            }
         case _:
             return record
 
 
-def _extract_h1_title(content: str) -> str | None:
-    """Extract text from the first H1 heading using the Markdown AST."""
-    tree = SyntaxTreeNode(_MD.parse(content))
-    for node in tree.walk():
-        if node.type == "heading" and node.tag == "h1":
-            return node.children[0].content if node.children else None
-    return None
+# ── Link normalization ───────────────────────────────────────────────
+
+
+_MARKDOWN_SUFFIX = ".md"
+_NODE_PROSE_PREFIX = "node:/prose/"
+
+
+def _resolver(doc_id: str) -> Callable[[str], str]:
+    """Build the ``rewrite_inline_links`` callback for the document ``doc_id``.
+
+    The callback converts an in-tree relative ``.md`` link to its
+    ``node:/prose/<id>`` form — resolved against ``doc_id``'s directory, any
+    ``#fragment`` dropped — and echoes every other href back unchanged.
+    """
+    base = posixpath.dirname(doc_id)
+
+    def resolve(href: str) -> str:
+        link = urlsplit(href)
+        if _is_relative_markdown(link):
+            resolved = posixpath.normpath(posixpath.join(base, link.path))
+            if not resolved.startswith("../"):  # stays inside the contents tree
+                return f"{_NODE_PROSE_PREFIX}{resolved[: -len(_MARKDOWN_SUFFIX)]}"
+        return href
+
+    return resolve
+
+
+def _is_relative_markdown(link: SplitResult) -> bool:
+    """True if ``link`` is a relative path to a Markdown file.
+
+    False for an external reference (a scheme like ``http:`` / ``node:`` /
+    ``mailto:``, or a ``//host``), an absolute path (leading ``/``), and any
+    non-``.md`` target — an image, a stylesheet, or a pure ``#fragment`` (whose
+    path is empty).
+    """
+    return (
+        not link.scheme
+        and not link.netloc
+        and not link.path.startswith("/")
+        and link.path.lower().endswith(_MARKDOWN_SUFFIX)
+    )

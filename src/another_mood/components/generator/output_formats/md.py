@@ -22,7 +22,7 @@ from another_mood.components.generator.output_formats.heading_shift import (
     under_heading as _under_heading,
 )
 from another_mood.components.generator.reports_config import ReportsConfig
-from another_mood.components.shared.markdown.inline_link import rewrite_inline_links
+from another_mood.components.shared.markdown import parse, rewrite_inline_links
 from another_mood.components.generator.template_engine import OutputFormat
 from another_mood.components.generator.url import url_escape
 
@@ -210,7 +210,7 @@ def make_link_filters(
                 return None
             return node_href(config, source, target)
 
-        return Markup(rewrite_inline_links(str(value), resolve))
+        return Markup(rewrite_inline_links(parse(str(value)), resolve))
 
     return {"href": href, "link": link, "anchor": md_anchor, "relink": relink}
 

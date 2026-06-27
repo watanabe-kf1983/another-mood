@@ -275,7 +275,7 @@ resolver は無変更 — anchor_path 文字列をキーにした辞書引き（
 [エラー処理](node:/prose/design/normalizer/architecture#エラー処理)
 ```
 
-path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す。`relink` はページをノード解決し、上記 fragment 規則で `#エラー処理` を出力 URL に乗せる。これは A7（見出し fragment 対応）がソース相対リンク `[t](architecture.md#エラー処理)` から生成する中間形でもある（[markdown-parser-spec.md のリンク正規化](../normalizer/markdown-parser-spec.md#リンク正規化-a5-a7)）。見出しが対象 prose に無ければ MissingNode として可視化（[未解決参照の扱い](#未解決参照の扱い)）。
+path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す。`relink` はページをノード解決し、上記 fragment 規則で `#エラー処理` を出力 URL に乗せる。これは A7（見出し fragment 対応）がソース相対リンク `[t](architecture.md#エラー処理)` から生成する中間形でもある（[markdown-parser-spec.md の見出し fragment 対応](../normalizer/markdown-parser-spec.md#見出し-fragment-対応-a7)）。見出しが対象 prose に無ければ MissingNode として可視化（[未解決参照の扱い](#未解決参照の扱い)）。
 
 #### テンプレートからの見出しリンク（`node(fragment=)`）
 

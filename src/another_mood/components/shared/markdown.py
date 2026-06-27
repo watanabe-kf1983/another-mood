@@ -1,28 +1,80 @@
-"""Locate and rewrite inline Markdown link destinations.
+"""The project's Markdown parsing, with the operations that read a parse.
 
-:func:`rewrite_inline_links` finds each real ``[text](href)`` link and replaces
-its ``(href)`` destination via a caller-supplied resolver, leaving the link text
-and the rest byte-for-byte.  Only the inline form is handled.  It is the shared
-core under both the generator's ``relink`` filter (``node:`` → URL) and the
-preprocess link normalizer (relative path → ``node:``).
+This module owns the single ``MarkdownIt`` instance.  A caller parses a body
+once with :func:`parse` and hands the opaque :class:`ParsedMarkdown` to the
+operations it needs — :func:`first_h1`, :func:`rewrite_inline_links` — so the
+body is parsed only once and the token stream never leaves this module.
+
+The two operations are the shared core under the preprocess prose pass (title
++ relative-link normalization) and the generator's ``relink`` filter (``node:``
+→ URL).
 """
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
+from markdown_it.tree import SyntaxTreeNode
 
 
 def _identity(url: str) -> str:
     return url
 
 
-# Reused across calls (parse is reentrant).  normalizeLink is identity so an
-# href stays raw and matches the source when splicing — the default
-# percent-encodes non-ASCII, and the encoded form would not.
+# The one parser.  normalizeLink is identity so a link href stays raw and
+# matches the source byte-for-byte when splicing (rewrite_inline_links) — the
+# default percent-encodes non-ASCII, and the encoded form would not match.
+# Harmless for the AST inspection first_h1 does.
 _MD = MarkdownIt()
 _MD.normalizeLink = _identity  # type: ignore[method-assign]
+
+
+@dataclass(frozen=True)
+class ParsedMarkdown:
+    """A parsed Markdown body: the source ``text`` and its token stream.
+
+    Opaque to callers — obtain it from :func:`parse` and hand it back to this
+    module's operations.  The tokens are an implementation detail and are not
+    meant to be read outside this module.
+    """
+
+    text: str
+    tokens: Sequence[Token]
+
+
+def parse(text: str) -> ParsedMarkdown:
+    """Parse a Markdown body once, for reuse across several operations."""
+    return ParsedMarkdown(text=text, tokens=_MD.parse(text))
+
+
+def first_h1(doc: ParsedMarkdown) -> str | None:
+    """The text of the body's first H1 heading, or ``None`` if it has none."""
+    tree = SyntaxTreeNode(doc.tokens)
+    for node in tree.walk():
+        if node.type == "heading" and node.tag == "h1":
+            return node.children[0].content if node.children else None
+    return None
+
+
+def rewrite_inline_links(
+    doc: ParsedMarkdown, resolve: Callable[[str], str | None]
+) -> str:
+    """Rewrite each inline link's destination via ``resolve``.
+
+    For each real inline link, ``resolve`` is called with its raw ``href`` and
+    returns where the link should point: a new href retargets it, the same href
+    leaves it unchanged, and ``None`` drops the destination — leaving a bare,
+    conspicuous ``[text]``.  The link text is never touched.
+    """
+    text = doc.text
+    # Splice right-to-left so each span (found on the original text) stays valid;
+    # _find_inline_links yields in document order, so reversed() gives that.
+    for link in reversed(list(_find_inline_links(doc.text, doc.tokens))):
+        new_href = resolve(link.href)
+        replacement = f"({new_href})" if new_href is not None else ""
+        text = text[: link.start] + replacement + text[link.end :]
+    return text
 
 
 @dataclass(frozen=True)
@@ -36,24 +88,7 @@ class _Link:
     end: int
 
 
-def rewrite_inline_links(text: str, resolve: Callable[[str], str | None]) -> str:
-    """Rewrite each inline link's destination via ``resolve``.
-
-    For each real inline link, ``resolve`` is called with its raw ``href`` and
-    returns where the link should point: a new href retargets it, the same href
-    leaves it unchanged, and ``None`` drops the destination — leaving a bare,
-    conspicuous ``[text]``.  The link text is never touched.
-    """
-    # Splice right-to-left so each span (found on the original text) stays valid;
-    # _find_inline_links yields in document order, so reversed() gives that.
-    for link in reversed(list(_find_inline_links(text))):
-        new_href = resolve(link.href)
-        replacement = f"({new_href})" if new_href is not None else ""
-        text = text[: link.start] + replacement + text[link.end :]
-    return text
-
-
-def _find_inline_links(text: str) -> Iterator[_Link]:
+def _find_inline_links(text: str, tokens: Sequence[Token]) -> Iterator[_Link]:
     """Locate each real inline link's ``(href)`` destination, in document order.
 
     A ``link_open`` token carries no source offset, so each ``](href)`` is found
@@ -67,7 +102,7 @@ def _find_inline_links(text: str) -> Iterator[_Link]:
     line_offsets = _line_offsets(text)
     blocks = [
         (token, token.map)
-        for token in _MD.parse(text)
+        for token in tokens
         if token.type == "inline" and token.map is not None
     ]
     for token, line_span in blocks:

@@ -7,6 +7,49 @@
 - Markdown AST: markdown-it-py（CommonMark 準拠、AST 走査で見出し抽出・リンク検出）
 - YAML 出力: ruamel.yaml（YAML 1.2、literal block scalar で Markdown 本文を可読に保持）
 
+### リンク正規化
+
+prose 本文中の相対リンクを `node:` アンカーパス記法（インラインリンク形）に変換する。preprocess の prose パスが、生成側フィルタ `relink`（`node:` → URL、[generator.md](../generator/generator.md#リンク解決)）の **逆向き処理** として本文 (`body.content`) のリンクを書き換える。解決はレキシカル（FS チェックなし）で、リンク先 prose の存在検証は relink（Generate フェーズ）に委ねる。実装は preprocess の `normalize_links`（`prose.py`）と shared/markdown の `rewrite_inline_links`。
+
+変換対象は **contents 内に解決する相対 `.md` リンクのみ**:
+
+- `[t](rel.md)` / `[t](rel.md#frag)` → `node:/prose/<解決後 id>`（`#frag` は落とす）
+- 次は **verbatim**（非変換）: 純 `#frag`（同一ページ参照）／ contents 外への脱出（`../` 突き抜け）／スキーム付き（`http:` `node:` `mailto:` 等）／絶対パス（先頭 `/`）／`.md` 以外（画像・スタイル等）／コード（fence・inline）内のリンク
+
+#### 例
+
+`{contents_dir}/design/normalizer/normalizer.md` 内:
+
+```markdown
+処理フローの詳細は[Composer](../composer/composer.md)を参照。
+```
+
+↓ 正規化 ↓
+
+```markdown
+処理フローの詳細は[Composer](node:/prose/design/composer/composer)を参照。
+```
+
+ページ部 (`/prose/...`) は prose の `/`-素通し例外（[anchor-spec.md](../generator/anchor-spec.md#prose-の例外)）でファイル相対パスがそのまま埋まる。
+
+#### 背景: cross-doc リンクを全て node: 化し fragment を落とす理由
+
+path+fragment リンクを「fragment 落とし」で変換するのは、次の優先タスク **C5/C6（プロファイル別出力・複数プロファイル並列ビルド）** で「きりだし単位が変わったときのリンク先の動的解決」を検証したいため。生の相対リンクは静的で、別構造の出力では壊れる。cross-doc リンクを全て `node:` 化して relink の動的解決下に置けば、出力構造が変わってもリンクが追従する。落とした fragment の精度は A7（[見出し fragment 対応](#見出し-fragment-対応-a7)）で回復する。
+
+#### 背景: 純 #frag を恒久的に非変換とする理由
+
+prose ファイルは **必ず全体が 1 ページに描画される** 不変条件を持つ（分割対象は query 由来のコレクションであって prose ドキュメント自身ではない）。同一ドキュメント内の `#frag` は Goldmark の native id で常に同一ページ内に着地するので壊れず、`node:` 化は不要。機械チェック（[B10](node:/tasks/B/tasks/B10)）目的の変換は過保護なので採らない。
+
+#### 背景: ソースの可搬性
+
+ソース Markdown では普通の相対パスでリンクを記述する。これにより:
+
+- GitHub 上でリンクがそのまま動作する（見出し fragment も github-slug 同士で着地する）
+- エディタのリンクジャンプが機能する
+- 独自記法によるソース汚染がない
+
+`node:` 記法への変換は Normalizer が自動的に行うため、ユーザがリンク記法を意識する必要はない。
+
 ## Proposals
 
 ### 見出し抽出 (A1)
@@ -61,37 +104,9 @@ prose:
 
 当面 **prose 限定**。任意の `text/markdown` body からの見出し抽出への一般化は、散文サブシステムの媒体非依存化（[H3](node:/tasks/H/tasks/H3)）と地続きなので、そこで扱う。
 
-### リンク正規化 (A5, A7)
+### 見出し fragment 対応 (A7)
 
-> **未実装** — Phase 12。**A5（基本変換: 相対パス → `node:`）** は見出し抽出に依存せず単独で実装できる。**A7（見出し fragment 対応）** は見出しノード（[見出し抽出](#見出し抽出-a1)）を前提とする後続。タスク [A5](node:/tasks/A/tasks/A5) / [A7](node:/tasks/A/tasks/A7)。
-
-ソース Markdown 内の相対リンクを `node:` アンカーパス記法（インラインリンク形）に変換する。
-
-#### 基本変換 (A5)
-
-1. Markdown リンク `[text](relative/path.md)` を検出
-2. 相対パスを `contents_dir` 基点の正規化パスに解決
-3. 対応する prose レコードのアンカーパス記法 (`node:/...`) に変換
-
-#### 例
-
-`{contents_dir}/design/normalizer/normalizer.md` 内:
-
-```markdown
-処理フローの詳細は[Composer](../composer/composer.md)を参照。
-```
-
-↓ 正規化 ↓
-
-```markdown
-処理フローの詳細は[Composer](node:/prose/design/composer/composer)を参照。
-```
-
-ページ部 (`/prose/...`) は prose の `/`-素通し例外（[anchor-spec.md](../generator/anchor-spec.md#prose-の例外)）でファイル相対パスがそのまま埋まる。`node:` リンクの解決は Document Generator の pre-render フィルタ `relink` が行う（[generator.md](../generator/generator.md#リンク解決) 参照）。
-
-#### 見出し fragment 対応 (A7)
-
-> **前提** — 見出し抽出（A1）と見出しノードの住所付け（[anchor-spec.md A3, A4](../generator/anchor-spec.md#見出しノード-a3-a4)）。A5 の後・見出しノードが解決可能になってから着手する。
+> **未実装** — Phase 12 タスク [A7](node:/tasks/A/tasks/A7)。基本変換（A5）は実装済み（[Internal Design のリンク正規化](#リンク正規化)）。本タスクは見出しノード（[見出し抽出](#見出し抽出-a1)・[anchor-spec.md A3, A4](../generator/anchor-spec.md#見出しノード-a3-a4)）を前提とする後続で、A5 が `node:` 化の際に落とした `#fragment` を、見出しノードが住所を持ってから透過で運ぶ。
 
 `[text](relative/path.md#見出し-slug)` の `#見出し-slug` を、解決後の `node:` URI の fragment としてそのまま運ぶ:
 
@@ -102,13 +117,3 @@ prose:
 ```
 
 `#見出し-slug` がページ内の見出しを指す。fragment は **著者が書いた slug をそのまま素通し**（生成側で再 slug しない）。見出しが対象 prose に存在しなければ relink が解決失敗として可視化する（[未解決参照の扱い](../generator/anchor-spec.md#未解決参照の扱い)）。
-
-#### 背景: ソースの可搬性
-
-ソース Markdown では普通の相対パスでリンクを記述する。これにより:
-
-- GitHub 上でリンクがそのまま動作する（見出し fragment も github-slug 同士で着地する）
-- エディタのリンクジャンプが機能する
-- 独自記法によるソース汚染がない
-
-`node:` 記法への変換は Normalizer が自動的に行うため、ユーザがリンク記法を意識する必要はない。

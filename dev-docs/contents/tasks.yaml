@@ -23,9 +23,8 @@ categories:
         proposal: design/generator/anchor-spec.md#見出しノード-a3-a4
       A5:
         title: ソース内相対リンク → node 記法への変換（基本）
-        note: "contents_dir 基点パス解決。出力は `node:` インライン形リンク。anchor_path の形式は anchor-spec.md に従う。見出し抽出に依存せず単独実装可"
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5-a7
+        done: true
       A6:
         title: under_heading フィルタ（見出し深さ調整）
         phase: 11
@@ -34,7 +33,7 @@ categories:
         title: "node 記法変換の `#fragment` 対応（見出しリンク）"
         note: "A5 の変換で `path.md#見出し-slug` の `#見出し-slug` を `node:` URI の fragment として素通し。見出しノード（A1, A3, A4）が解決可能になってから。fragment は再 slug せず素通し"
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#リンク正規化-a5-a7
+        proposal: design/normalizer/markdown-parser-spec.md#見出し-fragment-対応-a7
 
   B:
     title: アンカー / リンク解決

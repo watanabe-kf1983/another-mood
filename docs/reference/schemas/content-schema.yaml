@@ -45,7 +45,11 @@ properties:
               type: string
             content:
               title: Body content
-              description: Raw Markdown source as a string.
+              description: >-
+                Markdown source of the file. Relative links to other prose
+                documents are normalized to their `node:` form
+                (`[t](other.md)` → `[t](node:/prose/<id>)`); the template
+                `relink` filter resolves these back to URLs.
               type: string
           required: [mime_type, content]
       required: [id, body]

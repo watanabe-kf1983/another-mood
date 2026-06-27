@@ -263,7 +263,7 @@ prose:
 | `title` | Text of the first H1 heading. Omitted when there is no H1. |
 | `body` | A map with `mime_type` and `content`. To embed the body, reference `.content` from a template (e.g., `{{ body.content }}`). |
 
-The source Markdown is preserved verbatim, so it can be browsed and traversed directly on GitHub or in your IDE.
+The Markdown source files stay untouched on disk, so they remain browsable and traversable directly on GitHub or in your IDE. In the parsed `content`, relative links to other prose documents are normalized to their `node:` form (`[t](other.md)` → `[t](node:/prose/<id>)`) so the [`relink`](template.md#relink) filter resolves them to working URLs; every other link is kept as written.
 
 ## Full schema-schema
 
