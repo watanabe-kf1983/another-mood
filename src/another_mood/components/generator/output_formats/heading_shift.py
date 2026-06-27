@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from markdown_it import MarkdownIt
 from markdown_it.tree import SyntaxTreeNode
 
-# One module-level parser, reused across calls (matches source_loader._MD).
+# One module-level parser, reused across calls (matches prose._MD).
 # MarkdownIt.parse() is reentrant: it builds a fresh StateCore per call and only
 # reads the instance (no plugins mutate it), so the shared instance is safe even
 # under the concurrent rebuilds `mood watch` can trigger.
