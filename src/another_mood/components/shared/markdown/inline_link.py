@@ -1,9 +1,9 @@
 """Locate and rewrite inline Markdown link destinations.
 
 :func:`rewrite_inline_links` finds each real ``[text](href)`` link and replaces
-its ``(href)`` destination via a caller-supplied renderer, leaving the link text
+its ``(href)`` destination via a caller-supplied resolver, leaving the link text
 and the rest byte-for-byte.  Only the inline form is handled.  It is the shared
-core under both the generator's ``link_resolve`` (``node:`` → URL) and the
+core under both the generator's ``relink`` filter (``node:`` → URL) and the
 preprocess link normalizer (relative path → ``node:``).
 """
 
@@ -26,7 +26,7 @@ _MD.normalizeLink = _identity  # type: ignore[method-assign]
 
 
 @dataclass(frozen=True)
-class InlineLink:
+class _Link:
     """A real inline link's destination: the raw ``href`` and the source span
     ``[start, end)`` covering its ``(href)`` (parentheses included).  The
     ``[text]`` before it and any bytes after it stay put."""
@@ -36,24 +36,24 @@ class InlineLink:
     end: int
 
 
-def rewrite_inline_links(text: str, render: Callable[[InlineLink], str | None]) -> str:
-    """Rewrite each inline link's ``(href)`` destination via ``render``.
+def rewrite_inline_links(text: str, resolve: Callable[[str], str | None]) -> str:
+    """Rewrite each inline link's destination via ``resolve``.
 
-    For each real inline link, ``render`` is called with its :class:`InlineLink`.
-    A returned string replaces the ``(href)`` span — e.g. ``(url)`` to retarget,
-    or ``""`` to drop the destination and leave a bare ``[text]`` — while
-    ``None`` leaves the link untouched.  The link text is never touched.
+    For each real inline link, ``resolve`` is called with its raw ``href`` and
+    returns where the link should point: a new href retargets it, the same href
+    leaves it unchanged, and ``None`` drops the destination — leaving a bare,
+    conspicuous ``[text]``.  The link text is never touched.
     """
     # Splice right-to-left so each span (found on the original text) stays valid;
     # _find_inline_links yields in document order, so reversed() gives that.
     for link in reversed(list(_find_inline_links(text))):
-        replacement = render(link)
-        if replacement is not None:
-            text = text[: link.start] + replacement + text[link.end :]
+        new_href = resolve(link.href)
+        replacement = f"({new_href})" if new_href is not None else ""
+        text = text[: link.start] + replacement + text[link.end :]
     return text
 
 
-def _find_inline_links(text: str) -> Iterator[InlineLink]:
+def _find_inline_links(text: str) -> Iterator[_Link]:
     """Locate each real inline link's ``(href)`` destination, in document order.
 
     A ``link_open`` token carries no source offset, so each ``](href)`` is found
@@ -84,7 +84,7 @@ def _find_inline_links(text: str) -> Iterator[InlineLink]:
                 continue
             end = sep + len(needle)
             # The `(href)` runs from just past the `]` through the `)`.
-            yield InlineLink(href=href, start=sep + 1, end=end)
+            yield _Link(href=href, start=sep + 1, end=end)
             cursor = end
 
 

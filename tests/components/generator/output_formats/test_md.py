@@ -473,3 +473,16 @@ class TestRelinkFilterWiring:
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         # The destination is dropped, leaving the link text visibly bracketed.
         assert result == '<a id="/by_role/dev"></a>\nsee [ghost]'
+
+    def test_leaves_a_non_node_link_untouched(self, tmp_path: Path) -> None:
+        # Only `node:` destinations are rewritten; a plain relative link is left
+        # as-is while a `node:` link beside it still resolves.
+        engine = self._engine(
+            tmp_path,
+            '{{ "[r](../x.md) and [d](node:/members/alice)" | relink }}',
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == (
+            '<a id="/by_role/dev"></a>\n'
+            "[r](../x.md) and [d](../members/alice.md#/members/alice)"
+        )
