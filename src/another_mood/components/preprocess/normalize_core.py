@@ -1,7 +1,8 @@
 """Normalize core — shared file pipeline used by content/query modules.
 
 Walks a source directory, parses Markdown / YAML inputs via
-``source_loader``, validates them against a schema, applies dict-to-array
+``source_loader``, validates them against a schema, derives prose record
+fields from the Markdown body (``prose``), applies dict-to-array
 normalization, and yields the result for downstream emission.  Used by
 both ``content_normalizer`` and ``query_deriver``.
 
@@ -13,6 +14,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import cast
 
+from another_mood.components.preprocess.prose import derive_prose_titles
 from another_mood.components.shared.user_source.source_loader import load_source
 from another_mood.components.shared.user_source.validator import Validator
 from another_mood.components.shared.user_source.diagnostic import (
@@ -36,7 +38,7 @@ def iter_normalized(src_dir: Path, schema: Schema) -> Iterator[tuple[Path, objec
     for src_file in _iter_files(src_dir):
         data = load_source(src_file, src_dir)
         if data is not None:
-            yield src_file, normalize_data(data, schema)
+            yield src_file, normalize_data(derive_prose_titles(data), schema)
 
 
 def check(src_dir: Path, schema: Schema) -> None:

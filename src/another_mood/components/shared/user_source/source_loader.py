@@ -6,9 +6,10 @@ preprocess pipeline:
 * ``parse_yaml`` — parse a YAML file with ruamel.yaml, tagging scalar
   string values with a ``Location`` so downstream identifier-integrity
   checks can point diagnostics back at the originating YAML position.
-* ``parse_markdown`` — parse a Markdown string into a ``ProseRecord``.
 * ``load_source`` — dispatch by file type and return data ready for
-  schema validation.
+  schema validation.  Markdown files are wrapped raw (path-derived
+  ``id`` + ``body``); interpreting the body (e.g. title from the H1)
+  is left to ``preprocess.prose``.
 * ``UserStr`` / ``Location`` — value type for user-input strings tagged
   with their source location.
 """
@@ -18,8 +19,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from markdown_it import MarkdownIt
-from markdown_it.tree import SyntaxTreeNode
 from ruamel.yaml import YAML  # type: ignore[attr-defined]
 from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedMap, CommentedSeq  # type: ignore[attr-defined]
@@ -71,11 +70,7 @@ class UserStr(str):
 def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     """Parse a source file into data, or None if the file type is not recognized."""
     if FileType.MARKDOWN.match(src):
-        rel = src.relative_to(src_dir)
-        record = parse_markdown(
-            src.read_text(encoding="utf-8"), rel.with_suffix("").as_posix()
-        )
-        return {"prose": [record.to_data()]}
+        return load_prose(src, src_dir, mime_type="text/markdown")
     if FileType.YAML.match(src):
         return parse_yaml(src)
     return None
@@ -173,52 +168,26 @@ def _location(file: Path, line: Any, col: Any) -> Location:
     return Location(file=file, line=int(line) + 1, column=int(col) + 1)
 
 
-# ── Markdown ───────────────────────────────────────────────────────
+# ── Prose ──────────────────────────────────────────────────────────
 
 
-_MD = MarkdownIt()
+def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, object]:
+    """Wrap a prose source file into a single ``prose`` record.
 
-
-@dataclass(frozen=True)
-class ProseRecord:
-    id: str
-    title: str | None
-    body: str
-    mime_type: str
-
-    def to_data(self) -> Mapping[str, object]:
-        data: dict[str, object] = {
-            "id": self.id,
-            "body": {
-                "mime_type": self.mime_type,
-                "content": self.body,
-            },
-        }
-        if self.title is not None:
-            data["title"] = self.title
-        return data
-
-
-def parse_markdown(content: str, id: str) -> ProseRecord:
-    """Parse a Markdown string into a ProseRecord.
-
-    Extracts title from the first H1 heading (None if absent).
-    Body is the full file content.
+    The ``id`` is the source path relative to ``src_dir`` without its
+    extension; the raw text becomes the record ``body``.  The body is
+    left uninterpreted — deriving fields like ``title`` from it is the
+    job of ``preprocess.prose``.
     """
-    title = _extract_h1_title(content)
-    return ProseRecord(
-        id=id,
-        title=title,
-        body=content,
-        mime_type="text/markdown",
-    )
-
-
-def _extract_h1_title(content: str) -> str | None:
-    """Extract text from the first H1 heading using Markdown AST."""
-    tokens = _MD.parse(content)
-    tree = SyntaxTreeNode(tokens)
-    for node in tree.walk():
-        if node.type == "heading" and node.tag == "h1":
-            return node.children[0].content if node.children else None
-    return None
+    rel = src.relative_to(src_dir)
+    return {
+        "prose": [
+            {
+                "id": rel.with_suffix("").as_posix(),
+                "body": {
+                    "mime_type": mime_type,
+                    "content": src.read_text(encoding="utf-8"),
+                },
+            }
+        ]
+    }
