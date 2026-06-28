@@ -89,7 +89,8 @@ def load_editions(reports_file: Path) -> Sequence[Edition]:
 
     Reads the file once. Raises ``FileValidationError`` if validation
     produces any diagnostics.  Form A (top-level ``file_per``) returns a
-    single edition named ``_FORM_A_EDITION_NAME``.
+    single edition named ``_FORM_A_EDITION_NAME``; form B (an ``editions:``
+    map) returns one edition per entry, in declaration order.
     """
     data = parse_yaml(reports_file)
     validator = Validator(load_model(_REPORTS_SCHEMA_FILE))
@@ -97,4 +98,11 @@ def load_editions(reports_file: Path) -> Sequence[Edition]:
         raise FileValidationError(
             diagnostics=[issue.at_file(reports_file) for issue in issues]
         )
-    return (Edition.from_dict(_FORM_A_EDITION_NAME, data),)
+    editions = data.get("editions")
+    if editions is None:
+        # Form A: the top-level mapping is the single implicit edition.
+        return (Edition.from_dict(_FORM_A_EDITION_NAME, data),)
+    # Form B: one edition per entry. Mapping order is the declaration order
+    # (ruamel preserves it), so editions publish in the order written.
+    entries = cast(Mapping[str, Mapping[str, object]], editions)
+    return tuple(Edition.from_dict(name, entry) for name, entry in entries.items())

@@ -27,6 +27,21 @@ _INVALID_REPORTS_CASES = [
     pytest.param("file_per: ['']\n", id="file_per entry empty"),
     pytest.param("file_per: ['a..b']\n", id="file_per entry malformed dotted id"),
     pytest.param("unknown_key: 1\n", id="unknown top-level key"),
+    # form A and form B are mutually exclusive (oneOf).
+    pytest.param(
+        "file_per: [erds.item]\neditions:\n  web:\n    file_per: []\n",
+        id="form A and form B mixed",
+    ),
+    pytest.param("editions: {}\n", id="empty editions map"),
+    pytest.param(
+        "editions:\n  __meta:\n    file_per: []\n", id="edition name reserved __ prefix"
+    ),
+    pytest.param(
+        "editions:\n  '':\n    file_per: []\n", id="edition name empty string"
+    ),
+    pytest.param(
+        "editions:\n  web:\n    unknown_key: 1\n", id="unknown key in edition entry"
+    ),
 ]
 
 
@@ -59,6 +74,29 @@ def test_load_with_entries(tmp_path: Path) -> None:
 def test_load_empty_file_per(tmp_path: Path) -> None:
     assert load_editions(_write(tmp_path, "file_per: []\n")) == (
         Edition(name="default", file_per=()),
+    )
+
+
+def test_load_form_b_editions(tmp_path: Path) -> None:
+    # Form B yields one edition per entry, in declaration order; a missing
+    # or empty file_per is the no-split edition.
+    path = _write(
+        tmp_path,
+        dedent(
+            """
+            editions:
+              web:
+                file_per:
+                  - erds.item
+                  - erds.item.entities.item
+              pdf:
+                file_per: []
+            """
+        ),
+    )
+    assert load_editions(path) == (
+        Edition(name="web", file_per=("erds.item", "erds.item.entities.item")),
+        Edition(name="pdf", file_per=()),
     )
 
 
