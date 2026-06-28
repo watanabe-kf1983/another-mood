@@ -12,7 +12,7 @@ from another_mood.components.generator.data_tree import MappingNode, build_node_
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
     Edition,
-    load_reports_config,
+    load_editions,
 )
 from another_mood.components.generator.meta_templates import (
     META_EDITION,
@@ -43,7 +43,7 @@ def generate(
     data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
-    edition = load_reports_config(reports_file)
+    editions = load_editions(reports_file)
     # anchor_path -> node map; the root node is the "/" entry.
     node_map = build_node_map(load_model(data_dir))
     data = cast(MappingNode, node_map["/"])
@@ -68,15 +68,18 @@ def generate(
         globals=node_globals,
         edition=META_EDITION,
     )
-    render(
-        "index.md",
-        templates_dir,
-        data,
-        out_dir / "reports",
-        filters={**node_filters, **make_link_filters(edition, node_map)},
-        globals=node_globals,
-        edition=edition,
-    )
+    # Each edition renders the same data through its own page split into its
+    # own ``{out_dir}/{edition.name}/`` subtree; the loop is sequential.
+    for edition in editions:
+        render(
+            "index.md",
+            templates_dir,
+            data,
+            out_dir / edition.name,
+            filters={**node_filters, **make_link_filters(edition, node_map)},
+            globals=node_globals,
+            edition=edition,
+        )
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)

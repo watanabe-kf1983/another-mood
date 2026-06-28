@@ -8,7 +8,7 @@ import pytest
 from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.edition import (
     Edition,
-    load_reports_config,
+    load_editions,
 )
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
@@ -33,13 +33,14 @@ _INVALID_REPORTS_CASES = [
 @pytest.mark.parametrize("source", _INVALID_REPORTS_CASES)
 def test_load_rejects_invalid(source: str, tmp_path: Path) -> None:
     with pytest.raises(FileValidationError):
-        load_reports_config(_write(tmp_path, source))
+        load_editions(_write(tmp_path, source))
 
 
 # ── parse ──────────────────────────────────────────────────────────
 
 
 def test_load_with_entries(tmp_path: Path) -> None:
+    # Form A yields a single implicit edition named "reports".
     path = _write(
         tmp_path,
         dedent(
@@ -50,14 +51,14 @@ def test_load_with_entries(tmp_path: Path) -> None:
             """
         ),
     )
-    assert load_reports_config(path) == Edition(
-        file_per=("erds.item", "erds.item.entities.item")
+    assert load_editions(path) == (
+        Edition(name="reports", file_per=("erds.item", "erds.item.entities.item")),
     )
 
 
 def test_load_empty_file_per(tmp_path: Path) -> None:
-    assert load_reports_config(_write(tmp_path, "file_per: []\n")) == Edition(
-        file_per=()
+    assert load_editions(_write(tmp_path, "file_per: []\n")) == (
+        Edition(name="reports", file_per=()),
     )
 
 
