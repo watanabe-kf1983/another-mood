@@ -22,8 +22,30 @@ So a member list plus per-member detail pages is `file_per: [members.item[], mem
 
 To find the exact values, read the diagnostics. `output/__entity_defs/{entity}.md` shows each record type as a `Type:` heading and each array field's collection type in the attributes table; `output/__queries/{query}.md` does the same for query result shapes. Copy the value verbatim.
 
+## Editions
+
+A report can be published in more than one **edition** — body variants of the same report, built side by side. The two forms are mutually exclusive:
+
+- **Form A** (the top-level `file_per` shown above): a single implicit edition named `default`, written under `default/`.
+- **Form B** (an `editions:` map): one edition per entry, each written under its own `{edition}/` directory.
+
+```yaml
+# definition/reports.yaml — form B
+editions:
+  web:               # browse online: split into pages
+    file_per:
+      - erds.item
+      - erds.item.entities.item
+  print:             # read as one document: everything inlined
+    file_per: []
+```
+
+Every edition renders the same data through the same templates; for now they differ only in `file_per` (split granularity).
+
+## Output paths
+
+A split page is written at its **anchor-derived path** under the edition's output directory (`default/` for a single-edition report): the directory follows the view the node came from and the filename is the record's `id` (so a record from the `erds` view lands at `default/erds/{id}.md`). See [Template — Output path](template.md#output-path).
+
 ## Schema
 
 The built-in meta-schema is mirrored at [schemas/reports-schema.yaml](schemas/reports-schema.yaml) for direct reference.
-
-A split page is written at its **anchor-derived path** under the report's output directory `default/`: the directory follows the view the node came from and the filename is the record's `id` (so a record from the `erds` view lands at `default/erds/{id}.md`). See [Template — Output path](template.md#output-path).
