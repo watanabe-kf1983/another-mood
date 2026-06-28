@@ -1,8 +1,21 @@
 # Report output configuration. See the Another Mood docs on paging.
 #
-# `file_per:` lists ObjectType IDs whose nodes are split into separate
-# files. An empty list keeps everything in a single index.md.
-file_per:
-  - artist_discography.item
-  - album_tracklist.item
-  - prose.item
+# This report ships two editions (form B): each is published side by side
+# under output/{edition}/ and renders the same data, differing only in
+# `file_per` (which ObjectType IDs are split into their own pages).
+#
+#   web  — browse online: split discographies, tracklists, and prose into
+#          separate pages.
+#   book — read as one bound document: empty file_per keeps everything
+#          inlined into a single index.md.
+#
+# The templates use the two-loop pattern (`| link` + `{% mood_view %}`),
+# so the same templates serve both editions without change.
+editions:
+  web:
+    file_per:
+      - artist_discography.item
+      - album_tracklist.item
+      - prose.item
+  book:
+    file_per: []
