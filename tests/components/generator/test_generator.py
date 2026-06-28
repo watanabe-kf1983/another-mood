@@ -42,9 +42,9 @@ class TestGenerate:
             out_dir=out_dir,
         )
 
-        # User reports are rendered under reports/; the root node's own
-        # anchor is stamped at the top of index.md (C9 post_process).
-        assert (out_dir / "data" / "reports" / "index.md").read_text() == (
+        # User reports are rendered under the edition dir default/; the root
+        # node's own anchor is stamped at the top of index.md (C9 post_process).
+        assert (out_dir / "data" / "default" / "index.md").read_text() == (
             '<a id="/"></a>\n# Hello\n'
         )
         # Metadata root is always rendered at the site root.
@@ -84,15 +84,15 @@ class TestReconcile:
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         (upstream / "data" / "index.md").write_text("# Root\n")
-        (upstream / "data" / "reports" / "index.md").parent.mkdir()
-        (upstream / "data" / "reports" / "index.md").write_text("# Hello\n")
+        (upstream / "data" / "default" / "index.md").parent.mkdir()
+        (upstream / "data" / "default" / "index.md").write_text("# Hello\n")
         (upstream / "reports").mkdir()
 
         out_dir = tmp_path / "reconcile"
         reconcile(data_dir=upstream, out_dir=out_dir)
 
         assert (out_dir / "data" / "index.md").read_text() == "# Root\n"
-        assert (out_dir / "data" / "reports" / "index.md").read_text() == "# Hello\n"
+        assert (out_dir / "data" / "default" / "index.md").read_text() == "# Hello\n"
 
     def test_renders_warnings_page_and_links_from_index(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"

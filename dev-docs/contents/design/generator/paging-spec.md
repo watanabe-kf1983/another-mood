@@ -70,9 +70,9 @@ file_per:
 
 これによりアンカーパス規則と paging path 規則が同じ shape で表現される。
 
-`page_path` は **レポートルート相対**。実ファイルの書き出し位置は mood_view が出力ディレクトリ規約のマウント先（`{outDir}/reports/`）を被せて決める（`{outDir}/reports/{page_path}`）。`{outDir}` 直下の診断系出力（`index.md`、`__entity_defs/` 等）はマウント先と無関係に常に同じ位置に出る。
+`page_path` は **edition ルート相対**。実ファイルの書き出し位置は mood_view が edition のマウント先（`{outDir}/{edition}/`）を被せて決める（`{outDir}/{edition}/{page_path}`）。現状の単一構成（form A）では暗黙 edition `default` が唯一の edition なので `{outDir}/default/{page_path}` に出る。`{outDir}` 直下の診断系出力（`index.md`、`__entity_defs/` 等）はマウント先と無関係に常に同じ位置に出る。
 
-> Editions（[Proposals](#editions-c5c6)）を入れると、この `reports/` ラッパーは廃され、出力は `{outDir}/{edition}/{page_path}` になる（form A は既定 edition `default`）。
+> 複数 edition（`editions:` = form B）を 1 ビルドで横並びに出す構成は [Proposals](#editions-c5c6) 参照（form A はその単一形）。
 
 ## Internal Design
 
@@ -160,7 +160,7 @@ edition の出力は **`{outDir}/{edition}/{page_path}`**。`reports/` ラッパ
 
 `Edition` は 1 edition の設定＋振る舞い（`name` / `file_per` / `page_path` / `is_split_target`）を持つドメイン型（現 `ReportsConfig` を改名、モジュールは `edition.py`、meta 用の固定 edition は `META_EDITION`）。
 
-> **進め方（増分）.** ① 無影響リファクタ: 単一 report を `Sequence[Edition]`＋ループに移し、form A の既定 edition 名を一時的に **`reports`** にする（出力は現行 `{outDir}/reports/` と一字一句同一）→ 検証。② form B（`editions:`）対応で複数 edition 生成。③ 破壊的フリップ: form A の既定 edition 名 `reports` → `default`（ここで初めて出力レイアウト・URL が動く）。PR 分割は実装時に判断。
+> **進め方（増分）.** ① 無影響リファクタ: 単一 report を `Sequence[Edition]`＋ループに移す（既定 edition 名を一時 `reports` とし出力を現行 `{outDir}/reports/` と一致させた）→ 済。② 破壊的フリップ: form A の既定 edition 名 `reports` → `default`。出力が `{outDir}/default/` に動き、メタ index の `## Reports` を edition 名リストのイテレーション（`__edition_names` メタノード）にした → 済。③ form B（`editions:`）対応で複数 edition 生成（`load_editions` の form B 分岐・`reports-schema.yaml` の `oneOf`。複数 edition のメタ index 列挙は ② のイテレーションに自動で乗る）。PR 分割は実装時に判断。
 
 ### Edition 別ルートテンプレート（将来）
 

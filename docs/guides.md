@@ -58,7 +58,7 @@ What the tool generates (under `.another-mood/my-project/`):
 ```
 .another-mood/my-project/
 ├── output/                                   # Markdown
-│   ├── reports/                              # your templates' pages
+│   ├── default/                              # your templates' pages
 │   │   ├── index.md                          # home page (from templates/index.md)
 │   │   ├── members/{alice,bob,carol}.md
 │   │   └── by_role/{engineer,designer}.md
@@ -69,9 +69,9 @@ What the tool generates (under `.another-mood/my-project/`):
 └── render/                                   # HTML
 ```
 
-Your templates render to `output/reports/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.
+Your templates render to `output/default/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.
 
-Besides `reports/`, `output/` also holds pages the tool generates on its own — an overview `index.md` (the entities and queries) and the `__`-prefixed directories — independent of your templates. They let you check the current state of the schema, data, and queries while writing — see the [Workflow](#workflow) chapter for details.
+Besides `default/`, `output/` also holds pages the tool generates on its own — an overview `index.md` (the entities and queries) and the `__`-prefixed directories — independent of your templates. They let you check the current state of the schema, data, and queries while writing — see the [Workflow](#workflow) chapter for details.
 
 ### Try the live preview
 
@@ -79,7 +79,7 @@ Besides `reports/`, `output/` also holds pages the tool generates on its own —
 mood watch my-project
 ```
 
-`http://localhost:5077` displays the HTML in your browser. Edit any file and save: the project auto-rebuilds and the browser reloads. Try changing `alice`'s `role` in `contents/members.yaml` from `engineer` to `manager`. You'll see `output/reports/by_role/manager.md` newly appear, and `alice` disappear from `output/reports/by_role/engineer.md` (the same changes show in the browser pages). One line of data edited, multiple pages regenerated in a consistent state — this is what the tool is for.
+`http://localhost:5077` displays the HTML in your browser. Edit any file and save: the project auto-rebuilds and the browser reloads. Try changing `alice`'s `role` in `contents/members.yaml` from `engineer` to `manager`. You'll see `output/default/by_role/manager.md` newly appear, and `alice` disappear from `output/default/by_role/engineer.md` (the same changes show in the browser pages). One line of data edited, multiple pages regenerated in a consistent state — this is what the tool is for.
 
 The rest of this guide builds on this sample, walking through the pieces needed to write sources for your own project.
 
@@ -107,7 +107,7 @@ In the table below, "where to write" paths are relative to the project directory
 | 1 | Schema | `definition/schema.yaml` | `output/__entity_defs/<entity>.md` |
 | 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__entity_data/<entity>.md` |
 | 3 | Query | `definition/queries/**/*.yaml` | `output/__queries/<query>.md` |
-| 4 | Template | `definition/templates/**/*.md` | `output/reports/index.md` and below |
+| 4 | Template | `definition/templates/**/*.md` | `output/default/index.md` and below |
 
 Schema and content are required; queries are optional; templates are required for the final output. `schema.yaml` is the only fixed single file — everything else can be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
 
@@ -463,7 +463,7 @@ A subtemplate can itself call `{% mood_view %}`, so a subpage can generate furth
 
 ### Where subpages land
 
-A subpage mirrors the record's place in the data, under `reports/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `reports/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `reports/by_role/engineer.md`. You can check each record's address in `__entity_data/` and `__queries/`, where it appears as `_anchor_path`.
+A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `default/by_role/engineer.md`. You can check each record's address in `__entity_data/` and `__queries/`, where it appears as `_anchor_path`.
 
 A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
 

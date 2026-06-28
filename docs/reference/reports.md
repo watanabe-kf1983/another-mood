@@ -15,8 +15,8 @@ file_per:
 
 A **type ID** names a type in the schema — the value you list under `file_per:`. Two forms cover the usual list-and-detail layout:
 
-- `X.item` — **each record** of a type (e.g. `members.item`): one detail page per record (`reports/members/alice.md`).
-- `X.item[]` — the **collection** of those records (e.g. `members.item[]`): one list page for the whole collection (`reports/members.md`). It is the record form with `[]` appended — the array *of* `X.item`.
+- `X.item` — **each record** of a type (e.g. `members.item`): one detail page per record (`default/members/alice.md`).
+- `X.item[]` — the **collection** of those records (e.g. `members.item[]`): one list page for the whole collection (`default/members.md`). It is the record form with `[]` appended — the array *of* `X.item`.
 
 So a member list plus per-member detail pages is `file_per: [members.item[], members.item]`. Nesting extends the path one level per array — each task within a category is `categories.item.tasks.item`, and that task list is `categories.item.tasks.item[]`.
 
@@ -26,4 +26,4 @@ To find the exact values, read the diagnostics. `output/__entity_defs/{entity}.m
 
 The built-in meta-schema is mirrored at [schemas/reports-schema.yaml](schemas/reports-schema.yaml) for direct reference.
 
-A split page is written at its **anchor-derived path** under the report root: the directory follows the view the node came from and the filename is the record's `id` (so a record from the `erds` view lands at `reports/erds/{id}.md`). See [Template — Output path](template.md#output-path).
+A split page is written at its **anchor-derived path** under the report's output directory `default/`: the directory follows the view the node came from and the filename is the record's `id` (so a record from the `erds` view lands at `default/erds/{id}.md`). See [Template — Output path](template.md#output-path).

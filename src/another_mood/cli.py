@@ -196,7 +196,7 @@ def watch(
         with command.watch(config, on_report=_build_listener()) as session:
             base = f"http://{_display_host(session.host)}:{session.port}"
             print(
-                f"Server running at {base}/\n  Reports: {base}/reports/",
+                f"Server running at {base}/\n  Reports: {base}/default/",
                 file=sys.stderr,
                 flush=True,
             )
