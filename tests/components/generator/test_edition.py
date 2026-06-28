@@ -1,4 +1,4 @@
-"""Tests for reports_config — ReportsSchema validation and reports.yaml parsing."""
+"""Tests for edition — ReportsSchema validation and reports.yaml parsing."""
 
 from pathlib import Path
 from textwrap import dedent
@@ -6,8 +6,8 @@ from textwrap import dedent
 import pytest
 
 from another_mood.components.generator.data_tree import wrap_tree
-from another_mood.components.generator.reports_config import (
-    ReportsConfig,
+from another_mood.components.generator.edition import (
+    Edition,
     load_reports_config,
 )
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
@@ -50,13 +50,13 @@ def test_load_with_entries(tmp_path: Path) -> None:
             """
         ),
     )
-    assert load_reports_config(path) == ReportsConfig(
+    assert load_reports_config(path) == Edition(
         file_per=("erds.item", "erds.item.entities.item")
     )
 
 
 def test_load_empty_file_per(tmp_path: Path) -> None:
-    assert load_reports_config(_write(tmp_path, "file_per: []\n")) == ReportsConfig(
+    assert load_reports_config(_write(tmp_path, "file_per: []\n")) == Edition(
         file_per=()
     )
 
@@ -65,20 +65,20 @@ def test_load_empty_file_per(tmp_path: Path) -> None:
 
 
 def test_is_split_target_listed() -> None:
-    config = ReportsConfig(file_per=("erds.item", "erds.item.entities.item"))
-    assert config.is_split_target("erds.item")
-    assert config.is_split_target("erds.item.entities.item")
+    edition = Edition(file_per=("erds.item", "erds.item.entities.item"))
+    assert edition.is_split_target("erds.item")
+    assert edition.is_split_target("erds.item.entities.item")
 
 
 def test_is_split_target_not_listed() -> None:
-    config = ReportsConfig(file_per=("erds.item",))
-    assert not config.is_split_target("screens.item")
+    edition = Edition(file_per=("erds.item",))
+    assert not edition.is_split_target("screens.item")
     # A prefix of a listed id is not itself a target.
-    assert not config.is_split_target("erds")
+    assert not edition.is_split_target("erds")
 
 
 def test_is_split_target_empty_file_per() -> None:
-    assert not ReportsConfig(file_per=()).is_split_target("erds.item")
+    assert not Edition(file_per=()).is_split_target("erds.item")
 
 
 # ── page_path ──────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ class TestPagePath:
     def test_no_split_boundary_is_index(self) -> None:
         # Empty file_per -> nearest_ancestor finds nothing -> index.md.
         root = wrap_tree(self._TREE)
-        assert ReportsConfig(file_per=()).page_path(root["erds"][0]) == "index.md"
+        assert Edition(file_per=()).page_path(root["erds"][0]) == "index.md"
 
     def test_match_formats_anchor_path_as_md(self) -> None:
         # object_type_id "erds.item" is in file_per, so the erd is its own
@@ -107,6 +107,4 @@ class TestPagePath:
         # lstrip), ".md" appended.
         root = wrap_tree(self._TREE)
         erd = root["erds"][0]
-        assert (
-            ReportsConfig(file_per=("erds.item",)).page_path(erd) == "erds/user-mgmt.md"
-        )
+        assert Edition(file_per=("erds.item",)).page_path(erd) == "erds/user-mgmt.md"

@@ -10,14 +10,14 @@ from typing import Any, cast
 import yaml
 from jinja2 import Undefined
 
-from another_mood.components.generator.reports_config import ReportsConfig
+from another_mood.components.generator.edition import Edition
 from another_mood.components.shared import json_data_model
 
 META_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "meta")
 )
 
-META_REPORTS_CONFIG = ReportsConfig(
+META_EDITION = Edition(
     file_per=("__entity_defs.item", "__entity_data.item", "__queries.item")
 )
 """Fixed split policy for the meta render.

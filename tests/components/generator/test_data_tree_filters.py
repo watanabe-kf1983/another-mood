@@ -16,7 +16,7 @@ from another_mood.components.generator.data_tree_filters import (
     node_label,
     resolve_node,
 )
-from another_mood.components.generator.reports_config import ReportsConfig
+from another_mood.components.generator.edition import Edition
 
 # A small two-page tree: members and by_role are each their own page, so
 # cross-page links exercise the relative-path computation.
@@ -40,8 +40,8 @@ def _node_map() -> dict[str, Node]:
     return dict(build_node_map(_DATA))
 
 
-def _config() -> ReportsConfig:
-    return ReportsConfig(file_per=_FILE_PER)
+def _edition() -> Edition:
+    return Edition(file_per=_FILE_PER)
 
 
 # ── build_anchor_path ──────────────────────────────────────────────
@@ -208,7 +208,7 @@ class TestNodeHref:
         nodes = _node_map()
         source = nodes["/by_role/dev"]
         target = nodes["/members/alice"]
-        assert node_href(_config(), source, target) == (
+        assert node_href(_edition(), source, target) == (
             "../members/alice.md#/members/alice"
         )
 
@@ -216,21 +216,21 @@ class TestNodeHref:
         nodes = _node_map()
         source = nodes["/"]  # renders on index.md
         target = nodes["/members/alice"]
-        assert node_href(_config(), source, target) == (
+        assert node_href(_edition(), source, target) == (
             "members/alice.md#/members/alice"
         )
 
     def test_same_page_self_link_keeps_filename(self) -> None:
         nodes = _node_map()
         node = nodes["/members/alice"]
-        assert node_href(_config(), node, node) == "alice.md#/members/alice"
+        assert node_href(_edition(), node, node) == "alice.md#/members/alice"
 
     def test_fragment_always_appended_even_for_page_root(self) -> None:
         nodes = _node_map()
         source = nodes["/"]
         target = nodes["/members/alice"]
         # alice is itself a page root, yet the fragment is not dropped.
-        assert node_href(_config(), source, target).endswith("#/members/alice")
+        assert node_href(_edition(), source, target).endswith("#/members/alice")
         # A MissingNode has no page/URL — the rendering filters handle that
         # (a broken reference is shown as a bracketed `[text]`), so node_href is
         # only ever called for resolved nodes and carries no MissingNode branch.

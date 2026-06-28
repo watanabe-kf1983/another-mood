@@ -10,8 +10,12 @@ from typing import Any, cast
 
 from another_mood.components.generator.data_tree import MappingNode, build_node_map
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
+from another_mood.components.generator.edition import (
+    Edition,
+    load_reports_config,
+)
 from another_mood.components.generator.meta_templates import (
-    META_REPORTS_CONFIG,
+    META_EDITION,
     META_TEMPLATES_DIR,
     META_TEMPLATES_FILTERS,
 )
@@ -20,10 +24,6 @@ from another_mood.components.generator.output_formats.md import (
     MD_FILTERS,
     MD_GLOBALS,
     make_link_filters,
-)
-from another_mood.components.generator.reports_config import (
-    ReportsConfig,
-    load_reports_config,
 )
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.component.build_report import BuildReport
@@ -43,7 +43,7 @@ def generate(
     data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
-    config = load_reports_config(reports_file)
+    edition = load_reports_config(reports_file)
     # anchor_path -> node map; the root node is the "/" entry.
     node_map = build_node_map(load_model(data_dir))
     data = cast(MappingNode, node_map["/"])
@@ -63,19 +63,19 @@ def generate(
         filters={
             **META_TEMPLATES_FILTERS,
             **node_filters,
-            **make_link_filters(META_REPORTS_CONFIG, node_map),
+            **make_link_filters(META_EDITION, node_map),
         },
         globals=node_globals,
-        reports_config=META_REPORTS_CONFIG,
+        edition=META_EDITION,
     )
     render(
         "index.md",
         templates_dir,
         data,
         out_dir / "reports",
-        filters={**node_filters, **make_link_filters(config, node_map)},
+        filters={**node_filters, **make_link_filters(edition, node_map)},
         globals=node_globals,
-        reports_config=config,
+        edition=edition,
     )
 
 
@@ -130,12 +130,12 @@ def render(
     *,
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
-    reports_config: ReportsConfig = ReportsConfig(file_per=()),
+    edition: Edition = Edition(file_per=()),
 ) -> None:
     """Render a template and write the result to out_dir/index.md.
 
     The md format's own helpers are injected here so every render gets them; the
-    caller adds any config / node-map-bound filters on top via ``filters``.
+    caller adds any edition / node-map-bound filters on top via ``filters``.
     """
     TemplateEngine(
         out_dir,
@@ -143,5 +143,5 @@ def render(
         output_format=MD,
         filters={**MD_FILTERS, **filters},
         globals={**MD_GLOBALS, **globals},
-        reports_config=reports_config,
+        edition=edition,
     ).render_to_file(template_name, data, Path("index.md"))

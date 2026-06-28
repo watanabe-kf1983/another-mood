@@ -26,7 +26,7 @@ from another_mood.components.generator.output_formats.md import (
     stamp_anchor,
     under_heading,
 )
-from another_mood.components.generator.reports_config import ReportsConfig
+from another_mood.components.generator.edition import Edition
 from another_mood.components.generator.template_engine import (
     TemplateEngine,
     make_environment,
@@ -323,8 +323,8 @@ def _anchors() -> dict[str, Node]:
     return dict(build_node_map(_ANCHOR_DATA))
 
 
-def _config() -> ReportsConfig:
-    return ReportsConfig(file_per=_ANCHOR_FILE_PER)
+def _edition() -> Edition:
+    return Edition(file_per=_ANCHOR_FILE_PER)
 
 
 class TestMakeLinkFilters:
@@ -332,7 +332,7 @@ class TestMakeLinkFilters:
     ``relink``)."""
 
     def test_returns_href_link_anchor_and_relink(self) -> None:
-        filters_map = make_link_filters(_config(), _anchors())
+        filters_map = make_link_filters(_edition(), _anchors())
         assert set(filters_map) == {"href", "link", "anchor", "relink"}
 
 
@@ -356,9 +356,9 @@ class TestLinkFilterWiring:
             tmp_path,
             templates_dir=templates_dir,
             output_format=MD,
-            filters={**node_filters, **make_link_filters(_config(), _anchors())},
+            filters={**node_filters, **make_link_filters(_edition(), _anchors())},
             globals=globals_map,
-            reports_config=_config(),
+            edition=_edition(),
         )
 
     def test_link_resolves_source_from_context(self, tmp_path: Path) -> None:
@@ -448,9 +448,9 @@ class TestRelinkFilterWiring:
             tmp_path,
             templates_dir=templates_dir,
             output_format=MD,
-            filters={**node_filters, **make_link_filters(_config(), _anchors())},
+            filters={**node_filters, **make_link_filters(_edition(), _anchors())},
             globals=globals_map,
-            reports_config=_config(),
+            edition=_edition(),
         )
 
     def test_resolves_a_node_link_relative_to_the_source_page(

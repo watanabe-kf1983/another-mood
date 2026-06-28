@@ -21,7 +21,7 @@ from another_mood.components.generator.data_tree_filters import (
 from another_mood.components.generator.output_formats.heading_shift import (
     under_heading as _under_heading,
 )
-from another_mood.components.generator.reports_config import ReportsConfig
+from another_mood.components.generator.edition import Edition
 from another_mood.components.shared.markdown import parse, rewrite_inline_links
 from another_mood.components.generator.template_engine import OutputFormat
 from another_mood.components.generator.url import url_escape
@@ -157,9 +157,9 @@ def _longest_backtick_run(text: str) -> int:
 
 
 def make_link_filters(
-    config: ReportsConfig, node_map: Mapping[str, Node]
+    edition: Edition, node_map: Mapping[str, Node]
 ) -> Mapping[str, Callable[..., object]]:
-    """The markdown link filters, bound to ``config`` and the build's node map:
+    """The markdown link filters, bound to ``edition`` and the build's node map:
     ``href`` / ``link`` / ``anchor`` render a resolved node, and ``relink``
     rewrites a prose body's inline ``node:`` destinations.
 
@@ -184,7 +184,7 @@ def make_link_filters(
         if isinstance(a, MissingNode):
             return Markup("")
         # Markup so finalize does not corrupt the URL (see `as_url`).
-        return Markup(node_href(config, context["this"], a))
+        return Markup(node_href(edition, context["this"], a))
 
     @pass_context
     def link(context: Context, a: object, text: object = None) -> Markup:
@@ -194,7 +194,7 @@ def make_link_filters(
             # never a `[..](..)` to a dead URL — the same shape `relink` leaves
             # a dropped `node:` destination, so both broken-link forms read alike.
             return Markup(f"[{md_escape(display)}]")
-        return md_link(display, node_href(config, context["this"], a))
+        return md_link(display, node_href(edition, context["this"], a))
 
     @pass_context
     def relink(context: Context, value: object) -> Markup:
@@ -208,7 +208,7 @@ def make_link_filters(
                 # Unresolved: drop the destination, leaving the same conspicuous
                 # bracketed `[text]` `link` leaves, never leaking `node:` to output.
                 return None
-            return node_href(config, source, target)
+            return node_href(edition, source, target)
 
         return Markup(rewrite_inline_links(parse(str(value)), resolve))
 

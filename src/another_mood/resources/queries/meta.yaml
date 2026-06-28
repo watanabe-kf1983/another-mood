@@ -53,7 +53,7 @@ __queries:
 # Node set for the built-in ER diagram on the index template.  Like
 # __entity_defs but without the `parent_entity: { exists: false }` filter,
 # so child entities like `artists.members` are included as nodes.  Not
-# split to pages (absent from META_REPORTS_CONFIG's file_per) — a pure
+# split to pages (absent from META_EDITION's file_per) — a pure
 # helper feeding the diagram.
 __entity_tree:
   from: __definition.entities

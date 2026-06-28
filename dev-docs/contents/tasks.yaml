@@ -62,7 +62,7 @@ categories:
         phase: 11
         done: true
       B6:
-        title: ページパスの導出 (ReportsConfig.page_path)
+        title: ページパスの導出 (Edition.page_path)
         phase: 11
         done: true
       B7:

@@ -31,17 +31,17 @@ _REPORTS_SCHEMA_FILE = Path(
 
 
 @dataclass(frozen=True)
-class ReportsConfig:
+class Edition:
     """Parsed ``definition/reports.yaml``.
 
-    Only carries ``file_per`` for now; future additions (profiles, etc.)
-    extend this dataclass so callers' signatures stay stable.
+    Only carries ``file_per`` for now; future additions extend this
+    dataclass so callers' signatures stay stable.
     """
 
     file_per: Sequence[str]
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, object]) -> "ReportsConfig":
+    def from_dict(cls, data: Mapping[str, object]) -> "Edition":
         """Build from an already-validated reports.yaml mapping."""
         file_per_raw = cast(Sequence[object], data.get("file_per") or ())
         return cls(file_per=tuple(str(p) for p in file_per_raw))
@@ -72,7 +72,7 @@ class ReportsConfig:
         return page._meta.anchor_path.removeprefix("/") + ".md"
 
 
-def load_reports_config(reports_file: Path) -> ReportsConfig:
+def load_reports_config(reports_file: Path) -> Edition:
     """Validate ``reports.yaml`` against ReportsSchema and return the parsed config.
 
     Reads the file once. Raises ``FileValidationError`` if validation
@@ -84,4 +84,4 @@ def load_reports_config(reports_file: Path) -> ReportsConfig:
         raise FileValidationError(
             diagnostics=[issue.at_file(reports_file) for issue in issues]
         )
-    return ReportsConfig.from_dict(data)
+    return Edition.from_dict(data)

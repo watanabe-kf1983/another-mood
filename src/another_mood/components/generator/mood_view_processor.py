@@ -14,7 +14,7 @@ from jinja2.ext import Extension
 from jinja2.parser import Parser
 
 from another_mood.components.generator.data_tree import Node
-from another_mood.components.generator.reports_config import ReportsConfig
+from another_mood.components.generator.edition import Edition
 
 if TYPE_CHECKING:
     from another_mood.components.generator.template_engine import TemplateEngine
@@ -31,7 +31,7 @@ class MoodViewProcessorImpl:
     :meth:`_splits`)."""
 
     engine: TemplateEngine
-    reports_config: ReportsConfig = ReportsConfig(file_per=())
+    edition: Edition = Edition(file_per=())
 
     def __call__(self, template_name: str, subject: object) -> str:
         # Only a real data-tree node can become its own page; anything else
@@ -46,11 +46,11 @@ class MoodViewProcessorImpl:
     def _splits(self, node: Node) -> bool:
         """Whether the node becomes its own page (else inlined): its
         ``object_type_id`` is a ``file_per`` split target."""
-        return self.reports_config.is_split_target(node._meta.object_type_id)
+        return self.edition.is_split_target(node._meta.object_type_id)
 
     def _out_path(self, node: Node) -> Path:
         """Anchor-derived page path of a split node."""
-        return Path(self.reports_config.page_path(node))
+        return Path(self.edition.page_path(node))
 
 
 class MoodViewExtension(Extension):
