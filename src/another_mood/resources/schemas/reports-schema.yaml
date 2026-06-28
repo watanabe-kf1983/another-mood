@@ -1,11 +1,28 @@
 title: ReportsSchema
 description: >-
   Meta-schema validating the user's definition/reports.yaml. The file
-  configures report output.
+  configures report output. Two mutually exclusive forms: form A declares
+  a single edition's split policy at the top level (file_per); form B
+  declares an editions map — one named edition per entry, each with its
+  own file_per. Mixing the two (a top-level file_per alongside editions)
+  is rejected.
 
-type: object
-properties:
-  file_per:
+oneOf:
+  - $ref: "#/$defs/formA"
+  - $ref: "#/$defs/formB"
+
+$defs:
+  objectTypeId:
+    title: ObjectType ID
+    description: >-
+      Dotted ObjectType ID — segments separated by `.`, each segment
+      is a Unicode identifier. A record type ends in `.item` (e.g.
+      `erds.item.entities.item`); the array *of* those records takes a
+      trailing `[]` (e.g. `erds.item.entities.item[]`).
+    type: string
+    pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{N}_]*)*(\\[\\])?$"
+
+  filePerList:
     title: file_per list
     description: >-
       ObjectType IDs whose nodes are split out as separate files by the
@@ -16,12 +33,45 @@ properties:
       node.
     type: array
     items:
-      title: ObjectType ID
-      description: >-
-        Dotted ObjectType ID — segments separated by `.`, each segment
-        is a Unicode identifier. A record type ends in `.item` (e.g.
-        `erds.item.entities.item`); the array *of* those records takes a
-        trailing `[]` (e.g. `erds.item.entities.item[]`).
-      type: string
-      pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{N}_]*)*(\\[\\])?$"
-additionalProperties: false
+      $ref: "#/$defs/objectTypeId"
+
+  formA:
+    title: Single-edition report (form A)
+    description: >-
+      Top-level file_per: the report is published as one implicit edition
+      named `default`, under {outDir}/default/.
+    type: object
+    properties:
+      file_per:
+        $ref: "#/$defs/filePerList"
+    additionalProperties: false
+
+  formB:
+    title: Multi-edition report (form B)
+    description: >-
+      An editions map: each entry is one edition — a body variant of the
+      same report, published side by side under {outDir}/{edition}/. Every
+      edition renders the same data; for now they differ only in file_per
+      (split granularity).
+    type: object
+    required: [editions]
+    properties:
+      editions:
+        type: object
+        minProperties: 1
+        propertyNames:
+          description: >-
+            Edition name — any non-empty string, used as the output
+            subdirectory segment (IRI-escaped when it carries unsafe
+            characters). Names starting with `__` are reserved for the
+            diagnostic directories (__entity_defs/ etc.) and rejected.
+          pattern: "^(?!__).+$"
+        additionalProperties:
+          title: Edition
+          description: One edition's output configuration — same shape as form A's top level.
+          type: object
+          properties:
+            file_per:
+              $ref: "#/$defs/filePerList"
+          additionalProperties: false
+    additionalProperties: false

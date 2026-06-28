@@ -195,11 +195,7 @@ def watch(
     try:
         with command.watch(config, on_report=_build_listener()) as session:
             base = f"http://{_display_host(session.host)}:{session.port}"
-            print(
-                f"Server running at {base}/\n  Reports: {base}/default/",
-                file=sys.stderr,
-                flush=True,
-            )
+            print(f"Server running at {base}/", file=sys.stderr, flush=True)
             print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
             # Loop with a short timeout: on Windows, threading.Event.wait()
             # without a timeout is not interruptible by Ctrl+C, so the main

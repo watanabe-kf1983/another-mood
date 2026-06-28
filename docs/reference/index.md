@@ -10,5 +10,5 @@ For a guided walkthrough, see [Guides](../guides.md); this side is for targeted 
 - [Schema](schema.md) — schema definition (a JSON Schema subset plus the built-in prose schema)
 - [Query](query.md) — query syntax (`from` / `grouped` / `select`)
 - [Template](template.md) — template syntax (Jinja2 plus the `{% mood_view %}` extension)
-- [Reports](reports.md) — report output configuration (`definition/reports.yaml` — paging and profiles)
+- [Reports](reports.md) — report output configuration (`definition/reports.yaml` — paging and editions)
 - [Built-in schemas](schemas/) — canonical YAML for `schema-schema`, `content-schema`, `query-schema`, and `reports-schema`

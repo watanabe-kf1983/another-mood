@@ -123,7 +123,7 @@ categories:
       C6:
         title: 複数 edition の並列ビルド
         phase: 12
-        proposal: design/generator/paging-spec.md#editions-c6
+        done: true
       C7:
         title: FS-safe パス書き出しの堅牢化 (write 時例外 → 改名診断)
         note: >-

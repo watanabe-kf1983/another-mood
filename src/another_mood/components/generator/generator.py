@@ -44,10 +44,15 @@ def generate(
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     editions = load_editions(reports_file)
-    # anchor_path -> node map; the root node is the "/" entry.  Edition names
-    # join the model's top-level ``__`` meta channel (like ``__entity_*``) so the
-    # meta index reaches them as ``__edition_names``.
-    model = {**load_model(data_dir), "__edition_names": [e.name for e in editions]}
+    # anchor_path -> node map; the root node is the "/" entry.  Editions join
+    # the model's top-level ``__`` meta channel (like ``__entity_*``) so the
+    # meta index reaches them as ``__editions``: ``name`` is the display label,
+    # ``segment`` the IRI-escaped output/link segment (they differ only for
+    # names carrying unsafe characters).
+    model = {
+        **load_model(data_dir),
+        "__editions": [{"name": e.name, "segment": e.dir_segment} for e in editions],
+    }
     node_map = build_node_map(model)
     data = cast(MappingNode, node_map["/"])
     # Both renders walk the data tree, so both get the format-neutral filters
@@ -78,7 +83,7 @@ def generate(
             "index.md",
             templates_dir,
             data,
-            out_dir / edition.name,
+            out_dir / edition.dir_segment,
             filters={**node_filters, **make_link_filters(edition, node_map)},
             globals=node_globals,
             edition=edition,

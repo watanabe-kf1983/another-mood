@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.generator.data_tree import Node, nearest_ancestor
+from another_mood.components.generator.url import url_escape
 from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.user_source.source_loader import parse_yaml
@@ -58,6 +59,21 @@ class Edition:
         file_per_raw = cast(Sequence[object], data.get("file_per") or ())
         return cls(name=name, file_per=tuple(str(p) for p in file_per_raw))
 
+    @property
+    def dir_segment(self) -> str:
+        """The output subdirectory segment — ``name`` IRI-escaped.
+
+        Edition names are validated loosely (any non-empty, non-``__``
+        string), so an unsafe name is made FS- and link-safe with the same
+        per-segment escape anchor_path uses (``url_escape`` with no extra
+        safe chars; see :mod:`another_mood.components.generator.data_tree`).
+        The generator mounts the edition at ``{out_dir}/{dir_segment}/`` and
+        the meta index links to ``{dir_segment}/``, so both stay consistent.
+        ASCII-safe names (``default`` / ``web`` / ``pdf``) escape to
+        themselves.
+        """
+        return url_escape(self.name, safe="")
+
     def is_split_target(self, object_type_id: str) -> bool:
         """Whether nodes of ``object_type_id`` are split into their own page.
 
@@ -89,7 +105,8 @@ def load_editions(reports_file: Path) -> Sequence[Edition]:
 
     Reads the file once. Raises ``FileValidationError`` if validation
     produces any diagnostics.  Form A (top-level ``file_per``) returns a
-    single edition named ``_FORM_A_EDITION_NAME``.
+    single edition named ``_FORM_A_EDITION_NAME``; form B (an ``editions:``
+    map) returns one edition per entry, in declaration order.
     """
     data = parse_yaml(reports_file)
     validator = Validator(load_model(_REPORTS_SCHEMA_FILE))
@@ -97,4 +114,11 @@ def load_editions(reports_file: Path) -> Sequence[Edition]:
         raise FileValidationError(
             diagnostics=[issue.at_file(reports_file) for issue in issues]
         )
-    return (Edition.from_dict(_FORM_A_EDITION_NAME, data),)
+    editions = data.get("editions")
+    if editions is None:
+        # Form A: the top-level mapping is the single implicit edition.
+        return (Edition.from_dict(_FORM_A_EDITION_NAME, data),)
+    # Form B: one edition per entry. Mapping order is the declaration order
+    # (ruamel preserves it), so editions publish in the order written.
+    entries = cast(Mapping[str, Mapping[str, object]], editions)
+    return tuple(Edition.from_dict(name, entry) for name, entry in entries.items())
