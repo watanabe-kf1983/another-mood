@@ -6,71 +6,23 @@
 
 ### レポート設定ファイル
 
-`definition/reports.yaml` でレポート出力を設定する。`schema.yaml` と並ぶ必須ファイル。`mood init` および各 blueprint が生成する。次の二択（**混在不可**）:
+設定構文（form A の `file_per`、form B の `editions:` マップ、edition 名規則、`oneOf` 検証）は [docs/reference/reports.md](../../../../docs/reference/reports.md) を正本とする。設計判断:
 
-**form A** — トップ直書きの単一 edition。`file_per` にページとして切り出す対象 ObjectType ID ([schema-spec.md](../normalizer/schema-spec.md#entity-名) 参照 — 実行時には各ノードの `_meta.object_type_id` ([generator.md](generator.md#ノードメタデータ)) と照合される) を列挙する:
-
-```yaml
-# definition/reports.yaml — form A
-file_per:
-  - erds.item
-  - erds.item.entities.item
-```
-
-**form B** — 同一 report を複数の **edition** で並行配信する（`editions:` マップ）。各 edition は report の体裁違いで、**当面 edition 間の差は `file_per`（分割粒度）のみ** — Markdown→HTML レンダリングは全 edition 同一で、別レンダラ・別フォーマットは持たない。全 edition を 1 ビルドで同時生成し `{outDir}/{edition}/` に横並び公開する（環境で 1 つ選ぶ "profile" ではない）:
-
-```yaml
-# definition/reports.yaml — form B
-editions:
-  web:                  # ブラウズ用: ページ分割
-    file_per:
-      - erds.item
-      - erds.item.entities.item
-  print:                # 通読用: 全インライン（単一 index.md）
-    file_per: []
-```
-
-- 各 edition エントリの中身は form A のトップと同型（現状 `file_per` のみ）。
-- form A は **暗黙の単一 edition**で、その edition 名は `default`（出力 `{outDir}/default/`）。
-- edition 名は出力ディレクトリのセグメントになる。検証は**ゆるく**（非空・最低 1 edition・`__` 始まりは診断ディレクトリと衝突するため禁止）、セグメント化時に page_path / anchor_path と同じ IRI エスケープ（[anchor-spec.md](anchor-spec.md#escape-規則)、B7）を被せて FS-safe にする（`Edition.dir_segment`、表示は raw のまま）。FS 固有のキツいエッジ（長さ・予約名等）は C7 に委ねる。
-
-"並列ビルド" は成果物が横並びに出る意で concurrency は持たない。単一 edition 選択（`--edition`）も当面持たない。形式検証は内蔵 `reports-schema.yaml` の `oneOf`（form A ⊕ form B）で行う。
+- **edition は同一 report の体裁違いの並行出力**で、当面の差は `file_per`（分割粒度）のみ。Markdown→HTML レンダリングは全 edition 同一で、別レンダラ・別フォーマットは持たない。
+- 全 edition を 1 ビルドで横並び公開する — **環境で 1 つ選ぶ "profile" ではない**。"並列ビルド" は成果物が横並びに出る意で concurrency は持たず、単一 edition 選択（`--edition`）も当面持たない。
+- form A は暗黙の単一 edition `default`。edition 名の検証は**ゆるく**（非空・最低 1 件・`__` 始まり禁止）に留め、出力セグメント化時に anchor_path と同じ IRI エスケープ（`Edition.dir_segment`、表示は raw のまま）で FS-safe にする。FS 固有のキツいエッジ（長さ・予約名等）は C7 に委ねる。
 
 ### テンプレート主題のノード受け取りと `this` 束縛
 
-テンプレートの主題（subject）は **データツリーのノード**（Mapping = レコード / Array = コレクション）として渡し、コンテキストに **固定名 `this` で束縛**する:
+主題（subject）を `this` でどう参照するか（Mapping の spread／`this`／Array 反復、スカラ値の扱い）は [docs/reference/template.md の Subtemplate side](../../../../docs/reference/template.md#subtemplate-side) を正本とする。設計判断:
 
-- **Mapping 主題**: キーを spread し `{{ 名前 }}` で bare アクセス（`this.` 税ゼロ）。加えて `this` も束縛（`{{ this.名前 }}` ≡ `{{ 名前 }}`）
-- **非 Mapping 主題（Array）**: spread するフィールドがないので `this` のみ（`{% for e in this %}`）
-- スカラ主題は、分割（別ページ書き出し）時のみエラー — ページはアンカーパスを持つノードであるべきだから。inline 展開は単なる差し込みなので任意の値を許す
-- `this` は型不問で **常に主題ノード自身**（`_meta` アクセス・配列反復の handle）
-
-**束縛はレンダリング境界（`template_engine._bind`）の単一規則**として、root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一に適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築は持たない。
-
-加えて、主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(Edition, node_map)` だけを束縛すればよい（[generator.md のリンク解決](generator.md#リンク解決)）。
+- **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築を持たない。
+- 主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(Edition, node_map)` だけを束縛すればよい（[generator.md のリンク解決](generator.md#リンク解決)）。
+- スカラ主題を**分割時のみ**エラーにするのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。
 
 ### 分割ルール
 
-`{% mood_view "tpl" with NODE %}` は主題ノードの `_meta.object_type_id`（[generator.md](generator.md#ノードメタデータ)）を `file_per` と照合して振る舞いを決める:
-
-- **`file_per` の分割単位に含まれる** → 別ページに書き出し、**呼び出し位置には何も残さない**（`render_to_file` して空文字列を返す）
-- **含まれない** → その場にインライン展開（`{% include %}` 相当）
-
-親ページ側に出すリンクや目次は **mood_view が自動生成しない**。author が `| link` で別途書く。`| link` は target の page_path（[ページパスの導出](generator.md#ページパスの導出)）で解決されるので、**分割なら別ページ URL・インラインなら同ページ内 `#fragment`** に自動で適応する。これにより author は分割/インラインを意識せず、同じテンプレートが Web 用（分割）でも PDF 用（全インライン）でも動く。
-
-典型は **TOC ループと内容ループの分離**（two-loop パターン）:
-
-```jinja2
-{# 親ページの目次: 常にリンクを出す（分割なら別ページ、インラインなら #fragment へ適応） #}
-{%- for member in members %}
-- {{ member | link }} — {{ member.role }}
-{%- endfor %}
-
-{# 内容: 分割ならページ書き出し、非分割ならインライン展開 #}
-{%- for member in members %}
-{%- mood_view "member.md" with member %}
-{%- endfor %}
-```
+`{% mood_view %}` が主題の `_meta.object_type_id` を `file_per` と照合して分割/インラインを決めること、親ページのリンクは mood_view が自動生成せず author が `| link` で書く two-loop パターン（分割なら別ページ URL・インラインなら同ページ `#fragment` に自動適応）は [docs/reference/template.md の Split vs inline](../../../../docs/reference/template.md#split-vs-inline) を正本とする。設計判断:
 
 > **背景: なぜ自動リンクを mood_view に持たせないか.** 当初案は「分割時に親へリンクを残す」だったが、リンク解決の責務は既に `| link` ＋ page_path にあり、しかも分割/インラインへ自動適応する。mood_view にリンク生成を畳み込むと二重実装になり、かつ親側の周辺マークアップ（リスト記号・付随情報）を author が制御できなくなる。mood_view の責務は「このノードの内容をどこに置くか」の一点に保つ。`{% mood_view %}` にブロック本体やアーム（`{% split %}` 等の発明語）を持たせる糖衣も検討したが、two-loop パターンが既知の素の構文だけで同じことを達成するため採らない。
 
@@ -80,14 +32,7 @@ editions:
 
 ### ページパスと出力ディレクトリ
 
-ページパスはアンカーパスから直接導出される。導出規則は `Edition.page_path` が持ち、その定義は [generator.md](generator.md#ページパスの導出) を正本とする。anchor_path を流用するため、セグメントの**エスケープも anchor_path と同じ IRI 形を継承する**（[anchor-spec.md](anchor-spec.md#escape-規則) — 非 ASCII の `ucschar` は生のまま、`/` 等の構造文字と FS 危険文字は percent-encode）。要点:
-
-- **非 root**: anchor_path の先頭 `/` を落として `.md` を付けたもの（例: `/erds/user-management` → `erds/user-management.md`、`/erds/user-management/entities/user` → `erds/user-management/entities/user.md`、シングルトン `/overview` → `overview.md`）
-- **root (`anchor_path == "/"`)**: `index.md` 固定（file_per 不問）
-
-これによりアンカーパス規則と paging path 規則が同じ shape で表現される。
-
-`page_path` は **edition ルート相対**。実ファイルの書き出し位置は mood_view が edition のマウント先（`{outDir}/{edition}/`）を被せて決める（`{outDir}/{edition}/{page_path}`）。form A では暗黙 edition `default` が唯一なので `{outDir}/default/{page_path}`、form B では各 edition が `{outDir}/{edition}/{page_path}` に出る。各 edition ディレクトリは `{outDir}` 直下に置かれ、同じく `{outDir}` 直下に出る診断系出力（`index.md`、`__entity_defs/` 等）と横並びになる:
+ページパスの導出規則（anchor_path 由来、root は `index.md`、セグメントは anchor_path と同じ IRI エスケープを継承）は `Edition.page_path` が持ち、正本は [generator.md](generator.md#ページパスの導出)。`page_path` は **edition ルート相対**で、実ファイルは mood_view が edition のマウント先を被せた `{outDir}/{edition}/{page_path}` に書き出す（form A は暗黙 edition `default`）。各 edition ディレクトリと診断系出力（`index.md`、`__entity_defs/` 等）は `{outDir}` 直下に横並びになる:
 
 ```
 {outDir}/
