@@ -109,7 +109,7 @@ A *split* subject must be an addressable node, so a scalar raises an error; inli
 
 #### Output path
 
-A split page's path mirrors where the subject sits in the data: it is the subject's [anchor path](#anchor-paths) with `.md` appended, written under `reports/`. A record with anchor path `/products/foo` is written to `reports/products/foo.md`; a singleton at `/overview`, to `reports/overview.md`.
+A split page's path mirrors where the subject sits in the data: it is the subject's [anchor path](#anchor-paths) with `.md` appended, written under `default/`. A record with anchor path `/products/foo` is written to `default/products/foo.md`; a singleton at `/overview`, to `default/overview.md`.
 
 Two pages that resolve to the same path make the build fail rather than silently overwrite one another.
 

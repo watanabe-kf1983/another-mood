@@ -33,10 +33,8 @@ _REPORTS_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "reports-schema.yaml")
 )
 
-# The implicit edition name for form A (top-level ``file_per``).  Kept as a
-# single constant so the staged rename to ``"default"`` (the breaking output
-# flip) lands in exactly one place.
-_FORM_A_EDITION_NAME = "reports"
+# Output subdirectory name for form A's single implicit edition.
+_FORM_A_EDITION_NAME = "default"
 
 
 @dataclass(frozen=True)

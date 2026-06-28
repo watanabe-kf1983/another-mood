@@ -40,7 +40,7 @@ def test_load_rejects_invalid(source: str, tmp_path: Path) -> None:
 
 
 def test_load_with_entries(tmp_path: Path) -> None:
-    # Form A yields a single implicit edition named "reports".
+    # Form A yields a single implicit edition named "default".
     path = _write(
         tmp_path,
         dedent(
@@ -52,13 +52,13 @@ def test_load_with_entries(tmp_path: Path) -> None:
         ),
     )
     assert load_editions(path) == (
-        Edition(name="reports", file_per=("erds.item", "erds.item.entities.item")),
+        Edition(name="default", file_per=("erds.item", "erds.item.entities.item")),
     )
 
 
 def test_load_empty_file_per(tmp_path: Path) -> None:
     assert load_editions(_write(tmp_path, "file_per: []\n")) == (
-        Edition(name="reports", file_per=()),
+        Edition(name="default", file_per=()),
     )
 
 

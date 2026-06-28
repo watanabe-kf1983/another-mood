@@ -55,4 +55,6 @@
 
 ## Reports
 
-[→ reports/](reports/)
+{% for name in __edition_names %}
+- [{{ name }}]({{ name }}/)
+{% endfor %}
