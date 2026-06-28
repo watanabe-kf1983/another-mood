@@ -1,13 +1,17 @@
 # ``page_path`` reads ``node._meta`` — a template-public field under the
 # reserved ``_`` prefix (see data_tree.py), not a Python-protected attr.
 # pyright: reportPrivateUsage=false
-"""Reports config — validate and parse definition/reports.yaml for the generator.
+"""Edition — one report variant's output name and page-split policy.
 
-Reads the user's `reports.yaml`, validates it against the built-in
-ReportsSchema, and returns its parsed ``file_per`` list. Lives under
-``generator/`` because the report config is consumed by the generator
-alone; the loader is a generator-local helper rather than a pipeline
-stage.
+An ``Edition`` is the unit the generator loops over: its ``name`` (the
+output subdirectory segment) plus the page-split behaviour derived from
+``file_per``.  :func:`load_editions` reads the user's ``reports.yaml``,
+validates it against the built-in ReportsSchema, and returns the editions
+it declares.  Form A (top-level ``file_per``) yields a single implicit
+edition; form B (an ``editions:`` map) yields one per entry.
+
+Lives under ``generator/`` because editions are consumed by the generator
+alone; the loader is a generator-local helper rather than a pipeline stage.
 """
 
 from __future__ import annotations
@@ -29,22 +33,32 @@ _REPORTS_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "reports-schema.yaml")
 )
 
+# The implicit edition name for form A (top-level ``file_per``).  Kept as a
+# single constant so the staged rename to ``"default"`` (the breaking output
+# flip) lands in exactly one place.
+_FORM_A_EDITION_NAME = "reports"
+
 
 @dataclass(frozen=True)
-class ReportsConfig:
-    """Parsed ``definition/reports.yaml``.
+class Edition:
+    """One report edition — its output name and page-split policy.
 
-    Only carries ``file_per`` for now; future additions (profiles, etc.)
-    extend this dataclass so callers' signatures stay stable.
+    ``file_per`` drives :meth:`is_split_target` / :meth:`page_path`; ``name``
+    is the output subdirectory segment (``{outDir}/{name}/``).  The empty
+    default ``name`` is for fallback renders that write to a fixed directory
+    rather than an edition mount (so ``name`` is unused there).  Future
+    per-edition fields extend this dataclass so callers' signatures stay
+    stable.
     """
 
     file_per: Sequence[str]
+    name: str = ""
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, object]) -> "ReportsConfig":
-        """Build from an already-validated reports.yaml mapping."""
+    def from_dict(cls, name: str, data: Mapping[str, object]) -> "Edition":
+        """Build from an already-validated edition mapping."""
         file_per_raw = cast(Sequence[object], data.get("file_per") or ())
-        return cls(file_per=tuple(str(p) for p in file_per_raw))
+        return cls(name=name, file_per=tuple(str(p) for p in file_per_raw))
 
     def is_split_target(self, object_type_id: str) -> bool:
         """Whether nodes of ``object_type_id`` are split into their own page.
@@ -72,11 +86,12 @@ class ReportsConfig:
         return page._meta.anchor_path.removeprefix("/") + ".md"
 
 
-def load_reports_config(reports_file: Path) -> ReportsConfig:
-    """Validate ``reports.yaml`` against ReportsSchema and return the parsed config.
+def load_editions(reports_file: Path) -> Sequence[Edition]:
+    """Validate ``reports.yaml`` against ReportsSchema and return its editions.
 
     Reads the file once. Raises ``FileValidationError`` if validation
-    produces any diagnostics.
+    produces any diagnostics.  Form A (top-level ``file_per``) returns a
+    single edition named ``_FORM_A_EDITION_NAME``.
     """
     data = parse_yaml(reports_file)
     validator = Validator(load_model(_REPORTS_SCHEMA_FILE))
@@ -84,4 +99,4 @@ def load_reports_config(reports_file: Path) -> ReportsConfig:
         raise FileValidationError(
             diagnostics=[issue.at_file(reports_file) for issue in issues]
         )
-    return ReportsConfig.from_dict(data)
+    return (Edition.from_dict(_FORM_A_EDITION_NAME, data),)

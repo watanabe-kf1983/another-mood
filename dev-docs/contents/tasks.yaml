@@ -62,7 +62,7 @@ categories:
         phase: 11
         done: true
       B6:
-        title: ページパスの導出 (ReportsConfig.page_path)
+        title: ページパスの導出 (Edition.page_path)
         phase: 11
         done: true
       B7:
@@ -116,14 +116,14 @@ categories:
         phase: 11
         done: true
       C5:
-        title: プロファイル別の出力ディレクトリ規約
-        note: "{outDir}/{profile}/index.md"
+        title: edition 別の出力ディレクトリ規約
+        note: "{outDir}/{edition}/index.md"
         phase: 12
-        proposal: design/generator/paging-spec.md#proposals
+        proposal: design/generator/paging-spec.md#editions-c5c6
       C6:
-        title: 複数プロファイルの並列ビルド
+        title: 複数 edition の並列ビルド
         phase: 12
-        proposal: design/generator/paging-spec.md#proposals
+        proposal: design/generator/paging-spec.md#editions-c5c6
       C7:
         title: FS-safe パス書き出しの堅牢化 (write 時例外 → 改名診断)
         note: >-
