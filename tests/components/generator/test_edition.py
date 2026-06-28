@@ -100,6 +100,20 @@ def test_load_form_b_editions(tmp_path: Path) -> None:
     )
 
 
+# ── dir_segment ────────────────────────────────────────────────────
+
+
+def test_dir_segment_ascii_safe_name_is_identity() -> None:
+    assert Edition(name="web", file_per=()).dir_segment == "web"
+
+
+def test_dir_segment_escapes_unsafe_name() -> None:
+    # Same per-segment escape as anchor_path: URL-unsafe ASCII (space, `/`)
+    # is percent-encoded, non-ASCII ucschar (版) is kept raw.
+    assert Edition(name="Web 版", file_per=()).dir_segment == "Web%20版"
+    assert Edition(name="a/b", file_per=()).dir_segment == "a%2Fb"
+
+
 # ── is_split_target ────────────────────────────────────────────────
 
 

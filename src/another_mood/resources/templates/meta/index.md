@@ -55,6 +55,6 @@
 
 ## Reports
 
-{% for name in __edition_names %}
-- [{{ name }}]({{ name }}/)
+{% for e in __editions %}
+- [{{ e.name }}]({{ e.segment | safe }}/)
 {% endfor %}

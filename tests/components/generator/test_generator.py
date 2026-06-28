@@ -50,6 +50,39 @@ class TestGenerate:
         # Metadata root is always rendered at the site root.
         assert (out_dir / "data" / "index.md").exists()
 
+    def test_renders_each_form_b_edition_with_escaped_segment(
+        self, tmp_path: Path
+    ) -> None:
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
+        _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text("# {{ title }}\n")
+
+        out_dir = tmp_path / "output"
+        reports_file = tmp_path / "reports.yaml"
+        # Two editions; the second carries a space so its output segment and
+        # meta-index href are IRI-escaped (and stay consistent).
+        reports_file.write_text(
+            "editions:\n  web:\n    file_per: []\n  print me:\n    file_per: []\n"
+        )
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            reports_file=reports_file,
+            out_dir=out_dir,
+        )
+
+        assert (out_dir / "data" / "web" / "index.md").exists()
+        assert (out_dir / "data" / "print%20me" / "index.md").exists()
+        # Meta index lists each edition: raw display label, escaped href that
+        # matches the directory written above.
+        meta_index = (out_dir / "data" / "index.md").read_text()
+        assert "- [web](web/)" in meta_index
+        assert "- [print me](print%20me/)" in meta_index
+
     def test_writes_error_to_reports_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
