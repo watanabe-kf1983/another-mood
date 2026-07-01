@@ -36,18 +36,24 @@ class Watcher:
     def run(self) -> None:
         """Block and watch. Calls on_change for each debounced change set."""
         event_received = threading.Event()
-        file_filter = {str(p) for p in self._watch_paths if p.is_file()}
 
         class _Handler(FileSystemEventHandler):
-            # Only listen for mutation events. Ignoring open/access/close
-            # prevents our own read of upstream from self-triggering the
-            # watcher (inotify emits open/close events for reads, which
-            # watchdog surfaces by default).
+            # Only mutation events. Ignoring open/access/close prevents our own
+            # read of the watched tree from self-triggering (inotify emits
+            # open/close on reads, which watchdog surfaces by default).
             #
-            # When watching specific files (via parent dir), filter events
-            # to avoid cross-talk from sibling files in the same directory.
+            # ``restrict_to`` is per handler: ``None`` (no restriction) for a
+            # recursively-watched directory, where every event counts; or the
+            # single file watched via its parent directory (watchdog can only
+            # watch directories), so a sibling changing there does not fire.
+            # Keeping the restriction per handler is the fix for the earlier
+            # bug where one shared filter went non-empty as soon as any file
+            # was watched and then suppressed the watched directories' events.
+            def __init__(self, restrict_to: set[str] | None = None) -> None:
+                self._restrict_to = restrict_to
+
             def _handle(self, event: FileSystemEvent) -> None:
-                if not file_filter or event.src_path in file_filter:
+                if self._restrict_to is None or event.src_path in self._restrict_to:
                     event_received.set()
 
             on_created = _handle
@@ -55,13 +61,16 @@ class Watcher:
             on_deleted = _handle
             on_moved = _handle
 
-        handler = _Handler()
         observer = Observer()
         for path in self._watch_paths:
             if path.is_file():
-                observer.schedule(handler, str(path.parent), recursive=False)
+                observer.schedule(
+                    _Handler(restrict_to={str(path)}),
+                    str(path.parent),
+                    recursive=False,
+                )
             else:
-                observer.schedule(handler, str(path), recursive=True)
+                observer.schedule(_Handler(), str(path), recursive=True)
         observer.start()
 
         while True:
