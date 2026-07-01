@@ -7,6 +7,7 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 {% for artist in artist_discography %}
 - {{ artist | link }}{% if artist.country %} - {{ artist.country }}{% endif +%}
 {% endfor %}
+
 {% for artist in artist_discography %}
 {% filter under_heading("##") %}
 {% mood_view "artist-detail.md" with artist %}
@@ -110,6 +111,10 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {% endfor %}
 
 ## Notes
+
+{% for record in prose %}
+- {{ record | link }}
+{% endfor %}
 
 {% for record in prose %}
 {% filter under_heading("##") %}
