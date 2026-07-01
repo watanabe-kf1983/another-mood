@@ -99,7 +99,7 @@ A custom tag that renders a subtemplate, **either as its own page (split) or exp
 | Part | Description |
 |---|---|
 | `NAME` | The subtemplate's filename including the extension (e.g. `"product-detail.md"`), given as a string. |
-| `DATA` | The subject passed to the subtemplate. |
+| `DATA` | The subject passed to the subtemplate. A node subject must be `this` or one of its descendants. |
 
 #### Split vs inline
 
