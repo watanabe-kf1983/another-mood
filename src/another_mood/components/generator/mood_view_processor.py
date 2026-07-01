@@ -112,9 +112,7 @@ def _guard_subtree(
     Embedding a node off its home page breaks both its outgoing ``this``-keyed
     links (``relink`` / ``link`` / ``href``) and the anchor others link *to*.
     So the subject must be ``host``-or-a-descendant — checked structurally by
-    walking ``_parent`` from the subject up to the host by identity, not by an
-    ``anchor_path`` string prefix (a sibling's edge name can prefix another's,
-    e.g. ``/album`` vs ``/album_tracklist``).
+    walking ``_parent`` from the subject up to the host by identity.
 
     A non-node subject is exempt: it carries no anchor and no page identity of
     its own.  The exemption is only sound for a subtemplate that renders no

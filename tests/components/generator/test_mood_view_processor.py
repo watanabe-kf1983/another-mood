@@ -164,6 +164,18 @@ class TestMoodViewSubtreeGuard:
         assert "/prose/p1" in diag.message
         assert "/albums/a1" in diag.message
 
+    def test_sibling_whose_name_prefixes_host_is_rejected(self) -> None:
+        # `/album_tracklist/x` is a sibling of `/album`, not a descendant, even
+        # though its anchor path string-prefixes the host's -- ancestry is by
+        # identity, so a prefix shortcut would wrongly accept it.
+        tree = wrap_tree({"album": {"id": "a"}, "album_tracklist": [{"id": "x"}]})
+        with pytest.raises(FileValidationError):
+            self._render(
+                '{% mood_view "x.md" with subject %}',
+                this=tree["album"],
+                subject=tree["album_tracklist"][0],
+            )
+
     def test_non_node_subject_is_exempt(self) -> None:
         # A string carries no anchor and no page identity, so it is exempt even
         # under a node host.
