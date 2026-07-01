@@ -1,6 +1,8 @@
 # Music Catalog
 
-A fictional sampler catalog used to demonstrate Another Mood. Browse by artist or by album below, follow the genre tree to see how groupings cascade, and scroll on for cross-cutting views (live recordings, member rosters, the full track index, playlists).
+{% filter under_heading("#") %}
+{% mood_view "prose.md" with node(path="/prose/background") %}
+{% endfilter %}
 
 ## Artists
 
@@ -107,16 +109,4 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {{ entry.position }}. {{ node("tracks", entry.track_id).title }}
 {% endfor %}
 
-{% endfor %}
-
-## Notes
-
-{% for record in prose %}
-- {{ record | link }}
-{% endfor %}
-
-{% for record in prose %}
-{% filter under_heading("##") %}
-{% mood_view "prose.md" with record %}
-{% endfilter %}
 {% endfor %}

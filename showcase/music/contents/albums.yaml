@@ -22,6 +22,7 @@ albums:
     genre_id: psych
     year: 2019
     is_live: false
+    liner_notes: liner-notes/tidal_atlas
 
   dawn_cassette:
     title: Dawn Cassette
@@ -70,3 +71,4 @@ albums:
     genre_id: post_punk
     year: 2014
     is_live: false
+    liner_notes: liner-notes/winter_in_the_machine

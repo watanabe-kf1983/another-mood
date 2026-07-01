@@ -14,6 +14,7 @@ album_tracklist:
     - item: genre_id
     - item: year
     - item: is_live
+    - item: liner_notes
     - item: tracks
 
 # Each track with its album and the album's artist attached - exercises
