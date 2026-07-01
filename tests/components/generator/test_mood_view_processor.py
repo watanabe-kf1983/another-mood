@@ -16,6 +16,7 @@ from another_mood.components.generator.mood_view_processor import (
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.edition import Edition
 from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
 # -- Helpers --
@@ -113,6 +114,89 @@ class TestMoodViewSyntaxError:
         env = _make_extension_env(MockProcessor())
         with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
             env.from_string('{% mood_view "profile.md" user %}')
+
+
+class TestMoodViewSubtreeGuard:
+    """A node subject must lie within the host ``this``'s subtree; otherwise
+    the tag raises a build error pointing at its own source line (B12)."""
+
+    _TREE = {
+        "albums": [{"id": "a1", "title": "A1"}],
+        "prose": [{"id": "p1", "body": "note"}],
+    }
+
+    def _render(
+        self, template: str, this: object, subject: object
+    ) -> tuple[MockProcessor, str]:
+        mock = MockProcessor(return_value="OK")
+        env = _make_extension_env(mock)
+        result = env.from_string(template).render(this=this, subject=subject)
+        return mock, result
+
+    def test_descendant_subject_passes(self) -> None:
+        tree = wrap_tree(self._TREE)
+        mock, result = self._render(
+            '{% mood_view "x.md" with subject %}', this=tree, subject=tree["albums"][0]
+        )
+        assert result == "OK"
+        assert mock.calls == [("x.md", tree["albums"][0])]
+
+    def test_subject_equal_to_host_passes(self) -> None:
+        tree = wrap_tree(self._TREE)
+        album = tree["albums"][0]
+        _, result = self._render(
+            '{% mood_view "x.md" with subject %}', this=album, subject=album
+        )
+        assert result == "OK"
+
+    def test_non_descendant_subject_raises_at_tag_line(self) -> None:
+        tree = wrap_tree(self._TREE)
+        with pytest.raises(FileValidationError) as exc:
+            self._render(
+                '\n\n{% mood_view "x.md" with subject %}',
+                this=tree["albums"][0],
+                subject=tree["prose"][0],
+            )
+        (diag,) = exc.value.diagnostics
+        assert diag.line == 3
+        assert diag.source == "mood_view"
+        # The error names both the off-subtree subject and the host.
+        assert "/prose/p1" in diag.message
+        assert "/albums/a1" in diag.message
+
+    def test_sibling_whose_name_prefixes_host_is_rejected(self) -> None:
+        # `/album_tracklist/x` is a sibling of `/album`, not a descendant, even
+        # though its anchor path string-prefixes the host's -- ancestry is by
+        # identity, so a prefix shortcut would wrongly accept it.
+        tree = wrap_tree({"album": {"id": "a"}, "album_tracklist": [{"id": "x"}]})
+        with pytest.raises(FileValidationError):
+            self._render(
+                '{% mood_view "x.md" with subject %}',
+                this=tree["album"],
+                subject=tree["album_tracklist"][0],
+            )
+
+    def test_non_node_subject_is_exempt(self) -> None:
+        # A string carries no anchor and no page identity, so it is exempt even
+        # under a node host.
+        tree = wrap_tree(self._TREE)
+        mock, result = self._render(
+            '{% mood_view "x.md" with subject %}',
+            this=tree["albums"][0],
+            subject="just a string",
+        )
+        assert result == "OK"
+        assert mock.calls == [("x.md", "just a string")]
+
+    def test_node_subject_under_non_node_host_raises(self) -> None:
+        # A real node cannot be a descendant of a non-node host.
+        tree = wrap_tree(self._TREE)
+        with pytest.raises(FileValidationError):
+            self._render(
+                '{% mood_view "x.md" with subject %}',
+                this="not a node",
+                subject=tree["albums"][0],
+            )
 
 
 # -- MoodViewProcessorImpl --

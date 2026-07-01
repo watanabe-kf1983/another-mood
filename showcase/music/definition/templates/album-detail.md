@@ -18,10 +18,10 @@
     {{- "" }} | {{ '%d:%02d' | format(track.duration_sec // 60, track.duration_sec % 60) }}
     {{- "" }} |
 {% endfor %}
-{% if liner_notes %}
+{% if liner %}
 
 {% filter under_heading("#") %}
-{% mood_view "prose.md" with node(path="/prose/" ~ liner_notes) %}
+{% mood_view "prose.md" with liner %}
 {% endfilter %}
 {% endif %}
 

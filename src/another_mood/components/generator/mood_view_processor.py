@@ -12,9 +12,14 @@ from typing import TYPE_CHECKING, Any
 from jinja2 import nodes
 from jinja2.ext import Extension
 from jinja2.parser import Parser
+from jinja2.runtime import Context
 
-from another_mood.components.generator.data_tree import Node
+from another_mood.components.generator.data_tree import Node, nearest_ancestor
 from another_mood.components.generator.edition import Edition
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    FileValidationError,
+)
 
 if TYPE_CHECKING:
     from another_mood.components.generator.template_engine import TemplateEngine
@@ -64,8 +69,18 @@ class MoodViewExtension(Extension):
         parser.stream.expect("name:with")
         data = parser.parse_expression()
 
+        # Pass the render context (for the host ``this``) and the tag's own
+        # source location, baked in at parse time, so :meth:`_render` can point
+        # a subtree-guard error at the exact ``{% mood_view %}`` line.
+        args: list[nodes.Expr] = [
+            nodes.ContextReference(),
+            template_name,
+            data,
+            nodes.Const(parser.filename),
+            nodes.Const(lineno),
+        ]
         return nodes.CallBlock(
-            self.call_method("_render", [template_name, data]),
+            self.call_method("_render", args),
             [],
             [],
             [],
@@ -73,9 +88,68 @@ class MoodViewExtension(Extension):
 
     def _render(
         self,
+        context: Context,
         template_name: str,
         subject: object,
+        filename: str | None,
+        lineno: int,
         caller: Any,
     ) -> str:
+        _guard_subtree(subject, context.resolve("this"), filename, lineno)
         processor = self.environment.globals[PROCESSOR_KEY]
         return processor(template_name, subject)  # type: ignore[return-value]
+
+
+def _guard_subtree(
+    subject: object, host: object, filename: str | None, lineno: int
+) -> None:
+    """Reject a ``{% mood_view %}`` whose node subject lies outside the host's
+    subtree, pointing the error at the tag's own source location.
+
+    A node is drawn on exactly one page fixed by its data position
+    (``Edition.page_path``); link resolution rides on that invariant (a
+    link's source page is ``page_path(this)``, its target ``page_path(target)``).
+    Embedding a node off its home page breaks both its outgoing ``this``-keyed
+    links (``relink`` / ``link`` / ``href``) and the anchor others link *to*.
+    So the subject must be ``host``-or-a-descendant — checked structurally by
+    walking ``_parent`` from the subject up to the host by identity.
+
+    A non-node subject is exempt: it carries no anchor and no page identity of
+    its own.  The exemption is only sound for a subtemplate that renders no
+    ``this``-keyed content (no ``link`` / ``href`` / ``anchor`` / ``relink``,
+    no stamped anchor) — one that re-looks-up and draws a node internally is
+    outside this guard's reach and owns its own link correctness.
+    """
+    if not isinstance(subject, Node):
+        return
+    # ``is not None`` (not truthiness): an empty MappingNode / ArrayNode host is
+    # a falsy dict / list, yet still a valid ancestor match.
+    if (
+        isinstance(host, Node)
+        and nearest_ancestor(subject, lambda n: n is host) is not None
+    ):
+        return
+    host_desc = (
+        f"`this` ({host._meta.anchor_path})"
+        if isinstance(host, Node)
+        else "the host, which is not a data node"
+    )
+    raise FileValidationError(
+        [
+            Diagnostic(
+                file=Path(filename) if filename else None,
+                line=lineno,
+                column=None,
+                message=(
+                    f"{{% mood_view %}} can only render a node within its host's "
+                    f"subtree, but {subject._meta.anchor_path} is not a descendant "
+                    f"of {host_desc}. A node is drawn on exactly one page fixed by "
+                    f"its data position, so embedding one off its home page breaks "
+                    f"its links. Bring it into the subtree with a query (e.g. a "
+                    f"join) so it becomes a descendant, or reference it with "
+                    f"`| link` instead of embedding it."
+                ),
+                source="mood_view",
+            )
+        ]
+    )
