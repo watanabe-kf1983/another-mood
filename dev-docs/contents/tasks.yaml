@@ -92,10 +92,10 @@ categories:
         phase: 11
         done: true
       B12:
-        title: リンク source を主題 this から描画ページへ分離
-        note: "mood_view で無関係な host にノードを inline 埋め込みすると内部の相対リンク (relink/link/href) が壊れる。source を context[\"this\"] (page_path(this)) でなく実描画ページから取るよう分離。render_to_file が __page=out_path、render に page 引数、mood_view inline が host の __page を渡す。this は主題専用に残す。"
+        title: mood_view を this の subtree 内に限定（描画はデータ位置に従う）
+        note: "this の子孫でないノードを mood_view で埋めると、そのノードの内部リンク・被リンクの相対化が壊れる。各ノードは page_path の 1 ページにだけ描かれるという不変条件を、subject が this の子孫か（node の子孫判定; _parent を辿る。anchor_path 文字列 prefix は兄弟の edge 名が prefix になりうるので不可）で強制。subtree 外への mood_view は split/inline を問わずタグの file+line 付きビルドエラーにする（判定を edition の file_per に依存させない）。他所のノードはクエリ (LEFT JOIN) で子孫化するか link で参照。showcase/music は liner note を album_tracklist にジョインして album の子孫に。"
         phase: 12
-        proposal: design/generator/generator.md#リンク-source-の描画ページ分離-b12
+        proposal: design/generator/generator.md#mood_view-を-this-の-subtree-内に限定する-b12
 
   C:
     title: ページ分割 (paging)
