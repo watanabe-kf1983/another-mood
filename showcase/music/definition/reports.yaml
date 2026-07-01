@@ -4,18 +4,20 @@
 # under output/{edition}/ and renders the same data, differing only in
 # `file_per` (which ObjectType IDs are split into their own pages).
 #
-#   web  — browse online: split discographies, tracklists, and prose into
+#   web  — browse online: split discographies and tracklists into
 #          separate pages.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
 # The templates use the two-loop pattern (`| link` + `{% mood_view %}`),
-# so the same templates serve both editions without change.
+# so the same templates serve both editions without change. Prose is not
+# split in either edition: the About intro and each album's liner notes
+# are inlined where they are embedded (`{% mood_view "prose.md" %}`), so
+# they never become standalone pages.
 editions:
   web:
     file_per:
       - artist_discography.item
       - album_tracklist.item
-      - prose.item
   book:
     file_per: []

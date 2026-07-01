@@ -1,26 +1,34 @@
 # Music Catalog
 
-A fictional sampler catalog used to demonstrate Another Mood. Browse by artist or by album below, follow the genre tree to see how groupings cascade, and scroll on for cross-cutting views (live recordings, member rosters, the full track index, playlists).
+{% filter under_heading("#") %}
+{% mood_view "prose.md" with node(path="/prose/background") %}
+{% endfilter %}
 
 ## Artists
 
 {% for artist in artist_discography %}
-{% mood_view "artist-detail.md" with artist %}
 - {{ artist | link }}{% if artist.country %} - {{ artist.country }}{% endif +%}
+{% endfor %}
+
+{% for artist in artist_discography %}
+{% filter under_heading("##") %}
+{% mood_view "artist-detail.md" with artist %}
+{% endfilter %}
 {% endfor %}
 
 ## Albums by genre
 
 {% for entry in albums_by_genre %}
-### {{ node("genres", entry.genre_id).name }}
-
+- **{{ node("genres", entry.genre_id).name }}**
 {% for album in entry.albums | sort(attribute="year") %}
-- {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
+  - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
+{% endfor %}
 {% endfor %}
 
-{% endfor %}
 {% for album in album_tracklist %}
+{% filter under_heading("##") %}
 {% mood_view "album-detail.md" with album %}
+{% endfilter %}
 {% endfor %}
 
 ## Genre hierarchy
@@ -101,7 +109,4 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {{ entry.position }}. {{ node("tracks", entry.track_id).title }}
 {% endfor %}
 
-{% endfor %}
-{% for record in prose %}
-{% mood_view "prose.md" with record %}
 {% endfor %}

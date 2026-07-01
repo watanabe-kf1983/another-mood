@@ -103,6 +103,11 @@ properties:
         is_live:
           type: boolean
           description: True for concert recordings, false (or omitted) for studio albums.
+        liner_notes:
+          type: string
+          description: Id of the prose record holding this album's liner notes (a contents-relative path without extension). Optional - only some albums have liner notes.
+          x-ref:
+            entity: prose
       required: [title, artist_id, year]
 
   tracks:
