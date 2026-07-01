@@ -17,13 +17,12 @@ A fictional sampler catalog used to demonstrate Another Mood. Browse by artist o
 ## Albums by genre
 
 {% for entry in albums_by_genre %}
-### {{ node("genres", entry.genre_id).name }}
-
+- **{{ node("genres", entry.genre_id).name }}**
 {% for album in entry.albums | sort(attribute="year") %}
-- {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
+  - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
+{% endfor %}
 {% endfor %}
 
-{% endfor %}
 {% for album in album_tracklist %}
 {% filter under_heading("##") %}
 {% mood_view "album-detail.md" with album %}
