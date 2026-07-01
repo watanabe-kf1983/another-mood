@@ -91,6 +91,11 @@ categories:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
         phase: 11
         done: true
+      B12:
+        title: リンク source を主題 this から描画ページへ分離
+        note: "mood_view で無関係な host にノードを inline 埋め込みすると内部の相対リンク (relink/link/href) が壊れる。source を context[\"this\"] (page_path(this)) でなく実描画ページから取るよう分離。render_to_file が __page=out_path、render に page 引数、mood_view inline が host の __page を渡す。this は主題専用に残す。"
+        phase: 12
+        proposal: design/generator/generator.md#リンク-source-の描画ページ分離-b12
 
   C:
     title: ページ分割 (paging)
