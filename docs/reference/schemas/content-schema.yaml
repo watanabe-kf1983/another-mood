@@ -32,6 +32,20 @@ properties:
             Display title taken from the first H1 heading of the Markdown
             source. Absent when the source has no H1.
           type: string
+        order_key:
+          title: Prose order key
+          description: >-
+            Sort key for reading order, derived from the id: sorting prose
+            records by this string yields folder pre-order (each folder's
+            index first, then its subtree, contiguous).
+          type: string
+        depth:
+          title: Prose outline depth
+          description: >-
+            Heading depth of the record in the folder outline, derived from
+            the id (the root index is 1). A folder's index sits one level
+            above its files.
+          type: integer
         body:
           title: Prose body
           description: >-
