@@ -84,7 +84,7 @@ The node a link points at is often not in the template's context — a foreign k
 {{ node("categories", product.category_id) | link }}
 ```
 
-A path matching no node is a **missing node**, kept visible rather than a dead link. The `__entity_data/` and `__queries/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
+A path matching no node is a **missing node**, kept visible rather than a dead link. The `__db/__entity_data/` and `__db/__queries/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
 
 ## Tags
 
@@ -356,7 +356,7 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 | {{ spec.id }} | {{ spec.metadata.title }} |
 ```
 
-Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__entity_data/` and the shape of query results via `__queries/`.
+Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__entity_data/` and the shape of query results via `__db/__queries/`.
 
 ## Markdown escaping
 

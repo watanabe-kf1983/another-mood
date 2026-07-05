@@ -62,16 +62,18 @@ What the tool generates (under `.another-mood/my-project/`):
 │   │   ├── index.md                          # home page (from templates/index.md)
 │   │   ├── members/{alice,bob,carol}.md
 │   │   └── by_role/{engineer,designer}.md
-│   ├── index.md                              # auto overview (entities + queries)
-│   ├── __entity_defs/                        # described later
-│   ├── __entity_data/                         # described later
-│   └── __queries/                         # described later
+│   ├── index.md                              # cover: your reports + link to __db/
+│   └── __db/                                 # the database's self-description
+│       ├── index.md                          # auto overview (entities + queries)
+│       ├── __entity_defs/                    # described later
+│       ├── __entity_data/                    # described later
+│       └── __queries/                        # described later
 └── render/                                   # HTML
 ```
 
 Your templates render to `output/default/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.
 
-Besides `default/`, `output/` also holds pages the tool generates on its own — an overview `index.md` (the entities and queries) and the `__`-prefixed directories — independent of your templates. They let you check the current state of the schema, data, and queries while writing — see the [Workflow](#workflow) chapter for details.
+Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the database's self-description: an overview (`__db/index.md`, the entities and queries) plus the `__`-prefixed diagnostic directories. Independent of your templates, they let you check the current state of the schema, data, and queries while writing — see the [Workflow](#workflow) chapter for details.
 
 ### Try the live preview
 
@@ -104,9 +106,9 @@ In the table below, "where to write" paths are relative to the project directory
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | Schema | `definition/schema.yaml` | `output/__entity_defs/<entity>.md` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__entity_data/<entity>.md` |
-| 3 | Query | `definition/queries/**/*.yaml` | `output/__queries/<query>.md` |
+| 1 | Schema | `definition/schema.yaml` | `output/__db/__entity_defs/<entity>.md` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__db/__entity_data/<entity>.md` |
+| 3 | Query | `definition/queries/**/*.yaml` | `output/__db/__queries/<query>.md` |
 | 4 | Template | `definition/templates/**/*.md` | `output/default/index.md` and below |
 
 Schema and content are required; queries are optional; templates are required for the final output. `schema.yaml` is the only fixed single file — everything else can be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
@@ -203,7 +205,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via `output/__entity_defs/<entity>.md` (how the tool interpreted the declared type) and `output/__entity_data/<entity>.md` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via `output/__db/__entity_defs/<entity>.md` (how the tool interpreted the declared type) and `output/__db/__entity_data/<entity>.md` (whether the data is being loaded as expected).
 
 There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
 
@@ -463,7 +465,7 @@ A subtemplate can itself call `{% mood_view %}`, so a subpage can generate furth
 
 ### Where subpages land
 
-A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `default/by_role/engineer.md`. You can check each record's address in `__entity_data/` and `__queries/`, where it appears as `_anchor_path`.
+A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__entity_data/` and `__db/__queries/`, where it appears as `_anchor_path`.
 
 A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
 
@@ -499,7 +501,7 @@ For details, see [Schema — Built-in schema: prose](reference/schema.md#built-i
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__entity_data/` and the shape of query results in `__queries/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__entity_data/` and the shape of query results in `__db/__queries/` ([Workflow](#workflow)).
 
 ## Further reading
 
