@@ -37,8 +37,8 @@ properties:
               proposal:
                 type: string
                 description: |
-                  対応する Proposal 節への相対パス + アンカー
-                  (例: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2)。
+                  対応する Proposal 節の prose id（拡張子なし、spec と同形）+ 見出しアンカー
+                  (例: design/normalizer/normalizer#バイナリファイルの正規化-h1-h2)。
                   Proposal が無いタスクでは省略する。
             required: [ title, phase ]
       required: [ title, impl_paths, tasks ]
