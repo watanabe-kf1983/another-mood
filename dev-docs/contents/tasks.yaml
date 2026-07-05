@@ -152,6 +152,17 @@ categories:
         title: meta 主題の実ノード化 → _split マーカー撤去・page_path 一本化
         phase: 11
         done: true
+      C12:
+        title: render ループの一般化 (heterogeneous edition kinds を単一ループへ)
+        note: >-
+          generator の「メタ描画の特別扱い」と「ユーザ edition ループ」の 2 経路を、
+          templates_dir / root_template / file_per / segment / 追加 filters を差分フィールドに持つ
+          抽象化された edition kind 群を回す一本のループに畳む。meta-edition は root マウント
+          (segment="") のまま据え置き、出力はバイト単位で不変 (振る舞い不変リファクタ、出力 diff で検証)。
+          「ループが回す edition 群」と「トップが宣伝する __editions」は別チャネルに保つ。
+          F9 の前提。paging-spec「Edition 別ルートテンプレート (将来)」の前倒し。
+        phase: 12
+        proposal: 20-design/70-generator/40-paging-spec#render-ループの一般化-c12
 
   D:
     title: ユーザコンテンツバリデーション
@@ -275,14 +286,18 @@ categories:
         phase: 10
         done: true
       F9:
-        title: システムメタ出力を単一ディレクトリ配下に集約
+        title: システムメタを __db/ へ移動 + 二セクションの薄い表紙
         note: >-
-          システム生成のメタドキュメント (__entity_defs / __entity_data / __queries 等) を
-          output/ 直下に横並びさせず、index.md (概要) を除いて一つのディレクトリ配下にまとめる。
-          output/ 直下の見通しを良くし、利用者ツリーで __ ディレクトリが散らばらないようにする。
-          ディレクトリ名・対象範囲は実装時に確定。C11 で meta は実ノード化され各 __{view}/ は anchor 由来の
-          page_path で出るので、F9 はそのアンカールート (= 出力ディレクトリ) を単一親の下へ寄せる。
-        phase: 15
+          システム生成のメタ (entity_defs / entity_data / queries の各ページと、ER 図・一覧を持つ
+          index) を output/ 直下から edition マウント __db/ 配下へ移す (meta-edition の segment を
+          "" → __db に倒す)。root が空くので、User Reports (各 edition を大々的に列挙) ＋ Database
+          Information (__db/ へ控えめにリンク) の二セクションの薄い表紙テンプレを root に新設し、
+          meta index から ## Reports を移す。子アンカールート (__entity_defs 等) はグローバル名前空間の
+          衝突回避のため __ 始まりのまま (→ __db/__entity_defs/)。前提 C12 (render ループ一般化)。
+          docs/guides.md・reference/reports.md・Quick Start の __ パス表記、__warnings の置き場と
+          reconcile の append 先も同期する。
+        phase: 12
+        proposal: 20-design/70-generator/40-paging-spec#システムメタの-__db-移動と表紙-f9
 
   G:
     title: CLI / 設定システム
