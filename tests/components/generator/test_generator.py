@@ -39,6 +39,7 @@ class TestGenerate:
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
+            project_name="myproject",
             out_dir=out_dir,
         )
 
@@ -51,7 +52,9 @@ class TestGenerate:
         # lists the deliverables and links modestly to the __db/ meta surface,
         # which is where the self-description is now mounted (F9).
         cover = (out_dir / "data" / "index.md").read_text()
-        assert "## User Reports" in cover
+        # Title is the project name; sections are Reports + Database Information.
+        assert "# myproject" in cover
+        assert "## Reports" in cover
         assert "## Database Information" in cover
         # The meta edition is routed to Database Information as a derived link,
         # not listed as a User Reports deliverable.
@@ -81,12 +84,13 @@ class TestGenerate:
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
+            project_name="myproject",
             out_dir=out_dir,
         )
 
         assert (out_dir / "data" / "web" / "index.md").exists()
         assert (out_dir / "data" / "print%20me" / "index.md").exists()
-        # The root cover lists each edition under ## User Reports: raw display
+        # The root cover lists each edition under ## Reports: raw display
         # label, escaped href that matches the directory written above (F9).
         cover = (out_dir / "data" / "index.md").read_text()
         assert "- [web](web/)" in cover
@@ -108,6 +112,7 @@ class TestGenerate:
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
+            project_name="myproject",
             out_dir=out_dir,
         )
 

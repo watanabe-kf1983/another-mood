@@ -40,14 +40,24 @@ _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(
-    data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
+    data_dir: Path,
+    templates_dir: Path,
+    reports_file: Path,
+    project_name: str,
+    *,
+    out_dir: Path,
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     user_editions = load_editions(reports_file, templates_dir)
     editions = (META_EDITION, *user_editions)
 
     # The root cover just lists the editions — no data model, so no filters.
-    render("index.md", _COVER_TEMPLATES_DIR, {"editions": editions}, out_dir)
+    render(
+        "index.md",
+        _COVER_TEMPLATES_DIR,
+        {"editions": editions, "project_name": project_name},
+        out_dir,
+    )
 
     # A page tree per edition, over the shared data model.
     model = load_model(data_dir)

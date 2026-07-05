@@ -1,6 +1,6 @@
-# Another Mood
+# {{ project_name }}
 
-## User Reports
+## Reports
 
 {% for e in editions if not e.is_system %}
 - [{{ e.name }}]({{ e.dir_segment | safe }}/)
