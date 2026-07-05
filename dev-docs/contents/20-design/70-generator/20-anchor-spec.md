@@ -23,7 +23,7 @@
 - **dict キー（singleton 配下のキー）**: そのキーをそのまま使う
 - **リスト要素**: その要素の `id` フィールドの値を使う
 
-リスト要素に `id` フィールドが無い場合（Array pattern で id を schema 上要求していない場合、[schema-spec.md](../normalizer/schema-spec.md) 参照）、その要素はアンカーパスを持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカーパスを持たない。
+リスト要素に `id` フィールドが無い場合（Array pattern で id を schema 上要求していない場合、[schema-spec.md](../50-normalizer/20-schema-spec.md) 参照）、その要素はアンカーパスを持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカーパスを持たない。
 
 #### Escape 規則
 
@@ -115,7 +115,7 @@ prose:                             # flat list、id はファイル相対パス
 
 #### クラスとの関係
 
-class（[schema-spec.md](../normalizer/schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
+class（[schema-spec.md](../50-normalizer/20-schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
 
 - **class**: schema 上の位置を示す path-based 名（例: `categories.tasks`, `categories.item.tasks.item`）。クエリ DSL の `from:`、paging 設定、FK 解決、表示見出しで参照される
 - **アンカーパス**: データツリー上の実体パス（例: `/categories/web/tasks/foo`）。リンク解決でのみ使われる
@@ -188,7 +188,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node(path="/…") | link`（[リンク記法](#リンク記法)）の本文版で、解決後は同じ `[display](URL)` になる
 2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
 
-ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([markdown-parser-spec.md](../normalizer/markdown-parser-spec.md) 参照):
+ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([markdown-parser-spec.md](../50-normalizer/30-markdown-parser-spec.md) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
@@ -219,13 +219,13 @@ prose body 中の `node:` リンク先を、表示先ページからの相対 UR
 
 author の明示適用を最低線とする（schema が prose body 型を宣言していればアクセス時に自動処理する暗黙適用は別タスク）。
 
-未解決の `node:` 参照（マップに無いアンカーパス）は、`link` フィルタの MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）に倣い、**表示テキストを角括弧で囲んでリンク先を外す**（`[text](node:/missing)` → `[text]`）。死んだ `node:` リンクとして出力して「動くリンクの偽装」にしない。ビルドレポートへの警告は `link` 側と揃えて [B10](node:/tasks/B/tasks/B10) で後日扱う。実装機構は [generator.md の prose body 処理フィルタ](generator.md#prose-body-処理フィルタ) を正本とする。
+未解決の `node:` 参照（マップに無いアンカーパス）は、`link` フィルタの MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）に倣い、**表示テキストを角括弧で囲んでリンク先を外す**（`[text](node:/missing)` → `[text]`）。死んだ `node:` リンクとして出力して「動くリンクの偽装」にしない。ビルドレポートへの警告は `link` 側と揃えて [B10](node:/tasks/B/tasks/B10) で後日扱う。実装機構は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) を正本とする。
 
 ## Internal Design
 
 ### リンク解決
 
-リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](generator.md#リンク解決) と [ページパスの導出](generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_context` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
+リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](10-generator.md#リンク解決) と [ページパスの導出](10-generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_context` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。
 
 ### アンカー (`<a id>`) の raw HTML レンダリング (Hugo unsafe)
 
@@ -237,7 +237,7 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 ### 見出しノード (A3, A4)
 
-> **未実装** — [markdown-parser-spec.md の見出し抽出](../normalizer/markdown-parser-spec.md#見出し抽出-a1)（タスク [A1, A3〜A5, A7](node:/tasks/A/tasks/A1)）で導入。本節は anchor 側の住所付けとリンク解決への波及を定める。
+> **未実装** — [markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出-a1)（タスク [A1, A3〜A5, A7](node:/tasks/A/tasks/A1)）で導入。本節は anchor 側の住所付けとリンク解決への波及を定める。
 
 prose 本文中の見出しを **node（リンクの宛先）** として扱う。データツリー上は prose レコード配下の `headings` リスト要素なので、既存の「ネストしたリスト要素 = node」規則にそのまま乗る。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
 
@@ -275,7 +275,7 @@ resolver は無変更 — anchor_path 文字列をキーにした辞書引き（
 [エラー処理](node:/prose/design/normalizer/architecture#エラー処理)
 ```
 
-path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す。`relink` はページをノード解決し、上記 fragment 規則で `#エラー処理` を出力 URL に乗せる。これは A7（見出し fragment 対応）がソース相対リンク `[t](architecture.md#エラー処理)` から生成する中間形でもある（[markdown-parser-spec.md の見出し fragment 対応](../normalizer/markdown-parser-spec.md#見出し-fragment-対応-a7)）。見出しが対象 prose に無ければ MissingNode として可視化（[未解決参照の扱い](#未解決参照の扱い)）。
+path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す。`relink` はページをノード解決し、上記 fragment 規則で `#エラー処理` を出力 URL に乗せる。これは A7（見出し fragment 対応）がソース相対リンク `[t](architecture.md#エラー処理)` から生成する中間形でもある（[markdown-parser-spec.md の見出し fragment 対応](../50-normalizer/30-markdown-parser-spec.md#見出し-fragment-対応-a7)）。見出しが対象 prose に無ければ MissingNode として可視化（[未解決参照の扱い](#未解決参照の扱い)）。
 
 #### テンプレートからの見出しリンク（`node(fragment=)`）
 

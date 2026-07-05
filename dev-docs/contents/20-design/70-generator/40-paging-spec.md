@@ -17,7 +17,7 @@
 主題（subject）を `this` でどう参照するか（Mapping の spread／`this`／Array 反復、スカラ値の扱い）は `docs/reference/template.md` の Subtemplate side を正本とする。設計判断:
 
 - **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築を持たない。
-- 主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(Edition, node_map)` だけを束縛すればよい（[generator.md のリンク解決](generator.md#リンク解決)）。
+- 主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(Edition, node_map)` だけを束縛すればよい（[generator.md のリンク解決](10-generator.md#リンク解決)）。
 - スカラ主題を**分割時のみ**エラーにするのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。
 
 ### 分割ルール
@@ -32,7 +32,7 @@
 
 ### ページパスと出力ディレクトリ
 
-ページパスの導出規則（anchor_path 由来、root は `index.md`、セグメントは anchor_path と同じ IRI エスケープを継承）は `Edition.page_path` が持ち、正本は [generator.md](generator.md#ページパスの導出)。`page_path` は **edition ルート相対**で、実ファイルは mood_view が edition のマウント先を被せた `{outDir}/{edition}/{page_path}` に書き出す（form A は暗黙 edition `default`）。各 edition ディレクトリと診断系出力（`index.md`、`__entity_defs/` 等）は `{outDir}` 直下に横並びになる:
+ページパスの導出規則（anchor_path 由来、root は `index.md`、セグメントは anchor_path と同じ IRI エスケープを継承）は `Edition.page_path` が持ち、正本は [generator.md](10-generator.md#ページパスの導出)。`page_path` は **edition ルート相対**で、実ファイルは mood_view が edition のマウント先を被せた `{outDir}/{edition}/{page_path}` に書き出す（form A は暗黙 edition `default`）。各 edition ディレクトリと診断系出力（`index.md`、`__entity_defs/` 等）は `{outDir}` 直下に横並びになる:
 
 ```
 {outDir}/
@@ -43,7 +43,7 @@
 
 診断系は `__` 予約済みなので edition 名と衝突せず、edition 横断で常に同じ位置に出る。
 
-> **背景: リンク層を触らずに済む.** リンク URL は page 相対（`node_href` は source ページから target ページへの relpath、[generator.md のリンク解決](generator.md#リンク解決)）なので、`{edition}/` のマウント接頭辞はリンク解決に対して透過。各 edition が自分の `file_per`（→自分の `page_path`）で解いた相対 URL がそのまま正しく、リンクフィルタ層に改修は要らない。各 edition は自己完結した相対リンクのサブツリーになる。
+> **背景: リンク層を触らずに済む.** リンク URL は page 相対（`node_href` は source ページから target ページへの relpath、[generator.md のリンク解決](10-generator.md#リンク解決)）なので、`{edition}/` のマウント接頭辞はリンク解決に対して透過。各 edition が自分の `file_per`（→自分の `page_path`）で解いた相対 URL がそのまま正しく、リンクフィルタ層に改修は要らない。各 edition は自己完結した相対リンクのサブツリーになる。
 
 ## Internal Design
 
@@ -76,7 +76,7 @@ book edition（全 inline）で prose のフォルダ親子をネストさせる
 
 ### dev-docs book edition の順序（Phase 2）
 
-> **未実装** — dev-docs prose の**読む順**を id で制御する段。正しさ（web / book 両 edition のネスト・リンク）は実装済み（git log）。ネスト機構は [book edition のフォルダネスト](#book-edition-のフォルダネスト)、番号 / id 方針は [prose の章順と id の関係](../normalizer/markdown-parser-spec.md#prose-の章順と-id-の関係) が正本。
+> **未実装** — dev-docs prose の**読む順**を id で制御する段。正しさ（web / book 両 edition のネスト・リンク）は実装済み（git log）。ネスト機構は [book edition のフォルダネスト](#book-edition-のフォルダネスト)、番号 / id 方針は [prose の章順と id の関係](../50-normalizer/30-markdown-parser-spec.md#prose-の章順と-id-の関係) が正本。
 
 `order_key` は folder-preorder 済みなので、番号付き id を振れば**テンプレ無改修で読む順が効く**。残ステップ（別 PR）:
 

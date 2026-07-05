@@ -2,7 +2,7 @@
 
 ユーザがシステム設計書を authoring する際に、本ツールが first-class でサポートする artifact 群。各タスクは「artifact 用のスキーマ」「サンプルデータ」「表現テンプレート」の三点セットを blueprint として提供する。
 
-[F (メタドキュメンテーション)](meta-documentation.md) との違い: F は catalog から auto-derive する meta-view (ツールが自分自身を説明する用途)、本カテゴリはユーザが authoring した data 上で動く first-party blueprint (ユーザに設計書 authoring の力を授ける用途)。両者は同じ「構造化データ → 自動描画」のメカニズムを共有するが、データの出所 (catalog vs ユーザデータ) と動機が異なる。
+[F (メタドキュメンテーション)](40-meta-documentation.md) との違い: F は catalog から auto-derive する meta-view (ツールが自分自身を説明する用途)、本カテゴリはユーザが authoring した data 上で動く first-party blueprint (ユーザに設計書 authoring の力を授ける用途)。両者は同じ「構造化データ → 自動描画」のメカニズムを共有するが、データの出所 (catalog vs ユーザデータ) と動機が異なる。
 
 ## External Design
 
@@ -108,7 +108,7 @@ S4 は stateDiagram の Mermaid 適合性の実機検証も兼ねる。
 
 ## Candidates (未タスク化)
 
-下記は将来 S5 以降として task 化し得る候補。**設計書全体の目次設計を起点に各 artifact の範囲が決まる** ため、現時点では task 化を保留する。目次自体の検討には [カテゴリ A (Markdown パーサー拡張)](../normalizer/markdown-parser-spec.md) / [カテゴリ B (アンカー・リンク解決)](../generator/generator.md) の完了が前提。
+下記は将来 S5 以降として task 化し得る候補。**設計書全体の目次設計を起点に各 artifact の範囲が決まる** ため、現時点では task 化を保留する。目次自体の検討には [カテゴリ A (Markdown パーサー拡張)](../50-normalizer/30-markdown-parser-spec.md) / [カテゴリ B (アンカー・リンク解決)](../70-generator/10-generator.md) の完了が前提。
 
 - **システム構成図 (C4 系)** — Mermaid `C4Context` / `architecture-beta` で描く。後者は v11 でも beta 扱いで機能成熟度未確認。コンポーネント / コンテナ / 関係を構造化データで持つこと自体は可能
 - **要件トレーサビリティ表** — 要件 ID × {コンポーネント / テスト / 決定} の対応表。要件と他 artifact の参照関係を維持する仕組み (x-ref + 表生成テンプレート) で実現可能

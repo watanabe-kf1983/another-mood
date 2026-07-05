@@ -4,7 +4,7 @@
 
 ### 背景: 永続化形式とクエリモデルの分離
 
-著者がネスト（コンポジション）で書いたデータを、別の軸で再グループ化したいというニーズは、データの利用が進むにつれて事後的に現れる。`flatten:` 句は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上で intrinsic 配列を unwind してフラットなアクセスを可能にする。詳細は [json-data-model.md](../json-data-model.md) の「背景: なぜ永続化形式をフラット化しないか」を参照。
+著者がネスト（コンポジション）で書いたデータを、別の軸で再グループ化したいというニーズは、データの利用が進むにつれて事後的に現れる。`flatten:` 句は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上で intrinsic 配列を unwind してフラットなアクセスを可能にする。詳細は [json-data-model.md](../40-json-data-model.md) の「背景: なぜ永続化形式をフラット化しないか」を参照。
 
 ### 背景: where の closed set から `neq` (not equal) を外した理由
 
@@ -18,7 +18,7 @@ DB DSL によくある `neq` を入れなかったのは、対象キーが欠落
 
 ### 背景: sort の keyword に `null` ではなく `missing` を採用した
 
-ツールの data model は「nullable は項目自体を省略する」が原則で、独立した「null 値」概念を持たない ([json-data-model.md](../json-data-model.md))。where 句も存在判定は `exists: true/false` で表現しており、`null` という語は DSL のどこにも出てこない。ここだけ SQL の `NULLS FIRST/LAST` を借用すると語彙が不揃いになる。`missing: first/last` は「missing key」をそのまま表現し、`exists` と語彙が並ぶ。ElasticSearch も `missing: _first/_last` を採用しており、JSON/YAML 上の DSL では先例がある。
+ツールの data model は「nullable は項目自体を省略する」が原則で、独立した「null 値」概念を持たない ([json-data-model.md](../40-json-data-model.md))。where 句も存在判定は `exists: true/false` で表現しており、`null` という語は DSL のどこにも出てこない。ここだけ SQL の `NULLS FIRST/LAST` を借用すると語彙が不揃いになる。`missing: first/last` は「missing key」をそのまま表現し、`exists` と語彙が並ぶ。ElasticSearch も `missing: _first/_last` を採用しており、JSON/YAML 上の DSL では先例がある。
 
 ### 背景: sort の `direction` × `missing` を直交にした上で default は direction 非依存にした
 
@@ -97,7 +97,7 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 `select` の各 `item:` は、その attribute がレコードに存在しないとき (= schema 上 optional な属性で値が省略されているとき) は **出力レコードから当該キーを省く**。エラーにはしない。
 
-理由は data model 全体での「nullable = キー省略」原則との整合 ([json-data-model.md](../json-data-model.md))。`null` 値概念を持たない data model の下では、optional 属性が省略されたレコードは「キーがない」状態で素直に走るのが筋。`select` がここで `null` を捏造したりエラーで止めたりすると、後段の述語 (`where: { exists: false }`) や下流テンプレートの falsy 判定が壊れる。
+理由は data model 全体での「nullable = キー省略」原則との整合 ([json-data-model.md](../40-json-data-model.md))。`null` 値概念を持たない data model の下では、optional 属性が省略されたレコードは「キーがない」状態で素直に走るのが筋。`select` がここで `null` を捏造したりエラーで止めたりすると、後段の述語 (`where: { exists: false }`) や下流テンプレートの falsy 判定が壊れる。
 
 具体例: `from: __definition.entities` に `select - item: parent_entity` を入れると、top-level entity (= `parent_entity` キーが無い) は `parent_entity` キーを持たない行を吐き、child entity (= `parent_entity` に親 id) は値付きの行を吐く。出力レコードの shape が記録ごとに揺れることになるが、これは下流での `if row.parent_entity` 判定で自然に消える。
 

@@ -109,7 +109,7 @@ another_mood/
 ドキュメントの閲覧先は `.another-mood/dev-docs/output/`。
 
 - [index.md](.another-mood/dev-docs/output/web/prose/index.md) — 仕様・設計
-- [background/product.md](.another-mood/dev-docs/output/web/prose/background/product.md) — 製品ビジョン
+- [background/product.md](.another-mood/dev-docs/output/web/prose/10-background/10-product.md) — 製品ビジョン
 - [roadmap.md](.another-mood/dev-docs/output/web/roadmap.md) — ロードマップ
 - [tasks.md](.another-mood/dev-docs/output/web/tasks.md) — タスクカタログ
-- [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/dev/style-guide.md) — 命名・自己定義の表記規約
+- [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md) — 命名・自己定義の表記規約

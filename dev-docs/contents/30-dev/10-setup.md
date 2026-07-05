@@ -27,4 +27,4 @@ uv run pre-commit install    # pre-commit hook を有効化
 make ci                      # 全チェック実行で環境を確認
 ```
 
-各ツールの用途の詳細は [environment.md](environment.md) を参照。
+各ツールの用途の詳細は [environment.md](20-environment.md) を参照。

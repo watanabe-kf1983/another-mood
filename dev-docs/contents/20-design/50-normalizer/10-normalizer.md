@@ -14,7 +14,7 @@
 `additionalProperties` を持つオブジェクトを `[{"id": <key>, ...}]` 配列に正規化する際、`id` は `str(key)` でコエースする。YAML は int/bool キー (`10:`) を natively 許すが、以下の理由で string に揃える:
 
 1. **JSON は string キーしか持たない** — YAML キーは JSON 由来の正規化先には乗らない型を取りうるが、永続化形式 (`save_model` で書き出す YAML) は JSON 互換を保つ
-2. **catalog 宣言が `id: string`** ([schema-spec.md](schema-spec.md) Entity 名節) — 宣言とデータ実体の型を一致させる
+2. **catalog 宣言が `id: string`** ([schema-spec.md](20-schema-spec.md) Entity 名節) — 宣言とデータ実体の型を一致させる
 3. **x-ref ターゲット集合の型統一** — FK 検査が string-only で完結する (schema-schema は x-ref を type=string のみ許容)
 4. **アンカーパス生成の一貫性** — entity ページのパス・アンカーパス生成器が常に string 入力を仮定できる
 
@@ -98,4 +98,4 @@ $defs:
 
 #### 走査の非対称性との関係
 
-blob 内部は walker (build_schema_tree, normalize_data, query DSL の参照解決) いずれからも opaque。これは [queries-spec.md「走査の非対称性 (設計原則)」](../composer/queries-spec.md#走査の非対称性-設計原則) の「nested array に潜るのは `flatten:` 系のみ」と同質の制約として扱う。
+blob 内部は walker (build_schema_tree, normalize_data, query DSL の参照解決) いずれからも opaque。これは [queries-spec.md「走査の非対称性 (設計原則)」](../60-composer/10-queries-spec.md#走査の非対称性-設計原則) の「nested array に潜るのは `flatten:` 系のみ」と同質の制約として扱う。
