@@ -52,9 +52,3 @@
 {% else %}
 (no queries defined yet)
 {% endif %}
-
-## Reports
-
-{% for e in __editions %}
-- [{{ e.name }}]({{ e.segment | safe }}/)
-{% endfor %}

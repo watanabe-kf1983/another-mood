@@ -101,18 +101,17 @@ META_TEMPLATES_FILTERS: Mapping[str, Callable[..., Any]] = {
 
 META_EDITION = Edition(
     file_per=("__entity_defs.item", "__entity_data.item", "__queries.item"),
-    name="",
+    name="__db",
     templates_dir=META_TEMPLATES_DIR,
     root_template="index.md",
     extra_filters=META_TEMPLATES_FILTERS,
 )
-"""The built-in meta edition — root-mounted (empty ``name``), rendered from
-the meta templates with the system-only ``extra_filters`` above.
+"""The built-in meta edition — the database self-description, mounted at
+``__db/`` and rendered from the meta templates with the system-only
+``extra_filters`` above (mount and ``__`` naming: paging-spec).
 
-``file_per`` is the fixed internal page split: the meta diagnostics have no
-user ``reports.yaml``, so each built-in query (``__entity_defs`` /
-``__entity_data`` / ``__queries``) yields one result item per entity/query,
-and listing the item object-type ids here routes those item nodes to their
+``file_per`` is the fixed internal page split: with no user ``reports.yaml``,
+listing the built-in queries' item ids routes each entity/query result to its
 own ``{query}/{id}.md`` page via the ordinary ``page_path`` derivation."""
 
 

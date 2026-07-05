@@ -31,6 +31,10 @@ _BUILD_REPORT_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "build_report")
 )
 
+_COVER_TEMPLATES_DIR = Path(
+    str(resources.files("another_mood.resources") / "templates" / "cover")
+)
+
 _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 
 
@@ -40,20 +44,18 @@ def generate(
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     user_editions = load_editions(reports_file, templates_dir)
-    # ``__editions`` lists the user editions only: the meta edition renders in
-    # the loop below but is not a user report, so it stays off this channel.
-    model = {
-        **load_model(data_dir),
-        "__editions": [
-            {"name": e.name, "segment": e.dir_segment} for e in user_editions
-        ],
-    }
+    editions = (META_EDITION, *user_editions)
+
+    # The root cover just lists the editions — no data model, so no filters.
+    render("index.md", _COVER_TEMPLATES_DIR, {"editions": editions}, out_dir)
+
+    # A page tree per edition, over the shared data model.
+    model = load_model(data_dir)
     node_map = build_node_map(model)
     data = cast(MappingNode, node_map["/"])
     node_globals, node_filters = make_data_tree_filters(node_map)
-    # One loop over heterogeneous edition kinds: meta edition, then user editions.
-    for edition in (META_EDITION, *user_editions):
-        assert edition.templates_dir is not None  # always set for loop editions
+    for edition in editions:
+        assert edition.templates_dir is not None  # always set for data editions
         render(
             edition.root_template,
             edition.templates_dir,

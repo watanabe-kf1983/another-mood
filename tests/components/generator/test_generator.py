@@ -47,8 +47,17 @@ class TestGenerate:
         assert (out_dir / "data" / "default" / "index.md").read_text() == (
             '<a id="/"></a>\n# Hello\n'
         )
-        # Metadata root is always rendered at the site root.
-        assert (out_dir / "data" / "index.md").exists()
+        # The cover owns the site root: a thin two-section page that
+        # lists the deliverables and links modestly to the __db/ meta surface,
+        # which is where the self-description is now mounted (F9).
+        cover = (out_dir / "data" / "index.md").read_text()
+        assert "## User Reports" in cover
+        assert "## Database Information" in cover
+        # The meta edition is routed to Database Information as a derived link,
+        # not listed as a User Reports deliverable.
+        assert "[browse](__db/)" in cover
+        assert "- [__db]" not in cover
+        assert (out_dir / "data" / "__db" / "index.md").exists()
 
     def test_renders_each_form_b_edition_with_escaped_segment(
         self, tmp_path: Path
@@ -77,11 +86,11 @@ class TestGenerate:
 
         assert (out_dir / "data" / "web" / "index.md").exists()
         assert (out_dir / "data" / "print%20me" / "index.md").exists()
-        # Meta index lists each edition: raw display label, escaped href that
-        # matches the directory written above.
-        meta_index = (out_dir / "data" / "index.md").read_text()
-        assert "- [web](web/)" in meta_index
-        assert "- [print me](print%20me/)" in meta_index
+        # The root cover lists each edition under ## User Reports: raw display
+        # label, escaped href that matches the directory written above (F9).
+        cover = (out_dir / "data" / "index.md").read_text()
+        assert "- [web](web/)" in cover
+        assert "- [print me](print%20me/)" in cover
 
     def test_writes_error_to_reports_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"

@@ -125,6 +125,22 @@ def test_dir_segment_escapes_unsafe_name() -> None:
     assert Edition(name="a/b", file_per=()).dir_segment == "a%2Fb"
 
 
+# ── is_system ──────────────────────────────────────────────────────
+
+
+def test_is_system_true_for_dunder_name() -> None:
+    # The meta edition mounts at `__db`; the `__` prefix marks a system
+    # edition so the cover routes it to ## Database Information.
+    assert Edition(name="__db", file_per=()).is_system is True
+
+
+def test_is_system_false_for_user_and_cover_names() -> None:
+    # User edition names are validated non-`__`; the site-root name `""` (the
+    # cover render) is not system either.
+    assert Edition(name="web", file_per=()).is_system is False
+    assert Edition(name="", file_per=()).is_system is False
+
+
 # ── is_split_target ────────────────────────────────────────────────
 
 

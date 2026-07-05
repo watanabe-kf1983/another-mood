@@ -88,6 +88,14 @@ class Edition:
         """
         return url_escape(self.name, safe="")
 
+    @property
+    def is_system(self) -> bool:
+        """Whether this is a system edition (the ``__db`` self-description) vs a
+        user deliverable: user names are validated non-``__`` (ReportsSchema),
+        so the ``__`` prefix cleanly separates the two.
+        """
+        return self.name.startswith("__")
+
     def is_split_target(self, object_type_id: str) -> bool:
         """Whether nodes of ``object_type_id`` are split into their own page.
 
