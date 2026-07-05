@@ -15,7 +15,7 @@ from jinja2.parser import Parser
 from jinja2.runtime import Context
 
 from another_mood.components.generator.data_tree import Node, nearest_ancestor
-from another_mood.components.generator.edition import Edition
+from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
@@ -36,7 +36,7 @@ class MoodViewProcessorImpl:
     :meth:`_splits`)."""
 
     engine: TemplateEngine
-    edition: Edition = Edition(file_per=())
+    paging: PagingPolicy = PagingPolicy()
 
     def __call__(self, template_name: str, subject: object) -> str:
         # Only a real data-tree node can become its own page; anything else
@@ -51,11 +51,11 @@ class MoodViewProcessorImpl:
     def _splits(self, node: Node) -> bool:
         """Whether the node becomes its own page (else inlined): its
         ``object_type_id`` is a ``file_per`` split target."""
-        return self.edition.is_split_target(node._meta.object_type_id)
+        return self.paging.is_split_target(node._meta.object_type_id)
 
     def _out_path(self, node: Node) -> Path:
         """Anchor-derived page path of a split node."""
-        return Path(self.edition.page_path(node))
+        return Path(self.paging.page_path(node))
 
 
 class MoodViewExtension(Extension):
@@ -107,7 +107,7 @@ def _guard_subtree(
     subtree, pointing the error at the tag's own source location.
 
     A node is drawn on exactly one page fixed by its data position
-    (``Edition.page_path``); link resolution rides on that invariant (a
+    (``PagingPolicy.page_path``); link resolution rides on that invariant (a
     link's source page is ``page_path(this)``, its target ``page_path(target)``).
     Embedding a node off its home page breaks both its outgoing ``this``-keyed
     links (``relink`` / ``link`` / ``href``) and the anchor others link *to*.

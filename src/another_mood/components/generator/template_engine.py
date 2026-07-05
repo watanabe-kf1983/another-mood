@@ -18,7 +18,7 @@ from another_mood.components.generator.mood_view_processor import (
     MoodViewExtension,
     MoodViewProcessorImpl,
 )
-from another_mood.components.generator.edition import Edition
+from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -163,7 +163,7 @@ class TemplateEngine:
         output_format: OutputFormat,
         filters: Mapping[str, Callable[..., Any]],
         globals: Mapping[str, Callable[..., Any]] = {},
-        edition: Edition = Edition(file_per=()),
+        paging: PagingPolicy = PagingPolicy(),
     ) -> None:
         self._out_dir = out_dir
         self._paths = PathRegistry()
@@ -176,7 +176,7 @@ class TemplateEngine:
             self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
         # The mood_view extension dispatches via env.globals[PROCESSOR_KEY].
         self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(  # pyright: ignore[reportArgumentType]
-            engine=self, edition=edition
+            engine=self, paging=paging
         )
 
     def render(self, template_name: str, subject: object) -> str:

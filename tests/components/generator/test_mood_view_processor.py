@@ -14,7 +14,7 @@ from another_mood.components.generator.mood_view_processor import (
     MoodViewProcessorImpl,
 )
 from another_mood.components.generator.output_formats.md import MD
-from another_mood.components.generator.edition import Edition
+from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
@@ -230,8 +230,8 @@ class TestMoodViewProcessorImplFilePerRouting:
 
     def test_node_in_file_per_splits(self) -> None:
         engine = _MockEngine()
-        edition = Edition(file_per=("members.item",))
-        processor = MoodViewProcessorImpl(engine=engine, edition=edition)  # type: ignore[arg-type]
+        paging = PagingPolicy(("members.item",))
+        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         member = self._member()
         result = processor("member.md", member)
 
@@ -241,8 +241,8 @@ class TestMoodViewProcessorImplFilePerRouting:
 
     def test_node_absent_from_file_per_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined alice")
-        edition = Edition(file_per=())  # members.item not listed
-        processor = MoodViewProcessorImpl(engine=engine, edition=edition)  # type: ignore[arg-type]
+        paging = PagingPolicy()  # members.item not listed
+        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         member = self._member()
         result = processor("member.md", member)
 
@@ -275,15 +275,15 @@ class TestMoodViewProcessorImplNonNodeInlines:
 
 
 class TestMoodViewProcessorImplPagePath:
-    """A split subject maps to its output path via ``Edition.page_path``
+    """A split subject maps to its output path via ``PagingPolicy.page_path``
     (paging C3), so its directory is the view name."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
 
     def test_tree_node_uses_anchor_derived_page_path(self) -> None:
         engine = _MockEngine()
-        edition = Edition(file_per=("members.item",))
-        processor = MoodViewProcessorImpl(engine=engine, edition=edition)  # type: ignore[arg-type]
+        paging = PagingPolicy(("members.item",))
+        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         member = wrap_tree(self._TREE)["members"][0]
         processor("member.md", member)
 
@@ -313,7 +313,7 @@ class TestMoodViewProcessorImplViaEngine:
         self,
         tmp_path: Path,
         templates: dict[str, str],
-        edition: Edition = Edition(file_per=()),
+        paging: PagingPolicy = PagingPolicy(),
     ) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
@@ -326,13 +326,13 @@ class TestMoodViewProcessorImplViaEngine:
             templates_dir=templates_dir,
             output_format=MD,
             filters={},
-            edition=edition,
+            paging=paging,
         )
 
     def test_writes_file_with_rendered_content(self, tmp_path: Path) -> None:
-        edition = Edition(file_per=("members.item",))
-        engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"}, edition)
-        processor = MoodViewProcessorImpl(engine=engine, edition=edition)
+        paging = PagingPolicy(("members.item",))
+        engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"}, paging)
+        processor = MoodViewProcessorImpl(engine=engine, paging=paging)
         processor("profile.md", wrap_tree(self._TREE)["members"][0])
 
         # The split page opens with the subject node's own anchor (C9).

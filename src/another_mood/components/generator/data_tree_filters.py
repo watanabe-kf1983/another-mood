@@ -18,7 +18,7 @@ from typing import cast
 
 from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.data_tree import child as node_child
-from another_mood.components.generator.edition import Edition
+from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.url import url_escape
 
 
@@ -127,7 +127,7 @@ def node_label(a: object) -> str:
     return cast(Node, a)._meta.anchor_path
 
 
-def node_href(edition: Edition, source: object, a: object) -> str:
+def node_href(paging: PagingPolicy, source: object, a: object) -> str:
     """Page-relative URL — path to the target's page plus its anchor-path
     fragment — from the ``source`` node's page.
 
@@ -135,6 +135,6 @@ def node_href(edition: Edition, source: object, a: object) -> str:
     the rendering filters intercept that case and never call this for one.
     """
     target = cast(Node, a)
-    source_dir = posixpath.dirname(edition.page_path(cast(Node, source))) or "."
-    rel = posixpath.relpath(edition.page_path(target), source_dir)
+    source_dir = posixpath.dirname(paging.page_path(cast(Node, source))) or "."
+    rel = posixpath.relpath(paging.page_path(target), source_dir)
     return f"{rel}#{target._meta.anchor_path}"

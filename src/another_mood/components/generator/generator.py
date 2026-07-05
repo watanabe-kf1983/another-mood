@@ -11,7 +11,7 @@ from typing import Any, cast
 from another_mood.components.generator.data_tree import MappingNode, build_node_map
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
-    Edition,
+    PagingPolicy,
     load_editions,
 )
 from another_mood.components.generator.meta_templates import META_EDITION
@@ -55,7 +55,6 @@ def generate(
     data = cast(MappingNode, node_map["/"])
     node_globals, node_filters = make_data_tree_filters(node_map)
     for edition in editions:
-        assert edition.templates_dir is not None  # always set for data editions
         render(
             edition.root_template,
             edition.templates_dir,
@@ -64,10 +63,10 @@ def generate(
             filters={
                 **edition.extra_filters,
                 **node_filters,
-                **make_link_filters(edition, node_map),
+                **make_link_filters(edition.paging, node_map),
             },
             globals=node_globals,
-            edition=edition,
+            paging=edition.paging,
         )
 
 
@@ -122,12 +121,13 @@ def render(
     *,
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
-    edition: Edition = Edition(file_per=()),
+    paging: PagingPolicy = PagingPolicy(),
 ) -> None:
     """Render a template and write the result to out_dir/index.md.
 
     The md format's own helpers are injected here so every render gets them; the
     caller adds any edition / node-map-bound filters on top via ``filters``.
+    ``paging`` drives ``{% mood_view %}`` split/inline (empty = inline all).
     """
     TemplateEngine(
         out_dir,
@@ -135,5 +135,5 @@ def render(
         output_format=MD,
         filters={**MD_FILTERS, **filters},
         globals={**MD_GLOBALS, **globals},
-        edition=edition,
+        paging=paging,
     ).render_to_file(template_name, data, Path("index.md"))

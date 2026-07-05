@@ -8,6 +8,7 @@ import pytest
 from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.edition import (
     Edition,
+    PagingPolicy,
     load_editions,
 )
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
@@ -17,6 +18,12 @@ def _write(tmp_path: Path, source: str) -> Path:
     path = tmp_path / "reports.yaml"
     path.write_text(source)
     return path
+
+
+def _named(name: str) -> Edition:
+    """A minimal Edition for name-derived tests (dir_segment / is_system);
+    its paging and templates_dir are irrelevant here."""
+    return Edition(paging=PagingPolicy(), name=name, templates_dir=Path("t"))
 
 
 # ── validation ─────────────────────────────────────────────────────
@@ -69,8 +76,8 @@ def test_load_with_entries(tmp_path: Path) -> None:
     )
     assert load_editions(path, templates_dir) == (
         Edition(
+            paging=PagingPolicy(("erds.item", "erds.item.entities.item")),
             name="default",
-            file_per=("erds.item", "erds.item.entities.item"),
             templates_dir=templates_dir,
         ),
     )
@@ -79,7 +86,7 @@ def test_load_with_entries(tmp_path: Path) -> None:
 def test_load_empty_file_per(tmp_path: Path) -> None:
     templates_dir = tmp_path / "templates"
     assert load_editions(_write(tmp_path, "file_per: []\n"), templates_dir) == (
-        Edition(name="default", file_per=(), templates_dir=templates_dir),
+        Edition(paging=PagingPolicy(), name="default", templates_dir=templates_dir),
     )
 
 
@@ -103,11 +110,11 @@ def test_load_form_b_editions(tmp_path: Path) -> None:
     )
     assert load_editions(path, templates_dir) == (
         Edition(
+            paging=PagingPolicy(("erds.item", "erds.item.entities.item")),
             name="web",
-            file_per=("erds.item", "erds.item.entities.item"),
             templates_dir=templates_dir,
         ),
-        Edition(name="pdf", file_per=(), templates_dir=templates_dir),
+        Edition(paging=PagingPolicy(), name="pdf", templates_dir=templates_dir),
     )
 
 
@@ -115,14 +122,14 @@ def test_load_form_b_editions(tmp_path: Path) -> None:
 
 
 def test_dir_segment_ascii_safe_name_is_identity() -> None:
-    assert Edition(name="web", file_per=()).dir_segment == "web"
+    assert _named("web").dir_segment == "web"
 
 
 def test_dir_segment_escapes_unsafe_name() -> None:
     # Same per-segment escape as anchor_path: URL-unsafe ASCII (space, `/`)
     # is percent-encoded, non-ASCII ucschar (版) is kept raw.
-    assert Edition(name="Web 版", file_per=()).dir_segment == "Web%20版"
-    assert Edition(name="a/b", file_per=()).dir_segment == "a%2Fb"
+    assert _named("Web 版").dir_segment == "Web%20版"
+    assert _named("a/b").dir_segment == "a%2Fb"
 
 
 # ── is_system ──────────────────────────────────────────────────────
@@ -131,34 +138,34 @@ def test_dir_segment_escapes_unsafe_name() -> None:
 def test_is_system_true_for_dunder_name() -> None:
     # The meta edition mounts at `__db`; the `__` prefix marks a system
     # edition so the cover routes it to ## Database Information.
-    assert Edition(name="__db", file_per=()).is_system is True
+    assert _named("__db").is_system is True
 
 
 def test_is_system_false_for_user_and_cover_names() -> None:
     # User edition names are validated non-`__`; the site-root name `""` (the
     # cover render) is not system either.
-    assert Edition(name="web", file_per=()).is_system is False
-    assert Edition(name="", file_per=()).is_system is False
+    assert _named("web").is_system is False
+    assert _named("").is_system is False
 
 
 # ── is_split_target ────────────────────────────────────────────────
 
 
 def test_is_split_target_listed() -> None:
-    edition = Edition(file_per=("erds.item", "erds.item.entities.item"))
-    assert edition.is_split_target("erds.item")
-    assert edition.is_split_target("erds.item.entities.item")
+    paging = PagingPolicy(("erds.item", "erds.item.entities.item"))
+    assert paging.is_split_target("erds.item")
+    assert paging.is_split_target("erds.item.entities.item")
 
 
 def test_is_split_target_not_listed() -> None:
-    edition = Edition(file_per=("erds.item",))
-    assert not edition.is_split_target("screens.item")
+    paging = PagingPolicy(("erds.item",))
+    assert not paging.is_split_target("screens.item")
     # A prefix of a listed id is not itself a target.
-    assert not edition.is_split_target("erds")
+    assert not paging.is_split_target("erds")
 
 
 def test_is_split_target_empty_file_per() -> None:
-    assert not Edition(file_per=()).is_split_target("erds.item")
+    assert not PagingPolicy().is_split_target("erds.item")
 
 
 # ── page_path ──────────────────────────────────────────────────────
@@ -179,7 +186,7 @@ class TestPagePath:
     def test_no_split_boundary_is_index(self) -> None:
         # Empty file_per -> nearest_ancestor finds nothing -> index.md.
         root = wrap_tree(self._TREE)
-        assert Edition(file_per=()).page_path(root["erds"][0]) == "index.md"
+        assert PagingPolicy().page_path(root["erds"][0]) == "index.md"
 
     def test_match_formats_anchor_path_as_md(self) -> None:
         # object_type_id "erds.item" is in file_per, so the erd is its own
@@ -187,4 +194,4 @@ class TestPagePath:
         # lstrip), ".md" appended.
         root = wrap_tree(self._TREE)
         erd = root["erds"][0]
-        assert Edition(file_per=("erds.item",)).page_path(erd) == "erds/user-mgmt.md"
+        assert PagingPolicy(("erds.item",)).page_path(erd) == "erds/user-mgmt.md"

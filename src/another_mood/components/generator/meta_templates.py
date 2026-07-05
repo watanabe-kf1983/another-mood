@@ -10,7 +10,7 @@ from typing import Any, cast
 import yaml
 from jinja2 import Undefined
 
-from another_mood.components.generator.edition import Edition
+from another_mood.components.generator.edition import Edition, PagingPolicy
 from another_mood.components.shared import json_data_model
 
 META_TEMPLATES_DIR = Path(
@@ -100,10 +100,9 @@ META_TEMPLATES_FILTERS: Mapping[str, Callable[..., Any]] = {
 
 
 META_EDITION = Edition(
-    file_per=("__entity_defs.item", "__entity_data.item", "__queries.item"),
+    paging=PagingPolicy(("__entity_defs.item", "__entity_data.item", "__queries.item")),
     name="__db",
     templates_dir=META_TEMPLATES_DIR,
-    root_template="index.md",
     extra_filters=META_TEMPLATES_FILTERS,
 )
 """The built-in meta edition — the database self-description, mounted at
