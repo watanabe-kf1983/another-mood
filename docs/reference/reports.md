@@ -20,7 +20,7 @@ A **type ID** names a type in the schema — the value you list under `file_per:
 
 So a member list plus per-member detail pages is `file_per: [members.item[], members.item]`. Nesting extends the path one level per array — each task within a category is `categories.item.tasks.item`, and that task list is `categories.item.tasks.item[]`.
 
-To find the exact values, read the diagnostics. `output/__entity_defs/{entity}.md` shows each record type as a `Type:` heading and each array field's collection type in the attributes table; `output/__queries/{query}.md` does the same for query result shapes. Copy the value verbatim.
+To find the exact values, read the diagnostics. `output/__db/__entity_defs/{entity}.md` shows each record type as a `Type:` heading and each array field's collection type in the attributes table; `output/__db/__queries/{query}.md` does the same for query result shapes. Copy the value verbatim.
 
 ## Editions
 

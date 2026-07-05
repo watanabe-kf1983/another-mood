@@ -64,7 +64,7 @@ $defs:
             Edition name — any non-empty string, used as the output
             subdirectory segment (IRI-escaped when it carries unsafe
             characters). Names starting with `__` are reserved for the
-            diagnostic directories (__entity_defs/ etc.) and rejected.
+            tool's own output (`__db/`, `__warnings/`) and rejected.
           pattern: "^(?!__).+$"
         additionalProperties:
           title: Edition

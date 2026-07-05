@@ -1,6 +1,6 @@
 {% set entities = node(path="/__definition/entities") %}
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
-# Another Mood
+# Database Information
 
 ## Entity Relationships
 
@@ -52,9 +52,3 @@
 {% else %}
 (no queries defined yet)
 {% endif %}
-
-## Reports
-
-{% for e in __editions %}
-- [{{ e.name }}]({{ e.segment | safe }}/)
-{% endfor %}

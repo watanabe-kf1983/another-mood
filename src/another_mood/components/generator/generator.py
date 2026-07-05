@@ -11,7 +11,7 @@ from typing import Any, cast
 from another_mood.components.generator.data_tree import MappingNode, build_node_map
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
-    Edition,
+    PagingPolicy,
     load_editions,
 )
 from another_mood.components.generator.meta_templates import META_EDITION
@@ -31,29 +31,40 @@ _BUILD_REPORT_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "build_report")
 )
 
+_COVER_TEMPLATES_DIR = Path(
+    str(resources.files("another_mood.resources") / "templates" / "cover")
+)
+
 _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(
-    data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
+    data_dir: Path,
+    templates_dir: Path,
+    reports_file: Path,
+    project_name: str,
+    *,
+    out_dir: Path,
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
     user_editions = load_editions(reports_file, templates_dir)
-    # ``__editions`` lists the user editions only: the meta edition renders in
-    # the loop below but is not a user report, so it stays off this channel.
-    model = {
-        **load_model(data_dir),
-        "__editions": [
-            {"name": e.name, "segment": e.dir_segment} for e in user_editions
-        ],
-    }
+    editions = (META_EDITION, *user_editions)
+
+    # The root cover just lists the editions — no data model, so no filters.
+    render(
+        "index.md",
+        _COVER_TEMPLATES_DIR,
+        {"editions": editions, "project_name": project_name},
+        out_dir,
+    )
+
+    # A page tree per edition, over the shared data model.
+    model = load_model(data_dir)
     node_map = build_node_map(model)
     data = cast(MappingNode, node_map["/"])
     node_globals, node_filters = make_data_tree_filters(node_map)
-    # One loop over heterogeneous edition kinds: meta edition, then user editions.
-    for edition in (META_EDITION, *user_editions):
-        assert edition.templates_dir is not None  # always set for loop editions
+    for edition in editions:
         render(
             edition.root_template,
             edition.templates_dir,
@@ -62,10 +73,10 @@ def generate(
             filters={
                 **edition.extra_filters,
                 **node_filters,
-                **make_link_filters(edition, node_map),
+                **make_link_filters(edition.paging, node_map),
             },
             globals=node_globals,
-            edition=edition,
+            paging=edition.paging,
         )
 
 
@@ -120,12 +131,13 @@ def render(
     *,
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
-    edition: Edition = Edition(file_per=()),
+    paging: PagingPolicy = PagingPolicy(),
 ) -> None:
     """Render a template and write the result to out_dir/index.md.
 
     The md format's own helpers are injected here so every render gets them; the
     caller adds any edition / node-map-bound filters on top via ``filters``.
+    ``paging`` drives ``{% mood_view %}`` split/inline (empty = inline all).
     """
     TemplateEngine(
         out_dir,
@@ -133,5 +145,5 @@ def render(
         output_format=MD,
         filters={**MD_FILTERS, **filters},
         globals={**MD_GLOBALS, **globals},
-        edition=edition,
+        paging=paging,
     ).render_to_file(template_name, data, Path("index.md"))

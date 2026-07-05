@@ -1,14 +1,16 @@
 # ``page_path`` reads ``node._meta`` — a template-public field under the
 # reserved ``_`` prefix (see data_tree.py), not a Python-protected attr.
 # pyright: reportPrivateUsage=false
-"""Edition — one report variant's output name and page-split policy.
+"""Editions and their paging policy.
 
-An ``Edition`` is the unit the generator loops over: its ``name`` (the
-output subdirectory segment) plus the page-split behaviour derived from
-``file_per``.  :func:`load_editions` reads the user's ``reports.yaml``,
-validates it against the built-in ReportsSchema, and returns the editions
-it declares.  Form A (top-level ``file_per``) yields a single implicit
-edition; form B (an ``editions:`` map) yields one per entry.
+A :class:`PagingPolicy` is the page-split slice a render obeys — which node
+types become their own page (``file_per``) and where each split page lands.
+An :class:`Edition` is the full unit the generator loops over: a paging
+policy plus an output ``name`` and the template surface that renders it.
+:func:`load_editions` reads the user's ``reports.yaml``, validates it against
+the built-in ReportsSchema, and returns the editions it declares — form A
+(top-level ``file_per``) a single implicit edition, form B (an ``editions:``
+map) one per entry.
 
 Lives under ``generator/`` because editions are consumed by the generator
 alone; the loader is a generator-local helper rather than a pipeline stage.
@@ -43,20 +45,57 @@ _NO_EXTRA_FILTERS: Mapping[str, Callable[..., object]] = MappingProxyType({})
 
 
 @dataclass(frozen=True)
-class Edition:
-    """One edition kind the generator renders — its output ``name``,
-    page-split ``file_per``, and the template surface (``templates_dir`` /
-    ``root_template`` / ``extra_filters``) that renders it.
+class PagingPolicy:
+    """The page-split policy a render obeys: which node types split into
+    their own page (``file_per``) and the anchor-derived page each node
+    lands on.
 
-    ``file_per`` drives :meth:`is_split_target` / :meth:`page_path`; ``name``
-    is the output subdirectory segment (``{outDir}/{name}/``), empty for the
-    root-mounted meta edition and for fallback renders.  The template-surface
-    fields carry defaults so those fallback constructions stay terse.
+    This is the slice of an edition a ``{% mood_view %}`` / link render reads
+    — it decides split vs inline and where a split page goes.  Renders with
+    no paging (the cover, the build-report pages) use the empty default:
+    nothing splits, so everything inlines onto ``index.md``.
     """
 
-    file_per: Sequence[str]
+    file_per: Sequence[str] = ()
+
+    def is_split_target(self, object_type_id: str) -> bool:
+        """Whether nodes of ``object_type_id`` split into their own page —
+        their ``_meta.object_type_id``
+        (:mod:`another_mood.components.generator.data_tree`) is listed in
+        ``file_per``.  Takes the id string since the membership test needs
+        only the id; ``file_per`` is small, so a linear test is fine.
+        """
+        return object_type_id in self.file_per
+
+    def page_path(self, node: Node) -> str:
+        """Report-root-relative page path the ``node`` is rendered on.
+
+        The nearest split-target ``node``-or-ancestor's own page
+        (``{anchor_path}.md``), or ``index.md`` when no ancestor is a
+        split boundary (including the root).
+        """
+        page = nearest_ancestor(
+            node, lambda n: self.is_split_target(n._meta.object_type_id)
+        )
+        if page is None:
+            return "index.md"
+        return page._meta.anchor_path.removeprefix("/") + ".md"
+
+
+@dataclass(frozen=True)
+class Edition:
+    """One report edition the generator renders — its ``paging`` policy, its
+    output ``name`` (the subdirectory segment ``{outDir}/{name}/``), and the
+    template surface (``templates_dir`` / ``root_template`` / ``extra_filters``)
+    that renders it.
+
+    Only the generator holds a full ``Edition``; a render's ``{% mood_view %}``
+    and link filters take just its :attr:`paging`.
+    """
+
+    paging: PagingPolicy
+    templates_dir: Path
     name: str = ""
-    templates_dir: Path | None = None
     root_template: str = "index.md"
     extra_filters: Mapping[str, Callable[..., object]] = _NO_EXTRA_FILTERS
 
@@ -68,9 +107,9 @@ class Edition:
         with the user ``templates_dir``."""
         file_per_raw = cast(Sequence[object], data.get("file_per") or ())
         return cls(
-            name=name,
-            file_per=tuple(str(p) for p in file_per_raw),
+            paging=PagingPolicy(tuple(str(p) for p in file_per_raw)),
             templates_dir=templates_dir,
+            name=name,
         )
 
     @property
@@ -88,30 +127,13 @@ class Edition:
         """
         return url_escape(self.name, safe="")
 
-    def is_split_target(self, object_type_id: str) -> bool:
-        """Whether nodes of ``object_type_id`` are split into their own page.
-
-        A node is a split target when its ``_meta.object_type_id``
-        (:mod:`another_mood.components.generator.data_tree`) is listed in
-        ``file_per``.  Takes the id string rather than a node since the
-        membership test needs only the id.  ``file_per`` is small, so a
-        linear membership test is fine.
+    @property
+    def is_system(self) -> bool:
+        """Whether this is a system edition (the ``__db`` self-description) vs a
+        user deliverable: user names are validated non-``__`` (ReportsSchema),
+        so the ``__`` prefix cleanly separates the two.
         """
-        return object_type_id in self.file_per
-
-    def page_path(self, node: Node) -> str:
-        """Report-root-relative page path the ``node`` is rendered on.
-
-        The nearest split-target ``self``-or-ancestor's own page
-        (``{anchor_path}.md``), or ``index.md`` when no ancestor is a
-        split boundary (including the root).
-        """
-        page = nearest_ancestor(
-            node, lambda n: self.is_split_target(n._meta.object_type_id)
-        )
-        if page is None:
-            return "index.md"
-        return page._meta.anchor_path.removeprefix("/") + ".md"
+        return self.name.startswith("__")
 
 
 def load_editions(reports_file: Path, templates_dir: Path) -> Sequence[Edition]:
