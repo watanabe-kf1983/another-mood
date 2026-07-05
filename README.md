@@ -15,7 +15,7 @@ Output is written to `.another-mood/showcase/music/output/`.
 
 Under development (private).
 
-For design decisions and background, see [background/product.md](dev-docs/contents/background/product.md).
+For design decisions and background, see [background/product.md](dev-docs/contents/10-background/10-product.md).
 
 ## Documentation
 

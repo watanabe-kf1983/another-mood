@@ -1,5 +1,5 @@
 # Report output configuration. See:
-# dev-docs/contents/design/generator/paging-spec.md
+# dev-docs/contents/20-design/70-generator/40-paging-spec.md
 #
 # This report ships two editions (form B): each is published side by side
 # under output/{edition}/ and renders the same data, differing only in
