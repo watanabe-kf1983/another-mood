@@ -48,7 +48,7 @@ _INVALID_REPORTS_CASES = [
 @pytest.mark.parametrize("source", _INVALID_REPORTS_CASES)
 def test_load_rejects_invalid(source: str, tmp_path: Path) -> None:
     with pytest.raises(FileValidationError):
-        load_editions(_write(tmp_path, source))
+        load_editions(_write(tmp_path, source), tmp_path / "templates")
 
 
 # ── parse ──────────────────────────────────────────────────────────
@@ -56,6 +56,7 @@ def test_load_rejects_invalid(source: str, tmp_path: Path) -> None:
 
 def test_load_with_entries(tmp_path: Path) -> None:
     # Form A yields a single implicit edition named "default".
+    templates_dir = tmp_path / "templates"
     path = _write(
         tmp_path,
         dedent(
@@ -66,20 +67,26 @@ def test_load_with_entries(tmp_path: Path) -> None:
             """
         ),
     )
-    assert load_editions(path) == (
-        Edition(name="default", file_per=("erds.item", "erds.item.entities.item")),
+    assert load_editions(path, templates_dir) == (
+        Edition(
+            name="default",
+            file_per=("erds.item", "erds.item.entities.item"),
+            templates_dir=templates_dir,
+        ),
     )
 
 
 def test_load_empty_file_per(tmp_path: Path) -> None:
-    assert load_editions(_write(tmp_path, "file_per: []\n")) == (
-        Edition(name="default", file_per=()),
+    templates_dir = tmp_path / "templates"
+    assert load_editions(_write(tmp_path, "file_per: []\n"), templates_dir) == (
+        Edition(name="default", file_per=(), templates_dir=templates_dir),
     )
 
 
 def test_load_form_b_editions(tmp_path: Path) -> None:
     # Form B yields one edition per entry, in declaration order; a missing
     # or empty file_per is the no-split edition.
+    templates_dir = tmp_path / "templates"
     path = _write(
         tmp_path,
         dedent(
@@ -94,9 +101,13 @@ def test_load_form_b_editions(tmp_path: Path) -> None:
             """
         ),
     )
-    assert load_editions(path) == (
-        Edition(name="web", file_per=("erds.item", "erds.item.entities.item")),
-        Edition(name="pdf", file_per=()),
+    assert load_editions(path, templates_dir) == (
+        Edition(
+            name="web",
+            file_per=("erds.item", "erds.item.entities.item"),
+            templates_dir=templates_dir,
+        ),
+        Edition(name="pdf", file_per=(), templates_dir=templates_dir),
     )
 
 
