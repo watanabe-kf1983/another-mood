@@ -31,7 +31,7 @@
 
 `<projectDir>` 引数および `RB_*` で渡されるパスは、CWD 配下のみを許可する。CWD 外のパス（`../other-repo/docs` や絶対パス `/some/elsewhere/docs` 等）はエラーとして拒否する。
 
-現状は `_another_mood_root` ([config.py](../../../../src/another_mood/config.py)) が CWD 外の絶対パスを受けた場合に basename を採用してフォールバックする実装になっており、エラーにはしない。
+現状は `_another_mood_root` (`config.py`) が CWD 外の絶対パスを受けた場合に basename を採用してフォールバックする実装になっており、エラーにはしない。
 
 ### 未実装の config キー
 
