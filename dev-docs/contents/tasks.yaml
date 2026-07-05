@@ -10,17 +10,17 @@ categories:
         title: 見出し抽出 → prose.headings 生成
         note: prose body から見出しを採り nested な headings リストを生成。id=github-slug（dedup）、title=見出しテキスト、level。{#id} は使わない。FK 用の派生 entity は作らず、見出しリンクの妥当性は Generate で検証する
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#見出し抽出-a1
+        proposal: design/normalizer/markdown-parser-spec#見出し抽出-a1
       A3:
         title: 見出しノードの anchor_path 構築（#-形）
         note: nested 見出しの anchor_path を /prose/X#slug に組む分岐。prose の /-例外の隣。# は構造的セパレータで escape しない
         phase: 12
-        proposal: design/generator/anchor-spec.md#見出しノード-a3-a4
+        proposal: design/generator/anchor-spec#見出しノード-a3-a4
       A4:
         title: 出力 URL fragment 規則の一般化 + 見出しは stamp しない
         note: "fragment = anchor_path の最後の `#` 以降（無ければ全体）。見出しは Goldmark/GitHub の native id に着地し自前では刻まない"
         phase: 12
-        proposal: design/generator/anchor-spec.md#見出しノード-a3-a4
+        proposal: design/generator/anchor-spec#見出しノード-a3-a4
       A5:
         title: ソース内相対リンク → node 記法への変換（基本）
         phase: 12
@@ -33,7 +33,7 @@ categories:
         title: "node 記法変換の `#fragment` 対応（見出しリンク）"
         note: "A5 の変換で `path.md#見出し-slug` の `#見出し-slug` を `node:` URI の fragment として素通し。見出しノード（A1, A3, A4）が解決可能になってから。fragment は再 slug せず素通し"
         phase: 12
-        proposal: design/normalizer/markdown-parser-spec.md#見出し-fragment-対応-a7
+        proposal: design/normalizer/markdown-parser-spec#見出し-fragment-対応-a7
 
   B:
     title: アンカー / リンク解決
@@ -86,7 +86,7 @@ categories:
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
         phase: 15
-        proposal: design/generator/anchor-spec.md#未解決参照の扱い
+        proposal: design/generator/anchor-spec#未解決参照の扱い
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
         phase: 11
@@ -135,7 +135,7 @@ categories:
           IRI エスケープ (B7) で潰せない FS 固有問題 (パス長/予約名/末尾文字/正規化等) を、write 時の
           OSError → ユーザ改名診断で扱う。対象と方針は anchor-spec.md#escape-規則 を参照。優先度低。
         phase: 13
-        proposal: design/generator/anchor-spec.md#escape-規則
+        proposal: design/generator/anchor-spec#escape-規則
       C8:
         title: inline キーワードの廃止
         phase: 11
@@ -196,12 +196,12 @@ categories:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
         phase: 15
-        proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
+        proposal: design/normalizer/normalizer#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
         phase: 15
-        proposal: design/normalizer/normalizer.md#unique-制約-d8-d9
+        proposal: design/normalizer/normalizer#unique-制約-d8-d9
 
   E:
     title: YAML DSL クエリ評価拡充
@@ -229,7 +229,7 @@ categories:
           silent に上書きするため、著者が気付かずにパススルーデータを
           上書きする事故が起きる。重複を検知してエラーにする。
         phase: 13
-        proposal: design/composer/queries-spec.md#同名禁止-e6
+        proposal: design/composer/queries-spec#同名禁止-e6
       E8:
         title: "`from:` パス解決の最長一致化"
         phase: 10
@@ -295,12 +295,12 @@ categories:
         title: another-mood.config.json 読み込み
         note: config-spec.md
         phase: 15
-        proposal: design/app/config-spec.md#設定ファイル-g2
+        proposal: design/app/config-spec#設定ファイル-g2
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
         phase: 15
-        proposal: design/app/config-spec.md#rendercustomservercommand-g3
+        proposal: design/app/config-spec#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         phase: 10
@@ -311,7 +311,7 @@ categories:
           詳細は design/app/config-spec.md「処理対象ディレクトリの CWD 配下制約 (G8)」。
           現状は CWD 外の絶対パスを basename フォールバックで受け入れている。
         phase: 13
-        proposal: design/app/config-spec.md#処理対象ディレクトリの-cwd-配下制約-g8
+        proposal: design/app/config-spec#処理対象ディレクトリの-cwd-配下制約-g8
 
   H:
     title: バイナリファイルの取り扱い
@@ -325,18 +325,18 @@ categories:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 13
-        proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
+        proposal: design/normalizer/normalizer#バイナリファイルの正規化-h1-h2
       H2:
         title: 実装
         phase: 13
-        proposal: design/normalizer/normalizer.md#バイナリファイルの正規化-h1-h2
+        proposal: design/normalizer/normalizer#バイナリファイルの正規化-h1-h2
       H3:
         title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
         note: |
           詳細は design/normalizer/normalizer.md「散文サブシステムの一般化 (H3)」。
           前提 H1, H2。
         phase: 13
-        proposal: design/normalizer/normalizer.md#散文サブシステムの一般化-h3
+        proposal: design/normalizer/normalizer#散文サブシステムの一般化-h3
 
   J:
     title: プラグインシステム
@@ -380,7 +380,7 @@ categories:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
         phase: 15
-        proposal: design/normalizer/schema-spec.md#title-キーワード-m4
+        proposal: design/normalizer/schema-spec#title-キーワード-m4
       M5:
         title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
         phase: 10
@@ -394,7 +394,7 @@ categories:
           等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
           schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
         phase: 15
-        proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
+        proposal: design/normalizer/normalizer#正規化スコープと-catalog-境界-m5-m6-m7
       M7:
         title: user schema からの blob 型宣言の解放 (段階 3)
         note: |
@@ -403,7 +403,7 @@ categories:
           ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
           実需が surface してから着手。前提 M6。
         phase: 15
-        proposal: design/normalizer/normalizer.md#正規化スコープと-catalog-境界-m5-m6-m7
+        proposal: design/normalizer/normalizer#正規化スコープと-catalog-境界-m5-m6-m7
       M8:
         title: derive_queries 出力を canonical 形式で流す
         phase: 10
@@ -493,14 +493,14 @@ categories:
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F5)。
         phase: 13
-        proposal: design/app/system-dev-docs.md#s2-dfd-data-flow-diagram
+        proposal: design/app/system-dev-docs#s2-dfd-data-flow-diagram
       S3:
         title: CRUD マトリクステンプレート
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F6)。
         phase: 13
-        proposal: design/app/system-dev-docs.md#s3-crud-マトリクス
+        proposal: design/app/system-dev-docs#s3-crud-マトリクス
       S4:
         title: 画面遷移図 + 画面定義テンプレート
         note: |
@@ -508,7 +508,7 @@ categories:
           画面 entity + 遷移 entity を構造化し、Mermaid stateDiagram-v2 で
           遷移図を描く。stateDiagram の Mermaid 適合性実機検証も兼ねる。
         phase: 13
-        proposal: design/app/system-dev-docs.md#s4-画面遷移図--画面定義
+        proposal: design/app/system-dev-docs#s4-画面遷移図--画面定義
 
   T:
     title: ビルドインフラ

@@ -2,7 +2,7 @@
 
 テンプレートエンジンの出力フォーマット (Markdown / HTML / Mermaid 等) ごとに escape 関数と位置依存ヘルパを切り替える仕組みの仕様。
 
-利用者向けの API 仕様 (`md_escape` の振る舞い・4 ヘルパの使い方) は [docs/reference/template.md](../../../../docs/reference/template.md) を参照。本仕様は設計判断と内部構造に絞る。
+利用者向けの API 仕様 (`md_escape` の振る舞い・4 ヘルパの使い方) は `docs/reference/template.md` を参照。本仕様は設計判断と内部構造に絞る。
 
 ## External Design
 
@@ -69,11 +69,11 @@ Jinja2 の autoescape は `markupsafe.escape` (HTML escape) に決め打ちで e
 
 `finalize` は `Markup` を素通しする。ヘルパは **`Markup` を返したら、そのヘルパが内部のあらゆる escape を完了させていなければならない**。契約違反のヘルパはセーフネットを素通って崩れた出力を出す。
 
-新しい位置依存ヘルパを追加する際の不変条件。各ヘルパの具体的な実装責務 (CommonMark 6.1 制約、padding 規則、safe-set 等) は [md.py](../../../../src/another_mood/components/generator/output_formats/md.py) の docstring と [test_md.py](../../../../tests/components/generator/output_formats/test_md.py) で担保する。
+新しい位置依存ヘルパを追加する際の不変条件。各ヘルパの具体的な実装責務 (CommonMark 6.1 制約、padding 規則、safe-set 等) は `md.py` の docstring と `test_md.py` で担保する。
 
 ### OutputFormat と meta-template filters の住み分け
 
-OutputFormat 記述子の `globals` / `filters` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`OutputFormat` ではなく [meta_templates.py](../../../../src/another_mood/components/generator/meta_templates.py) に `META_TEMPLATES_FILTERS` として持ち、メタテンプレート描画時のみ `TemplateEngine` の `filters` 引数で注入する。
+OutputFormat 記述子の `globals` / `filters` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`OutputFormat` ではなく `meta_templates.py` に `META_TEMPLATES_FILTERS` として持ち、メタテンプレート描画時のみ `TemplateEngine` の `filters` 引数で注入する。
 
 新しい補助関数を追加する際の判定:
 

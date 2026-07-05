@@ -1,9 +1,19 @@
 # Report output configuration. See:
 # dev-docs/contents/design/generator/paging-spec.md
 #
-# `file_per:` lists ObjectType IDs whose nodes are split into separate
-# files. An empty list keeps everything in a single index.md.
-file_per:
-  - prose.item
-  - tasks.item[]
-  - roadmap.item[]
+# This report ships two editions (form B): each is published side by side
+# under output/{edition}/ and renders the same data, differing only in
+# `file_per` (which ObjectType IDs are split into their own pages).
+#
+#   web  — browse online: prose, tasks, and roadmap items are split into
+#          separate pages.
+#   book — read as one bound document: empty file_per keeps everything
+#          inlined into a single index.md.
+editions:
+  web:
+    file_per:
+      - prose.item
+      - tasks.item[]
+      - roadmap.item[]
+  book:
+    file_per: []

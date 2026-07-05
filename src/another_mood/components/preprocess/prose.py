@@ -1,10 +1,11 @@
-"""Prose preprocessing — derive prose record fields from the Markdown body.
+"""Prose preprocessing — derive prose record fields from its id and body.
 
 The source loader wraps a Markdown file into a path-derived ``id`` and a raw
 ``body``; it does not interpret the Markdown.  ``preprocess_prose`` does: for
-each Markdown prose record it derives a ``title`` from the first H1 and rewrites
-the body's relative links to ``node:/prose/<id>`` form.  A record's body is
-detected by ``body.mime_type``, never by file extension.
+each Markdown prose record it derives a ``title`` from the first H1, rewrites
+the body's relative links to ``node:/prose/<id>`` form, and reads the record's
+place in the folder tree (``order_key`` / ``depth``) off the id.  A record's
+body is detected by ``body.mime_type``, never by file extension.
 """
 
 import posixpath
@@ -23,9 +24,10 @@ def preprocess_prose(data: Mapping[str, object]) -> Mapping[str, object]:
     """Return ``data`` with each Markdown prose record's body interpreted.
 
     For every ``prose`` record with a ``text/markdown`` body, derive a ``title``
-    (first H1, unless one is already set) and rewrite the body's relative links
-    to ``node:/prose/<id>`` form.  Records without a Markdown body, and data
-    without a list-valued ``prose`` collection, pass through unchanged.
+    (first H1, unless one is already set), rewrite the body's relative links to
+    ``node:/prose/<id>`` form, and add its folder-tree ``order_key`` / ``depth``.
+    Records without a Markdown body, and data without a list-valued ``prose``
+    collection, pass through unchanged.
     """
     return _map_prose_records(data, _interpret)
 
@@ -59,11 +61,52 @@ def _map_prose_records(
 
 
 def _interpret(record: object) -> object:
-    """Derive a record's title and normalized links from a single parse.
+    """Derive a prose record's fields in two independent passes.
 
-    Records that aren't a Markdown prose record (``id`` + Markdown body) fall
-    through unchanged.  A first-H1 ``title`` is added only when the record has
-    none; an existing one (any value) is kept.
+    The passes match on what each needs, not on one another: ``order_key`` /
+    ``depth`` come from the id, so *any* prose record gets them; ``title`` and
+    the ``node:`` link rewrite come from a Markdown body, so only those records
+    get them.  A record lacking each pass's shape falls through that pass.
+    """
+    return _interpret_markdown(_add_outline(record))
+
+
+def _add_outline(record: object) -> object:
+    """Add the id-derived folder-tree fields (``order_key`` / ``depth``) to any
+    record carrying an ``id``."""
+    match record:
+        case {"id": str(doc_id)}:
+            order_key, depth = _outline_position(doc_id)
+            mapping = cast(Mapping[str, object], record)
+            return {**mapping, "order_key": order_key, "depth": depth}
+        case _:
+            return record
+
+
+def _outline_position(doc_id: str) -> tuple[str, int]:
+    """The ``(order_key, depth)`` of a prose id — its place in the folder tree.
+
+    A trailing ``index`` segment marks a folder's own intro page: it sorts
+    ahead of the folder's files (``order_key`` is the folder path ``".../"``,
+    the root index ``""``) and sits one heading level above them (``depth`` is
+    the segment count; a file is one deeper).  A plain string sort on
+    ``order_key`` then yields folder pre-order — each folder's index first, its
+    subtree contiguous — for provisional alphabetic ids and later
+    numeric-prefixed ones alike.
+    """
+    *folders, leaf = doc_id.split("/")
+    if leaf == "index":
+        order_key = "/".join(folders) + "/" if folders else ""
+        return order_key, len(folders) + 1
+    return doc_id, len(folders) + 2
+
+
+def _interpret_markdown(record: object) -> object:
+    """Derive ``title`` and rewrite links for a Markdown prose record.
+
+    A first-H1 ``title`` is added only when the record has none (an existing
+    one, any value, is kept); relative links are rewritten to ``node:`` form.
+    Records without a Markdown body pass through unchanged.
     """
     match record:
         case {

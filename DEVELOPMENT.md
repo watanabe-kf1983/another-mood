@@ -12,7 +12,7 @@
 
 ツールの動作には [uv](https://docs.astral.sh/uv/) が必要。インストール後 `uv sync` で依存を解決する。
 
-このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/default/prose/index.md](.another-mood/dev-docs/output/default/prose/index.md)。
+このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/web/prose/index.md](.another-mood/dev-docs/output/web/prose/index.md)。
 
 利用者向けサンプルプロジェクト群は `showcase/`（`starter` / `music` 等の各テンプレート）にある。`mood build showcase/{name}` でビルドできる。
 
@@ -35,7 +35,7 @@
 
 ドキュメントを追加・削除・移動した場合、プルリクを上げる前に以下のインデックスからのリンクを確認・更新する:
 
-- [index.md](.another-mood/dev-docs/output/default/prose/index.md) — dev-docs 全体インデックス
+- [index.md](.another-mood/dev-docs/output/web/prose/index.md) — dev-docs 全体インデックス
 - [docs/index.md](docs/index.md) — 利用者向けトップ
 - [docs/catalog.yaml](docs/catalog.yaml) — MCP 公開対象のカタログ
 - [DEVELOPMENT.md](DEVELOPMENT.md) — 開発者向けポインタ
@@ -108,8 +108,8 @@ another_mood/
 
 ドキュメントの閲覧先は `.another-mood/dev-docs/output/`。
 
-- [index.md](.another-mood/dev-docs/output/default/prose/index.md) — 仕様・設計
-- [background/product.md](.another-mood/dev-docs/output/default/prose/background/product.md) — 製品ビジョン
-- [roadmap.md](.another-mood/dev-docs/output/default/roadmap.md) — ロードマップ
-- [tasks.md](.another-mood/dev-docs/output/default/tasks.md) — タスクカタログ
-- [dev/style-guide.md](.another-mood/dev-docs/output/default/prose/dev/style-guide.md) — 命名・自己定義の表記規約
+- [index.md](.another-mood/dev-docs/output/web/prose/index.md) — 仕様・設計
+- [background/product.md](.another-mood/dev-docs/output/web/prose/background/product.md) — 製品ビジョン
+- [roadmap.md](.another-mood/dev-docs/output/web/roadmap.md) — ロードマップ
+- [tasks.md](.another-mood/dev-docs/output/web/tasks.md) — タスクカタログ
+- [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/dev/style-guide.md) — 命名・自己定義の表記規約
