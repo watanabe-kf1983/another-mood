@@ -14,11 +14,7 @@ from another_mood.components.generator.edition import (
     Edition,
     load_editions,
 )
-from another_mood.components.generator.meta_templates import (
-    META_EDITION,
-    META_TEMPLATES_DIR,
-    META_TEMPLATES_FILTERS,
-)
+from another_mood.components.generator.meta_templates import META_EDITION
 from another_mood.components.generator.output_formats.md import (
     MD,
     MD_FILTERS,
@@ -43,48 +39,31 @@ def generate(
     data_dir: Path, templates_dir: Path, reports_file: Path, *, out_dir: Path
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
-    editions = load_editions(reports_file)
-    # anchor_path -> node map; the root node is the "/" entry.  Editions join
-    # the model's top-level ``__`` meta channel (like ``__entity_*``) so the
-    # meta index reaches them as ``__editions``: ``name`` is the display label,
-    # ``segment`` the IRI-escaped output/link segment (they differ only for
-    # names carrying unsafe characters).
+    user_editions = load_editions(reports_file, templates_dir)
+    # ``__editions`` lists the user editions only: the meta edition renders in
+    # the loop below but is not a user report, so it stays off this channel.
     model = {
         **load_model(data_dir),
-        "__editions": [{"name": e.name, "segment": e.dir_segment} for e in editions],
+        "__editions": [
+            {"name": e.name, "segment": e.dir_segment} for e in user_editions
+        ],
     }
     node_map = build_node_map(model)
     data = cast(MappingNode, node_map["/"])
-    # Both renders walk the data tree, so both get the format-neutral filters
-    # plus the markdown link filters (href / link / anchor / relink).  These are
-    # the config / node-map-bound filters, assembled here where both are in
-    # scope; the engine adds only the format's binding-free filters.
     node_globals, node_filters = make_data_tree_filters(node_map)
-    # Meta render splits its real-node subjects (the __entity_defs /
-    # __entity_data / __queries query results) via a fixed internal
-    # file_per, so each lands on its own anchor-derived page.
-    render(
-        "index.md",
-        META_TEMPLATES_DIR,
-        data,
-        out_dir,
-        filters={
-            **META_TEMPLATES_FILTERS,
-            **node_filters,
-            **make_link_filters(META_EDITION, node_map),
-        },
-        globals=node_globals,
-        edition=META_EDITION,
-    )
-    # Each edition renders the same data through its own page split into its
-    # own ``{out_dir}/{edition.name}/`` subtree; the loop is sequential.
-    for edition in editions:
+    # One loop over heterogeneous edition kinds: meta edition, then user editions.
+    for edition in (META_EDITION, *user_editions):
+        assert edition.templates_dir is not None  # always set for loop editions
         render(
-            "index.md",
-            templates_dir,
+            edition.root_template,
+            edition.templates_dir,
             data,
             out_dir / edition.dir_segment,
-            filters={**node_filters, **make_link_filters(edition, node_map)},
+            filters={
+                **edition.extra_filters,
+                **node_filters,
+                **make_link_filters(edition, node_map),
+            },
             globals=node_globals,
             edition=edition,
         )

@@ -16,10 +16,11 @@ alone; the loader is a generator-local helper rather than a pipeline stage.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
+from types import MappingProxyType
 from typing import cast
 
 from another_mood.components.generator.data_tree import Node, nearest_ancestor
@@ -37,27 +38,40 @@ _REPORTS_SCHEMA_FILE = Path(
 # Output subdirectory name for form A's single implicit edition.
 _FORM_A_EDITION_NAME = "default"
 
+# Immutable empty default — a frozen dataclass field rejects a mutable ``{}``.
+_NO_EXTRA_FILTERS: Mapping[str, Callable[..., object]] = MappingProxyType({})
+
 
 @dataclass(frozen=True)
 class Edition:
-    """One report edition — its output name and page-split policy.
+    """One edition kind the generator renders — its output ``name``,
+    page-split ``file_per``, and the template surface (``templates_dir`` /
+    ``root_template`` / ``extra_filters``) that renders it.
 
     ``file_per`` drives :meth:`is_split_target` / :meth:`page_path`; ``name``
-    is the output subdirectory segment (``{outDir}/{name}/``).  The empty
-    default ``name`` is for fallback renders that write to a fixed directory
-    rather than an edition mount (so ``name`` is unused there).  Future
-    per-edition fields extend this dataclass so callers' signatures stay
-    stable.
+    is the output subdirectory segment (``{outDir}/{name}/``), empty for the
+    root-mounted meta edition and for fallback renders.  The template-surface
+    fields carry defaults so those fallback constructions stay terse.
     """
 
     file_per: Sequence[str]
     name: str = ""
+    templates_dir: Path | None = None
+    root_template: str = "index.md"
+    extra_filters: Mapping[str, Callable[..., object]] = _NO_EXTRA_FILTERS
 
     @classmethod
-    def from_dict(cls, name: str, data: Mapping[str, object]) -> "Edition":
-        """Build from an already-validated edition mapping."""
+    def from_dict(
+        cls, name: str, data: Mapping[str, object], templates_dir: Path
+    ) -> "Edition":
+        """Build a user edition from an already-validated mapping, stamped
+        with the user ``templates_dir``."""
         file_per_raw = cast(Sequence[object], data.get("file_per") or ())
-        return cls(name=name, file_per=tuple(str(p) for p in file_per_raw))
+        return cls(
+            name=name,
+            file_per=tuple(str(p) for p in file_per_raw),
+            templates_dir=templates_dir,
+        )
 
     @property
     def dir_segment(self) -> str:
@@ -100,7 +114,7 @@ class Edition:
         return page._meta.anchor_path.removeprefix("/") + ".md"
 
 
-def load_editions(reports_file: Path) -> Sequence[Edition]:
+def load_editions(reports_file: Path, templates_dir: Path) -> Sequence[Edition]:
     """Validate ``reports.yaml`` against ReportsSchema and return its editions.
 
     Reads the file once. Raises ``FileValidationError`` if validation
@@ -117,8 +131,10 @@ def load_editions(reports_file: Path) -> Sequence[Edition]:
     editions = data.get("editions")
     if editions is None:
         # Form A: the top-level mapping is the single implicit edition.
-        return (Edition.from_dict(_FORM_A_EDITION_NAME, data),)
+        return (Edition.from_dict(_FORM_A_EDITION_NAME, data, templates_dir),)
     # Form B: one edition per entry. Mapping order is the declaration order
     # (ruamel preserves it), so editions publish in the order written.
     entries = cast(Mapping[str, Mapping[str, object]], editions)
-    return tuple(Edition.from_dict(name, entry) for name, entry in entries.items())
+    return tuple(
+        Edition.from_dict(name, entry, templates_dir) for name, entry in entries.items()
+    )

@@ -17,17 +17,6 @@ META_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "meta")
 )
 
-META_EDITION = Edition(
-    file_per=("__entity_defs.item", "__entity_data.item", "__queries.item")
-)
-"""Fixed split policy for the meta render.
-
-The meta diagnostics have no user ``reports.yaml``; their page split is
-internal.  Each built-in query (``__entity_defs`` / ``__entity_data`` /
-``__queries``) yields one result item per entity/query, and listing
-the item object-type ids here routes those item nodes to their own
-``{query}/{id}.md`` page via the ordinary ``page_path`` derivation."""
-
 
 def pluck(row: object, key_path: str) -> object:
     """Jinja2 filter wrapper around :func:`json_data_model.pluck`.
@@ -108,6 +97,23 @@ META_TEMPLATES_FILTERS: Mapping[str, Callable[..., Any]] = {
     "to_yaml": to_yaml,
     "walk_entity": walk_entity,
 }
+
+
+META_EDITION = Edition(
+    file_per=("__entity_defs.item", "__entity_data.item", "__queries.item"),
+    name="",
+    templates_dir=META_TEMPLATES_DIR,
+    root_template="index.md",
+    extra_filters=META_TEMPLATES_FILTERS,
+)
+"""The built-in meta edition — root-mounted (empty ``name``), rendered from
+the meta templates with the system-only ``extra_filters`` above.
+
+``file_per`` is the fixed internal page split: the meta diagnostics have no
+user ``reports.yaml``, so each built-in query (``__entity_defs`` /
+``__entity_data`` / ``__queries``) yields one result item per entity/query,
+and listing the item object-type ids here routes those item nodes to their
+own ``{query}/{id}.md`` page via the ordinary ``page_path`` derivation."""
 
 
 # ── walk_entity helpers ──────────────────────────────────────────────

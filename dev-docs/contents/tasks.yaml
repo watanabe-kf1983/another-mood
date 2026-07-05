@@ -154,15 +154,8 @@ categories:
         done: true
       C12:
         title: render ループの一般化 (heterogeneous edition kinds を単一ループへ)
-        note: >-
-          generator の「メタ描画の特別扱い」と「ユーザ edition ループ」の 2 経路を、
-          templates_dir / root_template / file_per / segment / 追加 filters を差分フィールドに持つ
-          抽象化された edition kind 群を回す一本のループに畳む。meta-edition は root マウント
-          (segment="") のまま据え置き、出力はバイト単位で不変 (振る舞い不変リファクタ、出力 diff で検証)。
-          「ループが回す edition 群」と「トップが宣伝する __editions」は別チャネルに保つ。
-          F9 の前提。paging-spec「Edition 別ルートテンプレート (将来)」の前倒し。
         phase: 12
-        proposal: 20-design/70-generator/40-paging-spec#render-ループの一般化-c12
+        done: true
 
   D:
     title: ユーザコンテンツバリデーション
