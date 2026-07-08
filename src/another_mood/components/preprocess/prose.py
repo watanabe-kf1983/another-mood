@@ -2,10 +2,11 @@
 
 The source loader wraps a Markdown file into a path-derived ``id`` and a raw
 ``body``; it does not interpret the Markdown.  ``preprocess_prose`` does: for
-each Markdown prose record it derives a ``title`` from the first H1, rewrites
-the body's relative links to ``node:/prose/<id>`` form, and reads the record's
-place in the folder tree (``order_key`` / ``depth``) off the id.  A record's
-body is detected by ``body.mime_type``, never by file extension.
+each Markdown prose record it derives a ``title`` from the first H1, collects
+its ``headings`` as link-target nodes, rewrites the body's relative links to
+``node:/prose/<id>`` form, and reads the record's place in the folder tree
+(``order_key`` / ``depth``) off the id.  A record's body is detected by
+``body.mime_type``, never by file extension.
 """
 
 import posixpath
@@ -15,6 +16,7 @@ from urllib.parse import SplitResult, urlsplit
 
 from another_mood.components.shared.markdown import (
     first_h1,
+    heading_nodes,
     parse,
     rewrite_inline_links,
 )
@@ -24,10 +26,11 @@ def preprocess_prose(data: Mapping[str, object]) -> Mapping[str, object]:
     """Return ``data`` with each Markdown prose record's body interpreted.
 
     For every ``prose`` record with a ``text/markdown`` body, derive a ``title``
-    (first H1, unless one is already set), rewrite the body's relative links to
-    ``node:/prose/<id>`` form, and add its folder-tree ``order_key`` / ``depth``.
-    Records without a Markdown body, and data without a list-valued ``prose``
-    collection, pass through unchanged.
+    (first H1, unless one is already set), collect its ``headings`` as
+    link-target nodes, rewrite the body's relative links to ``node:/prose/<id>``
+    form, and add its folder-tree ``order_key`` / ``depth``.  Records without a
+    Markdown body, and data without a list-valued ``prose`` collection, pass
+    through unchanged.
     """
     return _map_prose_records(data, _interpret)
 
@@ -102,11 +105,13 @@ def _outline_position(doc_id: str) -> tuple[str, int]:
 
 
 def _interpret_markdown(record: object) -> object:
-    """Derive ``title`` and rewrite links for a Markdown prose record.
+    """Derive ``title`` / ``headings`` and rewrite links for a Markdown record.
 
     A first-H1 ``title`` is added only when the record has none (an existing
-    one, any value, is kept); relative links are rewritten to ``node:`` form.
-    Records without a Markdown body pass through unchanged.
+    one, any value, is kept); ``headings`` (the body's headings as link-target
+    nodes, empty when there are none) is always added; relative links are
+    rewritten to ``node:`` form.  Records without a Markdown body pass through
+    unchanged.
     """
     match record:
         case {
@@ -122,6 +127,7 @@ def _interpret_markdown(record: object) -> object:
                 **mapping,
                 "body": {**body, "content": normalized},
                 **({"title": new_title} if new_title is not None else {}),
+                "headings": heading_nodes(doc),
             }
         case _:
             return record

@@ -46,6 +46,36 @@ properties:
             the id (the root index is 1). A folder's index sits one level
             above its files.
           type: integer
+        headings:
+          title: Prose headings
+          description: >-
+            Headings found in the Markdown body, in document order, as
+            link-target nodes. Each carries the GitHub-compatible slug of its
+            text as `id` (deduplicated within the body), the heading text as
+            `title`, and its `level` (1-6). A cross-document link to a heading
+            resolves against these.
+          type: array
+          items:
+            title: Prose heading
+            description: One heading, a link target within the prose body.
+            type: object
+            properties:
+              id:
+                title: Heading id
+                description: >-
+                  GitHub-compatible slug of the heading text, matching the id
+                  the renderer stamps on the heading. Deduplicated within the
+                  body by a `-N` suffix.
+                type: string
+              title:
+                title: Heading title
+                description: Text of the heading.
+                type: string
+              level:
+                title: Heading level
+                description: Heading level, 1 (H1) through 6 (H6).
+                type: integer
+            required: [id, title, level]
         body:
           title: Prose body
           description: >-

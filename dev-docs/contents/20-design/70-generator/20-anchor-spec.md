@@ -237,7 +237,7 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 ### 見出しノード (A3, A4)
 
-> **未実装** — [markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出-a1)（タスク [A1, A3〜A5, A7](node:/tasks/A/tasks/A1)）で導入。本節は anchor 側の住所付けとリンク解決への波及を定める。
+> **未実装** — 見出しノードのデータ（`headings`）は [markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出)（A1, A5 実装済み）が用意する。本節は anchor 側の住所付け（`/prose/X#slug`）とリンク解決への波及（A3, A4, A7）を定める。
 
 prose 本文中の見出しを **node（リンクの宛先）** として扱う。データツリー上は prose レコード配下の `headings` リスト要素なので、既存の「ネストしたリスト要素 = node」規則にそのまま乗る。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
 

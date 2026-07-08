@@ -104,6 +104,29 @@ class TestPreprocessProseLinks:
         assert "title" not in record
 
 
+class TestPreprocessProseHeadings:
+    """preprocess_prose: collect the Markdown body's headings as link targets."""
+
+    def test_headings_are_collected(self) -> None:
+        result = preprocess_prose(_prose("# Title\n\n## エラー処理\n\n### 詳細\n"))
+        assert _record(result)["headings"] == [
+            {"id": "title", "title": "Title", "level": 1},
+            {"id": "エラー処理", "title": "エラー処理", "level": 2},
+            {"id": "詳細", "title": "詳細", "level": 3},
+        ]
+
+    def test_no_headings_is_an_empty_list(self) -> None:
+        # The key is always present for a Markdown body, empty when there are none.
+        assert _record(preprocess_prose(_prose("Plain prose.\n")))["headings"] == []
+
+    def test_non_markdown_body_has_no_headings(self) -> None:
+        # Headings come from parsing Markdown, so a non-Markdown body gets none —
+        # like ``title``, the key is simply absent (order_key / depth still apply).
+        body = {"mime_type": "text/plain", "content": "## Not parsed\n"}
+        record = _record(preprocess_prose({"prose": [{"id": "doc", "body": body}]}))
+        assert "headings" not in record
+
+
 # The referencing document for the pure-function tests; ``base`` is "a/b".
 _DOC = "a/b/doc"
 

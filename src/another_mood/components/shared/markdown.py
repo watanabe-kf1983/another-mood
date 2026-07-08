@@ -10,7 +10,8 @@ The two operations are the shared core under the preprocess prose pass (title
 → URL).
 """
 
-from collections.abc import Callable, Iterator, Sequence
+import unicodedata
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 
 from markdown_it import MarkdownIt
@@ -55,6 +56,84 @@ def first_h1(doc: ParsedMarkdown) -> str | None:
         if node.type == "heading" and node.tag == "h1":
             return node.children[0].content if node.children else None
     return None
+
+
+def heading_nodes(doc: ParsedMarkdown) -> Sequence[Mapping[str, object]]:
+    """The body's headings, in document order, as ``{id, title, level}`` nodes.
+
+    Each heading becomes a link target: ``id`` is the GitHub-compatible slug of
+    its text (see :func:`github_slug`), deduplicated within the body by a
+    ``-N`` suffix; ``title`` is the raw heading source (matching :func:`first_h1`
+    so an H1's node title equals the prose ``title``); ``level`` is 1–6.  All
+    levels are kept — a heading carries a native id in every renderer, so a link
+    may target any of them.
+    """
+    tree = SyntaxTreeNode(doc.tokens)
+    used: set[str] = set()
+    nodes: list[Mapping[str, object]] = []
+    for node in tree.walk():
+        if node.type == "heading":
+            slug = _dedup(github_slug(_heading_text(node)), used)
+            used.add(slug)
+            title = node.children[0].content if node.children else ""
+            nodes.append({"id": slug, "title": title, "level": int(node.tag[1:])})
+    return nodes
+
+
+def github_slug(text: str) -> str:
+    r"""A GitHub-compatible heading slug for ``text``.
+
+    Follows the algorithm GitHub documents for heading "Section links" —
+    lower-case, spaces to ``-``, drop other whitespace and punctuation, keep the
+    rest, and an ``-N`` suffix for duplicates (:func:`_dedup`); runs are not
+    collapsed:
+    https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#section-links
+    The exact keep-set — where that prose is loose (e.g. ``_`` is punctuation
+    yet kept) — is Ruby ``\p{Word}`` (:func:`_is_word_char`), from GitHub's own
+    open-sourced pipeline, html-pipeline's ``TableOfContentsFilter``
+    (``/[^\p{Word}\- ]/u``):
+    https://github.com/gjtorikian/html-pipeline/blob/f13a1534cb650ba17af400d1acd3a22c28004c09/lib/html/pipeline/toc_filter.rb
+    """
+    return "".join(
+        "-" if ch in " -" else ch.lower() if _is_word_char(ch) else "" for ch in text
+    )
+
+
+def _is_word_char(ch: str) -> bool:
+    r"""Whether ``ch`` is a Ruby ``\p{Word}`` character — GitHub's slug keep-set:
+    a letter, a mark, a decimal digit, a letter-number (``Nl``, e.g. ``Ⅷ``), or
+    connector punctuation (``Pc``, which includes ``_``).  Other numerics like
+    ``①`` (``No``) are excluded.
+
+    Spelled out by Unicode category because Python's ``re`` has no ``\p{...}``
+    escape, and its ``\w`` is a different set — it keeps ``No`` and drops marks.
+    """
+    category = unicodedata.category(ch)
+    return category[0] in ("L", "M") or category in ("Nd", "Nl", "Pc")
+
+
+def _heading_text(node: SyntaxTreeNode) -> str:
+    """A heading's plain text — the source the slug is derived from.
+
+    Concatenates the visible text of its inline children (a code span
+    contributes its literal content, ``node:`` → ``node``; emphasis / link
+    markup contributes only its inner text), so the slug matches what the
+    renderer sees rather than the raw Markdown.
+    """
+    return "".join(n.content for n in node.walk() if n.type in ("text", "code_inline"))
+
+
+def _dedup(base: str, used: set[str]) -> str:
+    """``base``, or ``base-N`` with the lowest ``N`` ≥ 1 free of ``used``.
+
+    GitHub appends ``-1``, ``-2``, … to the second and later headings in a
+    document that slug to the same id."""
+    if base not in used:
+        return base
+    suffix = 1
+    while f"{base}-{suffix}" in used:
+        suffix += 1
+    return f"{base}-{suffix}"
 
 
 def rewrite_inline_links(

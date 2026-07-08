@@ -8,9 +8,9 @@ categories:
     tasks:
       A1:
         title: 見出し抽出 → prose.headings 生成
-        note: prose body から見出しを採り nested な headings リストを生成。id=github-slug（dedup）、title=見出しテキスト、level。{#id} は使わない。FK 用の派生 entity は作らず、見出しリンクの妥当性は Generate で検証する
+        note: prose body から見出しを採り headings リスト（{id, title, level}、id=github-slug で dedup、H1〜H6 全レベル）を生成。{#id} は使わず、FK 用の派生 entity も作らない。見出しリンクの妥当性は Generate で検証する
         phase: 12
-        proposal: 20-design/50-normalizer/30-markdown-parser-spec#見出し抽出-a1
+        done: true
       A3:
         title: 見出しノードの anchor_path 構築（#-形）
         note: nested 見出しの anchor_path を /prose/X#slug に組む分岐。prose の /-例外の隣。# は構造的セパレータで escape しない
