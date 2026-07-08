@@ -250,6 +250,16 @@ categories:
         title: クエリ DSL 拡充前半 (flatten 句導入 + from 厳密化)
         phase: 10
         done: true
+      E12:
+        title: "クエリ間参照 (`from:` / `join.to:` にクエリ名)"
+        note: |
+          queries-spec.md「クエリ間参照」。依存 (from + join[].to) を手書き
+          Kahn 法で topo 順に解決。derive は view entity を catalog へ逐次
+          フィードバック、apply は同順で評価。サイクルは 1 閉路 1 診断、
+          derive 失敗の下流は汚染集合でカスケード抑制（根本原因のみ報告）。
+          前提 E6（ソース名の一意性）。
+        phase: 13
+        proposal: 20-design/60-composer/10-queries-spec#クエリ間参照-e12
 
   F:
     title: メタドキュメンテーション拡張
