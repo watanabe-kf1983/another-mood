@@ -16,10 +16,10 @@ categories:
         note: >-
           nested 見出しの anchor_path を /prose/X#slug に組む分岐。prose の
           /-例外の隣。# は構造的セパレータで escape しない。
-          検知は位置ベース (object_type_id) で先行し、述語は一点に括り出す
-          — B13 が由来照会へ差し替える
+          検知は位置ベース (object_type_id) で先行し、述語は _is_prose_record
+          / _is_prose_heading に括り出す — B13 が由来照会へ差し替える
         phase: 12
-        proposal: 20-design/70-generator/20-anchor-spec#見出しノード-a3-a4
+        done: true
       A4:
         title: 出力 URL fragment 規則の一般化 + 見出しは stamp しない
         note: "fragment = anchor_path の最後の `#` 以降（無ければ全体）。見出しは Goldmark/GitHub の native id に着地し自前では刻まない"
