@@ -201,6 +201,26 @@ class TestMetaAnchorPath:
         root = wrap_tree({"prose": [{"id": "design/with space"}]})
         assert root["prose"][0]._meta.anchor_path == "/prose/design/with%20space"
 
+    def test_prose_heading_folds_headings_into_hash_fragment(self) -> None:
+        # The `headings` segment folds onto the record's path as `#slug`; `#`
+        # and the slug are raw, and the record keeps its `/`-exception.
+        root = wrap_tree(
+            {
+                "prose": [
+                    {"id": "design/architecture", "headings": [{"id": "エラー処理"}]}
+                ]
+            }
+        )
+        heading = root["prose"][0]["headings"][0]
+        assert heading._meta.anchor_path == "/prose/design/architecture#エラー処理"
+
+    def test_headings_fold_is_prose_specific(self) -> None:
+        # Detection is position-based: a same-named `headings` list under a
+        # non-prose entity keeps the generic path, no `#` fold.
+        root = wrap_tree({"other": [{"id": "x", "headings": [{"id": "h"}]}]})
+        elem = root["other"][0]["headings"][0]
+        assert elem._meta.anchor_path == "/other/x/headings/h"
+
     def test_hash_in_id_is_percent_encoded(self) -> None:
         root = wrap_tree({"items": [{"id": "a#b"}]})
         assert root["items"][0]._meta.anchor_path == "/items/a%23b"

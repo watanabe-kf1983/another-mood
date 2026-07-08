@@ -102,21 +102,32 @@ class _NodeMeta:
         ``/`` at the root; every other node is the parent's path plus
         its escaped segment.  The leading ``/`` marks the path as
         absolute within the page's data tree (distinct from a relative
-        reference).  Each segment is IRI-escaped via ``url_escape``; the
-        ``prose`` entity is exempt from ``/`` escaping so that path-shaped
-        prose ids stay readable.
+        reference).  Each segment is IRI-escaped via ``url_escape``, save
+        two ``prose`` exceptions: a prose record keeps ``/`` in its id
+        unencoded so path-shaped ids stay readable, and a prose heading
+        folds the ``headings`` segment into a ``#slug`` fragment.
         """
         parent = self._node._parent
         if parent is None:
             return "/"
-        # ``prose.item`` keeps ``/`` in id values unencoded so the
-        # path-shaped prose ids stay readable.
-        safe = "/" if self.object_type_id == "prose.item" else ""
+        if self._is_prose_heading():
+            record = cast(MappingNode, self._node)._parent_record
+            assert record is not None  # a heading always has a record
+            # ``#`` is a structural separator, and the github slug must
+            # match the renderer's native heading id, so neither is escaped.
+            return f"{record._meta.anchor_path}#{self._node._segment}"
+        safe = "/" if self._is_prose_record() else ""
         seg = url_escape(self._node._segment, safe=safe)
         parent_path = parent._meta.anchor_path
         # The root path already ends in ``/``; avoid doubling it.
         sep = "" if parent_path == "/" else "/"
         return f"{parent_path}{sep}{seg}"
+
+    def _is_prose_record(self) -> bool:
+        return self.object_type_id == "prose.item"
+
+    def _is_prose_heading(self) -> bool:
+        return self.object_type_id == "prose.item.headings.item"
 
     @cached_property
     def object_type_id(self) -> str:
