@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from another_mood.components.preprocess.query_deriver import (
+    _source_name_conflicts,  # pyright: ignore[reportPrivateUsage]
     build_query_schema,
     derive_queries,
 )
@@ -318,3 +319,67 @@ class TestIdentifierDiagnostics:
             self._run(tmp_path, query_yaml)
         # The pipeline raises before any save_model call.
         assert not list((tmp_path / "derived" / "data").rglob("*.yaml"))
+
+
+class TestSourceNameConflicts:
+    """_source_name_conflicts: shadowing detection over a flat name list.
+
+    A query name shadows another source when it reuses a catalog entity
+    id, repeats an earlier query name, or takes the reserved ``__``
+    built-in prefix.  Each conflict is reported as ``(message, name)``.
+    """
+
+    _ENTITY_IDS = frozenset({"items", "albums"})
+
+    def _conflicts(self, names: list[str]) -> list[tuple[str, str]]:
+        return _source_name_conflicts(names, self._ENTITY_IDS)
+
+    def test_distinct_names_have_no_conflict(self) -> None:
+        assert self._conflicts(["ranked", "named"]) == []
+
+    def test_entity_collision(self) -> None:
+        assert self._conflicts(["items"]) == [
+            ("query name 'items' collides with data entity 'items'", "items")
+        ]
+
+    def test_duplicate_reports_only_the_later_occurrence(self) -> None:
+        assert self._conflicts(["ranked", "named", "ranked"]) == [
+            ("duplicate query name 'ranked'", "ranked")
+        ]
+
+    def test_reserved_prefix(self) -> None:
+        assert self._conflicts(["__mine"]) == [
+            ("query name '__mine' is reserved: '__' marks built-in names", "__mine")
+        ]
+
+    def test_reserved_prefix_takes_precedence_over_entity_collision(self) -> None:
+        # An entity can never be named ``__items`` (schema forbids it), but
+        # the ordering still matters: the ``__`` check runs first.
+        assert self._conflicts(["__items"]) == [
+            ("query name '__items' is reserved: '__' marks built-in names", "__items")
+        ]
+
+    def test_conflicts_preserve_input_order(self) -> None:
+        messages = [name for _, name in self._conflicts(["items", "__x", "ok", "ok"])]
+        assert messages == ["items", "__x", "ok"]
+
+
+class TestSourceNameDiagnostics:
+    """derive_queries surfaces a source-name conflict as a positioned
+    diagnostic anchored at the query name's YAML key."""
+
+    def test_collision_points_at_the_query_key(self, tmp_path: Path) -> None:
+        _write(tmp_path / "queries" / "q.yaml", "items:\n  from: items\n")
+        _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
+        with pytest.raises(FileValidationError) as exc_info:
+            derive_queries.fn(
+                queries_dir=tmp_path / "queries",
+                data_catalog_dir=tmp_path / "catalog",
+                out_dir=tmp_path / "out",
+            )
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].file == tmp_path / "queries" / "q.yaml"
+        assert diags[0].line == 1
+        assert diags[0].column == 1  # the query name key, not the ``from:`` value
+        assert "collides with data entity 'items'" in diags[0].message

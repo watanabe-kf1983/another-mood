@@ -44,18 +44,25 @@ def derive_queries(
 ) -> None:
     """Validate query files and derive view entities into out_dir."""
     schema = build_query_schema()
-    catalog = dc.build_tree(_load_catalog(data_catalog_dir))
+    catalog_entities = _load_catalog(data_catalog_dir)
+    catalog = dc.build_tree(catalog_entities)
 
-    diagnostics: list[Diagnostic] = []
+    user_files = list(_iter_top_level(queries_dir, schema))
+    builtin_files = list(_iter_top_level(_BUILTIN_QUERIES_DIR, schema))
+    diagnostics = _check_source_names(
+        [cast(str, q["id"]) for _, queries in user_files for q in queries],
+        frozenset(e.id for e in catalog_entities),
+    )
+
     pending: list[
         tuple[Path, Sequence[Mapping[str, object]], list[Mapping[str, object]]]
     ] = []
 
-    for src_dir, dst_dir in [
-        (queries_dir, out_dir),
-        (_BUILTIN_QUERIES_DIR, out_dir / "__builtin"),
+    for src_dir, dst_dir, files in [
+        (queries_dir, out_dir, user_files),
+        (_BUILTIN_QUERIES_DIR, out_dir / "__builtin", builtin_files),
     ]:
-        for src_file, queries in _iter_top_level(src_dir, schema):
+        for src_file, queries in files:
             entities, errors = _derive_entities(queries, catalog)
             diagnostics.extend(errors)
             # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
@@ -110,6 +117,42 @@ def _iter_top_level(
         )
 
 
+def _check_source_names(
+    names: Sequence[str], entity_ids: frozenset[str]
+) -> list[Diagnostic]:
+    """Position each shadowing conflict at its query name's YAML location."""
+    return [
+        _diagnostic_from(QueryDeriveError(message, offender=name))
+        for message, name in _source_name_conflicts(names, entity_ids)
+    ]
+
+
+def _source_name_conflicts(
+    names: Sequence[str], entity_ids: frozenset[str]
+) -> list[tuple[str, str]]:
+    """Find query names that shadow another source, as ``(message, name)``.
+
+    Data entities and queries share one flat source namespace, so a
+    reused name would silently shadow its source in the composer.  The
+    ``__`` prefix is reserved for built-in sources — which is also why
+    built-in query names never need this check.
+    """
+    conflicts: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for name in names:
+        if name.startswith("__"):
+            message = f"query name '{name}' is reserved: '__' marks built-in names"
+        elif name in entity_ids:
+            message = f"query name '{name}' collides with data entity '{name}'"
+        elif name in seen:
+            message = f"duplicate query name '{name}'"
+        else:
+            seen.add(name)
+            continue
+        conflicts.append((message, name))
+    return conflicts
+
+
 def _derive_entities(
     queries: Sequence[Mapping[str, object]], catalog: dc.Node
 ) -> tuple[list[Mapping[str, object]], list[Diagnostic]]:
@@ -134,8 +177,8 @@ def _derive_entities(
 def _diagnostic_from(exc: QueryDeriveError) -> Diagnostic:
     """Build a Diagnostic from a QueryDeriveError whose offender carries provenance.
 
-    A non-UserStr offender means the query data did not pass through
-    ``parse_yaml`` (an internal bug, not user error), so the original
+    A non-UserStr offender means the identifier did not pass through the
+    source loader (an internal bug, not user error), so the original
     exception is re-raised for developers to track down.
     """
     if not isinstance(exc.offender, UserStr):

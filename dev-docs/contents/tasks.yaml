@@ -235,12 +235,8 @@ categories:
         done: true
       E6:
         title: クエリ名と正規化済みデータ名の同名禁止チェック
-        note: |
-          queries-spec.md「同名禁止」。現状は composer.py が sources[name] を
-          silent に上書きするため、著者が気付かずにパススルーデータを
-          上書きする事故が起きる。重複を検知してエラーにする。
         phase: 13
-        proposal: 20-design/60-composer/10-queries-spec#同名禁止-e6
+        done: true
       E8:
         title: "`from:` パス解決の最長一致化"
         phase: 10

@@ -25,6 +25,16 @@ $defs:
         properties:
           type:
             const: object
+          properties:
+            propertyNames:
+              description: >-
+                Entity names must not start with `__`: that prefix is
+                reserved for built-in sources (`__definition.*` and the
+                built-in queries), which share one source namespace with
+                user entities and queries. Applies to top-level entity
+                names only; the general identifier pattern for every
+                nesting level lives in jsonSchemaSubset.
+              pattern: "^(?!__)"
 
   xRef:
     title: x-ref foreign-key declaration

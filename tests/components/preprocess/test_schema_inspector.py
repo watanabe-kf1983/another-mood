@@ -72,6 +72,21 @@ _VALID_SCHEMA_CASES = [
         """
         type: object
         properties:
+          users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                __notes: { type: string }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="reserved __ prefix applies to entity names only, not attributes",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
           products:
             type: object
             additionalProperties:
@@ -335,6 +350,21 @@ _REJECTED_SCHEMA_CASES = [
         additionalProperties: false
         """,
         id="hyphenated schema name rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          __users:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                name: { type: string }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="reserved __ entity name rejected",
     ),
     pytest.param(
         """
