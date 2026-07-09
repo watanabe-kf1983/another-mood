@@ -8,21 +8,14 @@ categories:
     tasks:
       A1:
         title: 見出し抽出 → prose.headings 生成
-        note: prose body から見出しを採り headings リスト（{id, title, level}、id=github-slug で dedup、H1〜H6 全レベル）を生成。{#id} は使わず、FK 用の派生 entity も作らない。見出しリンクの妥当性は Generate で検証する
         phase: 12
         done: true
       A3:
         title: 見出しノードの anchor_path 構築（#-形）
-        note: >-
-          nested 見出しの anchor_path を /prose/X#slug に組む分岐。prose の
-          /-例外の隣。# は構造的セパレータで escape しない。
-          検知は位置ベース (object_type_id) で先行し、述語は _is_prose_record
-          / _is_prose_heading に括り出す — B13 が由来照会へ差し替える
         phase: 12
         done: true
       A4:
         title: 出力 URL fragment 規則の一般化 + 見出しは stamp しない
-        note: "fragment = anchor_path の最後の `#` 以降（無ければ全体）。見出しは Goldmark/GitHub の native id に着地し自前では刻まない。node(fragment=) を含めて実装"
         phase: 12
         done: true
       A5:
@@ -35,9 +28,8 @@ categories:
         done: true
       A7:
         title: "node 記法変換の `#fragment` 対応（見出しリンク）"
-        note: "A5 の変換で `path.md#見出し-slug` の `#見出し-slug` を `node:` URI の fragment として素通し。見出しノード（A1, A3, A4）が解決可能になってから。fragment は再 slug せず素通し"
         phase: 12
-        proposal: 20-design/50-normalizer/30-markdown-parser-spec#見出し-fragment-対応-a7
+        done: true
 
   B:
     title: アンカー / リンク解決
@@ -97,7 +89,6 @@ categories:
         done: true
       B12:
         title: mood_view を this の subtree 内に限定（描画はデータ位置に従う）
-        note: "各ノードは page_path の 1 ページにだけ描かれる不変条件を、subject が this の子孫か（_parent 遡上の identity 判定）で強制。subtree 外への mood_view は split/inline 一律で file+line 付きビルドエラー。非ノード subject は免除（this 起点の描画をしない子テンプレに限り健全）。他所のノードは join で子孫化するか link で参照。設計は generator.md#リンク解決、実装は mood_view_processor.py の _guard_subtree docstring。"
         phase: 12
         done: true
       B13:
@@ -139,7 +130,6 @@ categories:
         done: true
       C5:
         title: edition 別の出力ディレクトリ規約
-        note: "{outDir}/{edition}/index.md"
         phase: 12
         done: true
       C6:
