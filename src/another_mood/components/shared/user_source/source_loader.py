@@ -3,9 +3,10 @@
 Concentrates the "user file → data" responsibility shared by every
 preprocess pipeline:
 
-* ``parse_yaml`` — parse a YAML file with ruamel.yaml, tagging scalar
-  string values with a ``Location`` so downstream identifier-integrity
-  checks can point diagnostics back at the originating YAML position.
+* ``parse_yaml`` — parse a YAML file with ruamel.yaml, tagging mapping
+  keys and scalar string values with a ``Location`` so downstream
+  identifier-integrity checks can point diagnostics back at the
+  originating YAML position.
 * ``load_source`` — dispatch by file type and return data ready for
   schema validation.  Markdown files are wrapped raw (path-derived
   ``id`` + ``body``); interpreting the body (e.g. title from the H1)
@@ -82,9 +83,9 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
 def parse_yaml(src: Path) -> Mapping[str, object]:
     """Parse a YAML file with ruamel.yaml.
 
-    Scalar strings are wrapped as ``UserStr`` carrying their source
-    ``Location`` so downstream diagnostics can point back at the
-    originating YAML position. Dict keys are not wrapped.
+    Mapping keys and scalar string values are wrapped as ``UserStr``
+    carrying their source ``Location`` so downstream diagnostics can
+    point back at the originating YAML position.
 
     Empty (or whitespace-only) files load as ``{}``. A non-mapping
     root (sequence, scalar) or a YAML parse error raises
@@ -111,9 +112,8 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
             ]
         ) from exc
     if isinstance(loaded, Mapping):
-        data = cast(Mapping[str, object], loaded)
-        _tag_user_strings(data, src)
-        return data
+        tagged = _tag_mapping(cast(CommentedMap, loaded), src)
+        return cast(Mapping[str, object], tagged)
     elif loaded is None:
         return {}
     else:
@@ -133,35 +133,51 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
         )
 
 
-def _tag_user_strings(node: object, file: Path) -> None:
-    """Walk a ruamel tree, replacing scalar str values with ``UserStr`` in place.
+def _tag_mapping(node: CommentedMap, file: Path) -> CommentedMap:
+    for key, value, key_lc, value_lc in _map_children(node):
+        # Delete first: re-assigning an equal key keeps the old key object.
+        del node[key]
+        node[_tag_value(key, file, key_lc)] = _tag_value(value, file, value_lc)
+    return node
 
-    Dict keys and non-string scalars are left untouched.
+
+def _tag_sequence(node: CommentedSeq, file: Path) -> CommentedSeq:
+    # Lists have no key to swap, so tag items in place (keeps their .lc).
+    for i, value, item_lc in _seq_children(node):
+        node[i] = _tag_value(value, file, item_lc)
+    return node
+
+
+def _tag_value(value: object, file: Path, lc_pos: tuple[Any, Any]) -> object:
+    """Return the tagged form of a node at ``lc_pos``: recurse into a
+    container, wrap a plain string as ``UserStr``, else leave it as is."""
+    if isinstance(value, CommentedMap):
+        return _tag_mapping(value, file)
+    elif isinstance(value, CommentedSeq):
+        return _tag_sequence(value, file)
+    elif isinstance(value, str) and not isinstance(value, UserStr):
+        return UserStr(value, _location(file, *lc_pos))
+    else:
+        return value
+
+
+def _map_children(node: CommentedMap) -> Iterator[tuple[Any, Any, Any, Any]]:
+    """Yield (key, value, key_lc, value_lc) per entry.
+
+    Concentrates the ruamel-specific introspection — ``.lc.key`` /
+    ``.lc.value`` are not in ruamel's type stubs — behind an ``Any``
+    boundary so callers stay free of typing escape hatches.
     """
-    for container, key, value, lc_pos in _ruamel_children(node):
-        if isinstance(value, str) and not isinstance(value, UserStr):
-            container[key] = UserStr(value, _location(file, *lc_pos))
-        else:
-            _tag_user_strings(value, file)
+    lc = getattr(node, "lc")
+    for key in list(node):  # type: ignore[no-untyped-call]
+        yield key, node[key], lc.key(key), lc.value(key)
 
 
-def _ruamel_children(
-    node: object,
-) -> Iterator[tuple[Any, Any, Any, tuple[Any, Any]]]:
-    """Yield (container, key_or_index, value, lc_position) for each child.
-
-    Concentrates the ruamel-specific introspection — ``.lc.value`` /
-    ``.lc.item`` are not in ruamel's type stubs, so the caller can stay
-    free of typing escape hatches.
-    """
-    if isinstance(node, CommentedMap):
-        lc = getattr(node, "lc")
-        for key in list(node):  # type: ignore[no-untyped-call]
-            yield node, key, node[key], lc.value(key)
-    elif isinstance(node, CommentedSeq):
-        lc = getattr(node, "lc")
-        for i in range(len(node)):
-            yield node, i, node[i], lc.item(i)
+def _seq_children(node: CommentedSeq) -> Iterator[tuple[int, Any, Any]]:
+    """Yield (index, value, item_lc) per element (see ``_map_children``)."""
+    lc = getattr(node, "lc")
+    for i in range(len(node)):
+        yield i, node[i], lc.item(i)
 
 
 def _location(file: Path, line: Any, col: Any) -> Location:

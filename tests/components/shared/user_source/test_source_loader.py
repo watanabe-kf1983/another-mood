@@ -9,6 +9,10 @@ from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     parse_yaml,
 )
+from another_mood.components.shared.user_source.position_resolver import (
+    Position,
+    resolve_position,
+)
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
@@ -82,16 +86,42 @@ class TestParseYaml:
         assert isinstance(tag, UserStr)
         assert tag.location == Location(file=f, line=4, column=7)
 
-    def test_dict_keys_and_non_string_scalars_left_untouched(
-        self, tmp_path: Path
-    ) -> None:
+    def test_mapping_keys_become_user_str_with_location(self, tmp_path: Path) -> None:
+        f = tmp_path / "keys.yaml"
+        f.write_text(
+            "top:\n"  # line 1, key column 1
+            "  name: alice\n"  # line 2, key column 3
+        )
+        result = parse_yaml(f)
+        (top,) = result.keys()
+        (name,) = result["top"].keys()  # type: ignore[union-attr]
+        assert isinstance(top, UserStr)
+        assert top.location == Location(file=f, line=1, column=1)
+        assert isinstance(name, UserStr)
+        assert name.location == Location(file=f, line=2, column=3)
+
+    def test_non_string_scalars_left_untouched(self, tmp_path: Path) -> None:
         f = tmp_path / "untouched.yaml"
         f.write_text("count: 3\nflag: true\n")
         result = parse_yaml(f)
-        keys = list(result.keys())
-        assert all(type(k) is str for k in keys)  # plain str, not UserStr
         assert result["count"] == 3
         assert result["flag"] is True
+
+    def test_key_tagging_preserves_lc_for_position_resolution(
+        self, tmp_path: Path
+    ) -> None:
+        """Tagging keys must leave ruamel's ``.lc`` intact so schema-validation
+        position resolution keeps working — including the root node's own
+        position (which anchors errors about the document root) and non-string
+        scalars, whose positions cannot ride on a ``UserStr``."""
+        f = tmp_path / "positions.yaml"
+        f.write_text("count: 3\nnested:\n  flag: true\n")
+        result = parse_yaml(f)
+        assert resolve_position([], result) == Position(line=1, column=1)
+        assert resolve_position(["count"], result) == Position(line=1, column=8)
+        assert resolve_position(["nested", "flag"], result) == Position(
+            line=3, column=9
+        )
 
 
 # ── UserStr / Location ─────────────────────────────────────────────
