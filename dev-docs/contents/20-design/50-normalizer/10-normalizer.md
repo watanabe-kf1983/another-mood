@@ -98,4 +98,4 @@ $defs:
 
 #### 走査の非対称性との関係
 
-blob 内部は walker (build_schema_tree, normalize_data, query DSL の参照解決) いずれからも opaque。これは [queries-spec.md「走査の非対称性 (設計原則)」](../60-composer/10-queries-spec.md#走査の非対称性-設計原則) の「nested array に潜るのは `flatten:` 系のみ」と同質の制約として扱う。
+blob 内部は walker (build_schema_tree, normalize_data, query DSL の参照解決) いずれからも opaque。これは [queries-spec.md「背景: 走査の非対称性を設計原則として確立した」](../60-composer/10-queries-spec.md#背景-走査の非対称性を設計原則として確立した) の「nested array に潜るのは `flatten:` 系のみ」と同質の制約として扱う。

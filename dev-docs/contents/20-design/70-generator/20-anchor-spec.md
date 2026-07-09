@@ -226,7 +226,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す（[Prose の例外](#prose-の例外)）。`relink` はこの文字列全体を見出しノードとして解決し、[出力 URL の形式](#出力-url-の形式)の fragment 規則で `#エラー処理` を出力 URL に乗せる。見出しが対象 prose に無ければ MissingNode として可視化する（[未解決参照の扱い](#未解決参照の扱い)）。
 
-ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、現状 Normalizer の `node:` 変換時に落ちる。透過で運んでこの形を生成する対応は [A7](node:/tasks/A/tasks/A7)（[markdown-parser-spec.md の見出し fragment 対応](../50-normalizer/30-markdown-parser-spec.md#見出し-fragment-対応-a7)）。
+ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、Normalizer が `node:` 変換時に透過で運んでこの形を生成する（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）。
 
 #### 対象はインラインリンク形のみ
 

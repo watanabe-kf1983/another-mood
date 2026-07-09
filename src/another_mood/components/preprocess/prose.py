@@ -41,8 +41,10 @@ def normalize_links(content: str, doc_id: str) -> str:
     An inline link ``[text](relative/path.md)`` whose target resolves to a prose
     document inside the contents tree becomes ``node:/prose/<resolved-id>``,
     resolved lexically against ``doc_id`` (this document's contents-relative
-    path, without extension).  Links that don't name an in-tree prose document
-    are left byte-for-byte (see :func:`_resolver`).
+    path, without extension); a ``#heading-slug`` fragment rides through
+    verbatim (``node:/prose/<resolved-id>#heading-slug``).  Links that don't
+    name an in-tree prose document are left byte-for-byte (see
+    :func:`_resolver`).
     """
     return rewrite_inline_links(parse(content), _resolver(doc_id))
 
@@ -145,7 +147,8 @@ def _resolver(doc_id: str) -> Callable[[str], str]:
 
     The callback converts an in-tree relative ``.md`` link to its
     ``node:/prose/<id>`` form — resolved against ``doc_id``'s directory, any
-    ``#fragment`` dropped — and echoes every other href back unchanged.
+    ``#fragment`` (a heading slug) carried through verbatim — and echoes every
+    other href back unchanged.
     """
     base = posixpath.dirname(doc_id)
 
@@ -154,7 +157,8 @@ def _resolver(doc_id: str) -> Callable[[str], str]:
         if _is_relative_markdown(link):
             resolved = posixpath.normpath(posixpath.join(base, link.path))
             if not resolved.startswith("../"):  # stays inside the contents tree
-                return f"{_NODE_PROSE_PREFIX}{resolved[: -len(_MARKDOWN_SUFFIX)]}"
+                node = f"{_NODE_PROSE_PREFIX}{resolved[: -len(_MARKDOWN_SUFFIX)]}"
+                return f"{node}#{link.fragment}" if link.fragment else node
         return href
 
     return resolve
