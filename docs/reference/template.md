@@ -86,6 +86,8 @@ The node a link points at is often not in the template's context — a foreign k
 
 A path matching no node is a **missing node**, kept visible rather than a dead link. The `__db/__entity_data/` and `__db/__queries/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
 
+A [prose](schema.md#built-in-schema-prose) record's headings are nodes too. A heading's anchor path is the record's path, `#`, and the heading's slug — `/prose/guides/ordering#placing-an-order` — and a link to it lands directly on the heading.
+
 ## Tags
 
 ### `mood_view`
@@ -218,7 +220,7 @@ How that URL lands — and the page-level fallback when the node has no anchor �
 
 emits `<a id="/members/alice"></a>`.
 
-Use `| anchor` to give a node a landing spot where you render it — a child node shown in a table row or list item, say — so links to it arrive there. A [`mood_view`](#mood_view) subject gets one [automatically](#where-a-node-is-rendered) and needs none. For a [missing node](#node), `anchor` emits nothing.
+Use `| anchor` to give a node a landing spot where you render it — a child node shown in a table row or list item, say — so links to it arrive there. A [`mood_view`](#mood_view) subject gets one [automatically](#where-a-node-is-rendered) and needs none. `anchor` emits nothing for a [missing node](#node).
 
 ### `in_cell`
 
@@ -292,7 +294,7 @@ Only inline links are rewritten; a `node:` written inside a code span or fence i
 
 ### `node`
 
-`node(*segs, path=None)` resolves an anchor path to its node, ready for [`link`](#link) / [`href`](#href) / [`label`](#label):
+`node(*segs, path=None, fragment=None)` resolves an anchor path to its node, ready for [`link`](#link) / [`href`](#href) / [`label`](#label):
 
 ```jinja2
 {# inside a by_role group: this member copy lives at /by_role/…, but the
@@ -309,7 +311,13 @@ Only inline links are rewritten; a `node:` written inside a code span or fence i
 {{ node(path="/overview") | link("About this site") }}
 ```
 
-The two compose: `path=` is a verbatim prefix and the positional segments are percent-encoded and appended, so you can take a ready-made path and dig into its children — `node("y", path="/prose/x")` resolves `/prose/x/y`.
+**`fragment=`** names a [prose heading](#anchor-paths) inside the target: it appends `#` and the heading's slug after the rest of the path, exactly as written — the slug must match the heading's rendered id, so it is not encoded:
+
+```jinja2
+{{ node(path="/prose/guides/ordering", fragment="placing-an-order") | link }}
+```
+
+The parts compose: `path=` is a verbatim prefix, the positional segments are percent-encoded and appended — so you can take a ready-made path and dig into its children, `node("y", path="/prose/x")` resolves `/prose/x/y` — and `fragment=` lands last.
 
 A path that matches no node resolves to a **missing node** rather than raising an error; the rendering filters keep it visible — [`link`](#link) brackets the attempted path as `[text]`, [`href`](#href) renders the empty string — so you can spot the broken reference and fix the source.
 

@@ -35,8 +35,8 @@ def make_data_tree_filters(
     pipe (``x | node``) cannot carry.  ``label`` / ``child`` are filters.
     """
 
-    def node(*segs: object, path: object = None) -> object:
-        return resolve_node(node_map, *segs, path=path)
+    def node(*segs: object, path: object = None, fragment: object = None) -> object:
+        return resolve_node(node_map, *segs, path=path, fragment=fragment)
 
     globals_map: Mapping[str, Callable[..., object]] = {
         "node": node,
@@ -60,20 +60,27 @@ class MissingNode:
 
 
 def resolve_node(
-    node_map: Mapping[str, Node], *segs: object, path: object = None
+    node_map: Mapping[str, Node],
+    *segs: object,
+    path: object = None,
+    fragment: object = None,
 ) -> object:
     """Resolve an anchor path to its node, or a :class:`MissingNode`.
 
     ``path`` (a ready-made address) is a verbatim prefix; positional ``segs``
     are each escaped and appended, so the escape mode is visible at the call.
     Either alone works, and they compose — ``segs`` dig into ``path``'s
-    children (``node("y", path="/prose/x")`` → ``/prose/x/y``).  A misused
+    children (``node("y", path="/prose/x")`` → ``/prose/x/y``).  ``fragment``
+    (a heading slug) is appended last as ``#{fragment}``, raw — the slug must
+    match the renderer's native heading id, so it is never escaped.  A misused
     input is never an error: a ``/``-leading positional is escaped to
     ``/%2F…`` and, not matching, surfaces as a visible MissingNode — the same
     way any unresolved reference does, rather than crashing the page.
     """
     prefix = "" if path is None else str(path)
     anchor = prefix + build_anchor_path(*segs)
+    if fragment is not None:
+        anchor = f"{anchor}#{fragment}"
     node = node_map.get(anchor)
     return node if node is not None else MissingNode(anchor)
 
@@ -128,8 +135,8 @@ def node_label(a: object) -> str:
 
 
 def node_href(paging: PagingPolicy, source: object, a: object) -> str:
-    """Page-relative URL — path to the target's page plus its anchor-path
-    fragment — from the ``source`` node's page.
+    """Page-relative URL — path to the target's page plus the target's
+    ``_meta.fragment`` — from the ``source`` node's page.
 
     ``a`` must be a resolved node: a :class:`MissingNode` has no page, so
     the rendering filters intercept that case and never call this for one.
@@ -137,4 +144,4 @@ def node_href(paging: PagingPolicy, source: object, a: object) -> str:
     target = cast(Node, a)
     source_dir = posixpath.dirname(paging.page_path(cast(Node, source))) or "."
     rel = posixpath.relpath(paging.page_path(target), source_dir)
-    return f"{rel}#{target._meta.anchor_path}"
+    return f"{rel}#{target._meta.fragment}"

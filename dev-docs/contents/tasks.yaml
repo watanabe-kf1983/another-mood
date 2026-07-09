@@ -22,9 +22,9 @@ categories:
         done: true
       A4:
         title: 出力 URL fragment 規則の一般化 + 見出しは stamp しない
-        note: "fragment = anchor_path の最後の `#` 以降（無ければ全体）。見出しは Goldmark/GitHub の native id に着地し自前では刻まない"
+        note: "fragment = anchor_path の最後の `#` 以降（無ければ全体）。見出しは Goldmark/GitHub の native id に着地し自前では刻まない。node(fragment=) を含めて実装"
         phase: 12
-        proposal: 20-design/70-generator/20-anchor-spec#見出しノード-a3-a4
+        done: true
       A5:
         title: ソース内相対リンク → node 記法への変換（基本）
         phase: 12
@@ -420,7 +420,7 @@ categories:
           等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
           schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
         phase: 15
-        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m5-m6-m7
+        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
       M7:
         title: user schema からの blob 型宣言の解放 (段階 3)
         note: |
@@ -429,7 +429,7 @@ categories:
           ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
           実需が surface してから着手。前提 M6。
         phase: 15
-        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m5-m6-m7
+        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
       M8:
         title: derive_queries 出力を canonical 形式で流す
         phase: 10

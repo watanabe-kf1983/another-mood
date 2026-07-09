@@ -312,7 +312,11 @@ For example, say you write `contents/guides/ordering.md` like this:
 ```markdown
 # Ordering flow
 
-Add items to your cart and proceed to checkout...
+Add items to your cart and proceed to checkout.
+
+## Placing an order
+
+Review your cart, then confirm.
 ```
 
 From templates, records appear in an array under the **reserved name `prose`**:
@@ -321,15 +325,22 @@ From templates, records appear in an array under the **reserved name `prose`**:
 prose:
   - id: guides/ordering          # file's relative path (without extension)
     title: Ordering flow         # the first H1
+    headings:                    # every heading, in order — each a link target
+      - { id: ordering-flow,    title: Ordering flow,    level: 1 }
+      - { id: placing-an-order, title: Placing an order, level: 2 }
     body:                        # the file's full Markdown
       mime_type: text/markdown
       content: |
         # Ordering flow
 
-        Add items to your cart and proceed to checkout...
+        Add items to your cart and proceed to checkout.
+
+        ## Placing an order
+
+        Review your cart, then confirm.
 ```
 
-One file = one record, and the three fields `id` / `title` / `body` are defined by the built-in schema. How to embed `body.content` is covered in detail in the [Templates](#templates) chapter.
+One file = one record, and the fields `id` / `title` / `headings` / `body` are defined by the built-in schema. How to embed `body.content` is covered in detail in the [Templates](#templates) chapter.
 
 ## Queries
 
