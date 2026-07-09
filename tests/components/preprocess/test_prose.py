@@ -147,9 +147,20 @@ class TestNormalizeLinksConverted:
             "[t](node:/prose/a/b/sub/x)"
         )
 
-    def test_path_fragment_is_dropped(self) -> None:
-        # A5 drops the #fragment (A7 will carry it through); the page resolves.
-        assert normalize_links("[t](x.md#sec)", _DOC) == "[t](node:/prose/a/b/x)"
+    def test_path_fragment_is_carried(self) -> None:
+        # The #fragment (a heading slug) rides onto the node: form verbatim.
+        assert normalize_links("[t](x.md#sec)", _DOC) == "[t](node:/prose/a/b/x#sec)"
+
+    def test_cjk_fragment_is_kept_raw(self) -> None:
+        # Like the path, the fragment is never encoded — it must match the
+        # heading's rendered id byte-for-byte.
+        assert normalize_links("[t](x.md#エラー処理)", _DOC) == (
+            "[t](node:/prose/a/b/x#エラー処理)"
+        )
+
+    def test_empty_fragment_is_dropped(self) -> None:
+        # A bare trailing `#` names no heading: only the page reference remains.
+        assert normalize_links("[t](x.md#)", _DOC) == "[t](node:/prose/a/b/x)"
 
     def test_self_reference_by_filename(self) -> None:
         assert normalize_links("[t](doc.md)", _DOC) == "[t](node:/prose/a/b/doc)"
