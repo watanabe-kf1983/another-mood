@@ -2,7 +2,7 @@
 
 A **query** is a mechanism that reshapes structured data into a more convenient form for reference, producing a named **view**. Queries can express grouping, field projection, and similar transformations.
 
-Queries live in YAML files under `{project}/definition/queries/` (`.yaml` or `.yml`, case-insensitive). The number of files, how they are split, and any subdirectory layout are flexible; all queries are evaluated together at build time. A single file can hold multiple queries — each top-level key becomes a view name.
+Queries live in YAML files under `{project}/definition/queries/` (`.yaml` or `.yml`, case-insensitive). The number of files, how they are split, and any subdirectory layout are flexible; all queries are evaluated together at build time. A single file can hold multiple queries — each top-level key becomes a view name, which must not reuse an entity name or another view name (views and entities share one namespace).
 
 ## Basic query structure
 
