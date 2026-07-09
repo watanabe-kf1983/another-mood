@@ -20,7 +20,7 @@
 {% for task in category.tasks %}
     {{- "" }}| {{ task.id }}{{ task | anchor }}
     {{- "" }} | {{ task.title }}
-    {{- "" }} | {% if task.proposal %}{{ node(path="/prose/" ~ task.proposal.split("#")[0]) | link("→") }}{% endif %}
+    {{- "" }} | {% if task.proposal %}{{ node(path="/prose/" ~ task.proposal) | link("→") }}{% endif %}
     {{- "" }} | {{ task.note | replace('\n', ' ') | trim }}
     {{- "" }} | {{ node("roadmap", task.phase) | link(task.phase) }}
     {{- "" }} | {{ "✅" if task.done else "" }}
