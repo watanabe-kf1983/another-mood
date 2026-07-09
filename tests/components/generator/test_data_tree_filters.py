@@ -30,7 +30,11 @@ _DATA = {
         {"id": "dev", "role": "Developer"},
     ],
     "prose": [
-        {"id": "design/architecture", "title": "Architecture"},
+        {
+            "id": "design/architecture",
+            "title": "Architecture",
+            "headings": [{"id": "エラー処理", "title": "エラー処理", "level": 2}],
+        },
     ],
 }
 _FILE_PER = ("members.item", "by_role.item", "prose.item")
@@ -113,6 +117,29 @@ class TestAnchorPathMode:
         assert resolve_node(nodes, "/members/alice") == MissingNode(
             "/%2Fmembers%2Falice"
         )
+
+
+class TestFragmentMode:
+    """``fragment=`` appends a heading slug as raw ``#{fragment}`` after the
+    page part — ``#`` is structural and the slug must match the renderer's
+    native heading id, so neither is escaped."""
+
+    def test_fragment_reaches_the_heading_node(self) -> None:
+        nodes = _node_map()
+        assert (
+            resolve_node(
+                nodes, path="/prose/design/architecture", fragment="エラー処理"
+            )
+            is (nodes["/prose/design/architecture#エラー処理"])
+        )
+
+    def test_missing_heading_yields_missing_node(self) -> None:
+        # A slug the target prose has no heading for degrades visibly, like
+        # any unresolved reference.
+        nodes = _node_map()
+        assert resolve_node(
+            nodes, path="/prose/design/architecture", fragment="no-such"
+        ) == MissingNode("/prose/design/architecture#no-such")
 
 
 # ── resolve_node ─────────────────────────────────────────────────
@@ -234,6 +261,17 @@ class TestNodeHref:
         # A MissingNode has no page/URL — the rendering filters handle that
         # (a broken reference is shown as a bracketed `[text]`), so node_href is
         # only ever called for resolved nodes and carries no MissingNode branch.
+
+    def test_heading_target_lands_on_native_slug(self) -> None:
+        # A heading node's URL: path to the prose record's page, fragment the
+        # bare slug — landing on the renderer's native heading id, not on a
+        # stamped anchor-path id.
+        nodes = _node_map()
+        source = nodes["/by_role/dev"]
+        target = nodes["/prose/design/architecture#エラー処理"]
+        assert node_href(_paging(), source, target) == (
+            "../prose/design/architecture.md#エラー処理"
+        )
 
 
 # ── make_data_tree_filters (format-neutral, context-free) ─────────────

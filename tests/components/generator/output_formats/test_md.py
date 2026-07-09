@@ -259,6 +259,13 @@ class TestMdAnchor:
         # would be unreachable; like href, it renders empty.
         assert md_anchor(MissingNode("/members/ghost")) == ""
 
+    def test_prose_heading_emits_nothing(self) -> None:
+        # A heading's id is emitted natively by the renderer (Goldmark/GitHub);
+        # stamping it too would duplicate the id, so the landing is left to
+        # the renderer (`stamps_anchor` false).
+        heading = build_node_map(_ANCHOR_DATA)["/prose/design/architecture#エラー処理"]
+        assert md_anchor(heading) == ""
+
 
 class TestMdPostProcess:
     """The format's render post-pass stamps a node subject's own anchor at the
@@ -279,6 +286,12 @@ class TestMdPostProcess:
         # The root render's mapping or a build-report dict has no anchor path,
         # so the output is passed through with nothing prepended.
         assert stamp_anchor("# Hello\n", {"title": "Hello"}) == "# Hello\n"
+
+    def test_prose_heading_subject_is_left_unstamped(self) -> None:
+        # A heading lands on the renderer's native id, so the auto-stamp
+        # (like the `anchor` filter) emits nothing for it.
+        heading = build_node_map(_ANCHOR_DATA)["/prose/design/architecture#エラー処理"]
+        assert stamp_anchor("## エラー処理\n", heading) == "## エラー処理\n"
 
 
 class TestHelpersBypassFinalizeEscape:
@@ -305,8 +318,9 @@ class TestHelpersBypassFinalizeEscape:
         assert template.render(value="a b") == "[label](a%20b)"
 
 
-# A small two-page tree: members and by_role are each their own page, so
-# cross-page links exercise the relative-path computation.
+# A small tree: members, by_role, and prose are each their own page, so
+# cross-page links exercise the relative-path computation; the prose record
+# carries a heading, whose landing point is renderer-native.
 _ANCHOR_DATA = {
     "members": [
         {"id": "alice", "name": "Alice"},
@@ -315,8 +329,15 @@ _ANCHOR_DATA = {
     "by_role": [
         {"id": "dev", "role": "Developer"},
     ],
+    "prose": [
+        {
+            "id": "design/architecture",
+            "title": "Architecture",
+            "headings": [{"id": "エラー処理", "title": "エラー処理", "level": 2}],
+        },
+    ],
 }
-_ANCHOR_FILE_PER = ("members.item", "by_role.item")
+_ANCHOR_FILE_PER = ("members.item", "by_role.item", "prose.item")
 
 
 def _anchors() -> dict[str, Node]:
@@ -406,6 +427,21 @@ class TestLinkFilterWiring:
         result = engine.render("t.md", _anchors()["/"])
         assert result == '<a id="/"></a>\n<a id="/members/alice"></a>'
 
+    def test_link_to_heading_lands_on_native_slug(self, tmp_path: Path) -> None:
+        # node(fragment=) reaches the heading node, and the URL's fragment is
+        # the bare slug — the renderer's native heading id — not the composed
+        # anchor path.
+        engine = self._engine(
+            tmp_path,
+            "{{ node(path='/prose/design/architecture', fragment='エラー処理')"
+            " | link }}",
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == (
+            '<a id="/by_role/dev"></a>\n'
+            "[エラー処理](../prose/design/architecture.md#エラー処理)"
+        )
+
 
 class TestUnderHeadingFilter:
     """The md.py filter adapter: str coercion, Markup wrapping, template use."""
@@ -473,6 +509,23 @@ class TestRelinkFilterWiring:
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         # The destination is dropped, leaving the link text visibly bracketed.
         assert result == '<a id="/by_role/dev"></a>\nsee [ghost]'
+
+    def test_resolves_a_heading_node_link_to_the_native_slug(
+        self, tmp_path: Path
+    ) -> None:
+        # A `node:` destination carrying a `#slug` resolves to the heading
+        # node, and the rewritten URL's fragment is the bare slug — the
+        # renderer's native heading id.
+        engine = self._engine(
+            tmp_path,
+            '{{ "see [エラー処理](node:/prose/design/architecture#エラー処理)"'
+            " | relink }}",
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == (
+            '<a id="/by_role/dev"></a>\n'
+            "see [エラー処理](../prose/design/architecture.md#エラー処理)"
+        )
 
     def test_leaves_a_non_node_link_untouched(self, tmp_path: Path) -> None:
         # Only `node:` destinations are rewritten; a plain relative link is left

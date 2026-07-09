@@ -240,6 +240,44 @@ class TestMetaAnchorPath:
         assert meta is root["items"][0]._meta
 
 
+class TestMetaFragment:
+    """``_meta.fragment`` is the URL fragment landing on the node — the
+    anchor path whole, except a prose heading's bare native slug."""
+
+    def test_data_node_fragment_is_its_anchor_path(self) -> None:
+        root = wrap_tree({"members": [{"id": "alice"}]})
+        assert root["members"][0]._meta.fragment == "/members/alice"
+
+    def test_prose_heading_fragment_is_the_bare_slug(self) -> None:
+        # The heading lands on the renderer's native id, so the fragment
+        # is the slug alone — not the composed `/prose/…#slug` path.
+        root = wrap_tree(
+            {
+                "prose": [
+                    {"id": "design/architecture", "headings": [{"id": "エラー処理"}]}
+                ]
+            }
+        )
+        heading = root["prose"][0]["headings"][0]
+        assert heading._meta.fragment == "エラー処理"
+
+
+class TestMetaStampsAnchor:
+    """``_meta.stamps_anchor`` — synthetic ids are stamped, a prose
+    heading's native id is the renderer's."""
+
+    def test_data_node_stamps(self) -> None:
+        root = wrap_tree({"members": [{"id": "alice"}]})
+        assert root["members"][0]._meta.stamps_anchor is True
+
+    def test_prose_heading_does_not_stamp(self) -> None:
+        root = wrap_tree(
+            {"prose": [{"id": "design/architecture", "headings": [{"id": "h"}]}]}
+        )
+        heading = root["prose"][0]["headings"][0]
+        assert heading._meta.stamps_anchor is False
+
+
 class TestMetaObjectTypeId:
     """``_meta.object_type_id`` mirrors the dotted catalog naming —
     ``X.item`` for a record, ``X.item[]`` for the array of those records."""

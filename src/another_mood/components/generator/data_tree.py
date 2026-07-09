@@ -123,6 +123,28 @@ class _NodeMeta:
         sep = "" if parent_path == "/" else "/"
         return f"{parent_path}{sep}{seg}"
 
+    @cached_property
+    def fragment(self) -> str:
+        """URL fragment that lands on this node — what ``href`` appends.
+
+        Equivalent to "the part of :attr:`anchor_path` after the last
+        ``#``", held as its own property so no consumer re-parses the
+        composed path string.
+        """
+        if self._is_prose_heading():
+            return self._node._segment
+        else:
+            return self.anchor_path
+
+    @cached_property
+    def stamps_anchor(self) -> bool:
+        """Whether the system emits an ``<a id>`` landing for this node.
+
+        False for a prose heading: the markdown renderer emits its id
+        natively, so a stamped ``<a id>`` would duplicate it.
+        """
+        return not self._is_prose_heading()
+
     def _is_prose_record(self) -> bool:
         return self.object_type_id == "prose.item"
 

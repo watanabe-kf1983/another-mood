@@ -121,20 +121,16 @@ def md_link(display: str, url: str) -> Markup:
 def md_anchor(a: object) -> Markup:
     """The receiving half of the link contract: an ``<a id>`` target carrying
     the node's anchor path, where the fragment that ``href`` always appends
-    lands.
-
-    The id reuses ``_meta.anchor_path`` verbatim — the same string ``node_href``
-    puts in the fragment — so the two ends match by construction.  It is already
-    IRI-escaped (``"`` / ``<`` / ``>`` are percent-encoded), so it is safe raw
-    in a quoted attribute; the Markup return keeps finalize from backslash-
-    escaping it.  The element is closed so it cannot swallow following inline
-    content.  Only a node is anchored — a :class:`MissingNode`, or any non-node
-    piped in, has no anchor path, so no ``href`` could ever target it and an
-    anchor there would be unreachable; it emits nothing (mirroring ``href``).
+    lands.  Emits nothing where there is no landing to stamp.
     """
-    if not isinstance(a, Node):
+    if isinstance(a, Node) and a._meta.stamps_anchor:
+        # anchor_path is IRI-escaped (`"` / `<` / `>` percent-encoded), so it
+        # is safe raw in a quoted attribute; Markup keeps finalize from
+        # backslash-escaping it.  Closed element, so it cannot swallow
+        # following inline text.
+        return Markup(f'<a id="{a._meta.anchor_path}"></a>')
+    else:
         return Markup("")
-    return Markup(f'<a id="{a._meta.anchor_path}"></a>')
 
 
 def stamp_anchor(rendered: str, subject: object) -> str:
@@ -142,9 +138,9 @@ def stamp_anchor(rendered: str, subject: object) -> str:
 
     A render is the one point where the system knows a node is drawn here, so
     it drops the ``| anchor`` landing point automatically (split page: top;
-    inline: the spot). A non-node subject yields nothing and is returned
-    untouched; a real node gets a trailing newline so its anchor cannot glue
-    onto a following heading.
+    inline: the spot). A subject :func:`md_anchor` emits nothing for is
+    returned untouched; otherwise the anchor gets a trailing newline so it
+    cannot glue onto a following heading.
     """
     anchor = md_anchor(subject)
     if not anchor:
