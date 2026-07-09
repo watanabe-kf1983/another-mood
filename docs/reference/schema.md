@@ -265,10 +265,10 @@ prose:
 |---|---|
 | `id` | Relative path from `contents_dir` (without extension). |
 | `title` | Text of the first H1 heading. Omitted when there is no H1. |
-| `headings` | The body's headings, in order, each a link target — `id` (the GitHub-compatible slug of the heading text, deduplicated within the body), `title` (the heading text), and `level` (1–6). A cross-document link to a heading — `[t](other.md#a-heading)` — resolves against these; see [Anchor paths](template.md#anchor-paths). |
+| `headings` | The body's headings, in order, each a link target — `id` (the GitHub-compatible slug of the heading text, deduplicated within the body), `title` (the heading text), and `level` (1–6). A link to a heading resolves against these; see [Anchor paths](template.md#anchor-paths). |
 | `body` | A map with `mime_type` and `content`. To embed the body, reference `.content` from a template (e.g., `{{ body.content }}`). |
 
-The Markdown source files stay untouched on disk, so they remain browsable and traversable directly on GitHub or in your IDE. In the parsed `content`, relative links to other prose documents are normalized to their `node:` form (`[t](other.md)` → `[t](node:/prose/<id>)`) so the [`relink`](template.md#relink) filter resolves them to working URLs; every other link is kept as written.
+The Markdown source files stay untouched on disk, so they remain browsable and traversable directly on GitHub or in your IDE. In the parsed `content`, relative links to other prose documents are normalized to their `node:` form (`[t](other.md)` → `[t](node:/prose/<id>)`) so the [`relink`](template.md#relink) filter resolves them to working URLs; every other link is kept as written. A `#fragment` on a converted link is dropped.
 
 ## Full schema-schema
 
