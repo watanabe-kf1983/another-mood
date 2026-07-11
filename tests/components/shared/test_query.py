@@ -121,7 +121,7 @@ class TestFromDerive:
 
     def test_rejects_unknown_name(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        with pytest.raises(QueryDeriveError, match="missing"):
+        with pytest.raises(QueryDeriveError, match="unknown source 'missing'"):
             From(name="missing").derive(root)
 
     def test_rejects_composition_walk(self) -> None:

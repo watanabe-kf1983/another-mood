@@ -83,7 +83,7 @@ class From(QueryNode):
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         if not catalog.has_child(self.name):
-            raise QueryDeriveError(f"unknown entity '{self.name}'", offender=self.name)
+            raise QueryDeriveError(f"unknown source '{self.name}'", offender=self.name)
         return catalog.child(self.name)
 
 
