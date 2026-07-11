@@ -18,8 +18,12 @@
 
 ## Albums by genre
 
-{% for entry in albums_by_genre %}
-- **{{ node("genres", entry.genre_id).name }}**
+The genre name comes straight from the `genres_with_albums` view, which
+reads the grouped `albums_by_genre` view and joins `genres` onto it (a
+query-to-query reference) - so the template no longer re-joins genres itself.
+
+{% for entry in genres_with_albums %}
+- **{{ entry.genre.name }}**
 {% for album in entry.albums | sort(attribute="year") %}
   - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
 {% endfor %}
