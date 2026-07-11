@@ -298,7 +298,7 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 処理の流れ:
 
-- **stamp**: `data_catalog._build_entity_node`（flat→tree 変換）で、無印の entity には自身の ObjectType id を刻み、既に `source_type` を持つ entity は**上書きしない**。この条件が効くのは [クエリ間参照 (E12)](../60-composer/10-queries-spec.md#クエリ間参照-e12) のフィードバックで stamp 済みの view entity が `build_tree` へ再入する場面で、それまでは死文。上書きすると由来が中間クエリの id にリセットされ、クエリ連鎖の二次ビューで prose 検知が silent に壊れる
+- **stamp**: `data_catalog._build_entity_node`（flat→tree 変換）で、無印の entity には自身の ObjectType id を刻み、既に `source_type` を持つ entity は**上書きしない**。この条件が効くのは [クエリ間参照 (E12)](../60-composer/10-queries-spec.md#背景-クエリ間参照に名前付き参照を採りインラインサブクエリを採らない) のフィードバックで stamp 済みの view entity が `build_tree` へ再入する場面で、それまでは死文。上書きすると由来が中間クエリの id にリセットされ、クエリ連鎖の二次ビューで prose 検知が silent に壊れる
 - **伝搬**: derive は `Node` を参照で再配線するため大半は自動（`From` / `Merge` の right / `Select` の子 / `Flatten` の inline 子 / `Grouped` の subtree）。row ノードを再構築する `Merge` / `Flatten` は既に `metadata` を明示 carry しており、同じ行に載せる
 - **`Select` の明示 carry**: `Select.derive` は現状 row ノードを metadata ごと落として再構築する。ここで由来を運ばないと `from: prose` + `select:`（prose の絞り込み・並べ替えビュー）で row の prose-ness が消え、headings 子だけ参照で生き残って「fold は効くのに `/`-例外は効かない」歪な非対称になる。由来は明示的に carry する
 - **合成ノードは無印**: `Grouped` の group row と `Flatten` で dissolve された wrapper は新規の合成型で、どの entity のレコードでもないため `source_type` を持たない。規則: **row を保つ変換（where / sort / select / join / flatten）は由来を保持し、合成ノードだけが無印で始まる**
