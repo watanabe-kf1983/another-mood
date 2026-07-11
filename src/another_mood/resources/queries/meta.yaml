@@ -5,37 +5,55 @@
 # catalog-internal entities/queries (ids starting with `__`, e.g.
 # __definition.*) are excluded so their internals do not clutter the
 # output.
+#
+# The three entity views form a containment chain (each reads the one
+# above via a query-to-query reference, so the shared `from` +
+# `where` are written once):
+#
+#   __entity_tree  — every user content entity, roots and children
+#     └ __entity_defs — the roots only (parent_entity absent)
+#         └ __entity_data — same roots, projected to just the id
 
-# Per-entity Entity Definition pages, and the index's Entity list.  Root
-# content entities — user-authored plus user-facing built-ins like
-# `prose`.  One result item per entity; its anchor path
-# (/__entity_defs/{id}) is the page the built-in root template splits it
-# to.  Parallel to __entity_data (same entity set, a distinct anchor root)
-# so the definition and data views land on separate pages without a
-# one-node-two-pages collision.
-__entity_defs:
+# Node set for the built-in ER diagram on the index template.  Every user
+# content entity, including child entities like `artists.members` (no
+# `parent_entity` filter), so the diagram can draw the composition edges.
+# The base of the entity chain: __entity_defs narrows it to roots.  Not
+# split to pages (absent from META_EDITION's file_per) — a pure helper
+# feeding the diagram and the two views below.
+__entity_tree:
   from: __definition.entities
   where:
     view: false
-    parent_entity: { exists: false }
     not:
       id: { startswith: __ }
+  select:
+    - item: id
+    - item: parent_entity
+    - item: builtin
+    - item: item_type
+
+# Per-entity Entity Definition pages, and the index's Entity list.  The
+# root content entities (parent_entity absent) — user-authored plus
+# user-facing built-ins like `prose`.  One result item per entity; its
+# anchor path (/__entity_defs/{id}) is the page the built-in root template
+# splits it to.  Parallel to __entity_data (same entity set, a distinct
+# anchor root) so the definition and data views land on separate pages
+# without a one-node-two-pages collision.
+__entity_defs:
+  from: __entity_tree
+  where:
+    parent_entity: { exists: false }
   select:
     - item: id
     - item: builtin
     - item: item_type
   sort: { by: builtin }
 
-# Per-entity Entity Data pages.  Same root content-entity set as
-# __entity_defs, a distinct anchor root (/__entity_data/{id}) so the data
-# view lands on its own page.
+# Per-entity Entity Data pages.  The same root entities as __entity_defs
+# (read straight from it), a distinct anchor root (/__entity_data/{id}) so
+# the data view lands on its own page.
 __entity_data:
-  from: __definition.entities
-  where:
-    view: false
-    parent_entity: { exists: false }
-    not:
-      id: { startswith: __ }
+  from: __entity_defs
   select:
     - item: id
 
@@ -49,20 +67,3 @@ __queries:
   where:
     not:
       id: { startswith: __ }
-
-# Node set for the built-in ER diagram on the index template.  Like
-# __entity_defs but without the `parent_entity: { exists: false }` filter,
-# so child entities like `artists.members` are included as nodes.  Not
-# split to pages (absent from META_EDITION's file_per) — a pure
-# helper feeding the diagram.
-__entity_tree:
-  from: __definition.entities
-  where:
-    view: false
-    not:
-      id: { startswith: __ }
-  select:
-    - item: id
-    - item: parent_entity
-    - item: builtin
-    - item: item_type
