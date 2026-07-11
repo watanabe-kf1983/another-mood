@@ -49,11 +49,16 @@ def derive_queries(
 
     user_files = list(_iter_top_level(queries_dir, schema))
     builtin_files = list(_iter_top_level(_BUILTIN_QUERIES_DIR, schema))
-    diagnostics = _check_source_names(
+
+    # Reject up front, not pooled with the derive-time errors below:
+    # deriving over an ambiguous namespace is meaningless, and cross-query
+    # references need each source name unique.
+    _reject_source_name_conflicts(
         [cast(str, q["id"]) for _, queries in user_files for q in queries],
         frozenset(e.id for e in catalog_entities),
     )
 
+    diagnostics: list[Diagnostic] = []
     pending: list[
         tuple[Path, Sequence[Mapping[str, object]], list[Mapping[str, object]]]
     ] = []
@@ -117,14 +122,17 @@ def _iter_top_level(
         )
 
 
-def _check_source_names(
+def _reject_source_name_conflicts(
     names: Sequence[str], entity_ids: frozenset[str]
-) -> list[Diagnostic]:
-    """Position each shadowing conflict at its query name's YAML location."""
-    return [
+) -> None:
+    """Raise :class:`FileValidationError` for name conflicts, each diagnostic
+    positioned at the offending query name's YAML location."""
+    conflicts = [
         _diagnostic_from(QueryDeriveError(message, offender=name))
         for message, name in _source_name_conflicts(names, entity_ids)
     ]
+    if conflicts:
+        raise FileValidationError(diagnostics=conflicts)
 
 
 def _source_name_conflicts(

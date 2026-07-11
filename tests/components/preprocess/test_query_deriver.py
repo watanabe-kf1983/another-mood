@@ -383,3 +383,21 @@ class TestSourceNameDiagnostics:
         assert diags[0].line == 1
         assert diags[0].column == 1  # the query name key, not the ``from:`` value
         assert "collides with data entity 'items'" in diags[0].message
+
+    def test_name_conflict_short_circuits_derivation(self, tmp_path: Path) -> None:
+        # The ``items`` query both shadows the entity ``items`` (a name
+        # conflict) and reads a missing source (a derive-time error).
+        # Fail-fast reports only the name conflict: deriving over an
+        # ambiguous namespace is unreliable, so name checking short-circuits
+        # before derivation runs.
+        _write(tmp_path / "queries" / "q.yaml", "items:\n  from: missing\n")
+        _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
+        with pytest.raises(FileValidationError) as exc_info:
+            derive_queries.fn(
+                queries_dir=tmp_path / "queries",
+                data_catalog_dir=tmp_path / "catalog",
+                out_dir=tmp_path / "out",
+            )
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert "collides with data entity 'items'" in diags[0].message
