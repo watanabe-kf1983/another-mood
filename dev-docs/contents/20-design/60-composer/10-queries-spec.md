@@ -128,7 +128,14 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### クエリ間参照 (E12)
 
-> **未実装** — Phase 13 タスク [E12](node:/tasks/E/tasks/E12)。前提 [E6](node:/tasks/E/tasks/E6)（ソース名の一意性）。
+> **実装中** — Phase 13 タスク [E12](node:/tasks/E/tasks/E12)。前提 [E6](node:/tasks/E/tasks/E6)（ソース名の一意性）。
+>
+> 進捗:
+>
+> - ✅ **共通基盤**（shared/query.py, コミット済み）: `Query.source_names()`（`from:` + 各 join 先を再帰収集）と `evaluation_order()`（依存 = source_names のうちクエリ名を指すもの → `graphlib.TopologicalSorter` で topo 順、サイクルは `QueryDeriveError` に翻訳）。テストは「ソート自体は graphlib の責務」としてラッパー分のみ
+> - ⬜ **derive 側**（query_deriver）: 下記「機構」「診断」のとおり topo 順 derive + catalog フィードバック + カスケード抑制。`evaluation_order` の raise を捕捉して 1 診断に
+> - ⬜ **apply 側**（composer）: 同 topo 順で評価
+> - ⬜ **F4c テンプレート修正 / showcase 入出力例 / docs 同期**（下記「既知の課題」）
 
 `from:` / `join.to:` のソース名として他のクエリ名を書けるようにする。RDBMS の view を FROM 句に書けること、Access の保存クエリを別クエリのソースにできることに相当する。
 
@@ -159,9 +166,10 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 #### 診断
 
 - **サイクル**: `graphlib` の `CycleError` が閉路を 1 本返す（predecessor 順なので参照方向に反転）。メッセージに閉路全体（`a → b → c → a`）を載せ、アンカーは閉路を成す参照値（`from:` または `join.to:`）の YAML 位置に置く。複数サイクルがあっても初回の 1 本のみ報告し、残りは再ビルドで出す
-- **カスケード抑制**: derive に失敗したクエリの下流は汚染集合で伝播的にスキップし、派生エラー（下流に自然発生する「unknown entity '失敗クエリ名'」）を出さない。報告は根本原因のみ — ビルド自体が失敗して再実行になるため、エラー件数 = 実際の問題数を保つ方が読みやすい
+- **カスケード抑制**: derive に失敗したクエリの下流は汚染集合で伝播的にスキップし、派生エラー（下流に自然発生する「unknown source '失敗クエリ名'」）を出さない。報告は根本原因のみ — ビルド自体が失敗して再実行になるため、エラー件数 = 実際の問題数を保つ方が読みやすい
+- **未知ソースの語彙**: `from:` / `join.to:` がエンティティにもクエリにも一致しないときの `From.derive` のメッセージを「unknown entity '{name}'」→「unknown **source** '{name}'」に一般化する。ソースがデータエンティティとは限らなくなったため。derive 側実装のついでに直す（`From.derive` / 関連テストの期待文字列）
 
 #### 既知の課題・要確認
 
 - **名前空間汚染**: 中間段のためだけの補助クエリも、テンプレートから見え、メタドキュメンテーション（ER 図・クエリカタログ）に載る。当面は命名規約で凌ぎ、痛くなったら `internal: true` 等の可視性フラグを検討する
-- **要確認**: per-query ER 図 (F4c) のテンプレートが from 先をテーブル前提にしていないか
+- **F4c query テンプレートのリンク切れ**（確認済み・要修正）: `templates/meta/query.md` は `from` / `join.to` を `node("__entity_defs", …)` へリンクするが、`__entity_defs` は `view: false` で絞るため、参照先がクエリ（view）だと解決せず MissingNode（可視のリンク切れ、クラッシュはしない）になる。Source Diagram のクラス表示自体は view entity も拾うので無事。→ 参照先が view のとき `__queries/{id}` へ張る条件分岐を入れる。判定材料は `node(path="/__definition/entities")` から引ける `entity.view`
