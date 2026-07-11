@@ -104,6 +104,66 @@ class TestCompose:
 
         assert (out / "data" / "contents" / "data.yaml").read_text() == "key: value\n"
 
+    def test_query_reads_another_query_out_of_file_order(self, tmp_path: Path) -> None:
+        """A query whose ``from:`` names another query is evaluated after
+        its source, regardless of the order queries appear in the file.
+
+        ``high_values`` reads the ``projected`` view; it is listed *first*
+        so file order alone would apply it before ``projected`` exists in
+        ``sources``.  Correct output proves evaluation follows dependency
+        (topological) order, not file order.
+
+        Only ``__definition.queries`` drives evaluation, so the derived
+        view entities and the data catalog are irrelevant here and left
+        out.  ``compose.fn`` runs the bare function without the Component
+        wrapper's ``data/`` output subdir.
+        """
+        contents = tmp_path / "contents"
+        _write(
+            contents / "items.yaml",
+            dedent("""\
+                items:
+                  - {name: a, value: 1}
+                  - {name: b, value: 3}
+            """),
+        )
+
+        queries = tmp_path / "queries"
+        _write(
+            queries / "chain.yaml",
+            dedent("""\
+                __definition:
+                  queries:
+                    - id: high_values
+                      from: projected
+                      where: {value: {gte: 3}}
+                    - id: projected
+                      from: items
+                      select:
+                        - {item: name, as: name}
+                        - {item: value, as: value}
+            """),
+        )
+
+        data_catalog = tmp_path / "data-catalog"
+        data_catalog.mkdir()
+
+        out = tmp_path / "views"
+        compose.fn(
+            contents_dir=contents,
+            queries_dir=queries,
+            data_catalog_dir=data_catalog,
+            out_dir=out,
+        )
+
+        results = out / "query-results"
+        assert yaml.safe_load((results / "projected.yaml").read_text()) == {
+            "projected": [{"name": "a", "value": 1}, {"name": "b", "value": 3}]
+        }
+        assert yaml.safe_load((results / "high_values.yaml").read_text()) == {
+            "high_values": [{"name": "b", "value": 3}]
+        }
+
     def test_query_can_walk_definition_entities(self, tmp_path: Path) -> None:
         """``from: __definition.entities`` returns the catalog records as data.
 
