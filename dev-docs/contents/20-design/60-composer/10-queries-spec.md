@@ -135,7 +135,7 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 > - ✅ **共通基盤**（shared/query.py, コミット済み）: `Query.source_names()`（`from:` + 各 join 先を再帰収集）と `evaluation_order()`（依存 = source_names のうちクエリ名を指すもの → `graphlib.TopologicalSorter` で topo 順、サイクルは `QueryDeriveError` に翻訳）。テストは「ソート自体は graphlib の責務」としてラッパー分のみ
 > - ✅ **名前衝突の fail-fast**（query_deriver）: 名前チェックを `_reject_source_name_conflicts` として derive 前段の raise-guard 化。衝突は派生エラーと混ぜず単独報告（unique な source 名前空間は topo 順 derive の前提）
 > - ✅ **未知ソースの語彙**（shared/query.py）: `From.derive` の未解決メッセージを「unknown entity」→「unknown source」に一般化（`from:` / `join.to:` はデータエンティティにもクエリ view にも解決しうるため）
-> - ⬜ **derive 側**（query_deriver）: 下記「機構」「診断」のとおり topo 順 derive + catalog フィードバック + カスケード抑制。`evaluation_order` の raise を捕捉して 1 診断に
+> - ✅ **derive 側**（query_deriver）: `_derive_all` が topo 順に derive → 各 view を `_with_source` で catalog に top-level source として追記（フィードバック）。失敗クエリは汚染集合で下流をカスケード抑制、`evaluation_order` の raise（サイクル）は 1 診断に翻訳。出力はファイル単位に再編
 > - ⬜ **apply 側**（composer）: 同 topo 順で評価
 > - ⬜ **F4c テンプレート修正 / showcase 入出力例 / docs 同期**（下記「既知の課題」）
 
