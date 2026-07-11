@@ -344,7 +344,7 @@ One file = one record, and the fields `id` / `title` / `headings` / `body` are d
 
 ## Queries
 
-A query is a mechanism that reshapes structured data into a more convenient form for reference. The result becomes a named **view** that templates can reference the same way as structured data. Add queries as needed.
+A query is a mechanism that reshapes structured data into a more convenient form for reference. The result becomes a named **view** that templates — and other queries — can reference the same way as structured data. Add queries as needed.
 
 Typical situations for writing a query: grouping (by category, by role, ...), selecting or renaming fields, or reusing the same transformed result across multiple templates.
 
@@ -395,7 +395,7 @@ A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) 
 
 | Block | Role |
 |---|---|
-| `from` | Specifies the source data by entity name. |
+| `from` | Specifies the source data by name — an entity, or another query's view. |
 | `flatten` | Unwinds an array attribute — one input row produces N output rows where N is the array length. |
 | `join` | Attaches matching rows from another entity onto each input row. |
 | `where` | Filters records by a predicate (e.g. `{ active: true }`). |

@@ -21,6 +21,7 @@ from another_mood.components.shared.query import (
     SelectItem,
     Sort,
     Where,
+    evaluation_order,
 )
 from another_mood.components.shared.record_predicate import (
     FieldPredicate,
@@ -120,7 +121,7 @@ class TestFromDerive:
 
     def test_rejects_unknown_name(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        with pytest.raises(QueryDeriveError, match="missing"):
+        with pytest.raises(QueryDeriveError, match="unknown source 'missing'"):
             From(name="missing").derive(root)
 
     def test_rejects_composition_walk(self) -> None:
@@ -1306,6 +1307,104 @@ def _catalog_name(field_name: str) -> str:
     underscore is the full translation.
     """
     return field_name.removesuffix("_")
+
+
+def _ref_query(from_: str, *join_tos: str) -> Query:
+    """A minimal query reading ``from_`` and joining each of ``join_tos``.
+
+    Clause payloads beyond the source names are irrelevant to
+    ``source_names`` / ``evaluation_order``, so the join condition is a
+    placeholder.
+    """
+    return Query(
+        from_=From(name=from_),
+        join=tuple(
+            Join(
+                right=Query(from_=From(name=to)),
+                merge=Merge(on_left="id", on_right="id", right_as=to),
+            )
+            for to in join_tos
+        ),
+    )
+
+
+class TestSourceNames:
+    """Query.source_names: the names a query reads, in clause order."""
+
+    def test_from_only(self) -> None:
+        assert Query(from_=From(name="tasks")).source_names() == ("tasks",)
+
+    def test_includes_each_join_target(self) -> None:
+        query = _parse_query_yaml(
+            """
+            from: tasks
+            join:
+              - to: categories
+                on: { left: category_id, right: id }
+              - to: phases
+                on: { left: phase_id, right: id }
+            """
+        )
+        assert query.source_names() == ("tasks", "categories", "phases")
+
+    def test_collects_join_right_sources_recursively(self) -> None:
+        """``from_dict`` only ever builds a join's right side as a bare
+        ``from:`` wrapper today, but source_names must not depend on
+        that shallowness — a richer right side contributes everything
+        it reads."""
+        query = Query(
+            from_=From(name="tasks"),
+            join=(
+                Join(
+                    right=_ref_query("categories", "phases"),
+                    merge=Merge(on_left="id", on_right="id", right_as="c"),
+                ),
+            ),
+        )
+        assert query.source_names() == ("tasks", "categories", "phases")
+
+
+class TestEvaluationOrder:
+    """evaluation_order: the wrapper over ``graphlib.TopologicalSorter``.
+
+    The sort itself is graphlib's; these cover only what this function
+    adds — building query→query dependencies from ``source_names`` and
+    turning a cycle into a positioned ``QueryDeriveError``.
+    """
+
+    def test_from_reference_orders_referenced_first(self) -> None:
+        queries = {"a": _ref_query("b"), "b": _ref_query("items")}
+        assert evaluation_order(queries) == ["b", "a"]
+
+    def test_join_reference_orders_referenced_first(self) -> None:
+        # The dependency rides on ``join.to``, not just ``from``.
+        queries = {"a": _ref_query("items", "b"), "b": _ref_query("items")}
+        assert evaluation_order(queries) == ["b", "a"]
+
+    def test_data_entity_sources_impose_no_ordering(self) -> None:
+        # ``items`` is not a key of ``queries``, so it is a data entity
+        # and creates no dependency edge.
+        queries = {"a": _ref_query("items", "items")}
+        assert evaluation_order(queries) == ["a"]
+
+    def test_cycle_reported_in_reference_direction(self) -> None:
+        # a reads b, b reads c, c reads a — the message must read forward
+        # along the references, not along graphlib's predecessor order.
+        with pytest.raises(QueryDeriveError) as exc_info:
+            evaluation_order(
+                {"a": _ref_query("b"), "b": _ref_query("c"), "c": _ref_query("a")}
+            )
+        assert "a → b → c → a" in str(exc_info.value)
+
+    def test_offender_is_the_reference_that_closes_the_cycle(self) -> None:
+        # ``a`` closes the cycle onto itself via a join to ``b`` (its
+        # ``from`` names the unrelated data entity ``items``).  The
+        # offender must be that ``b`` reference — anchoring the diagnostic
+        # at the ``join.to`` position, not at ``a``'s name or its ``from``.
+        queries = {"a": _ref_query("items", "b"), "b": _ref_query("a")}
+        with pytest.raises(QueryDeriveError) as exc_info:
+            evaluation_order(queries)
+        assert exc_info.value.offender == "b"
 
 
 class TestCatalogDriftSuppression:

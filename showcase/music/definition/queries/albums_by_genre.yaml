@@ -10,3 +10,23 @@ albums_by_genre:
       as: id
     - item: genre_id
     - item: albums
+
+# Each genre group with its genre record attached - exercises a
+# query-to-query reference (``from:`` names the ``albums_by_genre`` view
+# above, not a data entity). The genre name can't be joined in
+# ``albums_by_genre`` itself because ``join:`` runs before ``grouped:``
+# in the fixed pipeline order; splitting into two queries and referencing
+# the first from the second is the escape hatch. Without it the template
+# would have to re-join genres on its own
+# (``node("genres", entry.genre_id).name``).
+genres_with_albums:
+  from: albums_by_genre
+  join:
+    to: genres
+    on: { left: genre_id, right: id }
+    as: genre_matches
+    flatten: { as: genre }
+  select:
+    - item: genre_id
+    - item: genre
+    - item: albums

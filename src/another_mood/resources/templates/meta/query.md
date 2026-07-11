@@ -1,5 +1,10 @@
 {% set entities = node(path="/__definition/entities") %}
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
+{# A source name links into __queries when it is a query view, else
+   __entity_defs (which is filtered to view: false, so a view name would
+   404 there). Only the collection differs, so the link markup stays the
+   inline ``[text](href)`` form used elsewhere — a macro's plain-string
+   return would get markdown-escaped by the finalize hook and break. #}
 # Query: {{ id }}
 
 ## Source Diagram
@@ -33,7 +38,8 @@
 
 ### From
 
-[{{ from }}]({{ node("__entity_defs", from) | href }})
+{% set from_collection = "__queries" if (entities | child(from)).view else "__entity_defs" %}
+[{{ from }}]({{ node(from_collection, from) | href }})
 
 {% if flatten %}
 ### Flatten
@@ -51,7 +57,8 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join %}
-    {{- "" }}| [{{ entry.to }}]({{ node("__entity_defs", entry.to) | href }})
+    {% set to_collection = "__queries" if (entities | child(entry.to)).view else "__entity_defs" %}
+    {{- "" }}| [{{ entry.to }}]({{ node(to_collection, entry.to) | href }})
     {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
     {{- "" }} | {{ entry.as }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}

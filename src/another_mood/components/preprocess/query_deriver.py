@@ -26,7 +26,11 @@ from another_mood.components.shared.user_source.diagnostic import (
     FileValidationError,
 )
 from another_mood.components.shared.json_data_model import load_model, save_model
-from another_mood.components.shared.query import Query, QueryDeriveError
+from another_mood.components.shared.query import (
+    Query,
+    QueryDeriveError,
+    evaluation_order,
+)
 
 _QUERY_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
@@ -49,41 +53,47 @@ def derive_queries(
 
     user_files = list(_iter_top_level(queries_dir, schema))
     builtin_files = list(_iter_top_level(_BUILTIN_QUERIES_DIR, schema))
-    diagnostics = _check_source_names(
+
+    # Reject up front, not pooled with the derive-time errors below:
+    # deriving over an ambiguous namespace is meaningless, and cross-query
+    # references need each source name unique.
+    _reject_source_name_conflicts(
         [cast(str, q["id"]) for _, queries in user_files for q in queries],
         frozenset(e.id for e in catalog_entities),
     )
 
-    pending: list[
-        tuple[Path, Sequence[Mapping[str, object]], list[Mapping[str, object]]]
-    ] = []
-
-    for src_dir, dst_dir, files in [
+    file_groups = [
         (queries_dir, out_dir, user_files),
         (_BUILTIN_QUERIES_DIR, out_dir / "__builtin", builtin_files),
-    ]:
+    ]
+    all_queries = {
+        cast(str, raw["id"]): Query.from_dict(raw)
+        for _, _, files in file_groups
+        for _, queries in files
+        for raw in queries
+    }
+
+    derived = _derive_all(all_queries, catalog)
+
+    for src_dir, dst_dir, files in file_groups:
         for src_file, queries in files:
-            entities, errors = _derive_entities(queries, catalog)
-            diagnostics.extend(errors)
             # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
             # never collide on the same destination.
             rel = src_file.relative_to(src_dir)
             dst = dst_dir / rel.with_name(rel.name + ".yaml")
-            pending.append((dst, queries, entities))
-
-    if diagnostics:
-        raise FileValidationError(diagnostics=diagnostics)
-
-    for dst, queries, entities in pending:
-        save_model(
-            dst,
-            {
-                "__definition": {
-                    "queries": list(queries),
-                    "entities": entities,
-                }
-            },
-        )
+            save_model(
+                dst,
+                {
+                    "__definition": {
+                        "queries": list(queries),
+                        "entities": [
+                            entity
+                            for raw in queries
+                            for entity in derived[cast(str, raw["id"])]
+                        ],
+                    }
+                },
+            )
 
 
 def build_query_schema() -> Mapping[str, object]:
@@ -117,14 +127,17 @@ def _iter_top_level(
         )
 
 
-def _check_source_names(
+def _reject_source_name_conflicts(
     names: Sequence[str], entity_ids: frozenset[str]
-) -> list[Diagnostic]:
-    """Position each shadowing conflict at its query name's YAML location."""
-    return [
+) -> None:
+    """Raise :class:`FileValidationError` for name conflicts, each diagnostic
+    positioned at the offending query name's YAML location."""
+    conflicts = [
         _diagnostic_from(QueryDeriveError(message, offender=name))
         for message, name in _source_name_conflicts(names, entity_ids)
     ]
+    if conflicts:
+        raise FileValidationError(diagnostics=conflicts)
 
 
 def _source_name_conflicts(
@@ -153,25 +166,61 @@ def _source_name_conflicts(
     return conflicts
 
 
-def _derive_entities(
-    queries: Sequence[Mapping[str, object]], catalog: dc.Node
-) -> tuple[list[Mapping[str, object]], list[Diagnostic]]:
-    """Run each query's catalog transform and flatten the result, ``view: true``.
+def _derive_all(
+    queries: Mapping[str, Query], catalog: dc.Node
+) -> Mapping[str, Sequence[Mapping[str, object]]]:
+    """Derive every query in dependency order, returning each query's
+    ``view: true`` entities keyed by name.
 
-    Identifier-mismatch errors are collected as diagnostics and skipped;
-    the offending query contributes no entities.  Other queries continue.
+    Each view is fed back as a catalog source (see ``_with_source``) so a
+    later query can read it by name.  Raises :class:`FileValidationError`
+    if any query fails to derive.
     """
-    entities: list[Mapping[str, object]] = []
+    try:
+        order = evaluation_order(queries)
+    except QueryDeriveError as exc:
+        raise FileValidationError(diagnostics=[_diagnostic_from(exc)]) from exc
+
     diagnostics: list[Diagnostic] = []
-    for raw in queries:
-        name = cast(str, raw["id"])
-        try:
-            derived = dc.flatten_tree(Query.from_dict(raw).derive(catalog), name)
-        except QueryDeriveError as exc:
-            diagnostics.append(_diagnostic_from(exc))
-            continue
-        entities.extend(replace(e, view=True).to_dict() for e in derived)
-    return entities, diagnostics
+    poisoned: set[str] = set()
+    for name in order:
+        query = queries[name]
+        # ``poisoned`` only ever holds query names, so a data-entity source
+        # is never in it — no need to filter source_names to queries here.
+        if any(source in poisoned for source in query.source_names()):
+            poisoned.add(name)
+        else:
+            try:
+                view = query.derive(catalog)
+            except QueryDeriveError as exc:
+                diagnostics.append(_diagnostic_from(exc))
+                poisoned.add(name)
+            else:
+                catalog = _with_source(catalog, name, view)
+    if diagnostics:
+        raise FileValidationError(diagnostics=diagnostics)
+    # Reaching here means every query derived, so each is now a top-level
+    # source in ``catalog``; read the views back to serialize.
+    return {
+        name: [
+            replace(e, view=True).to_dict()
+            for e in dc.flatten_tree(catalog.child(name), name)
+        ]
+        for name in queries
+    }
+
+
+def _with_source(catalog: dc.Node, name: str, view: dc.Node) -> dc.Node:
+    """Hang a derived view off the catalog's virtual root as a top-level
+    ``object[]`` source, so a downstream ``From`` resolves it by name the
+    same way it resolves a data entity (see ``data_catalog.build_tree``)."""
+    return replace(
+        catalog,
+        children=[
+            *catalog.children,
+            (dc.Edge(name=name, type="object[]", required=True), view),
+        ],
+    )
 
 
 def _diagnostic_from(exc: QueryDeriveError) -> Diagnostic:

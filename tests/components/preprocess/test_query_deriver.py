@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from another_mood.components.preprocess.query_deriver import (
+    _derive_all,  # pyright: ignore[reportPrivateUsage]
     _source_name_conflicts,  # pyright: ignore[reportPrivateUsage]
     build_query_schema,
     derive_queries,
@@ -15,7 +16,7 @@ from another_mood.components.preprocess.query_deriver import (
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
-from another_mood.components.shared.query import Query
+from another_mood.components.shared.query import From, Query
 
 _CATALOG_YAML = (
     "__definition:\n"
@@ -383,3 +384,77 @@ class TestSourceNameDiagnostics:
         assert diags[0].line == 1
         assert diags[0].column == 1  # the query name key, not the ``from:`` value
         assert "collides with data entity 'items'" in diags[0].message
+
+    def test_name_conflict_short_circuits_derivation(self, tmp_path: Path) -> None:
+        # The ``items`` query both shadows the entity ``items`` (a name
+        # conflict) and reads a missing source (a derive-time error).
+        # Fail-fast reports only the name conflict: deriving over an
+        # ambiguous namespace is unreliable, so name checking short-circuits
+        # before derivation runs.
+        _write(tmp_path / "queries" / "q.yaml", "items:\n  from: missing\n")
+        _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
+        with pytest.raises(FileValidationError) as exc_info:
+            derive_queries.fn(
+                queries_dir=tmp_path / "queries",
+                data_catalog_dir=tmp_path / "catalog",
+                out_dir=tmp_path / "out",
+            )
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert "collides with data entity 'items'" in diags[0].message
+
+
+class TestQueryReferences:
+    """A query may name another query as its source.  Derivation runs in
+    dependency order, feeds each view back as a source, and suppresses the
+    cascade from a failed or cyclic reference."""
+
+    def _run_fn(self, tmp_path: Path, query_yaml: str) -> None:
+        _write(tmp_path / "queries" / "q.yaml", query_yaml)
+        _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
+        derive_queries.fn(
+            queries_dir=tmp_path / "queries",
+            data_catalog_dir=tmp_path / "catalog",
+            out_dir=tmp_path / "out",
+        )
+
+    def test_query_reads_another_querys_view(self) -> None:
+        # ``b`` reads ``a``.  It derives (rather than failing with "unknown
+        # source 'a'") only because ``a``'s view is fed back as a source
+        # before ``b`` is derived — so ``b`` in the result proves feedback.
+        items = dc.Entity(
+            id="items",
+            item_type=dc.ObjectType(
+                id="items.item",
+                attributes=[dc.Attribute(id="name", type="string", required=True)],
+            ),
+        )
+        derived = _derive_all(
+            {"a": Query(from_=From(name="items")), "b": Query(from_=From(name="a"))},
+            dc.build_tree([items]),
+        )
+        assert derived.keys() == {"a", "b"}
+
+    def test_failed_source_suppresses_downstream_cascade(self, tmp_path: Path) -> None:
+        # ``broken`` reads a missing source; ``downstream`` reads ``broken``.
+        # Only the root cause is reported: the derivative "unknown source
+        # 'broken'" that ``downstream`` would raise is suppressed.
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run_fn(
+                tmp_path,
+                "broken:\n  from: nonexistent\ndownstream:\n  from: broken\n",
+            )
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert "nonexistent" in diags[0].message
+        assert "broken" not in diags[0].message
+
+    def test_reference_cycle_reported_once(self, tmp_path: Path) -> None:
+        # ``a`` reads ``b`` and ``b`` reads ``a``: a single cycle diagnostic
+        # aborts the pass, rather than two unknown-source errors.
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run_fn(tmp_path, "a:\n  from: b\nb:\n  from: a\n")
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert "cycle" in diags[0].message
+        assert "a → b → a" in diags[0].message

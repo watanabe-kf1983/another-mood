@@ -15,6 +15,7 @@ wrapper.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from graphlib import CycleError, TopologicalSorter
 from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
@@ -29,7 +30,9 @@ type Record = Mapping[str, object]
 
 
 class QueryDeriveError(Exception):
-    """Raised when a query references an identifier missing from the catalog.
+    """Raised when a query's source reference cannot be turned into a
+    derivation — the referenced identifier is missing from the catalog,
+    or the references between queries form a cycle.
 
     The outer layer inspects ``offender`` (the user-input identifier value)
     to build a user-facing diagnostic — when ``offender`` carries source
@@ -80,7 +83,7 @@ class From(QueryNode):
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         if not catalog.has_child(self.name):
-            raise QueryDeriveError(f"unknown entity '{self.name}'", offender=self.name)
+            raise QueryDeriveError(f"unknown source '{self.name}'", offender=self.name)
         return catalog.child(self.name)
 
 
@@ -464,6 +467,12 @@ class Query(QueryNode):
                 f"unknown attribute '{exc.name}'", offender=exc.name
             ) from exc
 
+    def source_names(self) -> Sequence[str]:
+        return (
+            self.from_.name,
+            *chain.from_iterable(join.right.source_names() for join in self.join),
+        )
+
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Query":
         """Build a Query from a canonical query record.
@@ -516,3 +525,31 @@ class Query(QueryNode):
             select=select,
             sort=sort,
         )
+
+
+def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
+    """Order query names so each is preceded by the queries it reads.
+
+    A query's dependencies are its ``source_names()`` entries that name
+    another query in ``queries``; other sources impose no ordering.
+    Raises :class:`QueryDeriveError` if these references form a cycle.
+    """
+    deps = {
+        name: [n for n in q.source_names() if n in queries]
+        for name, q in queries.items()
+    }
+    try:
+        return list(TopologicalSorter(deps).static_order())
+    except CycleError as exc:
+        # graphlib reports the cycle in predecessor order (dependency →
+        # dependent); reverse it to reference order (reader → target),
+        # matching how a query names the source it reads.
+        cycle = list(reversed(exc.args[1]))
+        # ``cycle[0]`` reads ``cycle[1]``; use that reference's own value
+        # as the offender — taken from the query, not from ``cycle``, so
+        # the anchor doesn't depend on which string instance graphlib
+        # surfaces in the cycle.
+        offender = next(s for s in queries[cycle[0]].source_names() if s == cycle[1])
+        raise QueryDeriveError(
+            "query reference cycle: " + " → ".join(cycle), offender=offender
+        ) from exc

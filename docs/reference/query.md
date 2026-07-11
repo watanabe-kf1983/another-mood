@@ -41,7 +41,7 @@ Data for entities declared in [Schema](schema.md) is automatically passed throug
 
 ## from
 
-Specifies the entity to read from. The value is the entity name (= the top-level key in source YAML, declared under `properties` in schema.yaml).
+Specifies the source to read from. The value is a **source name**: either an entity name (= the top-level key in source YAML, declared under `properties` in schema.yaml) or the name of another query's view (a join's [`to:`](#join) accepts the same).
 
 ```yaml
 from: members
@@ -194,7 +194,7 @@ The shorthand `flatten: true` stands for the all-defaults form `flatten: {}` —
 
 | Key | Required | Role |
 |---|---|---|
-| `to` | Required | Id of the entity to match against. |
+| `to` | Required | Id of the source to match against — a data entity or another query's view. |
 | `on` | Required | `{ left, right }` — match rows where the input row's `left:` attribute equals the other entity's `right:` attribute. |
 | `as` | Optional | Name given to the matches on each output row. Defaults to the value of `to:`. |
 | `where` | Optional | Pre-join filter applied to `to:` before matching. Same grammar as the top-level `where:`. |
