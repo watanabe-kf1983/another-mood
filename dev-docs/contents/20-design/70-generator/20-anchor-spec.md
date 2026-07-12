@@ -272,7 +272,7 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 ### prose 検知の位置独立化 (B13)
 
-> **一部実装** — 由来フィールド `origin_item_type` の catalog への導入・刻印・参照伝搬まで実装済み。位置独立な prose 検知（generator 述語の由来ベースへの差し替え）と、行再構築 stage の明示 carry は未了。Phase 13 タスク [B13](node:/tasks/B/tasks/B13)。
+> **一部実装** — 由来フィールド `origin_item_type` の catalog への導入・刻印・参照伝搬まで実装済み。位置独立な prose 検知（generator 述語の由来ベースへの差し替え）は未了。Phase 13 タスク [B13](node:/tasks/B/tasks/B13)。
 
 [Prose の例外](#prose-の例外)の二例外（`/`-素通しと見出しの fold）は、どちらも「このノードは prose か」の検知をデータツリー位置（`object_type_id == "prose.item"` 等）で行う。しかし prose はクエリの `join:` / `flatten:` で任意の位置に現れるため、位置ベースの検知はそこで発火しない。
 
@@ -302,8 +302,7 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 - **stamp**: `data_catalog._build_entity_node`（flat→tree 変換）で、各 source entity に自身の ObjectType id を**無条件**で刻む。`build_tree` は source catalog に対し一度だけ走り（view は query derive が参照で再配線し `build_tree` へ再入しない）、保存すべき前段 stamp が無いため上書きガードは要らない
 - **伝搬**: derive は `Node` を参照で再配線するため大半は自動（`From` / `Merge` の right / `Select` の子 / `Flatten` の inline 子 / `Grouped` の subtree）。参照経由の子が由来を保持することは、join / grouped の派生で `…tasks.item` が `tasks.item` を保つとして実証済み
-- **行再構築 stage の明示 carry（未了）**: `Select` / `Merge` / `Flatten` は row ノードを metadata ごと落として再構築するため参照 carry が効かず、現状は self に解決する。`from: prose` + `select:` で row の prose-ness を保つには由来を明示 carry する必要がある
-- **合成ノードは自身が由来**: `Grouped` の group row と `Flatten` で dissolve された wrapper は新規の合成型で、どの entity のレコードでもない。`Node` 側は無印（`None`）で始まり flatten で自身の id に解決する。規則: **row を保つ変換（where / sort / select / join / flatten）は由来を保持し、合成ノードは自身を由来とする**
+- **合成ノード・再構築 row は自身が由来**: `Grouped` の group row、`Flatten` で dissolve された wrapper、および `Flatten` / `Merge` / `Select` が再構築する row は、`Node` 無印（`None`）から flatten で自身の id に解決する。規則: **由来は参照で保たれるノードだけが持ち（`From` / `where` / `sort` の参照返し、`Merge` の right / `Select` の子 / `Flatten` の inline 子 / `Grouped` の subtree）、row を組み替える変換（flatten / merge / select / grouped）が生む row は自身を由来とする**
 - **serde**: `ObjectType.origin_item_type` は materialize 済みで常に永続化に現れる。`from_dict` は dict に無ければ自身の id へ default（手書き dict 用の robustness で、materialize 済み本番データでは発火しない）。`Node` 側の `None` は従来どおり elide
 - **ClassVar**: `Entity.catalog` に `item_type.origin_item_type` エッジを足す（dataclass フィールドと ClassVar 自己記述の完全一致を保つ）。それでも `__entity_defs` に由来は出ない — `entity_def.md` は item_type の id / metadata / attributes のみ明示描画し由来を参照せず、メタ entity（`__definition.entities`）の def ページ自体が非公開だから。由来をメタドキュメントへ能動表示するのは F4c
 - **generator**: composer が data-catalog を sources にマージ済みなので、`__definition.entities` から `{item_type.id: origin_item_type}` の辞書を組める（値は materialize 済みで常に存在）。ObjectType が無い位置（配列 `…item[]` 等）だけ position id にフォールバックし、両述語とも偽になる
@@ -315,7 +314,7 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 
 由来判定は「ノードの位置 (`object_type_id`) → catalog の ObjectType → `origin_item_type`」という辞書引きなので、位置に対応する ObjectType が catalog に無いノードでは由来が引けず、position id へのフォールバックで両述語とも偽に倒れる。この取りこぼしが prose 検知の新たな穴にならないことを確認しておく。
 
-catalog は singleton オブジェクトを独自の ObjectType にせず、dotted 属性として親 row に inline する（`liner.id` / `liner.body.mime_type` の形式）。prose レコードが singleton になるのは `flatten:`（singleton 化）の `as:` 位置だけで、それ以外の現れ方 — トップレベルのパススルー、`join:` でのリスト添付、`grouped:` 配下、`select:` を通した行 — では prose レコードは配列要素のままであり、`Node` が参照で生存して ObjectType が catalog に生成されるため、判定に穴は無い。
+catalog は singleton オブジェクトを独自の ObjectType にせず、dotted 属性として親 row に inline する（`liner.id` / `liner.body.mime_type` の形式）。prose レコードが singleton になるのは `flatten:`（singleton 化）の `as:` 位置だけで、それ以外の現れ方 — トップレベルのパススルー、`join:` でのリスト添付、`grouped:` 配下 — では prose レコードは配列要素のままであり、`Node` が参照で生存して ObjectType が catalog に生成されるため、判定に穴は無い。
 
 残る singleton-flatten 位置（`album_tracklist.item.liner` 等）では:
 
@@ -326,7 +325,6 @@ catalog は singleton オブジェクトを独自の ObjectType にせず、dott
 
 #### 未決事項 (B13)
 
-- **由来の粒度は型でありフィールドではない**: `select: {item: title, as: id}` のように id を挿げ替える射影では型の由来が `prose.item` のまま残り、`/`-例外が title 値に適用されうる（実害は `/` を含む値のみ）。フィールド単位の由来追跡はスコープ外として記録
 - **メタドキュメンテーションへの能動表示**: 由来は ClassVar に載るがテンプレートは描画しない。`__entity_defs` / per-query ER 図（[F4c](node:/tasks/F/tasks/F4c)）に由来をラベル表示する改善は任意の後続
 
 ### 未決事項

@@ -99,8 +99,7 @@ categories:
           (showcase/music の liner が実例)。catalog の Node/ObjectType に
           origin_item_type (型の由来) を導入し、
           generator が object_type_id → 由来の辞書引きで判定する形に差し替える。
-          Select.derive の row 由来 carry を含む。実装は shared/data_catalog.py
-          + shared/query.py + generator/ に跨る。
+          実装は shared/data_catalog.py + generator/ に跨る。
           関連 E12 (フィードバック経路を由来が推移する設計、依存はしない)。
         phase: 13
         proposal: 20-design/70-generator/20-anchor-spec#prose-検知の位置独立化-b13
