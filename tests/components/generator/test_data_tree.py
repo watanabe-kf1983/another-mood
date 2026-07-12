@@ -215,8 +215,9 @@ class TestMetaAnchorPath:
         assert heading._meta.anchor_path == "/prose/design/architecture#エラー処理"
 
     def test_headings_fold_is_prose_specific(self) -> None:
-        # Detection is position-based: a same-named `headings` list under a
-        # non-prose entity keeps the generic path, no `#` fold.
+        # With no catalog, an un-cataloged position falls back to itself, so a
+        # same-named `headings` list under a non-prose entity keeps the generic
+        # path (no `#` fold). Provenance-driven folding is TestMetaOriginItemType.
         root = wrap_tree({"other": [{"id": "x", "headings": [{"id": "h"}]}]})
         elem = root["other"][0]["headings"][0]
         assert elem._meta.anchor_path == "/other/x/headings/h"
@@ -312,6 +313,43 @@ class TestMetaObjectTypeId:
         root = wrap_tree({"meta": {"about": {}}})
         assert root["meta"]._meta.object_type_id == "meta"
         assert root["meta"]["about"]._meta.object_type_id == "meta.about"
+
+
+class TestMetaOriginItemType:
+    """``_meta.origin_item_type`` resolves a node's schema position to the
+    entity its records derive from, so prose detection follows the type even
+    when a query's ``flatten:`` / ``join:`` moves prose off its source
+    position.  The id→origin map is read from ``__definition.entities``.
+    """
+
+    def test_uncataloged_position_falls_back_to_object_type_id(self) -> None:
+        # No ``__definition`` to resolve through, so origin is the position id
+        # itself — position-based detection still holds where no provenance is.
+        node = wrap_tree({"items": [{"id": "x"}]})["items"][0]
+        assert node._meta.origin_item_type == node._meta.object_type_id == "items.item"
+
+    def test_prose_heading_detected_at_a_flattened_position(self) -> None:
+        # A liner heading flattened into a view sits at a non-prose position
+        # (`album_tracklist.item.liner.headings.item`), yet its catalog origin
+        # is `prose.item.headings.item`, so detection fires there — the point
+        # of B13. The `#slug` fold this drives is TestMetaAnchorPath's concern.
+        data = {
+            "__definition": {
+                "entities": [
+                    {
+                        "item_type": {
+                            "id": "album_tracklist.item.liner.headings.item",
+                            "origin_item_type": "prose.item.headings.item",
+                        }
+                    }
+                ]
+            },
+            "album_tracklist": [
+                {"id": "tidal_atlas", "liner": {"headings": [{"id": "liner-notes"}]}}
+            ],
+        }
+        heading = wrap_tree(data)["album_tracklist"][0]["liner"]["headings"][0]
+        assert heading._meta._is_prose_heading() is True
 
 
 class TestIterNodes:
