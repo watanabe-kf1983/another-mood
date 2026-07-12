@@ -9,3 +9,5 @@ The point of the showcase is not the music. It is to demonstrate how the schema,
 ## Everything is invented
 
 Every artist, label, and recording in this dataset is fictional. Prose documents can point at this section with a plain relative link, heading fragment included (`../background.md#everything-is-invented`) - the build rewrites it to land on this heading wherever the document is rendered.
+
+Heading fragments survive query views, too. Each album page embeds its liner notes inline, so a document can point straight at [the Tidal Atlas liner notes](node:/album_tracklist/tidal_atlas/liner#liner-notes) as they appear on that album's page.
