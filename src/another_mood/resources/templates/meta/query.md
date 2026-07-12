@@ -1,10 +1,15 @@
 {% set entities = node(path="/__definition/entities") %}
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
-{# A source name links into __queries when it is a query view, else
-   __entity_defs (which is filtered to view: false, so a view name would
-   404 there). Only the collection differs, so the link markup stays the
-   inline ``[text](href)`` form used elsewhere — a macro's plain-string
-   return would get markdown-escaped by the finalize hook and break. #}
+{# ``source_link(name)`` renders the inline link to a source's meta page:
+   into __queries when the name is a query view, else __entity_defs
+   (filtered to view: false, so a view name would 404 there). ``| safe``
+   at each call site is required — the macro returns a plain string that
+   the finalize hook would otherwise markdown-escape (brackets and all),
+   breaking the link; the body's own ``{{ }}`` are already escaped
+   per-value while the macro renders, so nothing is double-escaped. #}
+{% macro source_link(name) -%}
+[{{ name }}]({{ node("__queries" if (entities | child(name)).view else "__entity_defs", name) | href }})
+{%- endmacro %}
 # Query: {{ id }}
 
 ## Source Diagram
@@ -38,8 +43,7 @@
 
 ### From
 
-{% set from_collection = "__queries" if (entities | child(from)).view else "__entity_defs" %}
-[{{ from }}]({{ node(from_collection, from) | href }})
+{{ source_link(from) | safe }}
 
 {% if flatten %}
 ### Flatten
@@ -57,8 +61,7 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join %}
-    {% set to_collection = "__queries" if (entities | child(entry.to)).view else "__entity_defs" %}
-    {{- "" }}| [{{ entry.to }}]({{ node(to_collection, entry.to) | href }})
+    {{- "" }}| {{ source_link(entry.to) | safe }}
     {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
     {{- "" }} | {{ entry.as }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
