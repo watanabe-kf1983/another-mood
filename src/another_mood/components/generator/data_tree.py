@@ -6,7 +6,7 @@
 """Data-tree wrappers exposing parent references and node metadata to templates."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, cast
 
@@ -46,11 +46,18 @@ class Node(ABC):
 class ArrayNode(list[Any], Node):
     """List subclass holding a ``_parent`` reference to its container."""
 
-    def __init__(self, items: Iterable[Any], *, parent: "Node", segment: str) -> None:
+    def __init__(
+        self,
+        items: Iterable[Any],
+        *,
+        parent: "Node",
+        segment: str,
+        type_index: Mapping[str, str],
+    ) -> None:
         super().__init__(items)
         self._parent: "Node | None" = parent
         self._segment = segment
-        self._meta: "_NodeMeta" = _NodeMeta(self)
+        self._meta: "_NodeMeta" = _NodeMeta(self, type_index)
 
     def _children(self) -> "Iterator[Node]":
         """The element nodes; id-less elements pass through raw and are skipped."""
@@ -66,12 +73,17 @@ class MappingNode(dict[str, Any], Node):
     """
 
     def __init__(
-        self, items: Mapping[str, Any], *, parent: "Node | None", segment: str
+        self,
+        items: Mapping[str, Any],
+        *,
+        parent: "Node | None",
+        segment: str,
+        type_index: Mapping[str, str],
     ) -> None:
         super().__init__(items)
         self._parent: "Node | None" = parent
         self._segment = segment
-        self._meta: "_NodeMeta" = _NodeMeta(self)
+        self._meta: "_NodeMeta" = _NodeMeta(self, type_index)
 
     @property
     def _parent_record(self) -> "MappingNode | None":
@@ -92,8 +104,9 @@ class _NodeMeta:
     ``_segment``; results are cached so repeated access is O(1).
     """
 
-    def __init__(self, node: Node) -> None:
+    def __init__(self, node: Node, type_index: Mapping[str, str]) -> None:
         self._node = node
+        self._type_index = type_index
 
     @cached_property
     def anchor_path(self) -> str:
@@ -146,10 +159,15 @@ class _NodeMeta:
         return not self._is_prose_heading()
 
     def _is_prose_record(self) -> bool:
-        return self.object_type_id == "prose.item"
+        return self.origin_item_type == "prose.item"
 
     def _is_prose_heading(self) -> bool:
-        return self.object_type_id == "prose.item.headings.item"
+        return self.origin_item_type == "prose.item.headings.item"
+
+    @cached_property
+    def origin_item_type(self) -> str:
+        """The origin ObjectType id this node's records derive from."""
+        return self._type_index.get(self.object_type_id, self.object_type_id)
 
     @cached_property
     def object_type_id(self) -> str:
@@ -193,7 +211,9 @@ def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
     ``id`` field are wrapped — the others have no anchor path and so
     do their subtrees, so they pass through raw.
     """
-    return _wrap_mapping(data, parent=None, segment="")
+    return _wrap_mapping(
+        data, parent=None, segment="", type_index=_build_type_index(data)
+    )
 
 
 def build_node_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
@@ -251,31 +271,63 @@ def child(node: Node, seg: object) -> Node | None:
     return next((c for c in node._children() if c._segment == key), None)
 
 
+def _build_type_index(data: Mapping[str, Any]) -> Mapping[str, str]:
+    """Map each ObjectType id to its ``origin_item_type`` (empty without a catalog)."""
+    entities = cast(
+        Sequence[Mapping[str, Any]],
+        data.get("__definition", {}).get("entities", []),
+    )
+    return {e["item_type"]["id"]: e["item_type"]["origin_item_type"] for e in entities}
+
+
 def _wrap_mapping(
-    source: Mapping[str, Any], *, parent: Node | None, segment: str
+    source: Mapping[str, Any],
+    *,
+    parent: Node | None,
+    segment: str,
+    type_index: Mapping[str, str],
 ) -> MappingNode:
-    node = MappingNode({}, parent=parent, segment=segment)
+    node = MappingNode({}, parent=parent, segment=segment, type_index=type_index)
     for key, value in source.items():
         if isinstance(value, Mapping):
             node[key] = _wrap_mapping(
-                cast(Mapping[str, Any], value), parent=node, segment=key
+                cast(Mapping[str, Any], value),
+                parent=node,
+                segment=key,
+                type_index=type_index,
             )
         elif isinstance(value, list):
             node[key] = _wrap_array(
-                cast(Iterable[Any], value), parent=node, segment=key
+                cast(Iterable[Any], value),
+                parent=node,
+                segment=key,
+                type_index=type_index,
             )
         else:
             node[key] = value
     return node
 
 
-def _wrap_array(source: Iterable[Any], *, parent: Node, segment: str) -> ArrayNode:
-    node = ArrayNode([], parent=parent, segment=segment)
+def _wrap_array(
+    source: Iterable[Any],
+    *,
+    parent: Node,
+    segment: str,
+    type_index: Mapping[str, str],
+) -> ArrayNode:
+    node = ArrayNode([], parent=parent, segment=segment, type_index=type_index)
     for value in source:
         if isinstance(value, Mapping) and "id" in value:
             # Mapping element of an Array — anchor segment is its ``id``.
             mapping = cast(Mapping[str, Any], value)
-            node.append(_wrap_mapping(mapping, parent=node, segment=str(mapping["id"])))
+            node.append(
+                _wrap_mapping(
+                    mapping,
+                    parent=node,
+                    segment=str(mapping["id"]),
+                    type_index=type_index,
+                )
+            )
         else:
             # No anchor path reaches scalars, lists, or id-less Mappings
             # — leave them (and their subtrees) raw.

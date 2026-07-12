@@ -30,6 +30,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: title, type: string, required: true }
@@ -58,6 +59,7 @@ _CASES = [
             view: false
             item_type:
               id: steps.item
+              origin_item_type: steps.item
               attributes:
                 - { id: order, type: integer, required: true }
                 - { id: instruction, type: string, required: true }
@@ -85,6 +87,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: tags, type: "string[]", required: false }
@@ -120,6 +123,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: title, type: string, required: true }
@@ -134,6 +138,7 @@ _CASES = [
             parent_entity: recipes
             item_type:
               id: recipes.item.ingredients.item
+              origin_item_type: recipes.item.ingredients.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: name, type: string, required: true }
@@ -167,6 +172,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: nutrition, type: object, required: true }
@@ -202,6 +208,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               attributes:
                 - { id: id, type: string, required: true }
                 - id: steps
@@ -215,6 +222,7 @@ _CASES = [
             parent_entity: recipes
             item_type:
               id: recipes.item.steps.item
+              origin_item_type: recipes.item.steps.item
               attributes:
                 - { id: instruction, type: string, required: true }
                 - { id: duration_min, type: integer, required: false }
@@ -242,6 +250,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               metadata:
                 title: Recipe collection
                 description: All recipes in the cookbook
@@ -286,6 +295,7 @@ _CASES = [
             view: false
             item_type:
               id: recipes.item
+              origin_item_type: recipes.item
               attributes:
                 - { id: id, type: string, required: true }
                 - id: title
@@ -344,6 +354,7 @@ _CASES = [
             view: false
             item_type:
               id: members.item
+              origin_item_type: members.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: name, type: string, required: false }
@@ -359,6 +370,7 @@ _CASES = [
             parent_entity: members
             item_type:
               id: members.item.hobby.pets.item
+              origin_item_type: members.item.hobby.pets.item
               attributes:
                 - { id: id, type: string, required: true }
                 - { id: name, type: string, required: false }

@@ -296,7 +296,7 @@ class TestToCatalogNode:
             SchemaProperty("x", True, ValueNode(type="number")),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree),"points") == [
-            dc.Entity("points", item_type=dc.ObjectType("points.item", attributes=[
+            dc.Entity("points", item_type=dc.ObjectType("points.item", origin_item_type="points.item", attributes=[
                 dc.Attribute("x", "number", True),
             ])),
         ]
@@ -310,7 +310,7 @@ class TestToCatalogNode:
             ])),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree),"persons") == [
-            dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
+            dc.Entity("persons", item_type=dc.ObjectType("persons.item", origin_item_type="persons.item", attributes=[
                 dc.Attribute("address",         "object", True),
                 dc.Attribute("address.city",    "string", True),
                 dc.Attribute("address.zipcode", "string", False),
@@ -325,14 +325,14 @@ class TestToCatalogNode:
             ]))),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree),"orders") == [
-            dc.Entity("orders", item_type=dc.ObjectType("orders.item", attributes=[
+            dc.Entity("orders", item_type=dc.ObjectType("orders.item", origin_item_type="orders.item", attributes=[
                 dc.Attribute("items", "object[]", False,
                              child_entity="orders.items",
                              child_item_type="orders.item.items.item"),
             ])),
             dc.Entity(
                 "orders.items",
-                item_type=dc.ObjectType("orders.item.items.item", attributes=[
+                item_type=dc.ObjectType("orders.item.items.item", origin_item_type="orders.item.items.item", attributes=[
                     dc.Attribute("name", "string", True),
                 ]),
                 parent_entity="orders",
@@ -345,7 +345,7 @@ class TestToCatalogNode:
             SchemaProperty("tags", False, ArrayNode(child=ValueNode(type="string"))),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree),"articles") == [
-            dc.Entity("articles", item_type=dc.ObjectType("articles.item", attributes=[
+            dc.Entity("articles", item_type=dc.ObjectType("articles.item", origin_item_type="articles.item", attributes=[
                 dc.Attribute("tags", "string[]", False),
             ])),
         ]
@@ -356,7 +356,7 @@ class TestToCatalogNode:
             SchemaProperty("matrix", False, ArrayNode(child=ArrayNode(child=ValueNode(type="number")))),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree),"sheets") == [
-            dc.Entity("sheets", item_type=dc.ObjectType("sheets.item", attributes=[
+            dc.Entity("sheets", item_type=dc.ObjectType("sheets.item", origin_item_type="sheets.item", attributes=[
                 dc.Attribute("matrix", "number[][]", False),
             ])),
         ]
@@ -369,14 +369,14 @@ class TestToCatalogNode:
             ])))),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree),"boards") == [
-            dc.Entity("boards", item_type=dc.ObjectType("boards.item", attributes=[
+            dc.Entity("boards", item_type=dc.ObjectType("boards.item", origin_item_type="boards.item", attributes=[
                 dc.Attribute("grid", "object[][]", False,
                              child_entity="boards.grid",
                              child_item_type="boards.item.grid.item"),
             ])),
             dc.Entity(
                 "boards.grid",
-                item_type=dc.ObjectType("boards.item.grid.item", attributes=[
+                item_type=dc.ObjectType("boards.item.grid.item", origin_item_type="boards.item.grid.item", attributes=[
                     dc.Attribute("v", "number", True),
                 ]),
                 parent_entity="boards",
@@ -436,7 +436,7 @@ class TestToCatalogNode:
             ])),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree), "members") == [
-            dc.Entity("members", item_type=dc.ObjectType("members.item", attributes=[
+            dc.Entity("members", item_type=dc.ObjectType("members.item", origin_item_type="members.item", attributes=[
                 dc.Attribute("name", "string", True),
                 dc.Attribute("hobby", "object", True),
                 dc.Attribute("hobby.pets", "object[]", False,
@@ -445,7 +445,7 @@ class TestToCatalogNode:
             ])),
             dc.Entity(
                 "members.hobby.pets",
-                item_type=dc.ObjectType("members.item.hobby.pets.item", attributes=[
+                item_type=dc.ObjectType("members.item.hobby.pets.item", origin_item_type="members.item.hobby.pets.item", attributes=[
                     dc.Attribute("name", "string", True),
                     dc.Attribute("kind", "string", False),
                 ]),
@@ -467,7 +467,7 @@ class TestToCatalogNode:
             ])),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree), "persons") == [
-            dc.Entity("persons", item_type=dc.ObjectType("persons.item", attributes=[
+            dc.Entity("persons", item_type=dc.ObjectType("persons.item", origin_item_type="persons.item", attributes=[
                 dc.Attribute("address",         "object",   True),
                 dc.Attribute("address.city",    "string",   True),
                 dc.Attribute("address.aliases", "string[]", False),
@@ -484,7 +484,7 @@ class TestToCatalogNode:
                            x_ref={"entity": "users", "attribute": "name"}),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree), "albums") == [
-            dc.Entity("albums", item_type=dc.ObjectType("albums.item", attributes=[
+            dc.Entity("albums", item_type=dc.ObjectType("albums.item", origin_item_type="albums.item", attributes=[
                 dc.Attribute("artist_id", "string", True,
                              x_ref=dc.XRef(entity="artists", attribute="id")),
                 dc.Attribute("curator", "string", False,
@@ -501,7 +501,7 @@ class TestToCatalogNode:
             ])),
         ]))
         assert dc.flatten_tree(to_catalog_node(tree), "users") == [
-            dc.Entity("users", item_type=dc.ObjectType("users.item", attributes=[
+            dc.Entity("users", item_type=dc.ObjectType("users.item", origin_item_type="users.item", attributes=[
                 dc.Attribute("address",         "object", True),
                 dc.Attribute("address.city_id", "string", True,
                              x_ref=dc.XRef(entity="cities", attribute="id")),

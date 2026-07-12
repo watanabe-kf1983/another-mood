@@ -71,8 +71,6 @@ A0–D7FF, F900–FDCF, FDF0–FFEF,
 
 `#` は `/` と同様に raw で挿入する構造的セパレータ。slug は github 互換で `#` を含まず、id 内の `#` は `%23` に escape されるため、anchor_path 中のリテラル `#` は見出し区切りの一個だけ。「`prose/` 以降は単一 id」の前提も、`#` の手前までを単一 id と読み替えることでそのまま保たれ、`/`-曖昧性は生じない。
 
-> **既知の穴**: 二例外の検知はどちらもデータツリー位置ベースで、クエリの `join:` / `flatten:` を経て別位置に現れた prose には発火しない。位置独立化は [prose 検知の位置独立化 (B13)](#prose-検知の位置独立化-b13) で扱う。
-
 #### 例
 
 正規化後の views データ:
@@ -269,62 +267,6 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 > **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
 
 ## Proposals
-
-### prose 検知の位置独立化 (B13)
-
-> **未実装** — Phase 13 タスク [B13](node:/tasks/B/tasks/B13)。
-
-[Prose の例外](#prose-の例外)の二例外（`/`-素通しと見出しの fold）は、どちらも「このノードは prose か」の検知をデータツリー位置（`object_type_id == "prose.item"` 等）で行う。しかし prose はクエリの `join:` / `flatten:` で任意の位置に現れるため、位置ベースの検知はそこで発火しない。
-
-実例が showcase/music にある: `album_tracklist` クエリは prose を `liner` として singleton-flatten し、album ページに `{% mood_view "prose.md" with liner %}` でインライン描画する。この liner ノードの位置は `album_tracklist.item.liner` であり、`prose.item` を見る検知は素通りする。liner の本文に見出しがあれば、見出し自体は album ページに native id で着地するのに fold は発火せず、generic 形（`/album_tracklist/X/liner/headings/slug`）の anchor_path が生成され、[fragment 規則](#出力-url-の形式)でも slug に割れないため見出しリンクが壊れる（現状の music の liner に見出しが無いため潜在）。
-
-検知の根拠を位置から **型の由来（provenance）** に移す: catalog が「この型の row はどの entity のレコードに由来するか」を保持し、generator は `object_type_id → 由来 ObjectType id` の対応で prose を同定する。
-
-#### 背景: 固有述語（duck-typing）案の不採用
-
-レコードの形状（`body.mime_type == "text/markdown"`）で prose を見分ける案は検討のうえ不採用とした:
-
-- [Prose の例外](#prose-の例外)の設計原則「一般化（構造で適用範囲を決めること）はしない — 利用者 entity の構造変化に伴う曖昧性混入を避けるため」と正面衝突する。判定基準を「位置」から「形」に替えただけの構造ベース判定であり、利用者が markdown body を持つ entity を作った瞬間、その id の `/` が無 escape で素通りし曖昧性が silent に混入する
-- `select:` が `headings` を残して `body` を落とすと fold の検知が消える（catalog 由来なら射影に影響されない）
-- 形状判定が由来判定より広く効く唯一の位置は singleton-flatten の wrapper（後述）だが、そこは `/`-例外が不要な位置なので追加カバレッジにならない
-
-#### 機構: `source_type` フィールド
-
-`Node`（tree 形）/ `ObjectType`（flat 形）の対に `source_type: str | None` を追加する。値は由来 entity の ObjectType id（例 `prose.item`）。
-
-- metadata に相乗りさせない: metadata は schema 著者情報（title / description）の入れ物であり、`__entity_defs` テンプレートが verbatim に描画するため system key が露出する。専用フィールドなら露出はテンプレート側で opt-in にできる
-- `Attribute`（`child_item_type` の隣）でもない: 由来は型に内在する性質で、Attribute / Edge は「親から見た辺」。決定的には、クエリの row 型（`album_tracklist.item` 等）には親 attribute が存在しない（Entity 直下）ため、Attribute 側では row の由来の置き場がない
-- serde は `x_ref` と同じコスト構造で済む: `to_dict` は `asdict`、`from_dict` は default `None` のフィールド自動追随、JSON data model の key 省略規約で `None` は永続化に現れない
-
-処理の流れ:
-
-- **stamp**: `data_catalog._build_entity_node`（flat→tree 変換）で、無印の entity には自身の ObjectType id を刻み、既に `source_type` を持つ entity は**上書きしない**。この条件が効くのは [クエリ間参照 (E12)](../60-composer/10-queries-spec.md#背景-クエリ間参照に名前付き参照を採りインラインサブクエリを採らない) のフィードバックで stamp 済みの view entity が `build_tree` へ再入する場面で、それまでは死文。上書きすると由来が中間クエリの id にリセットされ、クエリ連鎖の二次ビューで prose 検知が silent に壊れる
-- **伝搬**: derive は `Node` を参照で再配線するため大半は自動（`From` / `Merge` の right / `Select` の子 / `Flatten` の inline 子 / `Grouped` の subtree）。row ノードを再構築する `Merge` / `Flatten` は既に `metadata` を明示 carry しており、同じ行に載せる
-- **`Select` の明示 carry**: `Select.derive` は現状 row ノードを metadata ごと落として再構築する。ここで由来を運ばないと `from: prose` + `select:`（prose の絞り込み・並べ替えビュー）で row の prose-ness が消え、headings 子だけ参照で生き残って「fold は効くのに `/`-例外は効かない」歪な非対称になる。由来は明示的に carry する
-- **合成ノードは無印**: `Grouped` の group row と `Flatten` で dissolve された wrapper は新規の合成型で、どの entity のレコードでもないため `source_type` を持たない。規則: **row を保つ変換（where / sort / select / join / flatten）は由来を保持し、合成ノードだけが無印で始まる**
-- **generator**: composer が data-catalog を sources にマージ済みなので、`__definition.entities` から `{item_type.id: source_type（無印は自身の id）}` の辞書を組める — コンポーネント間の新配管は不要。`_NodeMeta` への供給は B3（object_type_id 注入）と同型
-- **判定の差し替え**: `/`-例外 = 由来が `prose.item`、見出し fold = 由来が `prose.item.headings.item`。catalog に ObjectType が無い位置は identity フォールバックで両述語とも偽（安全性は次の背景を参照）
-
-運搬路は実証済み: content-schema の `title: Prose headings` が派生 entity `album_tracklist.item.liner.headings.item` の metadata に既に写っており、`source_type` は同じ経路（`Node` の参照渡し + `flatten_tree` の書き写し）に載る。
-
-#### 背景: ObjectType の無い位置は identity フォールバックで安全に倒せる
-
-由来判定は「ノードの位置 (`object_type_id`) → catalog の ObjectType → `source_type`」という辞書引きなので、位置に対応する ObjectType が catalog に無いノードでは由来が引けず、フォールバック（述語は偽）に倒れる。この取りこぼしが prose 検知の新たな穴にならないことを確認しておく。
-
-catalog は singleton オブジェクトを独自の ObjectType にせず、dotted 属性として親 row に inline する（`liner.id` / `liner.body.mime_type` の形式）。prose レコードが singleton になるのは `flatten:`（singleton 化）の `as:` 位置だけで、それ以外の現れ方 — トップレベルのパススルー、`join:` でのリスト添付、`grouped:` 配下、`select:` を通した行 — では prose レコードは配列要素のままであり、`Node` が参照で生存して ObjectType が catalog に生成されるため、判定に穴は無い。
-
-残る singleton-flatten 位置（`album_tracklist.item.liner` 等）では:
-
-- **`/`-例外はそもそも不要**: この例外が効くのは prose の id 値（`/` を含みうる）がアンカーパスの segment になる場面、つまり prose レコードが**配列要素**である場面に限る。singleton 位置のノードの segment は dict キー（`liner`）であり、prose id は segment に現れない
-- **見出し fold は判定できる**: `headings` 配下は dotted inline の先で `Node` が参照生存し、`album_tracklist.item.liner.headings.item` の ObjectType が catalog に生成される（現に生成されている）ため、`source_type` を運べる
-
-つまり辞書引きが取りこぼす唯一の位置は、`/`-例外が構造的に不要で、fold は子ノード側で判定できる位置と一致する。
-
-#### 未決事項 (B13)
-
-- **フィールド名**: `source_type` 仮。`source_item_type` は ObjectType 自身に載るため冗長とみて避けたが、`child_item_type` との語彙対称も一理ある
-- **由来の粒度は型でありフィールドではない**: `select: {item: title, as: id}` のように id を挿げ替える射影では型の由来が `prose.item` のまま残り、`/`-例外が title 値に適用されうる（実害は `/` を含む値のみ）。フィールド単位の由来追跡はスコープ外として記録
-- **メタドキュメンテーションへの表示**: `__entity_defs` / per-query ER 図（[F4c](node:/tasks/F/tasks/F4c)）に由来をラベル表示する改善は任意の後続
 
 ### 未決事項
 

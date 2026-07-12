@@ -565,6 +565,7 @@ class TestGroupedDerive:
             - id: groups
               item_type:
                 id: groups.item
+                origin_item_type: groups.item
                 attributes:
                   - { id: phase, type: integer, required: true }
                   - id: tasks
@@ -575,6 +576,7 @@ class TestGroupedDerive:
             - id: groups.tasks
               item_type:
                 id: groups.item.tasks.item
+                origin_item_type: tasks.item
                 attributes:
                   - { id: id, type: string, required: true }
                   - { id: title, type: string, required: true }
@@ -1019,6 +1021,7 @@ class TestQueryPipeline:
             - id: cat_tasks
               item_type:
                 id: cat_tasks.item
+                origin_item_type: cat_tasks.item
                 attributes:
                   - { id: id, type: string, required: true }
                   - id: tasks
@@ -1029,6 +1032,7 @@ class TestQueryPipeline:
             - id: cat_tasks.tasks
               item_type:
                 id: cat_tasks.item.tasks.item
+                origin_item_type: tasks.item
                 attributes:
                   - { id: id, type: string, required: true }
                   - { id: title, type: string, required: true }
