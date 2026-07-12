@@ -103,14 +103,19 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 
 ## Playlists
 
-{% for pl in playlists %}
+Each playlist's track list comes from the `playlists_with_tracks` view, a
+two-hop query-to-query chain: `playlist_entries` joins `tracks` onto
+`playlist_tracks` (so the title travels with each link), and
+`playlists_with_tracks` nests those entries under each playlist - so the
+template neither re-filters `playlist_tracks` nor re-looks-up track titles.
+
+{% for pl in playlists_with_tracks %}
 ### {{ pl.name }}
 
 *Curated by {{ code_inline(pl.curator) }}.* {{ pl.description }}
 
-{% set entries = playlist_tracks | selectattr("playlist_id", "equalto", pl.id) | sort(attribute="position") %}
-{% for entry in entries %}
-{{ entry.position }}. {{ node("tracks", entry.track_id).title }}
+{% for entry in pl.entries | sort(attribute="position") %}
+{{ entry.position }}. {{ entry.track.title }}
 {% endfor %}
 
 {% endfor %}
