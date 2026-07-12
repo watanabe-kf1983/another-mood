@@ -144,6 +144,7 @@ class TestDeriveQueries:
                         "id": "names",
                         "item_type": {
                             "id": "names.item",
+                            "origin_item_type": "names.item",
                             "attributes": [
                                 {"id": "name", "type": "string", "required": True}
                             ],
@@ -426,6 +427,7 @@ class TestQueryReferences:
             id="items",
             item_type=dc.ObjectType(
                 id="items.item",
+                origin_item_type="items.item",
                 attributes=[dc.Attribute(id="name", type="string", required=True)],
             ),
         )

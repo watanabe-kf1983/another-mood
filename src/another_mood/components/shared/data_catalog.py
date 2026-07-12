@@ -44,6 +44,7 @@ class Edge:
 class Node:
     metadata: Mapping[str, object] | None = None
     children: Sequence[tuple[Edge, "Node"]] = ()
+    origin_item_type: str | None = None
 
     @property
     def is_entity(self) -> bool:
@@ -154,6 +155,7 @@ class Attribute:
 class ObjectType:
     id: str
     attributes: Sequence[Attribute]
+    origin_item_type: str
     metadata: Mapping[str, object] | None = None
 
     def to_dict(self) -> Mapping[str, object]:
@@ -162,7 +164,8 @@ class ObjectType:
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "ObjectType":
         return cls(
-            **_without(d, "attributes"),
+            **_without(d, "attributes", "origin_item_type"),
+            origin_item_type=cast(str, d.get("origin_item_type") or d["id"]),
             attributes=[Attribute.from_dict(a) for a in d["attributes"]],
         )
 
@@ -178,9 +181,9 @@ class Entity:
     #: Node-form self-description of the persisted Entity record.
     #: ``ObjectType`` (the type of ``item_type``) is singleton-flattened
     #: inline: the wrapper edge ``item_type`` (type=object) plus
-    #: dotted-name edges ``item_type.id`` / ``item_type.metadata`` for
-    #: scalars, and ``item_type.attributes`` carrying
-    #: ``Attribute.catalog`` as the child-entity link.
+    #: dotted-name edges ``item_type.id`` / ``item_type.origin_item_type``
+    #: / ``item_type.metadata`` for scalars, and ``item_type.attributes``
+    #: carrying ``Attribute.catalog`` as the child-entity link.
     #:
     #: The caller assigns the catalog id via
     #: ``flatten_tree(catalog, root_name=...)`` and is expected to set
@@ -190,6 +193,10 @@ class Entity:
             (Edge(name="id", type="string", required=True), Node()),
             (Edge(name="item_type", type="object", required=True), Node()),
             (Edge(name="item_type.id", type="string", required=True), Node()),
+            (
+                Edge(name="item_type.origin_item_type", type="string", required=True),
+                Node(),
+            ),
             (Edge(name="item_type.metadata", type="object", required=False), Node()),
             (
                 Edge(name="item_type.attributes", type="object[]", required=True),
@@ -276,6 +283,7 @@ def _build_entity_node(
             )
             for attr in entity.item_type.attributes
         ],
+        origin_item_type=entity.item_type.id,
     )
 
 
@@ -334,12 +342,14 @@ def _flatten_entity(
 
 def _to_object_type(node: Node, *, edge_path: Sequence[str]) -> ObjectType:
     """Build an ObjectType for ``node`` reached at ``edge_path``."""
+    item_type_id = _item_type_id(edge_path)
     return ObjectType(
-        id=_item_type_id(edge_path),
+        id=item_type_id,
         attributes=[
             _to_attribute(child, edge=edge, edge_path=(*edge_path, edge.name))
             for edge, child in node.children
         ],
+        origin_item_type=node.origin_item_type or item_type_id,
         metadata=node.metadata,
     )
 

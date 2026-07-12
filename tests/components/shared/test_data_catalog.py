@@ -20,6 +20,7 @@ class TestDictRoundTrip:
             id="users",
             item_type=dc.ObjectType(
                 id="users.item",
+                origin_item_type="users.item",
                 attributes=[dc.Attribute(id="name", type="string", required=True)],
             ),
         )
@@ -30,6 +31,7 @@ class TestDictRoundTrip:
             id="orders",
             item_type=dc.ObjectType(
                 id="orders.item",
+                origin_item_type="orders.item",
                 attributes=[
                     dc.Attribute(
                         id="total",
@@ -57,6 +59,7 @@ class TestDictRoundTrip:
             id="tasks_by_phase",
             item_type=dc.ObjectType(
                 id="tasks_by_phase.item",
+                origin_item_type="tasks_by_phase.item",
                 attributes=[dc.Attribute(id="phase", type="integer", required=True)],
             ),
             view=True,
@@ -69,6 +72,7 @@ class TestDictRoundTrip:
             id="albums",
             item_type=dc.ObjectType(
                 id="albums.item",
+                origin_item_type="albums.item",
                 attributes=[
                     dc.Attribute(
                         id="artist_id",
@@ -259,10 +263,14 @@ class TestRenameOnFlatten:
             """
         )
         expected = _catalog(
+            # A rename changes the id namespace but not provenance: the
+            # renamed types keep the origin stamped at build time
+            # (``categories.*``), not their new self ids.
             """
             - id: tasks_by_phase
               item_type:
                 id: tasks_by_phase.item
+                origin_item_type: categories.item
                 attributes:
                   - { id: id, type: string, required: true }
                   - id: tasks
@@ -273,6 +281,7 @@ class TestRenameOnFlatten:
             - id: tasks_by_phase.tasks
               item_type:
                 id: tasks_by_phase.item.tasks.item
+                origin_item_type: categories.item.tasks.item
                 attributes:
                   - { id: id, type: string, required: true }
                   - { id: phase, type: integer, required: true }
