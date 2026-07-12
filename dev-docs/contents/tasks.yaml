@@ -93,16 +93,8 @@ categories:
         done: true
       B13:
         title: prose 検知の位置独立化（catalog `origin_item_type` による由来判定）
-        note: |
-          `/`-例外と見出し fold (A3) の prose 検知は位置ベース (object_type_id)
-          のため、クエリ join/flatten で別位置に現れた prose に届かない
-          (showcase/music の liner が実例)。catalog の Node/ObjectType に
-          origin_item_type (型の由来) を導入し、
-          generator が object_type_id → 由来の辞書引きで判定する形に差し替える。
-          実装は shared/data_catalog.py + generator/ に跨る。
-          関連 E12 (フィードバック経路を由来が推移する設計、依存はしない)。
         phase: 13
-        proposal: 20-design/70-generator/20-anchor-spec#prose-検知の位置独立化-b13
+        done: true
 
   C:
     title: ページ分割 (paging)
