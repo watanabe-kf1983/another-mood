@@ -81,7 +81,9 @@ Besides `default/`, `output/` also holds pages the tool generates on its own. Th
 mood watch my-project
 ```
 
-`http://localhost:5077` displays the HTML in your browser. Edit any file and save: the project auto-rebuilds and the browser reloads. Try changing `alice`'s `role` in `contents/members.yaml` from `engineer` to `manager`. You'll see `output/default/by_role/manager.md` newly appear, and `alice` disappear from `output/default/by_role/engineer.md` (the same changes show in the browser pages). One line of data edited, multiple pages regenerated in a consistent state — this is what the tool is for.
+`http://localhost:5077` displays the HTML in your browser. Edit any file and save: the project auto-rebuilds and the browser reloads. Try changing `alice`'s `role` in `contents/members.yaml` from `engineer` to `manager`. In the browser a new `by_role/manager` page appears and `alice` drops off `by_role/engineer`. One line of data edited, multiple pages regenerated in a consistent state — this is what the tool is for.
+
+`watch` serves this preview live and writes nothing into the project — the `output/` files stay as your last `mood build` left them. Run `mood build` when you want the files regenerated.
 
 The rest of this guide builds on this sample, walking through the pieces needed to write sources for your own project.
 
@@ -102,14 +104,14 @@ Details on each in [Schema and content](#schema-and-content), [Queries](#queries
 
 You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the queries are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
-In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" paths are relative to the output directory (`.another-mood/<project>/`).
+In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__entity_defs/<entity>.md`).
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | Schema | `definition/schema.yaml` | `output/__db/__entity_defs/<entity>.md` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `output/__db/__entity_data/<entity>.md` |
-| 3 | Query | `definition/queries/**/*.yaml` | `output/__db/__queries/<query>.md` |
-| 4 | Template | `definition/templates/**/*.md` | `output/default/index.md` and below |
+| 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `/__db/__entity_data/<entity>` |
+| 3 | Query | `definition/queries/**/*.yaml` | `/__db/__queries/<query>` |
+| 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
 Schema and content are required; queries are optional; templates are required for the final output. `schema.yaml` is the only fixed single file — everything else can be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
 
@@ -205,7 +207,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via `output/__db/__entity_defs/<entity>.md` (how the tool interpreted the declared type) and `output/__db/__entity_data/<entity>.md` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__entity_data/<entity>` (whether the data is being loaded as expected).
 
 There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
 
