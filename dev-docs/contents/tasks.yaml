@@ -309,6 +309,15 @@ categories:
           現状は CWD 外の絶対パスを basename フォールバックで受け入れている。
         phase: 13
         proposal: 20-design/20-app/20-config-spec#処理対象ディレクトリの-cwd-配下制約-g8
+      G9:
+        title: "mood watch の作業ディレクトリ隔離 (システム temp + --outputDir)"
+        note: >-
+          watch の tmp/render/output をシステム temp のセッション固有ディレクトリへ移し、
+          プロジェクトへの出力は --outputDir 指定時のみにする (無指定 = 無出力)。watch と
+          build/出力読み出しの衝突を構造的に解消する。guides.md 等の診断ビュー案内の
+          書き換えを含む。
+        phase: 13
+        proposal: 20-design/20-app/20-config-spec#watch-の作業ディレクトリ隔離-g9
 
   H:
     title: バイナリファイルの取り扱い
