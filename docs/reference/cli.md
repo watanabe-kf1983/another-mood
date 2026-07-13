@@ -41,11 +41,10 @@ If any of these paths is missing when `build` or `watch` starts, the command fai
 
 ### Output path resolution
 
-Output directories are placed under `.another-mood/<project_dir>/`, relative to the current directory:
+Markdown and HTML output are placed under `.another-mood/<project_dir>/`, relative to the current directory:
 
 | Kind | Default | Env var |
 |---|---|---|
-| Intermediate output (per stage) | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` |
 | Markdown output | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
 | HTML output | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
 
@@ -183,7 +182,7 @@ RB_PORT=8080 mood watch .
 | `contents_dir` | `<project_dir>/contents` | `RB_CONTENTS_DIR` | — |
 | `queries_dir` | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` | — |
 | `templates_dir` | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` | — |
-| `tmp_dir` | `.another-mood/<project_dir>/tmp` | `RB_TMP_DIR` | — |
+| `tmp_dir` | (per-run session dir under the system temp dir) | `RB_TMP_DIR` | — |
 | `out_dir` | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` | — |
 | `render_dir` | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` | — |
 | `host` | `127.0.0.1` | `RB_HOST` | `--host` (only on `watch`) |

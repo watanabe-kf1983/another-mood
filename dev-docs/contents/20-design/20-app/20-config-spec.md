@@ -11,6 +11,16 @@
 3. 環境変数
 4. CLI 引数
 
+### 作業ディレクトリ（tmp）
+
+`tmp_dir`（ビルドの中間作業ディレクトリ）は既定でシステム temp 配下のセッション固有ディレクトリ（`tempfile.mkdtemp`）に置かれる。`RB_TMP_DIR` で固定パスに向けられる。
+
+後始末は mode で分かれる:
+
+- **build**: 実行ごとに作り、成功時・および UserError のみの失敗時に削除する。内部エラー（tool のバグ / 環境要因）のときだけ保持し、パスをログに出す（中間状態がデバッグに役立つ唯一のケース）。
+- **watch**: 同様に作るが削除しない。セッションが少なく長寿命で堆積が緩やかなため、OS の temp 掃除に委ねる。
+- **`RB_TMP_DIR` 明示指定時**: どちらの mode でも honor し、削除しない（lifecycle は利用者に委ねる）。
+
 ## Proposals
 
 ### 設定ファイル (G2)
@@ -33,31 +43,11 @@
 
 現状は `_another_mood_root` (`config.py`) が CWD 外の絶対パスを受けた場合に basename を採用してフォールバックする実装になっており、エラーにはしない。
 
-### 作業ディレクトリのシステム temp 隔離 (G9)
+### watch の出力 publish 隔離 (G9)
 
-> **未実装** — タスク [G9](node:/tasks/G/tasks/G9)。
+> **一部実装** — タスク [G9](node:/tasks/G/tasks/G9)。作業 tmp のシステム temp 隔離は実装済み（External Design「作業ディレクトリ（tmp）」節）。残るのは watch の出力 publish の隔離。
 
-作業ディレクトリ（tmp）を、プロジェクトの `.another-mood/` からシステム temp（`tempfile.mkdtemp`）へ移す。watch と build で「溜まり方」が異なるため後始末ポリシーを分ける。out（md）/ render（html）は publish の宛先であり、watch では既定で publish しない。
-
-#### tmp: watch — mkdtemp、消さない
-
-`tempfile.mkdtemp(prefix="another-mood-")` でセッション固有ディレクトリを作り、**明示的な削除はしない**（`finally` も signal handler も置かない）。取り残しは OS の temp 掃除に委ねる。
-
-- 理由: watch は「起動して放置」でセッションが少なく長寿命 → 作りっぱなしでも堆積は緩やか。「temp に作りっぱなし・OS が回収」は temp の設計思想どおりで、pip / systemd-private / go-build 等と同じ ecosystem 標準。`mkdtemp` は `0700`・予測不能名で作られるため、共有 `/tmp` に予測可能パスを置く安全性懸念も生じない。
-- セッション固有ディレクトリにより、同一プロジェクトの複数 watch（別ポート）が自然に隔離される（port が実質の識別子で、同一 port の二重起動は bind 失敗で発生しない）。各セッションの初回はコールドスタート（全ビルド）。
-
-> **背景: 掃除の backstop は環境で異なるが実害は小さい.** systemd 環境は `systemd-tmpfiles`（`/tmp` 約10日）、tmpfs な `/tmp` は再起動、macOS は約3日、コンテナ / CI はライフサイクルで一掃される。ネイティブ Windows や reaper の無い素の Linux は自動回収しないが、他の全 temp 利用アプリと同条件であり、watch のフットプリントは小さい。よって全環境で「消さない」を採る。
-
-#### tmp: build — mkdtemp、成功／UserError 失敗で削除
-
-build も `tempfile.mkdtemp` を使うが、watch と違い後始末する。build は agent の `edit → build → 修正 → build` ループで高頻度に走り、消さないと急速に堆積するため。
-
-- ポリシー: **成功時・および UserError のみの失敗時は削除**（どちらも高頻度）。**非UserError（tool のバグ / 環境要因）のときだけ保持し、実パスをログに出す**（稀 → 堆積せず、中間状態がデバッグに役立つ唯一のケース）。debug mode 等の別スイッチは設けない（「debug したいとき＝非UserError のとき」で保持条件に含まれる）。
-- 成功時に消して失うものは無い: 成果物と診断ビュー（`__db/`）は out_dir に publish 済みで、tmp は中間物のみ。
-- 非UserError の判定はコードに既にある: UserError は `ErrorEntry(traceback=None)`、それ以外の例外は `ErrorEntry` に Python traceback を載せる（`shared/component/build_report.py` の `_entries_from_exception`）。traceback フィールドは `BuildResult.errors` に素通しされるので、`any(e.traceback for e in result.errors)` で判定できる。これを `BuildResult.has_internal_error()`（下支えに `ErrorEntry.is_internal`）として型に持たせる。捕捉漏れの例外が `build()` から送出された場合も保持する。
-- `ENAMETOOLONG` は `PathTooLongError`（UserError）に再分類済み（`errors.py`）＝ 削除対象。パス長は利用者が直せる。
-
-tmp 生成と後始末の置き場は **command 層**（CLI / MCP build 双方に効かせる）。`config.tmp_dir` への mkdtemp パス注入は、mode を区別できず副作用も生じる `_fill_defaults`（validator）ではなく command 層で行う。
+out（md）/ render（html）は publish の宛先であり、watch では既定で publish しない。
 
 #### out / render — watch は既定で publish しない
 
