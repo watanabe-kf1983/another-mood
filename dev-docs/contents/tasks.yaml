@@ -322,15 +322,14 @@ categories:
         phase: 13
         proposal: 20-design/20-app/20-config-spec#処理対象ディレクトリの-cwd-配下制約-g8
       G9:
-        title: "mood watch / build の作業ディレクトリをシステム temp へ隔離"
+        title: "mood watch / build の作業ディレクトリと出力 publish を隔離"
         note: >-
-          作業 tmp のシステム temp 隔離 (mkdtemp、build は成功 / UserError 失敗時に削除・
-          内部エラー時のみ保持、watch は消さず OS 掃除に委ねる、RB_TMP_DIR で固定可) は実装済み。
-          残り: watch は既定で publish せず、--out-dir 指定時のみ md を publish (build は不変)。
-          watch 側 publish と build / 出力読み出しの衝突を構造的に解消する。guides.md 等の
-          診断ビュー案内の書き換えを含む。
+          作業 tmp はシステム temp へ隔離 (mkdtemp、build は成功 / UserError 失敗時に削除・
+          内部エラー時のみ保持、watch は消さず OS 掃除に委ねる、RB_TMP_DIR で固定可)。
+          publish は watch 既定で無し・--out-dir 指定時のみ md を publish (html は publish せず、
+          build は不変)。これで watch 側 publish と build / 出力読み出しの衝突を構造的に解消。
         phase: 13
-        proposal: 20-design/20-app/20-config-spec#watch-の出力-publish-隔離-g9
+        done: true
 
   H:
     title: バイナリファイルの取り扱い
