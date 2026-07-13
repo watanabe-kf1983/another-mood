@@ -1,5 +1,6 @@
 """Tests for error propagation."""
 
+import errno
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -12,6 +13,8 @@ from another_mood.components.shared.user_source.diagnostic import (
     FileValidationError,
 )
 from another_mood.components.shared.component.errors import (
+    PathTooLongError,
+    _as_reported_error,  # pyright: ignore[reportPrivateUsage]
     error_propagation,
 )
 
@@ -226,3 +229,20 @@ class TestErrorPropagation:
                 },
             ],
         }
+
+
+class TestAsReportedError:
+    def test_enametoolong_becomes_path_too_long_error(self) -> None:
+        result = _as_reported_error(OSError(errno.ENAMETOOLONG, "File name too long"))
+        assert isinstance(result, PathTooLongError)
+        # The raw OSError leads the guidance, then remedies.
+        assert "File name too long" in result.user_error_message
+        assert "shallower" in result.user_error_message
+
+    def test_other_oserror_passes_through(self) -> None:
+        cause = OSError(errno.ENOSPC, "No space left on device")
+        assert _as_reported_error(cause) is cause
+
+    def test_non_oserror_passes_through(self) -> None:
+        cause = ValueError("boom")
+        assert _as_reported_error(cause) is cause

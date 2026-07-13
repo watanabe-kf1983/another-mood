@@ -96,6 +96,38 @@ class TestGenerate:
         assert "- [web](web/)" in cover
         assert "- [print me](print%20me/)" in cover
 
+    def test_writes_error_to_reports_on_reserved_edition_name(
+        self, tmp_path: Path
+    ) -> None:
+        data_dir = tmp_path / "data" / "data"
+        data_dir.mkdir(parents=True)
+        _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "index.md").write_text("# {{ title }}\n")
+
+        out_dir = tmp_path / "output"
+        reports_file = tmp_path / "reports.yaml"
+        # `con` passes ReportsSchema (non-empty, non-`__`) but is a Windows
+        # device name, so its edition directory is rejected on every OS.
+        reports_file.write_text("editions:\n  con:\n    file_per: []\n")
+        generate(
+            data_dir=tmp_path / "data",
+            templates_dir=templates_dir,
+            reports_file=reports_file,
+            project_name="myproject",
+            out_dir=out_dir,
+        )
+
+        report = yaml.safe_load(
+            (out_dir / "reports" / "__build_report.yaml").read_text()
+        )
+        stages = report["__build_report"]["stages"]
+        assert any(s["component"] == "generate" and s["result"] == "ng" for s in stages)
+        messages = [e["message"] for e in report["__build_report"]["errors"]]
+        assert any("reserved filesystem name" in m for m in messages)
+
     def test_writes_error_to_reports_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)

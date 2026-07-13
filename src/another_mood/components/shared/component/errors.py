@@ -1,5 +1,6 @@
 """Error propagation — context manager for pipeline error handling."""
 
+import errno
 import traceback
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
@@ -12,6 +13,18 @@ from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticReporter
 
 _logger = getLogger(__name__)
+
+
+class PathTooLongError(UserError):
+    """A filesystem path-length overflow (``ENAMETOOLONG``), user-facing."""
+
+    def __init__(self, cause: OSError) -> None:
+        super().__init__(
+            f"An output path exceeds the filesystem's length limit: {cause}. "
+            f"If a long id is to blame, shorten it; otherwise build in a "
+            f"shallower output directory (on Windows, enabling long-path "
+            f"support also lifts the limit)."
+        )
 
 
 class StageContext(NamedTuple):
@@ -54,7 +67,8 @@ def error_propagation(
             yield StageContext(
                 out=data_dir, upstreams=upstream_data_dirs, reporter=reporter
             )
-        except Exception as exc:
+        except Exception as raised:
+            exc = _as_reported_error(raised)
             result = "ng"
             _log_error(exc)
             report = report.with_exception(exc)
@@ -68,6 +82,14 @@ def error_propagation(
     if component:
         report = report.with_added_stage(component, result)
     report.write(report_dir)
+
+
+def _as_reported_error(exc: Exception) -> Exception:
+    """Repackage an ``ENAMETOOLONG`` overflow as a user error; every other
+    exception (including any other ``OSError``) passes through unchanged."""
+    if isinstance(exc, OSError) and exc.errno == errno.ENAMETOOLONG:
+        return PathTooLongError(exc)
+    return exc
 
 
 def _log_error(exc: Exception) -> None:

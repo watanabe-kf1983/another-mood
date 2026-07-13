@@ -16,6 +16,9 @@ from another_mood.components.generator.mood_view_processor import (
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.shared.windows_reserved_name import (
+    WindowsReservedNameError,
+)
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
@@ -289,6 +292,22 @@ class TestMoodViewProcessorImplPagePath:
 
         # Directory is the view name (``members``), not the template stem.
         assert engine.written == [("member.md", member, Path("members/alice.md"))]
+
+
+class TestMoodViewProcessorImplReservedName:
+    """A split node whose id yields a filesystem-reserved page segment is
+    rejected before any file is written (C7)."""
+
+    def test_reserved_id_raises(self) -> None:
+        engine = _MockEngine()
+        paging = PagingPolicy(("members.item",))
+        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        # `CON` is a Windows device name: `members/CON.md` writes to the
+        # console, not a file, so the page is rejected on every OS.
+        member = wrap_tree({"members": [{"id": "CON"}]})["members"][0]
+        with pytest.raises(WindowsReservedNameError):
+            processor("member.md", member)
+        assert engine.written == []
 
 
 class TestMoodViewProcessorImplPageSubject:

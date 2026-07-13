@@ -42,11 +42,7 @@
 
 > **背景: なぜ IRI 形か.** エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
 
-escape 規則は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**は別タスク [C7](node:/tasks/C/tasks/C7) で扱う — 事前の encode/validation で防ぐのではなく、`mkdir`/`open` の `OSError` を捕まえて**ユーザに改名を促す診断**を出す方針。対象:
-
-- **パス長**（Windows `MAX_PATH`=260。anchor_path は階層を畳んだパスになるため、深いツリー + 長い id で**最も現実的に当たりやすい主リスク**）
-- Windows 予約名（CON / NUL / COM1…）、末尾のドット・空白
-- macOS の NFC/NFD 正規化、`ucschar` 内の Unicode 空白（U+3000 等）
+escape 規則は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**（パス長超過・Windows 予約名）はエスケープとは別に、パス書き出し側で対処する。
 
 `ucschar`（RFC 3987）のレンジ:
 

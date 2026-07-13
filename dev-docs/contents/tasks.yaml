@@ -128,12 +128,15 @@ categories:
         phase: 12
         done: true
       C7:
-        title: FS-safe パス書き出しの堅牢化 (write 時例外 → 改名診断)
+        title: FS-safe パス書き出しの堅牢化 (パス長の例外詰め替え + 予約名検査)
         note: >-
-          IRI エスケープ (B7) で潰せない FS 固有問題 (パス長/予約名/末尾文字/正規化等) を、write 時の
-          OSError → ユーザ改名診断で扱う。対象と方針は anchor-spec.md#escape-規則 を参照。優先度低。
+          IRI エスケープ (B7) で潰せない、FS 許容名 ≠ ユーザ命名 id の齟齬。loud なパス長超過は
+          最外での OSError (ENAMETOOLONG) → UserError 詰め替え。silent な Windows 予約名・末尾ドットは
+          共通の ntpath.isreserved 検査 (全 OS 一律 error) を、ユーザ id がパスになる箇所すべて
+          (generator ページパス / edition ディレクトリ / composer クエリ結果ファイル) に埋め込む。
+          ソースファイル名由来のパスは FS 受理済みで対象外。NFC/NFD は別課題 D10。
         phase: 13
-        proposal: 20-design/70-generator/20-anchor-spec#escape-規則
+        done: true
       C8:
         title: inline キーワードの廃止
         phase: 11
@@ -204,6 +207,15 @@ categories:
         note: --strict 連動
         phase: 15
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
+      D10:
+        title: 入力境界での一律 NFC 正規化
+        note: >-
+          macOS が NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id が silent に
+          同一出力ファイルへ畳まれる。preprocess の入力境界 2 点 (ファイル内容の decode 直後・
+          ディレクトリ走査で得たファイル名) で全テキストを一律 NFC 正規化する。設計は
+          normalizer.md の Proposals を参照。
+        phase: 13
+        proposal: 20-design/50-normalizer/10-normalizer#入力境界での一律-nfc-正規化-d10
 
   E:
     title: YAML DSL クエリ評価拡充

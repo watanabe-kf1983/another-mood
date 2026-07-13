@@ -26,6 +26,9 @@ from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
 from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.windows_reserved_name import (
+    ensure_not_windows_reserved,
+)
 
 _BUILD_REPORT_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "build_report")
@@ -69,7 +72,7 @@ def generate(
             edition.root_template,
             edition.templates_dir,
             data,
-            out_dir / edition.dir_segment,
+            ensure_not_windows_reserved(out_dir / edition.dir_segment),
             filters={
                 **edition.extra_filters,
                 **node_filters,

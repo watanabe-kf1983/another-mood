@@ -7,6 +7,9 @@ from typing import cast
 from another_mood.components.shared.query import Query, evaluation_order
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.windows_reserved_name import (
+    ensure_not_windows_reserved,
+)
 
 
 @Component(
@@ -41,4 +44,7 @@ def compose(
     query_results_out.mkdir(parents=True, exist_ok=True)
     for name in evaluation_order(queries):
         sources[name] = queries[name].apply([sources])
-        save_model(query_results_out / f"{name}.yaml", {name: sources[name]})
+        save_model(
+            ensure_not_windows_reserved(query_results_out / f"{name}.yaml"),
+            {name: sources[name]},
+        )
