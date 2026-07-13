@@ -130,10 +130,12 @@ categories:
       C7:
         title: FS-safe パス書き出しの堅牢化 (パス長の例外詰め替え + 予約名検査)
         note: >-
-          IRI エスケープ (B7) で潰せない FS 固有問題のうち、loud なパス長超過は最外での OSError
-          (ENAMETOOLONG) → UserError 詰め替え、silent な Windows 予約名・末尾ドットは
-          パス組み立て時の ntpath.isreserved 検査 (全 OS 一律 error) で扱う。NFC/NFD は別課題
-          (preprocess での一律 NFC 正規化、未タスク化)。設計は anchor-spec.md の Proposals を参照。
+          IRI エスケープ (B7) で潰せない、FS 許容名 ≠ ユーザ命名 id の齟齬。loud なパス長超過は
+          最外での OSError (ENAMETOOLONG) → UserError 詰め替え。silent な Windows 予約名・末尾ドットは
+          共通の ntpath.isreserved 検査 (全 OS 一律 error) を、ユーザ id がパスになる箇所すべて
+          (generator ページパス / edition ディレクトリ / composer クエリ結果ファイル) に埋め込む。
+          ソースファイル名由来のパスは FS 受理済みで対象外。NFC/NFD は別課題 D10。
+          設計は anchor-spec.md の Proposals を参照。
         phase: 13
         proposal: 20-design/70-generator/20-anchor-spec#c7-fs-固有パス問題の扱い
       C8:
