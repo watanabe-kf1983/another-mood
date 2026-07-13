@@ -212,10 +212,10 @@ categories:
         note: >-
           macOS が NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id が silent に
           同一出力ファイルへ畳まれる。preprocess の入力境界 2 点 (ファイル内容の decode 直後・
-          ディレクトリ走査で得たファイル名) で全テキストを一律 NFC 正規化する。設計は
-          normalizer.md の Proposals を参照。
+          ディレクトリ走査で得たファイル名) で全テキストを一律 NFC 正規化する。理由は
+          source_loader.py の _read_text_nfc docstring を参照。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#入力境界での一律-nfc-正規化-d10
+        done: true
 
   E:
     title: YAML DSL クエリ評価拡充

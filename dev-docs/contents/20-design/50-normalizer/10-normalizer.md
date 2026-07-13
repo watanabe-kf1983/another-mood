@@ -38,10 +38,6 @@
 
 追加の Unique 制約（id 以外のフィールドに対する一意性）の宣言。Phase 10 タスク [D8, D9](node:/tasks/D/tasks/D8)。
 
-### 入力境界での一律 NFC 正規化 (D10)
-
-macOS は NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id が silent に同一出力ファイルへ畳まれる（generator の `PageCollisionError` は文字列キー比較で NFC ≠ NFD を衝突と認識できない）。write 側では検出できないため、preprocess の入力境界 2 点 — (1) ファイル内容の decode 直後（decode は可逆な全単射・正規化は非可逆な畳み込みで層が別。デコーダのオプションでは実現できない）、(2) ディレクトリ走査で得たファイル名（decoder を通らない経路。prose id の源）— で全テキストを一律 NFC 正規化する。web / Git `core.precomposeunicode` の定石と同型。NFKC は互換分解（`①`→`1`、U+3000→空白）で id を歪めるため不可。実装は小さい。Phase 13 タスク [D10](node:/tasks/D/tasks/D10)。
-
 ### 正規化スコープと catalog 境界 (M6, M7)
 
 M5 で確立した境界 (Internal Design 参照) を、ad-hoc 実装から schema 上のマーカー駆動の一般機構に置き換える後続段階。
