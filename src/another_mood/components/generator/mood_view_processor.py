@@ -16,6 +16,9 @@ from jinja2.runtime import Context
 
 from another_mood.components.generator.data_tree import Node, nearest_ancestor
 from another_mood.components.generator.edition import PagingPolicy
+from another_mood.components.shared.windows_reserved_name import (
+    ensure_not_windows_reserved,
+)
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
@@ -55,7 +58,7 @@ class MoodViewProcessorImpl:
 
     def _out_path(self, node: Node) -> Path:
         """Anchor-derived page path of a split node."""
-        return Path(self.paging.page_path(node))
+        return ensure_not_windows_reserved(Path(self.paging.page_path(node)))
 
 
 class MoodViewExtension(Extension):
