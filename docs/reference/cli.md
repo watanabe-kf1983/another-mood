@@ -16,7 +16,7 @@ mood watch .
 |---|---|
 | [`mood init <project_dir>`](#init) | Shortcut for `mood blueprint apply starter <project_dir>`. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
-| [`mood watch <project_dir> [--host <addr>] [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
+| [`mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
 | [`mood blueprint list`](#blueprint-list) | List the available blueprints. |
 | [`mood blueprint apply <name> <project_dir>`](#blueprint-apply) | Apply a blueprint into a project directory. |
 | [`mood docs list`](#docs-list) | List bundled documentation entries with their `docs://` URIs. |
@@ -41,7 +41,7 @@ If any of these paths is missing when `build` or `watch` starts, the command fai
 
 ### Output path resolution
 
-Markdown and HTML output are placed under `.another-mood/<project_dir>/`, relative to the current directory:
+`build` places its Markdown and HTML output under `.another-mood/<project_dir>/`, relative to the current directory:
 
 | Kind | Default | Env var |
 |---|---|---|
@@ -49,6 +49,8 @@ Markdown and HTML output are placed under `.another-mood/<project_dir>/`, relati
 | HTML output | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
 
 Subdirectories matching the input path are created automatically, so that running different `<project_dir>` values in parallel processes does not cause output collisions.
+
+`watch` publishes nothing by default: it serves the preview live and writes no files into the project, so `mood build` stays the only writer of `output/`. Pass [`--out-dir <dir>`](#watch) to also publish the Markdown tree; `watch` never publishes HTML.
 
 ## init
 
@@ -86,15 +88,27 @@ Fail the build (exit code 1) when any warning is reported. Without `--strict`, w
 Watch files for changes, rebuild automatically, and serve a live preview.
 
 ```bash
-mood watch <project_dir> [--host <addr>] [--port <port>]
+mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>]
 ```
 
 When a change is detected on an input path (the schema file or the contents / queries / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
+
+By default `watch` writes nothing into the project — the preview is served live from a temporary working directory, and the diagnostic views are browsable at `/__db/`. Use `--out-dir` to also publish the Markdown tree to disk.
 
 ```
 $ mood watch .
 Press Ctrl+C to stop.
 ```
+
+### `--out-dir`
+
+Publish the Markdown output tree to `<dir>` on each rebuild. Without it, `watch` publishes nothing; naming a destination is the opt-in. Only Markdown is published — `watch` has no `--render-dir`, since the live server is the HTML consumer; run `mood build` for static HTML.
+
+```bash
+mood watch . --out-dir ./public
+```
+
+Pointing `--out-dir` at the project's own `.another-mood/<project_dir>/output` restores the pre-isolation behavior, where a concurrent `mood build` or a reader of `output/` can race the rebuild's republish — prefer a separate directory.
 
 ### `--host`
 
@@ -114,7 +128,7 @@ Specifies the port the preview server listens on. Defaults to `5077` (also overr
 mood watch . --port 8080
 ```
 
-To watch multiple `<project_dir>` values at the same time, start one process per project. Output directories are separated per `<project_dir>` and do not collide, but ports do — any process after the first needs `--port` to pick a different port.
+To watch multiple `<project_dir>` values at the same time, start one process per project. By default nothing is published, so their outputs cannot collide; ports do — any process after the first needs `--port` to pick a different port. (If you pass `--out-dir`, give each project a distinct directory.)
 
 ## blueprint
 
@@ -183,7 +197,7 @@ RB_PORT=8080 mood watch .
 | `queries_dir` | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` | — |
 | `templates_dir` | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` | — |
 | `tmp_dir` | (per-run session dir under the system temp dir) | `RB_TMP_DIR` | — |
-| `out_dir` | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` | — |
-| `render_dir` | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` | — |
+| `out_dir` | `build`: `.another-mood/<project_dir>/output`; `watch`: unset (publishes nothing) | `RB_OUT_DIR` | `--out-dir` |
+| `render_dir` | `build`: `.another-mood/<project_dir>/render`; `watch`: not published | `RB_RENDER_DIR` | `--render-dir` (only on `build`) |
 | `host` | `127.0.0.1` | `RB_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `RB_PORT` | `--port` (only on `watch`) |
