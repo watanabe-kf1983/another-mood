@@ -81,6 +81,17 @@ class TestHasWarnings:
         assert report.has_warnings() is True
 
 
+class TestIsInternal:
+    """``is_internal`` keys off the traceback: UserErrors carry none, bugs do."""
+
+    def test_false_without_traceback(self) -> None:
+        assert ErrorEntry(message="run mood init first").is_internal is False
+
+    def test_true_with_traceback(self) -> None:
+        entry = ErrorEntry(message="boom", traceback="Traceback (most recent...)")
+        assert entry.is_internal is True
+
+
 class TestWithException:
     """``with_exception`` keys traceback inclusion on whether the exception
     is user-facing (exposes ``user_error_message``)."""

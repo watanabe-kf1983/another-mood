@@ -36,3 +36,24 @@ class TestBuildResult:
         """``severity="error"`` diagnostics do not flip ``has_warnings``."""
         result = BuildResult(out_dir="x", diagnostics=(_error("schema mismatch"),))
         assert result.has_warnings() is False
+
+
+class TestHasInternalError:
+    def test_false_when_empty(self) -> None:
+        assert BuildResult(out_dir="x").has_internal_error() is False
+
+    def test_false_when_only_user_error(self) -> None:
+        # A UserError-derived entry carries no traceback.
+        result = BuildResult(out_dir="x", errors=(ErrorEntry(message="fix your yaml"),))
+        assert result.has_errors() is True
+        assert result.has_internal_error() is False
+
+    def test_true_when_any_error_carries_traceback(self) -> None:
+        result = BuildResult(
+            out_dir="x",
+            errors=(
+                ErrorEntry(message="fix your yaml"),
+                ErrorEntry(message="boom", traceback="Traceback (most recent...)"),
+            ),
+        )
+        assert result.has_internal_error() is True
