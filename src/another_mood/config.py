@@ -6,9 +6,6 @@ from typing import Any
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from another_mood.components.shared.component.component import ComponentCall
-from another_mood.pipeline.base import ComponentOutput
-
 
 class ConfigValidationError(Exception):
     """Raised when ProjectConfig fails post-construction validation."""
@@ -34,25 +31,16 @@ class ProjectConfig(BaseSettings):
     templates_dir: Path = Field(default=Path(""))
 
     # Output (generated)
-    tmp_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
     render_dir: Path = Field(default=Path(""))
+
+    # Working dir. Unset (None) resolves to a fresh system-temp dir at the
+    # command layer; set RB_TMP_DIR to pin it to a fixed path.
+    tmp_dir: Path | None = Field(default=None)
 
     # Server
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=5077)
-
-    def component_output(self, component: ComponentCall) -> ComponentOutput:
-        """Return ComponentOutput for the given component under tmp_dir."""
-        path = self.tmp_dir / component.name
-        path.mkdir(parents=True, exist_ok=True)
-        return ComponentOutput(path)
-
-    def tmp_subdir(self, *parts: str) -> Path:
-        """Return tmp_dir/<parts>, creating it if missing."""
-        path = self.tmp_dir.joinpath(*parts)
-        path.mkdir(parents=True, exist_ok=True)
-        return path
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""
@@ -91,8 +79,6 @@ class ProjectConfig(BaseSettings):
             values["queries_dir"] = pd / "definition" / "queries"
         if not values.get("templates_dir"):
             values["templates_dir"] = pd / "definition" / "templates"
-        if not values.get("tmp_dir"):
-            values["tmp_dir"] = rb / "tmp"
         if not values.get("out_dir"):
             values["out_dir"] = rb / "output"
         if not values.get("render_dir"):

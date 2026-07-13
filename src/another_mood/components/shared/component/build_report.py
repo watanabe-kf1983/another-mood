@@ -57,6 +57,10 @@ class ErrorEntry:
     message: str
     traceback: str | None = None
 
+    @property
+    def is_internal(self) -> bool:
+        return self.traceback is not None
+
     @classmethod
     def from_data(cls, raw: Mapping[str, object]) -> "ErrorEntry":
         traceback = raw.get("traceback")
