@@ -42,7 +42,7 @@
 
 > **背景: なぜ IRI 形か.** エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
 
-escape 規則は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**は別タスク [C7](node:/tasks/C/tasks/C7) で扱う（設計は [Proposals の C7 節](#c7-fs-固有パス問題の扱い) を参照）。
+escape 規則は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**（パス長超過・Windows 予約名）はエスケープとは別に、パス書き出し側で対処する。
 
 `ucschar`（RFC 3987）のレンジ:
 
@@ -263,46 +263,6 @@ author の明示適用を最低線とする（schema が prose body 型を宣言
 > **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
 
 ## Proposals
-
-### C7: FS 固有パス問題の扱い
-
-escape 規則（文字単位の安全化）で潰せない FS 固有問題を扱う。根本にあるのは、**FS が許容するファイル名の集合と、ユーザが命名する id の集合が一致しない**こと — ユーザが付けた id が、そのままではファイル名にできない場合がある。調査の結果、問題は failure mode で分類され、それぞれ機構が異なる:
-
-| 問題 | failure mode | 機構 |
-|---|---|---|
-| パス長超過 | loud — 全 OS で `OSError`（`ENAMETOOLONG`） | 最外での例外詰め替え |
-| Windows 予約名・末尾ドット | silent — 例外なくデバイス書き込み・名前切り詰め | ユーザ id → パス変換箇所での事前検査 |
-| macOS の NFC/NFD 畳み込み | silent — 別コードポイント列が同一ファイルへ | 入口での一律 NFC 正規化（別課題 [D10](node:/tasks/D/tasks/D10)） |
-
-#### パス長: 最外での OSError 詰め替え
-
-`error_propagation`（`shared/component/errors.py`）の例外捕捉で、`OSError` のうち `errno == ENAMETOOLONG` のみを `UserError` に詰め替える。文言は生の OSError を主役に据え、対処を条件形で添える — 「出力パスが FS の上限を超えました: `<OSError 原文>`。長い id が含まれる場合は改名、またはより浅いディレクトリでビルドしてください（Windows では長パス対応の有効化も）」。それ以外の `OSError`（`ENOSPC` / `EACCES` 等の環境問題・バグ）は詰め替えず素通しする — 誤誘導とバグ隠蔽を避ける。
-
-> **背景: なぜ事前 validation でなく事後捕捉か.** 長さの上限は出力先の絶対パス prefix・OS・FS に依存し、「誰の上限で測るか」が決められない（Linux では正当な長い CJK パスが、Windows の `MAX_PATH`=260 を超え得る — 一律の事前検査は擬陽性を生む）。権威ある信号は実際に投げられた OSError そのもので、「問題が起きる OS でビルドすれば落ちる」で足りる。
-
-> **背景: なぜ最外か、なぜ弱い（条件形の）文言か.** errno が運ぶのは機構（パスが上限を超えた）であって責任（ユーザが直せる）ではない。責任はパスの出自 — ユーザ id 由来か、ツール内部か — で決まるが、汎用の write 層（`save_model` 等）や最外はそれを知らないため、「id を改名せよ」と断定する強い主張はどこにも置けない。原文併記 + 条件形の弱い主張だけが全域で真になり、弱い主張なら出自の知識が不要なので、例外がレポートに化ける直前の単一の最外に置ける（pip / npm が同型）。逆に汎用 write 関数の内部に置いてはいけない — 呼び出し元にはツール固定名の write（`__build_report.yaml` 等）も同居しており、そこで責任を主張すると偽になる。
-
-#### Windows 予約名・末尾ドット: ユーザ id → パス変換箇所での事前検査
-
-古典的 Win32 では予約名（CON / COM1… ± 拡張子、大文字小文字無視）への書き込みは**デバイスへ silent に成功**し、末尾ドット・空白は **silent に剥がされる**ため、OSError 捕捉では原理的に届かない。検出手段はルール検査のみで、stdlib の `ntpath.isreserved`（Python 3.13+）がそのままルールテーブルになる — 予約名 ± 拡張子・末尾ドット/空白をカバーし、純粋な文字列述語なので POSIX でも import して使える。依存追加なし。
-
-予約名も、冒頭で述べた「ユーザの id がそのままではファイル名にできない」一例。したがって検査は generator のページパスに限らず、**ユーザ命名の id がファイルパスのセグメントになる箇所すべて**で要る。`components/shared` に共通の予約名チェック（`Path` を受け、対象セグメントを名指しして `ReservedNameError` を投げる）を置き、各サイトで呼ぶ:
-
-| サイト | パスになる id |
-|---|---|
-| generator ページパス | レコード / エンティティ / prose id（anchor_path 由来） |
-| generator edition ディレクトリ | edition 名（`reports.yaml` のキー。スキーマは `__` 接頭辞・空のみ排除するので予約名は通る） |
-| composer クエリ結果ファイル | クエリ id（`{id}.yaml`。generator より前に中間書き出しするため、レンダされないクエリは page path 検査で拾えない） |
-
-**ソースファイル名由来のパスは対象外** — content_normalizer / query_deriver の出力は入力ファイルの相対パスをなぞる。その名前はビルド中の OS の FS が既に受理済み（予約名ならそもそも Windows でソースとして存在も checkout もできない）で、新たな予約名を導入しない。ファイル名由来 id が持つリスク（prose id 等）は generator の anchor_path 検査が拾う。
-
-全サイト共通で、対象セグメントを名指しして **全 OS 一律で** fail-fast。
-
-> **背景: なぜ全 OS 一律 error か（パス長の「起きる OS で落ちる」との対比）.** 判断原理は同じ「擬陽性コストが決める」— 長さの一律検査には実擬陽性がある（上記）が、予約名は集合が小さく固定で正当な衝突がほぼ無く、対処も id の 1 回改名で終わる。プロジェクトは git 共有で可搬（id を付けた著者と Windows でビルドする人が別人になり得る）ため、「Linux の CI が通れば Windows でも安全」という対称性に価値がある。cargo も `cargo new con` を全 OS で拒否する。検査を preprocess の全 id 一律でなく各パス変換箇所に置くのは、実際にファイルになる id だけを対象にして擬陽性を狭め、そのパスの語彙で名指しできるため。percent-encode で逃がす変種（`CON` → `%43ON`）は不成立 — 英字・ドットは URI の unreserved で、RFC 3986 正規化が decode を許すため、リンクとファイル名が食い違い得る。
-
-#### 別課題 D10: 入口での一律 NFC 正規化
-
-macOS は NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id は silent に同一ファイルへ畳まれる（`PageCollisionError` は文字列キーのため NFC ≠ NFD を衝突と認識できない）。write 側では扱えず、preprocess の入力境界 2 点 — (1) ファイル内容の decode 直後（decode は可逆な全単射・正規化は非可逆な畳み込みで層が別、デコーダのオプションでは実現できない）、(2) ディレクトリ走査で得たファイル名（decoder を通らない経路。prose id の源）— で全テキストを一律 NFC 正規化する。web / Git `core.precomposeunicode` の定石と同型。NFKC は互換分解（`①`→`1`、U+3000→空白）で id を歪めるため不可。実装は小さい。
 
 ### 未決事項
 

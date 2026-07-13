@@ -135,9 +135,8 @@ categories:
           共通の ntpath.isreserved 検査 (全 OS 一律 error) を、ユーザ id がパスになる箇所すべて
           (generator ページパス / edition ディレクトリ / composer クエリ結果ファイル) に埋め込む。
           ソースファイル名由来のパスは FS 受理済みで対象外。NFC/NFD は別課題 D10。
-          設計は anchor-spec.md の Proposals を参照。
         phase: 13
-        proposal: 20-design/70-generator/20-anchor-spec#c7-fs-固有パス問題の扱い
+        done: true
       C8:
         title: inline キーワードの廃止
         phase: 11
@@ -214,9 +213,9 @@ categories:
           macOS が NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id が silent に
           同一出力ファイルへ畳まれる。preprocess の入力境界 2 点 (ファイル内容の decode 直後・
           ディレクトリ走査で得たファイル名) で全テキストを一律 NFC 正規化する。設計は
-          anchor-spec.md の C7 節内の別課題を参照。
+          normalizer.md の Proposals を参照。
         phase: 13
-        proposal: 20-design/70-generator/20-anchor-spec#別課題-d10-入口での一律-nfc-正規化
+        proposal: 20-design/50-normalizer/10-normalizer#入力境界での一律-nfc-正規化-d10
 
   E:
     title: YAML DSL クエリ評価拡充
