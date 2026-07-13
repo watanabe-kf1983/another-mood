@@ -3,9 +3,13 @@
 from pathlib import Path
 from textwrap import dedent
 
+import pytest
 import yaml
 
 from another_mood.components.composer.composer import compose
+from another_mood.components.shared.windows_reserved_name import (
+    WindowsReservedNameError,
+)
 
 
 def _write(path: Path, text: str) -> None:
@@ -86,6 +90,43 @@ class TestCompose:
         assert yaml.safe_load(
             (data_out / "query-results" / "names.yaml").read_text()
         ) == {"names": [{"name": "a"}, {"name": "b"}]}
+
+    def test_rejects_reserved_query_id(self, tmp_path: Path) -> None:
+        # A query whose id is `con` would write query-results/con.yaml — a
+        # Windows device name. Caught here, before the generator, since an
+        # unrendered query never reaches the page-path check. Uses
+        # ``compose.fn`` so the raise surfaces directly rather than as a
+        # recorded build-report error.
+        contents = tmp_path / "contents"
+        _write(
+            contents / "items.yaml",
+            dedent("""\
+                items:
+                  - {name: a, value: 1}
+            """),
+        )
+        queries = tmp_path / "queries"
+        _write(
+            queries / "con_query.yaml",
+            dedent("""\
+                __definition:
+                  queries:
+                    - id: con
+                      from: items
+                      select:
+                        - {item: name, as: name}
+            """),
+        )
+        data_catalog = tmp_path / "data-catalog"
+        data_catalog.mkdir()
+
+        with pytest.raises(WindowsReservedNameError):
+            compose.fn(
+                contents_dir=contents,
+                queries_dir=queries,
+                data_catalog_dir=data_catalog,
+                out_dir=tmp_path / "views",
+            )
 
     def test_empty_queries_dir(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents" / "data"
