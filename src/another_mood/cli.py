@@ -181,6 +181,12 @@ def build(
 @app.command()
 def watch(
     project_dir: str = typer.Argument(help="Project directory"),
+    out_dir: str | None = typer.Option(
+        None,
+        "--out-dir",
+        help="Publish the Markdown output tree here on each rebuild "
+        "(default: publish nothing).",
+    ),
     host: str | None = typer.Option(
         None,
         "--host",
@@ -191,7 +197,9 @@ def watch(
     ),
 ) -> None:
     """Watch for file changes, rebuild incrementally, and serve a live preview."""
-    config = _load_config(project_dir=Path(project_dir), host=host, port=port)
+    config = _load_config(
+        project_dir=Path(project_dir), out_dir=out_dir, host=host, port=port
+    )
     try:
         with command.watch(config, on_report=_build_listener()) as session:
             base = f"http://{_display_host(session.host)}:{session.port}"

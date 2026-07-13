@@ -141,11 +141,17 @@ def publish_stage(workspace: Workspace) -> Task:
     reconcile_out = workspace.component_output(reconcile)
     hugo_out = workspace.component_output(hugo_build)
     publish_out = workspace.component_output(publish)
+    # Publish a tree only where its destination is set (watch may set neither).
+    targets = [
+        (reconcile_out.dir / "data", config.out_dir),
+        (hugo_out.dir / "data", config.render_dir),
+    ]
+    active = [(src, dist) for src, dist in targets if dist is not None]
     call = publish.bind(
         upstream=hugo_out.dir,
         out_dir=publish_out.dir,
-        src_dirs=[reconcile_out.dir / "data", hugo_out.dir / "data"],
-        dist_dirs=[config.out_dir, config.render_dir],
+        src_dirs=[src for src, _ in active],
+        dist_dirs=[dist for _, dist in active],
     )
     return Stage(run_fn=call, watch_paths=[], upstreams=[hugo_out])
 

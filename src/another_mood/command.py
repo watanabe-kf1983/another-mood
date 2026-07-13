@@ -178,6 +178,7 @@ def build(
     returned.  Provided for symmetry with :func:`watch`; one-shot callers
     that only need the final value can omit it and use the return value.
     """
+    config = config.resolved_for_build()
     out_dir = str(config.out_dir)
     workspace = _session_workspace(config)
     result = _to_result(
@@ -208,7 +209,8 @@ def watch(
     ``on_report`` fires after each rebuild with the iteration's BuildResult.
     Cleans up watchers and the preview server on context exit.
     """
-    out_dir = str(config.out_dir)
+    config = config.resolved_for_watch()
+    out_dir = str(config.out_dir or "")
     workspace = _session_workspace(config)
     with pipeline(
         workspace, on_report=_lift(on_report, out_dir)

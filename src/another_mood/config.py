@@ -30,9 +30,10 @@ class ProjectConfig(BaseSettings):
     queries_dir: Path = Field(default=Path(""))
     templates_dir: Path = Field(default=Path(""))
 
-    # Output (generated)
-    out_dir: Path = Field(default=Path(""))
-    render_dir: Path = Field(default=Path(""))
+    # Output (published). Unset (None) means "not published"; build and watch
+    # fill or drop these per mode (see resolved_for_build / resolved_for_watch).
+    out_dir: Path | None = Field(default=None)
+    render_dir: Path | None = Field(default=None)
 
     # Working dir. Unset (None) resolves to a fresh system-temp dir at the
     # command layer; set RB_TMP_DIR to pin it to a fixed path.
@@ -41,6 +42,20 @@ class ProjectConfig(BaseSettings):
     # Server
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=5077)
+
+    def resolved_for_build(self) -> "ProjectConfig":
+        """Fill unset out_dir/render_dir with the ``.another-mood/<project>`` defaults."""
+        rb = _another_mood_root(self.project_dir)
+        return self.model_copy(
+            update={
+                "out_dir": self.out_dir or rb / "output",
+                "render_dir": self.render_dir or rb / "render",
+            }
+        )
+
+    def resolved_for_watch(self) -> "ProjectConfig":
+        """Drop render_dir — watch never publishes HTML — and keep out_dir as given."""
+        return self.model_copy(update={"render_dir": None})
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""
@@ -68,7 +83,6 @@ class ProjectConfig(BaseSettings):
     @classmethod
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         pd = Path(values.get("project_dir", ""))
-        rb = _another_mood_root(pd)
         if not values.get("schema_file"):
             values["schema_file"] = pd / "definition" / "schema.yaml"
         if not values.get("reports_file"):
@@ -79,10 +93,6 @@ class ProjectConfig(BaseSettings):
             values["queries_dir"] = pd / "definition" / "queries"
         if not values.get("templates_dir"):
             values["templates_dir"] = pd / "definition" / "templates"
-        if not values.get("out_dir"):
-            values["out_dir"] = rb / "output"
-        if not values.get("render_dir"):
-            values["render_dir"] = rb / "render"
         return values
 
 
