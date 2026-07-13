@@ -1,12 +1,16 @@
 """Tests for source_loader — parse_yaml, UserStr/Location."""
 
+import unicodedata
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from another_mood.components.shared.user_source.source_loader import (
     Location,
     UserStr,
+    load_prose,
     parse_yaml,
 )
 from another_mood.components.shared.user_source.position_resolver import (
@@ -122,6 +126,57 @@ class TestParseYaml:
         assert resolve_position(["nested", "flag"], result) == Position(
             line=3, column=9
         )
+
+
+# ── NFC normalization at the input boundary (D10) ──────────────────
+
+
+class TestNfcNormalization:
+    """All text is folded to NFC at the two decode/traversal boundaries,
+    so an id differing only in normalization form can't silently collapse
+    onto the same output file on a form-insensitive filesystem (macOS)."""
+
+    def test_yaml_value_normalized_to_nfc(self, tmp_path: Path) -> None:
+        nfd = unicodedata.normalize("NFD", "café")
+        assert nfd != "café"  # sanity: the written value really is decomposed
+        f = tmp_path / "value.yaml"
+        f.write_text(f"id: {nfd}\n", encoding="utf-8")
+        value = parse_yaml(f)["id"]
+        assert value == "café"
+        assert unicodedata.is_normalized("NFC", cast(str, value))
+
+    def test_yaml_key_normalized_to_nfc(self, tmp_path: Path) -> None:
+        nfd = unicodedata.normalize("NFD", "café")
+        f = tmp_path / "key.yaml"
+        f.write_text(f"{nfd}: value\n", encoding="utf-8")
+        (key,) = parse_yaml(f).keys()
+        assert key == "café"
+        assert unicodedata.is_normalized("NFC", key)
+
+    def test_prose_id_from_filename_normalized_to_nfc(self, tmp_path: Path) -> None:
+        # The filename is the id source and never passes through the
+        # decoder, so it needs its own normalization step.
+        nfd_stem = unicodedata.normalize("NFD", "café")
+        f = tmp_path / f"{nfd_stem}.md"
+        f.write_text("# Title\n", encoding="utf-8")
+        record = cast(
+            Sequence[Mapping[str, object]],
+            load_prose(f, tmp_path, mime_type="text/markdown")["prose"],
+        )[0]
+        assert record["id"] == "café"
+        assert unicodedata.is_normalized("NFC", cast(str, record["id"]))
+
+    def test_prose_content_normalized_to_nfc(self, tmp_path: Path) -> None:
+        nfd_body = unicodedata.normalize("NFD", "# Café\n")
+        f = tmp_path / "doc.md"
+        f.write_text(nfd_body, encoding="utf-8")
+        record = cast(
+            Sequence[Mapping[str, object]],
+            load_prose(f, tmp_path, mime_type="text/markdown")["prose"],
+        )[0]
+        content = cast(Mapping[str, object], record["body"])["content"]
+        assert content == "# Café\n"
+        assert unicodedata.is_normalized("NFC", cast(str, content))
 
 
 # ── UserStr / Location ─────────────────────────────────────────────

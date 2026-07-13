@@ -15,6 +15,7 @@ preprocess pipeline:
   with their source location.
 """
 
+import unicodedata
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,6 +78,18 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     return None
 
 
+def _read_text_nfc(src: Path) -> str:
+    """Decode ``src`` as UTF-8 and fold to NFC at this input boundary.
+
+    Decode is a reversible bijection; NFC is a separate, non-invertible
+    fold, so it can't ride on the decoder's options. Normalizing here
+    keeps ids that differ only in canonical form from silently colliding
+    on a form-insensitive filesystem (macOS). NFKC is unusable — its
+    compatibility decomposition (``①`` → ``1``) would distort ids.
+    """
+    return unicodedata.normalize("NFC", src.read_text(encoding="utf-8"))
+
+
 # ── YAML ───────────────────────────────────────────────────────────
 
 
@@ -96,7 +109,7 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
         # because ruamel's YAML() shares mutable internal state across
         # invocations (see components/shared/json_data_model.py).
         loaded = YAML().load(  # type: ignore[no-untyped-call]
-            src.read_text(encoding="utf-8")
+            _read_text_nfc(src)
         )
     except YAMLError as exc:
         mark = getattr(exc, "problem_mark", None)
@@ -194,15 +207,19 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
     extension; the raw text becomes the record ``body``.  The body is
     left uninterpreted — deriving fields like ``title`` from it is the
     job of ``preprocess.prose``.
+
+    The ``id`` comes from the traversed filename, which never passes
+    through the decoder, so it is NFC-folded separately here (see
+    ``_read_text_nfc`` for why).
     """
     rel = src.relative_to(src_dir)
     return {
         "prose": [
             {
-                "id": rel.with_suffix("").as_posix(),
+                "id": unicodedata.normalize("NFC", rel.with_suffix("").as_posix()),
                 "body": {
                     "mime_type": mime_type,
-                    "content": src.read_text(encoding="utf-8"),
+                    "content": _read_text_nfc(src),
                 },
             }
         ]
