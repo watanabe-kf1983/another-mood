@@ -6,9 +6,6 @@ from typing import Any
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from another_mood.components.shared.component.component import ComponentCall
-from another_mood.pipeline.base import ComponentOutput
-
 
 class ConfigValidationError(Exception):
     """Raised when ProjectConfig fails post-construction validation."""
@@ -41,18 +38,6 @@ class ProjectConfig(BaseSettings):
     # Server
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=5077)
-
-    def component_output(self, component: ComponentCall) -> ComponentOutput:
-        """Return ComponentOutput for the given component under tmp_dir."""
-        path = self.tmp_dir / component.name
-        path.mkdir(parents=True, exist_ok=True)
-        return ComponentOutput(path)
-
-    def tmp_subdir(self, *parts: str) -> Path:
-        """Return tmp_dir/<parts>, creating it if missing."""
-        path = self.tmp_dir.joinpath(*parts)
-        path.mkdir(parents=True, exist_ok=True)
-        return path
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""

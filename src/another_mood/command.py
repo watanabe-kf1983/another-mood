@@ -37,6 +37,7 @@ from another_mood.pipeline.render import (
     HugoServerStartupError as WatchStartupError,
 )
 from another_mood.pipeline.stages import pipeline
+from another_mood.pipeline.workspace import Workspace
 
 __all__ = [
     "BuildResult",
@@ -173,7 +174,8 @@ def build(
     that only need the final value can omit it and use the return value.
     """
     out_dir = str(config.out_dir)
-    report = pipeline(config, on_report=_lift(on_report, out_dir)).run()
+    workspace = Workspace(config, config.tmp_dir)
+    report = pipeline(workspace, on_report=_lift(on_report, out_dir)).run()
     return _to_result(report, out_dir)
 
 
@@ -192,8 +194,9 @@ def watch(
     Cleans up watchers and the preview server on context exit.
     """
     out_dir = str(config.out_dir)
+    workspace = Workspace(config, config.tmp_dir)
     with pipeline(
-        config, on_report=_lift(on_report, out_dir)
+        workspace, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
         yield WatchSession(
             host=config.host,
