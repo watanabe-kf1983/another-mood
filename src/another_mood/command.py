@@ -9,9 +9,12 @@ example, per-rebuild reports during watch) is delivered via callback
 arguments (e.g. ``watch(..., on_report=...)``) — never via ``print``.
 """
 
+import shutil
+import tempfile
 from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 from threading import Event
 
@@ -52,6 +55,8 @@ __all__ = [
     "read_doc",
     "watch",
 ]
+
+_logger = getLogger(__name__)
 
 
 # -- Boundary types ----------------------------------------------------------
@@ -174,9 +179,19 @@ def build(
     that only need the final value can omit it and use the return value.
     """
     out_dir = str(config.out_dir)
-    workspace = Workspace(config, config.tmp_dir)
-    report = pipeline(workspace, on_report=_lift(on_report, out_dir)).run()
-    return _to_result(report, out_dir)
+    workspace = _session_workspace(config)
+    result = _to_result(
+        pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
+    )
+    if workspace.temporary:
+        if result.has_internal_error():
+            _logger.error(
+                "build failed internally; kept working dir for post-mortem: %s",
+                workspace.root,
+            )
+        else:
+            shutil.rmtree(workspace.root, ignore_errors=True)
+    return result
 
 
 @contextmanager
@@ -194,7 +209,7 @@ def watch(
     Cleans up watchers and the preview server on context exit.
     """
     out_dir = str(config.out_dir)
-    workspace = Workspace(config, config.tmp_dir)
+    workspace = _session_workspace(config)
     with pipeline(
         workspace, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
@@ -206,6 +221,20 @@ def watch(
 
 
 # -- Helpers -----------------------------------------------------------------
+
+
+def _session_workspace(config: ProjectConfig) -> Workspace:
+    """Build the run Workspace, defaulting its root to a fresh system-temp dir.
+
+    An explicit ``tmp_dir`` (RB_TMP_DIR) is honored and left for the user to
+    manage; otherwise a throwaway system-temp dir is created and marked
+    ``temporary`` so the caller can clean it up.
+    """
+    if config.tmp_dir is not None:
+        return Workspace(config, config.tmp_dir)
+    else:
+        tmp = Path(tempfile.mkdtemp(prefix="another-mood-"))
+        return Workspace(config, tmp, temporary=True)
 
 
 def _to_result(report: BuildReport, out_dir: str) -> BuildResult:

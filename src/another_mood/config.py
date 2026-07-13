@@ -31,9 +31,12 @@ class ProjectConfig(BaseSettings):
     templates_dir: Path = Field(default=Path(""))
 
     # Output (generated)
-    tmp_dir: Path = Field(default=Path(""))
     out_dir: Path = Field(default=Path(""))
     render_dir: Path = Field(default=Path(""))
+
+    # Working dir. Unset (None) resolves to a fresh system-temp dir at the
+    # command layer; set RB_TMP_DIR to pin it to a fixed path.
+    tmp_dir: Path | None = Field(default=None)
 
     # Server
     host: str = Field(default="127.0.0.1")
@@ -76,8 +79,6 @@ class ProjectConfig(BaseSettings):
             values["queries_dir"] = pd / "definition" / "queries"
         if not values.get("templates_dir"):
             values["templates_dir"] = pd / "definition" / "templates"
-        if not values.get("tmp_dir"):
-            values["tmp_dir"] = rb / "tmp"
         if not values.get("out_dir"):
             values["out_dir"] = rb / "output"
         if not values.get("render_dir"):

@@ -18,6 +18,9 @@ class Workspace:
 
     config: ProjectConfig
     root: Path
+    # True when the command layer created root as a throwaway system-temp dir
+    # (vs. a user-pinned RB_TMP_DIR it must not delete).
+    temporary: bool = False
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:
         """Return ComponentOutput for the given component under ``root``."""
