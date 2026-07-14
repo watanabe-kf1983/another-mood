@@ -59,6 +59,12 @@ class ProjectConfig(BaseSettings):
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""
+        cwd = Path.cwd().resolve()
+        if not self.project_dir.resolve().is_relative_to(cwd):
+            raise ConfigValidationError(
+                "Project directory must be under the current directory "
+                f"({cwd}), but points outside it: {self.project_dir}"
+            )
         if not self.project_dir.is_dir():
             raise ConfigValidationError(
                 f"Project directory not found: {self.project_dir}"
@@ -99,21 +105,12 @@ class ProjectConfig(BaseSettings):
 def _another_mood_root(project_dir: Path) -> Path:
     """Resolve the `.another-mood/<project_dir>/` base directory.
 
-    Pathlib's ``/`` swallows the LHS whenever the RHS has an anchor (drive
-    and/or root), so a naive ``Path(".another-mood") / project_dir`` would
-    silently land tmp / output inside the project itself when a rooted
-    ``project_dir`` is passed (e.g. from an MCP agent). Project a relative
-    tail off CWD when possible; fall back to the basename for paths that
-    lie outside CWD.
-
-    ``anchor`` (rather than ``is_absolute()``) is the discriminator: on
-    Windows, ``/some/path`` and ``C:foo`` both have an anchor yet are not
-    absolute, and pathlib still swallows the LHS for them.
+    Output is namespaced by the project's CWD-relative path so distinct
+    projects never collide. ``ProjectConfig.verify`` guarantees
+    ``project_dir`` resolves under CWD, so ``relative_to`` always yields a
+    relative tail — which also sidesteps pathlib's ``/`` swallowing the LHS
+    whenever the RHS has an anchor (a naive ``Path(".another-mood") /
+    project_dir`` would otherwise land output inside a rooted project itself).
     """
-    if not project_dir.anchor:
-        return Path(".another-mood") / project_dir
-    try:
-        tail = project_dir.relative_to(Path.cwd())
-    except ValueError:
-        tail = Path(project_dir.name)
+    tail = project_dir.resolve().relative_to(Path.cwd().resolve())
     return Path(".another-mood") / tail
