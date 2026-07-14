@@ -316,11 +316,14 @@ categories:
         done: true
       G8:
         title: "<projectDir> を CWD 配下に制限"
-        note: |
-          詳細は design/app/config-spec.md「処理対象ディレクトリの CWD 配下制約 (G8)」。
-          現状は CWD 外の絶対パスを basename フォールバックで受け入れている。
+        note: >-
+          <projectDir> が CWD 配下にあることを ProjectConfig.verify() が必須とし、
+          CWD 外を指す場合 (絶対パス・相対 ../ 脱出の両方) はエラーで拒否する。出力キー
+          .another-mood/<CWD 相対 projectDir>/ の前提を守るための制約で、旧 basename
+          フォールバックの lossy な衝突を塞ぐ。out_dir / render_dir / tmp_dir・入力
+          サブパスの RB_* 上書きは対象外。build / watch にのみ効く。
         phase: 13
-        proposal: 20-design/20-app/20-config-spec#処理対象ディレクトリの-cwd-配下制約-g8
+        done: true
       G9:
         title: "mood watch / build の作業ディレクトリと出力 publish を隔離"
         note: >-

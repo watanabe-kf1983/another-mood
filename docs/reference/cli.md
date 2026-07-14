@@ -26,6 +26,8 @@ mood watch .
 
 `<project_dir>` is given as a path relative to the current directory. Input paths are resolved against this directory, and output is written to `.another-mood/<project_dir>/` directly under the current directory.
 
+`build` and `watch` cannot target a `<project_dir>` outside the current directory.
+
 ### Input path resolution
 
 Input paths (the schema file and the contents / queries / templates directories) are resolved relative to `<project_dir>`. Defaults:
