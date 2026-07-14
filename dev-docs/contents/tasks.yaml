@@ -315,7 +315,7 @@ categories:
         phase: 10
         done: true
       G8:
-        title: "<projectDir> / RB_* パスを CWD 配下に制限"
+        title: "<projectDir> を CWD 配下に制限"
         note: |
           詳細は design/app/config-spec.md「処理対象ディレクトリの CWD 配下制約 (G8)」。
           現状は CWD 外の絶対パスを basename フォールバックで受け入れている。
