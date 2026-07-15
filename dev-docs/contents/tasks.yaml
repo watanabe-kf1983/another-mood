@@ -346,11 +346,11 @@ categories:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの正規化-h1-h2
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h2
       H2:
         title: 実装
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの正規化-h1-h2
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h2
       H3:
         title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
         note: |
