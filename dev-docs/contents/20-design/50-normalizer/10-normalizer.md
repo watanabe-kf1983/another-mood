@@ -22,17 +22,76 @@
 
 ## Proposals
 
-### バイナリファイルの正規化 (H1, H2)
+### バイナリファイルの取り扱い (H1, H4-H7)
 
-`contents_dir` には YAML・Markdown のほかにバイナリファイル（PNG, JPG 等）も配置される想定。バイナリファイルの正規化における扱い（パス解決、Composer への受け渡し等）は未決定。Phase 10 タスク [H1, H2](node:/tasks/H/tasks/H1)（仕様確定 + 実装）。
+> H1 (仕様確定) 済み。実装は [H4–H7](node:/tasks/H/tasks/H4) の 4 スライスに分割 (Phase 13、下記「実装の分割」)。
 
-### 散文サブシステムの一般化 (H3)
+`contents_dir` に置かれた YAML・Markdown 以外のすべてのファイルを、内蔵コレクション **`blob`** のレコードとして扱う。名前が指すとおり正確なスコープは「バイナリ」ではなく「**ツールが解釈しない不透明なファイル**」であり、テキストファイル (.csv, .txt, .svg 等) も含む。M6/M7 の blob marker (`x-mood-blob`、walker から opaque) と同じ概念系。
 
-> **未実装** — Phase 10 タスク [H3](node:/tasks/H/tasks/H3)。前提 H1, H2。
+#### 背景: 要求
 
-内蔵スキーマ `{id, title, body}` は body が Typed Value (`mime_type` + `content`) のため、設計上は既に媒体非依存。バイナリファイル取り扱い (H1/H2) を機に、エンティティ名 `prose` を媒体非依存な名前に改名する。
+- ソフトウェア開発ドキュメントには、mermaid.js で表現できない図表・画面レイアウト等を画像として `![]()` で埋め込む必要がある (コア要求)
+- 画像に限らず、動画へのリンク、ファイル仕様書からのサンプル実物 (Excel / CSV 等) へのリンクも同様に扱う
+- 出力ドキュメントの自己完結・可搬性がツールの提供価値 — 外部アップロード先へのリンクで代替しない。帰結として各 edition 出力へバイナリリソースを全コピーする
+- prose の編集時 (エディタ上) から、相対パスで `![]()` / `[]()` が機能すること
+- YAML レコードから id で参照でき、クエリで join できること (例: 画面エンティティ → 画面イメージ図)
 
-下位互換のため、旧名 `prose` は内蔵クエリとして残し、`mime_type` が `text/markdown` のレコードのみを供給する案がある。詳細仕様は H1/H2 の進捗に合わせて確定。
+なお「コンテンツではなくテンプレートの付随物となる静的アセット」(テンプレートが HTML 化したときの CSS 等) は将来の別区分であり、contents には置かず、本仕様の対象外。
+
+#### External Design
+
+**スコープと除外規則** — contents_dir 内の YAML / Markdown 以外の全ファイルが blob になる (従来の silent skip は廃止)。不明拡張子も skip せず `application/octet-stream` で通す。除外はドットファイル・ドットディレクトリのみ (`.DS_Store`・エディタの隠しファイルを一点でカバーする SSG 慣行)。除外・許可リストの設定機構は実需が出てから足す (加算的なので後入れで手戻りしない)。
+
+**データモデル** — レコードは `{id, body: {mime_type}}`。
+
+- id は**拡張子込み**の contents 相対パス。拡張子を落とすと `fig.png` / `fig.jpg` が衝突する。prose の拡張子なし id は「.md が唯一の拡張子だから成立した省略」であり、blob には適用しない
+- `mime_type` は拡張子から導出 (stdlib `mimetypes`)
+- バイト列はデータモデルに載せない (base64 は肥大・メモリ・diff 破壊で却下)。**絶対パスも持たせない** — id が contents 相対パスそのものなので、コピー役は config から実パスを復元できる。絶対パスは診断ビュー・中間 YAML に環境固有情報を焼き付け、可搬性と衝突する
+- body を Typed Value 形 (`mime_type` のみ、`content` は省略) に保つのは prose との構造対称性のため。将来 text/html 等で inline content を持つ余地を残す
+
+##### 背景: prose と別コレクションにする理由
+
+prose は `{% mood_view %}` で埋め込めるレンダリング可能な本文を持つ「ページ素材」、blob は「参照されるリソース」で、テンプレート上の役割が根本的に違う。別コレクションなら、既存の prose を iterate するテンプレート群にバイナリレコードが混入する互換問題もそもそも発生しない。(旧 H3「prose を媒体非依存名へ改名しバイナリを統合」案はこの判断で棄却・タスクもカタログから削除。後継アイデア — text/html の blob を「ページとして解釈する」、画面イメージ図を HTML で作る等 — は body Typed Value の mime_type 分岐の延長として、実需が surface してから検討する)
+
+**パス解決 (相対リンク → node:)** — prose body 内の in-tree 相対リンクのうち .md 以外のターゲット (`![]()` 画像・`[]()` リンクとも) は、preprocess で `node:/blob/<id>` へ正規化し、generate の relink が表示ページ相対 URL へ解決する。既存の .md → `node:/prose/` 機構への相乗り。編集時のエディタプレビューは、相対パス authoring そのものが保証する。contents 外への脱出・スキーム付き・絶対パスは従来どおり verbatim。未解決参照は [anchor-spec.md の未解決契約](../70-generator/20-anchor-spec.md#未解決参照の扱い) に従う。
+
+**YAML からの参照** — `x-ref` で blob id を指す。ツール側の仕事は blob をデータカタログにエンティティ登録するところまでで、それにより既存の FK 検査がそのまま効く。x-ref をどう張るかは利用者のスキーマ設計の問題。
+
+**テンプレートからの参照** — href 系フィルタ (node → URL 解決) で参照する。画像ビルダ関数等の追加ヘルパは実需が出てから。
+
+**出力配置** — 各 edition ルート直下に contents 相対パスをミラー。md 出力 (out_dir) と html 出力 (render_dir) の両方に置く。参照の有無に関わらず全 blob をコピーする (到達可能性解析はしない)。
+
+#### Internal Design 方針
+
+**Composer への受け渡し** — composer を通るのはメタデータレコードのみ。バイト列は normalize にも compose にも入らない。
+
+**バイトの旅程** — 注入点は generate。`contents_dir + id` からバイトを読み、各 edition ツリーへミラーする。
+
+- 背景: generate は templates_dir / reports_file を user 入力として直接読む先例があり、後段ステージの user 入力読みはアーキテクチャの範囲内。edition ルートがどこかの知識は generator の所有物で、後段で注入すると再導出が要る。generate の一点注入なら、下流 2 レーン (md publish 行き / Hugo contentDir 行き) は既存の運搬機構が自動継承し、`mood watch` (G9 以降 publish なし) のライブプレビューにも Hugo contentDir 経由でバイトが届く
+- 注入は**増分 sync** (size + mtime 比較)。clear-and-copy だと watch でテンプレート一文字の変更ごとに動画が全コピーされる
+- contents → ワークスペースは実コピーとする。ソースへのハードリンクは禁止: inode 共有のため、in-place 上書き保存するツール (vim 既定・ffmpeg 等) でソースを更新すると出力が黙って変わる・書きかけが見える。ワークスペース内ホップのハードリンク化は実装後の最適化枠 — 計測して痛くなってから (Windows/NTFS でも `os.link` 可、EXDEV 等は copy fallback が定石)
+
+#### 実装の分割 (H4–H7)
+
+1 スライス = 1 ブランチで、それぞれ実機確認できる単位に直列分割する:
+
+- **H4 — blob レコード化とカタログ登録**: データレーンのみ (バイトはまだ運ばない)。`__entity_data` / `__entity_defs` 診断ビューと FK 検査で確認
+- **H5 — バイトの旅程**: generate の増分 sync + 下流 4 段 (reconcile / prepare_render / Hugo / publish) の貫通。build / watch 出力に実ファイルが並ぶことで確認
+- **H6 — リンク解決**: 相対リンク書き換え・blob ノードのアンカーパス・relink / href・未解決参照検出。prose `![]()` 埋め込みが web / book 両 edition で表示されることで確認 (book が機構的に最も壊れやすい経路)
+- **H7 — 仕上げ**: music ジャケット表示 (x-ref + テンプレート) で受け入れ確認を完遂、`docs/reference` 同期、本 Proposals の整理
+
+#### 受け入れ確認
+
+- showcase/music: アルバムごとのジャケット写真を YAML レコード (x-ref) + テンプレートで表示 (H7)
+- prose `![]()` 相対パス埋め込みの例 — book edition でのリンク解決を含めて確認 (H6)
+
+#### 実装時の確認事項
+
+- Hugo が .html / .md 拡張子の blob を content として解釈しないよう封じる方法 (H5。「HTML をページとして扱う」ユースケースは対象外 — 「背景: prose と別コレクションにする理由」末尾の後継アイデア)
+- `load_model` がバイナリ混在ツリーで YAML 以外を無視すること (H4)
+- blob ミラーパスとテンプレート由来ページパスの衝突検査 (H5)
+- prepare_render の in-place sync (`copy2`) とハードリンクの相性 (truncate が共有 inode を壊す)・削除プレースホルダ (`write_text`) が blob パスへ書かれる問題 (H5)
+- C7 (FS-safe パス) / D10 (NFC) の blob ファイル名への適用 (H4)
 
 ### Unique 制約 (D8, D9)
 

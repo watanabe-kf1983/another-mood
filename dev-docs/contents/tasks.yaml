@@ -337,7 +337,7 @@ categories:
   H:
     title: バイナリファイルの取り扱い
     impl_paths:
-      - src/another_mood/components/preprocess/normalizer.py
+      - src/another_mood/components/preprocess/
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
     spec: 20-design/50-normalizer/10-normalizer
@@ -346,18 +346,36 @@ categories:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの正規化-h1-h2
-      H2:
-        title: 実装
-        phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの正規化-h1-h2
-      H3:
-        title: 散文サブシステムの一般化（媒体非依存化と `prose` 改名）
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+        done: true
+      H4:
+        title: blob レコード化とカタログ登録
         note: |
-          詳細は design/normalizer/normalizer.md「散文サブシステムの一般化 (H3)」。
-          前提 H1, H2。
+          旧 H2 (実装) の分割 1/4。normalize が YAML/MD 以外 (ドットファイル除外) を
+          blob レコード化し、データカタログへ登録。確認は診断ビューと FK 検査。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#散文サブシステムの一般化-h3
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+      H5:
+        title: バイトの旅程 (generate 増分 sync + 下流貫通)
+        note: |
+          旧 H2 の分割 2/4。Hugo の .html 封じ・prepare_render プレースホルダ・
+          出力パス衝突検査を含む。確認は build / watch 出力に実ファイルが並ぶこと。
+        phase: 13
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+      H6:
+        title: リンク解決 (相対リンク → node:/blob → relink / href)
+        note: |
+          旧 H2 の分割 3/4。未解決参照検出を含む。確認は prose `![]()` 埋め込みが
+          web / book 両 edition で表示されること。
+        phase: 13
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+      H7:
+        title: showcase 仕上げ + docs 同期 + Proposals 整理
+        note: |
+          旧 H2 の分割 4/4。music ジャケット表示 (x-ref + テンプレート) で
+          受け入れ確認を完遂。
+        phase: 13
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
 
   J:
     title: プラグインシステム
