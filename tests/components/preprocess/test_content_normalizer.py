@@ -49,7 +49,8 @@ class TestBuildContentsSchema:
                 "prose": [
                     {
                         "id": "doc",
-                        "body": {"mime_type": "text/markdown", "content": "x"},
+                        "mime_type": "text/markdown",
+                        "content": "x",
                     }
                 ]
             }
@@ -68,7 +69,8 @@ class TestBuildContentsSchema:
                 "prose": [
                     {
                         "id": "doc",
-                        "body": {"mime_type": "text/markdown", "content": "x"},
+                        "mime_type": "text/markdown",
+                        "content": "x",
                     }
                 ]
             }

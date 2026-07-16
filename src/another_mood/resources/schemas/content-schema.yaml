@@ -5,8 +5,8 @@ title: ContentSchema
 description: >-
   Built-in schema that defines the `prose` and `blob` entities. Markdown
   files under contents_dir are parsed into prose records (id, title,
-  body); every other file (dotfiles excluded) becomes a blob record (id,
-  mime_type). Both are validated alongside the user's schema.yaml.
+  content); every other file (dotfiles excluded) becomes a blob record
+  (id, mime_type). Both are validated alongside the user's schema.yaml.
 
 type: object
 properties:
@@ -43,11 +43,11 @@ properties:
     title: Prose collection
     description: >-
       Collection of prose records, one per Markdown file in contents_dir.
-      Each record carries the file's id, optional title, and parsed body.
+      Each record carries the file's id, optional title, and content.
     type: array
     items:
       title: Prose record
-      description: One Markdown file parsed into an id / title / body triple.
+      description: One Markdown file parsed into an id / title / content record.
       type: object
       properties:
         id:
@@ -79,15 +79,15 @@ properties:
         headings:
           title: Prose headings
           description: >-
-            Headings found in the Markdown body, in document order, as
+            Headings found in the Markdown content, in document order, as
             link-target nodes. Each carries the GitHub-compatible slug of its
-            text as `id` (deduplicated within the body), the heading text as
+            text as `id` (deduplicated within the content), the heading text as
             `title`, and its `level` (1-6). A cross-document link to a heading
             resolves against these.
           type: array
           items:
             title: Prose heading
-            description: One heading, a link target within the prose body.
+            description: One heading, a link target within the prose content.
             type: object
             properties:
               id:
@@ -95,7 +95,7 @@ properties:
                 description: >-
                   GitHub-compatible slug of the heading text, matching the id
                   the renderer stamps on the heading. Deduplicated within the
-                  body by a `-N` suffix.
+                  content by a `-N` suffix.
                 type: string
               title:
                 title: Heading title
@@ -106,24 +106,19 @@ properties:
                 description: Heading level, 1 (H1) through 6 (H6).
                 type: integer
             required: [id, title, level]
-        body:
-          title: Prose body
+        mime_type:
+          title: Prose MIME type
           description: >-
-            Body of the Markdown file, carrying its MIME type and the raw
-            source text.
-          type: object
-          properties:
-            mime_type:
-              title: Body MIME type
-              description: MIME type of the body content (currently always `text/markdown`).
-              type: string
-            content:
-              title: Body content
-              description: >-
-                Markdown source of the file. Relative links to other prose
-                documents are normalized to their `node:` form
-                (`[t](other.md)` → `[t](node:/prose/<id>)`); the template
-                `relink` filter resolves these back to URLs.
-              type: string
-          required: [mime_type, content]
-      required: [id, body]
+            MIME type of the source (currently always `text/markdown`). A
+            record-level header like a blob record's; the payload it tags is
+            `content`.
+          type: string
+        content:
+          title: Prose content
+          description: >-
+            Markdown source of the file. Relative links to other prose
+            documents are normalized to their `node:` form
+            (`[t](other.md)` → `[t](node:/prose/<id>)`); the template
+            `relink` filter resolves these back to URLs.
+          type: string
+      required: [id, mime_type, content]

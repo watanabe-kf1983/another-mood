@@ -9,8 +9,8 @@ preprocess pipeline:
   originating YAML position.
 * ``load_source`` — dispatch by file type and return data ready for
   schema validation.  Markdown files are wrapped raw (path-derived
-  ``id`` + ``body``); interpreting the body (e.g. title from the H1)
-  is left to ``preprocess.prose``.
+  ``id`` + ``content``); interpreting the content (e.g. title from the
+  H1) is left to ``preprocess.prose``.
 * ``UserStr`` / ``Location`` — value type for user-input strings tagged
   with their source location.
 """
@@ -214,9 +214,9 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
     """Wrap a prose source file into a single ``prose`` record.
 
     The ``id`` is the source path relative to ``src_dir`` without its
-    extension; the raw text becomes the record ``body``.  The body is
-    left uninterpreted — deriving fields like ``title`` from it is the
-    job of ``preprocess.prose``.
+    extension; the raw text becomes the record ``content``, tagged by
+    ``mime_type``.  The content is left uninterpreted — deriving fields
+    like ``title`` from it is the job of ``preprocess.prose``.
 
     The ``id`` comes from the traversed filename, which never passes
     through the decoder, so it is NFC-folded separately here (see
@@ -227,10 +227,8 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
         "prose": [
             {
                 "id": unicodedata.normalize("NFC", rel.with_suffix("").as_posix()),
-                "body": {
-                    "mime_type": mime_type,
-                    "content": _read_text_nfc(src),
-                },
+                "mime_type": mime_type,
+                "content": _read_text_nfc(src),
             }
         ]
     }

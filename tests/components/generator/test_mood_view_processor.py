@@ -125,7 +125,7 @@ class TestMoodViewSubtreeGuard:
 
     _TREE = {
         "albums": [{"id": "a1", "title": "A1"}],
-        "prose": [{"id": "p1", "body": "note"}],
+        "prose": [{"id": "p1", "content": "note"}],
     }
 
     def _render(

@@ -1,12 +1,13 @@
-"""Prose preprocessing — derive prose record fields from its id and body.
+"""Prose preprocessing — derive prose record fields from its id and content.
 
 The source loader wraps a Markdown file into a path-derived ``id`` and a raw
-``body``; it does not interpret the Markdown.  ``preprocess_prose`` does: for
-each Markdown prose record it derives a ``title`` from the first H1, collects
-its ``headings`` as link-target nodes, rewrites the body's relative links to
-``node:/prose/<id>`` form, and reads the record's place in the folder tree
-(``order_key`` / ``depth``) off the id.  A record's body is detected by
-``body.mime_type``, never by file extension.
+``content``, tagged by ``mime_type``; it does not interpret the Markdown.
+``preprocess_prose`` does: for each Markdown prose record it derives a
+``title`` from the first H1, collects its ``headings`` as link-target nodes,
+rewrites the content's relative links to ``node:/prose/<id>`` form, and reads
+the record's place in the folder tree (``order_key`` / ``depth``) off the id.
+A record's Markdown-ness is detected by its ``mime_type``, never by file
+extension.
 """
 
 import posixpath
@@ -23,14 +24,14 @@ from another_mood.components.shared.markdown import (
 
 
 def preprocess_prose(data: Mapping[str, object]) -> Mapping[str, object]:
-    """Return ``data`` with each Markdown prose record's body interpreted.
+    """Return ``data`` with each Markdown prose record's content interpreted.
 
-    For every ``prose`` record with a ``text/markdown`` body, derive a ``title``
-    (first H1, unless one is already set), collect its ``headings`` as
-    link-target nodes, rewrite the body's relative links to ``node:/prose/<id>``
-    form, and add its folder-tree ``order_key`` / ``depth``.  Records without a
-    Markdown body, and data without a list-valued ``prose`` collection, pass
-    through unchanged.
+    For every ``prose`` record with ``text/markdown`` content, derive a
+    ``title`` (first H1, unless one is already set), collect its ``headings``
+    as link-target nodes, rewrite the content's relative links to
+    ``node:/prose/<id>`` form, and add its folder-tree ``order_key`` /
+    ``depth``.  Records with non-Markdown content, and data without a
+    list-valued ``prose`` collection, pass through unchanged.
     """
     return _map_prose_records(data, _interpret)
 
@@ -70,8 +71,9 @@ def _interpret(record: object) -> object:
 
     The passes match on what each needs, not on one another: ``order_key`` /
     ``depth`` come from the id, so *any* prose record gets them; ``title`` and
-    the ``node:`` link rewrite come from a Markdown body, so only those records
-    get them.  A record lacking each pass's shape falls through that pass.
+    the ``node:`` link rewrite come from Markdown content, so only those
+    records get them.  A record lacking each pass's shape falls through that
+    pass.
     """
     return _interpret_markdown(_add_outline(record))
 
@@ -110,24 +112,24 @@ def _interpret_markdown(record: object) -> object:
     """Derive ``title`` / ``headings`` and rewrite links for a Markdown record.
 
     A first-H1 ``title`` is added only when the record has none (an existing
-    one, any value, is kept); ``headings`` (the body's headings as link-target
-    nodes, empty when there are none) is always added; relative links are
-    rewritten to ``node:`` form.  Records without a Markdown body pass through
-    unchanged.
+    one, any value, is kept); ``headings`` (the content's headings as
+    link-target nodes, empty when there are none) is always added; relative
+    links are rewritten to ``node:`` form.  Records with non-Markdown content
+    pass through unchanged.
     """
     match record:
         case {
             "id": str(doc_id),
-            "body": {"mime_type": "text/markdown", "content": str(content)},
+            "mime_type": "text/markdown",
+            "content": str(content),
         }:
             mapping = cast(Mapping[str, object], record)
-            body = cast(Mapping[str, object], mapping["body"])
             doc = parse(content)
             normalized = rewrite_inline_links(doc, _resolver(doc_id))
             new_title = None if "title" in mapping else first_h1(doc)
             return {
                 **mapping,
-                "body": {**body, "content": normalized},
+                "content": normalized,
                 **({"title": new_title} if new_title is not None else {}),
                 "headings": heading_nodes(doc),
             }

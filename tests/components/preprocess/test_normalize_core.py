@@ -66,7 +66,7 @@ class TestIterNormalizedAndWrite:
         data = yaml.safe_load((out / "guide.md.yaml").read_text())
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
-        assert data["prose"][0]["body"]["mime_type"] == "text/markdown"
+        assert data["prose"][0]["mime_type"] == "text/markdown"
 
     def test_markdown_subdirectory_id(
         self, tmp_path: Path, schema: dict[str, object]

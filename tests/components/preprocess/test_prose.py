@@ -6,11 +6,14 @@ from another_mood.components.preprocess.prose import (
 )
 
 
-def _prose(content: str, **extra: object) -> dict[str, object]:
-    """Build loader-shaped prose data: one Markdown record under ``prose``."""
+def _prose(
+    content: str, *, mime_type: str = "text/markdown", **extra: object
+) -> dict[str, object]:
+    """Build loader-shaped prose data: one record under ``prose``."""
     record: dict[str, object] = {
         "id": "doc",
-        "body": {"mime_type": "text/markdown", "content": content},
+        "mime_type": mime_type,
+        "content": content,
         **extra,
     }
     return {"prose": [record]}
@@ -53,15 +56,8 @@ class TestPreprocessProseTitle:
         result = preprocess_prose(_prose("# H1 Title\n", title=123))
         assert _record(result)["title"] == 123
 
-    def test_non_markdown_body_is_skipped(self) -> None:
-        data = {
-            "prose": [
-                {
-                    "id": "doc",
-                    "body": {"mime_type": "text/plain", "content": "# Not parsed\n"},
-                }
-            ]
-        }
+    def test_non_markdown_content_is_skipped(self) -> None:
+        data = _prose("# Not parsed\n", mime_type="text/plain")
         assert "title" not in _record(preprocess_prose(data))
 
     def test_non_prose_data_passes_through(self) -> None:
@@ -70,42 +66,44 @@ class TestPreprocessProseTitle:
 
 
 class TestPreprocessProseLinks:
-    """preprocess_prose: rewrite relative links in each Markdown prose body."""
+    """preprocess_prose: rewrite relative links in each Markdown record's
+    content."""
 
-    def test_rewrites_body_content(self) -> None:
+    def test_rewrites_content(self) -> None:
         result = preprocess_prose(_prose("see [t](other.md)\n", id="a/b/doc"))
-        assert _record(result)["body"] == {
-            "mime_type": "text/markdown",
-            "content": "see [t](node:/prose/a/b/other)\n",
-        }
+        record = _record(result)
+        assert record["content"] == "see [t](node:/prose/a/b/other)\n"
+        assert record["mime_type"] == "text/markdown"
 
     def test_title_and_links_from_one_pass(self) -> None:
         # The single parse derives both: H1 title and a normalized link.
         result = preprocess_prose(_prose("# Doc\n\nsee [t](other.md)\n", id="a/b/doc"))
         record = _record(result)
         assert record["title"] == "Doc"
-        assert record["body"]["content"] == "# Doc\n\nsee [t](node:/prose/a/b/other)\n"  # type: ignore[index]
+        assert record["content"] == "# Doc\n\nsee [t](node:/prose/a/b/other)\n"
 
-    def test_body_without_links_keeps_content_verbatim(self) -> None:
-        # No links to rewrite: the body content passes through untouched (the
+    def test_content_without_links_kept_verbatim(self) -> None:
+        # No links to rewrite: the content passes through untouched (the
         # record still gains its id-derived order_key / depth).
         record = _record(
             preprocess_prose(_prose("Plain prose, no links.\n", id="a/b/doc"))
         )
-        assert record["body"]["content"] == "Plain prose, no links.\n"  # type: ignore[index]
+        assert record["content"] == "Plain prose, no links.\n"
 
-    def test_non_markdown_body_gets_outline_but_keeps_body_verbatim(self) -> None:
-        # order_key / depth are id-derived, so a non-Markdown body gets them
-        # too; only the body (and its links) is left untouched.
-        body = {"mime_type": "text/plain", "content": "[t](x.md)"}
-        record = _record(preprocess_prose({"prose": [{"id": "a/b/doc", "body": body}]}))
+    def test_non_markdown_content_gets_outline_but_kept_verbatim(self) -> None:
+        # order_key / depth are id-derived, so non-Markdown content gets them
+        # too; only the content (and its links) is left untouched.
+        data = _prose("[t](x.md)", mime_type="text/plain", id="a/b/doc")
+        record = _record(preprocess_prose(data))
         assert (record["order_key"], record["depth"]) == ("a/b/doc", 4)
-        assert record["body"] == body
+        assert record["content"] == "[t](x.md)"
+        assert record["mime_type"] == "text/plain"
         assert "title" not in record
 
 
 class TestPreprocessProseHeadings:
-    """preprocess_prose: collect the Markdown body's headings as link targets."""
+    """preprocess_prose: collect the Markdown content's headings as link
+    targets."""
 
     def test_headings_are_collected(self) -> None:
         result = preprocess_prose(_prose("# Title\n\n## エラー処理\n\n### 詳細\n"))
@@ -116,14 +114,14 @@ class TestPreprocessProseHeadings:
         ]
 
     def test_no_headings_is_an_empty_list(self) -> None:
-        # The key is always present for a Markdown body, empty when there are none.
+        # The key is always present for Markdown content, empty when there are none.
         assert _record(preprocess_prose(_prose("Plain prose.\n")))["headings"] == []
 
-    def test_non_markdown_body_has_no_headings(self) -> None:
-        # Headings come from parsing Markdown, so a non-Markdown body gets none —
+    def test_non_markdown_content_has_no_headings(self) -> None:
+        # Headings come from parsing Markdown, so non-Markdown content gets none —
         # like ``title``, the key is simply absent (order_key / depth still apply).
-        body = {"mime_type": "text/plain", "content": "## Not parsed\n"}
-        record = _record(preprocess_prose({"prose": [{"id": "doc", "body": body}]}))
+        data = _prose("## Not parsed\n", mime_type="text/plain")
+        record = _record(preprocess_prose(data))
         assert "headings" not in record
 
 
