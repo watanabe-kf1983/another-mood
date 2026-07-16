@@ -117,6 +117,10 @@ def _interpret_markdown(record: object) -> object:
     links are rewritten to ``node:`` form.  Records with non-Markdown content
     pass through unchanged.
     """
+    # Gate on mime_type, not just content: load_prose currently tags every
+    # prose record text/markdown, so the non-Markdown pass-through is dormant —
+    # kept as the branch key for future Prose-scoped polymorphism (e.g. a
+    # text/html prose interpreted as a page). See task M9.
     match record:
         case {
             "id": str(doc_id),
