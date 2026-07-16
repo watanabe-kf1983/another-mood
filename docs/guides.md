@@ -330,19 +330,18 @@ prose:
     headings:                    # every heading, in order — each a link target
       - { id: ordering-flow,    title: Ordering flow,    level: 1 }
       - { id: placing-an-order, title: Placing an order, level: 2 }
-    body:                        # the file's full Markdown
-      mime_type: text/markdown
-      content: |
-        # Ordering flow
+    mime_type: text/markdown
+    content: |                   # the file's full Markdown
+      # Ordering flow
 
-        Add items to your cart and proceed to checkout.
+      Add items to your cart and proceed to checkout.
 
-        ## Placing an order
+      ## Placing an order
 
-        Review your cart, then confirm.
+      Review your cart, then confirm.
 ```
 
-One file = one record, and the fields `id` / `title` / `headings` / `body` are defined by the built-in schema. How to embed `body.content` is covered in detail in the [Templates](#templates) chapter.
+One file = one record, and the fields `id` / `title` / `headings` / `mime_type` / `content` are defined by the built-in schema. How to embed `content` is covered in detail in the [Templates](#templates) chapter.
 
 ## Queries
 
@@ -497,11 +496,11 @@ The pairing is a convenience, not a rule — links and `{% mood_view %}` calls c
 
 ### Embedding a Markdown body
 
-The `body` field of a prose record holds two subfields, `mime_type` and `content`. To embed the body in a template, pipe `.content` through [`relink`](reference/template.md#relink) — it emits the Markdown as-is and resolves any `node:` cross-references the body links to:
+A prose record's Markdown lives in its `content` field. To embed it in a template, pipe `content` through [`relink`](reference/template.md#relink) — it emits the Markdown as-is and turns any cross-references the prose makes to your other pages into working URLs:
 
 ```jinja2
-{# embed the prose body #}
-{{ body.content | relink }}
+{# embed the prose content #}
+{{ content | relink }}
 ```
 
 For details, see [Schema — Built-in schema: prose](reference/schema.md#built-in-schema-prose).
