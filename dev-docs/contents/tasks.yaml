@@ -459,7 +459,7 @@ categories:
           なので、H4-H7 完了直後、利用者が blob 参照テンプレートを書き始める前に
           実施する。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#prose-レコードの-body-廃止-m9
+        done: true
 
   N:
     title: レンダリング / 出力形式

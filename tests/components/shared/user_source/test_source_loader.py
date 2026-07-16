@@ -169,14 +169,14 @@ class TestNfcNormalization:
         assert unicodedata.is_normalized("NFC", cast(str, record["id"]))
 
     def test_prose_content_normalized_to_nfc(self, tmp_path: Path) -> None:
-        nfd_body = unicodedata.normalize("NFD", "# Café\n")
+        nfd_content = unicodedata.normalize("NFD", "# Café\n")
         f = tmp_path / "doc.md"
-        f.write_text(nfd_body, encoding="utf-8")
+        f.write_text(nfd_content, encoding="utf-8")
         record = cast(
             Sequence[Mapping[str, object]],
             load_prose(f, tmp_path, mime_type="text/markdown")["prose"],
         )[0]
-        content = cast(Mapping[str, object], record["body"])["content"]
+        content = record["content"]
         assert content == "# Café\n"
         assert unicodedata.is_normalized("NFC", cast(str, content))
 

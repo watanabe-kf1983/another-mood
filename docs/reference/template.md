@@ -260,7 +260,7 @@ It removes only the *common* minimum, so lines nested deeper than their siblings
 
 `value | under_heading("##")` shifts the headings in an embedded Markdown fragment down so they nest under an enclosing heading. The argument is that enclosing level *as you see it at the call site* — a run of `#` — so every heading in the fragment moves down by that many levels: a fragment's own `#` title becomes `###`, nesting as a subsection directly under the `## …` heading above it. Levels never exceed `######` (H6), so a fragment shifted past the bottom collapses onto it.
 
-Use it as a block filter wrapping embedded output, or piped on a prose body:
+Use it as a block filter wrapping embedded output, or piped on prose content:
 
 ```jinja2
 ## Members
@@ -269,23 +269,23 @@ Use it as a block filter wrapping embedded output, or piped on a prose body:
 {% mood_view "member.md" with member %}
 {% endfilter %}
 
-{{ body.content | under_heading("##") }}
+{{ content | under_heading("##") }}
 ```
 
 Only the fragment's own top-level headings move. A heading quoted inside a blockquote or nested in a list item, a setext heading (the `===` / `---` underline style), and `#` inside a code fence are all left untouched. Like the other Markdown-emitting filters here, it inserts its result as-is — no `| safe` needed.
 
 ### `relink`
 
-`body | relink` resolves the `node:` links in a prose body to working URLs. A prose body refers to another node by linking to its [anchor path](#anchor-paths) under the `node:` scheme — `[text](node:/anchor/path)` — and `relink` rewrites each to the same relative URL [`link`](#link) would build for that node:
+`content | relink` resolves the `node:` links in prose content to working URLs. Prose content refers to another node by linking to its [anchor path](#anchor-paths) under the `node:` scheme — `[text](node:/anchor/path)` — and `relink` rewrites each to the same relative URL [`link`](#link) would build for that node:
 
 ```jinja2
-{{ prose.body.content | relink }}
+{{ prose.content | relink }}
 ```
 
-This is the standard way to embed a prose body: it emits the Markdown as-is (no [escaping](#markdown-escaping), like the other Markdown-emitting filters here — so no `| safe`) and resolves any cross-references it carries. Link resolution is its only job, so compose it with [`under_heading`](#under_heading) to also nest the body's headings under an enclosing one:
+This is the standard way to embed prose content: it emits the Markdown as-is (no [escaping](#markdown-escaping), like the other Markdown-emitting filters here — so no `| safe`) and resolves any cross-references it carries. Link resolution is its only job, so compose it with [`under_heading`](#under_heading) to also nest its headings under an enclosing one:
 
 ```jinja2
-{{ prose.body.content | relink | under_heading("##") }}
+{{ prose.content | relink | under_heading("##") }}
 ```
 
 Only inline links are rewritten; a `node:` written inside a code span or fence is left untouched. An unresolved `node:` reference drops its destination and keeps the link text as a conspicuous `[text]`, the same as [`link`](#link) for a [missing node](#node).
