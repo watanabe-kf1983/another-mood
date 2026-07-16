@@ -1,1 +1,1 @@
-{{ body.content | relink }}
+{{ content | relink }}
