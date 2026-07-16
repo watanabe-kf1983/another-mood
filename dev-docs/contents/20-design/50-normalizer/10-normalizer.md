@@ -42,16 +42,16 @@
 
 **スコープと除外規則** — contents_dir 内の YAML / Markdown 以外の全ファイルが blob になる (従来の silent skip は廃止)。不明拡張子も skip せず `application/octet-stream` で通す。除外はドットファイル・ドットディレクトリのみ (`.DS_Store`・エディタの隠しファイルを一点でカバーする SSG 慣行)。除外・許可リストの設定機構は実需が出てから足す (加算的なので後入れで手戻りしない)。
 
-**データモデル** — レコードは `{id, body: {mime_type}}`。
+**データモデル** — レコードは `{id, mime_type}`。
 
 - id は**拡張子込み**の contents 相対パス。拡張子を落とすと `fig.png` / `fig.jpg` が衝突する。prose の拡張子なし id は「.md が唯一の拡張子だから成立した省略」であり、blob には適用しない
-- `mime_type` は拡張子から導出 (stdlib `mimetypes`)
+- `mime_type` は拡張子から導出 (stdlib `mimetypes`)。id / mime_type ともレコード直下のヘッダ (エンベロープ規約は [M9](node:/tasks/M/tasks/M9) 参照)。**OS の mime ソース (`/etc/mime.types`・Windows レジストリ) は読まず、Python 同梱の凍結表のみ引く** (`MimeTypes(filenames=())`)。module-level の `mimetypes.guess_type` は環境ごとに同じ拡張子を別の型に解決し、それが診断ビュー・中間 YAML に焼き付いて可搬性を壊す (絶対パスを持たせない理由と同根)。凍結表が知らない拡張子 (フォント・office 形式等) は環境で揺れる代わりに octet-stream に落とす
 - バイト列はデータモデルに載せない (base64 は肥大・メモリ・diff 破壊で却下)。**絶対パスも持たせない** — id が contents 相対パスそのものなので、コピー役は config から実パスを復元できる。絶対パスは診断ビュー・中間 YAML に環境固有情報を焼き付け、可搬性と衝突する
-- body を Typed Value 形 (`mime_type` のみ、`content` は省略) に保つのは prose との構造対称性のため。将来 text/html 等で inline content を持つ余地を残す
+- **body は持たせない** — blob は payload (content) を持たないので、mime_type を包む階層に指すものがない。H1 で「prose との構造対称性」を根拠に空の `body` を持たせたのは誤りで、M9 で prose 側もフラット化し `{id, ..., mime_type, content}` に揃える。将来 text/html 等で inline content を持つ余地はレコード直下への `content` 追加で足りる (body 不要)
 
 ##### 背景: prose と別コレクションにする理由
 
-prose は `{% mood_view %}` で埋め込めるレンダリング可能な本文を持つ「ページ素材」、blob は「参照されるリソース」で、テンプレート上の役割が根本的に違う。別コレクションなら、既存の prose を iterate するテンプレート群にバイナリレコードが混入する互換問題もそもそも発生しない。(旧 H3「prose を媒体非依存名へ改名しバイナリを統合」案はこの判断で棄却・タスクもカタログから削除。後継アイデア — text/html の blob を「ページとして解釈する」、画面イメージ図を HTML で作る等 — は body Typed Value の mime_type 分岐の延長として、実需が surface してから検討する)
+prose は `{% mood_view %}` で埋め込めるレンダリング可能な本文を持つ「ページ素材」、blob は「参照されるリソース」で、テンプレート上の役割が根本的に違う。別コレクションなら、既存の prose を iterate するテンプレート群にバイナリレコードが混入する互換問題もそもそも発生しない。(旧 H3「prose を媒体非依存名へ改名しバイナリを統合」案はこの判断で棄却・タスクもカタログから削除。後継アイデア — text/html の blob を「ページとして解釈する」、画面イメージ図を HTML で作る等 — はレコード直下 mime_type の分岐の延長として、実需が surface してから検討する)
 
 **パス解決 (相対リンク → node:)** — prose body 内の in-tree 相対リンクのうち .md 以外のターゲット (`![]()` 画像・`[]()` リンクとも) は、preprocess で `node:/blob/<id>` へ正規化し、generate の relink が表示ページ相対 URL へ解決する。既存の .md → `node:/prose/` 機構への相乗り。編集時のエディタプレビューは、相対パス authoring そのものが保証する。contents 外への脱出・スキーム付き・絶対パスは従来どおり verbatim。未解決参照は [anchor-spec.md の未解決契約](../70-generator/20-anchor-spec.md#未解決参照の扱い) に従う。
 

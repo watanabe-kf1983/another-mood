@@ -10,7 +10,9 @@ import pytest
 from another_mood.components.shared.user_source.source_loader import (
     Location,
     UserStr,
+    load_blob,
     load_prose,
+    load_source,
     parse_yaml,
 )
 from another_mood.components.shared.user_source.position_resolver import (
@@ -177,6 +179,88 @@ class TestNfcNormalization:
         content = cast(Mapping[str, object], record["body"])["content"]
         assert content == "# Café\n"
         assert unicodedata.is_normalized("NFC", cast(str, content))
+
+    def test_blob_id_from_filename_normalized_to_nfc(self, tmp_path: Path) -> None:
+        # Like a prose id, a blob id is a traversed filename that never
+        # passes through the decoder, so it is folded separately.
+        nfd_stem = unicodedata.normalize("NFD", "café")
+        f = tmp_path / f"{nfd_stem}.png"
+        f.write_bytes(b"\x89PNG")
+        record = _blob_record(load_blob(f, tmp_path))
+        assert record["id"] == "café.png"
+        assert unicodedata.is_normalized("NFC", cast(str, record["id"]))
+
+
+# ── Blob ───────────────────────────────────────────────────────────
+
+
+def _blob_record(data: Mapping[str, object]) -> Mapping[str, object]:
+    return cast(Sequence[Mapping[str, object]], data["blob"])[0]
+
+
+class TestLoadBlob:
+    """load_blob: wrap an opaque contents file into a blob record."""
+
+    def test_record_shape_keeps_extension_and_no_bytes(self, tmp_path: Path) -> None:
+        f = tmp_path / "figs" / "diagram.png"
+        f.parent.mkdir()
+        f.write_bytes(b"\x89PNG\r\n")
+        assert _blob_record(load_blob(f, tmp_path)) == {
+            "id": "figs/diagram.png",
+            "mime_type": "image/png",
+        }
+
+    def test_unknown_extension_falls_back_to_octet_stream(self, tmp_path: Path) -> None:
+        f = tmp_path / "sample.unknownext"
+        f.write_bytes(b"\x00\x01")
+        assert (
+            _blob_record(load_blob(f, tmp_path))["mime_type"]
+            == "application/octet-stream"
+        )
+
+    def test_mime_type_ignores_os_mime_registry(self, tmp_path: Path) -> None:
+        # ``.xlsx`` is absent from Python's frozen table but present in most
+        # OS mime sources (/etc/mime.types, the Windows registry). Resolving
+        # it to the opaque default pins that derivation consults only the
+        # builtin table, so a blob's mime_type stays identical across
+        # machines (the module-level mimetypes.guess_type would not).
+        f = tmp_path / "report.xlsx"
+        f.write_bytes(b"PK\x03\x04")
+        assert (
+            _blob_record(load_blob(f, tmp_path))["mime_type"]
+            == "application/octet-stream"
+        )
+
+
+class TestLoadSourceBlobDispatch:
+    """load_source: non-YAML/Markdown files become blobs; hidden ones are skipped."""
+
+    def test_non_yaml_markdown_becomes_blob(self, tmp_path: Path) -> None:
+        f = tmp_path / "data.csv"
+        f.write_text("a,b\n1,2\n")
+        data = load_source(f, tmp_path)
+        assert data is not None
+        assert _blob_record(data) == {
+            "id": "data.csv",
+            "mime_type": "text/csv",
+        }
+
+    @pytest.mark.parametrize("rel", [".DS_Store", ".hidden/photo.png", ".gitkeep"])
+    def test_dotfile_and_dotdir_excluded(self, tmp_path: Path, rel: str) -> None:
+        # The one skip that survives: a dotfile is cruft in any source tree,
+        # so it must not reach validation (a .gitkeep lives in queries_dir).
+        f = tmp_path / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"x")
+        assert load_source(f, tmp_path) is None
+
+    def test_yaml_and_markdown_still_parsed(self, tmp_path: Path) -> None:
+        yaml_file = tmp_path / "d.yaml"
+        yaml_file.write_text("k: v\n")
+        md_file = tmp_path / "d.md"
+        md_file.write_text("# Title\n")
+        assert load_source(yaml_file, tmp_path) == {"k": "v"}
+        assert "prose" in cast(Mapping[str, object], load_source(md_file, tmp_path))
 
 
 # ── UserStr / Location ─────────────────────────────────────────────

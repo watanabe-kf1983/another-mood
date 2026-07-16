@@ -15,6 +15,7 @@ preprocess pipeline:
   with their source location.
 """
 
+import mimetypes
 import unicodedata
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
@@ -70,12 +71,21 @@ class UserStr(str):
 
 
 def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
-    """Parse a source file into data, or None if the file type is not recognized."""
+    """Parse a source file into data — YAML / Markdown, else a ``blob``
+    record — or None if it is hidden (a dotfile or under a dotdirectory).
+
+    A source tree with no ``blob`` collection in its schema (queries_dir)
+    rejects such a file at validation rather than skipping it silently.
+    """
     if FileType.MARKDOWN.match(src):
         return load_prose(src, src_dir, mime_type="text/markdown")
     if FileType.YAML.match(src):
         return parse_yaml(src)
-    return None
+    return None if _is_hidden(src, src_dir) else load_blob(src, src_dir)
+
+
+def _is_hidden(src: Path, src_dir: Path) -> bool:
+    return any(part.startswith(".") for part in src.relative_to(src_dir).parts)
 
 
 def _read_text_nfc(src: Path) -> str:
@@ -224,3 +234,37 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
             }
         ]
     }
+
+
+# ── Blob ───────────────────────────────────────────────────────────
+
+
+def load_blob(src: Path, src_dir: Path) -> Mapping[str, object]:
+    """Wrap a non-YAML/Markdown file into a ``blob`` record, keyed by its
+    contents-relative path with the extension kept (unlike a prose id)."""
+    rel = src.relative_to(src_dir)
+    return {
+        "blob": [
+            {
+                "id": unicodedata.normalize("NFC", rel.as_posix()),
+                "mime_type": _guess_mime_type(src),
+            }
+        ]
+    }
+
+
+# A MimeTypes built from no filenames uses only Python's frozen builtin
+# table.  The module-level ``mimetypes.guess_type`` instead reads OS mime
+# sources (``/etc/mime.types``, the Windows registry), so it resolves the
+# same extension differently across machines — and a blob's mime_type is
+# baked into the diagnostic views and intermediate YAML, where per-machine
+# variance breaks portability (the same reason blob ids carry no absolute
+# path).  Builtin-only is deterministic per Python version; extensions the
+# frozen table doesn't know (fonts, office formats) fall back to the opaque
+# default rather than resolving one way here and another way there.
+_MIME_TYPES = mimetypes.MimeTypes(filenames=())
+
+
+def _guess_mime_type(src: Path) -> str:
+    mime_type, _ = _MIME_TYPES.guess_type(src.name)
+    return mime_type or "application/octet-stream"

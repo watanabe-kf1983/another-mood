@@ -3,12 +3,42 @@
 
 title: ContentSchema
 description: >-
-  Built-in schema that defines the `prose` entity. Markdown files under
-  contents_dir are parsed into prose records (id, title, body) and
-  validated alongside the user's schema.yaml.
+  Built-in schema that defines the `prose` and `blob` entities. Markdown
+  files under contents_dir are parsed into prose records (id, title,
+  body); every other file (dotfiles excluded) becomes a blob record (id,
+  mime_type). Both are validated alongside the user's schema.yaml.
 
 type: object
 properties:
+  blob:
+    title: Blob collection
+    description: >-
+      Collection of blob records, one per opaque (non-YAML/Markdown) file
+      in contents_dir, dotfiles and dotdirectories excluded. Each record
+      names the file by id and MIME type; the bytes themselves stay out of
+      the data model and are mirrored into each edition at generate time.
+    type: array
+    items:
+      title: Blob record
+      description: One opaque contents file, referenced by id.
+      type: object
+      properties:
+        id:
+          title: Blob id
+          description: >-
+            Contents-relative path of the file, extension included — unlike
+            a prose id, which drops it. The extension distinguishes
+            `fig.png` from `fig.jpg`, which would otherwise collide.
+          type: string
+        mime_type:
+          title: Blob MIME type
+          description: >-
+            MIME type derived from the file extension (stdlib `mimetypes`),
+            or `application/octet-stream` when unknown. A record-level
+            header like a prose record's; a blob carries no payload of its
+            own (the bytes live in the source file, not the data model).
+          type: string
+      required: [id, mime_type]
   prose:
     title: Prose collection
     description: >-
