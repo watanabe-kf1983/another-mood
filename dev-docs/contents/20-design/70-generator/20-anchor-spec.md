@@ -27,7 +27,7 @@
 
 #### Escape 規則
 
-アンカーパスは **IRI**（RFC 3987）として扱う。URL fragment / パスとして使う以上 `/` を区切りに予約するため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**（prose は例外、下記）。
+アンカーパスは **IRI**（RFC 3987）として扱う。URL fragment / パスとして使う以上 `/` を区切りに予約するため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**（組み込みの `prose` / `blob` は例外、下記）。
 
 それ以外の文字は **IRI エスケープ**で正規化する:
 
@@ -54,16 +54,16 @@ A0–D7FF, F900–FDCF, FDF0–FFEF,
 
 #### Prose の例外
 
-`prose` entity に限り、アンカーパスの構成に二つの例外を置く。
+（`/`-素通しは組み込みコレクション共通で `blob` にも及ぶ。見出し `#slug` 畳みは prose 固有。）
 
-**id 内の `/` は素通し** — escape せずにアンカーパスへそのまま埋め込む。理由:
+**id 内の `/` は素通し** — 組み込みの `prose` / `blob` entity に限り、id 内の `/` を escape せずにアンカーパスへそのまま埋め込む。理由:
 
-- `prose` の id は contents/ 内ファイルの相対パスから生成され、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture` のような可読性の低い文字列になる
-- `prose` は flat な配列 entity で sub-entity を持たないため、resolver が `prose/` 以降を「単一の id」として扱えば曖昧性は発生しない
+- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[normalizer.md](../50-normalizer/10-normalizer.md)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
+- `prose` / `blob` はいずれも flat な配列 entity で sub-entity を持たないため、resolver が `prose/`・`blob/` 以降を「単一の id」として扱えば曖昧性は発生しない
 
-この例外は `prose` に固有のものとして明示的に定義する。一般化（「sub-entity を持たない配列 entity 一般に適用」等）はしない — 利用者 entity の構造変化に伴う将来の曖昧性混入を避けるため。
+この例外は **組み込みコレクション（`prose` / `blob`）に固有** のものとして明示的に定義する。id 形がシステム側で固定されている（contents 相対パス）ため将来も曖昧性は生じない。一方、`/` を含む任意の id への一般化はしない — 利用者 entity は構造が変わりうるため、その id を素通しにすると将来曖昧性が混入する。
 
-**見出しは `#slug` に畳む** — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
+**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
 
 `#` は `/` と同様に raw で挿入する構造的セパレータ。slug は github 互換で `#` を含まず、id 内の `#` は `%23` に escape されるため、anchor_path 中のリテラル `#` は見出し区切りの一個だけ。「`prose/` 以降は単一 id」の前提も、`#` の手前までを単一 id と読み替えることでそのまま保たれ、`/`-曖昧性は生じない。
 
@@ -100,6 +100,10 @@ prose:                             # flat list、id はファイル相対パス
       - { id: エラー処理, title: エラー処理, level: 2 }
   - id: design/normalizer/schema-spec
     title: Schema Specification
+
+blob:                              # flat list、id は拡張子込みファイル相対パス
+  - id: covers/cover.png
+    mime_type: image/png
 ```
 
 | アンカーパス | 指す対象 |
@@ -113,6 +117,7 @@ prose:                             # flat list、id はファイル相対パス
 | `/prose/design/architecture` | Architecture 散文（id 内 `/` を素通し） |
 | `/prose/design/architecture#エラー処理` | Architecture 本文中の見出し（`headings` セグメントは畳む） |
 | `/prose/design/normalizer/schema-spec` | Schema Specification 散文 |
+| `/blob/covers/cover.png` | cover.png への blob 参照（id 内 `/` を素通し、拡張子込み） |
 
 アンカーパスは **データツリー上の到達経路そのもの** で構成されるため、ネストしたリスト要素間で id が重複してもアンカーパスは衝突しない。
 

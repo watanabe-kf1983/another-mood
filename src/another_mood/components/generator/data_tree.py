@@ -12,6 +12,11 @@ from typing import Any, cast
 
 from another_mood.components.generator.url import url_escape
 
+# The built-in content collections, whose contents-relative-path ids keep `/`
+# raw in the anchor path. Not generalized to every `/`-bearing id — a user
+# entity's structure can change and reintroduce ambiguity (anchor-spec.md#prose-の例外).
+_PATH_BASED_ID_TYPES = frozenset({"prose.item", "blob.item"})
+
 
 class Node(ABC):
     """An anchorable data-tree node that links back to its container.
@@ -112,13 +117,10 @@ class _NodeMeta:
     def anchor_path(self) -> str:
         """Anchor path — absolute, `/`-rooted data-tree path.
 
-        ``/`` at the root; every other node is the parent's path plus
-        its escaped segment.  The leading ``/`` marks the path as
-        absolute within the page's data tree (distinct from a relative
-        reference).  Each segment is IRI-escaped via ``url_escape``, save
-        two ``prose`` exceptions: a prose record keeps ``/`` in its id
-        unencoded so path-shaped ids stay readable, and a prose heading
-        folds the ``headings`` segment into a ``#slug`` fragment.
+        ``/`` at the root; every other node is the parent's path plus its
+        segment, IRI-escaped via ``url_escape`` (save two exceptions handled
+        below).  The leading ``/`` marks the path as absolute within the
+        page's data tree, distinct from a relative reference.
         """
         parent = self._node._parent
         if parent is None:
@@ -129,7 +131,7 @@ class _NodeMeta:
             # ``#`` is a structural separator, and the github slug must
             # match the renderer's native heading id, so neither is escaped.
             return f"{record._meta.anchor_path}#{self._node._segment}"
-        safe = "/" if self._is_prose_record() else ""
+        safe = "/" if self.origin_item_type in _PATH_BASED_ID_TYPES else ""
         seg = url_escape(self._node._segment, safe=safe)
         parent_path = parent._meta.anchor_path
         # The root path already ends in ``/``; avoid doubling it.
@@ -157,9 +159,6 @@ class _NodeMeta:
         natively, so a stamped ``<a id>`` would duplicate it.
         """
         return not self._is_prose_heading()
-
-    def _is_prose_record(self) -> bool:
-        return self.origin_item_type == "prose.item"
 
     def _is_prose_heading(self) -> bool:
         return self.origin_item_type == "prose.item.headings.item"
@@ -223,7 +222,7 @@ def build_node_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
     root is reachable as ``result["/"]``.  Only wrapped nodes appear —
     id-less Array elements and nested Arrays pass through raw (see
     :func:`wrap_tree`) and carry no anchor path.  Built on a flat
-    full-path key so the ``prose`` ``/``-keeping exception needs no
+    full-path key so the prose/blob ``/``-keeping exception needs no
     special case here: each node's own ``anchor_path`` already encodes
     it.
     """
@@ -262,8 +261,8 @@ def child(node: Node, seg: object) -> Node | None:
 
     ``seg`` is a record's ``id`` (array element) or a key (mapping entry) —
     both recorded on the child as ``_segment``, so a single match resolves
-    either container kind, and a path-shaped id (e.g. a ``prose`` record)
-    matches its raw value without escaping.  A free function over the node
+    either container kind, and a path-shaped id (a ``prose`` or ``blob``
+    record) matches its raw value without escaping.  A free function over the node
     tree like :func:`iter_nodes` / :func:`nearest_ancestor`, rather than a
     method, so it cannot shadow a data key on the dict/list-subclass nodes.
     """

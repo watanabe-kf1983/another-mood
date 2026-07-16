@@ -98,13 +98,14 @@ class TestIterNormalizedAndWrite:
         assert (out / "items.yml.yaml").exists()
         assert (out / "items.md.yaml").exists()
 
-    def test_unrecognized_extensions_are_ignored(
+    def test_unrecognized_extensions_become_blobs(
         self, tmp_path: Path, schema: dict[str, object]
     ) -> None:
         src = tmp_path / "contents"
         src.mkdir()
         (src / "data.yaml").write_text("items:\n  - name: a\n")
-        # Files with unsupported extensions must not be treated as YAML.
+        # Files with unsupported extensions must not be treated as YAML:
+        # this one would raise if parsed, and instead becomes a blob.
         (src / "notes.txt").write_text("not valid yaml: { [")
         (src / "README").write_text("project readme")
 
@@ -112,8 +113,13 @@ class TestIterNormalizedAndWrite:
         _normalize(src, out, schema)
 
         assert (out / "data.yaml.yaml").exists()
-        assert not (out / "notes.txt.yaml").exists()
-        assert not (out / "README.yaml").exists()
+        assert yaml.safe_load((out / "notes.txt.yaml").read_text()) == {
+            "blob": [{"id": "notes.txt", "mime_type": "text/plain"}]
+        }
+        # No extension to guess from → the opaque default.
+        assert yaml.safe_load((out / "README.yaml").read_text()) == {
+            "blob": [{"id": "README", "mime_type": "application/octet-stream"}]
+        }
 
 
 class TestCheck:

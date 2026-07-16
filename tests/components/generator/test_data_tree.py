@@ -189,13 +189,22 @@ class TestMetaAnchorPath:
         assert b == "/erds/order-flow/entities/user"
         assert a != b
 
-    def test_slash_in_id_is_percent_encoded_outside_prose(self) -> None:
+    def test_slash_in_id_is_percent_encoded_for_user_entity(self) -> None:
+        # The `/`-keeping exception is confined to the built-in prose/blob
+        # collections; a user entity's `/`-bearing id is encoded.
         root = wrap_tree({"items": [{"id": "a/b"}]})
         assert root["items"][0]._meta.anchor_path == "/items/a%2Fb"
 
     def test_slash_in_id_is_kept_for_prose(self) -> None:
         root = wrap_tree({"prose": [{"id": "design/architecture"}]})
         assert root["prose"][0]._meta.anchor_path == "/prose/design/architecture"
+
+    def test_slash_in_id_is_kept_for_blob(self) -> None:
+        # A blob id is a contents-relative path like a prose id, so it shares
+        # the exception — `covers/fig.png` stays raw, not `covers%2Ffig.png`.
+        root = wrap_tree({"blob": [{"id": "covers/neon_after_rain.png"}]})
+        expected = "/blob/covers/neon_after_rain.png"
+        assert root["blob"][0]._meta.anchor_path == expected
 
     def test_space_in_id_is_percent_encoded_even_in_prose(self) -> None:
         root = wrap_tree({"prose": [{"id": "design/with space"}]})

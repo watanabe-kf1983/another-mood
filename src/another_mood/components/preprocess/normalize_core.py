@@ -32,8 +32,7 @@ def iter_normalized(src_dir: Path, schema: Schema) -> Iterator[tuple[Path, objec
     """Yield (src_file, normalized_data) for each recognized source file.
 
     Runs ``check`` first so all validation errors surface together
-    before any output is produced. Files whose extension is neither
-    YAML nor Markdown are skipped.
+    before any output is produced.
     """
     check(src_dir, schema)
     for src_file in _iter_files(src_dir):
