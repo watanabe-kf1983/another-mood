@@ -447,6 +447,18 @@ categories:
         title: derive_queries 出力を canonical 形式で流す
         phase: 10
         done: true
+      M9:
+        title: prose レコードの body 廃止 (フラット化)
+        note: |
+          body: {mime_type, content} を廃し、mime_type / content をレコード直下へ
+          移す。型情報は payload ではなく envelope 側のヘッダに置くのが慣行
+          (HTTP / MIME) で、このシステムで旅をする単位はレコード。レコード直下の
+          mime_type は、Prose 型に的を絞った将来の多態機構 (text/html prose 等) の
+          布石でもある。公開スキーマの破壊的変更 ({{ body.content }} → {{ content }})
+          なので、H4-H7 完了直後、利用者が blob 参照テンプレートを書き始める前に
+          実施する。
+        phase: 13
+        proposal: 20-design/50-normalizer/10-normalizer#prose-レコードの-body-廃止-m9
 
   N:
     title: レンダリング / 出力形式
