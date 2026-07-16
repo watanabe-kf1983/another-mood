@@ -355,6 +355,7 @@ categories:
           blob レコード化し、データカタログへ登録。確認は診断ビューと FK 検査。
         phase: 13
         proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+        done: true
       H5:
         title: バイトの旅程 (generate 増分 sync + 下流貫通)
         note: |
