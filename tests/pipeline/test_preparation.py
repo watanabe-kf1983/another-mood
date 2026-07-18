@@ -106,6 +106,23 @@ class TestSync:
             out / "sub" / "_index.md"
         ).read_text() == "[This page has been removed. Go to top page.](/)\n"
 
+    def test_deleted_blob_is_unlinked(self, tmp_path: Path) -> None:
+        """A removed blob (non-.md) is unlinked, not overwritten with the page
+        placeholder — a Markdown body at a byte path would corrupt it."""
+        src = tmp_path / "src"
+        _write(src / "index.md")
+        _write(src / "blob" / "cover.png", "PNGBYTES")
+        out = tmp_path / "out"
+
+        sync(src, out)
+        assert (out / "blob" / "cover.png").read_text() == "PNGBYTES"
+
+        (src / "blob" / "cover.png").unlink()
+        sync(src, out)
+
+        assert not (out / "blob" / "cover.png").exists()
+        assert (out / "_index.md").read_text() == "# Hello\n"
+
     def test_no_placeholder_when_nothing_deleted(self, tmp_path: Path) -> None:
         src = tmp_path / "src"
         _write(src / "a.md")

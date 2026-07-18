@@ -2,8 +2,7 @@
 
 Adapts Another Mood output to Hugo conventions:
 - Renames index.md → _index.md (Hugo branch bundle requirement)
-- Replaces deleted .md files with a placeholder so Hugo's dev server
-  reflects the removal (Hugo keeps deleted pages in memory otherwise)
+- Reflects source deletions (see _reflect_deletion)
 
 exclusive_write=False: Hugo's live server watches this dir, so in-place
 incremental updates are preferred over atomic clear-and-replace.
@@ -50,9 +49,7 @@ def sync(
 ) -> None:
     """Sync src_dir to out_dir, renaming index.md → _index.md.
 
-    Files present in out_dir but absent from src_dir are overwritten with
-    deleted_content so Hugo's dev server does not keep the deleted pages
-    in memory.
+    Files gone from src_dir are reflected via _reflect_deletion.
     """
     with dir_lock(out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -65,7 +62,20 @@ def sync(
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_file, dst)
         for deleted in old_files - src_files:
-            (out_dir / deleted).write_text(deleted_content, encoding="utf-8")
+            _reflect_deletion(out_dir / deleted, deleted_content)
+
+
+def _reflect_deletion(path: Path, deleted_content: str) -> None:
+    """Reflect a source deletion at its output path.
+
+    Unlink a blob, but overwrite a deleted ``.md`` page with the
+    placeholder: Hugo's dev server keeps a deleted page in memory, so the
+    file must stay (with removal content) to reflect the removal.
+    """
+    if path.suffix == ".md":
+        path.write_text(deleted_content, encoding="utf-8")
+    else:
+        path.unlink()
 
 
 def _hugo_name(rel: Path) -> Path:
