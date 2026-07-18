@@ -8,9 +8,14 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from another_mood.components.generator.data_tree import MappingNode, build_node_map
+from another_mood.components.generator.data_tree import (
+    MappingNode,
+    Node,
+    build_node_map,
+)
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
+    Edition,
     PagingPolicy,
     load_editions,
 )
@@ -40,12 +45,15 @@ _COVER_TEMPLATES_DIR = Path(
 
 _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 
+_BLOB_NAMESPACE = "/blob/"
+
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(
     data_dir: Path,
     templates_dir: Path,
     reports_file: Path,
+    contents_dir: Path,
     project_name: str,
     *,
     out_dir: Path,
@@ -55,32 +63,16 @@ def generate(
     editions = (META_EDITION, *user_editions)
 
     # The root cover just lists the editions — no data model, so no filters.
-    render(
+    markdown_engine(out_dir, _COVER_TEMPLATES_DIR).render_to_file(
         "index.md",
-        _COVER_TEMPLATES_DIR,
         {"editions": editions, "project_name": project_name},
-        out_dir,
+        Path("index.md"),
     )
 
     # A page tree per edition, over the shared data model.
-    model = load_model(data_dir)
-    node_map = build_node_map(model)
-    data = cast(MappingNode, node_map["/"])
-    node_globals, node_filters = make_data_tree_filters(node_map)
+    node_map = build_node_map(load_model(data_dir))
     for edition in editions:
-        render(
-            edition.root_template,
-            edition.templates_dir,
-            data,
-            ensure_not_windows_reserved(out_dir / edition.dir_segment),
-            filters={
-                **edition.extra_filters,
-                **node_filters,
-                **make_link_filters(edition.paging, node_map),
-            },
-            globals=node_globals,
-            paging=edition.paging,
-        )
+        render_edition(edition, node_map, contents_dir, out_dir)
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -102,20 +94,22 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
                 if d.severity == "warning"
             ]
             if warnings:
-                render(
+                markdown_engine(
+                    ctx.out / "__warnings", _BUILD_REPORT_TEMPLATES_DIR
+                ).render_to_file(
                     "warnings.md",
-                    _BUILD_REPORT_TEMPLATES_DIR,
                     {"diagnostics": [d.to_data() for d in warnings]},
-                    ctx.out / "__warnings",
+                    Path("index.md"),
                 )
                 _append_warnings_link(ctx.out / "index.md", len(warnings))
         else:
             report = BuildReport.collect(data_dir / "reports")
-            render(
+            markdown_engine(
+                out_dir / "data", _BUILD_REPORT_TEMPLATES_DIR
+            ).render_to_file(
                 "build_failure.md",
-                _BUILD_REPORT_TEMPLATES_DIR,
                 report.to_data(),
-                out_dir / "data",
+                Path("index.md"),
             )
 
 
@@ -126,27 +120,65 @@ def _append_warnings_link(index_md: Path, count: int) -> None:
         f.write(f"\n## Warnings\n\n{label} — [view](__warnings/)\n")
 
 
-def render(
-    template_name: str,
-    templates_dir: Path,
-    data: Mapping[str, object],
+def render_edition(
+    edition: Edition,
+    node_map: Mapping[str, Node],
+    contents_dir: Path,
     out_dir: Path,
+) -> None:
+    """Render one edition's page tree to its mount ``out_dir/<dir_segment>/``
+    and mirror its blob resources (when ``edition.mirror_blobs``)."""
+    data = cast(MappingNode, node_map["/"])
+    node_globals, node_filters = make_data_tree_filters(node_map)
+    root = ensure_not_windows_reserved(out_dir / edition.dir_segment)
+    markdown_engine(
+        root,
+        edition.templates_dir,
+        filters={
+            **edition.extra_filters,
+            **node_filters,
+            **make_link_filters(edition.paging, node_map),
+        },
+        globals=node_globals,
+        paging=edition.paging,
+    ).render_to_file(edition.root_template, data, Path("index.md"))
+    if edition.mirror_blobs:
+        _copy_blobs(node_map, contents_dir, root)
+
+
+def _copy_blobs(node_map: Mapping[str, Node], contents_dir: Path, root: Path) -> None:
+    """Copy each blob's bytes from ``contents_dir`` to ``root/blob/<id>``.
+
+    A real copy, never a hardlink: a shared inode lets an in-place source
+    edit corrupt already-published output.
+    """
+    for path, node in node_map.items():
+        if path.startswith(_BLOB_NAMESPACE):
+            src = contents_dir / cast(str, cast(MappingNode, node)["id"])
+            dest = root / path.removeprefix("/")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest)
+
+
+def markdown_engine(
+    out_dir: Path,
+    templates_dir: Path,
     *,
     filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
     paging: PagingPolicy = PagingPolicy(),
-) -> None:
-    """Render a template and write the result to out_dir/index.md.
+) -> TemplateEngine:
+    """A ``TemplateEngine`` bound to the Markdown output format and its helpers.
 
-    The md format's own helpers are injected here so every render gets them; the
-    caller adds any edition / node-map-bound filters on top via ``filters``.
-    ``paging`` drives ``{% mood_view %}`` split/inline (empty = inline all).
+    The md format's own filters/globals are merged in here so every caller gets
+    them; the caller adds any edition / node-map-bound ``filters`` on top and
+    drives ``render_to_file`` with its own destination.
     """
-    TemplateEngine(
+    return TemplateEngine(
         out_dir,
         templates_dir=templates_dir,
         output_format=MD,
         filters={**MD_FILTERS, **filters},
         globals={**MD_GLOBALS, **globals},
         paging=paging,
-    ).render_to_file(template_name, data, Path("index.md"))
+    )

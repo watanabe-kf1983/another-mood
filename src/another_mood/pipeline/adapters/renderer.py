@@ -1,5 +1,6 @@
 """Hugo renderer adapter — low-level Hugo subprocess operations."""
 
+import os
 import subprocess
 from importlib.resources import files
 from pathlib import Path
@@ -16,7 +17,7 @@ if not _hugo_path.is_file():
 _HUGO = str(_hugo_path)
 
 
-def build(content_dir: Path, out_dir: Path) -> None:
+def build(content_dir: Path, out_dir: Path, static_dir: Path) -> None:
     """Run renderer build to generate static HTML."""
     subprocess.run(
         [
@@ -32,10 +33,13 @@ def build(content_dir: Path, out_dir: Path) -> None:
         ],
         check=True,
         stdout=subprocess.DEVNULL,
+        env=_hugo_env(static_dir),
     )
 
 
-def serve(content_dir: Path, host: str, port: int) -> subprocess.Popen[bytes]:
+def serve(
+    content_dir: Path, host: str, port: int, static_dir: Path
+) -> subprocess.Popen[bytes]:
     """Start renderer dev server for live preview. Returns the Popen process."""
     return subprocess.Popen(
         [
@@ -54,4 +58,10 @@ def serve(content_dir: Path, host: str, port: int) -> subprocess.Popen[bytes]:
             "error",
         ],
         stdout=subprocess.DEVNULL,
+        env=_hugo_env(static_dir),
     )
+
+
+def _hugo_env(static_dir: Path) -> dict[str, str]:
+    """Env setting Hugo's static root to the blob dir (there is no --staticDir flag)."""
+    return {**os.environ, "HUGO_STATICDIR": str(static_dir.resolve())}

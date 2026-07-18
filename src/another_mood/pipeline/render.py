@@ -40,11 +40,12 @@ class HugoServerStartupError(RuntimeError):
 )
 def hugo_build(prep_dir: Path, *, out_dir: Path) -> None:
     """Run Hugo build. Runs even on upstream error to render the __build_failure page."""
+    static_dir = prep_dir / "static"
     with error_propagation([prep_dir], out_dir, component="hugo_build") as data_dirs:
         if data_dirs is not None:
-            renderer.build(data_dirs.upstreams[0], data_dirs.out)
+            renderer.build(data_dirs.upstreams[0], data_dirs.out, static_dir)
         else:
-            renderer.build(prep_dir / "data", out_dir / "data")
+            renderer.build(prep_dir / "data", out_dir / "data", static_dir)
 
 
 def RenderStage(
@@ -60,12 +61,15 @@ def RenderStage(
     prep_call = prepare_render.bind(data_dir=upstream.dir, out_dir=prep_dir)
     hugo_build_call = hugo_build.bind(prep_dir=prep_dir, out_dir=hugo_build_dir)
     content_dir = prep_dir / "data"
+    static_dir = prep_dir / "static"
 
     return MultiStageTask(
         [
             Stage(run_fn=prep_call, watch_paths=[], upstreams=[upstream]),
             Stage(run_fn=hugo_build_call, watch_paths=[], upstreams=[prep_out]),
-            _HugoServeTask(content_dir=content_dir, host=host, port=port),
+            _HugoServeTask(
+                content_dir=content_dir, static_dir=static_dir, host=host, port=port
+            ),
         ]
     )
 
@@ -75,6 +79,7 @@ class _HugoServeTask(Task):
     """Hugo dev server. No-op in build mode (`hugo build` handles HTML output)."""
 
     content_dir: Path
+    static_dir: Path
     host: str
     port: int
 
@@ -83,7 +88,9 @@ class _HugoServeTask(Task):
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
-        process = renderer.serve(self.content_dir, self.host, self.port)
+        process = renderer.serve(
+            self.content_dir, self.host, self.port, self.static_dir
+        )
 
         # Surface fast-fail startup errors (e.g. port already in use) before
         # signalling readiness; Hugo binds the port synchronously at startup.
