@@ -357,7 +357,7 @@ categories:
         proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
         done: true
       H5:
-        title: バイトの旅程 (generate 増分 sync + 下流貫通)
+        title: バイトの旅程 (generate → 全 edition コピー + 下流貫通)
         note: |
           旧 H2 の分割 2/4。generate から全 edition へ blob バイトを full copy し
           下流 (reconcile / prepare_render / Hugo / publish) を貫通させる。Hugo の
@@ -377,6 +377,20 @@ categories:
         note: |
           旧 H2 の分割 4/4。music ジャケット表示 (x-ref + テンプレート) で
           受け入れ確認を完遂。
+        phase: 13
+        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+      H8:
+        title: 内部 hop の hardlink 化 (blob コピーコスト削減)
+        note: |
+          H5 の full copy 最適化。実コピーは contents→workspace 境界の 1 回に絞り、
+          workspace 内 hop (generate / reconcile / prepare_render / publish) を
+          hardlink 化する。安全条件は「workspace 内 blob は write-once = 置換は
+          unlink→再作成、in-place truncate 禁止」。in-place sync する prepare_render の
+          write-once 化 (H5 の削除プレースホルダ修正と同一) が前提。実装前提: temp を
+          出力と同一 FS へ (現状 /tmp は別 FS)、os.link + EXDEV/Windows は copy fallback。
+          実測: showcase/music の 100MB blob で build 一巡 +9s (2 edition × 8〜12 コピー)。
+          設計は着手時に再考 (出発点案: normalize 段で temp へ size+mtime の
+          sync_if_newer を効かせ、以降は hardlink で運ぶ)。
         phase: 13
         proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
 
