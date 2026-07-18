@@ -104,6 +104,7 @@ META_EDITION = Edition(
     name="__db",
     templates_dir=META_TEMPLATES_DIR,
     extra_filters=META_TEMPLATES_FILTERS,
+    mirror_blobs=False,
 )
 """The built-in meta edition — the database self-description, mounted at
 ``__db/`` and rendered from the meta templates with the system-only

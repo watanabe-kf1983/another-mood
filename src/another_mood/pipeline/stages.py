@@ -93,12 +93,16 @@ def generator_stage(workspace: Workspace) -> Task:
         data_dir=compose_out.dir,
         templates_dir=config.templates_dir,
         reports_file=config.reports_file,
+        contents_dir=config.contents_dir,
         project_name=config.project_dir.resolve().name,
         out_dir=out.dir,
     )
+    # Watch contents_dir here too (normalize already does): a blob byte edit
+    # leaves the {id, mime_type} header — and so the upstream output —
+    # unchanged, so nothing else re-triggers generate to re-copy it.
     return Stage(
         run_fn=call,
-        watch_paths=[config.templates_dir, config.reports_file],
+        watch_paths=[config.templates_dir, config.reports_file, config.contents_dir],
         upstreams=[compose_out],
     )
 

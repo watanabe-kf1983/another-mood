@@ -45,12 +45,15 @@ _COVER_TEMPLATES_DIR = Path(
 
 _NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
 
+_BLOB_NAMESPACE = "/blob/"
+
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def generate(
     data_dir: Path,
     templates_dir: Path,
     reports_file: Path,
+    contents_dir: Path,
     project_name: str,
     *,
     out_dir: Path,
@@ -69,7 +72,7 @@ def generate(
     # A page tree per edition, over the shared data model.
     node_map = build_node_map(load_model(data_dir))
     for edition in editions:
-        render_edition(edition, node_map, out_dir)
+        render_edition(edition, node_map, contents_dir, out_dir)
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -118,9 +121,13 @@ def _append_warnings_link(index_md: Path, count: int) -> None:
 
 
 def render_edition(
-    edition: Edition, node_map: Mapping[str, Node], out_dir: Path
+    edition: Edition,
+    node_map: Mapping[str, Node],
+    contents_dir: Path,
+    out_dir: Path,
 ) -> None:
-    """Render one edition's page tree to its mount ``out_dir/<dir_segment>/``."""
+    """Render one edition's page tree to its mount ``out_dir/<dir_segment>/``
+    and mirror its blob resources (when ``edition.mirror_blobs``)."""
     data = cast(MappingNode, node_map["/"])
     node_globals, node_filters = make_data_tree_filters(node_map)
     root = ensure_not_windows_reserved(out_dir / edition.dir_segment)
@@ -135,6 +142,22 @@ def render_edition(
         globals=node_globals,
         paging=edition.paging,
     ).render_to_file(edition.root_template, data, Path("index.md"))
+    if edition.mirror_blobs:
+        _copy_blobs(node_map, contents_dir, root)
+
+
+def _copy_blobs(node_map: Mapping[str, Node], contents_dir: Path, root: Path) -> None:
+    """Copy each blob's bytes from ``contents_dir`` to ``root/blob/<id>``.
+
+    A real copy, never a hardlink: a shared inode lets an in-place source
+    edit corrupt already-published output.
+    """
+    for path, node in node_map.items():
+        if path.startswith(_BLOB_NAMESPACE):
+            src = contents_dir / cast(str, cast(MappingNode, node)["id"])
+            dest = root / path.removeprefix("/")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest)
 
 
 def markdown_engine(

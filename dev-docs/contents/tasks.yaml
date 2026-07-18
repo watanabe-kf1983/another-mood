@@ -359,8 +359,10 @@ categories:
       H5:
         title: バイトの旅程 (generate 増分 sync + 下流貫通)
         note: |
-          旧 H2 の分割 2/4。Hugo の .html 封じ・prepare_render プレースホルダ・
-          出力パス衝突検査を含む。確認は build / watch 出力に実ファイルが並ぶこと。
+          旧 H2 の分割 2/4。generate から全 edition へ blob バイトを full copy し
+          下流 (reconcile / prepare_render / Hugo / publish) を貫通させる。Hugo の
+          .html 封じ・prepare_render プレースホルダは後続スライス。増分 sync は後の
+          最適化枠。確認は build / watch 出力に実ファイルが並ぶこと。
         phase: 13
         proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
       H6:

@@ -98,6 +98,7 @@ class Edition:
     name: str = ""
     root_template: str = "index.md"
     extra_filters: Mapping[str, Callable[..., object]] = _NO_EXTRA_FILTERS
+    mirror_blobs: bool = True
 
     @classmethod
     def from_dict(
