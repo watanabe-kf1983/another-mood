@@ -2,7 +2,8 @@
 
 Adapts Another Mood output to Hugo conventions:
 - Renames index.md → _index.md (Hugo branch bundle requirement)
-- Reflects source deletions (see _reflect_deletion)
+- Routes blobs to a static/ tree (see _sync_blobs)
+- Reflects a deleted page with a placeholder
 
 exclusive_write=False: Hugo's live server watches this dir, so in-place
 incremental updates are preferred over atomic clear-and-replace.
@@ -36,46 +37,54 @@ def prepare_render(data_dir: Path, *, out_dir: Path) -> None:
     ) as data_dirs:
         if data_dirs is not None:
             sync(data_dirs.upstreams[0], data_dirs.out)
+            _sync_blobs(data_dirs.upstreams[0], out_dir / "static")
         else:
             page = data_dir / "data" / "index.md"
             content = (
                 page.read_text(encoding="utf-8") if page.is_file() else _DELETED_CONTENT
             )
             sync(data_dir / "data", out_dir / "data", deleted_content=content)
+            _sync_blobs(data_dir / "data", out_dir / "static")
 
 
 def sync(
     src_dir: Path, out_dir: Path, *, deleted_content: str = _DELETED_CONTENT
 ) -> None:
-    """Sync src_dir to out_dir, renaming index.md → _index.md.
+    """Sync src_dir pages to out_dir, renaming index.md → _index.md.
 
-    Files gone from src_dir are reflected via _reflect_deletion.
+    Blobs go to the static mount (see _sync_blobs); a deleted page is held as
+    a placeholder.
     """
     with dir_lock(out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         old_files = _collect_files(out_dir)
-        src_files = {_hugo_name(p) for p in _collect_files(src_dir)}
-        for src_file in src_dir.rglob("*"):
-            if not src_file.is_file():
-                continue
-            dst = out_dir / _hugo_name(src_file.relative_to(src_dir))
+        src_paths = {p for p in _collect_files(src_dir) if not _is_blob(p)}
+        expected = {_hugo_name(p) for p in src_paths}
+        for src_path in src_paths:
+            dst = out_dir / _hugo_name(src_path)
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src_file, dst)
-        for deleted in old_files - src_files:
-            _reflect_deletion(out_dir / deleted, deleted_content)
+            shutil.copy2(src_dir / src_path, dst)
+        for deleted in old_files - expected:
+            (out_dir / deleted).write_text(deleted_content, encoding="utf-8")
 
 
-def _reflect_deletion(path: Path, deleted_content: str) -> None:
-    """Reflect a source deletion at its output path.
+def _sync_blobs(src_dir: Path, out_dir: Path) -> None:
+    """Mirror blobs verbatim to the static mount, cleared and refilled each run
+    (files only, not the dir — rmtree would break Hugo's watch)."""
+    with dir_lock(out_dir):
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for stale in _collect_files(out_dir):
+            (out_dir / stale).unlink()
+        src_paths = {p for p in _collect_files(src_dir) if _is_blob(p)}
+        for src_path in src_paths:
+            dst = out_dir / src_path
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_dir / src_path, dst)
 
-    Unlink a blob, but overwrite a deleted ``.md`` page with the
-    placeholder: Hugo's dev server keeps a deleted page in memory, so the
-    file must stay (with removal content) to reflect the removal.
-    """
-    if path.suffix == ".md":
-        path.write_text(deleted_content, encoding="utf-8")
-    else:
-        path.unlink()
+
+def _is_blob(rel: Path) -> bool:
+    """Whether ``rel`` is a blob — the reserved ``<edition>/blob/…`` namespace."""
+    return len(rel.parts) >= 2 and rel.parts[1] == "blob"
 
 
 def _hugo_name(rel: Path) -> Path:

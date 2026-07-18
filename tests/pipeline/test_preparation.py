@@ -106,23 +106,6 @@ class TestSync:
             out / "sub" / "_index.md"
         ).read_text() == "[This page has been removed. Go to top page.](/)\n"
 
-    def test_deleted_blob_is_unlinked(self, tmp_path: Path) -> None:
-        """A removed blob (non-.md) is unlinked, not overwritten with the page
-        placeholder — a Markdown body at a byte path would corrupt it."""
-        src = tmp_path / "src"
-        _write(src / "index.md")
-        _write(src / "blob" / "cover.png", "PNGBYTES")
-        out = tmp_path / "out"
-
-        sync(src, out)
-        assert (out / "blob" / "cover.png").read_text() == "PNGBYTES"
-
-        (src / "blob" / "cover.png").unlink()
-        sync(src, out)
-
-        assert not (out / "blob" / "cover.png").exists()
-        assert (out / "_index.md").read_text() == "# Hello\n"
-
     def test_no_placeholder_when_nothing_deleted(self, tmp_path: Path) -> None:
         src = tmp_path / "src"
         _write(src / "a.md")
@@ -161,6 +144,35 @@ class TestSync:
 
 
 class TestPrepareRender:
+    def test_blobs_go_to_static_not_content(self, tmp_path: Path) -> None:
+        """Pages land in the content dir; blobs (incl. .html, which Hugo would
+        reject in content) land in the sibling static dir, verbatim."""
+        data_dir = tmp_path / "upstream"
+        out_dir = tmp_path / "out"
+        _write(data_dir / "data" / "web" / "index.md")
+        _write(data_dir / "data" / "web" / "blob" / "fig.html", "<h1>fig</h1>")
+
+        prepare_render(data_dir=data_dir, out_dir=out_dir)
+
+        assert (out_dir / "data" / "web" / "_index.md").exists()
+        assert (
+            out_dir / "static" / "web" / "blob" / "fig.html"
+        ).read_text() == "<h1>fig</h1>"
+        assert not (out_dir / "data" / "web" / "blob").exists()
+
+    def test_deleted_blob_removed_from_static(self, tmp_path: Path) -> None:
+        """A blob gone from src is dropped from the static dir on the next run."""
+        data_dir = tmp_path / "upstream"
+        out_dir = tmp_path / "out"
+        _write(data_dir / "data" / "web" / "blob" / "cover.png", "PNG")
+        prepare_render(data_dir=data_dir, out_dir=out_dir)
+        assert (out_dir / "static" / "web" / "blob" / "cover.png").exists()
+
+        (data_dir / "data" / "web" / "blob" / "cover.png").unlink()
+        prepare_render(data_dir=data_dir, out_dir=out_dir)
+
+        assert not (out_dir / "static" / "web" / "blob" / "cover.png").exists()
+
     def test_upstream_error_replaces_deleted_pages_with_build_report(
         self, tmp_path: Path
     ) -> None:
