@@ -385,8 +385,12 @@ categories:
           H5 の full copy 最適化。実コピーは contents→workspace 境界の 1 回に絞り、
           workspace 内 hop (generate / reconcile / prepare_render / publish) を
           hardlink 化する。安全条件は「workspace 内 blob は write-once = 置換は
-          unlink→再作成、in-place truncate 禁止」。in-place sync する prepare_render の
-          write-once 化 (H5 の削除プレースホルダ修正と同一) が前提。実装前提: temp を
+          unlink→再作成、in-place truncate 禁止」。この置換パス (copy2 の in-place
+          truncate → unlink→再作成) の write-once 化は全 hop 対象で本タスクのスコープ。
+          現状 in-place truncate するのは in-place sync する prepare_render のみ (他 hop は
+          temp→clear-copy で構造的に write-once の見込みだが、着手時に全 hop を棚卸しする)。
+          H5 の削除プレースホルダ修正 (削除パス = blob を unlink) とは別物で、削除修正だけ
+          では copy2 の truncate は残り prepare_render は write-once にならない。実装前提: temp を
           出力と同一 FS へ (現状 /tmp は別 FS)、os.link + EXDEV/Windows は copy fallback。
           実測: showcase/music の 100MB blob で build 一巡 +9s (2 edition × 8〜12 コピー)。
           設計は着手時に再考 (出発点案: normalize 段で temp へ size+mtime の
