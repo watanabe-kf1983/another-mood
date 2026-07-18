@@ -136,12 +136,20 @@ class はアンカーパスの構築には登場しない。
 
 #### 出力 URL の形式
 
-出力する URL は **対象ページへの相対パス** + URL fragment。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
+出力する URL は **対象ページへの相対パス** + URL fragment（blob は例外。[Blob の例外](#blob-の例外ファイルとして解決)）。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
 
 - **path 部**: source ページから target ページへの相対パス
-- **fragment 部**: **anchor_path の最後の `#` 以降。`#` が無ければ anchor_path 全体**。常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
+- **fragment 部**: **anchor_path の最後の `#` 以降。`#` が無ければ anchor_path 全体**。（blob を除き）常に付与する (target がページ root に一致する場合も省かない — ハンドリングを単純に保つ)
     - データノード `/prose/X` → fragment `/prose/X`（全体）。[アンカーの発行](#アンカーの発行)の規則で置かれた `<a id>` に着地する。fragment がページ内ジャンプとして機能するのは着地点が置かれた箇所のみで、ページ単位のリンクは path 部で機能する
     - 見出しノード `/prose/X#エラー処理` → fragment `エラー処理`（`#` 以降）。Goldmark/GitHub が見出しに打つ native id（`<h2 id="エラー処理">`）に着地する（[Prose の例外](#prose-の例外)）
+
+#### Blob の例外（ファイルとして解決）
+
+blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[normalizer.md](../50-normalizer/10-normalizer.md#バイナリファイルの取り扱い-h1-h4-h7) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
+
+- **path 部**: source ページから `blob/<id>`（＝ anchor_path の先頭 `/` を落としたファイルパス）への相対パス。`node_map` のキー一致でノードを引く点は他ノードと共通だが、URL 化の起点が `page_path`（分割 `.md` ページ）でなくファイルパスになる
+- **fragment 部**: 付けない。blob は着地点 `<a id>` を持たず（[アンカーの発行](#アンカーの発行)は主題ノードのみ・見出しは native）、fragment に anchor_path を乗せる一般則は blob には適用しない
+- **著者由来の生 fragment は透過**: ソース相対リンク `[x](f.pdf#page=3)` のような opaque な `#fragment` は、ファイル URL の末尾へそのまま後続させる（`…/blob/f.pdf#page=3`）。blob 自体がツールにとって opaque なリソースであり、その内部アンカーも見出し slug のように node 解決はせず、素で運ぶ
 
 #### アンカーの発行
 
