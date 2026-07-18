@@ -336,6 +336,9 @@ _ANCHOR_DATA = {
             "headings": [{"id": "エラー処理", "title": "エラー処理", "level": 2}],
         },
     ],
+    "blob": [
+        {"id": "covers/cover.png", "mime_type": "image/png"},
+    ],
 }
 _ANCHOR_FILE_PER = ("members.item", "by_role.item", "prose.item")
 
@@ -510,6 +513,16 @@ class TestRelinkFilterWiring:
         # The destination is dropped, leaving the link text visibly bracketed.
         assert result == '<a id="/by_role/dev"></a>\nsee [ghost]'
 
+    def test_unknown_heading_fragment_still_drops(self, tmp_path: Path) -> None:
+        # The blob fragment fallback must not rescue a bad heading slug on a
+        # (non-blob) prose page.
+        engine = self._engine(
+            tmp_path,
+            '{{ "see [x](node:/prose/design/architecture#no-such)" | relink }}',
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == '<a id="/by_role/dev"></a>\nsee [x]'
+
     def test_resolves_a_heading_node_link_to_the_native_slug(
         self, tmp_path: Path
     ) -> None:
@@ -538,4 +551,21 @@ class TestRelinkFilterWiring:
         assert result == (
             '<a id="/by_role/dev"></a>\n'
             "[r](../x.md) and [d](../members/alice.md#/members/alice)"
+        )
+
+    def test_resolves_a_blob_link_to_its_file_path(self, tmp_path: Path) -> None:
+        engine = self._engine(
+            tmp_path, '{{ "[c](node:/blob/covers/cover.png)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == ('<a id="/by_role/dev"></a>\n[c](../blob/covers/cover.png)')
+
+    def test_carries_a_blobs_opaque_fragment_through(self, tmp_path: Path) -> None:
+        # e.g. a PDF page anchor — opaque, so it rides onto the file URL raw.
+        engine = self._engine(
+            tmp_path, '{{ "[p](node:/blob/covers/cover.png#page=3)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == (
+            '<a id="/by_role/dev"></a>\n[p](../blob/covers/cover.png#page=3)'
         )

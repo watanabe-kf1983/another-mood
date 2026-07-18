@@ -25,7 +25,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import cast
 
-from another_mood.components.generator.data_tree import Node, nearest_ancestor
+from another_mood.components.generator.data_tree import Node, is_blob, nearest_ancestor
 from another_mood.components.generator.url import url_escape
 from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
@@ -72,8 +72,11 @@ class PagingPolicy:
 
         The nearest split-target ``node``-or-ancestor's own page
         (``{anchor_path}.md``), or ``index.md`` when no ancestor is a
-        split boundary (including the root).
+        split boundary (including the root).  A blob is not a rendered page
+        but an output file, so its ``page`` is the blob file itself.
         """
+        if is_blob(node):
+            return node._meta.anchor_path.removeprefix("/")
         page = nearest_ancestor(
             node, lambda n: self.is_split_target(n._meta.object_type_id)
         )

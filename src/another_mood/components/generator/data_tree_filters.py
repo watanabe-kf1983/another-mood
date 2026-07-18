@@ -144,4 +144,5 @@ def node_href(paging: PagingPolicy, source: object, a: object) -> str:
     target = cast(Node, a)
     source_dir = posixpath.dirname(paging.page_path(cast(Node, source))) or "."
     rel = posixpath.relpath(paging.page_path(target), source_dir)
-    return f"{rel}#{target._meta.fragment}"
+    fragment = target._meta.fragment
+    return f"{rel}#{fragment}" if fragment else rel

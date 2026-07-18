@@ -12,7 +12,7 @@ from jinja2 import pass_context
 from jinja2.runtime import Context
 from markupsafe import Markup
 
-from another_mood.components.generator.data_tree import Node
+from another_mood.components.generator.data_tree import Node, is_blob
 from another_mood.components.generator.data_tree_filters import (
     MissingNode,
     node_href,
@@ -199,12 +199,22 @@ def make_link_filters(
         def resolve(href: str) -> str | None:
             if not href.startswith(_NODE_SCHEME):
                 return href  # not a `node:` link: keep it unchanged
-            target = node_map.get(href[len(_NODE_SCHEME) :])
-            if target is None:
-                # Unresolved: drop the destination, leaving the same conspicuous
-                # bracketed `[text]` `link` leaves, never leaking `node:` to output.
-                return None
-            return node_href(paging, source, target)
+            ref = href[len(_NODE_SCHEME) :]
+            target = node_map.get(ref)
+            if target is not None:
+                return node_href(paging, source, target)
+            else:
+                # A blob's `#fragment` (e.g. `f.pdf#page=3`) is opaque, not a
+                # node of its own: it missed the lookup above, so resolve the
+                # base path and, if that is a blob, re-append the fragment raw.
+                base, sep, fragment = ref.partition("#")
+                base_target = node_map.get(base) if sep else None
+                if base_target is not None and is_blob(base_target):
+                    return f"{node_href(paging, source, base_target)}#{fragment}"
+                else:
+                    # Unresolved: drop the destination, leaving the conspicuous
+                    # bracketed `[text]` `link` leaves, never leaking `node:`.
+                    return None
 
         return Markup(rewrite_inline_links(parse(str(value)), resolve))
 

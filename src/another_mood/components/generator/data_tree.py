@@ -142,12 +142,14 @@ class _NodeMeta:
     def fragment(self) -> str:
         """URL fragment that lands on this node — what ``href`` appends.
 
-        Equivalent to "the part of :attr:`anchor_path` after the last
-        ``#``", held as its own property so no consumer re-parses the
-        composed path string.
+        Held as its own property so no consumer re-parses the composed path
+        string.  Usually the part of :attr:`anchor_path` after the last ``#``;
+        empty for a blob, which is a file with no within-page landing.
         """
         if self._is_prose_heading():
             return self._node._segment
+        elif is_blob(self._node):
+            return ""
         else:
             return self.anchor_path
 
@@ -254,6 +256,10 @@ def nearest_ancestor(node: Node, match: Callable[[Node], bool]) -> Node | None:
             return current
         current = current._parent
     return None
+
+
+def is_blob(node: Node) -> bool:
+    return node._meta.origin_item_type == "blob.item"
 
 
 def child(node: Node, seg: object) -> Node | None:
