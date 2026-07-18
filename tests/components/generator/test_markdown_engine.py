@@ -1,11 +1,11 @@
-"""Tests for render — template rendering and writing."""
+"""Tests for markdown_engine — Markdown-bound template rendering to file."""
 
 from pathlib import Path
 from textwrap import dedent
 
 from another_mood.components.generator.generator import (
     _BUILD_REPORT_TEMPLATES_DIR,  # pyright: ignore[reportPrivateUsage]
-    render,
+    markdown_engine,
 )
 from another_mood.components.generator.output_formats.md import md_escape
 
@@ -26,7 +26,9 @@ class TestWriteIndex:
 
         out_dir = tmp_path / "output"
         data = {"items": [{"name": "Alice"}, {"name": "Bob"}]}
-        render("index.md", templates_dir, data, out_dir)
+        markdown_engine(out_dir, templates_dir).render_to_file(
+            "index.md", data, Path("index.md")
+        )
 
         # MD enables trim_blocks, so the newline after `{% endfor %}` is
         # dropped: the loop leaves no trailing blank line.
@@ -44,9 +46,11 @@ class TestWriteIndex:
             "{{ code_inline('x') }}|{{ 'a|b' | in_cell }}"
         )
         out_dir = tmp_path / "output"
-        render("index.md", templates_dir, {}, out_dir)
-        # render() injects the md format's own helpers — a global and a filter —
-        # so every render has them without the caller listing them.
+        markdown_engine(out_dir, templates_dir).render_to_file(
+            "index.md", {}, Path("index.md")
+        )
+        # markdown_engine injects the md format's own helpers — a global and a
+        # filter — so every render has them without the caller listing them.
         assert (out_dir / "index.md").read_text() == "`x`|a\\|b"
 
     def test_renders_build_failure_with_diagnostics(self, tmp_path: Path) -> None:
@@ -66,7 +70,9 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
+        markdown_engine(out_dir, _BUILD_REPORT_TEMPLATES_DIR).render_to_file(
+            "build_failure.md", data, Path("index.md")
+        )
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result
@@ -89,7 +95,9 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
+        markdown_engine(out_dir, _BUILD_REPORT_TEMPLATES_DIR).render_to_file(
+            "build_failure.md", data, Path("index.md")
+        )
 
         result = (out_dir / "index.md").read_text()
         assert "```\n> 1 | bad value\n    | ^\n```" in result
@@ -104,7 +112,9 @@ class TestWriteIndex:
                 }
             ],
         }
-        render("build_failure.md", _BUILD_REPORT_TEMPLATES_DIR, data, out_dir)
+        markdown_engine(out_dir, _BUILD_REPORT_TEMPLATES_DIR).render_to_file(
+            "build_failure.md", data, Path("index.md")
+        )
 
         result = (out_dir / "index.md").read_text()
         assert "# Build Failed - Another Mood" in result
