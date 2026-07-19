@@ -1,6 +1,6 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from another_mood.components import (
     compose,
@@ -175,19 +175,26 @@ def build_report_stage(
     )
 
 
+# The pipeline's stage factories in execution order. Public so the write-once
+# sweep test (tests/pipeline/test_write_once_sweep.py) drives the exact same
+# stage sequence the real pipeline runs — a stage added here is automatically
+# covered by the sweep.
+STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
+    inspect_schema_stage,
+    normalize_contents_stage,
+    derive_queries_stage,
+    compose_stage,
+    generator_stage,
+    reconcile_stage,
+    render_stage,
+    publish_stage,
+)
+
+
 def pipeline(
     workspace: Workspace,
     on_report: Callable[[BuildReport], None] | None = None,
 ) -> Pipeline:
     """Create the full pipeline."""
-    stages: list[Task] = [
-        inspect_schema_stage(workspace),
-        normalize_contents_stage(workspace),
-        derive_queries_stage(workspace),
-        compose_stage(workspace),
-        generator_stage(workspace),
-        reconcile_stage(workspace),
-        render_stage(workspace),
-        publish_stage(workspace),
-    ]
+    stages = [factory(workspace) for factory in STAGE_FACTORIES]
     return Pipeline(stages, reporting=build_report_stage(workspace, on_report))
