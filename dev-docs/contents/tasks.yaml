@@ -95,6 +95,17 @@ categories:
         title: prose 検知の位置独立化（catalog `origin_item_type` による由来判定）
         phase: 13
         done: true
+      B14:
+        title: _NodeMeta の由来型分岐を _NodeKind strategy へ多態化
+        note: >-
+          _NodeMeta の複数プロパティに散る型分岐 (見出し / blob / prose 記録) を、
+          origin_item_type で選ぶ strategy object 一箇所へ集約する内部リファクタ。
+          外部挙動・anchor-spec は不変の behavior-preserving。対象は SEMANTIC 軸のみで、
+          ROOT (parent is None) は guard 据置・STRUCTURAL (Array/Mapping) 掃除はしない。
+          H6 の is_blob 分岐が発端だが、狙う sprawl は「見出し判定の 3プロパティ再テスト」で
+          H6 以前から在るため別タスク (H6 マージ後に着手)。
+        phase: 13
+        proposal: 20-design/70-generator/10-generator#nodemeta-の由来型分岐を-nodekind-strategy-へ多態化-b14
 
   C:
     title: ページ分割 (paging)
