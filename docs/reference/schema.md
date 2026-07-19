@@ -268,7 +268,26 @@ prose:
 | `mime_type` | Media type of the content — `text/markdown` for prose. |
 | `content` | The full Markdown source. To embed it, reference `content` from a template (e.g., `{{ content }}`); resolve its cross-references with [`relink`](template.md#relink). |
 
-The Markdown source files stay untouched on disk, so they remain browsable and traversable directly on GitHub or in your IDE. In the parsed `content`, relative links to other prose documents are normalized to their `node:` form (`[t](other.md)` → `[t](node:/prose/<id>)`) so the [`relink`](template.md#relink) filter resolves them to working URLs; every other link is kept as written.
+The Markdown source files stay untouched on disk, so they remain browsable and traversable directly on GitHub or in your IDE. In the parsed `content`, relative links to other prose documents and [assets](#built-in-schema-blob) are normalized to their `node:` form (`[t](other.md)` → `[t](node:/prose/<id>)`) so the [`relink`](template.md#relink) filter resolves them to working URLs; every other link is kept as written.
+
+## Built-in schema: blob
+
+Every file under `contents/` that is **not** YAML or Markdown — images, PDFs, audio, spreadsheets — is an **opaque** file the tool does not interpret, automatically collected into the built-in **`blob`** entity, one record per file, without a user-declared schema. Dotfiles and dotdirectories (e.g. `.DS_Store`) are the only exclusion; unknown extensions are kept, not skipped.
+
+Record shape:
+
+```yaml
+blob:
+  - id: "covers/neon_after_rain.png"   # relative path from contents_dir, extension included
+    mime_type: image/png               # derived from the extension
+```
+
+| Field | Value |
+|---|---|
+| `id` | Relative path from `contents_dir`, **extension included**. |
+| `mime_type` | Media type derived from the file extension, or `application/octet-stream` when the extension is unknown. |
+
+At build time every blob is copied verbatim to `blob/<id>` under each edition's output root — both the Markdown output and the rendered HTML.
 
 ## Full schema-schema
 
@@ -276,4 +295,4 @@ Everything above is a prose explanation of the built-in meta-schema (schema-sche
 
 ## Full content-schema
 
-The built-in schema that defines the structure of the prose entity introduced in [Built-in schema: prose](#built-in-schema-prose). The canonical specification is the YAML at [`./schemas/content-schema.yaml`](./schemas/content-schema.yaml).
+The built-in schema that defines the structure of the [prose](#built-in-schema-prose) and [blob](#built-in-schema-blob) entities. The canonical specification is the YAML at [`./schemas/content-schema.yaml`](./schemas/content-schema.yaml).

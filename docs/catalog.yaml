@@ -27,7 +27,7 @@ resources:
   - path: reference/schema.md
     description: >-
       Schema definition reference — a JSON Schema subset plus the built-in
-      prose schema.
+      prose and blob schemas.
   - path: reference/query.md
     description: >-
       Query syntax reference — `from` / `grouped` / `select`.

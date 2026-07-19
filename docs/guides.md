@@ -92,9 +92,10 @@ The rest of this guide builds on this sample, walking through the pieces needed 
 There are four kinds of sources.
 
 - **Schema** — A single file that declares the types of structured data.
-- **Content** — The actual data. Two kinds:
+- **Content** — The actual data. Three kinds:
   - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...).
   - **Prose** — Text written directly in Markdown. No user-defined schema needed (structured by the tool's built-in schema).
+  - **Assets** — Any other file (images, PDFs, ...). Opaque to the tool; copied into the output and referenceable by id. No user-defined schema needed.
 - **Query** — Creates a view that reshapes structured data into a more convenient form for reference.
 - **Template** — A file describing the shape of the final output page. References data or query results.
 
@@ -109,7 +110,7 @@ In the table below, "where to write" paths are relative to the project directory
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
 | 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose) | `/__db/__entity_data/<entity>` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__entity_data/<entity>` |
 | 3 | Query | `definition/queries/**/*.yaml` | `/__db/__queries/<query>` |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
@@ -343,6 +344,26 @@ prose:
 
 One file = one record, and the fields `id` / `title` / `headings` / `mime_type` / `content` are defined by the built-in schema. How to embed `content` is covered in detail in the [Templates](#templates) chapter.
 
+### Assets — images and other files
+
+A third kind of file rounds out `contents/`: anything that is **neither structured data nor prose** — an image, a PDF, an audio clip, a spreadsheet. These are opaque **assets**, which the tool does not interpret. Drop one under `contents/` and it is copied into the built output, so the site stays self-contained.
+
+The everyday way to use an asset is **inline in prose**, with an ordinary relative Markdown image or link — it resolves in both your editor's preview and the built pages:
+
+```markdown
+![Cover art](../covers/neon_after_rain.png)
+```
+
+An asset can also be referenced by id from structured data and templates. Its record carries only metadata — the bytes stay in the source file — and appears under the **reserved name `blob`**:
+
+```yaml
+blob:
+  - id: covers/neon_after_rain.png   # file's relative path (extension included)
+    mime_type: image/png             # derived from the extension
+```
+
+How to link to one from a template is covered in the [Templates](#templates) chapter.
+
 ## Queries
 
 A query is a mechanism that reshapes structured data into a more convenient form for reference. The result becomes a named **view** that templates — and other queries — can reference the same way as structured data. Add queries as needed.
@@ -505,6 +526,10 @@ A prose record's Markdown lives in its `content` field. To embed it in a templat
 
 For details, see [Schema — Built-in schema: prose](reference/schema.md#built-in-schema-prose).
 
+### Linking to Assets
+
+Assets can be linked from a template as well: the same [`link`](reference/template.md#link) / [`href`](reference/template.md#href) filters that point at pages also resolve an asset (a `blob`) to its output file — the [music sample](../showcase/music/) links album cover art this way. For the exact form and record shape, see the [Template reference](reference/template.md#node) and [Schema — Built-in schema: blob](reference/schema.md#built-in-schema-blob).
+
 ### Undefined fields become the empty string
 
 ```jinja2
@@ -518,4 +543,4 @@ Be aware that misspellings silently produce empty strings — no error is raised
 ## Further reading
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
-- [showcase/music/](../showcase/music/) — a more complex working sample than the member list, modeling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises groupings, joins, multi-join chains, intrinsic flatten, self-referencing entities, and prose alongside structured data.
+- [showcase/music/](../showcase/music/) — a more complex working sample than the member list, modeling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises groupings, joins, multi-join chains, intrinsic flatten, self-referencing entities, prose alongside structured data, and blob assets (album cover art).

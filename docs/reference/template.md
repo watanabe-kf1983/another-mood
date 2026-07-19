@@ -75,6 +75,8 @@ A link lands in-page only where the node's [`anchor`](#anchor) (`<a id>`) sits, 
 
 [`link`](#link) / [`href`](#href) return the URL pointing at the node's [`anchor`](#anchor). A node with no anchor of its own still resolves to its nearest ancestor's page, so the link lands nearby rather than nowhere.
 
+For a [blob](schema.md#built-in-schema-blob) node, the URL points straight at the blob's output file.
+
 ### Anchor paths
 
 The node a link points at is often not in the template's context — a foreign key, a related record. To reach it, you look it up by its **anchor path**: the node's address in the data tree, built from the keys and record `id`s on the way to it (`/members/alice` is the record `alice` of `members`). [`node`](#node) does the lookup, resolving an anchor path — usually from plain segments, not a written-out string — to its node, ready to link:
@@ -198,6 +200,7 @@ For a [missing node](#node), the display text in brackets — `[text]` with no U
 ```
 members/alice.md#/members/alice      (from the root page)
 ../members/alice.md#/members/alice   (from a by_role/… page)
+blob/covers/cover.png                (a blob — its output file)
 ```
 
 How that URL lands — and the page-level fallback when the node has no anchor — is covered under [Building the link](#building-the-link). For a [missing node](#node), `href` renders the empty string.
@@ -304,10 +307,11 @@ Only inline links are rewritten; a `node:` written inside a code span or fence i
 
 **Positional segments** are raw values: one argument is one path segment, percent-encoded so a `/` inside a value does not split it into two segments. This is the common form.
 
-**`path=`** takes a complete, ready-made anchor path and uses it exactly as written — not encoded. Use it for constant paths, and for `prose` records — their `id` is a relative file path whose `/` must stay a separator:
+**`path=`** takes a complete, ready-made anchor path and uses it exactly as written — not encoded. Use it for constant paths, and for `prose` and `blob` records — their `id` is a relative file path whose `/` must stay a separator:
 
 ```jinja2
 {{ node(path="/prose/design/architecture") | link }}
+{{ node(path="/blob/covers/cover.png") | href }}
 {{ node(path="/overview") | link("About this site") }}
 ```
 
