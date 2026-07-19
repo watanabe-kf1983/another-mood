@@ -116,8 +116,13 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
 def _append_warnings_link(index_md: Path, count: int) -> None:
     """Append a short ``## Warnings`` block linking to the warnings page."""
     label = f"{count} warning{'' if count == 1 else 's'}"
-    with index_md.open("a", encoding="utf-8") as f:
-        f.write(f"\n## Warnings\n\n{label} — [view](__warnings/)\n")
+    content = index_md.read_text(encoding="utf-8")
+    # Replace the file, never append in place: the inode may be shared
+    # with the upstream copy via hardlink.
+    index_md.unlink()
+    index_md.write_text(
+        f"{content}\n## Warnings\n\n{label} — [view](__warnings/)\n", encoding="utf-8"
+    )
 
 
 def render_edition(

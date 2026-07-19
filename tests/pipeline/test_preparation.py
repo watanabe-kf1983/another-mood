@@ -1,5 +1,6 @@
 """Tests for preparation — Hugo content sync + prepare_render Component."""
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -127,6 +128,22 @@ class TestSync:
         sync(src, out)
 
         assert (out / "a.md").exists()
+
+    def test_never_writes_into_an_existing_file(self, tmp_path: Path) -> None:
+        """Files are replaced, never written into: a hardlinked observer of
+        the old file must keep its bytes across a re-sync."""
+        src = tmp_path / "src"
+        _write(src / "a.md", "# v1\n")
+        out = tmp_path / "out"
+        sync(src, out)
+        observer = tmp_path / "observer.md"
+        os.link(out / "a.md", observer)
+
+        _write(src / "a.md", "# v2\n")
+        sync(src, out)
+
+        assert (out / "a.md").read_text() == "# v2\n"
+        assert observer.read_text() == "# v1\n"
 
     def test_deleted_content_override(self, tmp_path: Path) -> None:
         """Caller-supplied deleted_content replaces the default placeholder."""

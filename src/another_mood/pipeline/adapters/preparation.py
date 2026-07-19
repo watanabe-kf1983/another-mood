@@ -6,7 +6,9 @@ Adapts Another Mood output to Hugo conventions:
 - Reflects a deleted page with a placeholder
 
 exclusive_write=False: Hugo's live server watches this dir, so in-place
-incremental updates are preferred over atomic clear-and-replace.
+incremental updates are preferred over atomic clear-and-replace. In-place
+applies to the directory, not to files: each run clears and refills the
+file set, never writing into an existing file.
 
 error_propagation=False: reconcile renders a __build_failure page on
 upstream error, which Hugo must still serve. The sync runs unconditionally,
@@ -58,12 +60,14 @@ def sync(
     with dir_lock(out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         old_files = _collect_files(out_dir)
+        for stale in old_files:
+            (out_dir / stale).unlink()
         src_paths = {p for p in _collect_files(src_dir) if not _is_blob(p)}
-        expected = {_hugo_name(p) for p in src_paths}
         for src_path in src_paths:
             dst = out_dir / _hugo_name(src_path)
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_dir / src_path, dst)
+        expected = {_hugo_name(p) for p in src_paths}
         for deleted in old_files - expected:
             (out_dir / deleted).write_text(deleted_content, encoding="utf-8")
 
