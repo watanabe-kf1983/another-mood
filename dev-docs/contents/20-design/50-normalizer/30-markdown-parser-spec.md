@@ -11,13 +11,13 @@
 
 ### リンク正規化
 
-prose 本文中の相対リンクを `node:` アンカーパス記法（インラインリンク形）に変換する。preprocess の prose パスが、生成側フィルタ `relink`（`node:` → URL、[generator.md](../70-generator/10-generator.md#リンク解決)）の **逆向き処理** として本文 (`content`) のリンクを書き換える。解決はレキシカル（FS チェックなし）で、リンク先 prose の存在検証は relink（Generate フェーズ）に委ねる。実装は preprocess の `normalize_links`（`prose.py`）と shared/markdown の `rewrite_inline_links`。
+prose 本文中の相対リンクを `node:` アンカーパス記法（インラインリンク形）に変換する。preprocess の prose パスが、生成側フィルタ `relink`（`node:` → URL、[generator.md](../70-generator/10-generator.md#リンク解決)）の **逆向き処理** として本文 (`content`) のリンクを書き換える。解決はレキシカル（FS チェックなし）で、リンク先ノードの存在検証は relink（Generate フェーズ）に委ねる。実装は preprocess の `normalize_links`（`prose.py`）と shared/markdown の `rewrite_inline_links`。
 
-変換対象は **contents 内に解決する相対 `.md` リンクのみ**:
+変換対象は **contents 内に解決する相対リンク**。ターゲットの拡張子で行き先が分かれる:
 
-- `[t](rel.md)` → `node:/prose/<解決後 id>`
-- `[t](rel.md#見出し-slug)` → `node:/prose/<解決後 id>#見出し-slug`（`#fragment` は著者が書いた slug を **素通し** — 再 slug・encode しない。ページ内見出しを指し、対象 prose に無ければ relink が解決失敗として可視化する（[anchor-spec.md の未解決参照の扱い](../70-generator/20-anchor-spec.md#未解決参照の扱い)））
-- 次は **verbatim**（非変換）: 純 `#frag`（同一ページ参照）／ contents 外への脱出（`../` 突き抜け）／スキーム付き（`http:` `node:` `mailto:` 等）／絶対パス（先頭 `/`）／`.md` 以外（画像・スタイル等）／コード（fence・inline）内のリンク
+- **`.md` → prose**: `[t](rel.md)` → `node:/prose/<解決後 id>`、`[t](rel.md#見出し-slug)` → `node:/prose/<解決後 id>#見出し-slug`（`#fragment` は著者が書いた slug を **素通し** — 再 slug・encode しない。ページ内見出しを指し、対象 prose に無ければ relink が解決失敗として可視化する（[anchor-spec.md の未解決参照の扱い](../70-generator/20-anchor-spec.md#未解決参照の扱い)））
+- **`.md` 以外 → [blob](../46-blob-spec.md)**: `![]()` 画像・`[]()` リンクとも `node:/blob/<id>` へ（id は拡張子込み）。H6 で追加した、prose 機構への相乗り
+- 次は **verbatim**（非変換）: 純 `#frag`（同一ページ参照）／ contents 外への脱出（`../` 突き抜け）／スキーム付き（`http:` `node:` `mailto:` 等）／絶対パス（先頭 `/`）／コード（fence・inline）内のリンク
 
 #### 例
 
@@ -85,4 +85,4 @@ prose:
 
 #### スコープ
 
-当面 **prose 限定**。任意の `text/markdown` body からの見出し抽出への一般化は、散文サブシステムの媒体非依存化と地続きだったが、その担い手だった旧 H3 は「prose と blob を別コレクションにする」判断で棄却された（[normalizer.md「バイナリファイルの取り扱い」](10-normalizer.md#バイナリファイルの取り扱い-h1-h4-h7)）。後継アイデア（text/html blob のページ解釈）が実タスク化するとき、そこで再検討する。
+当面 **prose 限定**。任意の `text/markdown` body からの見出し抽出への一般化は、散文サブシステムの媒体非依存化と地続きだったが、その担い手だった旧 H3 は「prose と [blob](../46-blob-spec.md) を別コレクションにする」判断で棄却された。後継アイデア（text/html blob のページ解釈）が実タスク化するとき、そこで再検討する。

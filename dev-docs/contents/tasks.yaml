@@ -357,7 +357,6 @@ categories:
         title: 仕様確定
         note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
         done: true
       H4:
         title: blob レコード化とカタログ登録
@@ -365,7 +364,6 @@ categories:
           旧 H2 (実装) の分割 1/4。normalize が YAML/MD 以外 (ドットファイル除外) を
           blob レコード化し、データカタログへ登録。確認は診断ビューと FK 検査。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
         done: true
       H5:
         title: バイトの旅程 (generate → 全 edition コピー + 下流貫通)
@@ -375,7 +373,6 @@ categories:
           blob を Hugo static mount (HUGO_STATICDIR) に分離し .html 対応、削除は unlink。
           増分 sync は後の最適化枠 (H8)。確認は build / watch 出力に実ファイルが並ぶこと。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
         done: true
       H6:
         title: リンク解決 (相対リンク → node:/blob → relink / href)
@@ -383,7 +380,6 @@ categories:
           旧 H2 の分割 3/4。未解決参照検出を含む。確認は prose `![]()` 埋め込みが
           web / book 両 edition で表示されること。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
         done: true
       H7:
         title: showcase 仕上げ + docs 同期 + Proposals 整理
@@ -391,7 +387,7 @@ categories:
           旧 H2 の分割 4/4。music ジャケット表示 (x-ref + テンプレート) で
           受け入れ確認を完遂。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+        done: true
       H8:
         title: 内部 hop の hardlink 化 (blob コピーコスト削減)
         note: |
@@ -409,7 +405,7 @@ categories:
           設計は着手時に再考 (出発点案: normalize 段で temp へ size+mtime の
           sync_if_newer を効かせ、以降は hardlink で運ぶ)。
         phase: 13
-        proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+        proposal: 20-design/46-blob-spec#blob-運搬の最適化-h8
 
   J:
     title: プラグインシステム
