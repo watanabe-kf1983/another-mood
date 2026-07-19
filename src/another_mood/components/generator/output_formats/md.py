@@ -69,29 +69,24 @@ def code_fenced(value: object, language: str = "") -> Markup:
 
 
 def dedent(text: str) -> str:
-    """Strip the common leading whitespace from a rendered block.
+    """Strip the *common* leading whitespace from a rendered block.
 
-    Registered as a filter so a template can indent the body of a
-    ``{% filter dedent %}`` block — tags and content alike — for
-    readability, then have that shared indentation removed from the
-    output.  Owned by the format because, like ``trim_blocks`` /
-    ``lstrip_blocks``, it only matters where output whitespace is
-    significant (Markdown).  Keys off the *common* minimum
-    (``textwrap.dedent``), so lines nested deeper than their siblings
-    keep the difference: it fully flattens single-level blocks and
-    suits whitespace-insensitive output (e.g. Mermaid) otherwise.
+    Lets a template indent a ``{% filter dedent %}`` block for readability and
+    have that shared indentation removed from the output.  Keys off the common
+    minimum (``textwrap.dedent``), so lines nested deeper than their siblings
+    keep the difference.  Owned by the format because indentation only matters
+    where output whitespace is significant (Markdown), like ``trim_blocks`` /
+    ``lstrip_blocks``.
     """
     return textwrap.dedent(text)
 
 
 def under_heading(value: object, marker: str) -> Markup:
-    """Filter adapter for :func:`.heading_shift.under_heading`.
-
-    The filter boundary is this format's concern, not the transform's: Jinja
-    pipes in arbitrary values, so coerce to ``str``; the shifted Markdown is
-    returned as Markup so the format's finalize hook does not re-escape it (it
-    is already valid output, like the other markdown-emitting filters here).
-    """
+    """Filter adapter for :func:`.heading_shift.under_heading`."""
+    # The filter boundary is this format's concern, not the transform's: Jinja
+    # pipes in arbitrary values, so coerce to `str`; return Markup so finalize
+    # does not re-escape the shifted Markdown (already valid output, like the
+    # other markdown-emitting filters here).
     return Markup(_under_heading(str(value), marker))
 
 
@@ -140,7 +135,7 @@ def stamp_anchor(rendered: str, subject: object) -> str:
 
     A render is the one point where the system knows a node is drawn here, so
     it drops the ``| anchor`` landing point automatically (split page: top;
-    inline: the spot). A subject :func:`md_anchor` emits nothing for is
+    inline: the spot). A subject whose :func:`md_anchor` emits nothing is
     returned untouched; otherwise the anchor gets a trailing newline so it
     cannot glue onto a following heading.
     """
@@ -161,22 +156,21 @@ def make_link_filters(
     ``href`` / ``link`` / ``anchor`` render a resolved node, and ``relink``
     rewrites a prose body's inline ``node:`` destinations.
 
-    ``href`` / ``link`` / ``relink`` take ``@pass_context`` for two purposes: it
-    reads the source page from the render context's ``this``, and it stops
-    Jinja2's optimizer from constant-folding constant-argument calls — a
-    compile-time-evaluated ``{{ node("/x") | href }}`` would bake one source
-    page's relative URL into the compiled template and break the same template
-    rendered from another page.  ``anchor`` needs neither (its id is the node's
-    own page-independent anchor path), so it is the bare :func:`md_anchor`.
-
     An unresolved reference never renders a link to a dead URL: ``href`` yields
     empty, while ``link`` and ``relink`` both leave a conspicuous bracketed
     ``[text]`` — ``link`` brackets the escaped display text, ``relink`` drops the
-    destination from the source ``[text](node:…)``.  Only ``relink`` needs
-    ``node_map`` — it resolves anchor-path strings itself; the others receive a
-    resolved node.
+    destination from the source ``[text](node:…)``.
     """
 
+    # `href` / `link` / `relink` take `@pass_context` for two reasons: to read
+    # the source page from the render context's `this`, and to stop Jinja2's
+    # optimizer from constant-folding constant-argument calls — a compile-time
+    # `{{ node("/x") | href }}` would bake one source page's relative URL into
+    # the compiled template and break the same template rendered from another
+    # page. `anchor` needs neither (its id is the node's own page-independent
+    # anchor path), so it stays the bare `md_anchor`. Only `relink` touches
+    # `node_map` — it resolves anchor-path strings itself; the others receive an
+    # already-resolved node.
     @pass_context
     def href(context: Context, a: object) -> Markup:
         if isinstance(a, MissingNode):
