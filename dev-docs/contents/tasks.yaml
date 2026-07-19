@@ -384,6 +384,7 @@ categories:
           web / book 両 edition で表示されること。
         phase: 13
         proposal: 20-design/50-normalizer/10-normalizer#バイナリファイルの取り扱い-h1-h4-h7
+        done: true
       H7:
         title: showcase 仕上げ + docs 同期 + Proposals 整理
         note: |
