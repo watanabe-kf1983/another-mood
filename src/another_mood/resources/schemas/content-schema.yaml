@@ -25,18 +25,13 @@ properties:
       properties:
         id:
           title: Blob id
-          description: >-
-            Contents-relative path of the file, extension included — unlike
-            a prose id, which drops it. The extension distinguishes
-            `fig.png` from `fig.jpg`, which would otherwise collide.
+          description: Contents-relative path of the file, extension included.
           type: string
         mime_type:
           title: Blob MIME type
           description: >-
-            MIME type derived from the file extension (stdlib `mimetypes`),
-            or `application/octet-stream` when unknown. A record-level
-            header like a prose record's; a blob carries no payload of its
-            own (the bytes live in the source file, not the data model).
+            MIME type derived from the file extension, or
+            `application/octet-stream` when unknown.
           type: string
       required: [id, mime_type]
   prose:
