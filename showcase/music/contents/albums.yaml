@@ -6,6 +6,7 @@ albums:
     genre_id: techno
     year: 2018
     is_live: false
+    liner_notes: liner-notes/neon_after_rain
 
   live_in_osaka:
     title: Neon After Rain - Live in Osaka
