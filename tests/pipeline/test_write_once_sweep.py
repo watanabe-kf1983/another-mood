@@ -51,6 +51,18 @@ def test_no_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
     published_member = published / "output" / "default" / "members" / "alice.md"
     assert "Alicia" in published_member.read_text(encoding="utf-8")
 
+    # Hardlink transport is effective: tmp_path is one filesystem, so the
+    # blob must stay a single inode from generate through every hop (a
+    # silent revert to real copies would fail no behavior test).
+    blob_rel = Path("default") / "blob" / "cover.png"
+    generate_blob = workspace.root / "generate" / "data" / blob_rel
+    for downstream in (
+        workspace.root / "reconcile" / "data" / blob_rel,
+        workspace.root / "prepare_render" / "static" / blob_rel,
+        published_blob,
+    ):
+        assert downstream.stat().st_ino == generate_blob.stat().st_ino, downstream
+
 
 def test_observers_flag_in_place_writes_only(tmp_path: Path) -> None:
     watched = tmp_path / "watched"

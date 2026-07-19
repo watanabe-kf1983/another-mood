@@ -31,6 +31,7 @@ from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
 from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.transfer import transfer_tree
 from another_mood.components.shared.windows_reserved_name import (
     ensure_not_windows_reserved,
 )
@@ -87,7 +88,7 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
     """
     with error_propagation([data_dir], out_dir, component="reconcile") as ctx:
         if ctx is not None:
-            shutil.copytree(ctx.upstreams[0], ctx.out, dirs_exist_ok=True)
+            transfer_tree(ctx.upstreams[0], ctx.out, dirs_exist_ok=True)
             warnings = [
                 d
                 for d in BuildReport.collect(data_dir / "reports").diagnostics

@@ -139,6 +139,9 @@ class TestSync:
         observer = tmp_path / "observer.md"
         os.link(out / "a.md", observer)
 
+        # Replace via unlink: out/a.md shares this inode, and an in-place
+        # write would corrupt it before sync even runs.
+        (src / "a.md").unlink()
         _write(src / "a.md", "# v2\n")
         sync(src, out)
 
