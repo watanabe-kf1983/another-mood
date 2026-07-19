@@ -1,5 +1,9 @@
 # {{ title }}
 
+{% if cover %}
+![{{ title }} — cover art]({{ node(path="/blob/" ~ cover) | href }})
+
+{% endif -%}
 **{{ year }}** &middot; {% if is_live %}Live recording{% else %}Studio album{% endif +%}
 
 | Field | Value |

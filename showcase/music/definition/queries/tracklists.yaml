@@ -20,6 +20,7 @@ album_tracklist:
     - item: genre_id
     - item: year
     - item: is_live
+    - item: cover
     - item: tracks
     - item: liner
 

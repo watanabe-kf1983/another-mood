@@ -24,6 +24,7 @@ albums:
     year: 2019
     is_live: false
     liner_notes: liner-notes/tidal_atlas
+    cover: covers/tidal_atlas.svg
 
   dawn_cassette:
     title: Dawn Cassette
@@ -32,6 +33,7 @@ albums:
     genre_id: psych
     year: 2022
     is_live: false
+    cover: covers/dawn_cassette.svg
 
   factory_lullabies:
     title: Factory Lullabies
@@ -40,6 +42,7 @@ albums:
     genre_id: punk
     year: 2012
     is_live: false
+    cover: covers/factory_lullabies.svg
 
   last_train_to_dawn:
     title: Last Train to Dawn
@@ -48,6 +51,7 @@ albums:
     genre_id: punk
     year: 2015
     is_live: false
+    cover: covers/last_train_to_dawn.svg
 
   live_at_the_garage:
     title: Last Train - Live at the Garage
@@ -64,6 +68,7 @@ albums:
     genre_id: post_punk
     year: 2008
     is_live: false
+    cover: covers/graphite_summer.svg
 
   winter_in_the_machine:
     title: Winter in the Machine
@@ -73,3 +78,4 @@ albums:
     year: 2014
     is_live: false
     liner_notes: liner-notes/winter_in_the_machine
+    cover: covers/winter_in_the_machine.svg

@@ -108,6 +108,11 @@ properties:
           description: Id of the prose record holding this album's liner notes (a contents-relative path without extension). Optional - only some albums have liner notes.
           x-ref:
             entity: prose
+        cover:
+          type: string
+          description: Id of the cover-art blob (a contents-relative path, extension included). Optional - only some albums ship cover art.
+          x-ref:
+            entity: blob
       required: [title, artist_id, year]
 
   tracks:
