@@ -196,24 +196,29 @@ def make_link_filters(
             parts = urlsplit(href)
             if parts.scheme != _NODE_SCHEME:
                 return href  # not a `node:` link: keep it unchanged
-            ref = href.removeprefix(f"{_NODE_SCHEME}:")
-            target = node_map.get(ref)
+            anchor_path = (
+                f"{parts.path}#{parts.fragment}" if parts.fragment else parts.path
+            )
+            target = node_map.get(anchor_path)
             if target is not None:
                 # The node itself — a prose heading is one too, keyed by its
                 # full `path#slug`, so it resolves here without a special case.
                 return node_href(paging, source, target)
-            else:
-                # `ref` missed, so its `#fragment` is not a node of its own.
-                # Only a blob — whose URL is a bare, fragmentless file path — can
-                # carry a raw author fragment (a PDF's `#page=3`); every other
-                # base already ends in its own landing fragment, so a stray
-                # fragment is unresolved and drops (leaving the conspicuous
-                # bracketed `[text]`, never leaking `node:`).
-                base_target = node_map.get(parts.path) if parts.fragment else None
+            elif parts.fragment:
+                # Missed with a `#fragment`: only a blob — whose URL is a bare,
+                # fragmentless file path — can carry a raw author fragment (a
+                # PDF's `#page=3`). Every other base already owns its landing
+                # fragment, so re-attach only onto a blob; anything else is
+                # unresolved and drops (the conspicuous bracketed `[text]`,
+                # never leaking `node:`).
+                base_target = node_map.get(parts.path)
                 if base_target is not None and is_blob(base_target):
                     return f"{node_href(paging, source, base_target)}#{parts.fragment}"
                 else:
                     return None
+            else:
+                # Missed with no fragment to carry — simply unresolved.
+                return None
 
         return Markup(rewrite_inline_links(parse(str(value)), resolve))
 
