@@ -514,11 +514,23 @@ class TestRelinkFilterWiring:
         assert result == '<a id="/by_role/dev"></a>\nsee [ghost]'
 
     def test_unknown_heading_fragment_still_drops(self, tmp_path: Path) -> None:
-        # The blob fragment fallback must not rescue a bad heading slug on a
-        # (non-blob) prose page.
+        # An absent heading slug misses the full-ref lookup; its base is a prose
+        # page (not a blob), so nothing rescues it into a page-top link with a
+        # dead `#slug` — it drops.
         engine = self._engine(
             tmp_path,
             '{{ "see [x](node:/prose/design/architecture#no-such)" | relink }}',
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == '<a id="/by_role/dev"></a>\nsee [x]'
+
+    def test_stray_fragment_on_a_data_node_drops(self, tmp_path: Path) -> None:
+        # A data node's URL already ends in its own landing fragment
+        # (`#/members/alice`), so an author's extra `#section` cannot land — only
+        # a blob (a bare fragmentless file URL) carries a raw fragment. Drop it
+        # rather than emit a broken double-`#` destination.
+        engine = self._engine(
+            tmp_path, '{{ "see [x](node:/members/alice#section)" | relink }}'
         )
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == '<a id="/by_role/dev"></a>\nsee [x]'

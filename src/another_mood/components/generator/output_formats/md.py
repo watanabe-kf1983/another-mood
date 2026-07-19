@@ -7,6 +7,7 @@
 import re
 import textwrap
 from collections.abc import Callable, Mapping
+from urllib.parse import urlsplit
 
 from jinja2 import pass_context
 from jinja2.runtime import Context
@@ -33,8 +34,9 @@ _MD_ESCAPE_PATTERN = re.compile(r"([!-/:-@\[-`{-~])")
 
 _BACKTICK_RUN_PATTERN = re.compile(r"`+")
 
-# Scheme that a prose body's inline links use to point at a node (see `relink`).
-_NODE_SCHEME = "node:"
+# Scheme name a prose body's inline links use to point at a node (the `node` in
+# `node:/path`, sans the `:` separator — see `relink`).
+_NODE_SCHEME = "node"
 
 
 def md_escape(text: str) -> str:
@@ -197,23 +199,26 @@ def make_link_filters(
         source = context["this"]
 
         def resolve(href: str) -> str | None:
-            if not href.startswith(_NODE_SCHEME):
+            parts = urlsplit(href)
+            if parts.scheme != _NODE_SCHEME:
                 return href  # not a `node:` link: keep it unchanged
-            ref = href[len(_NODE_SCHEME) :]
+            ref = href.removeprefix(f"{_NODE_SCHEME}:")
             target = node_map.get(ref)
             if target is not None:
+                # The node itself — a prose heading is one too, keyed by its
+                # full `path#slug`, so it resolves here without a special case.
                 return node_href(paging, source, target)
             else:
-                # A blob's `#fragment` (e.g. `f.pdf#page=3`) is opaque, not a
-                # node of its own: it missed the lookup above, so resolve the
-                # base path and, if that is a blob, re-append the fragment raw.
-                base, sep, fragment = ref.partition("#")
-                base_target = node_map.get(base) if sep else None
+                # `ref` missed, so its `#fragment` is not a node of its own.
+                # Only a blob — whose URL is a bare, fragmentless file path — can
+                # carry a raw author fragment (a PDF's `#page=3`); every other
+                # base already ends in its own landing fragment, so a stray
+                # fragment is unresolved and drops (leaving the conspicuous
+                # bracketed `[text]`, never leaking `node:`).
+                base_target = node_map.get(parts.path) if parts.fragment else None
                 if base_target is not None and is_blob(base_target):
-                    return f"{node_href(paging, source, base_target)}#{fragment}"
+                    return f"{node_href(paging, source, base_target)}#{parts.fragment}"
                 else:
-                    # Unresolved: drop the destination, leaving the conspicuous
-                    # bracketed `[text]` `link` leaves, never leaking `node:`.
                     return None
 
         return Markup(rewrite_inline_links(parse(str(value)), resolve))
