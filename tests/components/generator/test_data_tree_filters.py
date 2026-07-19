@@ -19,7 +19,8 @@ from another_mood.components.generator.data_tree_filters import (
 from another_mood.components.generator.edition import PagingPolicy
 
 # A small two-page tree: members and by_role are each their own page, so
-# cross-page links exercise the relative-path computation.
+# cross-page links exercise the relative-path computation. The blob is an
+# output file (never a split page), so it links to its file path, not a page.
 _DATA = {
     "overview": {"title": "Overview"},
     "members": [
@@ -35,6 +36,9 @@ _DATA = {
             "title": "Architecture",
             "headings": [{"id": "エラー処理", "title": "エラー処理", "level": 2}],
         },
+    ],
+    "blob": [
+        {"id": "covers/cover.png", "mime_type": "image/png"},
     ],
 }
 _FILE_PER = ("members.item", "by_role.item", "prose.item")
@@ -272,6 +276,18 @@ class TestNodeHref:
         assert node_href(_paging(), source, target) == (
             "../prose/design/architecture.md#エラー処理"
         )
+
+    def test_blob_target_resolves_to_file_path_without_fragment(self) -> None:
+        nodes = _node_map()
+        source = nodes["/"]  # renders on index.md
+        target = nodes["/blob/covers/cover.png"]
+        assert node_href(_paging(), source, target) == "blob/covers/cover.png"
+
+    def test_blob_target_relative_from_split_page(self) -> None:
+        nodes = _node_map()
+        source = nodes["/by_role/dev"]  # renders on by_role/dev.md
+        target = nodes["/blob/covers/cover.png"]
+        assert node_href(_paging(), source, target) == "../blob/covers/cover.png"
 
 
 # ── make_data_tree_filters (format-neutral, context-free) ─────────────

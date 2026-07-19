@@ -7,12 +7,13 @@
 import re
 import textwrap
 from collections.abc import Callable, Mapping
+from urllib.parse import urlsplit
 
 from jinja2 import pass_context
 from jinja2.runtime import Context
 from markupsafe import Markup
 
-from another_mood.components.generator.data_tree import Node
+from another_mood.components.generator.data_tree import Node, is_blob
 from another_mood.components.generator.data_tree_filters import (
     MissingNode,
     node_href,
@@ -33,8 +34,9 @@ _MD_ESCAPE_PATTERN = re.compile(r"([!-/:-@\[-`{-~])")
 
 _BACKTICK_RUN_PATTERN = re.compile(r"`+")
 
-# Scheme that a prose body's inline links use to point at a node (see `relink`).
-_NODE_SCHEME = "node:"
+# Scheme name a prose body's inline links use to point at a node (the `node` in
+# `node:/path`, sans the `:` separator — see `relink`).
+_NODE_SCHEME = "node"
 
 
 def md_escape(text: str) -> str:
@@ -67,29 +69,24 @@ def code_fenced(value: object, language: str = "") -> Markup:
 
 
 def dedent(text: str) -> str:
-    """Strip the common leading whitespace from a rendered block.
+    """Strip the *common* leading whitespace from a rendered block.
 
-    Registered as a filter so a template can indent the body of a
-    ``{% filter dedent %}`` block — tags and content alike — for
-    readability, then have that shared indentation removed from the
-    output.  Owned by the format because, like ``trim_blocks`` /
-    ``lstrip_blocks``, it only matters where output whitespace is
-    significant (Markdown).  Keys off the *common* minimum
-    (``textwrap.dedent``), so lines nested deeper than their siblings
-    keep the difference: it fully flattens single-level blocks and
-    suits whitespace-insensitive output (e.g. Mermaid) otherwise.
+    Lets a template indent a ``{% filter dedent %}`` block for readability and
+    have that shared indentation removed from the output.  Keys off the common
+    minimum (``textwrap.dedent``), so lines nested deeper than their siblings
+    keep the difference.  Owned by the format because indentation only matters
+    where output whitespace is significant (Markdown), like ``trim_blocks`` /
+    ``lstrip_blocks``.
     """
     return textwrap.dedent(text)
 
 
 def under_heading(value: object, marker: str) -> Markup:
-    """Filter adapter for :func:`.heading_shift.under_heading`.
-
-    The filter boundary is this format's concern, not the transform's: Jinja
-    pipes in arbitrary values, so coerce to ``str``; the shifted Markdown is
-    returned as Markup so the format's finalize hook does not re-escape it (it
-    is already valid output, like the other markdown-emitting filters here).
-    """
+    """Filter adapter for :func:`.heading_shift.under_heading`."""
+    # The filter boundary is this format's concern, not the transform's: Jinja
+    # pipes in arbitrary values, so coerce to `str`; return Markup so finalize
+    # does not re-escape the shifted Markdown (already valid output, like the
+    # other markdown-emitting filters here).
     return Markup(_under_heading(str(value), marker))
 
 
@@ -138,7 +135,7 @@ def stamp_anchor(rendered: str, subject: object) -> str:
 
     A render is the one point where the system knows a node is drawn here, so
     it drops the ``| anchor`` landing point automatically (split page: top;
-    inline: the spot). A subject :func:`md_anchor` emits nothing for is
+    inline: the spot). A subject whose :func:`md_anchor` emits nothing is
     returned untouched; otherwise the anchor gets a trailing newline so it
     cannot glue onto a following heading.
     """
@@ -159,22 +156,21 @@ def make_link_filters(
     ``href`` / ``link`` / ``anchor`` render a resolved node, and ``relink``
     rewrites a prose body's inline ``node:`` destinations.
 
-    ``href`` / ``link`` / ``relink`` take ``@pass_context`` for two purposes: it
-    reads the source page from the render context's ``this``, and it stops
-    Jinja2's optimizer from constant-folding constant-argument calls — a
-    compile-time-evaluated ``{{ node("/x") | href }}`` would bake one source
-    page's relative URL into the compiled template and break the same template
-    rendered from another page.  ``anchor`` needs neither (its id is the node's
-    own page-independent anchor path), so it is the bare :func:`md_anchor`.
-
     An unresolved reference never renders a link to a dead URL: ``href`` yields
     empty, while ``link`` and ``relink`` both leave a conspicuous bracketed
     ``[text]`` — ``link`` brackets the escaped display text, ``relink`` drops the
-    destination from the source ``[text](node:…)``.  Only ``relink`` needs
-    ``node_map`` — it resolves anchor-path strings itself; the others receive a
-    resolved node.
+    destination from the source ``[text](node:…)``.
     """
 
+    # `href` / `link` / `relink` take `@pass_context` for two reasons: to read
+    # the source page from the render context's `this`, and to stop Jinja2's
+    # optimizer from constant-folding constant-argument calls — a compile-time
+    # `{{ node("/x") | href }}` would bake one source page's relative URL into
+    # the compiled template and break the same template rendered from another
+    # page. `anchor` needs neither (its id is the node's own page-independent
+    # anchor path), so it stays the bare `md_anchor`. Only `relink` touches
+    # `node_map` — it resolves anchor-path strings itself; the others receive an
+    # already-resolved node.
     @pass_context
     def href(context: Context, a: object) -> Markup:
         if isinstance(a, MissingNode):
@@ -197,14 +193,32 @@ def make_link_filters(
         source = context["this"]
 
         def resolve(href: str) -> str | None:
-            if not href.startswith(_NODE_SCHEME):
+            parts = urlsplit(href)
+            if parts.scheme != _NODE_SCHEME:
                 return href  # not a `node:` link: keep it unchanged
-            target = node_map.get(href[len(_NODE_SCHEME) :])
-            if target is None:
-                # Unresolved: drop the destination, leaving the same conspicuous
-                # bracketed `[text]` `link` leaves, never leaking `node:` to output.
+            anchor_path = (
+                f"{parts.path}#{parts.fragment}" if parts.fragment else parts.path
+            )
+            target = node_map.get(anchor_path)
+            if target is not None:
+                # The node itself — a prose heading is one too, keyed by its
+                # full `path#slug`, so it resolves here without a special case.
+                return node_href(paging, source, target)
+            elif parts.fragment:
+                # Missed with a `#fragment`: only a blob — whose URL is a bare,
+                # fragmentless file path — can carry a raw author fragment (a
+                # PDF's `#page=3`). Every other base already owns its landing
+                # fragment, so re-attach only onto a blob; anything else is
+                # unresolved and drops (the conspicuous bracketed `[text]`,
+                # never leaking `node:`).
+                base_target = node_map.get(parts.path)
+                if base_target is not None and is_blob(base_target):
+                    return f"{node_href(paging, source, base_target)}#{parts.fragment}"
+                else:
+                    return None
+            else:
+                # Missed with no fragment to carry — simply unresolved.
                 return None
-            return node_href(paging, source, target)
 
         return Markup(rewrite_inline_links(parse(str(value)), resolve))
 

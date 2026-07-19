@@ -4,7 +4,7 @@ The source loader wraps a Markdown file into a path-derived ``id`` and a raw
 ``content``, tagged by ``mime_type``; it does not interpret the Markdown.
 ``preprocess_prose`` does: for each Markdown prose record it derives a
 ``title`` from the first H1, collects its ``headings`` as link-target nodes,
-rewrites the content's relative links to ``node:/prose/<id>`` form, and reads
+rewrites the content's relative links to their ``node:`` form, and reads
 the record's place in the folder tree (``order_key`` / ``depth``) off the id.
 A record's Markdown-ness is detected by its ``mime_type``, never by file
 extension.
@@ -28,8 +28,8 @@ def preprocess_prose(data: Mapping[str, object]) -> Mapping[str, object]:
 
     For every ``prose`` record with ``text/markdown`` content, derive a
     ``title`` (first H1, unless one is already set), collect its ``headings``
-    as link-target nodes, rewrite the content's relative links to
-    ``node:/prose/<id>`` form, and add its folder-tree ``order_key`` /
+    as link-target nodes, rewrite the content's relative links to their
+    ``node:`` form, and add its folder-tree ``order_key`` /
     ``depth``.  Records with non-Markdown content, and data without a
     list-valued ``prose`` collection, pass through unchanged.
     """
@@ -37,16 +37,8 @@ def preprocess_prose(data: Mapping[str, object]) -> Mapping[str, object]:
 
 
 def normalize_links(content: str, doc_id: str) -> str:
-    """Rewrite each relative Markdown link in ``content`` to its ``node:`` form.
-
-    An inline link ``[text](relative/path.md)`` whose target resolves to a prose
-    document inside the contents tree becomes ``node:/prose/<resolved-id>``,
-    resolved lexically against ``doc_id`` (this document's contents-relative
-    path, without extension); a ``#heading-slug`` fragment rides through
-    verbatim (``node:/prose/<resolved-id>#heading-slug``).  Links that don't
-    name an in-tree prose document are left byte-for-byte (see
-    :func:`_resolver`).
-    """
+    """Rewrite each in-tree relative link and image in ``content`` to its
+    ``node:`` form, resolved against ``doc_id``'s directory."""
     return rewrite_inline_links(parse(content), _resolver(doc_id))
 
 
@@ -146,41 +138,46 @@ def _interpret_markdown(record: object) -> object:
 
 _MARKDOWN_SUFFIX = ".md"
 _NODE_PROSE_PREFIX = "node:/prose/"
+_NODE_BLOB_PREFIX = "node:/blob/"
 
 
 def _resolver(doc_id: str) -> Callable[[str], str]:
-    """Build the ``rewrite_inline_links`` callback for the document ``doc_id``.
-
-    The callback converts an in-tree relative ``.md`` link to its
-    ``node:/prose/<id>`` form — resolved against ``doc_id``'s directory, any
-    ``#fragment`` (a heading slug) carried through verbatim — and echoes every
-    other href back unchanged.
-    """
+    """Build :func:`rewrite_inline_links`'s per-destination callback for
+    ``doc_id``."""
     base = posixpath.dirname(doc_id)
 
-    def resolve(href: str) -> str:
-        link = urlsplit(href)
-        if _is_relative_markdown(link):
+    def resolve(dest: str) -> str:
+        link = urlsplit(dest)
+        if _is_in_tree_relative(link):
             resolved = posixpath.normpath(posixpath.join(base, link.path))
             if not resolved.startswith("../"):  # stays inside the contents tree
-                node = f"{_NODE_PROSE_PREFIX}{resolved[: -len(_MARKDOWN_SUFFIX)]}"
+                node = _node_target(resolved)
                 return f"{node}#{link.fragment}" if link.fragment else node
-        return href
+        return dest
 
     return resolve
 
 
-def _is_relative_markdown(link: SplitResult) -> bool:
-    """True if ``link`` is a relative path to a Markdown file.
+def _is_in_tree_relative(link: SplitResult) -> bool:
+    """True if ``link`` is a relative path pointing inside the contents tree.
 
     False for an external reference (a scheme like ``http:`` / ``node:`` /
-    ``mailto:``, or a ``//host``), an absolute path (leading ``/``), and any
-    non-``.md`` target — an image, a stylesheet, or a pure ``#fragment`` (whose
-    path is empty).
+    ``mailto:``, or a ``//host``), an absolute path (leading ``/``), and a pure
+    ``#fragment`` (empty path) — none of which name an in-tree file.
     """
     return (
         not link.scheme
         and not link.netloc
+        and bool(link.path)
         and not link.path.startswith("/")
-        and link.path.lower().endswith(_MARKDOWN_SUFFIX)
     )
+
+
+def _node_target(resolved: str) -> str:
+    """The fragmentless ``node:`` base an in-tree contents path resolves to."""
+    # Prose drops the extension, a blob keeps it, so each id matches the form
+    # source_loader assigns (a prose id is extensionless, a blob id the full path).
+    if resolved.lower().endswith(_MARKDOWN_SUFFIX):
+        return f"{_NODE_PROSE_PREFIX}{resolved[: -len(_MARKDOWN_SUFFIX)]}"
+    else:
+        return f"{_NODE_BLOB_PREFIX}{resolved}"

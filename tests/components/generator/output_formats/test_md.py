@@ -336,6 +336,9 @@ _ANCHOR_DATA = {
             "headings": [{"id": "エラー処理", "title": "エラー処理", "level": 2}],
         },
     ],
+    "blob": [
+        {"id": "covers/cover.png", "mime_type": "image/png"},
+    ],
 }
 _ANCHOR_FILE_PER = ("members.item", "by_role.item", "prose.item")
 
@@ -510,6 +513,28 @@ class TestRelinkFilterWiring:
         # The destination is dropped, leaving the link text visibly bracketed.
         assert result == '<a id="/by_role/dev"></a>\nsee [ghost]'
 
+    def test_unknown_heading_fragment_still_drops(self, tmp_path: Path) -> None:
+        # An absent heading slug misses the full-ref lookup; its base is a prose
+        # page (not a blob), so nothing rescues it into a page-top link with a
+        # dead `#slug` — it drops.
+        engine = self._engine(
+            tmp_path,
+            '{{ "see [x](node:/prose/design/architecture#no-such)" | relink }}',
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == '<a id="/by_role/dev"></a>\nsee [x]'
+
+    def test_stray_fragment_on_a_data_node_drops(self, tmp_path: Path) -> None:
+        # A data node's URL already ends in its own landing fragment
+        # (`#/members/alice`), so an author's extra `#section` cannot land — only
+        # a blob (a bare fragmentless file URL) carries a raw fragment. Drop it
+        # rather than emit a broken double-`#` destination.
+        engine = self._engine(
+            tmp_path, '{{ "see [x](node:/members/alice#section)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == '<a id="/by_role/dev"></a>\nsee [x]'
+
     def test_resolves_a_heading_node_link_to_the_native_slug(
         self, tmp_path: Path
     ) -> None:
@@ -538,4 +563,21 @@ class TestRelinkFilterWiring:
         assert result == (
             '<a id="/by_role/dev"></a>\n'
             "[r](../x.md) and [d](../members/alice.md#/members/alice)"
+        )
+
+    def test_resolves_a_blob_link_to_its_file_path(self, tmp_path: Path) -> None:
+        engine = self._engine(
+            tmp_path, '{{ "[c](node:/blob/covers/cover.png)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == ('<a id="/by_role/dev"></a>\n[c](../blob/covers/cover.png)')
+
+    def test_carries_a_blobs_opaque_fragment_through(self, tmp_path: Path) -> None:
+        # e.g. a PDF page anchor — opaque, so it rides onto the file URL raw.
+        engine = self._engine(
+            tmp_path, '{{ "[p](node:/blob/covers/cover.png#page=3)" | relink }}'
+        )
+        result = engine.render("t.md", _anchors()["/by_role/dev"])
+        assert result == (
+            '<a id="/by_role/dev"></a>\n[p](../blob/covers/cover.png#page=3)'
         )

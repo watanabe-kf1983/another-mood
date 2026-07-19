@@ -130,7 +130,8 @@ _DOC = "a/b/doc"
 
 
 class TestNormalizeLinksConverted:
-    """Relative ``.md`` links resolving inside contents become ``node:`` refs."""
+    """Relative ``.md`` links resolving inside contents become prose ``node:``
+    refs."""
 
     def test_sibling_md_link(self) -> None:
         assert normalize_links("see [t](other.md) ok", _DOC) == (
@@ -189,8 +190,41 @@ class TestNormalizeLinksConverted:
         )
 
 
+class TestNormalizeLinksBlob:
+    """Relative non-``.md`` links resolving inside contents become blob
+    ``node:`` refs — the path kept whole (extension and all), an opaque fragment
+    riding along rather than resolved as a heading slug."""
+
+    def test_image_becomes_blob_node(self) -> None:
+        # The image src is rewritten to the blob node; the extension stays.
+        assert normalize_links("![alt](cover.png)", _DOC) == (
+            "![alt](node:/blob/a/b/cover.png)"
+        )
+
+    def test_plain_link_to_a_file_becomes_blob_node(self) -> None:
+        assert normalize_links("[data](sheet.csv)", _DOC) == (
+            "[data](node:/blob/a/b/sheet.csv)"
+        )
+
+    def test_parent_dir_blob(self) -> None:
+        assert normalize_links("![c](../img/x.png)", _DOC) == (
+            "![c](node:/blob/a/img/x.png)"
+        )
+
+    def test_opaque_fragment_is_carried(self) -> None:
+        # A blob is opaque: its own anchor (a PDF's page) rides through verbatim.
+        assert normalize_links("[p](doc.pdf#page=3)", _DOC) == (
+            "[p](node:/blob/a/b/doc.pdf#page=3)"
+        )
+
+    def test_extensionless_file_is_still_a_blob(self) -> None:
+        # No `.md`, so a blob keyed by its full path; downstream drops it if no
+        # such blob exists.
+        assert normalize_links("[t](LICENSE)", _DOC) == "[t](node:/blob/a/b/LICENSE)"
+
+
 class TestNormalizeLinksVerbatim:
-    """Links that don't name an in-tree prose document are left byte-for-byte."""
+    """Links that don't name an in-tree file are left byte-for-byte."""
 
     def test_pure_fragment_is_same_page(self) -> None:
         assert normalize_links("[t](#sec)", _DOC) == "[t](#sec)"
@@ -213,8 +247,10 @@ class TestNormalizeLinksVerbatim:
     def test_mailto_scheme(self) -> None:
         assert normalize_links("[t](mailto:a@b.com)", _DOC) == "[t](mailto:a@b.com)"
 
-    def test_non_markdown_target(self) -> None:
-        assert normalize_links("![alt](img.png)", _DOC) == "![alt](img.png)"
+    def test_escaping_image_is_left(self) -> None:
+        # A blob-shaped ref climbing out of contents bails out like any escape,
+        # before it could be classified as a blob.
+        assert normalize_links("![a](../../../x.png)", _DOC) == "![a](../../../x.png)"
 
     def test_fenced_code_example_is_untouched(self) -> None:
         # The fence is a separate block with no link_open; the real link after

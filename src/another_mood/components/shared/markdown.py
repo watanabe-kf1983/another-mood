@@ -139,45 +139,41 @@ def _dedup(base: str, used: set[str]) -> str:
 def rewrite_inline_links(
     doc: ParsedMarkdown, resolve: Callable[[str], str | None]
 ) -> str:
-    """Rewrite each inline link's destination via ``resolve``.
+    """Rewrite each inline link's and image's destination via ``resolve``.
 
-    For each real inline link, ``resolve`` is called with its raw ``href`` and
-    returns where the link should point: a new href retargets it, the same href
-    leaves it unchanged, and ``None`` drops the destination — leaving a bare,
-    conspicuous ``[text]``.  The link text is never touched.
+    ``resolve`` is called with each raw destination and returns where it should
+    point: a new value retargets it, the same value leaves it unchanged, and
+    ``None`` drops it — leaving a bare, conspicuous ``[text]`` / ``![alt]``.  The
+    link text and image alt are never touched.
     """
     text = doc.text
     # Splice right-to-left so each span (found on the original text) stays valid;
     # _find_inline_links yields in document order, so reversed() gives that.
     for link in reversed(list(_find_inline_links(doc.text, doc.tokens))):
-        new_href = resolve(link.href)
-        replacement = f"({new_href})" if new_href is not None else ""
+        new_dest = resolve(link.dest)
+        replacement = f"({new_dest})" if new_dest is not None else ""
         text = text[: link.start] + replacement + text[link.end :]
     return text
 
 
 @dataclass(frozen=True)
 class _Link:
-    """A real inline link's destination: the raw ``href`` and the source span
-    ``[start, end)`` covering its ``(href)`` (parentheses included).  The
-    ``[text]`` before it and any bytes after it stay put."""
+    """An inline link's or image's destination: the raw ``dest`` and the source
+    span ``[start, end)`` covering its ``(dest)`` (parentheses included).  The
+    ``[text]`` / ``![alt]`` before it and any bytes after it stay put."""
 
-    href: str
+    dest: str
     start: int
     end: int
 
 
 def _find_inline_links(text: str, tokens: Sequence[Token]) -> Iterator[_Link]:
-    """Locate each real inline link's ``(href)`` destination, in document order.
-
-    A ``link_open`` token carries no source offset, so each ``](href)`` is found
-    by searching its block's character window — bounded to the block so the same
-    path in a code example elsewhere is not matched, and cursor-advanced so
-    repeated links match successive occurrences.
-
-    Residual edge: a real link and an inline-code span with the same literal
-    ``](href)`` in one block — the text search may hit the code one.
-    """
+    """The ``(dest)`` span of each inline link and image, in document order."""
+    # link_open / image tokens carry no source offset, so each `](dest)` is found
+    # by a forward string search — cursor-advanced so repeats match in turn, and
+    # bounded to the block's char window so a like `](dest)` in a code block
+    # elsewhere can't match. Best-effort: an identical `](dest)` in an inline-code
+    # span in the *same* block can still be hit instead.
     line_offsets = _line_offsets(text)
     blocks = [
         (token, token.map)
@@ -191,26 +187,31 @@ def _find_inline_links(text: str, tokens: Sequence[Token]) -> Iterator[_Link]:
             line_offsets[end_line] if end_line < len(line_offsets) else len(text)
         )
         cursor = window_start
-        for href in _link_hrefs(token):
-            needle = f"]({href})"
+        for dest in _link_dests(token):
+            needle = f"]({dest})"
             sep = text.find(needle, cursor, window_end)
             if sep == -1:  # not a bare inline link (reference / autolink / titled)
                 continue
             end = sep + len(needle)
-            # The `(href)` runs from just past the `]` through the `)`.
-            yield _Link(href=href, start=sep + 1, end=end)
+            # The `(dest)` runs from just past the `]` through the `)`.
+            yield _Link(dest=dest, start=sep + 1, end=end)
             cursor = end
 
 
-def _link_hrefs(token: Token) -> Iterator[str]:
-    """Yield the raw href of each real inline link in ``token``.
-
-    Only ``link_open`` children qualify, so an href inside inline code is
-    excluded."""
+def _link_dests(token: Token) -> Iterator[str]:
+    """The raw destination of each inline link and image in ``token``, in source
+    order."""
+    # One pass over the children, not links-then-images: _find_inline_links
+    # advances a cursor and needs the destinations in source order.
     for child in token.children or ():
-        href = child.attrs.get("href")
-        if child.type == "link_open" and isinstance(href, str):
-            yield href
+        if child.type == "link_open":
+            dest = child.attrs.get("href")
+        elif child.type == "image":
+            dest = child.attrs.get("src")
+        else:
+            continue
+        if isinstance(dest, str):
+            yield dest
 
 
 def _line_offsets(text: str) -> list[int]:
