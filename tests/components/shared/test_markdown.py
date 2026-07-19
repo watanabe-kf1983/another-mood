@@ -172,6 +172,24 @@ class TestRewriteInlineLinks:
             '[x](a.md "Title")'
         )
 
+    def test_retargets_an_image_destination(self) -> None:
+        # An image shares the ``](dest)`` shape, so its src is rewritten while
+        # the ``![alt]`` stays put.
+        assert rewrite_inline_links(parse("see ![alt](a.md) ok"), _resolve) == (
+            "see ![alt](A) ok"
+        )
+
+    def test_drops_an_image_destination_to_bare_alt(self) -> None:
+        assert rewrite_inline_links(parse("see ![alt](gone) ok"), _resolve) == (
+            "see ![alt] ok"
+        )
+
+    def test_rewrites_links_and_images_together_in_order(self) -> None:
+        assert (
+            rewrite_inline_links(parse("[x](a.md) ![y](gone) [z](keep.md)"), _resolve)
+            == "[x](A) ![y] [z](keep.md)"
+        )
+
 
 class TestParseSharedAcrossOperations:
     """One parse feeds both operations — the path a multi-derivation caller uses."""
