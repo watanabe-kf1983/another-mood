@@ -119,9 +119,4 @@ properties:
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
 
-## Proposals
-
-### `title:` キーワード (M4)
-
-ObjectType に対する人間向けの表示名 (例: `Category`) を `title:` キーワードで指定する仕組み。Phase 10 タスク [M4](node:/tasks/M/tasks/M4)。
 

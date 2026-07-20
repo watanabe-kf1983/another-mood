@@ -298,11 +298,6 @@ categories:
         note: config-spec.md
         phase: 17
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
-      G3:
-        title: render.customServer.command 対応
-        note: config-spec.md
-        phase: 17
-        proposal: 20-design/20-app/20-config-spec#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         phase: 10
@@ -390,34 +385,10 @@ categories:
       - src/another_mood/components/shared/data_catalog.py
     spec: 20-design/40-communication/10-json-data-model
     tasks:
-      M4:
-        title: Entity Name の導入 (`title:` 由来の表示ラベル)
-        note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
-        phase: 17
-        proposal: 20-design/50-normalizer/20-schema-spec#title-キーワード-m4
       M5:
         title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
         phase: 10
         done: true
-      M6:
-        title: blob marker 機構の導入 (内部 schema 専用、段階 2)
-        note: |
-          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
-          段階 2。x-mood-blob: true 等のマーカーを導入し、build_schema_tree と
-          normalize_data がそれを認識する形に拡張。query-schema.yaml の whereClause
-          等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
-          schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
-        phase: 17
-        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
-      M7:
-        title: user schema からの blob 型宣言の解放 (段階 3)
-        note: |
-          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
-          段階 3。schema-schema.yaml に if/then で blob サブツリーを許容する
-          ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
-          実需が surface してから着手。前提 M6。
-        phase: 17
-        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
       M8:
         title: derive_queries 出力を canonical 形式で流す
         phase: 10
@@ -435,6 +406,10 @@ categories:
     tasks:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
+        note: >-
+          カスタムレンダラ差し替えの構想 (旧 G3 render.customServer.command) はこの
+          検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
+          差し替えで済む抽象は存在しない。
         phase: 17
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
