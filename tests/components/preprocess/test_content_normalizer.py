@@ -251,7 +251,37 @@ def test_blob_file_becomes_record_and_is_fk_target(tmp_path: Path) -> None:
             "x-ref albums.jacket = 'covers/missing.png' has no match in blob.id",
         ),
     ]
-    # The blob's metadata record lands on disk (its bytes do not — that is H5).
+    # The blob's metadata record lands on disk.
     assert yaml.safe_load((out / "covers" / "day1.png.yaml").read_text()) == {
         "blob": [{"id": "covers/day1.png", "mime_type": "image/png"}]
     }
+
+
+def test_blob_bytes_are_mirrored_as_a_real_copy(tmp_path: Path) -> None:
+    """Blob bytes land beside their record at the contents-relative path,
+    as a real copy — never a hardlink to the user's source file, whose
+    in-place edits must not reach the workspace."""
+    schema_file = tmp_path / "schema.yaml"
+    schema_file.write_text("type: object\nproperties: {}\n")
+    src = tmp_path / "contents"
+    (src / "covers").mkdir(parents=True)
+    blob_bytes = b"\x89PNG\r\n\x1a\n fake png bytes"
+    (src / "covers" / "day1.png").write_bytes(blob_bytes)
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    out = tmp_path / "normalized"
+    out.mkdir()
+
+    reporter = DiagnosticReporter()
+    normalize_contents.fn(
+        src_dir=src,
+        out_dir=out,
+        schema_file=schema_file,
+        data_catalog_dir=catalog_dir,
+        reporter=reporter,
+    )
+
+    mirrored = out / "covers" / "day1.png"
+    assert mirrored.read_bytes() == blob_bytes
+    # tmp_path is one filesystem, so a hardlink would share the inode.
+    assert mirrored.stat().st_ino != (src / "covers" / "day1.png").stat().st_ino

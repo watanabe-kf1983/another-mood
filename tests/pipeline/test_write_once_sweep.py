@@ -52,16 +52,22 @@ def test_no_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
     assert "Alicia" in published_member.read_text(encoding="utf-8")
 
     # Hardlink transport is effective: tmp_path is one filesystem, so the
-    # blob must stay a single inode from generate through every hop (a
-    # silent revert to real copies would fail no behavior test).
+    # blob must stay a single inode from normalize's boundary copy through
+    # every hop (a silent revert to real copies would fail no behavior test).
     blob_rel = Path("default") / "blob" / "cover.png"
-    generate_blob = workspace.root / "generate" / "data" / blob_rel
+    normalize_blob = workspace.root / "normalize_contents" / "data" / "cover.png"
     for downstream in (
+        workspace.root / "compose" / "data" / "contents" / "cover.png",
+        workspace.root / "generate" / "data" / blob_rel,
         workspace.root / "reconcile" / "data" / blob_rel,
         workspace.root / "prepare_render" / "static" / blob_rel,
         published_blob,
     ):
-        assert downstream.stat().st_ino == generate_blob.stat().st_ino, downstream
+        assert downstream.stat().st_ino == normalize_blob.stat().st_ino, downstream
+    # The boundary itself stays a real copy — a hardlink to the user's
+    # source would let in-place edits reach the workspace.
+    source_blob = workspace.config.contents_dir / "cover.png"
+    assert normalize_blob.stat().st_ino != source_blob.stat().st_ino
 
 
 def test_observers_flag_in_place_writes_only(tmp_path: Path) -> None:

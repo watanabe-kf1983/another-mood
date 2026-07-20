@@ -5,8 +5,11 @@ schema (built-in prose schema + user schema), and normalized
 (dict-to-array conversion for additionalProperties patterns).  When
 the data catalog is available, FK references declared via ``x-ref``
 are also checked against the actual data (data-level FK integrity).
+Blob sources additionally have their bytes mirrored beside their
+records.
 """
 
+import shutil
 from collections.abc import Mapping, Sequence
 from importlib import resources
 from pathlib import Path
@@ -17,6 +20,7 @@ from another_mood.components.preprocess.normalize_core import iter_normalized
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.user_source.diagnostic import DiagnosticReporter
+from another_mood.components.shared.user_source.source_loader import is_blob_file
 from another_mood.components.shared.json_data_model import load_model, save_model
 
 _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
@@ -45,6 +49,8 @@ def normalize_contents(
         # never collide on the same destination.
         rel = src_file.relative_to(src_dir)
         save_model(out_dir / rel.with_name(rel.name + ".yaml"), data)
+        if is_blob_file(src_file):
+            _mirror_blob_bytes(src_file, out_dir / rel)
         _accumulate(data, data_by_entity)
 
     for diagnostic in check_fk_data(_load_catalog(data_catalog_dir), data_by_entity):
@@ -62,6 +68,14 @@ def build_contents_schema(
     validated against the matching entry.
     """
     return load_model(_BUILTIN_CONTENTS_SCHEMA_FILE, schema_file)
+
+
+def _mirror_blob_bytes(src_file: Path, dest: Path) -> None:
+    # A real copy, never a hardlink to the user's source file: a shared
+    # inode would let an in-place source edit corrupt the workspace and
+    # published output without firing any watcher event.
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src_file, dest)
 
 
 def _accumulate(data: object, sink: dict[str, list[Mapping[str, object]]]) -> None:

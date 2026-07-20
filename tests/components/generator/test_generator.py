@@ -33,15 +33,12 @@ class TestGenerate:
         (templates_dir / "index.md").write_text("# {{ title }}\n")
 
         out_dir = tmp_path / "output"
-        contents_dir = tmp_path / "contents"
-        contents_dir.mkdir()
         reports_file = tmp_path / "reports.yaml"
         reports_file.write_text("file_per: []\n")
         generate(
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
-            contents_dir=contents_dir,
             project_name="myproject",
             out_dir=out_dir,
         )
@@ -66,8 +63,8 @@ class TestGenerate:
         assert (out_dir / "data" / "__db" / "index.md").exists()
 
     def test_mirrors_blob_bytes_into_user_edition_only(self, tmp_path: Path) -> None:
-        # A blob record carries only {id, mime_type}; its bytes live in the
-        # user's contents tree, keyed by the id (a contents-relative path).
+        # A blob record carries only {id, mime_type}; its bytes ride the
+        # composed contents tree, keyed by the id (a contents-relative path).
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
         _write_yaml(
@@ -77,11 +74,10 @@ class TestGenerate:
                 "blob": [{"id": "covers/cover.png", "mime_type": "image/png"}],
             },
         )
-
-        contents_dir = tmp_path / "contents"
-        (contents_dir / "covers").mkdir(parents=True)
+        blob_src = data_dir / "contents" / "covers" / "cover.png"
+        blob_src.parent.mkdir(parents=True)
         blob_bytes = b"\x89PNG\r\n\x1a\n\x00 not really a png \xff"
-        (contents_dir / "covers" / "cover.png").write_bytes(blob_bytes)
+        blob_src.write_bytes(blob_bytes)
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
@@ -94,15 +90,15 @@ class TestGenerate:
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
-            contents_dir=contents_dir,
             project_name="myproject",
             out_dir=out_dir,
         )
 
-        # The blob lands at its anchor-path address (/blob/<id>) under the user
-        # edition, byte-identical to the source.
+        # The blob lands at its anchor-path address (/blob/<id>) under the
+        # user edition, byte-identical and inode-shared (hardlink transport).
         mirrored = out_dir / "data" / "default" / "blob" / "covers" / "cover.png"
         assert mirrored.read_bytes() == blob_bytes
+        assert mirrored.stat().st_ino == blob_src.stat().st_ino
         # The __db self-description describes the data, not its resources — no
         # blob bytes are mirrored there.
         assert not (out_dir / "data" / "__db" / "blob").exists()
@@ -119,8 +115,6 @@ class TestGenerate:
         (templates_dir / "index.md").write_text("# {{ title }}\n")
 
         out_dir = tmp_path / "output"
-        contents_dir = tmp_path / "contents"
-        contents_dir.mkdir()
         reports_file = tmp_path / "reports.yaml"
         # Two editions; the second carries a space so its output segment and
         # meta-index href are IRI-escaped (and stay consistent).
@@ -131,7 +125,6 @@ class TestGenerate:
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
-            contents_dir=contents_dir,
             project_name="myproject",
             out_dir=out_dir,
         )
@@ -156,8 +149,6 @@ class TestGenerate:
         (templates_dir / "index.md").write_text("# {{ title }}\n")
 
         out_dir = tmp_path / "output"
-        contents_dir = tmp_path / "contents"
-        contents_dir.mkdir()
         reports_file = tmp_path / "reports.yaml"
         # `con` passes ReportsSchema (non-empty, non-`__`) but is a Windows
         # device name, so its edition directory is rejected on every OS.
@@ -166,7 +157,6 @@ class TestGenerate:
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
-            contents_dir=contents_dir,
             project_name="myproject",
             out_dir=out_dir,
         )
@@ -189,15 +179,12 @@ class TestGenerate:
         (templates_dir / "index.md").write_text('{% mood_view "bad.md" with x %}')
 
         out_dir = tmp_path / "output"
-        contents_dir = tmp_path / "contents"
-        contents_dir.mkdir()
         reports_file = tmp_path / "reports.yaml"
         reports_file.write_text("file_per: []\n")
         generate(
             data_dir=tmp_path / "data",
             templates_dir=templates_dir,
             reports_file=reports_file,
-            contents_dir=contents_dir,
             project_name="myproject",
             out_dir=out_dir,
         )
