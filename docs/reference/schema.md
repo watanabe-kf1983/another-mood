@@ -289,6 +289,8 @@ blob:
 
 At build time every blob is copied verbatim to `blob/<id>` under each edition's output root — both the Markdown output and the rendered HTML.
 
+`blob` records come from files only: writing a `blob` record by hand in a YAML file fails validation — the file itself defines the record, and a hand-written one would have no bytes behind it.
+
 ## Full schema-schema
 
 Everything above is a prose explanation of the built-in meta-schema (schema-schema). The strict specification is the YAML at [`./schemas/schema-schema.yaml`](./schemas/schema-schema.yaml).

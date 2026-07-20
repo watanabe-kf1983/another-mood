@@ -3,6 +3,7 @@
 from pathlib import Path
 from textwrap import dedent
 
+import pytest
 import yaml
 
 from another_mood.components.preprocess.content_normalizer import (
@@ -13,6 +14,7 @@ from another_mood.components.preprocess.schema_inspector import inspect_schema
 from another_mood.components.shared.user_source.diagnostic import (
     DiagnosticReporter,
     DiagnosticSeverity,
+    FileValidationError,
 )
 
 
@@ -285,3 +287,42 @@ def test_blob_bytes_are_mirrored_as_a_real_copy(tmp_path: Path) -> None:
     assert mirrored.read_bytes() == blob_bytes
     # tmp_path is one filesystem, so a hardlink would share the inode.
     assert mirrored.stat().st_ino != (src / "covers" / "day1.png").stat().st_ino
+
+
+def test_handwritten_blob_records_fail_validation(tmp_path: Path) -> None:
+    """blob records come from files only: hand-written ``blob`` records in
+    YAML are rejected outright — whether or not a matching file exists —
+    with a diagnostic at each record's YAML position."""
+    schema_file = tmp_path / "schema.yaml"
+    schema_file.write_text("type: object\nproperties: {}\n", encoding="utf-8")
+    src = tmp_path / "contents"
+    (src / "covers").mkdir(parents=True)
+    (src / "covers" / "day1.png").write_bytes(b"\x89PNG\r\n")
+    (src / "handwritten.yaml").write_text(
+        "blob:\n"
+        "  - id: covers/day1.png\n"
+        "    mime_type: image/png\n"
+        "  - id: covers/ghost.png\n"
+        "    mime_type: image/png\n",
+        encoding="utf-8",
+    )
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    out = tmp_path / "normalized"
+    out.mkdir()
+
+    with pytest.raises(FileValidationError) as exc_info:
+        normalize_contents.fn(
+            src_dir=src,
+            out_dir=out,
+            schema_file=schema_file,
+            data_catalog_dir=catalog_dir,
+            reporter=DiagnosticReporter(),
+        )
+
+    yaml_file = src / "handwritten.yaml"
+    message = "is hand-written; blob records come from files only"
+    assert [(d.file, d.line, d.message) for d in exc_info.value.diagnostics] == [
+        (yaml_file, 2, f"blob.id = 'covers/day1.png' {message}"),
+        (yaml_file, 4, f"blob.id = 'covers/ghost.png' {message}"),
+    ]
