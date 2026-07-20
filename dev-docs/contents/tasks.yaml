@@ -81,7 +81,7 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
-        phase: 15
+        phase: 17
         proposal: 20-design/70-generator/20-anchor-spec#未解決参照の扱い
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
@@ -204,12 +204,12 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
@@ -307,12 +307,12 @@ categories:
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
-        phase: 15
+        phase: 17
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
       G3:
         title: render.customServer.command 対応
         note: config-spec.md
-        phase: 15
+        phase: 17
         proposal: 20-design/20-app/20-config-spec#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
@@ -400,11 +400,11 @@ categories:
       J1:
         title: 計算機能プラグインの I/F 仕様検討
         note: 入出力 / 登録方法 / Composer か Generator のどこに挿すか
-        phase: 15
+        phase: 17
       J2:
         title: サンプル実装で I/F 検証
         note: 例 — ファンクションポイント算出
-        phase: 15
+        phase: 17
 
   L:
     title: dog-fooding リファクタ
@@ -450,7 +450,7 @@ categories:
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
         note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/20-schema-spec#title-キーワード-m4
       M5:
         title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
@@ -464,7 +464,7 @@ categories:
           normalize_data がそれを認識する形に拡張。query-schema.yaml の whereClause
           等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
           schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
       M7:
         title: user schema からの blob 型宣言の解放 (段階 3)
@@ -473,7 +473,7 @@ categories:
           段階 3。schema-schema.yaml に if/then で blob サブツリーを許容する
           ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
           実需が surface してから着手。前提 M6。
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
       M8:
         title: derive_queries 出力を canonical 形式で流す
@@ -500,10 +500,10 @@ categories:
     tasks:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
-        phase: 15
+        phase: 17
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 15
+        phase: 17
       N3:
         title: "watch で捨てられる hugo_build をスキップ (レンダリング効率)"
         note: |
@@ -512,7 +512,7 @@ categories:
           捨てられる full hugo build がリビルド遅延に乗る。ただし report / error 伝播が
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
-        phase: 15
+        phase: 17
 
   O:
     title: バグ修正
@@ -551,11 +551,72 @@ categories:
     title: 公開
     impl_paths:
       - pyproject.toml
+      - dev-docs/
     tasks:
       Q1:
         title: PyPI 公開
-        note: 詳細タスクは別途切り出す（ライセンス / README / メタデータ整備など）
+        note: >-
+          静かな公開に徹する (告知・宣伝は Q3)。前提 Q2。詳細タスクは着手時に切り出す
+          — MIT ライセンス / README の利用者向け書き直し / pyproject メタデータ整備 /
+          パッケージ名確保など。README にはメンテナンス期待値の明文化を含める
+          (as-is / no-SLA / fork 歓迎)。リリースフローは Q6。
         phase: 14
+      Q2:
+        title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
+        note: >-
+          仕様未着手。今後も破壊的変更が見込まれるため、プロジェクトソース
+          (definition / contents) 側に利用可能な mood バージョン (またはフォーマット世代)
+          を宣言し、不整合時に loud に失敗する機構を入れる。方式・置き場所の検討から始める。
+          Q1 (PyPI 公開) の前提。
+        phase: 14
+      Q3:
+        title: 告知・宣伝を伴うローンチ
+        note: >-
+          Q1 は静かな公開に留め、S2-S4 (システム開発ドキュメント) の完成を待って
+          告知する。内容 (告知先・訴求) は接近時に具体化。前提 Q4, Q5, Q7。
+        phase: 16
+      Q4:
+        title: dev-docs の全面英語化
+        note: >-
+          ローンチで外部コントリビュータが設計判断を読める状態にする。
+          background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
+          Phase 15 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
+          その完了後・告知前に実施する。Q3 の前提。
+        phase: 16
+      Q5:
+        title: 残タスクの GitHub Issues 移行 + ロードマップ退役
+        note: >-
+          Phase 17 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
+          一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
+          はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
+          ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
+        phase: 16
+      Q6:
+        title: リリースフロー整備 (tag 駆動 publish + バージョン運用)
+        note: >-
+          「main マージ = リリース」にはしない。main は従来通り trunk として自由にマージし、
+          リリースは version bump + git tag を打つ別イベント。tag push を契機に
+          GH Actions (trusted publishing) が publish する。手順は DEVELOPMENT.md に
+          チェックリスト化 (Q2 のフォーマット世代 +1 判定を含む)。リリースブランチは
+          旧バージョンへのパッチ需要が出るまで導入しない (pre-1.0 単独開発は trunk-based 維持)。
+          リリースノートは GH 自動生成 (PR タイトルの束ね) を基本とし、破壊的変更のある
+          リリースのみ冒頭に移行手順を手書きする。外部向けの体裁格上げ判断は Q7。
+          バージョニングは 0.x 慣習に従い 0.MINOR を破壊的変更 (フォーマット世代 +1) に
+          予約、それ以外は 0.x.PATCH。1.0.0 はローンチ (Q3) で刻む。
+        phase: 14
+      Q7:
+        title: リポジトリの外部公開整備 (GH 設定 / CONTRIBUTING / changelog)
+        note: >-
+          外部に見られる前提のリポジトリ整備。branch protection 等の GH 設定、
+          外部が読む changelog / リリースノートの体裁、メンテナンス期待値の明文化
+          (as-is / no-SLA / fork 歓迎)。コントリビューションは積極受け入れしない方針
+          — Issues は有効のまま放置・PR も放置・Dependabot は有効化しない。
+          うるさくなったら (AI slop 等) そのとき対策を再考。
+          `requires-python >=3.13` の広さも一度判断する (広げるか、最新版のみと宣言するか)。
+          下限の実態: 3.13 要求は ntpath.isreserved の 1 箇所のみ (vendor すれば 3.12 化は安い)。
+          PEP 695 構文 (type 文 / ジェネリクス) が広範にあり 3.12 が構文上の床。
+          受益者が現れるローンチまで不要なので Phase 16。Q3 の前提。
+        phase: 16
 
   R:
     title: ユーザドキュメント・サンプルプロジェクト改善
@@ -584,14 +645,14 @@ categories:
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F5)。
-        phase: 13
+        phase: 15
         proposal: 20-design/20-app/50-system-dev-docs#s2-dfd-data-flow-diagram
       S3:
         title: CRUD マトリクステンプレート
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F6)。
-        phase: 13
+        phase: 15
         proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス
       S4:
         title: 画面遷移図 + 画面定義テンプレート
@@ -599,7 +660,7 @@ categories:
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           画面 entity + 遷移 entity を構造化し、Mermaid stateDiagram-v2 で
           遷移図を描く。stateDiagram の Mermaid 適合性実機検証も兼ねる。
-        phase: 13
+        phase: 15
         proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
 
   T:
