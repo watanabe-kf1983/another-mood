@@ -189,26 +189,44 @@ class TestMetaAnchorPath:
         assert b == "/erds/order-flow/entities/user"
         assert a != b
 
-    def test_slash_in_id_is_percent_encoded_for_user_entity(self) -> None:
-        # The `/`-keeping exception is confined to the built-in prose/blob
-        # collections; a user entity's `/`-bearing id is encoded.
-        root = wrap_tree({"items": [{"id": "a/b"}]})
-        assert root["items"][0]._meta.anchor_path == "/items/a%2Fb"
-
-    def test_slash_in_id_is_kept_for_prose(self) -> None:
-        root = wrap_tree({"prose": [{"id": "design/architecture"}]})
-        assert root["prose"][0]._meta.anchor_path == "/prose/design/architecture"
-
-    def test_slash_in_id_is_kept_for_blob(self) -> None:
-        # A blob id is a contents-relative path like a prose id, so it shares
-        # the exception — `covers/fig.png` stays raw, not `covers%2Ffig.png`.
-        root = wrap_tree({"blob": [{"id": "covers/neon_after_rain.png"}]})
-        expected = "/blob/covers/neon_after_rain.png"
-        assert root["blob"][0]._meta.anchor_path == expected
-
-    def test_space_in_id_is_percent_encoded_even_in_prose(self) -> None:
-        root = wrap_tree({"prose": [{"id": "design/with space"}]})
-        assert root["prose"][0]._meta.anchor_path == "/prose/design/with%20space"
+    @pytest.mark.parametrize(
+        ("collection", "id_value", "expected"),
+        [
+            # Default: the segment is IRI-escaped — reserved ASCII is
+            # percent-encoded, ucschar stays raw, a non-str id is stringified.
+            pytest.param("items", "a/b", "/items/a%2Fb", id="slash-escaped"),
+            pytest.param("items", "a#b", "/items/a%23b", id="hash-escaped"),
+            pytest.param("items", "書籍", "/items/書籍", id="ucschar-kept"),
+            pytest.param("items", 42, "/items/42", id="numeric-stringified"),
+            # prose/blob exception: their ids are contents-relative paths, so a
+            # `/` stays raw.  Confined to those built-in collections — a user
+            # entity (`items`, above) percent-encodes its `/`.
+            pytest.param(
+                "prose",
+                "design/architecture",
+                "/prose/design/architecture",
+                id="slash-kept-prose",
+            ),
+            pytest.param(
+                "blob",
+                "covers/neon_after_rain.png",
+                "/blob/covers/neon_after_rain.png",
+                id="slash-kept-blob",
+            ),
+            # ...but only `/`; other reserved chars (a space) are still escaped.
+            pytest.param(
+                "prose",
+                "design/with space",
+                "/prose/design/with%20space",
+                id="space-escaped-in-prose",
+            ),
+        ],
+    )
+    def test_segment_rendered_into_path(
+        self, collection: str, id_value: object, expected: str
+    ) -> None:
+        node = wrap_tree({collection: [{"id": id_value}]})[collection][0]
+        assert node._meta.anchor_path == expected
 
     def test_prose_heading_folds_headings_into_hash_fragment(self) -> None:
         # The `headings` segment folds onto the record's path as `#slug`; `#`
@@ -230,19 +248,6 @@ class TestMetaAnchorPath:
         root = wrap_tree({"other": [{"id": "x", "headings": [{"id": "h"}]}]})
         elem = root["other"][0]["headings"][0]
         assert elem._meta.anchor_path == "/other/x/headings/h"
-
-    def test_hash_in_id_is_percent_encoded(self) -> None:
-        root = wrap_tree({"items": [{"id": "a#b"}]})
-        assert root["items"][0]._meta.anchor_path == "/items/a%23b"
-
-    def test_ucschar_in_id_is_kept_raw(self) -> None:
-        # IRI form: non-ASCII ucschar pass through unencoded.
-        root = wrap_tree({"items": [{"id": "書籍"}]})
-        assert root["items"][0]._meta.anchor_path == "/items/書籍"
-
-    def test_numeric_id_is_stringified(self) -> None:
-        root = wrap_tree({"items": [{"id": 42}]})
-        assert root["items"][0]._meta.anchor_path == "/items/42"
 
     def test_result_is_cached(self) -> None:
         root = wrap_tree({"items": [{"id": "x"}]})
@@ -341,7 +346,7 @@ class TestMetaOriginItemType:
         # A liner heading flattened into a view sits at a non-prose position
         # (`album_tracklist.item.liner.headings.item`), yet its catalog origin
         # is `prose.item.headings.item`, so detection fires there — the point
-        # of B13. The `#slug` fold this drives is TestMetaAnchorPath's concern.
+        # of B13.  Observed via the heading-only `#slug` fold it drives.
         data = {
             "__definition": {
                 "entities": [
@@ -358,7 +363,9 @@ class TestMetaOriginItemType:
             ],
         }
         heading = wrap_tree(data)["album_tracklist"][0]["liner"]["headings"][0]
-        assert heading._meta._is_prose_heading() is True
+        assert heading._meta.origin_item_type == "prose.item.headings.item"
+        assert heading._meta.stamps_anchor is False
+        assert heading._meta.anchor_path.endswith("#liner-notes")
 
 
 class TestIterNodes:

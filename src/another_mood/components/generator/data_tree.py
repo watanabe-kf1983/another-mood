@@ -12,20 +12,13 @@ from typing import Any, cast
 
 from another_mood.components.generator.url import url_escape
 
-# The built-in content collections, whose contents-relative-path ids keep `/`
-# raw in the anchor path. Not generalized to every `/`-bearing id — a user
-# entity's structure can change and reintroduce ambiguity (anchor-spec.md#prose-の例外).
-_PATH_BASED_ID_TYPES = frozenset({"prose.item", "blob.item"})
-
 
 class Node(ABC):
-    """An anchorable data-tree node that links back to its container.
+    """An anchorable data-tree node that links back to its container."""
 
-    Its members are instance attributes set in ``__init__``, so they are
-    declared here as annotations rather than ``@abstractmethod`` (which
-    would block subclasses from instantiating).
-    """
-
+    # Members are instance attributes set in ``__init__``, so they are
+    # declared here as plain annotations, not ``@abstractmethod`` — the
+    # latter would block subclasses from instantiating.
     _parent: "Node | None"
     """Reference to the container node, or ``None`` at the root."""
 
@@ -103,11 +96,7 @@ class MappingNode(dict[str, Any], Node):
 
 
 class _NodeMeta:
-    """Lazy node-metadata view exposed under ``node._meta``.
-
-    Each property composes its parent's value with this node's
-    ``_segment``; results are cached so repeated access is O(1).
-    """
+    """Lazy node-metadata view exposed under ``node._meta``."""
 
     def __init__(self, node: Node, type_index: Mapping[str, str]) -> None:
         self._node = node
@@ -115,55 +104,36 @@ class _NodeMeta:
 
     @cached_property
     def anchor_path(self) -> str:
-        """Anchor path — absolute, `/`-rooted data-tree path.
-
-        ``/`` at the root; every other node is the parent's path plus its
-        segment, IRI-escaped via ``url_escape`` (save two exceptions handled
-        below).  The leading ``/`` marks the path as absolute within the
-        page's data tree, distinct from a relative reference.
+        """Anchor path — an absolute, ``/``-rooted path in the page's data
+        tree.  The leading ``/`` marks it absolute, distinct from a
+        relative reference.
         """
-        parent = self._node._parent
-        if parent is None:
-            return "/"
-        if self._is_prose_heading():
-            record = cast(MappingNode, self._node)._parent_record
-            assert record is not None  # a heading always has a record
-            # ``#`` is a structural separator, and the github slug must
-            # match the renderer's native heading id, so neither is escaped.
-            return f"{record._meta.anchor_path}#{self._node._segment}"
-        safe = "/" if self.origin_item_type in _PATH_BASED_ID_TYPES else ""
-        seg = url_escape(self._node._segment, safe=safe)
-        parent_path = parent._meta.anchor_path
-        # The root path already ends in ``/``; avoid doubling it.
-        sep = "" if parent_path == "/" else "/"
-        return f"{parent_path}{sep}{seg}"
+        return self._anchor.anchor_path(self._node)
 
     @cached_property
     def fragment(self) -> str:
         """URL fragment that lands on this node — what ``href`` appends.
 
-        Held as its own property so no consumer re-parses the composed path
-        string.  Usually the part of :attr:`anchor_path` after the last ``#``;
-        empty for a blob, which is a file with no within-page landing.
+        Usually the whole :attr:`anchor_path`; a bare slug for a prose
+        heading (the renderer's native id), and empty for a blob, a file
+        with no within-page landing.
         """
-        if self._is_prose_heading():
-            return self._node._segment
-        elif is_blob(self._node):
-            return ""
-        else:
-            return self.anchor_path
+        return self._anchor.fragment(self._node)
 
     @cached_property
     def stamps_anchor(self) -> bool:
         """Whether the system emits an ``<a id>`` landing for this node.
 
-        False for a prose heading: the markdown renderer emits its id
+        False for a prose heading: the markdown renderer emits the id
         natively, so a stamped ``<a id>`` would duplicate it.
         """
-        return not self._is_prose_heading()
+        return self._anchor.stamps_anchor()
 
-    def _is_prose_heading(self) -> bool:
-        return self.origin_item_type == "prose.item.headings.item"
+    @cached_property
+    def _anchor(self) -> "_Anchor":
+        """The strategy that resolves this node's anchor (path / fragment /
+        stamping)."""
+        return _anchor_for(self.origin_item_type)
 
     @cached_property
     def origin_item_type(self) -> str:
@@ -172,36 +142,148 @@ class _NodeMeta:
 
     @cached_property
     def object_type_id(self) -> str:
-        """Schema-position ID in catalog notation.
-
-        A record/singleton node is its dotted path (``X.item`` for an
-        array element, ``X`` for a singleton); an Array node is the
-        catalog ``X.item[]`` form — the array *of* that element type. The
-        ``[]`` marker is appended only here, on the public id, so an
-        Array's descendants compose against the plain :attr:`_type_path`
-        and stay ``…item`` rather than ``…item[].item``.
+        """Schema-position ID in catalog notation: a record/singleton node's
+        dotted path (``X.item`` for an array element, ``X`` for a singleton),
+        or an Array node's ``X.item[]`` — the array *of* that element type.
         """
+        # The ``[]`` marker lives only on this public id; descendants compose
+        # against the marker-less ``_type_path`` and so stay ``…item`` rather
+        # than ``…item[].item``.
         path = self._type_path
         return f"{path}.item[]" if isinstance(self._node, ArrayNode) else path
 
     @cached_property
     def _type_path(self) -> str:
-        """Dotted schema path, sans array marker — composed by descendants.
-
-        ``.item`` at the root — the value ``data_catalog._item_type_id``
-        yields for the empty edge path, i.e. the root object's type.
-        Top-level entities are catalog roots (``parent_entity=None``), so
-        the root's id is deliberately not a prefix of theirs; the root
-        contributes an empty prefix in the composition below.
+        """Dotted schema path, sans the array ``[]`` marker — the form
+        descendants compose against.
         """
         parent = self._node._parent
         if parent is None:
+            # Root: the empty edge path, whose type id is ``.item`` (the value
+            # ``data_catalog._item_type_id`` yields there). Top-level entities
+            # are catalog roots, so the root is deliberately not a prefix of
+            # theirs — it contributes an empty prefix to descendants below.
             return ".item"
         # Schema position of an Array element is the constant ``item`` —
         # the element's ``id`` only matters for anchor identity.
         seg = "item" if isinstance(parent, ArrayNode) else self._node._segment
         parent_path = "" if parent._parent is None else parent._meta._type_path
         return f"{parent_path}.{seg}" if parent_path else seg
+
+
+# --- Anchor strategies ------------------------------------------------------
+#
+# An ``_Anchor`` owns how a node's anchor is formed — its path, its URL
+# fragment, and whether an ``<a id>`` is stamped.  ``_NodeMeta`` holds no
+# anchor logic; it only selects the strategy (:attr:`_NodeMeta._anchor`) by
+# origin type and delegates.
+#
+# This is the SEMANTIC axis of node metadata.  The STRUCTURAL axis (Array vs
+# Mapping, feeding ``object_type_id`` / ``_type_path``) stays inline in
+# ``_NodeMeta`` — it is already polymorphic in the node classes, so mixing it
+# in here would double up an existing split.  And origin, the discriminant, is
+# itself computed from that structural core, so these strategies ride on top
+# of it rather than replacing ``_NodeMeta`` wholesale.
+
+
+class _Anchor(ABC):
+    """Strategy resolving a node's anchor: its path, fragment, and stamping."""
+
+    @abstractmethod
+    def anchor_path(self, node: Node) -> str:
+        """Compose ``node``'s anchor path under this anchor."""
+
+    @abstractmethod
+    def fragment(self, node: Node) -> str:
+        """The URL fragment that lands on ``node`` under this anchor."""
+
+    @abstractmethod
+    def stamps_anchor(self) -> bool:
+        """Whether the system emits an ``<a id>`` landing for this anchor."""
+
+
+class _SegmentAnchor(_Anchor):
+    """A node anchored at the parent's path plus its own escaped segment.
+
+    The default anchor for an ordinary data node (and the tree root, whose
+    parentless base case ``anchor_path`` handles).  ``_ProseAnchor`` /
+    ``_BlobAnchor`` refine it, differing only in :attr:`_raw_chars` and the
+    fragment.
+    """
+
+    _raw_chars = ""
+
+    def anchor_path(self, node: Node) -> str:
+        parent = node._parent
+        if parent is None:
+            # The tree root — no parent to compose against.  The recursion's
+            # base case, and the only node that reaches here parentless.
+            return "/"
+        seg = url_escape(node._segment, safe=self._raw_chars)
+        parent_path = parent._meta.anchor_path
+        # The root path already ends in ``/``; avoid doubling it.
+        sep = "" if parent_path == "/" else "/"
+        return f"{parent_path}{sep}{seg}"
+
+    def fragment(self, node: Node) -> str:
+        return self.anchor_path(node)
+
+    def stamps_anchor(self) -> bool:
+        return True
+
+
+class _ProseAnchor(_SegmentAnchor):
+    """A prose record — a contents-relative-path id that keeps ``/`` raw."""
+
+    # Only the built-in prose/blob collections keep ``/`` raw, not every
+    # ``/``-bearing id: a user entity's structure can change and reintroduce
+    # ambiguity (anchor-spec.md#prose-の例外).
+    _raw_chars = "/"
+
+
+class _BlobAnchor(_SegmentAnchor):
+    """A blob — a file node whose path-based id keeps ``/`` raw like a prose
+    id, and which has no within-page landing, so its fragment is empty."""
+
+    _raw_chars = "/"
+
+    def fragment(self, node: Node) -> str:
+        return ""
+
+
+class _HeadingAnchor(_Anchor):
+    """A prose heading — folds onto its record's path as ``#slug``.
+
+    The markdown renderer emits the heading's id natively, so the fragment
+    is the bare slug and nothing is stamped (a stamped ``<a id>`` would
+    duplicate the native one).
+    """
+
+    def anchor_path(self, node: Node) -> str:
+        record = cast(MappingNode, node)._parent_record
+        assert record is not None  # a heading always has a record
+        # ``#`` is a structural separator, and the github slug must match
+        # the renderer's native heading id, so neither is escaped.
+        return f"{record._meta.anchor_path}#{node._segment}"
+
+    def fragment(self, node: Node) -> str:
+        return node._segment
+
+    def stamps_anchor(self) -> bool:
+        return False
+
+
+_DEFAULT_ANCHOR = _SegmentAnchor()
+_ANCHOR_BY_ORIGIN: Mapping[str, _Anchor] = {
+    "prose.item.headings.item": _HeadingAnchor(),
+    "prose.item": _ProseAnchor(),
+    "blob.item": _BlobAnchor(),
+}
+
+
+def _anchor_for(origin_item_type: str) -> _Anchor:
+    """Select the anchor strategy for an ``origin_item_type`` (segment default)."""
+    return _ANCHOR_BY_ORIGIN.get(origin_item_type, _DEFAULT_ANCHOR)
 
 
 def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
@@ -262,15 +344,16 @@ def is_blob(node: Node) -> bool:
     return node._meta.origin_item_type == "blob.item"
 
 
+# A free function over the node tree, like :func:`iter_nodes` /
+# :func:`nearest_ancestor`, rather than a method — so it cannot shadow a data
+# key on the dict/list-subclass nodes.
 def child(node: Node, seg: object) -> Node | None:
     """The child of ``node`` whose anchor segment equals ``seg``, or ``None``.
 
     ``seg`` is a record's ``id`` (array element) or a key (mapping entry) —
     both recorded on the child as ``_segment``, so a single match resolves
     either container kind, and a path-shaped id (a ``prose`` or ``blob``
-    record) matches its raw value without escaping.  A free function over the node
-    tree like :func:`iter_nodes` / :func:`nearest_ancestor`, rather than a
-    method, so it cannot shadow a data key on the dict/list-subclass nodes.
+    record) matches its raw value without escaping.
     """
     key = str(seg)
     return next((c for c in node._children() if c._segment == key), None)
