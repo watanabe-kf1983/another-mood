@@ -345,17 +345,22 @@ categories:
         done: true
 
   J:
-    title: プラグインシステム
+    title: 外部計算連携
     impl_paths:
       - src/another_mood/
     tasks:
-      J1:
-        title: 計算機能プラグインの I/F 仕様検討
-        note: 入出力 / 登録方法 / Composer か Generator のどこに挿すか
-        phase: 17
-      J2:
-        title: サンプル実装で I/F 検証
-        note: 例 — ファンクションポイント算出
+      J3:
+        title: "外部計算とのデータ受け渡し境界の整備 (例: Function Point 算出の掲載)"
+        note: >-
+          計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
+          (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
+          歴史の轍を踏まない)。集計・導出値の掲載ニーズには受け渡し境界の両側で応える:
+          (1) 入力側 = 計算結果を通常の contents YAML として還流 — 既に可能で
+          schema / x-ref 検証も効く、(2) 出力側 = クエリ結果の機械可読エクスポート (YAML) —
+          未提供 (現 __db/__queries は人間向け診断 Markdown で結果データではない)。
+          実需が具体化した時点で (2) の安定契約と「export → 外部計算 → contents 還流」
+          ラウンドトリップのガイド化を仕様検討する。クエリ DSL への集約関数追加
+          (sum / count 等) は、それでも足りない場合の後続候補。
         phase: 17
 
   L:
