@@ -6,7 +6,10 @@ Adapts Another Mood output to Hugo conventions:
 - Reflects a deleted page with a placeholder
 
 exclusive_write=False: Hugo's live server watches this dir, so in-place
-incremental updates are preferred over atomic clear-and-replace.
+incremental updates are preferred over atomic clear-and-replace. In-place
+applies to the directory, not to files: each run clears and refills the
+file set, never writing into an existing file (the write-once rule, see
+transfer.py).
 
 error_propagation=False: reconcile renders a __build_failure page on
 upstream error, which Hugo must still serve. The sync runs unconditionally,
@@ -14,12 +17,12 @@ while error_propagation is invoked manually to forward upstream reports to
 out_dir/reports where build_report_stage collects them.
 """
 
-import shutil
 from pathlib import Path
 
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.dir_lock import dir_lock
 from another_mood.components.shared.component.errors import error_propagation
+from another_mood.components.shared.transfer import link_or_copy
 
 _DELETED_CONTENT = "[This page has been removed. Go to top page.](/)\n"
 
@@ -58,12 +61,14 @@ def sync(
     with dir_lock(out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         old_files = _collect_files(out_dir)
+        for stale in old_files:
+            (out_dir / stale).unlink()
         src_paths = {p for p in _collect_files(src_dir) if not _is_blob(p)}
-        expected = {_hugo_name(p) for p in src_paths}
         for src_path in src_paths:
             dst = out_dir / _hugo_name(src_path)
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src_dir / src_path, dst)
+            link_or_copy(src_dir / src_path, dst)
+        expected = {_hugo_name(p) for p in src_paths}
         for deleted in old_files - expected:
             (out_dir / deleted).write_text(deleted_content, encoding="utf-8")
 
@@ -79,7 +84,7 @@ def _sync_blobs(src_dir: Path, out_dir: Path) -> None:
         for src_path in src_paths:
             dst = out_dir / src_path
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src_dir / src_path, dst)
+            link_or_copy(src_dir / src_path, dst)
 
 
 def _is_blob(rel: Path) -> bool:

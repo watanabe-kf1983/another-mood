@@ -237,6 +237,11 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
 # ── Blob ───────────────────────────────────────────────────────────
 
 
+def is_blob_file(src: Path) -> bool:
+    """True when ``load_source`` treats ``src`` as a blob (not YAML/Markdown)."""
+    return not FileType.MARKDOWN.match(src) and not FileType.YAML.match(src)
+
+
 def load_blob(src: Path, src_dir: Path) -> Mapping[str, object]:
     """Wrap a non-YAML/Markdown file into a ``blob`` record, keyed by its
     contents-relative path with the extension kept (unlike a prose id)."""

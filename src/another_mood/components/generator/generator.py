@@ -2,7 +2,6 @@
 and reconcile the output with the propagated BuildReport.
 """
 
-import shutil
 from collections.abc import Callable, Mapping
 from importlib import resources
 from pathlib import Path
@@ -31,6 +30,7 @@ from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
 from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.transfer import link_or_copy, transfer_tree
 from another_mood.components.shared.windows_reserved_name import (
     ensure_not_windows_reserved,
 )
@@ -53,7 +53,6 @@ def generate(
     data_dir: Path,
     templates_dir: Path,
     reports_file: Path,
-    contents_dir: Path,
     project_name: str,
     *,
     out_dir: Path,
@@ -72,7 +71,7 @@ def generate(
     # A page tree per edition, over the shared data model.
     node_map = build_node_map(load_model(data_dir))
     for edition in editions:
-        render_edition(edition, node_map, contents_dir, out_dir)
+        render_edition(edition, node_map, data_dir / "contents", out_dir)
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -87,7 +86,7 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
     """
     with error_propagation([data_dir], out_dir, component="reconcile") as ctx:
         if ctx is not None:
-            shutil.copytree(ctx.upstreams[0], ctx.out, dirs_exist_ok=True)
+            transfer_tree(ctx.upstreams[0], ctx.out, dirs_exist_ok=True)
             warnings = [
                 d
                 for d in BuildReport.collect(data_dir / "reports").diagnostics
@@ -116,18 +115,24 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
 def _append_warnings_link(index_md: Path, count: int) -> None:
     """Append a short ``## Warnings`` block linking to the warnings page."""
     label = f"{count} warning{'' if count == 1 else 's'}"
-    with index_md.open("a", encoding="utf-8") as f:
-        f.write(f"\n## Warnings\n\n{label} — [view](__warnings/)\n")
+    content = index_md.read_text(encoding="utf-8")
+    # Replace the file, never append in place: the inode may be shared
+    # with the upstream copy via hardlink.
+    index_md.unlink()
+    index_md.write_text(
+        f"{content}\n## Warnings\n\n{label} — [view](__warnings/)\n", encoding="utf-8"
+    )
 
 
 def render_edition(
     edition: Edition,
     node_map: Mapping[str, Node],
-    contents_dir: Path,
+    blobs_dir: Path,
     out_dir: Path,
 ) -> None:
     """Render one edition's page tree to its mount ``out_dir/<dir_segment>/``
-    and mirror its blob resources (when ``edition.mirror_blobs``)."""
+    and mirror its blob resources (when ``edition.mirror_blobs``) from
+    ``blobs_dir`` (blob bytes at their contents-relative paths)."""
     data = cast(MappingNode, node_map["/"])
     node_globals, node_filters = make_data_tree_filters(node_map)
     root = ensure_not_windows_reserved(out_dir / edition.dir_segment)
@@ -143,21 +148,17 @@ def render_edition(
         paging=edition.paging,
     ).render_to_file(edition.root_template, data, Path("index.md"))
     if edition.mirror_blobs:
-        _copy_blobs(node_map, contents_dir, root)
+        _copy_blobs(node_map, blobs_dir, root)
 
 
-def _copy_blobs(node_map: Mapping[str, Node], contents_dir: Path, root: Path) -> None:
-    """Copy each blob's bytes from ``contents_dir`` to ``root/blob/<id>``.
-
-    A real copy, never a hardlink: a shared inode lets an in-place source
-    edit corrupt already-published output.
-    """
+def _copy_blobs(node_map: Mapping[str, Node], blobs_dir: Path, root: Path) -> None:
+    """Mirror each blob's bytes from ``blobs_dir`` to ``root/blob/<id>``."""
     for path, node in node_map.items():
         if path.startswith(_BLOB_NAMESPACE):
-            src = contents_dir / cast(str, cast(MappingNode, node)["id"])
+            src = blobs_dir / cast(str, cast(MappingNode, node)["id"])
             dest = root / path.removeprefix("/")
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dest)
+            link_or_copy(src, dest)
 
 
 def markdown_engine(

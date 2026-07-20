@@ -69,7 +69,7 @@ OUT: `render_dir`
 - [pipeline.md](30-pipeline.md) — パイプライン構成
 
 コンポーネント間通信:
-- [json-data-model.md](40-json-data-model.md) — JSON データモデル（定義・マージ戦略・予約プレフィックス）
+- [communication](40-communication/index.md) — 総論（運搬機構: workspace の write-once 不変条件・hardlink / エラー伝播: BuildReport）と、通信されるデータクラスの各論（[JSON データモデル](40-communication/10-json-data-model.md) / [prose](40-communication/20-prose-spec.md) / [blob](40-communication/30-blob-spec.md)）
 
 各コンポーネントの処理フローと技術選定:
 - [normalizer.md](50-normalizer/10-normalizer.md)

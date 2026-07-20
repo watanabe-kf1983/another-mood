@@ -6,6 +6,7 @@ from pathlib import Path
 
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.dir_lock import dir_lock
+from another_mood.components.shared.transfer import transfer_tree
 
 
 @Component(out_dir="out_dir", upstream_dirs=["upstream"])
@@ -26,4 +27,4 @@ def publish(
         with dir_lock(src.parent):
             if dist.exists():
                 shutil.rmtree(dist)
-            shutil.copytree(src, dist)
+            transfer_tree(src, dist)

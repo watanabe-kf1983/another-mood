@@ -107,6 +107,9 @@ class TestSnapshot:
         src.mkdir()
         (src / "a.txt").write_text("original")
         with exclusive_read(src) as snap:
+            # Replace via unlink: an in-place write would reach the
+            # snapshot through the shared inode.
+            (src / "a.txt").unlink()
             (src / "a.txt").write_text("modified")
             assert (snap / "a.txt").read_text() == "original"
 
@@ -133,3 +136,25 @@ class TestSnapshot:
             (od / "data.txt").write_text("written")
         with exclusive_read(out) as snap:
             assert (snap / "data.txt").read_text() == "written"
+
+
+class TestHardlinkTransport:
+    def test_exclusive_write_temp_is_colocated(self, tmp_path: Path) -> None:
+        out = tmp_path / "output"
+        with exclusive_write(out) as od:
+            assert od.parent == out.parent
+
+    def test_exclusive_write_syncs_by_hardlink(self, tmp_path: Path) -> None:
+        out = tmp_path / "output"
+        with exclusive_write(out) as od:
+            (od / "a.txt").write_text("x")
+            written_inode = (od / "a.txt").stat().st_ino
+        assert (out / "a.txt").stat().st_ino == written_inode
+
+    def test_exclusive_read_snapshots_by_hardlink(self, tmp_path: Path) -> None:
+        src = tmp_path / "upstream"
+        src.mkdir()
+        (src / "a.txt").write_text("x")
+        with exclusive_read(src) as snap:
+            assert snap.parent == src.parent
+            assert (snap / "a.txt").stat().st_ino == (src / "a.txt").stat().st_ino

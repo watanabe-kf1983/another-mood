@@ -1,12 +1,12 @@
 """Composer — combine normalized data into views."""
 
-import shutil
 from pathlib import Path
 from typing import cast
 
 from another_mood.components.shared.query import Query, evaluation_order
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.transfer import transfer_tree
 from another_mood.components.shared.windows_reserved_name import (
     ensure_not_windows_reserved,
 )
@@ -29,9 +29,9 @@ def compose(
     queries_out = out_dir / "queries"
     query_results_out = out_dir / "query-results"
 
-    shutil.copytree(contents_dir, contents_out)
-    shutil.copytree(data_catalog_dir, data_catalog_out)
-    shutil.copytree(queries_dir, queries_out)
+    transfer_tree(contents_dir, contents_out)
+    transfer_tree(data_catalog_dir, data_catalog_out)
+    transfer_tree(queries_dir, queries_out)
 
     sources = load_model(contents_out, data_catalog_out, queries_out)
     raw_queries = cast(

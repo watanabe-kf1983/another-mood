@@ -43,7 +43,7 @@
     __entity_defs/  __entity_data/  __queries/   診断（edition 横断・常に __db 内の同位置）
 ```
 
-`__db` マウントと各アンカールート（`__entity_defs` 等）はどちらも `__` 始まりだが要求する事情は別レイヤ: `__db` は edition 名のユーザ空間（`__` 始まりは検証で禁止）との衝突回避、`__entity_defs` はグローバル node_map でのユーザ entity/query 名との衝突回避。ゆえに `__db/entity_defs` にはできず `__db/__entity_defs` になる（[予約プレフィックス](../40-json-data-model.md#予約プレフィックス)）。診断系は `__db` 内で edition 横断・常に同位置。
+`__db` マウントと各アンカールート（`__entity_defs` 等）はどちらも `__` 始まりだが要求する事情は別レイヤ: `__db` は edition 名のユーザ空間（`__` 始まりは検証で禁止）との衝突回避、`__entity_defs` はグローバル node_map でのユーザ entity/query 名との衝突回避。ゆえに `__db/entity_defs` にはできず `__db/__entity_defs` になる（[予約プレフィックス](../40-communication/10-json-data-model.md#予約プレフィックス)）。診断系は `__db` 内で edition 横断・常に同位置。
 
 出力は **deliverable（著者の reports）と DB 自己記述（`__db/`）の 2 種**で捉え、表紙で reports を前面・`__db/` を控えめな別エントリに置く。`__db/` を reports / edition の軸には混ぜない（自己記述面を「体裁違いのレポート」に誤ラベルさせないため）。`__warnings/`（reconcile の警告ページ）は build-report 層で自己記述とは別軸ゆえ `{outDir}/__warnings/` 直下、リンクは表紙 `index.md` に append。
 

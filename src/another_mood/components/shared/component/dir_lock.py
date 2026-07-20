@@ -11,9 +11,11 @@ directories that may be read and written by concurrent threads:
 Both share the same lock-path convention (dir_lock).
 
 Design notes:
-- The output directory is updated in-place (contents cleared + copied)
+- The output directory is updated in-place (contents cleared + refilled)
   rather than replaced via rename so that filesystem watchers keep
   tracking the same directory inode.
+- Files move between temp and real directories by hardlink; safe only
+  under the write-once rule (see transfer.py).
 - Timestamps over monotonic counters: system clock is reliable enough
   on a single machine and requires no shared state between processes.
 """
@@ -30,6 +32,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from filelock import FileLock
+
+from another_mood.components.shared.transfer import transfer_tree
 
 
 def version_path_for(managed_dir: Path) -> Path:
@@ -53,7 +57,8 @@ def exclusive_write(out_dir: Path) -> Generator[Path, None, None]:
     is synced to out_dir under a file lock with ordering guarantees.
     """
     out_dir.parent.mkdir(parents=True, exist_ok=True)
-    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}."))
+    # Next to out_dir: os.link needs one filesystem (/tmp may be another).
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{out_dir.name}.", dir=out_dir.parent))
 
     start_time = datetime.now(timezone.utc)
     try:
@@ -80,7 +85,7 @@ def _sync_if_newer(tmp_dir: Path, out_dir: Path, start_time: datetime) -> None:
                 shutil.rmtree(child)
             else:
                 child.unlink()
-        shutil.copytree(tmp_dir, out_dir, dirs_exist_ok=True)
+        transfer_tree(tmp_dir, out_dir, dirs_exist_ok=True)
 
         version_info = VersionInfo(start_time=start_time)
         version_path.write_text(version_info.to_json(), encoding="utf-8")
@@ -93,12 +98,18 @@ def exclusive_read(src: Path) -> Generator[Path, None, None]:
     Acquires the directory's file lock, copies to a temp dir, then
     releases the lock immediately. The caller reads from the exclusive_read
     without blocking concurrent writes. Cleaned up on exit.
+
+    The copy shares inodes with src: it isolates against unlink +
+    re-create (the write-once rule, see transfer.py), not against
+    in-place writes.
     """
-    tmp = Path(tempfile.mkdtemp(prefix=f"{src.name}."))
+    src.parent.mkdir(parents=True, exist_ok=True)
+    # Next to src: os.link needs one filesystem (/tmp may be another).
+    tmp = Path(tempfile.mkdtemp(prefix=f"{src.name}.", dir=src.parent))
     try:
         with dir_lock(src):
             if src.exists():
-                shutil.copytree(src, tmp, dirs_exist_ok=True)
+                transfer_tree(src, tmp, dirs_exist_ok=True)
         yield tmp
     finally:
         if tmp.exists():
