@@ -394,7 +394,7 @@ categories:
           H5 の full copy 最適化。実コピーを contents→workspace 境界の 1 回に絞り、
           workspace 内 hop を全ファイル hardlink 化 (安全条件「workspace 内の全ファイルは
           write-once」)、前回出力から size+mtime で増分再利用。設計と実測 (100MB blob で
-          build 一巡の実コピー 12→3、warm 無変更は 0) は 20-design/46-blob-spec の
+          build 一巡の実コピー 12→3、warm 無変更は 0) は 20-design/40-communication/30-blob-spec の
           Internal Design 参照。
         phase: 13
         done: true
@@ -435,7 +435,7 @@ categories:
       - src/another_mood/components/shared/json_data_model.py
       - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/shared/data_catalog.py
-    spec: 20-design/40-json-data-model
+    spec: 20-design/40-communication/10-json-data-model
     tasks:
       M4:
         title: Entity Name の導入 (`title:` 由来の表示ラベル)
