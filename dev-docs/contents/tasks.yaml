@@ -133,12 +133,6 @@ categories:
         done: true
       C7:
         title: FS-safe パス書き出しの堅牢化 (パス長の例外詰め替え + 予約名検査)
-        note: >-
-          IRI エスケープ (B7) で潰せない、FS 許容名 ≠ ユーザ命名 id の齟齬。loud なパス長超過は
-          最外での OSError (ENAMETOOLONG) → UserError 詰め替え。silent な Windows 予約名・末尾ドットは
-          共通の ntpath.isreserved 検査 (全 OS 一律 error) を、ユーザ id がパスになる箇所すべて
-          (generator ページパス / edition ディレクトリ / composer クエリ結果ファイル) に埋め込む。
-          ソースファイル名由来のパスは FS 受理済みで対象外。NFC/NFD は別課題 D10。
         phase: 13
         done: true
       C8:
@@ -213,11 +207,6 @@ categories:
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
-        note: >-
-          macOS が NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id が silent に
-          同一出力ファイルへ畳まれる。preprocess の入力境界 2 点 (ファイル内容の decode 直後・
-          ディレクトリ走査で得たファイル名) で全テキストを一律 NFC 正規化する。理由は
-          source_loader.py の _read_text_nfc docstring を参照。
         phase: 13
         done: true
 
@@ -320,21 +309,10 @@ categories:
         done: true
       G8:
         title: "<projectDir> を CWD 配下に制限"
-        note: >-
-          <projectDir> が CWD 配下にあることを ProjectConfig.verify() が必須とし、
-          CWD 外を指す場合 (絶対パス・相対 ../ 脱出の両方) はエラーで拒否する。出力キー
-          .another-mood/<CWD 相対 projectDir>/ の前提を守るための制約で、旧 basename
-          フォールバックの lossy な衝突を塞ぐ。out_dir / render_dir / tmp_dir・入力
-          サブパスの RB_* 上書きは対象外。build / watch にのみ効く。
         phase: 13
         done: true
       G9:
         title: "mood watch / build の作業ディレクトリと出力 publish を隔離"
-        note: >-
-          作業 tmp はシステム temp へ隔離 (mkdtemp、build は成功 / UserError 失敗時に削除・
-          内部エラー時のみ保持、watch は消さず OS 掃除に委ねる、RB_TMP_DIR で固定可)。
-          publish は watch 既定で無し・--out-dir 指定時のみ md を publish (html は publish せず、
-          build は不変)。これで watch 側 publish と build / 出力読み出しの衝突を構造的に解消。
         phase: 13
         done: true
 
@@ -344,51 +322,30 @@ categories:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
-    spec: 20-design/50-normalizer/10-normalizer
+    spec: 20-design/40-communication/30-blob-spec
     tasks:
       H1:
         title: 仕様確定
-        note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 13
         done: true
       H4:
         title: blob レコード化とカタログ登録
-        note: |
-          旧 H2 (実装) の分割 1/4。normalize が YAML/MD 以外 (ドットファイル除外) を
-          blob レコード化し、データカタログへ登録。確認は診断ビューと FK 検査。
         phase: 13
         done: true
       H5:
         title: バイトの旅程 (generate → 全 edition コピー + 下流貫通)
-        note: |
-          旧 H2 の分割 2/4。generate から全 edition へ blob バイトを full copy し
-          下流 (reconcile / prepare_render / Hugo / publish) を貫通。prepare_render で
-          blob を Hugo static mount (HUGO_STATICDIR) に分離し .html 対応、削除は unlink。
-          増分 sync は後の最適化枠 (H8)。確認は build / watch 出力に実ファイルが並ぶこと。
         phase: 13
         done: true
       H6:
         title: リンク解決 (相対リンク → node:/blob → relink / href)
-        note: |
-          旧 H2 の分割 3/4。未解決参照検出を含む。確認は prose `![]()` 埋め込みが
-          web / book 両 edition で表示されること。
         phase: 13
         done: true
       H7:
         title: showcase 仕上げ + docs 同期 + Proposals 整理
-        note: |
-          旧 H2 の分割 4/4。music ジャケット表示 (x-ref + テンプレート) で
-          受け入れ確認を完遂。
         phase: 13
         done: true
       H8:
         title: 内部 hop の hardlink 化 (blob コピーコスト削減)
-        note: |
-          H5 の full copy 最適化。実コピーを contents→workspace 境界の 1 回に絞り、
-          workspace 内 hop を全ファイル hardlink 化 (安全条件「workspace 内の全ファイルは
-          write-once」)、前回出力から size+mtime で増分再利用。設計と実測 (100MB blob で
-          build 一巡の実コピー 12→3、warm 無変更は 0) は 20-design/40-communication/30-blob-spec の
-          Internal Design 参照。
         phase: 13
         done: true
 
@@ -414,28 +371,14 @@ categories:
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
-        note: >-
-          dev-docs 全 prose を走査した結果、構造化に値するのは tasks / roadmap のみ
-          (実施済み)。prose 内の他の表は設計判断に埋め込まれた一発物の比較・説明表で、
-          振り替えると「判断と理由を同じ場所に書く」原則を壊すため非対象。
-          唯一の同型レコード集合である pipeline.md のステージ構成表
-          (と 20-design 目次構成との対応) は、第二のビューが生まれる
-          S2 (DFD) 着手時に再訪する。
         phase: 13
         done: true
       L2:
         title: スキーマ + クエリ + テンプレート群の構築
-        note: >-
-          tasks.yaml + queries/{tasks,roadmap}.yaml + templates 一式として
-          先行実装済み。L1 の棚卸しで追加対象が出なかったため、これをもって完了。
         phase: 13
         done: true
       L3:
         title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
-        note: >-
-          新規タスク化なし。30-dev/environment.md の環境定義表はレコード的だが、
-          正本が .devcontainer 等の外部設定ファイルにあり、その取り込みは
-          ツールの射程外と判断。
         phase: 13
         done: true
 
@@ -481,14 +424,6 @@ categories:
         done: true
       M9:
         title: prose レコードの body 廃止 (フラット化)
-        note: |
-          body: {mime_type, content} を廃し、mime_type / content をレコード直下へ
-          移す。型情報は payload ではなく envelope 側のヘッダに置くのが慣行
-          (HTTP / MIME) で、このシステムで旅をする単位はレコード。レコード直下の
-          mime_type は、Prose 型に的を絞った将来の多態機構 (text/html prose 等) の
-          布石でもある。公開スキーマの破壊的変更 ({{ body.content }} → {{ content }})
-          なので、H4-H7 完了直後、利用者が blob 参照テンプレートを書き始める前に
-          実施する。
         phase: 13
         done: true
 
