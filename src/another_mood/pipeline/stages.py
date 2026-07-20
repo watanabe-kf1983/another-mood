@@ -40,6 +40,7 @@ def normalize_contents_stage(workspace: Workspace) -> Task:
         data_catalog_dir=inspect_out.dir,
         schema_file=config.schema_file,
         out_dir=out.dir,
+        prev_out_dir=out.dir / "data",
     )
     return Stage(
         run_fn=call,

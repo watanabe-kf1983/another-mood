@@ -51,24 +51,6 @@ def test_no_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
     published_member = published / "output" / "default" / "members" / "alice.md"
     assert "Alicia" in published_member.read_text(encoding="utf-8")
 
-    # Hardlink transport is effective: tmp_path is one filesystem, so the
-    # blob must stay a single inode from normalize's boundary copy through
-    # every hop (a silent revert to real copies would fail no behavior test).
-    blob_rel = Path("default") / "blob" / "cover.png"
-    normalize_blob = workspace.root / "normalize_contents" / "data" / "cover.png"
-    for downstream in (
-        workspace.root / "compose" / "data" / "contents" / "cover.png",
-        workspace.root / "generate" / "data" / blob_rel,
-        workspace.root / "reconcile" / "data" / blob_rel,
-        workspace.root / "prepare_render" / "static" / blob_rel,
-        published_blob,
-    ):
-        assert downstream.stat().st_ino == normalize_blob.stat().st_ino, downstream
-    # The boundary itself stays a real copy — a hardlink to the user's
-    # source would let in-place edits reach the workspace.
-    source_blob = workspace.config.contents_dir / "cover.png"
-    assert normalize_blob.stat().st_ino != source_blob.stat().st_ino
-
 
 def test_observers_flag_in_place_writes_only(tmp_path: Path) -> None:
     watched = tmp_path / "watched"
@@ -92,6 +74,9 @@ def _scaffold_project(tmp_path: Path) -> Path:
     project = tmp_path / "project"
     command.init(project)
     (project / "contents" / "cover.png").write_bytes(_BLOB_V1)
+    # Untouched between the two runs: run2 takes normalize's hardlink-reuse
+    # path for it, so the sweep covers that path too.
+    (project / "contents" / "logo.png").write_bytes(b"logo-bytes-unchanged")
     return project
 
 

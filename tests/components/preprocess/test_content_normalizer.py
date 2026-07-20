@@ -1,5 +1,6 @@
 """Tests for content_normalizer."""
 
+import os
 from pathlib import Path
 from textwrap import dedent
 
@@ -104,6 +105,7 @@ class TestNormalizeContents:
         normalize_contents(
             src_dir=src,
             out_dir=out,
+            prev_out_dir=tmp_path / "prev",
             schema_file=schema_file,
             data_catalog_dir=catalog_dir,
         )
@@ -172,6 +174,7 @@ def test_normalize_contents_reports_dangling_fk_as_warning(tmp_path: Path) -> No
     normalize_contents.fn(
         src_dir=src,
         out_dir=out,
+        prev_out_dir=tmp_path / "prev",
         schema_file=schema_file,
         data_catalog_dir=catalog_dir,
         reporter=reporter,
@@ -241,6 +244,7 @@ def test_blob_file_becomes_record_and_is_fk_target(tmp_path: Path) -> None:
     normalize_contents.fn(
         src_dir=src,
         out_dir=out,
+        prev_out_dir=tmp_path / "prev",
         schema_file=schema_file,
         data_catalog_dir=catalog_dir,
         reporter=reporter,
@@ -278,6 +282,7 @@ def test_blob_bytes_are_mirrored_as_a_real_copy(tmp_path: Path) -> None:
     normalize_contents.fn(
         src_dir=src,
         out_dir=out,
+        prev_out_dir=tmp_path / "prev",
         schema_file=schema_file,
         data_catalog_dir=catalog_dir,
         reporter=reporter,
@@ -287,6 +292,72 @@ def test_blob_bytes_are_mirrored_as_a_real_copy(tmp_path: Path) -> None:
     assert mirrored.read_bytes() == blob_bytes
     # tmp_path is one filesystem, so a hardlink would share the inode.
     assert mirrored.stat().st_ino != (src / "covers" / "day1.png").stat().st_ino
+
+
+def test_unchanged_blob_is_hardlinked_from_previous_output(tmp_path: Path) -> None:
+    """An unchanged source blob reuses the previous run's mirror by
+    hardlink — while still sharing no inode with the user's source."""
+    src_blob = _scaffold_blob_project(tmp_path, b"\x89PNG v1 bytes")
+    run1 = tmp_path / "run1"
+    run2 = tmp_path / "run2"
+
+    _run_normalize(tmp_path, out=run1, prev_out=tmp_path / "none")
+    _run_normalize(tmp_path, out=run2, prev_out=run1)
+
+    mirrored = run2 / "covers" / "day1.png"
+    assert mirrored.stat().st_ino == (run1 / "covers" / "day1.png").stat().st_ino
+    assert mirrored.stat().st_ino != src_blob.stat().st_ino
+
+
+def test_changed_blob_is_recopied_from_source(tmp_path: Path) -> None:
+    """A rewritten source blob is re-copied onto a fresh inode."""
+    src_blob = _scaffold_blob_project(tmp_path, b"\x89PNG v1 bytes")
+    run1 = tmp_path / "run1"
+    run2 = tmp_path / "run2"
+
+    _run_normalize(tmp_path, out=run1, prev_out=tmp_path / "none")
+    src_blob.write_bytes(b"\x89PNG v2 bytes, longer")
+    _run_normalize(tmp_path, out=run2, prev_out=run1)
+
+    mirrored = run2 / "covers" / "day1.png"
+    assert mirrored.read_bytes() == b"\x89PNG v2 bytes, longer"
+    assert mirrored.stat().st_ino != (run1 / "covers" / "day1.png").stat().st_ino
+
+
+def test_touched_blob_with_equal_size_is_recopied(tmp_path: Path) -> None:
+    """mtime alone invalidates reuse: the quick check never reads bytes."""
+    src_blob = _scaffold_blob_project(tmp_path, b"\x89PNG v1 bytes")
+    run1 = tmp_path / "run1"
+    run2 = tmp_path / "run2"
+
+    _run_normalize(tmp_path, out=run1, prev_out=tmp_path / "none")
+    stat = src_blob.stat()
+    os.utime(src_blob, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000))
+    _run_normalize(tmp_path, out=run2, prev_out=run1)
+
+    mirrored = run2 / "covers" / "day1.png"
+    assert mirrored.stat().st_ino != (run1 / "covers" / "day1.png").stat().st_ino
+
+
+def _scaffold_blob_project(tmp_path: Path, blob_bytes: bytes) -> Path:
+    """Schema + catalog + a single blob source; returns the source blob path."""
+    (tmp_path / "schema.yaml").write_text("type: object\nproperties: {}\n")
+    (tmp_path / "catalog").mkdir()
+    (tmp_path / "contents" / "covers").mkdir(parents=True)
+    blob = tmp_path / "contents" / "covers" / "day1.png"
+    blob.write_bytes(blob_bytes)
+    return blob
+
+
+def _run_normalize(tmp_path: Path, *, out: Path, prev_out: Path) -> None:
+    normalize_contents.fn(
+        src_dir=tmp_path / "contents",
+        out_dir=out,
+        prev_out_dir=prev_out,
+        schema_file=tmp_path / "schema.yaml",
+        data_catalog_dir=tmp_path / "catalog",
+        reporter=DiagnosticReporter(),
+    )
 
 
 def test_handwritten_blob_records_fail_validation(tmp_path: Path) -> None:
@@ -315,6 +386,7 @@ def test_handwritten_blob_records_fail_validation(tmp_path: Path) -> None:
         normalize_contents.fn(
             src_dir=src,
             out_dir=out,
+            prev_out_dir=tmp_path / "prev",
             schema_file=schema_file,
             data_catalog_dir=catalog_dir,
             reporter=DiagnosticReporter(),
