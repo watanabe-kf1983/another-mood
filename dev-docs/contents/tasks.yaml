@@ -81,7 +81,7 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
-        phase: 15
+        phase: 17
         proposal: 20-design/70-generator/20-anchor-spec#未解決参照の扱い
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
@@ -133,12 +133,6 @@ categories:
         done: true
       C7:
         title: FS-safe パス書き出しの堅牢化 (パス長の例外詰め替え + 予約名検査)
-        note: >-
-          IRI エスケープ (B7) で潰せない、FS 許容名 ≠ ユーザ命名 id の齟齬。loud なパス長超過は
-          最外での OSError (ENAMETOOLONG) → UserError 詰め替え。silent な Windows 予約名・末尾ドットは
-          共通の ntpath.isreserved 検査 (全 OS 一律 error) を、ユーザ id がパスになる箇所すべて
-          (generator ページパス / edition ディレクトリ / composer クエリ結果ファイル) に埋め込む。
-          ソースファイル名由来のパスは FS 受理済みで対象外。NFC/NFD は別課題 D10。
         phase: 13
         done: true
       C8:
@@ -204,20 +198,15 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 15
+        phase: 17
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
-        note: >-
-          macOS が NFC/NFD をファイル名として同一視するため、正規化形だけ異なる id が silent に
-          同一出力ファイルへ畳まれる。preprocess の入力境界 2 点 (ファイル内容の decode 直後・
-          ディレクトリ走査で得たファイル名) で全テキストを一律 NFC 正規化する。理由は
-          source_loader.py の _read_text_nfc docstring を参照。
         phase: 13
         done: true
 
@@ -307,34 +296,18 @@ categories:
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
-        phase: 15
+        phase: 17
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
-      G3:
-        title: render.customServer.command 対応
-        note: config-spec.md
-        phase: 15
-        proposal: 20-design/20-app/20-config-spec#rendercustomservercommand-g3
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         phase: 10
         done: true
       G8:
         title: "<projectDir> を CWD 配下に制限"
-        note: >-
-          <projectDir> が CWD 配下にあることを ProjectConfig.verify() が必須とし、
-          CWD 外を指す場合 (絶対パス・相対 ../ 脱出の両方) はエラーで拒否する。出力キー
-          .another-mood/<CWD 相対 projectDir>/ の前提を守るための制約で、旧 basename
-          フォールバックの lossy な衝突を塞ぐ。out_dir / render_dir / tmp_dir・入力
-          サブパスの RB_* 上書きは対象外。build / watch にのみ効く。
         phase: 13
         done: true
       G9:
         title: "mood watch / build の作業ディレクトリと出力 publish を隔離"
-        note: >-
-          作業 tmp はシステム temp へ隔離 (mkdtemp、build は成功 / UserError 失敗時に削除・
-          内部エラー時のみ保持、watch は消さず OS 掃除に委ねる、RB_TMP_DIR で固定可)。
-          publish は watch 既定で無し・--out-dir 指定時のみ md を publish (html は publish せず、
-          build は不変)。これで watch 側 publish と build / 出力読み出しの衝突を構造的に解消。
         phase: 13
         done: true
 
@@ -344,67 +317,51 @@ categories:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
-    spec: 20-design/50-normalizer/10-normalizer
+    spec: 20-design/40-communication/30-blob-spec
     tasks:
       H1:
         title: 仕様確定
-        note: パス解決 / Composer への受け渡し / テンプレートからの参照方法
         phase: 13
         done: true
       H4:
         title: blob レコード化とカタログ登録
-        note: |
-          旧 H2 (実装) の分割 1/4。normalize が YAML/MD 以外 (ドットファイル除外) を
-          blob レコード化し、データカタログへ登録。確認は診断ビューと FK 検査。
         phase: 13
         done: true
       H5:
         title: バイトの旅程 (generate → 全 edition コピー + 下流貫通)
-        note: |
-          旧 H2 の分割 2/4。generate から全 edition へ blob バイトを full copy し
-          下流 (reconcile / prepare_render / Hugo / publish) を貫通。prepare_render で
-          blob を Hugo static mount (HUGO_STATICDIR) に分離し .html 対応、削除は unlink。
-          増分 sync は後の最適化枠 (H8)。確認は build / watch 出力に実ファイルが並ぶこと。
         phase: 13
         done: true
       H6:
         title: リンク解決 (相対リンク → node:/blob → relink / href)
-        note: |
-          旧 H2 の分割 3/4。未解決参照検出を含む。確認は prose `![]()` 埋め込みが
-          web / book 両 edition で表示されること。
         phase: 13
         done: true
       H7:
         title: showcase 仕上げ + docs 同期 + Proposals 整理
-        note: |
-          旧 H2 の分割 4/4。music ジャケット表示 (x-ref + テンプレート) で
-          受け入れ確認を完遂。
         phase: 13
         done: true
       H8:
         title: 内部 hop の hardlink 化 (blob コピーコスト削減)
-        note: |
-          H5 の full copy 最適化。実コピーを contents→workspace 境界の 1 回に絞り、
-          workspace 内 hop を全ファイル hardlink 化 (安全条件「workspace 内の全ファイルは
-          write-once」)、前回出力から size+mtime で増分再利用。設計と実測 (100MB blob で
-          build 一巡の実コピー 12→3、warm 無変更は 0) は 20-design/40-communication/30-blob-spec の
-          Internal Design 参照。
         phase: 13
         done: true
 
   J:
-    title: プラグインシステム
+    title: 外部計算連携
     impl_paths:
       - src/another_mood/
     tasks:
-      J1:
-        title: 計算機能プラグインの I/F 仕様検討
-        note: 入出力 / 登録方法 / Composer か Generator のどこに挿すか
-        phase: 15
-      J2:
-        title: サンプル実装で I/F 検証
-        note: 例 — ファンクションポイント算出
-        phase: 15
+      J3:
+        title: "外部計算とのデータ受け渡し境界の整備 (例: Function Point 算出の掲載)"
+        note: >-
+          計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
+          (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
+          歴史の轍を踏まない)。集計・導出値の掲載ニーズには受け渡し境界の両側で応える:
+          (1) 入力側 = 計算結果を通常の contents YAML として還流 — 既に可能で
+          schema / x-ref 検証も効く、(2) 出力側 = クエリ結果の機械可読エクスポート (YAML) —
+          未提供 (現 __db/__queries は人間向け診断 Markdown で結果データではない)。
+          実需が具体化した時点で (2) の安定契約と「export → 外部計算 → contents 還流」
+          ラウンドトリップのガイド化を仕様検討する。クエリ DSL への集約関数追加
+          (sum / count 等) は、それでも足りない場合の後続候補。
+        phase: 17
 
   L:
     title: dog-fooding リファクタ
@@ -414,28 +371,14 @@ categories:
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
-        note: >-
-          dev-docs 全 prose を走査した結果、構造化に値するのは tasks / roadmap のみ
-          (実施済み)。prose 内の他の表は設計判断に埋め込まれた一発物の比較・説明表で、
-          振り替えると「判断と理由を同じ場所に書く」原則を壊すため非対象。
-          唯一の同型レコード集合である pipeline.md のステージ構成表
-          (と 20-design 目次構成との対応) は、第二のビューが生まれる
-          S2 (DFD) 着手時に再訪する。
         phase: 13
         done: true
       L2:
         title: スキーマ + クエリ + テンプレート群の構築
-        note: >-
-          tasks.yaml + queries/{tasks,roadmap}.yaml + templates 一式として
-          先行実装済み。L1 の棚卸しで追加対象が出なかったため、これをもって完了。
         phase: 13
         done: true
       L3:
         title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
-        note: >-
-          新規タスク化なし。30-dev/environment.md の環境定義表はレコード的だが、
-          正本が .devcontainer 等の外部設定ファイルにあり、その取り込みは
-          ツールの射程外と判断。
         phase: 13
         done: true
 
@@ -447,48 +390,16 @@ categories:
       - src/another_mood/components/shared/data_catalog.py
     spec: 20-design/40-communication/10-json-data-model
     tasks:
-      M4:
-        title: Entity Name の導入 (`title:` 由来の表示ラベル)
-        note: 表示参照を Entity ID から Name に切り替え。未指定時は ID にフォールバック。
-        phase: 15
-        proposal: 20-design/50-normalizer/20-schema-spec#title-キーワード-m4
       M5:
         title: query_deriver の正規化スコープを catalog 境界に揃える (段階 1)
         phase: 10
         done: true
-      M6:
-        title: blob marker 機構の導入 (内部 schema 専用、段階 2)
-        note: |
-          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
-          段階 2。x-mood-blob: true 等のマーカーを導入し、build_schema_tree と
-          normalize_data がそれを認識する形に拡張。query-schema.yaml の whereClause
-          等にマーカーを付与し、M5 の ad-hoc 対応を marker 駆動に置き換える。
-          schema-schema.yaml には触れない (user schema には未解放)。前提 M5。
-        phase: 15
-        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
-      M7:
-        title: user schema からの blob 型宣言の解放 (段階 3)
-        note: |
-          design/normalizer/normalizer.md「正規化スコープと catalog 境界」の
-          段階 3。schema-schema.yaml に if/then で blob サブツリーを許容する
-          ルールを追加し、__entity_defs / docs/reference/schema.md を更新。
-          実需が surface してから着手。前提 M6。
-        phase: 15
-        proposal: 20-design/50-normalizer/10-normalizer#正規化スコープと-catalog-境界-m6-m7
       M8:
         title: derive_queries 出力を canonical 形式で流す
         phase: 10
         done: true
       M9:
         title: prose レコードの body 廃止 (フラット化)
-        note: |
-          body: {mime_type, content} を廃し、mime_type / content をレコード直下へ
-          移す。型情報は payload ではなく envelope 側のヘッダに置くのが慣行
-          (HTTP / MIME) で、このシステムで旅をする単位はレコード。レコード直下の
-          mime_type は、Prose 型に的を絞った将来の多態機構 (text/html prose 等) の
-          布石でもある。公開スキーマの破壊的変更 ({{ body.content }} → {{ content }})
-          なので、H4-H7 完了直後、利用者が blob 参照テンプレートを書き始める前に
-          実施する。
         phase: 13
         done: true
 
@@ -500,10 +411,14 @@ categories:
     tasks:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
-        phase: 15
+        note: >-
+          カスタムレンダラ差し替えの構想 (旧 G3 render.customServer.command) はこの
+          検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
+          差し替えで済む抽象は存在しない。
+        phase: 17
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 15
+        phase: 17
       N3:
         title: "watch で捨てられる hugo_build をスキップ (レンダリング効率)"
         note: |
@@ -512,7 +427,7 @@ categories:
           捨てられる full hugo build がリビルド遅延に乗る。ただし report / error 伝播が
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
-        phase: 15
+        phase: 17
 
   O:
     title: バグ修正
@@ -551,11 +466,72 @@ categories:
     title: 公開
     impl_paths:
       - pyproject.toml
+      - dev-docs/
     tasks:
       Q1:
         title: PyPI 公開
-        note: 詳細タスクは別途切り出す（ライセンス / README / メタデータ整備など）
+        note: >-
+          静かな公開に徹する (告知・宣伝は Q3)。前提 Q2。詳細タスクは着手時に切り出す
+          — MIT ライセンス / README の利用者向け書き直し / pyproject メタデータ整備 /
+          パッケージ名確保など。README にはメンテナンス期待値の明文化を含める
+          (as-is / no-SLA / fork 歓迎)。リリースフローは Q6。
         phase: 14
+      Q2:
+        title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
+        note: >-
+          仕様未着手。今後も破壊的変更が見込まれるため、プロジェクトソース
+          (definition / contents) 側に利用可能な mood バージョン (またはフォーマット世代)
+          を宣言し、不整合時に loud に失敗する機構を入れる。方式・置き場所の検討から始める。
+          Q1 (PyPI 公開) の前提。
+        phase: 14
+      Q3:
+        title: 告知・宣伝を伴うローンチ
+        note: >-
+          Q1 は静かな公開に留め、S2-S4 (システム開発ドキュメント) の完成を待って
+          告知する。内容 (告知先・訴求) は接近時に具体化。前提 Q4, Q5, Q7。
+        phase: 16
+      Q4:
+        title: dev-docs の全面英語化
+        note: >-
+          ローンチで外部コントリビュータが設計判断を読める状態にする。
+          background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
+          Phase 15 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
+          その完了後・告知前に実施する。Q3 の前提。
+        phase: 16
+      Q5:
+        title: 残タスクの GitHub Issues 移行 + ロードマップ退役
+        note: >-
+          Phase 17 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
+          一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
+          はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
+          ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
+        phase: 16
+      Q6:
+        title: リリースフロー整備 (tag 駆動 publish + バージョン運用)
+        note: >-
+          「main マージ = リリース」にはしない。main は従来通り trunk として自由にマージし、
+          リリースは version bump + git tag を打つ別イベント。tag push を契機に
+          GH Actions (trusted publishing) が publish する。手順は DEVELOPMENT.md に
+          チェックリスト化 (Q2 のフォーマット世代 +1 判定を含む)。リリースブランチは
+          旧バージョンへのパッチ需要が出るまで導入しない (pre-1.0 単独開発は trunk-based 維持)。
+          リリースノートは GH 自動生成 (PR タイトルの束ね) を基本とし、破壊的変更のある
+          リリースのみ冒頭に移行手順を手書きする。外部向けの体裁格上げ判断は Q7。
+          バージョニングは 0.x 慣習に従い 0.MINOR を破壊的変更 (フォーマット世代 +1) に
+          予約、それ以外は 0.x.PATCH。1.0.0 はローンチ (Q3) で刻む。
+        phase: 14
+      Q7:
+        title: リポジトリの外部公開整備 (GH 設定 / CONTRIBUTING / changelog)
+        note: >-
+          外部に見られる前提のリポジトリ整備。branch protection 等の GH 設定、
+          外部が読む changelog / リリースノートの体裁、メンテナンス期待値の明文化
+          (as-is / no-SLA / fork 歓迎)。コントリビューションは積極受け入れしない方針
+          — Issues は有効のまま放置・PR も放置・Dependabot は有効化しない。
+          うるさくなったら (AI slop 等) そのとき対策を再考。
+          `requires-python >=3.13` の広さも一度判断する (広げるか、最新版のみと宣言するか)。
+          下限の実態: 3.13 要求は ntpath.isreserved の 1 箇所のみ (vendor すれば 3.12 化は安い)。
+          PEP 695 構文 (type 文 / ジェネリクス) が広範にあり 3.12 が構文上の床。
+          受益者が現れるローンチまで不要なので Phase 16。Q3 の前提。
+        phase: 16
 
   R:
     title: ユーザドキュメント・サンプルプロジェクト改善
@@ -584,14 +560,14 @@ categories:
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F5)。
-        phase: 13
+        phase: 15
         proposal: 20-design/20-app/50-system-dev-docs#s2-dfd-data-flow-diagram
       S3:
         title: CRUD マトリクステンプレート
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F6)。
-        phase: 13
+        phase: 15
         proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス
       S4:
         title: 画面遷移図 + 画面定義テンプレート
@@ -599,7 +575,7 @@ categories:
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           画面 entity + 遷移 entity を構造化し、Mermaid stateDiagram-v2 で
           遷移図を描く。stateDiagram の Mermaid 適合性実機検証も兼ねる。
-        phase: 13
+        phase: 15
         proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
 
   T:
