@@ -414,13 +414,30 @@ categories:
     tasks:
       L1:
         title: 構造化データに振り替えられる箇所の棚卸し
+        note: >-
+          dev-docs 全 prose を走査した結果、構造化に値するのは tasks / roadmap のみ
+          (実施済み)。prose 内の他の表は設計判断に埋め込まれた一発物の比較・説明表で、
+          振り替えると「判断と理由を同じ場所に書く」原則を壊すため非対象。
+          唯一の同型レコード集合である pipeline.md のステージ構成表
+          (と 20-design 目次構成との対応) は、第二のビューが生まれる
+          S2 (DFD) 着手時に再訪する。
         phase: 13
+        done: true
       L2:
         title: スキーマ + クエリ + テンプレート群の構築
+        note: >-
+          tasks.yaml + queries/{tasks,roadmap}.yaml + templates 一式として
+          先行実装済み。L1 の棚卸しで追加対象が出なかったため、これをもって完了。
         phase: 13
+        done: true
       L3:
         title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
+        note: >-
+          新規タスク化なし。30-dev/environment.md の環境定義表はレコード的だが、
+          正本が .devcontainer 等の外部設定ファイルにあり、その取り込みは
+          ツールの射程外と判断。
         phase: 13
+        done: true
 
   M:
     title: JSON データモデル と データカタログ
