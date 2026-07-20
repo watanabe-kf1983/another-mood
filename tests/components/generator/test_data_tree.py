@@ -341,7 +341,7 @@ class TestMetaOriginItemType:
         # A liner heading flattened into a view sits at a non-prose position
         # (`album_tracklist.item.liner.headings.item`), yet its catalog origin
         # is `prose.item.headings.item`, so detection fires there — the point
-        # of B13. The `#slug` fold this drives is TestMetaAnchorPath's concern.
+        # of B13.  Observed via the heading-only `#slug` fold it drives.
         data = {
             "__definition": {
                 "entities": [
@@ -358,7 +358,9 @@ class TestMetaOriginItemType:
             ],
         }
         heading = wrap_tree(data)["album_tracklist"][0]["liner"]["headings"][0]
-        assert heading._meta._is_prose_heading() is True
+        assert heading._meta.origin_item_type == "prose.item.headings.item"
+        assert heading._meta.stamps_anchor is False
+        assert heading._meta.anchor_path.endswith("#liner-notes")
 
 
 class TestIterNodes:
