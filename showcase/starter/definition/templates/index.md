@@ -1,17 +1,17 @@
 # Project Members
 
-{% mood_view "prose.md" with node("prose", "about") %}
+{% render "prose.md" with node("prose", "about") %}
 
 ## Members
 
 {% for member in members %}
-{% mood_view "member.md" with member %}
+{% render "member.md" with member %}
 - {{ member | link }} — {{ member.role }}
 {% endfor %}
 
 ## By Role
 
 {% for entry in by_role %}
-{% mood_view "by_role.md" with entry %}
+{% render "by_role.md" with entry %}
 - {{ entry | link }}
 {% endfor %}

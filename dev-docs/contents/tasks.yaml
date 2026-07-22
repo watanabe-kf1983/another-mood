@@ -88,7 +88,7 @@ categories:
         phase: 11
         done: true
       B12:
-        title: mood_view を this の subtree 内に限定（描画はデータ位置に従う）
+        title: render を this の subtree 内に限定（描画はデータ位置に従う）
         phase: 12
         done: true
       B13:
@@ -104,7 +104,7 @@ categories:
     title: ページ分割 (paging)
     impl_paths:
       - src/another_mood/components/generator/
-      - src/another_mood/components/generator/mood_view_processor.py
+      - src/another_mood/components/generator/render_processor.py
     spec: 20-design/70-generator/40-paging-spec
     tasks:
       C1:
@@ -120,7 +120,7 @@ categories:
         phase: 11
         done: true
       C4:
-        title: "{% mood_view %} の振る舞い分岐: 分割 vs インライン展開"
+        title: "{% render %} の振る舞い分岐: 分割 vs インライン展開"
         phase: 11
         done: true
       C5:
@@ -140,7 +140,7 @@ categories:
         phase: 11
         done: true
       C9:
-        title: mood_view 自動アンカー刻印
+        title: render 自動アンカー刻印
         phase: 11
         done: true
       C10:
@@ -449,7 +449,7 @@ categories:
   P:
     title: テンプレートエンジン拡張
     impl_paths:
-      - src/another_mood/components/generator/mood_view_processor.py
+      - src/another_mood/components/generator/render_processor.py
       - src/another_mood/components/generator/template_engine.py
     spec: 20-design/70-generator/30-template-spec
     tasks:
@@ -458,18 +458,21 @@ categories:
         phase: 11
         done: true
       P3:
-        title: mood_view 主題の this 束縛 (ノード受け取り + ページ identity 安定化)
+        title: render 主題の this 束縛 (ノード受け取り + ページ identity 安定化)
         phase: 11
         done: true
       P4:
-        title: mood_view → view 改名 (静かなエイリアス併存)
+        title: mood_view → render 改名 (静かなエイリアス併存)
         note: >-
           スペック語彙への唯一のツール名混入の解消 (背景は 20-app/60-sbdb-manifest)。
-          view を正とし、mood_view は警告なしの静かなエイリアスとして併存させる
+          render を正とし、mood_view は警告なしの静かなエイリアスとして併存させる
           — 唯一の稼働プロジェクトの利用者は事情を把握しており周知が不要なため。
-          タグ名は着手時に確定 (候補: view (推奨) / page / sbdb_view)。
+          タグ名は render に確定: 当初候補の view は query が生む「ビュー」と語彙衝突
+          (docs/reference/query.md)、page は inline 時に嘘になる。render は split/inline
+          両モードで正確、docs の既存記述と一致、Liquid の {% render %} に先例。
           Q2 (実装は V1) の前哨・前提。エイリアス廃止は P5。
         phase: 14
+        done: true
       P5:
         title: mood_view エイリアス廃止
         note: >-
@@ -499,7 +502,7 @@ categories:
           マニフェスト sbdb.yaml に edition (フォーマット世代、必須) を宣言し、
           対応外なら loud に失敗する。tools.<processor>.requires (任意) で fail-fast、
           未知構文の厳格パースは完備済みを設計義務化。実装タスクは V1-V3、
-          前哨は P4 (mood_view → view 改名)。Q1 (PyPI 公開) の前提。
+          前哨は P4 (mood_view → render 改名)。Q1 (PyPI 公開) の前提。
         phase: 14
       Q3:
         title: 告知・宣伝を伴うローンチ

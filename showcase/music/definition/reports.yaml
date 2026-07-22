@@ -9,10 +9,10 @@
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
-# The templates use the two-loop pattern (`| link` + `{% mood_view %}`),
+# The templates use the two-loop pattern (`| link` + `{% render %}`),
 # so the same templates serve both editions without change. Prose is not
 # split in either edition: the About intro and each album's liner notes
-# are inlined where they are embedded (`{% mood_view "prose.md" %}`), so
+# are inlined where they are embedded (`{% render "prose.md" %}`), so
 # they never become standalone pages.
 editions:
   web:

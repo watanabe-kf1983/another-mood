@@ -431,7 +431,7 @@ For full syntax and examples, see [Query](reference/query.md).
 
 ## Templates
 
-Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template engine this tool builds on — with the tool's own additions (custom filters such as `link`, and the `{% mood_view %}` tag for splitting output across files).
+Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template engine this tool builds on — with the tool's own additions (custom filters such as `link`, and the `{% render %}` tag for splitting output across files).
 
 ### Jinja2 basics
 
@@ -449,7 +449,7 @@ Templates render with whitespace trimming on, so a control tag alone on its line
 
 ### Root template
 
-`definition/templates/index.md` is the site's entry point — the root template. The template engine begins evaluation here. Write the body of the home page along with the `{% mood_view %}` calls that generate subpages.
+`definition/templates/index.md` is the site's entry point — the root template. The template engine begins evaluation here. Write the body of the home page along with the `{% render %}` calls that generate subpages.
 
 Sample `definition/templates/index.md`:
 
@@ -459,31 +459,31 @@ Sample `definition/templates/index.md`:
 ## Members
 
 {% for member in members %}
-{% mood_view "member.md" with member %}
+{% render "member.md" with member %}
 - {{ member | link }}
 {% endfor %}
 
 ## By Role
 
 {% for entry in by_role %}
-{% mood_view "by_role.md" with entry %}
+{% render "by_role.md" with entry %}
 - {{ entry | link }}
 {% endfor %}
 ```
 
 Each loop does two things per record: it **writes that record's subpage** and **emits an index link** to it. The sections below take the machinery apart: writing subpages, the subtemplates that render them, where the pages land, and the `link` that points at them.
 
-### Subpages: the `{% mood_view %}` tag
+### Subpages: the `{% render %}` tag
 
-`{% mood_view "TEMPLATE_NAME.md" with DATA %}` evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA`, and writes the result to its own file when `DATA`'s type is listed in `definition/reports.yaml` (the sample lists every type shown here). A type that isn't listed expands in place instead.
+`{% render "TEMPLATE_NAME.md" with DATA %}` evaluates `definition/templates/TEMPLATE_NAME.md` against `DATA`, and writes the result to its own file when `DATA`'s type is listed in `definition/reports.yaml` (the sample lists every type shown here). A type that isn't listed expands in place instead.
 
-When it writes a separate file, `{% mood_view %}` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
+When it writes a separate file, `{% render %}` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page.
 
-For the full tag specification, see [Template — `mood_view`](reference/template.md#mood_view).
+For the full tag specification, see [Template — `render`](reference/template.md#render).
 
 ### Subtemplates
 
-Templates called by `{% mood_view %}`. The record passed in via `with` — the **subject** — has its fields available directly as top-level variables:
+Templates called by `{% render %}`. The record passed in via `with` — the **subject** — has its fields available directly as top-level variables:
 
 ```jinja2
 {# definition/templates/member.md #}
@@ -494,7 +494,7 @@ Role: {{ role }}
 
 The subject is also bound as `this`, so `{{ this.name }}` is the same as `{{ name }}`.
 
-A subtemplate can itself call `{% mood_view %}`, so a subpage can generate further subpages of its own.
+A subtemplate can itself call `{% render %}`, so a subpage can generate further subpages of its own.
 
 ### Where subpages land
 
@@ -507,13 +507,13 @@ A record only gets a subpage of its own if its type is listed in `definition/rep
 Look again at the pair of lines inside the sample's loops:
 
 ```jinja2
-{% mood_view "member.md" with member %}
+{% render "member.md" with member %}
 - {{ member | link }}
 ```
 
-`{{ member | link }}` turns the record into a Markdown link to that record — here landing at the top of the very subpage the `{% mood_view %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
+`{{ member | link }}` turns the record into a Markdown link to that record — here landing at the top of the very subpage the `{% render %}` above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
 
-The pairing is a convenience, not a rule — links and `{% mood_view %}` calls can live in separate loops when a page calls for a different arrangement (the [music sample](../showcase/music/) does this).
+The pairing is a convenience, not a rule — links and `{% render %}` calls can live in separate loops when a page calls for a different arrangement (the [music sample](../showcase/music/) does this).
 
 ### Embedding a Markdown body
 

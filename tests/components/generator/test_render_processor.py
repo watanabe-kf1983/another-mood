@@ -1,4 +1,4 @@
-"""Tests for mood_view_processor — MoodViewExtension and MoodViewProcessorImpl."""
+"""Tests for render_processor — RenderExtension and RenderProcessorImpl."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,10 +8,10 @@ import pytest
 from jinja2 import Environment, TemplateSyntaxError
 
 from another_mood.components.generator.data_tree import wrap_tree
-from another_mood.components.generator.mood_view_processor import (
+from another_mood.components.generator.render_processor import (
     PROCESSOR_KEY,
-    MoodViewExtension,
-    MoodViewProcessorImpl,
+    RenderExtension,
+    RenderProcessorImpl,
 )
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.edition import PagingPolicy
@@ -38,21 +38,21 @@ class MockProcessor:
 
 
 def _make_extension_env(processor: MockProcessor) -> Environment:
-    env = Environment(extensions=[MoodViewExtension], keep_trailing_newline=True)
+    env = Environment(extensions=[RenderExtension], keep_trailing_newline=True)
     env.globals[PROCESSOR_KEY] = processor  # type: ignore[assignment]
     return env
 
 
-# -- MoodViewExtension --
+# -- RenderExtension --
 
 
-class TestMoodViewParsing:
+class TestRenderParsing:
     """Extension correctly parses template name and data from the tag."""
 
     def test_receives_template_name_and_data(self) -> None:
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile.md" with user %}')
+        template = env.from_string('{% render "profile.md" with user %}')
         template.render(user={"id": "alice", "name": "Alice"})
 
         assert len(mock.calls) == 1
@@ -63,7 +63,7 @@ class TestMoodViewParsing:
         """The with-expression is evaluated, not passed as a string."""
         mock = MockProcessor()
         env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "card.md" with items[0] %}')
+        template = env.from_string('{% render "card.md" with items[0] %}')
         template.render(items=[{"id": "x", "val": 42}])
 
         assert mock.calls[0][1] == {"id": "x", "val": 42}
@@ -72,7 +72,7 @@ class TestMoodViewParsing:
         mock = MockProcessor()
         env = _make_extension_env(mock)
         template = env.from_string(
-            '{% mood_view "a.md" with x %}{% mood_view "b.md" with y %}'
+            '{% render "a.md" with x %}{% render "b.md" with y %}'
         )
         template.render(x={"id": "1"}, y={"id": "2"})
 
@@ -84,7 +84,7 @@ class TestMoodViewParsing:
         mock = MockProcessor()
         env = _make_extension_env(mock)
         template = env.from_string(
-            '{% for item in items %}{% mood_view "detail.md" with item %}{% endfor %}'
+            '{% for item in items %}{% render "detail.md" with item %}{% endfor %}'
         )
         template.render(items=[{"id": "a"}, {"id": "b"}, {"id": "c"}])
 
@@ -92,13 +92,13 @@ class TestMoodViewParsing:
         assert [c[1]["id"] for c in mock.calls] == ["a", "b", "c"]
 
 
-class TestMoodViewOutput:
+class TestRenderOutput:
     """Extension returns renderer's output into the Jinja2 result."""
 
     def test_return_value_appears_in_output(self) -> None:
         mock = MockProcessor(return_value="REPLACED")
         env = _make_extension_env(mock)
-        template = env.from_string('before{% mood_view "x.md" with d %}after')
+        template = env.from_string('before{% render "x.md" with d %}after')
         result = template.render(d={"id": "1"})
 
         assert result == "beforeREPLACEDafter"
@@ -106,20 +106,44 @@ class TestMoodViewOutput:
     def test_empty_return_produces_nothing(self) -> None:
         mock = MockProcessor(return_value="")
         env = _make_extension_env(mock)
-        template = env.from_string('before{% mood_view "x.md" with d %}after')
+        template = env.from_string('before{% render "x.md" with d %}after')
         result = template.render(d={"id": "1"})
 
         assert result == "beforeafter"
 
 
-class TestMoodViewSyntaxError:
+class TestRenderSyntaxError:
     def test_missing_with_keyword(self) -> None:
         env = _make_extension_env(MockProcessor())
         with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
-            env.from_string('{% mood_view "profile.md" user %}')
+            env.from_string('{% render "profile.md" user %}')
 
 
-class TestMoodViewSubtreeGuard:
+class TestMoodViewAlias:
+    """``mood_view`` is a silent alias of ``render``: same parse, same
+    dispatch, no warning (P4 — kept until the sole live project migrates)."""
+
+    def test_alias_parses_and_dispatches_identically(self) -> None:
+        mock = MockProcessor(return_value="OUT")
+        env = _make_extension_env(mock)
+        template = env.from_string('{% mood_view "profile.md" with user %}')
+        result = template.render(user={"id": "alice"})
+
+        assert result == "OUT"
+        assert mock.calls == [("profile.md", {"id": "alice"})]
+
+    def test_both_spellings_coexist_in_one_template(self) -> None:
+        mock = MockProcessor()
+        env = _make_extension_env(mock)
+        template = env.from_string(
+            '{% render "a.md" with x %}{% mood_view "b.md" with y %}'
+        )
+        template.render(x={"id": "1"}, y={"id": "2"})
+
+        assert [c[0] for c in mock.calls] == ["a.md", "b.md"]
+
+
+class TestRenderSubtreeGuard:
     """A node subject must lie within the host ``this``'s subtree; otherwise
     the tag raises a build error pointing at its own source line (B12)."""
 
@@ -139,7 +163,7 @@ class TestMoodViewSubtreeGuard:
     def test_descendant_subject_passes(self) -> None:
         tree = wrap_tree(self._TREE)
         mock, result = self._render(
-            '{% mood_view "x.md" with subject %}', this=tree, subject=tree["albums"][0]
+            '{% render "x.md" with subject %}', this=tree, subject=tree["albums"][0]
         )
         assert result == "OK"
         assert mock.calls == [("x.md", tree["albums"][0])]
@@ -148,7 +172,7 @@ class TestMoodViewSubtreeGuard:
         tree = wrap_tree(self._TREE)
         album = tree["albums"][0]
         _, result = self._render(
-            '{% mood_view "x.md" with subject %}', this=album, subject=album
+            '{% render "x.md" with subject %}', this=album, subject=album
         )
         assert result == "OK"
 
@@ -156,13 +180,13 @@ class TestMoodViewSubtreeGuard:
         tree = wrap_tree(self._TREE)
         with pytest.raises(FileValidationError) as exc:
             self._render(
-                '\n\n{% mood_view "x.md" with subject %}',
+                '\n\n{% render "x.md" with subject %}',
                 this=tree["albums"][0],
                 subject=tree["prose"][0],
             )
         (diag,) = exc.value.diagnostics
         assert diag.line == 3
-        assert diag.source == "mood_view"
+        assert diag.source == "render"
         # The error names both the off-subtree subject and the host.
         assert "/prose/p1" in diag.message
         assert "/albums/a1" in diag.message
@@ -174,7 +198,7 @@ class TestMoodViewSubtreeGuard:
         tree = wrap_tree({"album": {"id": "a"}, "album_tracklist": [{"id": "x"}]})
         with pytest.raises(FileValidationError):
             self._render(
-                '{% mood_view "x.md" with subject %}',
+                '{% render "x.md" with subject %}',
                 this=tree["album"],
                 subject=tree["album_tracklist"][0],
             )
@@ -184,7 +208,7 @@ class TestMoodViewSubtreeGuard:
         # under a node host.
         tree = wrap_tree(self._TREE)
         mock, result = self._render(
-            '{% mood_view "x.md" with subject %}',
+            '{% render "x.md" with subject %}',
             this=tree["albums"][0],
             subject="just a string",
         )
@@ -196,13 +220,13 @@ class TestMoodViewSubtreeGuard:
         tree = wrap_tree(self._TREE)
         with pytest.raises(FileValidationError):
             self._render(
-                '{% mood_view "x.md" with subject %}',
+                '{% render "x.md" with subject %}',
                 this="not a node",
                 subject=tree["albums"][0],
             )
 
 
-# -- MoodViewProcessorImpl --
+# -- RenderProcessorImpl --
 
 
 @dataclass
@@ -223,7 +247,7 @@ class _MockEngine:
         self.written.append((template_name, data, out_path))
 
 
-class TestMoodViewProcessorImplFilePerRouting:
+class TestRenderProcessorImplFilePerRouting:
     """A real node's split-vs-inline decision follows ``file_per`` (C4)."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
@@ -234,7 +258,7 @@ class TestMoodViewProcessorImplFilePerRouting:
     def test_node_in_file_per_splits(self) -> None:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
-        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         member = self._member()
         result = processor("member.md", member)
 
@@ -245,7 +269,7 @@ class TestMoodViewProcessorImplFilePerRouting:
     def test_node_absent_from_file_per_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined alice")
         paging = PagingPolicy()  # members.item not listed
-        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         member = self._member()
         result = processor("member.md", member)
 
@@ -254,13 +278,13 @@ class TestMoodViewProcessorImplFilePerRouting:
         assert result == "inlined alice"
 
 
-class TestMoodViewProcessorImplNonNodeInlines:
+class TestRenderProcessorImplNonNodeInlines:
     """Only a real data-tree node can split; any non-node subject (a plain
     dict or list, not wrapped with an anchor path) always inlines."""
 
     def test_plain_dict_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined")
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("summary.md", {"id": "alice", "name": "Alice"})
 
         assert engine.rendered == [("summary.md", {"id": "alice", "name": "Alice"})]
@@ -269,7 +293,7 @@ class TestMoodViewProcessorImplNonNodeInlines:
 
     def test_plain_list_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined")
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("list.md", [{"id": "a"}, {"id": "b"}])
 
         assert engine.rendered == [("list.md", [{"id": "a"}, {"id": "b"}])]
@@ -277,7 +301,7 @@ class TestMoodViewProcessorImplNonNodeInlines:
         assert result == "inlined"
 
 
-class TestMoodViewProcessorImplPagePath:
+class TestRenderProcessorImplPagePath:
     """A split subject maps to its output path via ``PagingPolicy.page_path``
     (paging C3), so its directory is the view name."""
 
@@ -286,7 +310,7 @@ class TestMoodViewProcessorImplPagePath:
     def test_tree_node_uses_anchor_derived_page_path(self) -> None:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
-        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         member = wrap_tree(self._TREE)["members"][0]
         processor("member.md", member)
 
@@ -294,14 +318,14 @@ class TestMoodViewProcessorImplPagePath:
         assert engine.written == [("member.md", member, Path("members/alice.md"))]
 
 
-class TestMoodViewProcessorImplReservedName:
+class TestRenderProcessorImplReservedName:
     """A split node whose id yields a filesystem-reserved page segment is
     rejected before any file is written (C7)."""
 
     def test_reserved_id_raises(self) -> None:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
-        processor = MoodViewProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
         # `CON` is a Windows device name: `members/CON.md` writes to the
         # console, not a file, so the page is rejected on every OS.
         member = wrap_tree({"members": [{"id": "CON"}]})["members"][0]
@@ -310,12 +334,12 @@ class TestMoodViewProcessorImplReservedName:
         assert engine.written == []
 
 
-class TestMoodViewProcessorImplPageSubject:
+class TestRenderProcessorImplPageSubject:
     """A scalar is never a real node, so it can never split and inlines."""
 
     def test_scalar_inlines(self) -> None:
         engine = _MockEngine(render_return="hello")
-        processor = MoodViewProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
         result = processor("x.md", "just a string")
 
         assert engine.rendered == [("x.md", "just a string")]
@@ -323,7 +347,7 @@ class TestMoodViewProcessorImplPageSubject:
         assert result == "hello"
 
 
-class TestMoodViewProcessorImplViaEngine:
+class TestRenderProcessorImplViaEngine:
     """End-to-end via a real TemplateEngine — exercises the integration."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
@@ -351,7 +375,7 @@ class TestMoodViewProcessorImplViaEngine:
     def test_writes_file_with_rendered_content(self, tmp_path: Path) -> None:
         paging = PagingPolicy(("members.item",))
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"}, paging)
-        processor = MoodViewProcessorImpl(engine=engine, paging=paging)
+        processor = RenderProcessorImpl(engine=engine, paging=paging)
         processor("profile.md", wrap_tree(self._TREE)["members"][0])
 
         # The split page opens with the subject node's own anchor (C9).
@@ -362,7 +386,7 @@ class TestMoodViewProcessorImplViaEngine:
     def test_non_node_dict_does_not_write_file(self, tmp_path: Path) -> None:
         # A non-node dict inlines, so no page is written.
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"})
-        processor = MoodViewProcessorImpl(engine=engine)
+        processor = RenderProcessorImpl(engine=engine)
         result = processor("profile.md", {"id": "alice"})
 
         assert result == "hi alice"

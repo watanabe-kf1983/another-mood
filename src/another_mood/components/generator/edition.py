@@ -50,7 +50,7 @@ class PagingPolicy:
     their own page (``file_per``) and the anchor-derived page each node
     lands on.
 
-    This is the slice of an edition a ``{% mood_view %}`` / link render reads
+    This is the slice of an edition a ``{% render %}`` / link render reads
     — it decides split vs inline and where a split page goes.  Renders with
     no paging (the cover, the build-report pages) use the empty default:
     nothing splits, so everything inlines onto ``index.md``.
@@ -92,7 +92,7 @@ class Edition:
     template surface (``templates_dir`` / ``root_template`` / ``extra_filters``)
     that renders it.
 
-    Only the generator holds a full ``Edition``; a render's ``{% mood_view %}``
+    Only the generator holds a full ``Edition``; a render's ``{% render %}``
     and link filters take just its :attr:`paging`.
     """
 

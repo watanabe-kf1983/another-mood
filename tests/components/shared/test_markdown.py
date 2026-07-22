@@ -61,7 +61,7 @@ class TestGithubSlug:
             ("Anchor Specification", "anchor-specification"),  # lowercase, space→-
             ("ID 体系", "id-体系"),  # ASCII lowercased, CJK kept
             ("Escape 規則", "escape-規則"),
-            ("mood_view 自動アンカー刻印", "mood_view-自動アンカー刻印"),  # _ kept
+            ("snake_case 記法", "snake_case-記法"),  # _ kept
             ("API の設計", "api-の設計"),
             ("用語", "用語"),  # CJK only, unchanged
             ("藤岡弘、", "藤岡弘"),  # CJK punctuation dropped

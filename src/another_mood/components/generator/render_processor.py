@@ -1,7 +1,11 @@
 # ``_out_path`` reads ``node._meta`` — a template-public field under the
 # reserved ``_`` prefix (see data_tree.py), not a Python-protected attr.
 # pyright: reportPrivateUsage=false
-"""Mood-view processor — {% mood_view %} tag parsing and dispatch."""
+"""Render processor — {% render %} tag parsing and dispatch.
+
+``mood_view`` is kept as a silent alias of ``render`` (no deprecation
+warning) for the sole live project, which migrates out of band; the alias
+is removed in a later task.  Both spellings share this one parse path."""
 
 from __future__ import annotations
 
@@ -27,12 +31,12 @@ from another_mood.components.shared.user_source.diagnostic import (
 if TYPE_CHECKING:
     from another_mood.components.generator.template_engine import TemplateEngine
 
-PROCESSOR_KEY = "_mood_view_processor"
+PROCESSOR_KEY = "_render_processor"
 
 
 @dataclass(frozen=True)
-class MoodViewProcessorImpl:
-    """Routes a {% mood_view %} invocation: inline expansion, or its own
+class RenderProcessorImpl:
+    """Routes a {% render %} invocation: inline expansion, or its own
     page via the engine at the subject's output path.
 
     Whether a subject splits is driven by ``file_per`` (see
@@ -61,10 +65,14 @@ class MoodViewProcessorImpl:
         return ensure_not_windows_reserved(Path(self.paging.page_path(node)))
 
 
-class MoodViewExtension(Extension):
-    """Jinja2 extension for {% mood_view "template" with data %} tag."""
+class RenderExtension(Extension):
+    """Jinja2 extension for the {% render "template" with data %} tag.
 
-    tags = {"mood_view"}
+    ``mood_view`` is registered as a silent alias: both tag names route
+    through the same :meth:`parse` (which consumes whichever keyword opened
+    the tag), so they are behaviourally identical."""
+
+    tags = {"render", "mood_view"}
 
     def parse(self, parser: Parser) -> nodes.Node:
         lineno = next(parser.stream).lineno
@@ -74,7 +82,7 @@ class MoodViewExtension(Extension):
 
         # Pass the render context (for the host ``this``) and the tag's own
         # source location, baked in at parse time, so :meth:`_render` can point
-        # a subtree-guard error at the exact ``{% mood_view %}`` line.
+        # a subtree-guard error at the exact ``{% render %}`` line.
         args: list[nodes.Expr] = [
             nodes.ContextReference(),
             template_name,
@@ -106,7 +114,7 @@ class MoodViewExtension(Extension):
 def _guard_subtree(
     subject: object, host: object, filename: str | None, lineno: int
 ) -> None:
-    """Reject a ``{% mood_view %}`` whose node subject lies outside the host's
+    """Reject a ``{% render %}`` whose node subject lies outside the host's
     subtree, pointing the error at the tag's own source location.
 
     A node is drawn on exactly one page fixed by its data position
@@ -144,7 +152,7 @@ def _guard_subtree(
                 line=lineno,
                 column=None,
                 message=(
-                    f"{{% mood_view %}} can only render a node within its host's "
+                    f"{{% render %}} can only render a node within its host's "
                     f"subtree, but {subject._meta.anchor_path} is not a descendant "
                     f"of {host_desc}. A node is drawn on exactly one page fixed by "
                     f"its data position, so embedding one off its home page breaks "
@@ -152,7 +160,7 @@ def _guard_subtree(
                     f"join) so it becomes a descendant, or reference it with "
                     f"`| link` instead of embedding it."
                 ),
-                source="mood_view",
+                source="render",
             )
         ]
     )

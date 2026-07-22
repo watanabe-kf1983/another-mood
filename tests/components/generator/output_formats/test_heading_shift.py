@@ -66,6 +66,6 @@ class TestInputContract:
             under_heading("# A", marker)
 
     def test_empty_input_yields_empty(self) -> None:
-        # A split mood_view returns "", so {% filter under_heading %} shifts
+        # A split render returns "", so {% filter under_heading %} shifts
         # nothing — the no-op that keeps split and inline output identical.
         assert under_heading("", "##") == ""

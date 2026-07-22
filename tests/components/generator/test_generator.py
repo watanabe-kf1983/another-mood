@@ -176,7 +176,7 @@ class TestGenerate:
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        (templates_dir / "index.md").write_text('{% mood_view "bad.md" with x %}')
+        (templates_dir / "index.md").write_text('{% render "bad.md" with x %}')
 
         out_dir = tmp_path / "output"
         reports_file = tmp_path / "reports.yaml"
