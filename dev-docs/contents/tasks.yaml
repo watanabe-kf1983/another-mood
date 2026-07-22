@@ -461,6 +461,22 @@ categories:
         title: mood_view 主題の this 束縛 (ノード受け取り + ページ identity 安定化)
         phase: 11
         done: true
+      P4:
+        title: mood_view → view 改名 (静かなエイリアス併存)
+        note: >-
+          スペック語彙への唯一のツール名混入の解消 (背景は 20-app/60-sbdb-manifest)。
+          view を正とし、mood_view は警告なしの静かなエイリアスとして併存させる
+          — 唯一の稼働プロジェクトの利用者は事情を把握しており周知が不要なため。
+          タグ名は着手時に確定 (候補: view (推奨) / page / sbdb_view)。
+          Q2 (実装は V1) の前哨・前提。エイリアス廃止は P5。
+        phase: 14
+      P5:
+        title: mood_view エイリアス廃止
+        note: >-
+          稼働プロジェクトの移行完了後に mood_view エイリアスを撤去する。
+          公開後の語彙に遺産を持ち込まないため、Q1 (PyPI 公開) 前に必ず畳む。
+          前提 P4。
+        phase: 14
 
   Q:
     title: 公開
@@ -482,8 +498,8 @@ categories:
           設計合意済み — 検討メモは 20-app/60-sbdb-manifest (Proposals)。projectDir 直下の
           マニフェスト sbdb.yaml に edition (フォーマット世代、必須) を宣言し、
           対応外なら loud に失敗する。tools.<processor>.requires (任意) で fail-fast、
-          未知構文の厳格パースは完備済みを設計義務化。前哨タスクとして
-          mood_view → view 改名を別ブランチで先行。Q1 (PyPI 公開) の前提。
+          未知構文の厳格パースは完備済みを設計義務化。実装タスクは V1-V3、
+          前哨は P4 (mood_view → view 改名)。Q1 (PyPI 公開) の前提。
         phase: 14
       Q3:
         title: 告知・宣伝を伴うローンチ
@@ -612,3 +628,32 @@ categories:
         title: 既存フィルタの output_format モデルへの移行
         phase: 11
         done: true
+
+  V:
+    title: プロジェクトマニフェスト (sbdb.yaml)
+    impl_paths:
+      - src/another_mood/pipeline/
+      - src/another_mood/components/scaffold/
+    spec: 20-design/20-app/60-sbdb-manifest
+    tasks:
+      V1:
+        title: sbdb.yaml 読み込みと edition ゲート
+        note: >-
+          二段読み (緩い抽出 → 互換ゲート → 厳格検証) の骨格。edition 一致チェック
+          (対応集合 = {1}、欠落時は警告なしで edition 1 みなし)。title のトップページ
+          反映 (ディレクトリ名直渡しをフォールバックに降格)。前提 P4。
+        phase: 14
+      V2:
+        title: tools.<processor>.requires の fail-fast
+        note: >-
+          実行中バージョンとの比較とエラーメッセージ。バージョン要求記法
+          (>= 等) をどこまで受けるかの検討を含む。前提 V1。
+        phase: 14
+      V3:
+        title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
+        note: >-
+          mood init / blueprint が sbdb.yaml (edition + title) を生成。showcase /
+          dev-docs への付与。docs/reference のマニフェスト章 + style guide への
+          sbdb 表記追記。稼働プロジェクトへの付与はリポジトリ外の作業のため、
+          P5 の移行完了判断と併せて行う。前提 V1。
+        phase: 14

@@ -147,7 +147,8 @@ contents 編集者は versioning の存在を知らなくてよい。
 
 - フォーマット識別子は **sbdb**（source-based DB）。style guide の表記規約に追記する
 - **`mood_view` → `view` 改名**: スペック語彙への唯一のツール名混入を、公開前の
-  今のうちに解消する。Q2 本体の前哨タスクとして別ブランチで実施。
+  今のうちに解消する。Q2 本体の前哨タスク（[P4](node:/tasks/P/tasks/P4)、
+  エイリアス廃止は [P5](node:/tasks/P/tasks/P5)）として別ブランチで実施。
   改名後のタグ名は着手時に確定（候補: `view`（推奨）/ `page` / `sbdb_view`）
 
 #### 移行措置
@@ -155,7 +156,8 @@ contents 編集者は versioning の存在を知らなくてよい。
 既存の稼働プロジェクトが 1 件あり（利用者は把握済み）、以下の猶予を置く。
 警告は出さない — 唯一の利用者が事情を把握しており、周知の必要がないため:
 
-- `mood_view` は**警告なしの静かなエイリアス**として `view` と併存。廃止は稼働
+- `mood_view` は**警告なしの静かなエイリアス**として `view` と併存
+  （[P4](node:/tasks/P/tasks/P4)）。廃止（[P5](node:/tasks/P/tasks/P5)）は稼働
   プロジェクトの移行完了後、[Q1](node:/tasks/Q/tasks/Q1)（PyPI 公開）前
 - `sbdb.yaml` 欠落時は**警告なしで edition 1 とみなして続行**。必須化の期限は
   min(Q1, 最初の edition bump) — edition が複数になった瞬間に「欠落 = 1」の仮定は
@@ -166,12 +168,14 @@ contents 編集者は versioning の存在を知らなくてよい。
 
 前哨（別ブランチ）:
 
-- `mood_view` → `view` 改名（静かなエイリアス併存）
+- `mood_view` → `view` 改名（静かなエイリアス併存、[P4](node:/tasks/P/tasks/P4)。
+  エイリアス廃止は [P5](node:/tasks/P/tasks/P5)）
 
-本体:
+本体（カテゴリ V）:
 
-1. `sbdb.yaml` の読み込みと互換ゲート（二段読み）
-2. `mood init` / blueprint が `sbdb.yaml`（`edition` + `title`）を生成
-3. `title` のトップページ表示（現行のディレクトリ名直渡しをフォールバックに降格）
-4. showcase / dev-docs / 稼働プロジェクトへの `sbdb.yaml` 付与
-5. `docs/` 同期（reference にマニフェスト章）+ style guide への sbdb 表記追記
+1. [V1](node:/tasks/V/tasks/V1) — `sbdb.yaml` の読み込みと edition ゲート（二段読み）
+   + `title` のトップページ表示（現行のディレクトリ名直渡しをフォールバックに降格）
+2. [V2](node:/tasks/V/tasks/V2) — `tools.<processor>.requires` の fail-fast
+3. [V3](node:/tasks/V/tasks/V3) — 生態系への展開: `mood init` / blueprint の生成、
+   showcase / dev-docs への付与、`docs/` reference のマニフェスト章 + style guide への
+   sbdb 表記追記（稼働プロジェクトへの付与はリポジトリ外の作業のため P5 と同じ籠）
