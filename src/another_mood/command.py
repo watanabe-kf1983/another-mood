@@ -23,6 +23,7 @@ from another_mood.components.docs_catalog.catalog import (
     list_docs as _list_docs,
     read_doc as _read_doc,
 )
+from another_mood.components.manifest import Manifest, read_manifest
 from another_mood.components.scaffold.blueprints import (
     DEFAULT_BLUEPRINT,
     Blueprint,
@@ -185,8 +186,9 @@ def build(
     """
     config = config.resolved_for_build()
     out_dir = str(config.out_dir)
+    manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
-    workspace = _session_workspace(config, layout)
+    workspace = _session_workspace(config, layout, manifest)
     result = _to_result(
         pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
     )
@@ -217,9 +219,11 @@ def watch(
     """
     config = config.resolved_for_watch()
     out_dir = str(config.out_dir or "")
-    # Resolved (and verified) once at startup; rebuilds do not re-check.
+    # Both read once at startup: the manifest is not watched (see design doc),
+    # and rebuilds do not re-check source existence.
+    manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
-    workspace = _session_workspace(config, layout)
+    workspace = _session_workspace(config, layout, manifest)
     with pipeline(
         workspace, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
@@ -233,7 +237,9 @@ def watch(
 # -- Helpers -----------------------------------------------------------------
 
 
-def _session_workspace(config: ProjectConfig, layout: SourceLayout) -> Workspace:
+def _session_workspace(
+    config: ProjectConfig, layout: SourceLayout, manifest: Manifest
+) -> Workspace:
     """Build the run Workspace, defaulting its root to a fresh system-temp dir.
 
     An explicit ``tmp_dir`` (RB_TMP_DIR) is honored and left for the user to
@@ -241,10 +247,10 @@ def _session_workspace(config: ProjectConfig, layout: SourceLayout) -> Workspace
     ``temporary`` so the caller can clean it up.
     """
     if config.tmp_dir is not None:
-        return Workspace(config, config.tmp_dir, layout)
+        return Workspace(config, config.tmp_dir, layout, manifest)
     else:
         tmp = Path(tempfile.mkdtemp(prefix="another-mood-"))
-        return Workspace(config, tmp, layout, temporary=True)
+        return Workspace(config, tmp, layout, manifest, temporary=True)
 
 
 def _to_result(report: BuildReport, out_dir: str) -> BuildResult:
