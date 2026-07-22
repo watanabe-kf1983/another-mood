@@ -479,10 +479,11 @@ categories:
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
         note: >-
-          仕様未着手。今後も破壊的変更が見込まれるため、プロジェクトソース
-          (definition / contents) 側に利用可能な mood バージョン (またはフォーマット世代)
-          を宣言し、不整合時に loud に失敗する機構を入れる。方式・置き場所の検討から始める。
-          Q1 (PyPI 公開) の前提。
+          設計合意済み — 検討メモは 20-app/60-sbdb-manifest (Proposals)。projectDir 直下の
+          マニフェスト sbdb.yaml に edition (フォーマット世代、必須) を宣言し、
+          対応外なら loud に失敗する。tools.<processor>.requires (任意) で fail-fast、
+          未知構文の厳格パースは完備済みを設計義務化。前哨タスクとして
+          mood_view → view 改名を別ブランチで先行。Q1 (PyPI 公開) の前提。
         phase: 14
       Q3:
         title: 告知・宣伝を伴うローンチ
