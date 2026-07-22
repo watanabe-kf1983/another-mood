@@ -16,23 +16,23 @@
 
 主題（subject）を `this` でどう参照するか（Mapping の spread／`this`／Array 反復、スカラ値の扱い）は `docs/reference/template.md` の Subtemplate side を正本とする。設計判断:
 
-- **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として root テンプレート（`index.md`）と `{% mood_view %}` サブテンプレートに同一適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% mood_view %}` 側はパス決定とノードのパススルーだけを担い、context 構築を持たない。
+- **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として root テンプレート（`index.md`）と `{% render %}` サブテンプレートに同一適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`{% render %}` 側はパス決定とノードのパススルーだけを担い、context 構築を持たない。
 - 主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(PagingPolicy, node_map)` だけを束縛すればよい（[generator.md のリンク解決](10-generator.md#リンク解決)）。
 - スカラ主題を**分割時のみ**エラーにするのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。
 
 ### 分割ルール
 
-`{% mood_view %}` が主題の `_meta.object_type_id` を `file_per` と照合して分割/インラインを決めること、親ページのリンクは mood_view が自動生成せず author が `| link` で書く two-loop パターン（分割なら別ページ URL・インラインなら同ページ `#fragment` に自動適応）は `docs/reference/template.md` の Split vs inline を正本とする。設計判断:
+`{% render %}` が主題の `_meta.object_type_id` を `file_per` と照合して分割/インラインを決めること、親ページのリンクは render が自動生成せず author が `| link` で書く two-loop パターン（分割なら別ページ URL・インラインなら同ページ `#fragment` に自動適応）は `docs/reference/template.md` の Split vs inline を正本とする。設計判断:
 
-> **決定: 親リンクを mood_view に畳み込まない.** リンク解決は既に `| link` ＋ page_path が持ち分割/インラインへ自動適応するので、mood_view に持たせると二重実装になり、親側の周辺マークアップ（リスト記号等）も author の制御外になる。mood_view の責務は「このノードの内容をどこに置くか」に保つ。
+> **決定: 親リンクを render に畳み込まない.** リンク解決は既に `| link` ＋ page_path が持ち分割/インラインへ自動適応するので、render に持たせると二重実装になり、親側の周辺マークアップ（リスト記号等）も author の制御外になる。render の責務は「このノードの内容をどこに置くか」に保つ。
 
 > **決定: インラインは型単位ポリシー（call-site 上書きは持たない）.** インライン意図は型を `file_per` から外して表現する。file_per 対象の型を call-site で `inline` 強制すると、そのノードが自前ページとインライン本文に**二重出力**され、`| link` の指す先と実体の所在がずれる（footgun）。
 
-> **見出し深さ.** subtemplate が「見出し＋本文」を一単位で再利用したいとき、埋め込み先によって見出しレベルが変わる（同じ型を `##` 下でも `###` 下でも置きたい）。この深さ調整は mood_view 固有ではなく、生成側の `under_heading` フィルタ（任意の埋め込み出力をブロックで囲む／prose body をパイプで処理）が担う。split 時に mood_view が `""` を返す性質と合わさり、同じ記述が分割でもインラインでも正しく出る。仕様は `docs/reference/template.md` の `under_heading` を参照。
+> **見出し深さ.** subtemplate が「見出し＋本文」を一単位で再利用したいとき、埋め込み先によって見出しレベルが変わる（同じ型を `##` 下でも `###` 下でも置きたい）。この深さ調整は render 固有ではなく、生成側の `under_heading` フィルタ（任意の埋め込み出力をブロックで囲む／prose body をパイプで処理）が担う。split 時に render が `""` を返す性質と合わさり、同じ記述が分割でもインラインでも正しく出る。仕様は `docs/reference/template.md` の `under_heading` を参照。
 
 ### ページパスと出力ディレクトリ
 
-ページパスの導出規則（anchor_path 由来、root は `index.md`、セグメントは anchor_path と同じ IRI エスケープを継承）は `PagingPolicy.page_path` が持ち、正本は [generator.md](10-generator.md#ページパスの導出)。`page_path` は **edition ルート相対**で、実ファイルは mood_view が edition のマウント先を被せた `{outDir}/{edition}/{page_path}` に書き出す（form A は暗黙 edition `default`）。root の入口には薄い**表紙**（cover。edition ではなく一回 render）を置き、システム生成のメタ（DB の自己記述）は `__db/` マウントへ退避する:
+ページパスの導出規則（anchor_path 由来、root は `index.md`、セグメントは anchor_path と同じ IRI エスケープを継承）は `PagingPolicy.page_path` が持ち、正本は [generator.md](10-generator.md#ページパスの導出)。`page_path` は **edition ルート相対**で、実ファイルは render が edition のマウント先を被せた `{outDir}/{edition}/{page_path}` に書き出す（form A は暗黙 edition `default`）。root の入口には薄い**表紙**（cover。edition ではなく一回 render）を置き、システム生成のメタ（DB の自己記述）は `__db/` マウントへ退避する:
 
 ```
 {outDir}/

@@ -25,7 +25,7 @@
 {% if liner %}
 
 {% filter under_heading("#") %}
-{% mood_view "prose.md" with liner %}
+{% render "prose.md" with liner %}
 {% endfilter %}
 {% endif %}
 

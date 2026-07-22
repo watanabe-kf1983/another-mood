@@ -13,10 +13,10 @@ from jinja2 import (
     Undefined,
 )
 
-from another_mood.components.generator.mood_view_processor import (
+from another_mood.components.generator.render_processor import (
     PROCESSOR_KEY,
-    MoodViewExtension,
-    MoodViewProcessorImpl,
+    RenderExtension,
+    RenderProcessorImpl,
 )
 from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.shared.user_error import UserError
@@ -67,7 +67,7 @@ def make_environment(output_format: OutputFormat) -> Environment:
     # format's own helpers plus its config / node-map-bound ones) and passes
     # them to TemplateEngine, which registers them on this env.
     return Environment(
-        extensions=[MoodViewExtension],
+        extensions=[RenderExtension],
         keep_trailing_newline=True,
         trim_blocks=output_format.trim_blocks,
         lstrip_blocks=output_format.lstrip_blocks,
@@ -93,7 +93,7 @@ def _bind(subject: object) -> Mapping[str, object]:
 class PageCollisionError(UserError):
     """Two distinct pages resolved to the same output file.
 
-    Raised by the engine when a ``{% mood_view %}`` page would overwrite
+    Raised by the engine when a ``{% render %}`` page would overwrite
     one already written this build under a different subject or template —
     distinct pages must not share an output path, or one silently clobbers
     the other.  The guidance is the exception's ``args[0]`` so it surfaces
@@ -111,7 +111,7 @@ class PageCollisionError(UserError):
             f"({origin}). Each page needs a unique path — this usually means "
             f"two records share an id, or one record is rendered as a page "
             f"more than once. Give the records distinct ids, or drop the "
-            f"duplicate {{% mood_view %}} call."
+            f"duplicate {{% render %}} call."
         )
 
 
@@ -174,8 +174,8 @@ class TemplateEngine:
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
         for name, func in globals.items():
             self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
-        # The mood_view extension dispatches via env.globals[PROCESSOR_KEY].
-        self._env.globals[PROCESSOR_KEY] = MoodViewProcessorImpl(  # pyright: ignore[reportArgumentType]
+        # The render extension dispatches via env.globals[PROCESSOR_KEY].
+        self._env.globals[PROCESSOR_KEY] = RenderProcessorImpl(  # pyright: ignore[reportArgumentType]
             engine=self, paging=paging
         )
 

@@ -4,7 +4,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 
 | Addition | Kind | Purpose |
 |---|---|---|
-| [`mood_view`](#mood_view) | tag | render a subtemplate, as its own page or inline |
+| [`render`](#render) | tag | render a subtemplate, as its own page or inline |
 | [`link`](#link) | filter | Markdown link to a node |
 | [`href`](#href) | filter | the URL targeting a node, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
@@ -24,7 +24,7 @@ Two evaluation rules also differ from stock Jinja2: [accessing an undefined name
 
 Templates are placed under `{project}/definition/templates/` with the `.md` extension. The `.md` extension is chosen so editors apply Markdown syntax highlighting to the body — template syntax and Markdown body are mixed, and treating files as plain text makes them visually hard to distinguish.
 
-`definition/templates/index.md` is the **root template**. The template engine begins evaluation here; every other template is rendered by a [`mood_view`](#mood_view) call reachable from it.
+`definition/templates/index.md` is the **root template**. The template engine begins evaluation here; every other template is rendered by a [`render`](#render) call reachable from it.
 
 ```jinja2
 {# templates/index.md #}
@@ -33,7 +33,7 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 ## Products
 
 {% for product in products %}
-{% mood_view "product-detail.md" with product %}
+{% render "product-detail.md" with product %}
 - {{ product | link }}
 {% endfor %}
 ```
@@ -57,7 +57,7 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 {% endfor %}
 ```
 
-A subtemplate additionally sees its subject — the data passed to the `mood_view` call that rendered it — as `this` and as spread top-level variables ([Subtemplate side](#subtemplate-side)).
+A subtemplate additionally sees its subject — the data passed to the `render` call that rendered it — as `this` and as spread top-level variables ([Subtemplate side](#subtemplate-side)).
 
 ## Linking
 
@@ -67,7 +67,7 @@ A link names a node — a record, a query group, a singleton, a nested object �
 
 A link lands in-page only where the node's [`anchor`](#anchor) (`<a id>`) sits, and an anchor is placed in one of two ways:
 
-**On a subject, automatically.** Every template render opens with its subject's anchor — for the root template that subject is the data root, for a [`mood_view`](#mood_view) subtemplate it is the node passed to it. A link to a subject lands where it renders: the top of its own page when split, or its place in the page when inline.
+**On a subject, automatically.** Every template render opens with its subject's anchor — for the root template that subject is the data root, for a [`render`](#render) subtemplate it is the node passed to it. A link to a subject lands where it renders: the top of its own page when split, or its place in the page when inline.
 
 **On any other node, by hand.** A node a template only refers to — shown in a table, linked in a list — is not a subject, so it carries no anchor until the author adds one with `| anchor`.
 
@@ -92,12 +92,12 @@ A [prose](schema.md#built-in-schema-prose) record's headings are nodes too. A he
 
 ## Tags
 
-### `mood_view`
+### `render`
 
 A custom tag that renders a subtemplate, **either as its own page (split) or expanded in place (inline)**.
 
 ```jinja2
-{% mood_view "NAME" with DATA %}
+{% render "NAME" with DATA %}
 ```
 
 | Part | Description |
@@ -119,18 +119,18 @@ Two pages that resolve to the same path make the build fail rather than silently
 
 #### Return value of the tag
 
-When the subject is **split**, the tag **returns the empty string**: the output file is written as a side effect, so nothing appears at the position where `{% mood_view %}` was placed in the parent template (a tag alone on its line emits nothing under block trimming — see [Whitespace](#whitespace)). When **inline**, the tag returns the rendered text, which appears at the call site.
+When the subject is **split**, the tag **returns the empty string**: the output file is written as a side effect, so nothing appears at the position where `{% render %}` was placed in the parent template (a tag alone on its line emits nothing under block trimming — see [Whitespace](#whitespace)). When **inline**, the tag returns the rendered text, which appears at the call site.
 
-To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `{% mood_view %}` call:
+To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `{% render %}` call:
 
 ```jinja2
 {% for product in products %}
-{% mood_view "product-detail.md" with product %}
+{% render "product-detail.md" with product %}
 - {{ product | link }}
 {% endfor %}
 ```
 
-The subpage opens with the subject's own anchor automatically ([Linking](#where-a-node-is-rendered)), so this link lands on it — you write no `| anchor` for a `mood_view` subject.
+The subpage opens with the subject's own anchor automatically ([Linking](#where-a-node-is-rendered)), so this link lands on it — you write no `| anchor` for a `render` subject.
 
 #### Subtemplate side
 
@@ -223,7 +223,7 @@ How that URL lands — and the page-level fallback when the node has no anchor �
 
 emits `<a id="/members/alice"></a>`.
 
-Use `| anchor` to give a node a landing spot where you render it — a child node shown in a table row or list item, say — so links to it arrive there. A [`mood_view`](#mood_view) subject gets one [automatically](#where-a-node-is-rendered) and needs none. `anchor` emits nothing for a [missing node](#node).
+Use `| anchor` to give a node a landing spot where you render it — a child node shown in a table row or list item, say — so links to it arrive there. A [`render`](#render) subject gets one [automatically](#where-a-node-is-rendered) and needs none. `anchor` emits nothing for a [missing node](#node).
 
 ### `in_cell`
 
@@ -269,7 +269,7 @@ Use it as a block filter wrapping embedded output, or piped on prose content:
 ## Members
 
 {% filter under_heading("##") %}
-{% mood_view "member.md" with member %}
+{% render "member.md" with member %}
 {% endfilter %}
 
 {{ content | under_heading("##") }}
@@ -351,7 +351,7 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 
 ## Whitespace
 
-Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% mood_view %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
+Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% render %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
 
 To indent a block's body — tags and content together — and strip that indentation back out of the output, wrap it in the [`dedent`](#dedent) filter (best where the output tolerates leftover indentation, such as a Mermaid diagram).
 

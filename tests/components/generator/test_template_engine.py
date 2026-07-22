@@ -32,7 +32,7 @@ class TestRender:
 
 class TestThisBinding:
     """The render boundary binds the subject as ``this`` uniformly — the
-    root template and mood_view subtemplates see data the same way."""
+    root template and render subtemplates see data the same way."""
 
     def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
@@ -154,7 +154,7 @@ class TestPostProcess:
     """The engine applies the format's ``post_process`` to a rendered output,
     with the subject in hand.  Tested with a stand-in format to pin the seam
     independently of md's anchor stamp; the md behavior and both render paths
-    are covered end-to-end in the md / mood_view / generator tests."""
+    are covered end-to-end in the md / render / generator tests."""
 
     def test_post_process_is_applied_to_render_output(self, tmp_path: Path) -> None:
         templates_dir = tmp_path / "templates"
@@ -265,7 +265,7 @@ class TestTemplateSyntaxErrorConversion:
     def test_raises_file_validation_error(self, tmp_path: Path) -> None:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        (templates_dir / "bad.md").write_text("{% mood_view bad %}")
+        (templates_dir / "bad.md").write_text("{% render bad %}")
 
         engine = TemplateEngine(
             tmp_path, templates_dir=templates_dir, output_format=MD, filters={}

@@ -1,6 +1,6 @@
 # Blob
 
-blob は `contents_dir` に置かれた YAML・Markdown 以外の「**ツールが解釈しない不透明なファイル**」（画像・PDF・動画・CSV 等）を、内蔵コレクション **`blob`** のレコードとして扱う型。[prose](20-prose-spec.md) と対をなす — prose は `{% mood_view %}` で埋め込む「ページ素材」、blob は id で参照される「リソース」。prose と同じくパイプラインを横断する: preprocess が各ファイルを `{id, mime_type}` レコード化し、generate がバイト列を各 edition 出力へミラーし、relink / href がリンクを解決する。
+blob は `contents_dir` に置かれた YAML・Markdown 以外の「**ツールが解釈しない不透明なファイル**」（画像・PDF・動画・CSV 等）を、内蔵コレクション **`blob`** のレコードとして扱う型。[prose](20-prose-spec.md) と対をなす — prose は `{% render %}` で埋め込む「ページ素材」、blob は id で参照される「リソース」。prose と同じくパイプラインを横断する: preprocess が各ファイルを `{id, mime_type}` レコード化し、generate がバイト列を各 edition 出力へミラーし、relink / href がリンクを解決する。
 
 ## External Design
 

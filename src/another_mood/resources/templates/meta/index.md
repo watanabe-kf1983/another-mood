@@ -33,10 +33,10 @@
 {% filter dedent %}
     {% for entity in __entity_defs %}
         - {{ entity | link }}{% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
-        {% mood_view "entity_def.md" with entity %}
+        {% render "entity_def.md" with entity %}
     {% endfor %}
     {% for entity in __entity_data %}
-        {% mood_view "entity_data.md" with entity %}
+        {% render "entity_data.md" with entity %}
     {% endfor %}
 {% endfilter %}
 
@@ -46,7 +46,7 @@
 {% filter dedent %}
     {% for query in __queries %}
         - {{ query | link }}
-        {% mood_view "query.md" with query %}
+        {% render "query.md" with query %}
     {% endfor %}
 {% endfilter %}
 {% else %}

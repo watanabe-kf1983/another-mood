@@ -1,7 +1,7 @@
 # Music Catalog
 
 {% filter under_heading("#") %}
-{% mood_view "prose.md" with node(path="/prose/background") %}
+{% render "prose.md" with node(path="/prose/background") %}
 {% endfilter %}
 
 ## Artists
@@ -12,7 +12,7 @@
 
 {% for artist in artist_discography %}
 {% filter under_heading("##") %}
-{% mood_view "artist-detail.md" with artist %}
+{% render "artist-detail.md" with artist %}
 {% endfilter %}
 {% endfor %}
 
@@ -31,7 +31,7 @@ query-to-query reference) - so the template no longer re-joins genres itself.
 
 {% for album in album_tracklist %}
 {% filter under_heading("##") %}
-{% mood_view "album-detail.md" with album %}
+{% render "album-detail.md" with album %}
 {% endfilter %}
 {% endfor %}
 
