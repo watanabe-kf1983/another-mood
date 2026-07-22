@@ -10,7 +10,11 @@ from typing import NamedTuple
 
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.user_error import UserError
-from another_mood.components.shared.user_source.diagnostic import DiagnosticReporter
+from another_mood.components.shared.user_source.diagnostic import (
+    Diagnostic,
+    DiagnosticReporter,
+    DiagnosticSeverity,
+)
 
 _logger = getLogger(__name__)
 
@@ -76,6 +80,7 @@ def error_propagation(
             result = "ok"
         # Drain reported diagnostics regardless of success — warnings
         # reported before a later raise should still surface to the user.
+        _log_warnings(reporter.diagnostics)
         report = report.with_added_diagnostics(
             d.to_entry() for d in reporter.diagnostics
         )
@@ -90,6 +95,12 @@ def _as_reported_error(exc: Exception) -> Exception:
     if isinstance(exc, OSError) and exc.errno == errno.ENAMETOOLONG:
         return PathTooLongError(exc)
     return exc
+
+
+def _log_warnings(diagnostics: Sequence[Diagnostic]) -> None:
+    for diagnostic in diagnostics:
+        if diagnostic.severity is DiagnosticSeverity.warning:
+            _logger.warning("warning: %s", diagnostic.format().lstrip())
 
 
 def _log_error(exc: Exception) -> None:

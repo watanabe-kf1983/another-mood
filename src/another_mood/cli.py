@@ -139,13 +139,20 @@ _BUILD_MESSAGES = {
 }
 
 
-def _build_listener() -> Callable[[BuildResult], None]:
-    """Return an on_report listener that prints the iteration result to stderr."""
+def _build_listener(strict: bool = False) -> Callable[[BuildResult], None]:
+    """Return an on_report listener that prints the iteration result to stderr.
+
+    Under ``strict``, warnings (with no errors) count as a failure, so the
+    summary line agrees with the non-zero exit code the strict gate produces.
+    """
     first = True
 
     def on_report(result: BuildResult) -> None:
         nonlocal first
-        msg = _BUILD_MESSAGES[first, not result.has_errors()]
+        ok = not result.has_errors() and not (strict and result.has_warnings())
+        msg = _BUILD_MESSAGES[first, ok]
+        if ok and result.has_warnings():
+            msg += " with warnings"
         first = False
         print(f"{msg} at {datetime.now():%H:%M:%S}.", file=sys.stderr, flush=True)
 
@@ -173,7 +180,7 @@ def build(
         out_dir=out_dir,
         render_dir=render_dir,
     )
-    result = command.build(config, on_report=_build_listener())
+    result = command.build(config, on_report=_build_listener(strict=strict))
     if result.has_errors() or (strict and result.has_warnings()):
         raise SystemExit(1)
 
