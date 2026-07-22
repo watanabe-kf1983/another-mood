@@ -1,5 +1,6 @@
 baseURL = '/'
 uglyURLs = true
+relativeURLs = true
 
 [markup.goldmark.renderHooks.link]
 useEmbedded = "fallback"
