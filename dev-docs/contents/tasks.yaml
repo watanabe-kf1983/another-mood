@@ -310,6 +310,16 @@ categories:
         title: "mood watch / build の作業ディレクトリと出力 publish を隔離"
         phase: 13
         done: true
+      G10:
+        title: ソースレイアウトの ProjectConfig からの分離 + RB_ レイアウトオーバーライド廃止
+        note: >-
+          レイアウト 5 パス (schema_file / reports_file / contents_dir / queries_dir /
+          templates_dir) はフォーマット世代が定める仕様でありユーザ設定ではない。
+          ProjectConfig を起動パラメータに痩せさせ、SourceLayout として導出して
+          Workspace に載せる。ソース存在検証もレイアウト解決後へ移設。
+          RB_ レイアウトオーバーライドは完全廃止 (内部利用ゼロ確認済み)。V1 の前提。
+        phase: 14
+        proposal: 20-design/20-app/20-config-spec#ソースレイアウトの分離-g10
 
   H:
     title: バイナリファイルの取り扱い
