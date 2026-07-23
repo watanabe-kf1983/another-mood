@@ -699,6 +699,7 @@ categories:
           .git / README 等との同居が設計 (scaffold の cargo init 型と同根) のため
           対象外。背景は 20-app/60-sbdb-manifest の厳格パース節。
         phase: 14
+        done: true
       V6:
         title: scaffold の衝突判定を管轄領域の存在チェックに置換
         note: >-
