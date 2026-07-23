@@ -155,7 +155,7 @@ No normalization happens; the value is passed to templates as written.
 
 ## Supported keywords
 
-A subset of JSON Schema draft 2020-12. Only the keywords listed below are accepted (unknown keywords are rejected uniformly by the built-in meta-schema's `additionalProperties: false`).
+A subset of JSON Schema draft 2020-12. Only the keywords listed below are accepted (unknown keywords are rejected uniformly by the meta-schema's `additionalProperties: false`).
 
 ### Structural keywords (involved in normalization)
 
@@ -226,7 +226,7 @@ The declared references appear in `output/__db/__entity_defs/<entity>.md` as a `
 
 ## Unsupported keywords
 
-Keywords that exist in JSON Schema draft 2020-12 but are rejected by the built-in meta-schema:
+Keywords that exist in JSON Schema draft 2020-12 but are rejected by the meta-schema:
 
 - **Core**: `$id`, `$schema`, `$ref`, `$defs`, `$anchor`, `$comment`, etc.
 - **Composition and conditions**: `allOf`, `anyOf`, `oneOf`, `not`, `if` / `then` / `else`
@@ -293,7 +293,7 @@ At build time every blob is copied verbatim to `blob/<id>` under each edition's 
 
 ## Full schema-schema
 
-Everything above is a prose explanation of the built-in meta-schema (schema-schema). The strict specification is the YAML at [`./schemas/schema-schema.yaml`](./schemas/schema-schema.yaml).
+Everything above is a prose explanation of the meta-schema (schema-schema). The strict specification is the YAML at [`./schemas/schema-schema.yaml`](./schemas/schema-schema.yaml).
 
 ## Full content-schema
 

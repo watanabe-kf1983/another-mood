@@ -38,19 +38,26 @@ resources:
     description: >-
       Report output configuration reference — `definition/reports.yaml`,
       `file_per:`, and multi-edition (`editions:`) output.
+  - path: reference/manifest.md
+    description: >-
+      Project manifest reference (`sbdb.yaml`) — project title and
+      version compatibility.
   - path: reference/schemas/content-schema.yaml
     description: >-
-      Built-in meta-schema merged with the user's schema.yaml at validation
+      Built-in schema merged with the user's schema.yaml at validation
       time so all content files are validated uniformly.
   - path: reference/schemas/query-schema.yaml
     description: >-
-      Built-in meta-schema validating user-defined query files under
-      queries_dir.
+      Schema validating user-defined query files under queries_dir.
   - path: reference/schemas/schema-schema.yaml
     description: >-
-      Built-in meta-schema validating the user's schema.yaml — defines the
+      Meta-schema validating the user's schema.yaml — defines the
       JSON Schema subset that user schemas may use.
   - path: reference/schemas/reports-schema.yaml
     description: >-
-      Built-in meta-schema validating the user's reports.yaml — defines
+      Schema validating the user's reports.yaml — defines
       the form A (file_per) and form B (editions) shapes.
+  - path: reference/schemas/manifest-schema.yaml
+    description: >-
+      Schema validating the project manifest sbdb.yaml —
+      sbdb_version, title, and the tools.another-mood namespace.

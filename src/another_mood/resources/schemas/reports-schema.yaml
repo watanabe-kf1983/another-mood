@@ -1,6 +1,6 @@
 title: ReportsSchema
 description: >-
-  Meta-schema validating the user's definition/reports.yaml. The file
+  Validates the user's definition/reports.yaml. The file
   configures report output. Two mutually exclusive forms: form A declares
   a single edition's split policy at the top level (file_per); form B
   declares an editions map — one named edition per entry, each with its

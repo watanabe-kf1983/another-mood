@@ -30,7 +30,7 @@ mood watch .
 
 ### Source layout
 
-Source paths are fixed by the sbdb format — they are part of the project structure, not configuration, and cannot be overridden:
+Source paths are fixed — they are part of the project structure, not configuration, and cannot be overridden:
 
 | Kind | Path |
 |---|---|
@@ -41,6 +41,8 @@ Source paths are fixed by the sbdb format — they are part of the project struc
 | Templates | `<project_dir>/definition/templates` |
 
 If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
+
+The project [manifest](manifest.md) (`<project_dir>/sbdb.yaml`) also lives at a fixed path.
 
 ### Output path resolution
 
@@ -155,7 +157,7 @@ mood blueprint apply <name> <project_dir>
 
 Applies the named blueprint by copying its sources into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name prints the available list on stderr and exits with code 1.
 
-For each file, prints `  created: <path>` to stderr, or `warning: skipped (already exists): <path>` if the destination already exists. The exit code is 0 if all files are newly created, or 1 if any file is skipped. Re-running `apply` on an existing project never causes destructive changes.
+A fresh [manifest](manifest.md) (`sbdb.yaml`) is also generated. Files unrelated to the blueprint are left alone, but if any file to be written already exists, the command lists the conflicts on stderr and exits with code 1 without writing anything.
 
 ## docs
 

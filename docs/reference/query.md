@@ -412,4 +412,4 @@ Each query's result is exposed via an auto-generated meta page at `output/__db/_
 
 ## Full query-schema
 
-The built-in schema that constrains the form of query files. The canonical specification is the YAML at [`./schemas/query-schema.yaml`](./schemas/query-schema.yaml).
+The schema that constrains the form of query files. The canonical specification is the YAML at [`./schemas/query-schema.yaml`](./schemas/query-schema.yaml).
