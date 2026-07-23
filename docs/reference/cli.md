@@ -28,16 +28,17 @@ mood watch .
 
 `build` and `watch` cannot target a `<project_dir>` outside the current directory.
 
-### Input path resolution
+### Source layout
 
-Input paths (the schema file and the contents / queries / templates directories) are resolved relative to `<project_dir>`. Defaults:
+Source paths are fixed by the sbdb format — they are part of the project structure, not configuration, and cannot be overridden:
 
-| Kind | Default | Env var |
-|---|---|---|
-| Schema | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` |
-| Content | `<project_dir>/contents` | `RB_CONTENTS_DIR` |
-| Queries | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` |
-| Templates | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` |
+| Kind | Path |
+|---|---|
+| Schema | `<project_dir>/definition/schema.yaml` |
+| Reports | `<project_dir>/definition/reports.yaml` |
+| Content | `<project_dir>/contents` |
+| Queries | `<project_dir>/definition/queries` |
+| Templates | `<project_dir>/definition/templates` |
 
 If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
 
@@ -185,7 +186,7 @@ Every configuration key has a default; each can be overridden individually via a
 Each configuration key can be overridden by an environment variable: prefix the key name with `RB_` and uppercase it as snake case. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
 
 ```bash
-RB_CONTENTS_DIR=/abs/path/to/contents mood build .
+RB_OUT_DIR=/abs/path/to/output mood build .
 RB_PORT=8080 mood watch .
 ```
 
@@ -194,10 +195,6 @@ RB_PORT=8080 mood watch .
 | Key | Default | Env var | CLI |
 |---|---|---|---|
 | `project_dir` | (required, given as argument) | — | first positional argument |
-| `schema_file` | `<project_dir>/definition/schema.yaml` | `RB_SCHEMA_FILE` | — |
-| `contents_dir` | `<project_dir>/contents` | `RB_CONTENTS_DIR` | — |
-| `queries_dir` | `<project_dir>/definition/queries` | `RB_QUERIES_DIR` | — |
-| `templates_dir` | `<project_dir>/definition/templates` | `RB_TEMPLATES_DIR` | — |
 | `tmp_dir` | (per-run session dir under the system temp dir) | `RB_TMP_DIR` | — |
 | `out_dir` | `build`: `.another-mood/<project_dir>/output`; `watch`: unset (publishes nothing) | `RB_OUT_DIR` | `--out-dir` |
 | `render_dir` | `build`: `.another-mood/<project_dir>/render`; `watch`: not published | `RB_RENDER_DIR` | `--render-dir` (only on `build`) |

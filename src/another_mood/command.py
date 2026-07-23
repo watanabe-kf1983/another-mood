@@ -34,17 +34,22 @@ from another_mood.components.shared.component.build_report import (
     BuildReport,
     ErrorEntry,
 )
+from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.config import ProjectConfig
+from another_mood.layout import SourceLayout, resolve_layout, verify_layout
 from another_mood.pipeline.render import (
     HugoServerStartupError as WatchStartupError,
 )
 from another_mood.pipeline.stages import pipeline
 from another_mood.pipeline.workspace import Workspace
 
+# UserError is re-exported: commands raise its subclasses for pre-pipeline
+# refusals, and the CLI catches that base.
 __all__ = [
     "BuildResult",
     "ResultDiagnostic",
+    "UserError",
     "WatchSession",
     "WatchStartupError",
     "apply_blueprint",
@@ -180,7 +185,9 @@ def build(
     """
     config = config.resolved_for_build()
     out_dir = str(config.out_dir)
-    workspace = _session_workspace(config)
+    layout = resolve_layout(config.project_dir)
+    verify_layout(layout)
+    workspace = _session_workspace(config, layout)
     result = _to_result(
         pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
     )
@@ -211,7 +218,10 @@ def watch(
     """
     config = config.resolved_for_watch()
     out_dir = str(config.out_dir or "")
-    workspace = _session_workspace(config)
+    # Verified once at startup; rebuilds do not re-check source existence.
+    layout = resolve_layout(config.project_dir)
+    verify_layout(layout)
+    workspace = _session_workspace(config, layout)
     with pipeline(
         workspace, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
@@ -225,7 +235,7 @@ def watch(
 # -- Helpers -----------------------------------------------------------------
 
 
-def _session_workspace(config: ProjectConfig) -> Workspace:
+def _session_workspace(config: ProjectConfig, layout: SourceLayout) -> Workspace:
     """Build the run Workspace, defaulting its root to a fresh system-temp dir.
 
     An explicit ``tmp_dir`` (RB_TMP_DIR) is honored and left for the user to
@@ -233,10 +243,10 @@ def _session_workspace(config: ProjectConfig) -> Workspace:
     ``temporary`` so the caller can clean it up.
     """
     if config.tmp_dir is not None:
-        return Workspace(config, config.tmp_dir)
+        return Workspace(config, config.tmp_dir, layout)
     else:
         tmp = Path(tempfile.mkdtemp(prefix="another-mood-"))
-        return Workspace(config, tmp, temporary=True)
+        return Workspace(config, tmp, layout, temporary=True)
 
 
 def _to_result(report: BuildReport, out_dir: str) -> BuildResult:

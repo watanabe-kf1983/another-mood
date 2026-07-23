@@ -14,6 +14,7 @@ from pathlib import Path
 
 from another_mood import command
 from another_mood.config import ProjectConfig
+from another_mood.layout import resolve_layout
 from another_mood.pipeline.stages import STAGE_FACTORIES
 from another_mood.pipeline.workspace import Workspace
 
@@ -87,7 +88,7 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
         out_dir=published / "output",
         render_dir=published / "render",
     )
-    return Workspace(config, tmp_path / "workspace"), published
+    return Workspace(config, tmp_path / "workspace", resolve_layout(project)), published
 
 
 def _run_all_stages(
