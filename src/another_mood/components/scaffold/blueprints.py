@@ -15,8 +15,6 @@ from typing import Sequence, cast
 
 import yaml
 
-from another_mood.components.shared.user_error import UserError
-
 DEFAULT_BLUEPRINT = "starter"
 INDEX_FILE = "index.yaml"
 # Kept in sync with components/manifest (a cross-component import would
@@ -38,15 +36,6 @@ class ScaffoldResult:
     """Outcome of a scaffolding pass: the files that were created."""
 
     created: Sequence[Path]
-
-
-class ScaffoldConflictError(UserError):
-    """A file the scaffold would write already exists; nothing was written."""
-
-    def __init__(self, conflicts: Sequence[Path]) -> None:
-        self.conflicts = conflicts
-        listing = "\n".join(f"  {path}" for path in conflicts)
-        super().__init__(f"refusing to scaffold: these files already exist:\n{listing}")
 
 
 def _showcase_root() -> Path:
@@ -88,16 +77,13 @@ def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
 def scaffold_project(template_root: Path, project_dir: Path) -> ScaffoldResult:
     """Copy *template_root* into *project_dir* and generate a fresh manifest.
 
-    The template's own manifest is not copied.  Raises
-    :class:`ScaffoldConflictError` before writing anything if any
-    destination file already exists; unrelated existing files are fine.
+    Overwrites whatever it lands on: guarding the target directory is the
+    caller's job.  The template's own manifest is not copied.
     """
     targets = [
         *(project_dir / rel for rel in _collect_template_files(template_root)),
         project_dir / MANIFEST_FILENAME,
     ]
-    if conflicts := [dest for dest in targets if dest.exists()]:
-        raise ScaffoldConflictError(conflicts)
     for rel in _collect_template_files(template_root):
         dest = project_dir / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
