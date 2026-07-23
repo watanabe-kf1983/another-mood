@@ -668,11 +668,13 @@ categories:
         phase: 14
         done: true
       V2:
-        title: tools.<processor>.requires の fail-fast
+        title: tools.<processor>.minimum_version の fail-fast
         note: >-
-          実行中バージョンとの比較とエラーメッセージ。バージョン要求記法
-          (>= 等) をどこまで受けるかの検討を含む。前提 V4。
+          実行中バージョンとの比較とエラーメッセージ。記法検討の結果、欄名を
+          requires から minimum_version に改め、素のバージョンのみ受ける
+          (レンジ記法なし。理由は 20-app/60-sbdb-manifest)。前提 V4。
         phase: 14
+        done: true
       V3:
         title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
         note: >-

@@ -12,6 +12,17 @@ properties:
   tools:
     description: Optional per-processor namespace.
     type: object
+    properties:
+      another-mood:
+        description: Settings addressed to the another-mood processor.
+        type: object
+        properties:
+          minimum_version:
+            description: >-
+              Minimum another-mood version this project requires — a plain
+              version like "0.3.5", no operators or ranges.
+            type: string
+        additionalProperties: false
     additionalProperties:
       type: object
 additionalProperties: false
