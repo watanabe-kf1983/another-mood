@@ -67,11 +67,9 @@ def list_blueprints(
 
 
 def _render_scaffold(result: ScaffoldResult) -> None:
-    """Print created / skipped lines for a scaffold pass."""
+    """Print created lines for a scaffold pass."""
     for path in result.created:
         print(f"  created: {path}", file=sys.stderr)
-    for path in result.skipped:
-        print(f"warning: skipped (already exists): {path}", file=sys.stderr)
 
 
 @blueprint_app.command("apply")
@@ -89,10 +87,12 @@ def apply_blueprint(
         raise typer.Exit(1)
     target = Path(project_dir)
     print(f"Scaffolding {target}/ from blueprint: {name}", file=sys.stderr)
-    result = command.apply_blueprint(name, target)
-    _render_scaffold(result)
-    if not result.all_written:
+    try:
+        result = command.apply_blueprint(name, target)
+    except UserError as exc:
+        print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1)
+    _render_scaffold(result)
 
 
 @docs_app.command("list")
@@ -125,10 +125,12 @@ def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Initialize a new project. Shortcut for `mood blueprint apply starter`."""
     target = Path(project_dir)
     print(f"Scaffolding {target}/ from default blueprint", file=sys.stderr)
-    result = command.init(target)
-    _render_scaffold(result)
-    if not result.all_written:
+    try:
+        result = command.init(target)
+    except UserError as exc:
+        print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1)
+    _render_scaffold(result)
 
 
 _BUILD_MESSAGES = {
