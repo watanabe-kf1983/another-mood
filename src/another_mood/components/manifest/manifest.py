@@ -1,9 +1,16 @@
-"""Read and validate the project manifest (sbdb.yaml). Design: 20-app/60-sbdb-manifest."""
+"""Read and validate the project manifest (sbdb.yaml). Design: 20-app/60-sbdb-manifest.
+
+Version comparison uses ``packaging`` (the PyPA reference implementation of
+PEP 440): another-mood's own version is a PEP 440 version, so its ordering
+rules — including pre-releases like ``0.4.0.dev1`` — are authoritative here.
+"""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from importlib import resources
+from importlib import metadata, resources
 from pathlib import Path
+
+from packaging.version import InvalidVersion, Version
 
 from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.user_error import UserError
@@ -12,7 +19,10 @@ from another_mood.components.shared.user_source.diagnostic import (
     DiagnosticEntry,
     FileValidationError,
 )
-from another_mood.components.shared.user_source.source_loader import parse_yaml
+from another_mood.components.shared.user_source.source_loader import (
+    UserStr,
+    parse_yaml,
+)
 from another_mood.components.shared.user_source.validator import Validator
 
 MANIFEST_FILENAME = "sbdb.yaml"
@@ -46,6 +56,23 @@ class ManifestError(UserError):
         return [d.to_entry() for d in self.diagnostics]
 
 
+class MinimumVersionError(UserError):
+    """The running another-mood is older than the project's declared minimum.
+
+    Not a malformed file, so it carries no diagnostics — like
+    ``UnsupportedSbdbVersionError``, the message alone is the payload.
+    """
+
+    def __init__(self, minimum: Version, running: Version, manifest_file: Path) -> None:
+        self.minimum = minimum
+        self.running = running
+        super().__init__(
+            f"{manifest_file} requires another-mood {minimum} or newer, "
+            f"but {running} is running. "
+            "Upgrade another-mood to build this project."
+        )
+
+
 class UnsupportedSbdbVersionError(UserError):
     """Unsupported sbdb generation — not a malformed file, so it carries no diagnostics."""
 
@@ -69,8 +96,11 @@ def read_manifest(project_dir: Path) -> Manifest:
         # Grace period: a missing manifest reads as sbdb_version 1, silently.
         return Manifest()
     data = _parse(manifest_file)
-    # Gate before validation: a manifest from a future generation must fail as
-    # "unsupported generation", not on whatever unknown key it happens to carry.
+    # Gates run before validation: a manifest from a future generation must
+    # fail as "unsupported generation", not on whatever unknown key it happens
+    # to carry.  The minimum_version gate comes first — "upgrade to X" is the
+    # most actionable error, so nothing may preempt it.
+    _gate_minimum_version(data, manifest_file)
     _gate_version(data, manifest_file)
     _validate(data, manifest_file)
     title = data.get("title")
@@ -82,6 +112,45 @@ def _parse(manifest_file: Path) -> Mapping[str, object]:
         return parse_yaml(manifest_file)
     except FileValidationError as exc:
         raise ManifestError(list(exc.diagnostics)) from exc
+
+
+def _gate_minimum_version(data: Mapping[str, object], manifest_file: Path) -> None:
+    declared = _declared_minimum_version(data)
+    if declared is None:
+        return
+    try:
+        minimum = Version(declared)
+    except InvalidVersion:
+        raise ManifestError([_invalid_version_diagnostic(declared, manifest_file)])
+    running = Version(metadata.version("another-mood"))
+    if running < minimum:
+        raise MinimumVersionError(minimum, running, manifest_file)
+
+
+def _declared_minimum_version(data: Mapping[str, object]) -> str | None:
+    # Loose extraction: any shape mismatch on the way down is a broken
+    # manifest, deferred to _validate, which locates it in the file.
+    match data:
+        case {"tools": {"another-mood": {"minimum_version": str() as declared}}}:
+            return declared
+        case _:
+            return None
+
+
+def _invalid_version_diagnostic(declared: str, manifest_file: Path) -> Diagnostic:
+    # parse_yaml wraps string scalars as UserStr, so the offending value
+    # usually knows its own position; a plain str degrades to file-only.
+    location = declared.location if isinstance(declared, UserStr) else None
+    return Diagnostic(
+        file=manifest_file,
+        line=location.line if location else None,
+        column=location.column if location else None,
+        message=(
+            f"{declared!r} is not a valid version. minimum_version takes a "
+            'plain version like "0.3.5" — no operators or ranges.'
+        ),
+        source="manifest",
+    )
 
 
 def _gate_version(data: Mapping[str, object], manifest_file: Path) -> None:
