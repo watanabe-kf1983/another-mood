@@ -657,6 +657,7 @@ categories:
           境界に出す。title のトップページ反映 (ディレクトリ名直渡しをフォールバックに
           降格)。sbdb_version の値ゲート (対応集合照合) は V4 に分離。前提 P4。
         phase: 14
+        done: true
       V4:
         title: sbdb_version 値ゲート (対応集合照合)
         note: >-
@@ -675,7 +676,7 @@ categories:
         title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
         note: >-
           mood init / blueprint が sbdb.yaml (sbdb_version + title) を生成。showcase /
-          dev-docs への付与。docs/reference のマニフェスト章 + style guide への
+          dev-docs への付与 (music は V1 で実例として付与済み)。docs/reference のマニフェスト章 + style guide への
           sbdb 表記追記。稼働プロジェクトへの付与はリポジトリ外の作業のため、
           P5 の移行完了判断と併せて行う。前提 V1。
         phase: 14

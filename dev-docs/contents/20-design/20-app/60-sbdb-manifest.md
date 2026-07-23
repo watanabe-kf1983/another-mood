@@ -157,17 +157,6 @@ contents 編集者は versioning の存在を知らなくてよい。
 #### 命名
 
 - フォーマット識別子は **sbdb**（source-based DB）。style guide の表記規約に追記する
-- **`mood_view` → `render` 改名**: スペック語彙への唯一のツール名混入を、公開前の
-  今のうちに解消する。Q2 本体の前哨タスク（[P4](node:/tasks/P/tasks/P4)、
-  エイリアス廃止は [P5](node:/tasks/P/tasks/P5)）として別ブランチで実施。
-  改名後のタグ名は `render` に確定。当初の推奨候補 `view` は、query が生成する
-  名前付きデータセットの正式名称「ビュー」（`docs/reference/query.md`）と
-  同一 namespace 感覚で語彙衝突し、しかもタグの引数は view 名ではなくテンプレート
-  ファイル名なので誤読を誘う。`page` は inline 展開時に嘘になる（ページか否かを
-  決めるのはタグではなく `file_per`）。`render` は split/inline 両モードで意味論が
-  正確、docs リファレンスの既存記述（"render a subtemplate…"）と一致し、
-  Shopify Liquid の `{% render %}`（スコープ分離 + 明示的データ受け渡し）に先例がある。
-  Jinja 組み込みタグ・既存フィルタとも非衝突
 
 #### 移行措置
 
@@ -184,12 +173,7 @@ contents 編集者は versioning の存在を知らなくてよい。
 
 #### 実装スコープ
 
-前哨（別ブランチ）:
-
-- `mood_view` → `render` 改名（静かなエイリアス併存、[P4](node:/tasks/P/tasks/P4)。
-  エイリアス廃止は [P5](node:/tasks/P/tasks/P5)）
-
-本体（カテゴリ V、実行順）:
+カテゴリ V（実行順）:
 
 1. [V1](node:/tasks/V/tasks/V1) — `sbdb.yaml` の読み込みとスキーマ検証（未知キー拒否・
    `sbdb_version` 必須/整数）+ `title` のトップページ表示（現行のディレクトリ名直渡しを
