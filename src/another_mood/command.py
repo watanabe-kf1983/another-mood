@@ -37,7 +37,7 @@ from another_mood.components.shared.component.build_report import (
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.config import ProjectConfig
-from another_mood.layout import SourceLayout, resolve_layout, verify_layout
+from another_mood.layout import SourceLayout, resolve_layout
 from another_mood.pipeline.render import (
     HugoServerStartupError as WatchStartupError,
 )
@@ -186,7 +186,6 @@ def build(
     config = config.resolved_for_build()
     out_dir = str(config.out_dir)
     layout = resolve_layout(config.project_dir)
-    verify_layout(layout)
     workspace = _session_workspace(config, layout)
     result = _to_result(
         pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
@@ -218,9 +217,8 @@ def watch(
     """
     config = config.resolved_for_watch()
     out_dir = str(config.out_dir or "")
-    # Verified once at startup; rebuilds do not re-check source existence.
+    # Resolved (and verified) once at startup; rebuilds do not re-check.
     layout = resolve_layout(config.project_dir)
-    verify_layout(layout)
     workspace = _session_workspace(config, layout)
     with pipeline(
         workspace, on_report=_lift(on_report, out_dir)
