@@ -666,6 +666,7 @@ categories:
           出す)。bool ガード (True == 1)。sbdb.yaml 欠落時は警告なしで sbdb_version 1 みなし。
           設計は 20-app/60-sbdb-manifest。前提 V1。
         phase: 14
+        done: true
       V2:
         title: tools.<processor>.requires の fail-fast
         note: >-

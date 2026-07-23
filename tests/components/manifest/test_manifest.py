@@ -1,16 +1,16 @@
-"""Tests for manifest — sbdb.yaml parsing and ManifestSchema validation.
-
-Scope is V1: parse + strict validation + title extraction. The sbdb_version
-value gate (membership in the supported set) is a separate task, so any integer
-sbdb_version is accepted here.
-"""
+"""Tests for manifest — sbdb.yaml parsing, version gate, and validation."""
 
 from pathlib import Path
 from textwrap import dedent
 
 import pytest
 
-from another_mood.components.manifest import Manifest, ManifestError, read_manifest
+from another_mood.components.manifest import (
+    Manifest,
+    ManifestError,
+    UnsupportedSbdbVersionError,
+    read_manifest,
+)
 
 
 def _write(project_dir: Path, source: str) -> Path:
@@ -36,11 +36,49 @@ def test_title_is_optional(tmp_path: Path) -> None:
     assert read_manifest(tmp_path) == Manifest(title=None)
 
 
-def test_value_gate_is_deferred(tmp_path: Path) -> None:
-    # V1 checks sbdb_version is an integer but not its value; any integer is
-    # accepted (the membership gate is a separate task).
-    _write(tmp_path, "sbdb_version: 999\ntitle: Future\n")
-    assert read_manifest(tmp_path) == Manifest(title="Future")
+# ── version gate ───────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("version", [0, 2, 999, -1])
+def test_rejects_unsupported_version(version: int, tmp_path: Path) -> None:
+    _write(tmp_path, f"sbdb_version: {version}\ntitle: Other\n")
+    with pytest.raises(UnsupportedSbdbVersionError) as exc_info:
+        read_manifest(tmp_path)
+    assert str(version) in exc_info.value.user_error_message
+    assert "sbdb.yaml" in exc_info.value.user_error_message
+
+
+def test_gate_hint_depends_on_direction(tmp_path: Path) -> None:
+    _write(tmp_path, "sbdb_version: 2\n")
+    with pytest.raises(UnsupportedSbdbVersionError) as newer:
+        read_manifest(tmp_path)
+    assert "Upgrade another-mood" in newer.value.user_error_message
+
+    _write(tmp_path, "sbdb_version: 0\n")
+    with pytest.raises(UnsupportedSbdbVersionError) as older:
+        read_manifest(tmp_path)
+    assert "Migrate the project" in older.value.user_error_message
+
+
+def test_gate_precedes_strict_validation(tmp_path: Path) -> None:
+    # A manifest from a future generation may carry keys we do not know.  The
+    # gate must fire first, so the user hears "unsupported generation" rather
+    # than "unknown key".
+    _write(tmp_path, "sbdb_version: 2\nfuture_key: x\n")
+    with pytest.raises(UnsupportedSbdbVersionError):
+        read_manifest(tmp_path)
+
+
+@pytest.mark.parametrize("version", ["true", "false", '"1"', "1.5"])
+def test_gate_defers_ill_typed_version_to_validation(
+    version: str, tmp_path: Path
+) -> None:
+    # An ill-typed version is a broken manifest, not an unsupported generation.
+    # bool is the trap: as an int subclass it reaches the membership test, where
+    # `false` would come out as "unsupported generation" instead of a type error.
+    _write(tmp_path, f"sbdb_version: {version}\n")
+    with pytest.raises(ManifestError):
+        read_manifest(tmp_path)
 
 
 def test_tools_namespace_is_accepted(tmp_path: Path) -> None:
