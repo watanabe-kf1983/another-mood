@@ -81,7 +81,7 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
-        phase: 17
+        phase: 18
         proposal: 20-design/70-generator/20-anchor-spec#未解決参照の扱い
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
@@ -198,12 +198,12 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 17
+        phase: 18
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 17
+        phase: 18
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
@@ -296,7 +296,7 @@ categories:
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
-        phase: 17
+        phase: 18
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
@@ -365,7 +365,7 @@ categories:
           実需が具体化した時点で (2) の安定契約と「export → 外部計算 → contents 還流」
           ラウンドトリップのガイド化を仕様検討する。クエリ DSL への集約関数追加
           (sum / count 等) は、それでも足りない場合の後続候補。
-        phase: 17
+        phase: 18
 
   L:
     title: dog-fooding リファクタ
@@ -419,10 +419,10 @@ categories:
           カスタムレンダラ差し替えの構想 (旧 G3 render.customServer.command) はこの
           検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
           差し替えで済む抽象は存在しない。
-        phase: 17
+        phase: 18
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 17
+        phase: 18
       N3:
         title: "watch で捨てられる hugo_build をスキップ (レンダリング効率)"
         note: |
@@ -431,7 +431,7 @@ categories:
           捨てられる full hugo build がリビルド遅延に乗る。ただし report / error 伝播が
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
-        phase: 17
+        phase: 18
 
   O:
     title: バグ修正
@@ -501,23 +501,23 @@ categories:
         note: >-
           Q1 は静かな公開に留め、S2-S4 (システム開発ドキュメント) の完成を待って
           告知する。内容 (告知先・訴求) は接近時に具体化。前提 Q4, Q5, Q7。
-        phase: 16
+        phase: 17
       Q4:
         title: dev-docs の全面英語化
         note: >-
           ローンチで外部コントリビュータが設計判断を読める状態にする。
           background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
-          Phase 15 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
+          Phase 16 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
           その完了後・告知前に実施する。Q3 の前提。
-        phase: 16
+        phase: 17
       Q5:
         title: 残タスクの GitHub Issues 移行 + ロードマップ退役
         note: >-
-          Phase 17 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
+          Phase 18 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
           一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
           はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
           ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
-        phase: 16
+        phase: 17
       Q6:
         title: リリースフロー整備 (tag 駆動 publish + バージョン運用)
         note: >-
@@ -531,7 +531,7 @@ categories:
           リリースのみ冒頭に移行手順を手書きする。外部向けの体裁格上げ判断は Q7。
           バージョニングは 0.x 慣習に従い 0.MINOR を破壊的変更 (フォーマット世代 +1) に
           予約、それ以外は 0.x.PATCH。1.0.0 はローンチ (Q3) で刻む。
-        phase: 14
+        phase: 15
       Q7:
         title: リポジトリの外部公開整備 (GH 設定 / CONTRIBUTING / changelog)
         note: >-
@@ -543,8 +543,8 @@ categories:
           `requires-python >=3.13` の広さも一度判断する (広げるか、最新版のみと宣言するか)。
           下限の実態: 3.13 要求は ntpath.isreserved の 1 箇所のみ (vendor すれば 3.12 化は安い)。
           PEP 695 構文 (type 文 / ジェネリクス) が広範にあり 3.12 が構文上の床。
-          受益者が現れるローンチまで不要なので Phase 16。Q3 の前提。
-        phase: 16
+          受益者が現れるローンチまで不要なので Phase 17。Q3 の前提。
+        phase: 17
 
   R:
     title: ユーザドキュメント・サンプルプロジェクト改善
@@ -573,14 +573,14 @@ categories:
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F5)。
-        phase: 15
+        phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s2-dfd-data-flow-diagram
       S3:
         title: CRUD マトリクステンプレート
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F6)。
-        phase: 15
+        phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス
       S4:
         title: 画面遷移図 + 画面定義テンプレート
@@ -588,7 +588,7 @@ categories:
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           画面 entity + 遷移 entity を構造化し、Mermaid stateDiagram-v2 で
           遷移図を描く。stateDiagram の Mermaid 適合性実機検証も兼ねる。
-        phase: 15
+        phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
 
   T:
