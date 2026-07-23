@@ -4,7 +4,7 @@ type: object
 required: [sbdb_version]
 properties:
   sbdb_version:
-    description: sbdb format generation these sources target.
+    description: Format generation these sources follow.
     type: integer
   title:
     description: Project display name, shown on the top page.

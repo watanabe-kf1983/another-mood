@@ -1,6 +1,6 @@
 title: QuerySchema
 description: >-
-  Meta-schema validating user-defined query files under queries_dir. Each
+  Validates user-defined query files under queries_dir. Each
   top-level key names a query (= view) and maps to a definition with a
   required `from:` data source and optional `where:` / `grouped:` /
   `select:` clauses. See docs/reference/query.md for the prose

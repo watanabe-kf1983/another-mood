@@ -1,5 +1,5 @@
 sbdb_version: 1
-title: Music Catalog
+title: 蔵書管理システム — テーブル設計書
 tools:
   another-mood:
     minimum_version: "0.1.0"

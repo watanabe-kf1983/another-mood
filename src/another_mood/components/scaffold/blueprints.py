@@ -9,14 +9,20 @@ lives at ``showcase/<name>/``.
 
 import shutil
 from dataclasses import dataclass
-from importlib import resources
+from importlib import metadata, resources
 from pathlib import Path
 from typing import Sequence, cast
 
 import yaml
 
+from another_mood.components.shared.user_error import UserError
+
 DEFAULT_BLUEPRINT = "starter"
 INDEX_FILE = "index.yaml"
+# Kept in sync with components/manifest (a cross-component import would
+# violate the dependency rule: components may only depend on shared).
+MANIFEST_FILENAME = "sbdb.yaml"
+SBDB_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -29,14 +35,18 @@ class Blueprint:
 
 @dataclass(frozen=True)
 class ScaffoldResult:
-    """Outcome of a scaffolding pass: which files were created vs. skipped."""
+    """Outcome of a scaffolding pass: the files that were created."""
 
     created: Sequence[Path]
-    skipped: Sequence[Path]
 
-    @property
-    def all_written(self) -> bool:
-        return not self.skipped
+
+class ScaffoldConflictError(UserError):
+    """A file the scaffold would write already exists; nothing was written."""
+
+    def __init__(self, conflicts: Sequence[Path]) -> None:
+        self.conflicts = conflicts
+        listing = "\n".join(f"  {path}" for path in conflicts)
+        super().__init__(f"refusing to scaffold: these files already exist:\n{listing}")
 
 
 def _showcase_root() -> Path:
@@ -76,26 +86,48 @@ def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
 
 
 def scaffold_project(template_root: Path, project_dir: Path) -> ScaffoldResult:
-    """Copy *template_root* into *project_dir*, skipping existing files.
+    """Copy *template_root* into *project_dir* and generate a fresh manifest.
 
-    Existing files are never overwritten.  Returns a :class:`ScaffoldResult`
-    listing both the destinations that were created and those that were
-    skipped because the file already existed.
+    The template's own manifest is not copied.  Raises
+    :class:`ScaffoldConflictError` before writing anything if any
+    destination file already exists; unrelated existing files are fine.
     """
-    created: list[Path] = []
-    skipped: list[Path] = []
+    targets = [
+        *(project_dir / rel for rel in _collect_template_files(template_root)),
+        project_dir / MANIFEST_FILENAME,
+    ]
+    if conflicts := [dest for dest in targets if dest.exists()]:
+        raise ScaffoldConflictError(conflicts)
     for rel in _collect_template_files(template_root):
         dest = project_dir / rel
-        if dest.exists():
-            skipped.append(dest)
-            continue
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(template_root / rel, dest)
-        created.append(dest)
-    return ScaffoldResult(created=created, skipped=skipped)
+    manifest = project_dir / MANIFEST_FILENAME
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(_generate_manifest(project_dir), encoding="utf-8")
+    return ScaffoldResult(created=targets)
 
 
 def _collect_template_files(template_root: Path) -> Sequence[Path]:
     return sorted(
-        p.relative_to(template_root) for p in template_root.rglob("*") if p.is_file()
+        p.relative_to(template_root)
+        for p in template_root.rglob("*")
+        if p.is_file() and p.relative_to(template_root) != Path(MANIFEST_FILENAME)
+    )
+
+
+def _generate_manifest(project_dir: Path) -> str:
+    # resolve() so `mood init .` gets the real directory name — the same
+    # derivation as the build's fallback title.
+    title = project_dir.resolve().name
+    # A verified floor ("known to work"), not an audited true minimum.
+    running = metadata.version("another-mood")
+    return yaml.safe_dump(
+        {
+            "sbdb_version": SBDB_VERSION,
+            "title": title,
+            "tools": {"another-mood": {"minimum_version": running}},
+        },
+        sort_keys=False,
+        allow_unicode=True,
     )

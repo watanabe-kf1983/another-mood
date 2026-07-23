@@ -11,4 +11,5 @@ For a guided walkthrough, see [Guides](../guides.md); this side is for targeted 
 - [Query](query.md) — query syntax (`from` / `grouped` / `select`)
 - [Template](template.md) — template syntax (Jinja2 plus the `{% render %}` extension)
 - [Reports](reports.md) — report output configuration (`definition/reports.yaml` — paging and editions)
-- [Built-in schemas](schemas/) — canonical YAML for `schema-schema`, `content-schema`, `query-schema`, and `reports-schema`
+- [Manifest](manifest.md) — project manifest (`sbdb.yaml`) — project title and version compatibility
+- [Built-in schemas](schemas/) — canonical YAML for `schema-schema`, `content-schema`, `query-schema`, `reports-schema`, and `manifest-schema`

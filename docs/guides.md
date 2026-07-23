@@ -49,9 +49,12 @@ my-project/
 │       ├── index.md                      # home-page template
 │       ├── member.md                     # member detail
 │       └── by_role.md                    # listing by role
-└── contents/
-    └── members.yaml                      # data (3 members)
+├── contents/
+│   └── members.yaml                      # data (3 members)
+└── sbdb.yaml                             # project manifest (title etc.)
 ```
+
+`sbdb.yaml` is the project **manifest** — edit its `title` to rename the project ([Manifest](reference/manifest.md)).
 
 What the tool generates (under `.another-mood/my-project/`):
 
@@ -101,6 +104,8 @@ There are four kinds of sources.
 
 Details on each in [Schema and content](#schema-and-content), [Queries](#queries), and [Templates](#templates). For the order of writing and how to verify, see the next chapter, [Workflow](#workflow).
 
+One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, at the project root next to `definition/` and `contents/`. It is not material for the pages — it declares what the project is (display title, format generation). `mood init` generates it; see [Manifest](reference/manifest.md).
+
 ## Workflow
 
 You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the queries are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
@@ -114,7 +119,7 @@ In the table below, "where to write" paths are relative to the project directory
 | 3 | Query | `definition/queries/**/*.yaml` | `/__db/__queries/<query>` |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
-Schema and content are required; queries are optional; templates are required for the final output. `schema.yaml` is the only fixed single file — everything else can be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
+Schema and content are required; queries are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, queries, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
 
 With `mood watch` running, the output of each stage updates in the browser as you edit. By the time you start writing templates, the shapes of the data and query results they reference are already settled, so you can focus on the templates. Syntax errors in your sources show up in the browser through the same mechanism, and you watch and fix them as you go — this "write, check, fix" loop is what the workflow looks like in practice.
 

@@ -1,11 +1,14 @@
 """Tests for the scaffold component (blueprints + project copying)."""
 
+from importlib import metadata
 from pathlib import Path
 
 import pytest
+import yaml
 
 from another_mood.components.scaffold.blueprints import (
     Blueprint,
+    ScaffoldConflictError,
     apply_blueprint,
     available_blueprints,
     load_blueprints,
@@ -24,84 +27,151 @@ def template(tmp_path: Path) -> Path:
     return root
 
 
-def test_scaffold_creates_all_files(template: Path, tmp_path: Path) -> None:
-    target = tmp_path / "proj"
+class TestScaffoldCopy:
+    """Copying the template into the target directory."""
 
-    result = scaffold_project(template, target)
+    def test_creates_all_template_files(self, template: Path, tmp_path: Path) -> None:
+        target = tmp_path / "proj"
 
-    assert result.all_written is True
-    assert set(result.created) == {
-        target / "dir_a" / "file1.txt",
-        target / "dir_b" / "file2.txt",
-    }
-    assert list(result.skipped) == []
-    assert (target / "dir_a" / "file1.txt").read_text() == "content1"
-    assert (target / "dir_b" / "file2.txt").read_text() == "content2"
+        result = scaffold_project(template, target)
 
+        assert set(result.created) == {
+            target / "dir_a" / "file1.txt",
+            target / "dir_b" / "file2.txt",
+            target / "sbdb.yaml",
+        }
+        assert (target / "dir_a" / "file1.txt").read_text() == "content1"
+        assert (target / "dir_b" / "file2.txt").read_text() == "content2"
 
-def test_scaffold_skips_existing_files(template: Path, tmp_path: Path) -> None:
-    target = tmp_path / "proj"
-    scaffold_project(template, target)
+    def test_tolerates_unrelated_files(self, template: Path, tmp_path: Path) -> None:
+        """A freshly cloned repo (.git, README.md, …) is a valid target."""
+        target = tmp_path / "proj"
+        (target / ".git").mkdir(parents=True)
+        (target / ".git" / "config").write_text("")
+        (target / "README.md").write_text("# proj")
 
-    result = scaffold_project(template, target)
+        result = scaffold_project(template, target)
 
-    assert result.all_written is False
-    assert list(result.created) == []
-    assert set(result.skipped) == {
-        target / "dir_a" / "file1.txt",
-        target / "dir_b" / "file2.txt",
-    }
-
-
-def test_scaffold_partial_conflict(template: Path, tmp_path: Path) -> None:
-    """When some files exist, only those are skipped; others are created."""
-    target = tmp_path / "proj"
-    conflict = target / "dir_a" / "file1.txt"
-    conflict.parent.mkdir(parents=True)
-    conflict.write_text("original")
-
-    result = scaffold_project(template, target)
-
-    assert result.all_written is False
-    assert list(result.created) == [target / "dir_b" / "file2.txt"]
-    assert list(result.skipped) == [conflict]
-    assert conflict.read_text() == "original"
-    assert (target / "dir_b" / "file2.txt").read_text() == "content2"
+        assert (target / "dir_a" / "file1.txt") in result.created
+        assert (target / "README.md").read_text() == "# proj"
 
 
-def test_apply_blueprint_copies_named_blueprint(tmp_path: Path) -> None:
-    target = tmp_path / "proj"
+class TestScaffoldManifest:
+    """Generation of the target's fresh sbdb.yaml."""
 
-    result = apply_blueprint("starter", target)
+    def test_titled_after_target_directory(
+        self, template: Path, tmp_path: Path
+    ) -> None:
+        target = tmp_path / "proj"
 
-    assert result.all_written is True
-    assert (target / "definition" / "schema.yaml").is_file()
-    assert (target / "definition" / "schema.yaml") in result.created
+        scaffold_project(template, target)
+
+        assert yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8")) == {
+            "sbdb_version": 1,
+            "title": "proj",
+            "tools": {
+                "another-mood": {"minimum_version": metadata.version("another-mood")}
+            },
+        }
+
+    def test_template_manifest_not_copied(self, template: Path, tmp_path: Path) -> None:
+        """The template's own manifest names the template, not the new project."""
+        (template / "sbdb.yaml").write_text(
+            "sbdb_version: 1\ntitle: Template Title\n", encoding="utf-8"
+        )
+        target = tmp_path / "proj"
+
+        scaffold_project(template, target)
+
+        manifest = yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8"))
+        assert manifest["title"] == "proj"
 
 
-def test_available_blueprints_lists_starter_and_music() -> None:
-    blueprints = available_blueprints()
+class TestScaffoldConflict:
+    """Collisions with files the scaffold would write: all-or-nothing."""
 
-    # Manifest order is preserved; starter must come first.
-    names = [b.name for b in blueprints]
-    assert names[0] == "starter"
-    assert "music" in names
-    assert all(b.description for b in blueprints)
+    def test_rerun_is_rejected(self, template: Path, tmp_path: Path) -> None:
+        target = tmp_path / "proj"
+        scaffold_project(template, target)
+
+        with pytest.raises(ScaffoldConflictError):
+            scaffold_project(template, target)
+
+    def test_aborts_before_writing_anything(
+        self, template: Path, tmp_path: Path
+    ) -> None:
+        """One conflicting file fails the whole pass; nothing else is written."""
+        target = tmp_path / "proj"
+        conflict = target / "dir_a" / "file1.txt"
+        conflict.parent.mkdir(parents=True)
+        conflict.write_text("original")
+
+        with pytest.raises(ScaffoldConflictError) as excinfo:
+            scaffold_project(template, target)
+
+        assert list(excinfo.value.conflicts) == [conflict]
+        assert conflict.read_text() == "original"
+        assert not (target / "dir_b" / "file2.txt").exists()
+        assert not (target / "sbdb.yaml").exists()
+
+    def test_existing_manifest_is_a_conflict(
+        self, template: Path, tmp_path: Path
+    ) -> None:
+        target = tmp_path / "proj"
+        existing = target / "sbdb.yaml"
+        existing.parent.mkdir(parents=True)
+        existing.write_text("sbdb_version: 1\ntitle: Kept\n", encoding="utf-8")
+
+        with pytest.raises(ScaffoldConflictError) as excinfo:
+            scaffold_project(template, target)
+
+        assert list(excinfo.value.conflicts) == [existing]
+        assert yaml.safe_load(existing.read_text(encoding="utf-8"))["title"] == "Kept"
 
 
-def test_load_blueprints_preserves_manifest_order(tmp_path: Path) -> None:
-    (tmp_path / "index.yaml").write_text(
-        "blueprints:\n"
-        "  - name: gamma\n    description: g.\n"
-        "  - name: alpha\n    description: a.\n"
-        "  - name: beta\n    description: b.\n",
-        encoding="utf-8",
-    )
+class TestApplyBlueprint:
+    """Applying a bundled blueprint by name."""
 
-    blueprints = load_blueprints(tmp_path)
+    def test_copies_blueprint_with_fresh_manifest(self, tmp_path: Path) -> None:
+        target = tmp_path / "proj"
 
-    assert list(blueprints) == [
-        Blueprint(name="gamma", description="g."),
-        Blueprint(name="alpha", description="a."),
-        Blueprint(name="beta", description="b."),
-    ]
+        result = apply_blueprint("starter", target)
+
+        assert (target / "definition" / "schema.yaml").is_file()
+        assert (target / "definition" / "schema.yaml") in result.created
+        # The bundled blueprint carries its own manifest, but the applied
+        # project gets a fresh one titled after the target directory.
+        manifest = yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8"))
+        assert manifest["title"] == "proj"
+        minimum = manifest["tools"]["another-mood"]["minimum_version"]
+        assert minimum == metadata.version("another-mood")
+
+
+class TestBlueprintCatalog:
+    """The bundled blueprint manifest (index.yaml)."""
+
+    def test_available_blueprints_lists_starter_and_music(self) -> None:
+        blueprints = available_blueprints()
+
+        # Manifest order is preserved; starter must come first.
+        names = [b.name for b in blueprints]
+        assert names[0] == "starter"
+        assert "music" in names
+        assert all(b.description for b in blueprints)
+
+    def test_load_blueprints_preserves_manifest_order(self, tmp_path: Path) -> None:
+        (tmp_path / "index.yaml").write_text(
+            "blueprints:\n"
+            "  - name: gamma\n    description: g.\n"
+            "  - name: alpha\n    description: a.\n"
+            "  - name: beta\n    description: b.\n",
+            encoding="utf-8",
+        )
+
+        blueprints = load_blueprints(tmp_path)
+
+        assert list(blueprints) == [
+            Blueprint(name="gamma", description="g."),
+            Blueprint(name="alpha", description="a."),
+            Blueprint(name="beta", description="b."),
+        ]

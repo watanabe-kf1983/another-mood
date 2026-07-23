@@ -48,4 +48,4 @@ A split page is written at its **anchor-derived path** under the edition's outpu
 
 ## Schema
 
-The built-in meta-schema is mirrored at [schemas/reports-schema.yaml](schemas/reports-schema.yaml) for direct reference.
+The schema is mirrored at [schemas/reports-schema.yaml](schemas/reports-schema.yaml) for direct reference.
