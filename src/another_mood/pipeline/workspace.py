@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from another_mood.components.manifest import Manifest
 from another_mood.components.shared.component.component import ComponentCall
 from another_mood.config import ProjectConfig
 from another_mood.layout import SourceLayout
@@ -21,6 +22,8 @@ class Workspace:
     config: ProjectConfig
     root: Path
     layout: SourceLayout
+    # Project identity from sbdb.yaml — separate from config (how to build).
+    manifest: Manifest
     # True when the command layer created root as a throwaway system-temp dir
     # (vs. a user-pinned RB_TMP_DIR it must not delete).
     temporary: bool = False

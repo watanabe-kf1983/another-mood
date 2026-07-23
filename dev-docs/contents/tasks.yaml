@@ -509,7 +509,7 @@ categories:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
         note: >-
           設計合意済み — 検討メモは 20-app/60-sbdb-manifest (Proposals)。projectDir 直下の
-          マニフェスト sbdb.yaml に edition (フォーマット世代、必須) を宣言し、
+          マニフェスト sbdb.yaml に sbdb_version (フォーマット世代、必須) を宣言し、
           対応外なら loud に失敗する。tools.<processor>.requires (任意) で fail-fast、
           未知構文の厳格パースは完備済みを設計義務化。実装タスクは V1-V3、
           前哨は P4 (mood_view → render 改名)。Q1 (PyPI 公開) の前提。
@@ -650,23 +650,33 @@ categories:
     spec: 20-design/20-app/60-sbdb-manifest
     tasks:
       V1:
-        title: sbdb.yaml 読み込みと edition ゲート
+        title: sbdb.yaml 読み込みと検証 + title 反映
         note: >-
-          二段読み (緩い抽出 → 互換ゲート → 厳格検証) の骨格。edition 一致チェック
-          (対応集合 = {1}、欠落時は警告なしで edition 1 みなし)。title のトップページ
-          反映 (ディレクトリ名直渡しをフォールバックに降格)。前提 P4。
+          sbdb.yaml をパース → スキーマ厳格検証 (未知キー拒否・sbdb_version 必須/整数)
+          → title 抽出。ManifestError は build-report ではなく専用例外として CLI/MCP
+          境界に出す。title のトップページ反映 (ディレクトリ名直渡しをフォールバックに
+          降格)。sbdb_version の値ゲート (対応集合照合) は V4 に分離。前提 P4。
+        phase: 14
+        done: true
+      V4:
+        title: sbdb_version 値ゲート (対応集合照合)
+        note: >-
+          読み込んだ sbdb_version を対応集合 ({1}) と照合し、範囲外なら loud に拒否
+          (二段読みのゲート段: 厳格検証の前に置き、将来版の未知キーより先に「非対応版」を
+          出す)。bool ガード (True == 1)。sbdb.yaml 欠落時は警告なしで sbdb_version 1 みなし。
+          設計は 20-app/60-sbdb-manifest。前提 V1。
         phase: 14
       V2:
         title: tools.<processor>.requires の fail-fast
         note: >-
           実行中バージョンとの比較とエラーメッセージ。バージョン要求記法
-          (>= 等) をどこまで受けるかの検討を含む。前提 V1。
+          (>= 等) をどこまで受けるかの検討を含む。前提 V4。
         phase: 14
       V3:
         title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
         note: >-
-          mood init / blueprint が sbdb.yaml (edition + title) を生成。showcase /
-          dev-docs への付与。docs/reference のマニフェスト章 + style guide への
+          mood init / blueprint が sbdb.yaml (sbdb_version + title) を生成。showcase /
+          dev-docs への付与 (music は V1 で実例として付与済み)。docs/reference のマニフェスト章 + style guide への
           sbdb 表記追記。稼働プロジェクトへの付与はリポジトリ外の作業のため、
           P5 の移行完了判断と併せて行う。前提 V1。
         phase: 14

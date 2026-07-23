@@ -1,0 +1,17 @@
+title: ManifestSchema
+description: Validates a project's sbdb.yaml.
+type: object
+required: [sbdb_version]
+properties:
+  sbdb_version:
+    description: sbdb format generation these sources target.
+    type: integer
+  title:
+    description: Project display name, shown on the top page.
+    type: string
+  tools:
+    description: Optional per-processor namespace.
+    type: object
+    additionalProperties:
+      type: object
+additionalProperties: false

@@ -94,7 +94,8 @@ def generator_stage(workspace: Workspace) -> Task:
         data_dir=compose_out.dir,
         templates_dir=layout.templates_dir,
         reports_file=layout.reports_file,
-        project_name=workspace.config.project_dir.resolve().name,
+        project_name=workspace.manifest.title
+        or workspace.config.project_dir.resolve().name,
         out_dir=out.dir,
     )
     return Stage(
