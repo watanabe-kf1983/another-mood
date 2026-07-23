@@ -81,7 +81,7 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
-        phase: 17
+        phase: 18
         proposal: 20-design/70-generator/20-anchor-spec#未解決参照の扱い
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
@@ -198,12 +198,12 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 17
+        phase: 18
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 17
+        phase: 18
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
@@ -296,7 +296,7 @@ categories:
       G2:
         title: another-mood.config.json 読み込み
         note: config-spec.md
-        phase: 17
+        phase: 18
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
@@ -312,12 +312,6 @@ categories:
         done: true
       G10:
         title: ソースレイアウトの ProjectConfig からの分離 + RB_ レイアウトオーバーライド廃止
-        note: >-
-          レイアウト 5 パス (schema_file / reports_file / contents_dir / queries_dir /
-          templates_dir) はフォーマット世代が定める仕様でありユーザ設定ではない。
-          ProjectConfig を起動パラメータに痩せさせ、SourceLayout として導出して
-          Workspace に載せる。ソース存在検証もレイアウト解決後へ移設。
-          RB_ レイアウトオーバーライドは完全廃止 (内部利用ゼロ確認済み)。V1 の前提。
         phase: 14
         done: true
 
@@ -371,7 +365,7 @@ categories:
           実需が具体化した時点で (2) の安定契約と「export → 外部計算 → contents 還流」
           ラウンドトリップのガイド化を仕様検討する。クエリ DSL への集約関数追加
           (sum / count 等) は、それでも足りない場合の後続候補。
-        phase: 17
+        phase: 18
 
   L:
     title: dog-fooding リファクタ
@@ -425,10 +419,10 @@ categories:
           カスタムレンダラ差し替えの構想 (旧 G3 render.customServer.command) はこの
           検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
           差し替えで済む抽象は存在しない。
-        phase: 17
+        phase: 18
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 17
+        phase: 18
       N3:
         title: "watch で捨てられる hugo_build をスキップ (レンダリング効率)"
         note: |
@@ -437,7 +431,7 @@ categories:
           捨てられる full hugo build がリビルド遅延に乗る。ただし report / error 伝播が
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
-        phase: 17
+        phase: 18
 
   O:
     title: バグ修正
@@ -473,14 +467,6 @@ categories:
         done: true
       P4:
         title: mood_view → render 改名 (静かなエイリアス併存)
-        note: >-
-          スペック語彙への唯一のツール名混入の解消 (背景は 20-app/60-sbdb-manifest)。
-          render を正とし、mood_view は警告なしの静かなエイリアスとして併存させる
-          — 唯一の稼働プロジェクトの利用者は事情を把握しており周知が不要なため。
-          タグ名は render に確定: 当初候補の view は query が生む「ビュー」と語彙衝突
-          (docs/reference/query.md)、page は inline 時に嘘になる。render は split/inline
-          両モードで正確、docs の既存記述と一致、Liquid の {% render %} に先例。
-          Q2 (実装は V1) の前哨・前提。エイリアス廃止は P5。
         phase: 14
         done: true
       P5:
@@ -498,21 +484,19 @@ categories:
       - dev-docs/
     tasks:
       Q1:
-        title: PyPI 公開
+        title: PyPI 公開 (0.1.0 手動 publish)
         note: >-
-          静かな公開に徹する (告知・宣伝は Q3)。前提 Q2。詳細タスクは着手時に切り出す
-          — MIT ライセンス / README の利用者向け書き直し / pyproject メタデータ整備 /
-          パッケージ名確保など。README にはメンテナンス期待値の明文化を含める
-          (as-is / no-SLA / fork 歓迎)。リリースフローは Q6。
+          名前確保を兼ねた静かな初回公開 (告知・宣伝は Q3。PyPI に予約制度はなく、
+          動く最小版を早めに上げるのが実質の名前確保)。手順は「PR merge → 即
+          upload」の一続き: アカウントスコープ token を発行し、使い捨てシェルで
+          `read -rs` → export → uv build && uv publish → シェル破棄 + 即 revoke。
+          token はコマンドライン・history・Claude のセッションのいずれにも通さない。
+          プロジェクトスコープ token は作らない (リリースフローは Q6 で
+          trusted publishing に移り、以後 token 自体が不要になるため)。
+          前提: Q2 / 移行措置を畳む P5, V7 / Q8, Q9, R2。
         phase: 14
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
-        note: >-
-          設計は 20-app/60-sbdb-manifest。projectDir 直下のマニフェスト sbdb.yaml に
-          sbdb_version (フォーマット世代、必須) を宣言し、対応外なら loud に失敗する。
-          tools.<processor>.minimum_version (任意) で fail-fast、未知構文の厳格パースは
-          完備済みを設計義務化。実装は V1-V4 で完了 (稼働プロジェクトへの sbdb.yaml
-          付与のみ P5 の籠)、前哨は P4 (mood_view → render 改名)。Q1 (PyPI 公開) の前提。
         phase: 14
         done: true
       Q3:
@@ -520,37 +504,55 @@ categories:
         note: >-
           Q1 は静かな公開に留め、S2-S4 (システム開発ドキュメント) の完成を待って
           告知する。内容 (告知先・訴求) は接近時に具体化。前提 Q4, Q5, Q7。
-        phase: 16
+        phase: 17
       Q4:
         title: dev-docs の全面英語化
         note: >-
           ローンチで外部コントリビュータが設計判断を読める状態にする。
           background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
-          Phase 15 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
+          Phase 16 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
           その完了後・告知前に実施する。Q3 の前提。
-        phase: 16
+        phase: 17
       Q5:
         title: 残タスクの GitHub Issues 移行 + ロードマップ退役
         note: >-
-          Phase 17 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
+          Phase 18 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
           一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
           はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
           ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
-        phase: 16
+        phase: 17
       Q6:
-        title: リリースフロー整備 (tag 駆動 publish + バージョン運用)
+        title: リリース手順の明文化 (チェックリスト + バージョン運用)
         note: >-
-          「main マージ = リリース」にはしない。main は従来通り trunk として自由にマージし、
-          リリースは version bump + git tag を打つ別イベント。tag push を契機に
-          GH Actions (trusted publishing) が publish する。手順は DEVELOPMENT.md に
-          チェックリスト化 (Q2 のフォーマット世代 +1 判定、showcase / dev-docs の
-          minimum_version 更新を含む)。リリースブランチは
-          旧バージョンへのパッチ需要が出るまで導入しない (pre-1.0 単独開発は trunk-based 維持)。
-          リリースノートは GH 自動生成 (PR タイトルの束ね) を基本とし、破壊的変更のある
-          リリースのみ冒頭に移行手順を手書きする。外部向けの体裁格上げ判断は Q7。
-          バージョニングは 0.x 慣習に従い 0.MINOR を破壊的変更 (フォーマット世代 +1) に
-          予約、それ以外は 0.x.PATCH。1.0.0 はローンチ (Q3) で刻む。
-        phase: 14
+          リリース全ステップの洗い出し、手動/自動の境界決定 (PR マージ側
+          ゲート Q11 の実装形の捌き込み)、versioning 方式の選定 (B: hatch-vcs /
+          C: 常時 .devN 仮宣言 — 選定理由の記録込み)、チェックリストの確定。
+          契機・ブランチ運用・破壊的変更フラグ管理の決定済み事項と残論点は
+          30-dev/50-release に集約済み。
+          規模は 1 PR ではない — 着手時にブレイクダウンする。
+        phase: 15
+        proposal: 30-dev/50-release
+      Q10:
+        title: tag 駆動 publish ワークフロー (GH Actions + trusted publishing)
+        note: >-
+          チェックリスト (Q6) の自動側のうち publish 実行面: tag push 契機で
+          build → PyPI publish (trusted publishing 登録込み) → GH Release +
+          リリースノート自動生成 (.github/release.yml のラベル別節)。tag と
+          pyproject の version 一致検証を含む (方式 B なら不要)。DoD =
+          チェックリストに従い実リリースを 1 回回し、通った実態でチェック
+          リストを確定する。前提 Q6, Q1。
+        phase: 15
+        proposal: 30-dev/50-release
+      Q11:
+        title: PR マージ側の破壊的変更ゲート
+        note: >-
+          破壊的変更がしれっとマージされるのを PR 時点で捕まえる追加プロセス。
+          何かを置くことはほぼ確定、実装形 (ci.yml 検査 job / AI レビュー /
+          pull_request_template.md / DEVELOPMENT.md の規律明文化、併用可) の
+          捌きは Q6 で決める。機械検査の実装先は新規ワークフローではなく
+          既存 ci.yml への追加を想定。前提 Q6。
+        phase: 15
+        proposal: 30-dev/50-release
       Q7:
         title: リポジトリの外部公開整備 (GH 設定 / CONTRIBUTING / changelog)
         note: >-
@@ -562,19 +564,68 @@ categories:
           `requires-python >=3.13` の広さも一度判断する (広げるか、最新版のみと宣言するか)。
           下限の実態: 3.13 要求は ntpath.isreserved の 1 箇所のみ (vendor すれば 3.12 化は安い)。
           PEP 695 構文 (type 文 / ジェネリクス) が広範にあり 3.12 が構文上の床。
-          受益者が現れるローンチまで不要なので Phase 16。Q3 の前提。
-        phase: 16
+          受益者が現れるローンチまで不要なので Phase 17。Q3 の前提。
+        phase: 17
+      Q8:
+        title: PyPI アカウント準備 (登録 + 2FA)
+        note: >-
+          リポジトリ外・機長側の作業 (Claude には委任しない)。pypi.org に
+          アカウント登録 (メール確認) と 2FA 設定 (全アップロード者に必須)。
+          審査・承認プロセスはなく、作業・リードタイムとも 15 分程度。
+          API token の発行は使い捨て運用のため publish 直前に行う (Q1 側)。
+          Q1 の前提。
+        phase: 14
+      Q9:
+        title: パッケージメタデータの最小整備 (LICENSE + pyproject)
+        note: >-
+          LICENSE ファイル (MIT) の追加と pyproject の license / urls。0.1.0 では
+          最小に留め、classifiers / keywords / description 磨きはローンチ前
+          (R3) に回す。DoD にビルド成立確認を含める: uv build の wheel/sdist
+          に resources/ (テンプレート・bundled docs・blueprint) が同梱され、
+          showcase / テスト等の開発専用物が混入しないこと。twine check 通過。
+          Q1 の前提。
+        phase: 14
 
   R:
     title: ユーザドキュメント・サンプルプロジェクト改善
     impl_paths:
       - docs/
       - showcase/
+      - README.md
     tasks:
       R1:
         title: "スキーマ記述例の `additionalProperties: false` 位置を統一"
         phase: 10
         done: true
+      R2:
+        title: README の 0.1.0 向け書き直し
+        note: >-
+          開発者向けの現 README を利用者向けに書き直す: 何であるか / install
+          (PyPI) / 最小の使い方 / メンテナンス期待値の明文化 (as-is, no-SLA,
+          fork 歓迎)。docs/guides.md の install 節の PyPI 化 (git+https →
+          パッケージ名) も含む — docs/ は wheel に同梱されるため upload 前の
+          書き換えが必須。ローンチの顔としての全面改稿は R3。
+          Q1 の前提。
+        phase: 14
+      R3:
+        title: README の 1.0.0 向け全面改稿
+        note: >-
+          ローンチの顔としての書き直し。R2 の最小版を、告知に耐える体裁へ
+          格上げする。classifiers / keywords / description 磨きなど Q9 で
+          最小に留めた残メタデータも同じ籠で拾う。PyPI ページはリリース時の
+          同梱 README で更新されるため、1.0.0 の tag より前に main へ入って
+          いればよい。Q3 の前提。
+        phase: 17
+      R4:
+        title: context7.json 設置 + Context7 登録
+        note: >-
+          LLM 経由の発見性整備。リポジトリ直下に context7.json を置いて
+          docs/ をインデックス対象に指定し、context7.com にライブラリ登録、
+          インデックス結果を確認する。登録は誰でもできる (所有確認なし) ため、
+          第三者登録で README だけ雑に拾われる前に、正本の docs/ を向かせる
+          のが目的。publish イベントとの依存はなく public リポジトリなら
+          いつでも可。Q3 の近傍。
+        phase: 17
 
   S:
     title: システム開発ドキュメント
@@ -592,14 +643,14 @@ categories:
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F5)。
-        phase: 15
+        phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s2-dfd-data-flow-diagram
       S3:
         title: CRUD マトリクステンプレート
         note: |
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           F カテゴリから S への移管 (旧 F6)。
-        phase: 15
+        phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス
       S4:
         title: 画面遷移図 + 画面定義テンプレート
@@ -607,7 +658,7 @@ categories:
           仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
           画面 entity + 遷移 entity を構造化し、Mermaid stateDiagram-v2 で
           遷移図を描く。stateDiagram の Mermaid 適合性実機検証も兼ねる。
-        phase: 15
+        phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
 
   T:
@@ -654,60 +705,35 @@ categories:
     tasks:
       V1:
         title: sbdb.yaml 読み込みと検証 + title 反映
-        note: >-
-          sbdb.yaml をパース → スキーマ厳格検証 (未知キー拒否・sbdb_version 必須/整数)
-          → title 抽出。ManifestError は build-report ではなく専用例外として CLI/MCP
-          境界に出す。title のトップページ反映 (ディレクトリ名直渡しをフォールバックに
-          降格)。sbdb_version の値ゲート (対応集合照合) は V4 に分離。前提 P4。
         phase: 14
         done: true
       V4:
         title: sbdb_version 値ゲート (対応集合照合)
-        note: >-
-          読み込んだ sbdb_version を対応集合 ({1}) と照合し、範囲外なら loud に拒否
-          (二段読みのゲート段: 厳格検証の前に置き、将来版の未知キーより先に「非対応版」を
-          出す)。bool ガード (True == 1)。sbdb.yaml 欠落時は警告なしで sbdb_version 1 みなし。
-          設計は 20-app/60-sbdb-manifest。前提 V1。
         phase: 14
         done: true
       V2:
         title: tools.<processor>.minimum_version の fail-fast
-        note: >-
-          実行中バージョンとの比較とエラーメッセージ。記法検討の結果、欄名を
-          requires から minimum_version に改め、素のバージョンのみ受ける
-          (レンジ記法なし。理由は 20-app/60-sbdb-manifest)。前提 V4。
         phase: 14
         done: true
       V3:
         title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
-        note: >-
-          mood init / blueprint が sbdb.yaml (sbdb_version + title) を生成。showcase /
-          dev-docs への付与 (music は V1 で実例として付与済み)。docs/reference の
-          マニフェスト章を追加 (sbdb の展開は同章の初出箇所にインラインで記載 —
-          散文用法は作らないため style guide には載せない)。
-          稼働プロジェクトへの付与はリポジトリ外の作業のため、
-          P5 の移行完了判断と併せて行う。前提 V1。
         phase: 14
         done: true
       V5:
         title: definition/ 配下の未知エントリ拒否 (layout 面の厳格パース)
-        note: >-
-          resolve_layout は既知パスの存在確認のみで、definition/ 配下の未知
-          ファイル・ディレクトリを黙って無視する。将来 mood が新配置を追加したとき
-          旧 mood が silent に読み飛ばす前方互換の穴になるため、mood の管轄領域である
-          definition/ 配下に限り未知エントリをエラーにする。プロジェクト直下は
-          .git / README 等との同居が設計 (scaffold の cargo init 型と同根) のため
-          対象外。背景は 20-app/60-sbdb-manifest の厳格パース節。
         phase: 14
         done: true
       V6:
         title: scaffold の衝突判定を管轄領域の存在チェックに置換
-        note: >-
-          コピー対象のファイル単位チェックだと、既存 contents/ 等への blueprint の
-          マージ (半混在状態) がすり抜ける。mood がプロジェクトに書く領域は
-          sbdb.yaml / definition/ / contents/ で尽きるので、この 3 つのどれかが
-          既に在れば何も書かずにエラーする形へ置換。無関係ファイルの同居許容は維持。
-          cargo init は既存 src/ を採用するが、blueprint はサンプルデータなので
-          採用の意味論は成立せず拒否が正解。V5 と同根 (管轄領域の原理)。
         phase: 14
         done: true
+      V7:
+        title: sbdb.yaml の必須化 (欠落 = エラー)
+        note: >-
+          移行措置として置いた「欠落時は警告なしで sbdb_version 1 とみなす」猶予を畳み、
+          sbdb.yaml 欠落を ManifestError にする。期限は min(Q1, 最初の sbdb_version bump)
+          — sbdb_version が複数になった瞬間に「欠落 = 1」の仮定が ambiguous になるため、
+          運用判断ではなく構造的期限。公開後は未知の利用者が現れるので Q1 (PyPI 公開) 前に
+          必ず畳む。着手条件は稼働プロジェクトの移行完了 (P5 と同条件)。
+          設計は 20-app/60-sbdb-manifest の移行措置節。前提 V4。
+        phase: 14
