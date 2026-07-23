@@ -1,7 +1,5 @@
 """JSON data model — load and save the project's YAML representation.
 
-See: dev-docs/contents/internal/json-data-model.md
-
 Reads use ``load_model`` (deep-merge across multiple files / dirs).
 Writes use ``save_model`` (single-file emit applying the project's
 serialization conventions: YAML 1.2, literal-block multiline strings,

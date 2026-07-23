@@ -1,4 +1,4 @@
-"""Read and validate the project manifest (sbdb.yaml). Design: 20-app/60-sbdb-manifest.
+"""Read and validate the project manifest (sbdb.yaml).
 
 Version comparison uses ``packaging`` (the PyPA reference implementation of
 PEP 440): another-mood's own version is a PEP 440 version, so its ordering

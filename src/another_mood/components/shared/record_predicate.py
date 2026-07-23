@@ -4,8 +4,6 @@ Four sum-type variants form a :class:`RecordPredicate`:
 :class:`FieldPredicate` (atomic) and :class:`And` / :class:`Or` /
 :class:`Not` (combinators).  Pipeline integration (``apply`` /
 ``derive``) lives on the ``Where`` wrapper in :mod:`query`.
-
-See ``dev-docs/design/composer/queries-spec.md`` for the spec.
 """
 
 from collections.abc import Mapping, Sequence
