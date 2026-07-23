@@ -4,8 +4,7 @@ Each DSL element (From / Flatten / Where / Grouped / SelectItem / Select /
 Sort / Query) is a ``QueryNode``: it pairs a record transform with a catalog
 transform derived from the same DSL fragment.  The two transforms
 compose along the same pipeline so that the resulting schema can be
-inspected without evaluating data.  See
-dev-docs/internal/components/composer.md for the duality rationale.
+inspected without evaluating data.
 
 The ``where`` clause's per-record predicate AST lives in
 :mod:`record_predicate`; :class:`Where` here is just the pipeline
@@ -161,8 +160,8 @@ class Flatten(QueryNode):
 class Merge:
     """Equi-join with default cardinality: attach matched right rows
     as a list under ``right_as`` on each left row.  Both ``on_*``
-    paths follow the asymmetry rule (External Design: nested object
-    dot path allowed, array crossing not).
+    paths follow the asymmetry rule: nested object dot paths allowed,
+    array crossing not.
     """
 
     on_left: str
