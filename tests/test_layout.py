@@ -22,6 +22,7 @@ class TestResolveLayout:
     def test_derives_v1_paths_from_project_dir(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)
         layout = resolve_layout(tmp_path)
+        assert layout.definition_dir == tmp_path / "definition"
         assert layout.schema_file == tmp_path / "definition" / "schema.yaml"
         assert layout.reports_file == tmp_path / "definition" / "reports.yaml"
         assert layout.contents_dir == tmp_path / "contents"
@@ -34,6 +35,7 @@ class TestResolveLayout:
         message = exc_info.value.user_error_message
         assert "Source paths not found:" in message
         names = (
+            "definition_dir",
             "schema_file",
             "reports_file",
             "contents_dir",
@@ -56,5 +58,43 @@ class TestResolveLayout:
         with pytest.raises(SourceLayoutError, match="schema_file"):
             resolve_layout(tmp_path)
 
+
+class TestUnknownDefinitionEntries:
+    def test_rejects_unknown_file(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / "notes.yaml").write_text("")
+        with pytest.raises(SourceLayoutError) as exc_info:
+            resolve_layout(tmp_path)
+        message = exc_info.value.user_error_message
+        assert "Unknown entries under definition/:" in message
+        assert "notes.yaml" in message
+        assert "schema.yaml" in message  # the known set, as a hint
+
+    def test_rejects_unknown_directory(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / "quries").mkdir()
+        with pytest.raises(SourceLayoutError, match="quries"):
+            resolve_layout(tmp_path)
+
+    def test_allows_hidden_entries(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / ".gitignore").write_text("")
+        (tmp_path / "definition" / ".cache").mkdir()
+        resolve_layout(tmp_path)
+
+    def test_allows_unknown_entries_below_top_level(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / "templates" / "partials").mkdir()
+        (tmp_path / "definition" / "queries" / "notes.txt").write_text("")
+        resolve_layout(tmp_path)
+
+    def test_allows_unknown_entries_beside_definition(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "README.md").write_text("")
+        (tmp_path / ".git").mkdir()
+        resolve_layout(tmp_path)
+
+
+class TestSourceLayoutError:
     def test_is_a_user_error(self) -> None:
         assert issubclass(SourceLayoutError, UserError)
