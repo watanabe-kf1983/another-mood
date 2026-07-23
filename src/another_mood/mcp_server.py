@@ -121,10 +121,8 @@ def init(project_dir: str) -> ScaffoldResult:
     """Initialize a project at `project_dir` from the `starter` blueprint.
     Equivalent to `mood init <project_dir>`.
 
-    The directory is created if missing. Unrelated existing files
-    (`.git`, `README.md`, …) are fine, but if any file the scaffold
-    would write already exists, the whole pass fails before writing
-    anything.
+    The directory is created if missing; unrelated files in it are fine.
+    Fails without writing anything if it already holds a project.
     """
     return command.init(Path(project_dir))
 
@@ -142,11 +140,9 @@ def apply_blueprint(name: str, project_dir: str) -> ScaffoldResult:
     """Apply the named blueprint by copying its sources into `project_dir`.
     Equivalent to `mood blueprint apply <name> <project_dir>`.
 
-    `name` must be one of the names returned by `list_blueprints()`; an
-    unknown name raises `ValueError`. The directory is created if missing.
-    Unrelated existing files (`.git`, `README.md`, …) are fine, but if any
-    file the scaffold would write already exists, the whole pass fails
-    before writing anything.
+    `name` must be one of the names returned by `list_blueprints()`.
+    The directory is created if missing; unrelated files in it are fine.
+    Fails without writing anything if it already holds a project.
     """
     available = [b.name for b in command.list_blueprints()]
     if name not in available:

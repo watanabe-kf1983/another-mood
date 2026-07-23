@@ -8,7 +8,6 @@ import yaml
 
 from another_mood.components.scaffold.blueprints import (
     Blueprint,
-    ScaffoldConflictError,
     apply_blueprint,
     available_blueprints,
     load_blueprints,
@@ -85,48 +84,6 @@ class TestScaffoldManifest:
 
         manifest = yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8"))
         assert manifest["title"] == "proj"
-
-
-class TestScaffoldConflict:
-    """Collisions with files the scaffold would write: all-or-nothing."""
-
-    def test_rerun_is_rejected(self, template: Path, tmp_path: Path) -> None:
-        target = tmp_path / "proj"
-        scaffold_project(template, target)
-
-        with pytest.raises(ScaffoldConflictError):
-            scaffold_project(template, target)
-
-    def test_aborts_before_writing_anything(
-        self, template: Path, tmp_path: Path
-    ) -> None:
-        """One conflicting file fails the whole pass; nothing else is written."""
-        target = tmp_path / "proj"
-        conflict = target / "dir_a" / "file1.txt"
-        conflict.parent.mkdir(parents=True)
-        conflict.write_text("original")
-
-        with pytest.raises(ScaffoldConflictError) as excinfo:
-            scaffold_project(template, target)
-
-        assert list(excinfo.value.conflicts) == [conflict]
-        assert conflict.read_text() == "original"
-        assert not (target / "dir_b" / "file2.txt").exists()
-        assert not (target / "sbdb.yaml").exists()
-
-    def test_existing_manifest_is_a_conflict(
-        self, template: Path, tmp_path: Path
-    ) -> None:
-        target = tmp_path / "proj"
-        existing = target / "sbdb.yaml"
-        existing.parent.mkdir(parents=True)
-        existing.write_text("sbdb_version: 1\ntitle: Kept\n", encoding="utf-8")
-
-        with pytest.raises(ScaffoldConflictError) as excinfo:
-            scaffold_project(template, target)
-
-        assert list(excinfo.value.conflicts) == [existing]
-        assert yaml.safe_load(existing.read_text(encoding="utf-8"))["title"] == "Kept"
 
 
 class TestApplyBlueprint:

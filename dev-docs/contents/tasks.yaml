@@ -710,3 +710,4 @@ categories:
           cargo init は既存 src/ を採用するが、blueprint はサンプルデータなので
           採用の意味論は成立せず拒否が正解。V5 と同根 (管轄領域の原理)。
         phase: 14
+        done: true

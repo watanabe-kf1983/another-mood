@@ -38,7 +38,7 @@ from another_mood.components.shared.component.build_report import (
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.config import ProjectConfig
-from another_mood.layout import SourceLayout, resolve_layout
+from another_mood.layout import SourceLayout, resolve_layout, verify_absent
 from another_mood.pipeline.render import (
     HugoServerStartupError as WatchStartupError,
 )
@@ -143,15 +143,17 @@ class BuildResult:
 
 def init(project_dir: Path) -> ScaffoldResult:
     """Initialize a new project from the default blueprint."""
-    return _apply_blueprint(DEFAULT_BLUEPRINT, project_dir)
+    return apply_blueprint(DEFAULT_BLUEPRINT, project_dir)
 
 
 def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
     """Copy the named blueprint into ``project_dir``.
 
-    The caller is responsible for validating ``name`` against
-    :func:`list_blueprints`.
+    Raises :class:`ProjectExistsError` without writing anything if
+    ``project_dir`` already holds a project.  The caller is responsible
+    for validating ``name`` against :func:`list_blueprints`.
     """
+    verify_absent(project_dir)
     return _apply_blueprint(name, project_dir)
 
 
