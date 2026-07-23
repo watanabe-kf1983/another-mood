@@ -183,7 +183,8 @@ Means 定義）。ゆえにスペックの語彙に
 - `mood_view` は**警告なしの静かなエイリアス**として `render` と併存
   （[P4](node:/tasks/P/tasks/P4)）。廃止（[P5](node:/tasks/P/tasks/P5)）は稼働
   プロジェクトの移行完了後、[Q1](node:/tasks/Q/tasks/Q1)（PyPI 公開）前
-- `sbdb.yaml` 欠落時は**警告なしで sbdb_version 1 とみなして続行**。必須化の期限は
+- `sbdb.yaml` 欠落時は**警告なしで sbdb_version 1 とみなして続行**。必須化
+  （[V7](node:/tasks/V/tasks/V7)）の期限は
   min(Q1, 最初の sbdb_version bump) — sbdb_version が複数になった瞬間に「欠落 = 1」の
   仮定は ambiguous になるため、これは運用判断ではなく構造的期限。公開後は未知の利用者が
   現れるため、いずれの猶予も Q1 までに必ず畳む

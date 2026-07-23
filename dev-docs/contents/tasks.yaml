@@ -312,12 +312,6 @@ categories:
         done: true
       G10:
         title: ソースレイアウトの ProjectConfig からの分離 + RB_ レイアウトオーバーライド廃止
-        note: >-
-          レイアウト 5 パス (schema_file / reports_file / contents_dir / queries_dir /
-          templates_dir) はフォーマット世代が定める仕様でありユーザ設定ではない。
-          ProjectConfig を起動パラメータに痩せさせ、SourceLayout として導出して
-          Workspace に載せる。ソース存在検証もレイアウト解決後へ移設。
-          RB_ レイアウトオーバーライドは完全廃止 (内部利用ゼロ確認済み)。V1 の前提。
         phase: 14
         done: true
 
@@ -473,14 +467,6 @@ categories:
         done: true
       P4:
         title: mood_view → render 改名 (静かなエイリアス併存)
-        note: >-
-          スペック語彙への唯一のツール名混入の解消 (背景は 20-app/60-sbdb-manifest)。
-          render を正とし、mood_view は警告なしの静かなエイリアスとして併存させる
-          — 唯一の稼働プロジェクトの利用者は事情を把握しており周知が不要なため。
-          タグ名は render に確定: 当初候補の view は query が生む「ビュー」と語彙衝突
-          (docs/reference/query.md)、page は inline 時に嘘になる。render は split/inline
-          両モードで正確、docs の既存記述と一致、Liquid の {% render %} に先例。
-          Q2 (実装は V1) の前哨・前提。エイリアス廃止は P5。
         phase: 14
         done: true
       P5:
@@ -500,19 +486,14 @@ categories:
       Q1:
         title: PyPI 公開
         note: >-
-          静かな公開に徹する (告知・宣伝は Q3)。前提 Q2。詳細タスクは着手時に切り出す
+          静かな公開に徹する (告知・宣伝は Q3)。前提 Q2 と、移行措置を畳む P5 / V7。
+          詳細タスクは着手時に切り出す
           — MIT ライセンス / README の利用者向け書き直し / pyproject メタデータ整備 /
           パッケージ名確保など。README にはメンテナンス期待値の明文化を含める
           (as-is / no-SLA / fork 歓迎)。リリースフローは Q6。
         phase: 14
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
-        note: >-
-          設計は 20-app/60-sbdb-manifest。projectDir 直下のマニフェスト sbdb.yaml に
-          sbdb_version (フォーマット世代、必須) を宣言し、対応外なら loud に失敗する。
-          tools.<processor>.minimum_version (任意) で fail-fast、未知構文の厳格パースは
-          完備済みを設計義務化。実装は V1-V4 で完了 (稼働プロジェクトへの sbdb.yaml
-          付与のみ P5 の籠)、前哨は P4 (mood_view → render 改名)。Q1 (PyPI 公開) の前提。
         phase: 14
         done: true
       Q3:
@@ -654,60 +635,35 @@ categories:
     tasks:
       V1:
         title: sbdb.yaml 読み込みと検証 + title 反映
-        note: >-
-          sbdb.yaml をパース → スキーマ厳格検証 (未知キー拒否・sbdb_version 必須/整数)
-          → title 抽出。ManifestError は build-report ではなく専用例外として CLI/MCP
-          境界に出す。title のトップページ反映 (ディレクトリ名直渡しをフォールバックに
-          降格)。sbdb_version の値ゲート (対応集合照合) は V4 に分離。前提 P4。
         phase: 14
         done: true
       V4:
         title: sbdb_version 値ゲート (対応集合照合)
-        note: >-
-          読み込んだ sbdb_version を対応集合 ({1}) と照合し、範囲外なら loud に拒否
-          (二段読みのゲート段: 厳格検証の前に置き、将来版の未知キーより先に「非対応版」を
-          出す)。bool ガード (True == 1)。sbdb.yaml 欠落時は警告なしで sbdb_version 1 みなし。
-          設計は 20-app/60-sbdb-manifest。前提 V1。
         phase: 14
         done: true
       V2:
         title: tools.<processor>.minimum_version の fail-fast
-        note: >-
-          実行中バージョンとの比較とエラーメッセージ。記法検討の結果、欄名を
-          requires から minimum_version に改め、素のバージョンのみ受ける
-          (レンジ記法なし。理由は 20-app/60-sbdb-manifest)。前提 V4。
         phase: 14
         done: true
       V3:
         title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
-        note: >-
-          mood init / blueprint が sbdb.yaml (sbdb_version + title) を生成。showcase /
-          dev-docs への付与 (music は V1 で実例として付与済み)。docs/reference の
-          マニフェスト章を追加 (sbdb の展開は同章の初出箇所にインラインで記載 —
-          散文用法は作らないため style guide には載せない)。
-          稼働プロジェクトへの付与はリポジトリ外の作業のため、
-          P5 の移行完了判断と併せて行う。前提 V1。
         phase: 14
         done: true
       V5:
         title: definition/ 配下の未知エントリ拒否 (layout 面の厳格パース)
-        note: >-
-          resolve_layout は既知パスの存在確認のみで、definition/ 配下の未知
-          ファイル・ディレクトリを黙って無視する。将来 mood が新配置を追加したとき
-          旧 mood が silent に読み飛ばす前方互換の穴になるため、mood の管轄領域である
-          definition/ 配下に限り未知エントリをエラーにする。プロジェクト直下は
-          .git / README 等との同居が設計 (scaffold の cargo init 型と同根) のため
-          対象外。背景は 20-app/60-sbdb-manifest の厳格パース節。
         phase: 14
         done: true
       V6:
         title: scaffold の衝突判定を管轄領域の存在チェックに置換
-        note: >-
-          コピー対象のファイル単位チェックだと、既存 contents/ 等への blueprint の
-          マージ (半混在状態) がすり抜ける。mood がプロジェクトに書く領域は
-          sbdb.yaml / definition/ / contents/ で尽きるので、この 3 つのどれかが
-          既に在れば何も書かずにエラーする形へ置換。無関係ファイルの同居許容は維持。
-          cargo init は既存 src/ を採用するが、blueprint はサンプルデータなので
-          採用の意味論は成立せず拒否が正解。V5 と同根 (管轄領域の原理)。
         phase: 14
         done: true
+      V7:
+        title: sbdb.yaml の必須化 (欠落 = エラー)
+        note: >-
+          移行措置として置いた「欠落時は警告なしで sbdb_version 1 とみなす」猶予を畳み、
+          sbdb.yaml 欠落を ManifestError にする。期限は min(Q1, 最初の sbdb_version bump)
+          — sbdb_version が複数になった瞬間に「欠落 = 1」の仮定が ambiguous になるため、
+          運用判断ではなく構造的期限。公開後は未知の利用者が現れるので Q1 (PyPI 公開) 前に
+          必ず畳む。着手条件は稼働プロジェクトの移行完了 (P5 と同条件)。
+          設計は 20-app/60-sbdb-manifest の移行措置節。前提 V4。
+        phase: 14
