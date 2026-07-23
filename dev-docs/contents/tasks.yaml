@@ -580,7 +580,7 @@ categories:
         note: >-
           LICENSE ファイル (MIT) の追加と pyproject の license / urls。0.1.0 では
           最小に留め、classifiers / keywords / description 磨きはローンチ前
-          (Phase 17) に回す。DoD にビルド成立確認を含める: uv build の wheel/sdist
+          (R3) に回す。DoD にビルド成立確認を含める: uv build の wheel/sdist
           に resources/ (テンプレート・bundled docs・blueprint) が同梱され、
           showcase / テスト等の開発専用物が混入しないこと。twine check 通過。
           Q1 の前提。
@@ -604,9 +604,28 @@ categories:
           (PyPI) / 最小の使い方 / メンテナンス期待値の明文化 (as-is, no-SLA,
           fork 歓迎)。docs/guides.md の install 節の PyPI 化 (git+https →
           パッケージ名) も含む — docs/ は wheel に同梱されるため upload 前の
-          書き換えが必須。ローンチの顔としての全面改稿は別途 (Phase 17)。
+          書き換えが必須。ローンチの顔としての全面改稿は R3。
           Q1 の前提。
         phase: 14
+      R3:
+        title: README の 1.0.0 向け全面改稿
+        note: >-
+          ローンチの顔としての書き直し。R2 の最小版を、告知に耐える体裁へ
+          格上げする。classifiers / keywords / description 磨きなど Q9 で
+          最小に留めた残メタデータも同じ籠で拾う。PyPI ページはリリース時の
+          同梱 README で更新されるため、1.0.0 の tag より前に main へ入って
+          いればよい。Q3 の前提。
+        phase: 17
+      R4:
+        title: context7.json 設置 + Context7 登録
+        note: >-
+          LLM 経由の発見性整備。リポジトリ直下に context7.json を置いて
+          docs/ をインデックス対象に指定し、context7.com にライブラリ登録、
+          インデックス結果を確認する。登録は誰でもできる (所有確認なし) ため、
+          第三者登録で README だけ雑に拾われる前に、正本の docs/ を向かせる
+          のが目的。publish イベントとの依存はなく public リポジトリなら
+          いつでも可。Q3 の近傍。
+        phase: 17
 
   S:
     title: システム開発ドキュメント
