@@ -1,0 +1,5 @@
+sbdb_version: 1
+title: Another Mood Dev Docs
+tools:
+  another-mood:
+    minimum_version: "0.1.0"

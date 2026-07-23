@@ -508,12 +508,13 @@ categories:
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
         note: >-
-          設計合意済み — 検討メモは 20-app/60-sbdb-manifest (Proposals)。projectDir 直下の
-          マニフェスト sbdb.yaml に sbdb_version (フォーマット世代、必須) を宣言し、
-          対応外なら loud に失敗する。tools.<processor>.requires (任意) で fail-fast、
-          未知構文の厳格パースは完備済みを設計義務化。実装タスクは V1-V3、
-          前哨は P4 (mood_view → render 改名)。Q1 (PyPI 公開) の前提。
+          設計は 20-app/60-sbdb-manifest。projectDir 直下のマニフェスト sbdb.yaml に
+          sbdb_version (フォーマット世代、必須) を宣言し、対応外なら loud に失敗する。
+          tools.<processor>.minimum_version (任意) で fail-fast、未知構文の厳格パースは
+          完備済みを設計義務化。実装は V1-V4 で完了 (稼働プロジェクトへの sbdb.yaml
+          付与のみ P5 の籠)、前哨は P4 (mood_view → render 改名)。Q1 (PyPI 公開) の前提。
         phase: 14
+        done: true
       Q3:
         title: 告知・宣伝を伴うローンチ
         note: >-
@@ -542,7 +543,8 @@ categories:
           「main マージ = リリース」にはしない。main は従来通り trunk として自由にマージし、
           リリースは version bump + git tag を打つ別イベント。tag push を契機に
           GH Actions (trusted publishing) が publish する。手順は DEVELOPMENT.md に
-          チェックリスト化 (Q2 のフォーマット世代 +1 判定を含む)。リリースブランチは
+          チェックリスト化 (Q2 のフォーマット世代 +1 判定、showcase / dev-docs の
+          minimum_version 更新を含む)。リリースブランチは
           旧バージョンへのパッチ需要が出るまで導入しない (pre-1.0 単独開発は trunk-based 維持)。
           リリースノートは GH 自動生成 (PR タイトルの束ね) を基本とし、破壊的変更のある
           リリースのみ冒頭に移行手順を手書きする。外部向けの体裁格上げ判断は Q7。
@@ -647,6 +649,7 @@ categories:
     impl_paths:
       - src/another_mood/pipeline/
       - src/another_mood/components/scaffold/
+      - src/another_mood/layout.py
     spec: 20-design/20-app/60-sbdb-manifest
     tasks:
       V1:
@@ -679,7 +682,30 @@ categories:
         title: 生態系への展開 (scaffold 生成 + 既存プロジェクト付与 + docs)
         note: >-
           mood init / blueprint が sbdb.yaml (sbdb_version + title) を生成。showcase /
-          dev-docs への付与 (music は V1 で実例として付与済み)。docs/reference のマニフェスト章 + style guide への
-          sbdb 表記追記。稼働プロジェクトへの付与はリポジトリ外の作業のため、
+          dev-docs への付与 (music は V1 で実例として付与済み)。docs/reference の
+          マニフェスト章を追加 (sbdb の展開は同章の初出箇所にインラインで記載 —
+          散文用法は作らないため style guide には載せない)。
+          稼働プロジェクトへの付与はリポジトリ外の作業のため、
           P5 の移行完了判断と併せて行う。前提 V1。
+        phase: 14
+        done: true
+      V5:
+        title: definition/ 配下の未知エントリ拒否 (layout 面の厳格パース)
+        note: >-
+          resolve_layout は既知パスの存在確認のみで、definition/ 配下の未知
+          ファイル・ディレクトリを黙って無視する。将来 mood が新配置を追加したとき
+          旧 mood が silent に読み飛ばす前方互換の穴になるため、mood の管轄領域である
+          definition/ 配下に限り未知エントリをエラーにする。プロジェクト直下は
+          .git / README 等との同居が設計 (scaffold の cargo init 型と同根) のため
+          対象外。背景は 20-app/60-sbdb-manifest の厳格パース節。
+        phase: 14
+      V6:
+        title: scaffold の衝突判定を管轄領域の存在チェックに置換
+        note: >-
+          コピー対象のファイル単位チェックだと、既存 contents/ 等への blueprint の
+          マージ (半混在状態) がすり抜ける。mood がプロジェクトに書く領域は
+          sbdb.yaml / definition/ / contents/ で尽きるので、この 3 つのどれかが
+          既に在れば何も書かずにエラーする形へ置換。無関係ファイルの同居許容は維持。
+          cargo init は既存 src/ を採用するが、blueprint はサンプルデータなので
+          採用の意味論は成立せず拒否が正解。V5 と同根 (管轄領域の原理)。
         phase: 14
