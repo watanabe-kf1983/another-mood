@@ -219,8 +219,8 @@ def watch(
     """
     config = config.resolved_for_watch()
     out_dir = str(config.out_dir or "")
-    # Both read once at startup: the manifest is not watched (see design doc),
-    # and rebuilds do not re-check source existence.
+    # Both read once at startup: the manifest is not watched, and rebuilds
+    # do not re-check source existence.
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
     workspace = _session_workspace(config, layout, manifest)

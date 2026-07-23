@@ -1,4 +1,4 @@
-"""Source layout — where a project's source files live. Design: 20-app/20-config-spec."""
+"""Source layout — where a project's source files live."""
 
 from dataclasses import dataclass, fields
 from pathlib import Path
