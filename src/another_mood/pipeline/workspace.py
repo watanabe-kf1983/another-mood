@@ -5,6 +5,7 @@ from pathlib import Path
 
 from another_mood.components.shared.component.component import ComponentCall
 from another_mood.config import ProjectConfig
+from another_mood.layout import SourceLayout
 from another_mood.pipeline.base import ComponentOutput
 
 
@@ -12,12 +13,14 @@ from another_mood.pipeline.base import ComponentOutput
 class Workspace:
     """A pipeline run's config paired with the scratch root its stages work under.
 
-    Threaded through every stage: components read their inputs from ``config``
-    and write their outputs under ``root`` (via :meth:`component_output`).
+    Threaded through every stage: components read their source inputs from
+    ``layout``, invocation parameters from ``config``, and write their
+    outputs under ``root`` (via :meth:`component_output`).
     """
 
     config: ProjectConfig
     root: Path
+    layout: SourceLayout
     # True when the command layer created root as a throwaway system-temp dir
     # (vs. a user-pinned RB_TMP_DIR it must not delete).
     temporary: bool = False

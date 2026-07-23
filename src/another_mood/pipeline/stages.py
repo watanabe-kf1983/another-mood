@@ -21,47 +21,47 @@ from another_mood.pipeline.workspace import Workspace
 
 def inspect_schema_stage(workspace: Workspace) -> Task:
     """Validate schema.yaml against SchemaSchema."""
-    config = workspace.config
+    layout = workspace.layout
     out = workspace.component_output(inspect_schema)
     call = inspect_schema.bind(
-        schema_file=config.schema_file,
+        schema_file=layout.schema_file,
         out_dir=out.dir,
     )
-    return Stage(run_fn=call, watch_paths=[config.schema_file])
+    return Stage(run_fn=call, watch_paths=[layout.schema_file])
 
 
 def normalize_contents_stage(workspace: Workspace) -> Task:
     """Normalize contents_dir to normalized_contents_dir (passthrough)."""
-    config = workspace.config
+    layout = workspace.layout
     inspect_out = workspace.component_output(inspect_schema)
     out = workspace.component_output(normalize_contents)
     call = normalize_contents.bind(
-        src_dir=config.contents_dir,
+        src_dir=layout.contents_dir,
         data_catalog_dir=inspect_out.dir,
-        schema_file=config.schema_file,
+        schema_file=layout.schema_file,
         out_dir=out.dir,
         prev_out_dir=out.dir / "data",
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.contents_dir],
+        watch_paths=[layout.contents_dir],
         upstreams=[inspect_out],
     )
 
 
 def derive_queries_stage(workspace: Workspace) -> Task:
     """Validate query files and derive view entities."""
-    config = workspace.config
+    layout = workspace.layout
     inspect_out = workspace.component_output(inspect_schema)
     out = workspace.component_output(derive_queries)
     call = derive_queries.bind(
-        queries_dir=config.queries_dir,
+        queries_dir=layout.queries_dir,
         data_catalog_dir=inspect_out.dir,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.queries_dir],
+        watch_paths=[layout.queries_dir],
         upstreams=[inspect_out],
     )
 
@@ -87,19 +87,19 @@ def compose_stage(workspace: Workspace) -> Task:
 
 def generator_stage(workspace: Workspace) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
-    config = workspace.config
+    layout = workspace.layout
     compose_out = workspace.component_output(compose)
     out = workspace.component_output(generate)
     call = generate.bind(
         data_dir=compose_out.dir,
-        templates_dir=config.templates_dir,
-        reports_file=config.reports_file,
-        project_name=config.project_dir.resolve().name,
+        templates_dir=layout.templates_dir,
+        reports_file=layout.reports_file,
+        project_name=workspace.config.project_dir.resolve().name,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[config.templates_dir, config.reports_file],
+        watch_paths=[layout.templates_dir, layout.reports_file],
         upstreams=[compose_out],
     )
 

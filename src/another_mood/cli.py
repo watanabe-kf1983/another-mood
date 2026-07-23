@@ -10,7 +10,7 @@ from pathlib import Path
 import typer
 
 from another_mood import command
-from another_mood.command import BuildResult
+from another_mood.command import BuildResult, UserError
 from another_mood.components.scaffold.blueprints import ScaffoldResult
 from another_mood.config import ConfigValidationError, ProjectConfig
 
@@ -180,7 +180,11 @@ def build(
         out_dir=out_dir,
         render_dir=render_dir,
     )
-    result = command.build(config, on_report=_build_listener(strict=strict))
+    try:
+        result = command.build(config, on_report=_build_listener(strict=strict))
+    except UserError as exc:
+        print(exc.user_error_message, file=sys.stderr)
+        raise typer.Exit(1) from exc
     if result.has_errors() or (strict and result.has_warnings()):
         raise SystemExit(1)
 
@@ -219,6 +223,9 @@ def watch(
             # can be raised.
             while not session.shutdown.wait(timeout=0.1):
                 pass
+    except UserError as exc:
+        print(exc.user_error_message, file=sys.stderr)
+        raise typer.Exit(1) from exc
     except command.WatchStartupError as exc:
         raise typer.Exit(1) from exc
     except KeyboardInterrupt:
