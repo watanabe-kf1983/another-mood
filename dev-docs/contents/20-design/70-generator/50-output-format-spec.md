@@ -53,7 +53,7 @@ def md_escape(text: str) -> str:
 
 `<projectDir>/filters.py` の auto-load や entry points 経由でプロジェクト固有の Python ヘルパを登録する仕組みは **意図的にサポートしない**。
 
-ソース (Another Mood プロジェクト) を書いた人とそのソースでツールを動かす人が一致するとは限らない。任意 Python の実行を許すと、配布されたプロジェクトを `mood build` した時点で第三者の手元で任意コードが走る。これは Excel マクロウィルスと同型の問題で、被害は受け取り側に発生する。
+ソース (Another Mood プロジェクト) を書いた人とそのソースでツールを動かす人が一致するとは限らない。任意 Python の実行を許すと、配布されたプロジェクトを `mood build` した時点で第三者の手元で任意コードが走る。これは Excel マクロウィルスと同型の問題で、被害は受け取り側に発生する。この「著者 ≠ 実行者」の信頼境界と、テンプレート実行そのものの扱い (0.1.0 の A / 1.0 の C) は [template-trust-model.md](60-template-trust-model.md) に一般化して整理している。
 
 整形ニーズは Jinja2 標準フィルタ + 本仕様の位置依存ヘルパ + [system filters](#outputformat-と-system-filters-の住み分け) (built-in メタ用、ユーザ非公開) で吸収する。これらで足りないケースが顕在化したら、Python 任意実行を経由しない手段 (宣言的 DSL の拡張、データ側での事前整形 等) で詰める。
 
