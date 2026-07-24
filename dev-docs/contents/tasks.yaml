@@ -477,18 +477,62 @@ categories:
           前提 P4。
         phase: 14
       P6:
-        title: non-evaluating テンプレートエンジンへの移行 (C)
+        title: テンプレートエンジンを minijinja へ差し替え (C)
         note: >-
-          テンプレートを untrusted 入力として安全に build/watch できるよう、
-          値モデルが構造的に安全な non-evaluating エンジン (python-liquid /
-          minijinja / 小さな自作評価器) へ移す。着手時にまず escape 実射の
-          spike でエンジンを選定する (minijinja-py は "no extra security
-          layer" のため境界での marshal 検証が要る)。untrusted なテンプレート
-          配布を導入する機能の hard predecessor — 配布が安全化に先行する順序
-          事故を防ぐ。dual-mode (デフォルト C / 信頼したプロジェクトのみ評価
-          エンジン解禁) も同じ籠で検討。
-        phase: 15
-        proposal: 20-design/70-generator/60-template-trust-model#段階論-a010--c10
+          Jinja2 を minijinja (minijinja-py) へ差し替える。選定理由は移行コスト
+          の少なさ (macro 0・Jinja 互換構文・env.finalizer フックあり) と LLM
+          執筆性 (Jinja系の訓練データを相続)。差し替えで dunder 経路の RCE は
+          構造的に閉じる (Rust の閉じた値モデル)。作業は make_environment の
+          置換・filter/global 登録・finalize→env.finalizer・エラーの構造化
+          Diagnostic 化・テンプレ構文の微差吸収。本タスクは engine 差し替えのみ
+          で、安全の残り (非 _ グラフ / globals) は marshal 契約 P9 が担保する。
+          前提 P8 (minijinja はカスタムタグ非対応ゆえ、タグ廃止まで済ませる)。
+          0.1.0 を C で出すため Q1 の前提 (P9 と対で安全化を完了させる)。
+        phase: 14
+        proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
+      P9:
+        title: marshal 契約の構築 (テンプレ境界の capability 封じ)
+        note: >-
+          minijinja は dunder は封じるが、渡したオブジェクトの非 _ 属性・
+          メソッド・非 _ 名 global は露出する。これを機械的に封じる:
+          TemplateValue 型 (primitive | Markup | Node | Mapping | Sequence) で
+          pyright を一次ガードに、composer の単一構築点で「値・要素は primitive
+          か Node のみ」を再帰 assert、globals は純粋 callable のみ
+          (render=filter=P8 で processor が closure 化され operational
+          オブジェクト露出が消える)、SSTI ペイロードを実 render に撃つ CI
+          回帰テスト。Node の _ 予約接頭辞が構造参照 (_parent/_meta) を
+          minijinja の _ ブロックと一致させ大半を肩代わりする。untrusted な
+          テンプレート配布を導入する機能の hard predecessor — engine 差し替え
+          (P6) だけでは非 _ グラフ/globals が開いたまま。dual-mode (デフォルト
+          安全 / 信頼プロジェクトのみ評価エンジン解禁) も同じ籠で検討。前提 P6。
+          0.1.0 を C で出すため Q1 の前提 (これで RCE を閉じ、build/watch の
+          危険注記が不要になる)。
+        phase: 14
+        proposal: 20-design/70-generator/60-template-trust-model#minijinja-を選ぶ場合の安全規律marshal-契約
+      P7:
+        title: render filter 形の追加 ({% render %} タグと併存)
+        note: >-
+          render を filter 形 `subject | render("tpl")` でも呼べるようにし、
+          {% render %} タグと併存させる (稼働プロジェクトは out-of-band で
+          filter へ移行)。filter は node / link と同じ curated helper のパイプ
+          語彙に揃い、engine 中立で現 Jinja2 でも実施可。filter 形を主として
+          採り (function 形より一貫)、this は pass_context / pass_state で取得。
+          split 時の "" は edition (Web/Book) 両立の load-bearing ゆえ静かに
+          保つ (診断化しない)。P4 (mood_view→render の静かなエイリアス併存) と
+          同じ要領。
+        phase: 14
+        proposal: 20-design/70-generator/30-template-spec#render-の-filter-化
+      P8:
+        title: "{% render %} タグ廃止 (filter 形へ一本化)"
+        note: >-
+          稼働プロジェクトの filter 形への移行完了後、{% render %} タグと
+          唯一の Jinja 拡張 RenderExtension を撤去し filter 形へ一本化する。
+          素の Environment だけになり、公開後の語彙にタグ遺産を残さない
+          (P5 の mood_view 廃止と同じ理由・要領、Q1 前に畳む)。P6
+          (non-evaluating 移行) の hard predecessor — minijinja はカスタム
+          タグ非対応ゆえタグが残ると移行できない。前提 P7。
+        phase: 14
+        proposal: 20-design/70-generator/30-template-spec#render-の-filter-化
 
   Q:
     title: 公開
@@ -506,7 +550,8 @@ categories:
           token はコマンドライン・history・Claude のセッションのいずれにも通さない。
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
-          前提: Q2 / 移行措置を畳む P5, V7 / Q8, Q9, R2。
+          前提: Q2 / 移行措置を畳む P5, V7 / 0.1.0 を C で出す P7→P8→P6→P9
+          (RCE を閉じ危険注記を不要化) / Q8, Q9, R2。
         phase: 14
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
@@ -597,7 +642,9 @@ categories:
           (R3) に回す。DoD にビルド成立確認を含める: uv build の wheel/sdist
           に resources/ (テンプレート・bundled docs・blueprint) が同梱され、
           showcase / テスト等の開発専用物が混入しないこと。twine check 通過。
-          Q1 の前提。
+          minijinja 移行 (P6) で Rust バインディング依存が増えるため、対象
+          プラットフォームで minijinja-py の compiled wheel が解決することも
+          DoD に含める。Q1 の前提。
         phase: 14
 
   R:
@@ -640,17 +687,6 @@ categories:
           のが目的。publish イベントとの依存はなく public リポジトリなら
           いつでも可。Q3 の近傍。
         phase: 17
-      R5:
-        title: build/watch の信頼契約注記を docs/ に追加
-        note: >-
-          build/watch がテンプレートをコードとして実行する信頼契約を
-          docs/reference/cli.md に明記する。文面は確定済み (make/npm/Jekyll に
-          正規化し、信頼できるプロジェクトのみ build/watch すると述べる。
-          exploit のレシピは書かない)。docs/ は wheel 同梱のため Q1 (PyPI 公開)
-          前に入れる。設計は 20-design/70-generator/60-template-trust-model の
-          信頼モデル (0.1.0) 節。
-        phase: 14
-
   S:
     title: システム開発ドキュメント
     impl_paths:

@@ -1,43 +1,44 @@
 # Template Trust Model
 
-テンプレートエンジンの信頼境界 — 「誰が書いたテンプレートを、誰の手元で実行するか」— の設計。`build` / `watch` はプロジェクトのテンプレートを**コードとして実行**するため、この境界が製品の安全性を規定する。
+テンプレートエンジンの信頼境界 — 「誰が書いたテンプレートを、誰の手元で実行するか」— の設計。`build` / `watch` はプロジェクトのテンプレートを評価するため、この境界 — テンプレートが host のコードに届きうるか — が製品の安全性を規定する。
 
 利用者向けの注意書き（`build` / `watch` の信頼契約）は `docs/` を参照。本仕様は設計判断に絞る。
 
 ## External Design
 
-### 信頼モデル (0.1.0): プロジェクトを build する = そのプロジェクトのコードを走らせる
+### 信頼モデル (0.1.0): テンプレートは閉じた値モデルで評価する（RCE 構造封鎖）
 
-0.1.0 の立場は明示的に **「テンプレートは信頼された入力」**。`build` / `watch` はテンプレートを素の Jinja2 (`Environment`) で評価し、サンドボックス化しない。したがって悪意あるプロジェクトを build / watch すれば、その利用者のマシンで任意コードが走る。
+0.1.0 は **minijinja（閉じた Rust 値モデル）＋ marshal 契約**で出荷する（P6 / P9）。テンプレートは host 言語のリフレクション / capability への経路を持たない値の上で評価されるため、**build / watch で第三者のプロジェクトを走らせても任意コード（RCE）は走らない**。dunder 経路は minijinja が構造封鎖し、非 `_` 属性・メソッド・globals は marshal 契約が封じる（機構は [Proposals](#proposals)）。
 
-これは `make` / `npm install` / Jekyll など**ビルドツールの標準契約**と同型で、脆弱性ではなく「ビルドツールはコードを走らせる」という性質。よって対策は言語のサンドボックス化ではなく、信頼できないプロジェクトを build しない運用（将来は [Proposals](#proposals) の隔離 / non-evaluating エンジン）で受ける。
+ゆえに `make` / `npm install` / Jekyll 型の「build = コードを走らせる」契約とは異なり、テンプレートを安全なコンテンツとして扱える。**`docs/` に RCE の危険注記は置かない** — RCE が閉じている以上、注記は過剰警告になる。
 
-`docs/` に置く信頼契約の注記（確定文面）:
+残る攻撃面は **DoS**（`"x" * 10**12` 等のメモリ爆弾・`{% for %}` 無限ループ）のみで、ローカル CLI では Ctrl-C の accepted-risk。リソース上限は無人 / ホスト build を導入するマイルストーンで入れる（[Proposals](#proposals) の DoS 節）。
 
-> `mood build` and `mood watch` render a project's templates, which run as code on your machine — with no sandboxing, as with most build tools (`make`, `npm install`, Jekyll). A malicious project can therefore execute arbitrary code. Only build or watch projects you trust; do not run them on sources received from untrusted parties.
+### 背景: なぜ A（注記のみ）でなく C を 0.1.0 から採るか
 
-注記の設計判断:
+当初案は 0.1.0 を **A**（素の Jinja2・「テンプレートは信頼された入力」・「build = コード実行」の危険注記のみ）とし、C を 1.0 の配布機能に送るものだった。C を 0.1.0 へ前倒ししたのは:
 
-- **主語は「プロジェクト / ソース」であって「データ」ではない** — このツールの語彙で「データ」= `contents/` は最も安全な部類（後述の通り escape される）。実行ベクタはテンプレートなので、「信頼できないデータ」と書くと読み手が「テンプレートだけ貰ったから安全」と真逆に誤読する
-- **結果（任意コード実行）を一節で述べる** — 「secure でない」だけだと under-alarm する。深刻度を較正させる
-- **ビルドツール群への並置で正規化する** — 締め出したい相手には新情報ゼロ（皆知る契約）。信頼して使うローカル著者を「特別に危険」と怯えさせず、免罪符でなく業界標準の正直なラベルに読ませる
-- **exploit のレシピは書かない** — 契約（危険であること）は書くが、撃ち方は書かない
+- **engine 差し替え（P6）が実測で drop-in** — minijinja は Jinja 互換で macro 0、exotic filter（`groupby` / `format` / `selectattr` 等）も演算子（`~` / `//` / 文字列反復）も `+` 空白制御も素通り、undefined 連鎖は `undefined_behavior="chainable"` で吸収。parity のテール risk が無い
+- **marshal 契約（P9）が軽量** — 型＋composer 構築点の 1 assert ＋ CI テスト。Node の `_` 予約接頭辞が minijinja の `_` ブロックと一致し大半を肩代わりする
+- **render=filter（P7 / P8）で 0.1.0 前にどのみちテンプレを触る** — 1 回の改修で engine まで倒せ、**後の破壊的移行と危険注記を両方回避**できる
+
+配布（1.0）の hard predecessor だった安全化が 0.1.0 で済むため、配布機能はこの順序事故から解放される。
 
 ### 背景: 実行ベクタはテンプレートのみ
 
-ソース4種のうち任意コード実行に至るのはテンプレートだけで、他3種は経路を持たない:
+ソース4種のうち host コードへの経路を持ちうるのはテンプレートだけ（C の値モデルでそれも封鎖）で、他3種はそもそも経路を持たない:
 
 - **`contents/` (data)** — data 値は md output format の finalize で escape される（[anchor-spec.md](20-anchor-spec.md) の unsafe トラストモデル参照）
 - **`definition/schema.yaml`** — 宣言的な型定義
 - **`definition/queries/`** — 境界付きの宣言 DSL（`from`/`flatten`/`join`/`where`/`grouped`/`select`/`sort`）。`where` 述語は演算子の閉じた enum（`EQ`/`GT`/`STARTSWITH`/`CONTAINS` 等）を `and`/`or`/`not` で結合するだけで、フィールド参照は dotted-key lookup（Python の `getattr` ではない）。`eval`/`exec`/式言語は無い（[record_predicate.py](../../../../src/another_mood/components/shared/record_predicate.py)）
 
-ゆえに注記・将来の防御はいずれも**テンプレート実行の一点**に集約してよい。
+ゆえに防御は**テンプレート評価の一点**（engine の閉じた値モデル ＋ marshal 契約）に集約してよい。
 
 ### 背景: unsafe HTML の信頼前提との整合
 
-[anchor-spec.md](20-anchor-spec.md) の raw HTML（`unsafe=true`）の議論は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。本仕様の RCE 議論は逆に**著者 ≠ 実行者**（配布されたプロジェクトを第三者が build する）を扱う。
+[anchor-spec.md](20-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のプロジェクトに埋める HTML の話で、C（RCE 封鎖）とは別レイヤ — unsafe HTML は「著者が自分の *出力* に責任を持つ」表現力の問題、marshal 契約は「テンプレートが host の *コード* に届かない」実行安全の問題。
 
-両者は矛盾しない。上位の信頼モデル **「プロジェクトを build する = そのコードを走らせる = そのプロジェクトを信頼する」** の下では、unsafe HTML も任意コードも「信頼したプロジェクトの一部」として同じ傘に入る。anchor-spec の前提は 0.1.0（A）の信頼モデルそのものであり、著者 ≠ 実行者のケースは信頼契約の外側（＝ build すべきでない）として扱う。
+**著者 ≠ 実行者**（第三者が配布プロジェクトを build）のケースは、C の下では RCE が閉じたぶん A より安全になった — これが 0.1.0 から C を採る意義そのもの。残る差は「著者が unsafe HTML で書いた出力を第三者が信じるか」という *出力の信頼* で、実行安全とは独立に扱う。
 
 ## Internal Design
 
@@ -52,13 +53,13 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 - **`SandboxedEnvironment`（B）は実行時ブロックリスト** — 危険属性を都度「禁止」する。禁止漏れの属性パスが見つかるたびに脱出 CVE が出る、後手のイタチごっこ。しかも DoS 等は塞がず偽の安心を生む
 - **穴を個別に塞ぐ発想も同じ轍** — `attr`/`map(attribute=)`/`selectattr`/`groupby` は string 属性名でリフレクションへ迂回でき、しかもこれらは showcase で属性ソート等に広く使われる load-bearing なフィルタ。フィルタごと禁止できず、許可リスト側で「属性文字列を安全なリテラルに制約」する必要がある
 
-正しい対処は値モデルを叩くのではなく、**値モデルが構造的に安全なエンジンへ移す**（C）か、**プロセス / OS 隔離**でビルドごと囲う。0.1.0 は素の `Environment` のまま（[template_engine.py](../../../../src/another_mood/components/generator/template_engine.py) の `make_environment`）とし、防御層はエンジン成熟（C）とホスティング（隔離）に送る。
+正しい対処は値モデルを叩くのではなく、**値モデルが構造的に安全なエンジンへ移す**（C ＝ minijinja）か、**プロセス / OS 隔離**でビルドごと囲う。0.1.0 は前者を採り、`Environment` を minijinja へ差し替える（[template_engine.py](../../../../src/another_mood/components/generator/template_engine.py) の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
 
 ## Proposals
 
 未実装。1.0 の配布 / 共有機能に向けて詰める。
 
-### 段階論: A@0.1.0 → C@1.0
+### 段階論: C を 0.1.0 から採る
 
 信頼境界の選択肢は本質的に二択で、B は両世界で中途半端（言語を縛るが漏れる／隔離もしない）ゆえ不採:
 
@@ -67,23 +68,42 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 | **「build = コードを走らせる」と理解させる**（ビルドツールとして正直に立つ） | **A ＋ untrusted build は OS / コンテナ隔離**。言語は不変、showcase もそのまま |
 | **「テンプレは安全なコンテンツ、知らない人が無警戒に build してよい」を維持** | **C（non-evaluating エンジン）**。知覚を「安全なコンテンツ」に保つには実態もそう作る |
 
-段階論: **0.1.0 は A**（local / trusted 前提、注記のみ）。**1.0 で C**。C 移行は **untrusted なテンプレート配布を導入する 1.0 機能の hard predecessor** とし、「配布は始まったが安全化は未了」の順序事故を防ぐ（tasks.yaml に依存付きで登録する）。
+**決定: 0.1.0 から C（minijinja ＋ marshal 契約）。** 当初は A@0.1.0（注記のみ）→ C@1.0 の段階論だったが、C の実測軽量さ（[背景節](#external-design)）ゆえ前倒しした。C は **P6（engine 差し替え）＋ P9（marshal 契約）**で構成し、両者 phase 14（Q1 = 0.1.0 公開の前）。依存の鎖は **P7（render filter 追加）→ P8（タグ廃止）→ P6 → P9 → Q1**。B は上表の通り不採。
 
-### 0.x の制約: テンプレ表現を C 表現可能圏に留める
+配布（1.0）は C を hard predecessor に持つが、その C が 0.1.0 で済むため「配布は始まったが安全化は未了」の順序事故は最初から起きない。showcase / dev-docs 全テンプレートは既に minijinja 表現可能圏（parity 実測で確認）に収まっており、0.1.0 から minijinja で回る。
 
-C（non-evaluating）に倒す以上、0.x の間に Jinja2 固有機能（任意メソッド呼び出し、drop で表現できない構文）を showcase / docs で育てると、1.0 が全テンプレート著者を巻き込む破壊的移行になる。
+### C のエンジン候補と検証（spike 実施済）
 
-現状は安全側: showcase 全テンプレートを走査した結果、dunder アクセス 0、データオブジェクトへのメソッド呼び出し 0、関数呼び出しは全て curated なグローバル / フィルタ（`node`/`link`/`code_inline` 等）、`sort`/`map`/`selectattr` の属性引数は全て安全なリテラル。**既に drop ＋ curated helpers 様式（≒ Liquid 表現可能圏）に収まっている**。0.x では意識してこの圏内に留める。
+判定基準: **テンプレートに渡るデータが host 言語のリフレクション / capability への経路を運ぶか**。実射結果:
 
-### C のエンジン候補と検証（spike deferred）
-
-| 候補 | 系統 | 評価（context7 一次調査） |
+| 候補 | 系統 | 評価（spike 済） |
 |---|---|---|
-| **python-liquid** | non-evaluating が言語仕様 | 保証がバインディング非依存で原理的に最強。ただし Python 港の実像（カスタム tag/filter・drop・メンテ）は未検証 |
-| **minijinja (`minijinja-py`)** | 閉じた値モデル（Rust） | Jinja2 互換構文で書き直し最小。**ただし README 明記「Python objects retain their APIs ... without an extra security layer」** — 安全性は境界での marshal 次第でタダではない。ネイティブ `{% include %}` あり（`{% render %}` 拡張の土台）、`minijinja-contrib` pycompat |
-| 小さな自作評価器 | logic-less / 許可リスト | 言語は安全にできるが、テンプレートエンジンの真に難しい部分＝**コンテキスト別エスケープ**（`finalize`/`Markup`/whitespace）を再オープンする |
+| **python-liquid** | non-evaluating が言語仕様 | 呼び出し構文が host allowlist（filter/tag）のみ ＝ **安全がバインディング非依存**。注入した capability オブジェクトすら *呼べない*。helper は filter/context-aware filter/custom tag で全表現可（実証）。エスケープは `OutputNode.render_to_output` の override（~10行、実証）。macro 無し／`groupby`・`format`・文字列×n 無し ＝ 移行時にテンプレ logic をクエリ・custom filter へ押し出す（現テンプレでの要手当ては 3 箇所のみ、いずれも「テンプレに漏れた logic」） |
+| **minijinja (`minijinja-py`)** | 閉じた値モデル（Rust） | 評価器は Rust、素データは Rust `Value` に marshal され Python 不在 ＝ dunder 経路は**構造封鎖**。**ただし RCE 閉包は dunder だけの必要条件で不十分** — 渡したオブジェクトの**非 `_` 属性・メソッド・非 `_` 名 global** は露出し呼べる（`x.pub.getcwd()` / `render_to_file()` 実行を確認）。よって安全は**境界の marshal 契約**（下記）。Jinja 互換で書き直し最小（macro native・`env.finalizer` フックあり・`{% render %}` は filter 化）。エラーは最厚（前後行＋キャレット＋変数）で LLM 執筆に有利 |
+| 小さな自作評価器 | logic-less / 許可リスト | 言語は安全にできるが、真に難しい**コンテキスト別エスケープ**（`finalize`/`Markup`/whitespace）を再オープンする。不採 |
 
-C 着手時に spike を1本撃つ: `{{ x.__class__ }}` / `{{ x.__class__.__mro__[1].__subclasses__() }}` / `{{ ""|attr("__class__") }}` / `{{ [x]|map(attribute="__class__")|list }}` を、このツールと同じデータ渡し方で (a) minijinja-py（データを ①素の dict ②ネイティブ marshal ③Object ラップ）(b) python-liquid に実射し、どれが構造的に弾くかを表にする。判定基準は一言: **テンプレートに渡るデータが host 言語のリフレクションへの経路を運ぶか**。
+二択の軸: **liquid＝言語で構造保証（未信頼テンプレを既定安全で build する世界）／ minijinja＝ほぼ drop-in ＋ marshal 契約（自作・半信頼の世界）**。
+
+**決定（P6）: minijinja 採用。** 決め手は移行コストの少なさ（macro 0・Jinja 互換・`finalizer` あり）と LLM 執筆性（Jinja系の訓練データ相続）。安全は言語構造保証（liquid）ではなく **marshal 契約**で確保し、その構築を P9 として engine 差し替え（P6）から分離する。liquid は「未信頼テンプレを既定安全で build する」へ倒す場合の対抗案として残す。
+
+### minijinja を選ぶ場合の安全規律（marshal 契約）
+
+minijinja は dunder は構造封鎖するが、**渡したオブジェクトの非 `_` グラフは全開**（属性・メソッド・その戻り値を辿れる）。安全は「テンプレートに live capability を到達させない」契約で、次で機械化する:
+
+- **`_` 接頭辞境界**: minijinja は `_` 属性・`_` メソッドを既定で拒否（"insecure method call"）。another-mood は構造参照（`_parent`→木全体、`_meta`→アンカー戦略、`_children`）を既に `_` 予約接頭辞に置いており、**minijinja の `_` ブロックと一致 → 参照グラフは不可視**（テンプレは `_` フィールドを直接触っていない＝壊れない）。navigation は filter が Python 側で行う。
+- **唯一の構築時ガード**: `MappingNode`/`ArrayNode`（＝dict/list 派生）の内容は minijinja が map/seq の items として露出する。ゆえに **composer の単一構築点で「値・要素は primitive か Node のみ」を再帰 assert**。型 `TemplateValue = primitive | Markup | Node | Mapping | Sequence` で pyright を一次ガードに。
+- **globals 衛生（地雷）**: `_` 接頭辞は**属性は守るが global 名は守らない**。`env.globals[PROCESSOR_KEY]`（`"_render_processor"`）は `_` 名でも露出し、`.engine.render_to_file(...)` という**非 `_` メソッドでファイル書込 capability が開く**（実証）。→ globals は純粋 callable のみ。**`{% render %}` の filter 化で processor は closure に captured され global から消える**（minijinja は closure 変数を触らせない）＝この設計判断が安全にも効く。
+- **CI 回帰テスト**: `{{ x.__class__… }}` / `{{ node.非_メソッド() }}` / `{{ operational_global.… }}` を実 render に撃ち無害を assert（値モデル＋オブジェクト集合＋globals が閉じたままかを守る）。
+
+残る恒久義務は「非 `_` に capability を置かない」＋「globals は純粋 callable」の2点で、`_` 規約と render=filter が大半を肩代わりする。
+
+### 移行コスト・エラー品質・執筆性（spike 実施済）
+
+engine 選定の副次軸。安全軸（上）とは直交だが、二択の実コストを埋める。
+
+- **移行難度（現 showcase + dev-docs 14 テンプレ走査）**: macro 使用 **0**。`{% filter under_heading %}` ブロック（~10）は pipe 化（`… | render | under_heading`、望ましい方向）。大半は機械置換。Liquid で真に手当てが要るのは **3 箇所のみ** ── `groupby`（→クエリ `grouped` へ）、`"#" * depth` の文字列反復（→custom filter）、`'%02d' | format`（→custom filter）── いずれも「テンプレに漏れた logic」＝ logic-less 規律が元々外へ出したいもの。minijinja は Jinja 互換ゆえ演算子（`~`/`//`/三項）がそのまま通り機械置換すら不要で、手当ては exotic filter 整備のみ。
+- **エラー品質 / LLM 執筆性**: 記法誤りへのエラーは minijinja / liquid とも現行 jinja2 を上回る（キャレット＋前後行＋列、構造化フィールドで Diagnostic 化可）。minijinja が最厚（参照変数まで）。Stack Overflow 質問数は Jinja系（DTL + Twig + Jinja ≈ 40k）が Liquid（≈4k）の約10倍で、**minijinja は Jinja 構文ゆえこの執筆性を相続**する。Liquid は下位だが `{{ }}`＋`{% %}` の視覚的家族を共有し、罰は方言限定・loud で回収可能。逆に Liquid の strict さは LLM を安全/移植圏へ**自己強制**する guardrail（minijinja は非 `_` メソッド等の逸脱を静かに許す）。
+- **移植性**: 単一 Python ツールには概ね畑違い。唯一の具体シナリオ＝ブラウザ / WASM プレビューでは minijinja が Rust→WASM で**同一 engine**（最高忠実度）、Liquid は python-liquid ＋ LiquidJS の別実装になる。
 
 ### 1.0 設計オプション: dual-mode（VS Code Workspace Trust 相当）
 
