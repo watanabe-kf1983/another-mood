@@ -537,7 +537,7 @@ categories:
           保つ (診断化しない)。P4 (mood_view→render の静かなエイリアス併存) と
           同じ要領。
         phase: 14
-        proposal: 20-design/70-generator/30-template-spec#render-の-filter-化
+        done: true
       P8:
         title: "{% render %} タグ廃止 (filter 形へ一本化)"
         note: >-
@@ -546,9 +546,20 @@ categories:
           素の Environment だけになり、公開後の語彙にタグ遺産を残さない
           (P5 の mood_view 廃止と同じ理由・要領、Q1 前に畳む)。P6
           (non-evaluating 移行) の hard predecessor — minijinja はカスタム
-          タグ非対応ゆえタグが残ると移行できない。前提 P7。
+          タグ非対応ゆえタグが残ると移行できない。前提 P7。P10 (タグ表記の
+          掃除) を先に畳んでおくと、撤去時に残っているタグ言及は「タグ自体を
+          主題とするもの」だけになり、本タスクで一緒に落とせる。
         phase: 14
-        proposal: 20-design/70-generator/30-template-spec#render-の-filter-化
+      P10:
+        title: dev-docs design/ の {% render %} タグ表記の掃除
+        note: >-
+          P7 の積み残し: filter 形が正の綴りになった時点で、タグ構文で
+          メカニズムを説明している design/ 内の表記 (8 ファイル 11 箇所) は
+          stale になった。filter 形へ書き直す。タグ自体を主題とする言及
+          (trust-model のエンジン評価、template-spec の P8 残件) は撤去まで
+          正当なので残す。前提 N4 (render→site 改名が済むと dev-docs の
+          「render」が filter の一義になり、掃除の検証が grep だけで済む)。
+        phase: 14
 
   Q:
     title: 公開
