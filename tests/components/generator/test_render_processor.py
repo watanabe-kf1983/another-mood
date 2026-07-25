@@ -1,11 +1,12 @@
-"""Tests for render_processor — RenderExtension and RenderProcessorImpl."""
+"""Tests for render_processor — render_filter, RenderExtension, and
+RenderProcessorImpl."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pytest
-from jinja2 import Environment, TemplateSyntaxError
+from jinja2 import DictLoader, Environment, TemplateSyntaxError
 
 from another_mood.components.generator.data_tree import wrap_tree
 from another_mood.components.generator.render_processor import (
@@ -40,6 +41,32 @@ class MockProcessor:
 def _make_extension_env(processor: MockProcessor) -> Environment:
     env = Environment(extensions=[RenderExtension], keep_trailing_newline=True)
     env.globals[PROCESSOR_KEY] = processor  # type: ignore[assignment]
+    return env
+
+
+@dataclass
+class _MockEngine:
+    """Captures calls to render / render_to_file for routing assertions."""
+
+    rendered: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
+    written: list[tuple[str, dict[str, Any], Path]] = field(default_factory=lambda: [])
+    render_return: str = "INLINED"
+
+    def render(self, template_name: str, data: dict[str, Any]) -> str:
+        self.rendered.append((template_name, data))
+        return self.render_return
+
+    def render_to_file(
+        self, template_name: str, data: dict[str, Any], out_path: Path
+    ) -> None:
+        self.written.append((template_name, data, out_path))
+
+
+def _make_filter_env(
+    processor: RenderProcessorImpl, templates: dict[str, str] | None = None
+) -> Environment:
+    env = Environment(keep_trailing_newline=True, loader=DictLoader(templates or {}))
+    env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
     return env
 
 
@@ -226,25 +253,108 @@ class TestRenderSubtreeGuard:
             )
 
 
-# -- RenderProcessorImpl --
+# -- render_filter --
 
 
-@dataclass
-class _MockEngine:
-    """Captures calls to render / render_to_file for routing assertions."""
+class TestRenderFilter:
+    """Only the filter's own wiring: routing to the processor and guard.
+    The routing decisions themselves (split / inline / paths / guard
+    semantics) are covered by the RenderProcessorImpl and tag tests."""
 
-    rendered: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
-    written: list[tuple[str, dict[str, Any], Path]] = field(default_factory=lambda: [])
-    render_return: str = "INLINED"
+    def test_dispatches_template_name_and_subject(self) -> None:
+        engine = _MockEngine(render_return="OUT")
+        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        env = _make_filter_env(processor)
+        result = env.from_string('{{ user | render("profile.md") }}').render(
+            user={"id": "alice", "name": "Alice"}
+        )
 
-    def render(self, template_name: str, data: dict[str, Any]) -> str:
-        self.rendered.append((template_name, data))
-        return self.render_return
+        assert result == "OUT"
+        assert engine.rendered == [("profile.md", {"id": "alice", "name": "Alice"})]
 
-    def render_to_file(
-        self, template_name: str, data: dict[str, Any], out_path: Path
+    def test_guard_error_points_at_template_without_line(self) -> None:
+        """The guard fires with the host ``this`` resolved from context; a
+        filter has no source line, so the diagnostic carries only the
+        enclosing template's name."""
+        tree = wrap_tree({"albums": [{"id": "a1"}], "prose": [{"id": "p1"}]})
+        processor = RenderProcessorImpl(engine=_MockEngine())  # type: ignore[arg-type]
+        env = _make_filter_env(processor, {"page.md": '{{ subject | render("x.md") }}'})
+        with pytest.raises(FileValidationError) as exc:
+            env.get_template("page.md").render(
+                this=tree["albums"][0], subject=tree["prose"][0]
+            )
+        (diag,) = exc.value.diagnostics
+        assert diag.file == Path("page.md")
+        assert diag.line is None
+        assert diag.source == "render"
+        assert "/prose/p1" in diag.message
+        assert "/albums/a1" in diag.message
+
+
+class TestRenderFilterViaEngine:
+    """End-to-end via a real TemplateEngine — the filter is registered by
+    the engine itself, and its output survives the format's finalize."""
+
+    _TREE = {"members": [{"id": "alice", "name": "A*B"}]}
+
+    def _make_engine(
+        self,
+        tmp_path: Path,
+        templates: dict[str, str],
+        filters: dict[str, Any] | None = None,
+    ) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir(parents=True)
+        for name, body in templates.items():
+            (templates_dir / name).write_text(body)
+        out_dir = tmp_path / "out"
+        out_dir.mkdir(parents=True)
+        return TemplateEngine(
+            out_dir,
+            templates_dir=templates_dir,
+            output_format=MD,
+            filters=filters or {},
+        )
+
+    def test_inline_output_is_not_escaped_again(self, tmp_path: Path) -> None:
+        """The subtemplate's rendered markdown passes through the outer
+        template's finalize untouched: its markup is not re-escaped, while
+        the value interpolated inside it is escaped exactly once."""
+        engine = self._make_engine(
+            tmp_path,
+            {
+                "index.md": '{{ this.members[0] | render("member.md") }}',
+                "member.md": "**{{ name }}**",
+            },
+        )
+        result = engine.render("index.md", wrap_tree(self._TREE))
+
+        assert "**A\\*B**" in result
+
+    def test_engine_owned_filter_beats_caller_supplied_one(
+        self, tmp_path: Path
     ) -> None:
-        self.written.append((template_name, data, out_path))
+        """``render`` is part of the engine's vocabulary: a caller-supplied
+        filter of the same name must not shadow it."""
+
+        def hijack(*args: object) -> str:
+            return "HIJACKED"
+
+        engine = self._make_engine(
+            tmp_path,
+            {
+                "index.md": '{{ this.members[0] | render("member.md") }}',
+                "member.md": "real {{ id }}",
+            },
+            filters={"render": hijack},
+        )
+        result = engine.render("index.md", wrap_tree(self._TREE))
+
+        assert "real alice" in result
+        assert "HIJACKED" not in result
+
+
+# -- RenderProcessorImpl --
 
 
 class TestRenderProcessorImplFilePerRouting:

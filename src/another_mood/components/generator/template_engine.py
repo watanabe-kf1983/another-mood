@@ -93,7 +93,7 @@ def _bind(subject: object) -> Mapping[str, object]:
 class PageCollisionError(UserError):
     """Two distinct pages resolved to the same output file.
 
-    Raised by the engine when a ``{% render %}`` page would overwrite
+    Raised by the engine when a rendered page would overwrite
     one already written this build under a different subject or template —
     distinct pages must not share an output path, or one silently clobbers
     the other.  The guidance is the exception's ``args[0]`` so it surfaces
@@ -111,7 +111,7 @@ class PageCollisionError(UserError):
             f"({origin}). Each page needs a unique path — this usually means "
             f"two records share an id, or one record is rendered as a page "
             f"more than once. Give the records distinct ids, or drop the "
-            f"duplicate {{% render %}} call."
+            f"duplicate `render` call."
         )
 
 
@@ -174,10 +174,12 @@ class TemplateEngine:
             self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
         for name, func in globals.items():
             self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
-        # The render extension dispatches via env.globals[PROCESSOR_KEY].
-        self._env.globals[PROCESSOR_KEY] = RenderProcessorImpl(  # pyright: ignore[reportArgumentType]
-            engine=self, paging=paging
-        )
+        processor = RenderProcessorImpl(engine=self, paging=paging)
+        # The render extension dispatches via env.globals[PROCESSOR_KEY]; the
+        # filter form is bound to the processor directly.  Registered after
+        # the caller's filters: engine-owned, not overridable.
+        self._env.globals[PROCESSOR_KEY] = processor  # pyright: ignore[reportArgumentType]
+        self._env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
 
     def render(self, template_name: str, subject: object) -> str:
         return self._render(template_name, subject)
