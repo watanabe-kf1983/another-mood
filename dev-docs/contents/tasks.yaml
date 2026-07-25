@@ -508,24 +508,40 @@ categories:
         phase: 14
         proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
       P9:
-        title: marshal 契約の構築 (テンプレ境界の capability 封じ)
+        title: marshal 契約の型・構造ロック (先行実装)
         note: >-
-          minijinja は dunder は封じるが、渡したオブジェクトの非 _ 属性・
-          メソッド・非 _ 名 global は露出する。これを機械的に封じる:
-          TemplateValue 型 (primitive | Markup | Node | Mapping | Sequence) で
-          pyright を一次ガードに、composer の単一構築点で「値・要素は primitive
-          か Node のみ」を再帰 assert、globals は純粋 callable のみ
-          (render=filter=P8 で processor が closure 化され operational
-          オブジェクト露出が消える)、SSTI ペイロードを実 render に撃つ CI
-          回帰テスト。Node の _ 予約接頭辞が構造参照 (_parent/_meta) を
-          minijinja の _ ブロックと一致させ大半を肩代わりする。untrusted な
-          テンプレート配布を導入する機能の hard predecessor — engine 差し替え
-          (P6) だけでは非 _ グラフ/globals が開いたまま。dual-mode (デフォルト
-          安全 / 信頼プロジェクトのみ評価エンジン解禁) も同じ籠で検討。前提 P6。
-          0.1.0 を C で出すため Q1 の前提 (これで RCE を閉じ、build/watch の
-          危険注記が不要になる)。
+          テンプレートに渡る型を TemplateSafe union に閉じ、型を正直に保つ
+          (本番の値の安全性は動的検査しない)。データツリーは load_model (Any)
+          由来ゆえ、検証を持つ container コンストラクタへ詰め替える
+          (parse, don't validate を型に): SafeMapping(dict[str,TemplateSafe]) /
+          SafeArray(list[TemplateSafe]) を基底に Node がアンカーを足す。
+          wrap_tree が木を全て Safe*/Node へ変換 (raw pass-through も詰め替え、
+          bare dict/list は消える)。①各値を exact-type で構築検証 (Any 源への
+          唯一の runtime 検証、[TemplateSafe] を裏打ち)、②非 _ 属性を __slots__
+          (Node 含む全基底) で封じる、③④非 _ メソッド・危険 dunder が無いことを
+          surface-audit テスト1本で監査 (enumerate 4型)。exact-type ゆえ
+          サブクラスは構築点で弾かれ metaclass/seal は不要 (@final は静的
+          マーカー)。filters/globals は -> TemplateSafe に締め、副作用は
+          capability を closure に閉じた render filter のみ許す。動的検査は
+          原理的に不可 (開いた値モデル) ゆえ規律を型で保つ設計。純 Python で
+          P6 非依存 (minijinja の露出 pin は P11)。dual-mode (デフォルト安全 /
+          信頼プロジェクトのみ評価エンジン解禁) も同じ籠で検討。0.1.0 を C で
+          出すため Q1 の前提。
         phase: 14
-        proposal: 20-design/70-generator/60-template-trust-model#minijinja-を選ぶ場合の安全規律marshal-契約
+        proposal: 20-design/70-generator/60-template-trust-model#marshal-契約spike-実測で確定
+      P11:
+        title: SSTI 回帰テスト (minijinja 露出セマンティクスの pin)
+        note: >-
+          marshal 契約 (P9) の安全性は minijinja の露出規則に依存し、それは
+          将来版で変わりうる。dunder 直記法 / attr('__class__') / str.format・
+          format_map の format-string 系 / _ 名 global 露出 / 非 _ メソッド
+          dispatch を実 render に撃ち無害を assert し、現行挙動を固定する
+          (payload は OWASP 等で周知の古典で新規開示にはならない)。minijinja を
+          実行環境に入れる P6 まで走らせられないため P9 (型・構造) と分離。
+          前提 P6。0.1.0 を C で出すため Q1 の前提 (これで RCE 閉包を実証し
+          build/watch の危険注記が不要になる)。
+        phase: 14
+        proposal: 20-design/70-generator/60-template-trust-model#ssti-回帰テストp6-依存別タスク
       P7:
         title: render filter 形の追加 ({% render %} タグと併存)
         note: >-
@@ -580,7 +596,7 @@ categories:
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
           前提: Q2 / 移行措置を畳む P5, V7 / 公開 CLI 語彙を確定する N4 /
-          0.1.0 を C で出す P7→P8→P6→P9
+          0.1.0 を C で出す P7→P8→P6 (＋P9 並行) →P11
           (RCE を閉じ危険注記を不要化) / Q8, Q9, R2。
         phase: 14
       Q2:
