@@ -71,7 +71,7 @@ What the tool generates (under `.another-mood/my-project/`):
 │       ├── __entity_defs/                    # described later
 │       ├── __entity_data/                    # described later
 │       └── __queries/                        # described later
-└── render/                                   # HTML
+└── site/                                     # HTML
 ```
 
 Your templates render to `output/default/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.

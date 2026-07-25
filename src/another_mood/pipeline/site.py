@@ -1,4 +1,4 @@
-"""Render stage — prepare Hugo content and render to HTML."""
+"""Site stage — prepare Hugo content and render to a browsable site."""
 
 import signal
 import subprocess
@@ -12,8 +12,8 @@ from pathlib import Path
 from another_mood.components.shared.component.component import Component
 from another_mood.pipeline.base import ComponentOutput
 from another_mood.components.shared.component.errors import error_propagation
-from another_mood.pipeline.adapters import renderer
-from another_mood.pipeline.adapters.preparation import prepare_render
+from another_mood.pipeline.adapters import hugo
+from another_mood.pipeline.adapters.preparation import prepare_site
 from another_mood.pipeline.base import MultiStageTask, Stage, Task
 
 _logger = getLogger(__name__)
@@ -43,12 +43,12 @@ def hugo_build(prep_dir: Path, *, out_dir: Path) -> None:
     static_dir = prep_dir / "static"
     with error_propagation([prep_dir], out_dir, component="hugo_build") as data_dirs:
         if data_dirs is not None:
-            renderer.build(data_dirs.upstreams[0], data_dirs.out, static_dir)
+            hugo.build(data_dirs.upstreams[0], data_dirs.out, static_dir)
         else:
-            renderer.build(prep_dir / "data", out_dir / "data", static_dir)
+            hugo.build(prep_dir / "data", out_dir / "data", static_dir)
 
 
-def RenderStage(
+def SiteStage(
     *,
     upstream: ComponentOutput,
     prep_dir: Path,
@@ -56,9 +56,9 @@ def RenderStage(
     host: str,
     port: int,
 ) -> MultiStageTask:
-    """Compose the render pipeline: prep Stage + Hugo serve Task + Hugo build Stage."""
+    """Compose the site pipeline: prep Stage + Hugo serve Task + Hugo build Stage."""
     prep_out = ComponentOutput(prep_dir)
-    prep_call = prepare_render.bind(data_dir=upstream.dir, out_dir=prep_dir)
+    prep_call = prepare_site.bind(data_dir=upstream.dir, out_dir=prep_dir)
     hugo_build_call = hugo_build.bind(prep_dir=prep_dir, out_dir=hugo_build_dir)
     content_dir = prep_dir / "data"
     static_dir = prep_dir / "static"
@@ -88,9 +88,7 @@ class _HugoServeTask(Task):
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
-        process = renderer.serve(
-            self.content_dir, self.host, self.port, self.static_dir
-        )
+        process = hugo.serve(self.content_dir, self.host, self.port, self.static_dir)
 
         # Surface fast-fail startup errors (e.g. port already in use) before
         # signalling readiness; Hugo binds the port synchronously at startup.

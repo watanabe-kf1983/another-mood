@@ -1,4 +1,4 @@
-"""Tests for preparation — Hugo content sync + prepare_render Component."""
+"""Tests for preparation — Hugo content sync + prepare_site Component."""
 
 import os
 from pathlib import Path
@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml
 
-from another_mood.pipeline.adapters.preparation import prepare_render, sync
+from another_mood.pipeline.adapters.preparation import prepare_site, sync
 
 
 def _write(path: Path, content: str = "# Hello\n") -> None:
@@ -172,7 +172,7 @@ class TestPrepareRender:
         _write(data_dir / "data" / "web" / "index.md")
         _write(data_dir / "data" / "web" / "blob" / "fig.html", "<h1>fig</h1>")
 
-        prepare_render(data_dir=data_dir, out_dir=out_dir)
+        prepare_site(data_dir=data_dir, out_dir=out_dir)
 
         assert (out_dir / "data" / "web" / "_index.md").exists()
         assert (
@@ -185,11 +185,11 @@ class TestPrepareRender:
         data_dir = tmp_path / "upstream"
         out_dir = tmp_path / "out"
         _write(data_dir / "data" / "web" / "blob" / "cover.png", "PNG")
-        prepare_render(data_dir=data_dir, out_dir=out_dir)
+        prepare_site(data_dir=data_dir, out_dir=out_dir)
         assert (out_dir / "static" / "web" / "blob" / "cover.png").exists()
 
         (data_dir / "data" / "web" / "blob" / "cover.png").unlink()
-        prepare_render(data_dir=data_dir, out_dir=out_dir)
+        prepare_site(data_dir=data_dir, out_dir=out_dir)
 
         assert not (out_dir / "static" / "web" / "blob" / "cover.png").exists()
 
@@ -210,7 +210,7 @@ class TestPrepareRender:
         )
         _write(data_dir / "data" / "index.md", "# Build Failed\n\nboom\n")
 
-        prepare_render(data_dir=data_dir, out_dir=out_dir)
+        prepare_site(data_dir=data_dir, out_dir=out_dir)
 
         assert (
             out_dir / "data" / "_index.md"

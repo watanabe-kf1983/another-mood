@@ -58,10 +58,10 @@ Generator の出力と上流から伝播してきた `BuildReport` を突き合�
 IN: `generate_dir`
 OUT: `reconcile_dir`
 
-**Document Renderer**
+**Site Builder**
 生成された Markdown を HTML にレンダリングする。
 IN: `reconcile_dir`
-OUT: `render_dir`
+OUT: `site_dir`
 
 各コンポーネントはファイル監視のトリガーが異なるため、別プロセスとして動作する。入力データを変更すると normalized → views → documents とカスケードで更新される。
 

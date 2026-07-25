@@ -36,4 +36,4 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 `.another-mood/<projectDir>/` のように入力パスに対応するサブディレクトリを自動作成する。異なる `<projectDir>` を別プロセスで同時処理しても出力が衝突しない。サブディレクトリ名は CWD からの相対パスをそのまま使うため予測可能である。
 
-この「CWD からの相対パス」というキーは、`<projectDir>` が CWD 配下にあって初めて定義できる。そのため `<projectDir>` が CWD 外を指す場合（絶対パス・相対 `../` 脱出の両方）は `ProjectConfig.verify()` がエラーで拒否する。CWD 外を basename にフォールバックさせると `/a/proj` と `/b/proj` が同じ `.another-mood/proj/` に着地する lossy な衝突を招くため、この前提はフォールバックではなくエラーで守る。`out_dir` / `render_dir` / `tmp_dir` は「どこに書き出すか」という別の関心で、CWD 外への出力に正当な用途があるため縛らない。
+この「CWD からの相対パス」というキーは、`<projectDir>` が CWD 配下にあって初めて定義できる。そのため `<projectDir>` が CWD 外を指す場合（絶対パス・相対 `../` 脱出の両方）は `ProjectConfig.verify()` がエラーで拒否する。CWD 外を basename にフォールバックさせると `/a/proj` と `/b/proj` が同じ `.another-mood/proj/` に着地する lossy な衝突を招くため、この前提はフォールバックではなくエラーで守る。`out_dir` / `site_dir` / `tmp_dir` は「どこに書き出すか」という別の関心で、CWD 外への出力に正当な用途があるため縛らない。

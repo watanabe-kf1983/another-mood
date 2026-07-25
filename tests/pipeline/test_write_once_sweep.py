@@ -5,7 +5,7 @@ every produced file is hardlink-snapshotted and all snapshots are re-checked.
 A snapshot pins the inode a stage produced, so a later in-place write — by a
 downstream stage or by the re-run — changes the snapshot's bytes and fails
 the check. Blind spot: rewriting identical bytes in place is invisible here;
-test_preparation.py pins the known such site (prepare_render) directly.
+test_preparation.py pins the known such site (prepare_site) directly.
 """
 
 import hashlib
@@ -87,7 +87,7 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
     config = ProjectConfig(
         project_dir=project,
         out_dir=published / "output",
-        render_dir=published / "render",
+        site_dir=published / "site",
     )
     workspace = Workspace(
         config, tmp_path / "workspace", resolve_layout(project), Manifest()

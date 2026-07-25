@@ -33,7 +33,7 @@ blob は `contents_dir` に置かれた YAML・Markdown 以外の「**ツール�
 
 **境界コピーは normalize** — normalize が `contents/<id>` のバイトを出力 data ツリーの **contents 相対パスそのまま** (`data/contents/<id>`) にミラーする。レコードファイルは `<rel>.yaml` と拡張子付与されるので、`.yaml` を持ちえない blob (定義上 YAML/Markdown 以外) と構造的に衝突しない — 専用名前空間は不要。generate は下流の `data_dir/contents/<id>` から読んで各 edition ツリーへ `/blob/<id>` としてミラーする (generate の contents 直読み・`contents_dir` パラメータは廃止)。edition ルートがどこかの知識は generator の所有物なので、edition 別ミラーは generate に残す。下流 2 レーン (md publish 行き / Hugo 行き) は既存の運搬機構が自動継承し、`mood watch` (publish なし) のライブプレビューにもバイトが届く。
 
-**Hugo レーンは static mount 経由** — prepare_render で blob を content ツリーから分離し `static` mount として渡す。理由は、content dir 内の `.html` が Hugo 既定の `security.allowContent` にビルドごと弾かれるため。運搬機構の実装 (個別 unlink での更新・`HUGO_STATICDIR` 環境変数・削除が restart まで preview に残る Hugo 仕様) とその理由は `_sync_blobs` / `_hugo_env` の docstring に置く。
+**Hugo レーンは static mount 経由** — prepare_site で blob を content ツリーから分離し `static` mount として渡す。理由は、content dir 内の `.html` が Hugo 既定の `security.allowContent` にビルドごと弾かれるため。運搬機構の実装 (個別 unlink での更新・`HUGO_STATICDIR` 環境変数・削除が restart まで preview に残る Hugo 仕様) とその理由は `_sync_blobs` / `_hugo_env` の docstring に置く。
 
 **コピー戦略は hardlink + 増分再利用** — workspace 内の hardlink 運搬と「全ファイル write-once」不変条件は [Component Communication](index.md) の総論（運搬機構）に従う。blob 固有なのは境界コピーと増分再利用の 2 点:
 
