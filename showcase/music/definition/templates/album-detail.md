@@ -24,8 +24,6 @@
 {% endfor %}
 {% if liner %}
 
-{% filter under_heading("#") %}
-{% render "prose.md" with liner %}
-{% endfilter %}
+{{ liner | render("prose.md") | under_heading("#") -}}
 {% endif %}
 
