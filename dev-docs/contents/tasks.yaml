@@ -432,6 +432,22 @@ categories:
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
         phase: 18
+      N4:
+        title: render 語彙の site への改名 (render/ ディレクトリ・render stage)
+        note: >-
+          「render」が二義になった: テンプレート側の render filter (P7) と、
+          Markdown→HTML 段の render/ ディレクトリ・render stage。HTML 側を
+          site へ改名し、render をテンプレート側の唯一の語にする。成果物は
+          HTML 単体でなくテーマ・アセット込みの「ブラウザで開ける一式」なので
+          site が正確 (Hugo 自身の語彙とも一致)。利用者可視: render/ → site/、
+          --render-dir → --site-dir、RB_RENDER_DIR → RB_SITE_DIR、config の
+          render_dir → site_dir、cli.md 同期。内部: pipeline/render.py →
+          site.py (RenderStage / render_stage → Site 系、成果物名 stage は
+          build_report_stage に前例)、pipeline/adapters/renderer.py → hugo.py
+          (generator の Renderer protocol との名前衝突を解消、実体は Hugo
+          アダプタゆえ)。公開 CLI 語彙の変更なので Q1 前に済ませ、
+          エイリアスは置かない (未公開のため)。
+        phase: 14
 
   O:
     title: バグ修正
@@ -550,7 +566,8 @@ categories:
           token はコマンドライン・history・Claude のセッションのいずれにも通さない。
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
-          前提: Q2 / 移行措置を畳む P5, V7 / 0.1.0 を C で出す P7→P8→P6→P9
+          前提: Q2 / 移行措置を畳む P5, V7 / 公開 CLI 語彙を確定する N4 /
+          0.1.0 を C で出す P7→P8→P6→P9
           (RCE を閉じ危険注記を不要化) / Q8, Q9, R2。
         phase: 14
       Q2:
