@@ -561,6 +561,7 @@ categories:
           正当なので残す。前提 N4 (render→site 改名が済むと dev-docs の
           「render」が filter の一義になり、掃除の検証が grep だけで済む)。
         phase: 14
+        done: true
 
   Q:
     title: 公開

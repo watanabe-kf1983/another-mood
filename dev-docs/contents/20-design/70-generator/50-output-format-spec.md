@@ -90,7 +90,7 @@ OutputFormat 記述子の `globals` / `filters` は **「出力フォーマッ�
 
 ### render サブテンプレートの output_format 解決
 
-`{% render "template.md" with data %}` でサブテンプレートを呼ぶ場合、`template_name` の拡張子から output_format を引き、対応する Environment で render する想定。テンプレート参照に拡張子が含まれていること（[P2](node:/tasks/P/tasks/P2) で確立、利用者向け仕様は `docs/reference/template.md` の render）に依存する。
+`subject | render("template.md")` でサブテンプレートを呼ぶ場合、`template_name` の拡張子から output_format を引き、対応する Environment で render する想定。テンプレート参照に拡張子が含まれていること（[P2](node:/tasks/P/tasks/P2) で確立、利用者向け仕様は `docs/reference/template.md` の render）に依存する。
 
 現状は MD output_format に決め打ち。複数 output_format を扱うテンプレートが登場した時に実装する制約として記録しておく。
 

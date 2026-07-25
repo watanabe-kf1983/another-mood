@@ -34,7 +34,7 @@ Generator はデータロード直後に views ツリーを `wrap_tree` でラ�
 
 ### ページパスの導出
 
-ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`{% render %}`) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
+ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`render` フィルタ) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
 
 paging ポリシー (どの object type が分割境界か、root→`index.md` / 分割対象→`{anchor_path}.md`) は `PagingPolicy` (`file_per` ＋ `is_split_target` / `page_path`) が担い、構造的な木の遡上だけは data_tree の free function `nearest_ancestor` に分離する (`PagingPolicy` は paging を知らない木に触れず、data_tree は paging を知らないまま保つ)。`Edition` はこの `PagingPolicy` を保持し、generator だけが full な `Edition` を持つ。座標系をレポートルート相対に取る理由を含め、導出規則とコードは `edition.py` の `PagingPolicy` docstring が正本。
 
@@ -46,9 +46,9 @@ paging ポリシー (どの object type が分割境界か、root→`index.md` /
 
 #### 描画の単一ページ不変条件 (render subtree ガード)
 
-上のリンク解決は次の不変条件に乗っている: **各ノードは *データ位置* で一意に定まる 1 ページ (`PagingPolicy.page_path`) にだけ描かれる**。source は `page_path(this)`、target は `page_path(target)` — 両者が同じ規則でノードのデータ位置からページを引くからこそ、`| link` / `href` / `relink` が一貫して相対化できる。`{% render %}` で `this` の subtree 外にノードを inline 描画するとこの不変条件が破れ、`page_path(subject)` が実描画ページと食い違って、そのノードの内部 `this` 起点リンクも、そのノードへ張る被リンクも壊れる。
+上のリンク解決は次の不変条件に乗っている: **各ノードは *データ位置* で一意に定まる 1 ページ (`PagingPolicy.page_path`) にだけ描かれる**。source は `page_path(this)`、target は `page_path(target)` — 両者が同じ規則でノードのデータ位置からページを引くからこそ、`| link` / `href` / `relink` が一貫して相対化できる。`render` フィルタで `this` の subtree 外にノードを inline 描画するとこの不変条件が破れ、`page_path(subject)` が実描画ページと食い違って、そのノードの内部 `this` 起点リンクも、そのノードへ張る被リンクも壊れる。
 
-そこで render 拡張は、subject が `this` の子孫（subject から `_parent` を遡上して `this` に identity 一致）でなければ、タグの file+line 付きビルドエラーにする。判定は **構造（子孫）** で行い、split / inline や edition (file_per) に依存しない — 妥当性をテンプレート単体で決めたいため（同じ呼び出しが「split する edition では通り、しない edition では弾かれる」ような edition 依存エラーを避ける）。
+そこで render フィルタは、subject が `this` の子孫（subject から `_parent` を遡上して `this` に identity 一致）でなければ、描画元テンプレート位置付きのビルドエラーにする。判定は **構造（子孫）** で行い、split / inline や edition (file_per) に依存しない — 妥当性をテンプレート単体で決めたいため（同じ呼び出しが「split する edition では通り、しない edition では弾かれる」ような edition 依存エラーを避ける）。
 
 **非ノード subject は免除**（anchor も page identity も持たない）。ただしこの免除が健全なのは、その子テンプレが `this` 起点の描画（`link` / `href` / `anchor` / `relink`・アンカー刻印）を一切しないときに限る。id 等を受け取り内部でノードを引き直して描く子テンプレはガードの射程外で、リンク正当性は author 責任になる（例: meta の `record_table.md` は entity id を受けてデータ行の表を描くのみで、entity ノード自体は配置しない）。他所のノードを描きたいときはクエリ (join 等) で subtree に取り込んで子孫化するか、`| link` で参照する。導出規則とコードは `render_processor.py` の `_guard_subtree` docstring が正本。
 
