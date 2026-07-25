@@ -24,3 +24,6 @@
 {% else %}
 (no records)
 {% endif %}
+
+{# The trailing blank line above is this block's bottom margin: call sites
+   stack these tables back-to-back, so the separator lives here. #}
