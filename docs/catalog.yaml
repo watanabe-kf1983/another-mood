@@ -33,7 +33,8 @@ resources:
       Query syntax reference — `from` / `grouped` / `select`.
   - path: reference/template.md
     description: >-
-      Template syntax reference — Jinja2 plus the `{% render %}` extension.
+      Template syntax reference — Jinja2 plus the `render` filter and other
+      additions.
   - path: reference/reports.md
     description: >-
       Report output configuration reference — `definition/reports.yaml`,
