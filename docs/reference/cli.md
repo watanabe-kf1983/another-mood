@@ -51,7 +51,7 @@ The project [manifest](manifest.md) (`<project_dir>/sbdb.yaml`) also lives at a 
 | Kind | Default | Env var |
 |---|---|---|
 | Markdown output | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
-| HTML output | `.another-mood/<project_dir>/render` | `RB_RENDER_DIR` |
+| HTML output | `.another-mood/<project_dir>/site` | `RB_SITE_DIR` |
 
 Subdirectories matching the input path are created automatically, so that running different `<project_dir>` values in parallel processes does not cause output collisions.
 
@@ -80,7 +80,7 @@ Steps:
 1. Loads `<project_dir>/definition/schema.yaml` and normalizes `<project_dir>/contents`.
 2. Evaluates the queries under `<project_dir>/definition/queries` to build views.
 3. Renders Markdown to `output/` using the templates in `<project_dir>/definition/templates`.
-4. Renders the Markdown in `output/` into HTML in `render/`.
+4. Renders the Markdown in `output/` into HTML in `site/`.
 
 Exits with code 0 if all stages succeed, or 1 if any stage fails.
 
@@ -107,7 +107,7 @@ Press Ctrl+C to stop.
 
 ### `--out-dir`
 
-Publish the Markdown output tree to `<dir>` on each rebuild. Without it, `watch` publishes nothing; naming a destination is the opt-in. Only Markdown is published — `watch` has no `--render-dir`, since the live server is the HTML consumer; run `mood build` for static HTML.
+Publish the Markdown output tree to `<dir>` on each rebuild. Without it, `watch` publishes nothing; naming a destination is the opt-in. Only Markdown is published — `watch` has no `--site-dir`, since the live server is the HTML consumer; run `mood build` for static HTML.
 
 ```bash
 mood watch . --out-dir ./public
@@ -199,6 +199,6 @@ RB_PORT=8080 mood watch .
 | `project_dir` | (required, given as argument) | — | first positional argument |
 | `tmp_dir` | (per-run session dir under the system temp dir) | `RB_TMP_DIR` | — |
 | `out_dir` | `build`: `.another-mood/<project_dir>/output`; `watch`: unset (publishes nothing) | `RB_OUT_DIR` | `--out-dir` |
-| `render_dir` | `build`: `.another-mood/<project_dir>/render`; `watch`: not published | `RB_RENDER_DIR` | `--render-dir` (only on `build`) |
+| `site_dir` | `build`: `.another-mood/<project_dir>/site`; `watch`: not published | `RB_SITE_DIR` | `--site-dir` (only on `build`) |
 | `host` | `127.0.0.1` | `RB_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `RB_PORT` | `--port` (only on `watch`) |

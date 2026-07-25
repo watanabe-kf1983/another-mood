@@ -98,19 +98,19 @@ def read_doc(uri: str) -> str:
 def build(
     project_dir: str,
     out_dir: str | None = None,
-    render_dir: str | None = None,
+    site_dir: str | None = None,
 ) -> BuildResult:
     """Run a one-shot build of `project_dir`, generating Markdown and HTML
     and returning the result. Equivalent to `mood build <project_dir>`.
 
-    `out_dir` and `render_dir` are optional; leave them unset to use the
+    `out_dir` and `site_dir` are optional; leave them unset to use the
     defaults under `.another-mood/<project_dir>/`.
     """
     overrides: dict[str, object] = {"project_dir": Path(project_dir)}
     if out_dir is not None:
         overrides["out_dir"] = Path(out_dir)
-    if render_dir is not None:
-        overrides["render_dir"] = Path(render_dir)
+    if site_dir is not None:
+        overrides["site_dir"] = Path(site_dir)
     config = ProjectConfig(**overrides)  # type: ignore[arg-type]
     config.verify()
     return command.build(config)

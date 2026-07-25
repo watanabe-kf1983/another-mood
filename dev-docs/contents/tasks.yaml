@@ -448,6 +448,7 @@ categories:
           アダプタゆえ)。公開 CLI 語彙の変更なので Q1 前に済ませ、
           エイリアスは置かない (未公開のため)。
         phase: 14
+        done: true
 
   O:
     title: バグ修正

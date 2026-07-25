@@ -14,7 +14,7 @@
 | compose | — | inspect_schemas_dir, normalize_contents_dir, derive_queries_dir | compose_dir |
 | generate | templates_dir | compose_dir | generate_dir |
 | reconcile | — | generate_dir | reconcile_dir |
-| render | — | reconcile_dir | render_dir |
+| site | — | reconcile_dir | site_dir |
 
 dev モードでは User Input / Upstream の変更を Watch してステージを自動再実行する（`pipeline/base.py` 参照）。build モードでは依存順に直列実行する。Upstream は前段ステージの Output であり、`BuildReport`（エラー伝播）の収集対象。
 

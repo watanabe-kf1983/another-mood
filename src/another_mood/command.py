@@ -39,7 +39,7 @@ from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.config import ProjectConfig
 from another_mood.layout import SourceLayout, resolve_layout, verify_absent
-from another_mood.pipeline.render import (
+from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
 from another_mood.pipeline.stages import pipeline

@@ -13,9 +13,9 @@ from another_mood.components import (
 )
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.dir_lock import dir_lock
-from another_mood.pipeline.adapters.preparation import prepare_render
+from another_mood.pipeline.adapters.preparation import prepare_site
 from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task
-from another_mood.pipeline.render import RenderStage, hugo_build
+from another_mood.pipeline.site import SiteStage, hugo_build
 from another_mood.pipeline.workspace import Workspace
 
 
@@ -120,12 +120,12 @@ def reconcile_stage(workspace: Workspace) -> Task:
     )
 
 
-def render_stage(workspace: Workspace) -> Task:
-    """Prepare Hugo content and render to HTML."""
+def site_stage(workspace: Workspace) -> Task:
+    """Prepare Hugo content and render to a browsable site."""
     config = workspace.config
-    return RenderStage(
+    return SiteStage(
         upstream=workspace.component_output(reconcile),
-        prep_dir=workspace.component_output(prepare_render).dir,
+        prep_dir=workspace.component_output(prepare_site).dir,
         hugo_build_dir=workspace.component_output(hugo_build).dir,
         host=config.host,
         port=config.port,
@@ -146,7 +146,7 @@ def publish_stage(workspace: Workspace) -> Task:
     # Publish a tree only where its destination is set (watch may set neither).
     targets = [
         (reconcile_out.dir / "data", config.out_dir),
-        (hugo_out.dir / "data", config.render_dir),
+        (hugo_out.dir / "data", config.site_dir),
     ]
     active = [(src, dist) for src, dist in targets if dist is not None]
     call = publish.bind(
@@ -187,7 +187,7 @@ STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     compose_stage,
     generator_stage,
     reconcile_stage,
-    render_stage,
+    site_stage,
     publish_stage,
 )
 

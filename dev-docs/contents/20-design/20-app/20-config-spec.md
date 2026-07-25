@@ -4,7 +4,7 @@
 
 ### 設定の管轄範囲
 
-設定システムが扱うのは**起動パラメータ**（どう実行し、どこへ出すか: `project_dir` / `out_dir` / `render_dir` / `tmp_dir` / `host` / `port`）のみ。
+設定システムが扱うのは**起動パラメータ**（どう実行し、どこへ出すか: `project_dir` / `out_dir` / `site_dir` / `tmp_dir` / `host` / `port`）のみ。
 
 ソースレイアウト（`definition/schema.yaml` 等のパス群）は設定ではなく sbdb フォーマット世代が定めるプロジェクト構造であり、`resolve_layout`（`layout.py`）が導出する。レイアウトの `RB_*` 個別オーバーライドは廃止済み（[G10](node:/tasks/G/tasks/G10) — フォーマット世代を名乗りながらファイル位置を動かせるのは宣言と矛盾するため）。
 

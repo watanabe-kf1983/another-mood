@@ -33,11 +33,9 @@ _DELETED_CONTENT = "[This page has been removed. Go to top page.](/)\n"
     exclusive_write=False,
     error_propagation=False,
 )
-def prepare_render(data_dir: Path, *, out_dir: Path) -> None:
+def prepare_site(data_dir: Path, *, out_dir: Path) -> None:
     """Sync reconcile data into a Hugo-ready content directory."""
-    with error_propagation(
-        [data_dir], out_dir, component="prepare_render"
-    ) as data_dirs:
+    with error_propagation([data_dir], out_dir, component="prepare_site") as data_dirs:
         if data_dirs is not None:
             sync(data_dirs.upstreams[0], data_dirs.out)
             _sync_blobs(data_dirs.upstreams[0], out_dir / "static")

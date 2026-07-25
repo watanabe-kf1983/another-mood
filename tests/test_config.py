@@ -11,7 +11,7 @@ class TestAnotherMoodRoot:
     def test_relative_project_dir(self) -> None:
         config = ProjectConfig(project_dir=Path("docs")).resolved_for_build()
         assert config.out_dir == Path(".another-mood/docs/output")
-        assert config.render_dir == Path(".another-mood/docs/render")
+        assert config.site_dir == Path(".another-mood/docs/site")
 
     def test_relative_multi_component_project_dir(self) -> None:
         config = ProjectConfig(
@@ -67,21 +67,21 @@ class TestPublishDestinations:
     def test_unset_by_default(self) -> None:
         config = ProjectConfig(project_dir=Path("docs"))
         assert config.out_dir is None
-        assert config.render_dir is None
+        assert config.site_dir is None
 
     def test_build_keeps_explicit_dirs(self) -> None:
         config = ProjectConfig(
             project_dir=Path("docs"),
             out_dir=Path("/pin/out"),
-            render_dir=Path("/pin/render"),
+            site_dir=Path("/pin/site"),
         ).resolved_for_build()
         assert config.out_dir == Path("/pin/out")
-        assert config.render_dir == Path("/pin/render")
+        assert config.site_dir == Path("/pin/site")
 
     def test_watch_publishes_nothing_by_default(self) -> None:
         config = ProjectConfig(project_dir=Path("docs")).resolved_for_watch()
         assert config.out_dir is None
-        assert config.render_dir is None
+        assert config.site_dir is None
 
     def test_watch_opts_into_md_via_out_dir(self) -> None:
         config = ProjectConfig(
@@ -89,10 +89,10 @@ class TestPublishDestinations:
         ).resolved_for_watch()
         assert config.out_dir == Path("/pin/out")
 
-    def test_watch_never_publishes_render(self) -> None:
-        # Even a pinned render_dir (e.g. RB_RENDER_DIR) is dropped: the live
+    def test_watch_never_publishes_site(self) -> None:
+        # Even a pinned site_dir (e.g. RB_SITE_DIR) is dropped: the live
         # server is watch's only HTML consumer.
         config = ProjectConfig(
-            project_dir=Path("docs"), render_dir=Path("/pin/render")
+            project_dir=Path("docs"), site_dir=Path("/pin/site")
         ).resolved_for_watch()
-        assert config.render_dir is None
+        assert config.site_dir is None

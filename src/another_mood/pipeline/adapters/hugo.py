@@ -1,4 +1,4 @@
-"""Hugo renderer adapter — low-level Hugo subprocess operations."""
+"""Hugo adapter — low-level Hugo subprocess operations."""
 
 import os
 import subprocess
@@ -18,7 +18,7 @@ _HUGO = str(_hugo_path)
 
 
 def build(content_dir: Path, out_dir: Path, static_dir: Path) -> None:
-    """Run renderer build to generate static HTML."""
+    """Run Hugo build to generate static HTML."""
     subprocess.run(
         [
             _HUGO,
@@ -40,7 +40,7 @@ def build(content_dir: Path, out_dir: Path, static_dir: Path) -> None:
 def serve(
     content_dir: Path, host: str, port: int, static_dir: Path
 ) -> subprocess.Popen[bytes]:
-    """Start renderer dev server for live preview. Returns the Popen process."""
+    """Start Hugo dev server for live preview. Returns the Popen process."""
     return subprocess.Popen(
         [
             _HUGO,

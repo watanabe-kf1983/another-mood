@@ -167,9 +167,7 @@ def build(
     out_dir: str | None = typer.Option(
         None, "--out-dir", help="Published output directory"
     ),
-    render_dir: str | None = typer.Option(
-        None, "--render-dir", help="Hugo render directory"
-    ),
+    site_dir: str | None = typer.Option(None, "--site-dir", help="Hugo site directory"),
     strict: bool = typer.Option(
         False,
         "--strict",
@@ -180,7 +178,7 @@ def build(
     config = _load_config(
         project_dir=Path(project_dir),
         out_dir=out_dir,
-        render_dir=render_dir,
+        site_dir=site_dir,
     )
     try:
         result = command.build(config, on_report=_build_listener(strict=strict))

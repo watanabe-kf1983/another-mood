@@ -25,7 +25,7 @@ class ProjectConfig(BaseSettings):
     # Output (published). Unset (None) means "not published"; build and watch
     # fill or drop these per mode (see resolved_for_build / resolved_for_watch).
     out_dir: Path | None = Field(default=None)
-    render_dir: Path | None = Field(default=None)
+    site_dir: Path | None = Field(default=None)
 
     # Working dir. Unset (None) resolves to a fresh system-temp dir at the
     # command layer; set RB_TMP_DIR to pin it to a fixed path.
@@ -36,18 +36,18 @@ class ProjectConfig(BaseSettings):
     port: int = Field(default=5077)
 
     def resolved_for_build(self) -> "ProjectConfig":
-        """Fill unset out_dir/render_dir with the ``.another-mood/<project>`` defaults."""
+        """Fill unset out_dir/site_dir with the ``.another-mood/<project>`` defaults."""
         rb = _another_mood_root(self.project_dir)
         return self.model_copy(
             update={
                 "out_dir": self.out_dir or rb / "output",
-                "render_dir": self.render_dir or rb / "render",
+                "site_dir": self.site_dir or rb / "site",
             }
         )
 
     def resolved_for_watch(self) -> "ProjectConfig":
-        """Drop render_dir — watch never publishes HTML — and keep out_dir as given."""
-        return self.model_copy(update={"render_dir": None})
+        """Drop site_dir — watch never publishes HTML — and keep out_dir as given."""
+        return self.model_copy(update={"site_dir": None})
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""
