@@ -4,11 +4,9 @@
 """Render processor — the ``render`` filter (``{{ subject | render("tpl") }}``)
 and its dispatch: inline expansion, or the subject's own page."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol
 
 from jinja2 import nodes, pass_context
 from jinja2.ext import Extension
@@ -26,10 +24,18 @@ from another_mood.components.shared.user_source.diagnostic import (
     FileValidationError,
 )
 
-if TYPE_CHECKING:
-    from another_mood.components.generator.template_engine import TemplateEngine
-
 PROCESSOR_KEY = "_render_processor"
+
+
+class Renderer(Protocol):
+    """What the processor needs of the template engine: rendering a
+    subject inline, or out to a file."""
+
+    def render(self, template_name: str, subject: object) -> str: ...
+
+    def render_to_file(
+        self, template_name: str, subject: object, out_path: Path
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -40,7 +46,7 @@ class RenderProcessorImpl:
     Whether a subject splits is driven by ``file_per`` (see
     :meth:`_splits`)."""
 
-    engine: TemplateEngine
+    engine: Renderer
     paging: PagingPolicy = PagingPolicy()
 
     def __call__(self, template_name: str, subject: object) -> str:

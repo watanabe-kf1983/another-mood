@@ -48,18 +48,18 @@ def _make_extension_env(processor: MockProcessor) -> Environment:
 class _MockEngine:
     """Captures calls to render / render_to_file for routing assertions."""
 
-    rendered: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
-    written: list[tuple[str, dict[str, Any], Path]] = field(default_factory=lambda: [])
+    rendered: list[tuple[str, object]] = field(default_factory=lambda: [])
+    written: list[tuple[str, object, Path]] = field(default_factory=lambda: [])
     render_return: str = "INLINED"
 
-    def render(self, template_name: str, data: dict[str, Any]) -> str:
-        self.rendered.append((template_name, data))
+    def render(self, template_name: str, subject: object) -> str:
+        self.rendered.append((template_name, subject))
         return self.render_return
 
     def render_to_file(
-        self, template_name: str, data: dict[str, Any], out_path: Path
+        self, template_name: str, subject: object, out_path: Path
     ) -> None:
-        self.written.append((template_name, data, out_path))
+        self.written.append((template_name, subject, out_path))
 
 
 def _make_filter_env(
@@ -263,7 +263,7 @@ class TestRenderFilter:
 
     def test_dispatches_template_name_and_subject(self) -> None:
         engine = _MockEngine(render_return="OUT")
-        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)
         env = _make_filter_env(processor)
         result = env.from_string('{{ user | render("profile.md") }}').render(
             user={"id": "alice", "name": "Alice"}
@@ -277,7 +277,7 @@ class TestRenderFilter:
         filter has no source line, so the diagnostic carries only the
         enclosing template's name."""
         tree = wrap_tree({"albums": [{"id": "a1"}], "prose": [{"id": "p1"}]})
-        processor = RenderProcessorImpl(engine=_MockEngine())  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=_MockEngine())
         env = _make_filter_env(processor, {"page.md": '{{ subject | render("x.md") }}'})
         with pytest.raises(FileValidationError) as exc:
             env.get_template("page.md").render(
@@ -368,7 +368,7 @@ class TestRenderProcessorImplFilePerRouting:
     def test_node_in_file_per_splits(self) -> None:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
-        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)
         member = self._member()
         result = processor("member.md", member)
 
@@ -379,7 +379,7 @@ class TestRenderProcessorImplFilePerRouting:
     def test_node_absent_from_file_per_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined alice")
         paging = PagingPolicy()  # members.item not listed
-        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)
         member = self._member()
         result = processor("member.md", member)
 
@@ -394,7 +394,7 @@ class TestRenderProcessorImplNonNodeInlines:
 
     def test_plain_dict_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined")
-        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)
         result = processor("summary.md", {"id": "alice", "name": "Alice"})
 
         assert engine.rendered == [("summary.md", {"id": "alice", "name": "Alice"})]
@@ -403,7 +403,7 @@ class TestRenderProcessorImplNonNodeInlines:
 
     def test_plain_list_inlines(self) -> None:
         engine = _MockEngine(render_return="inlined")
-        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)
         result = processor("list.md", [{"id": "a"}, {"id": "b"}])
 
         assert engine.rendered == [("list.md", [{"id": "a"}, {"id": "b"}])]
@@ -420,7 +420,7 @@ class TestRenderProcessorImplPagePath:
     def test_tree_node_uses_anchor_derived_page_path(self) -> None:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
-        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)
         member = wrap_tree(self._TREE)["members"][0]
         processor("member.md", member)
 
@@ -435,7 +435,7 @@ class TestRenderProcessorImplReservedName:
     def test_reserved_id_raises(self) -> None:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
-        processor = RenderProcessorImpl(engine=engine, paging=paging)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine, paging=paging)
         # `CON` is a Windows device name: `members/CON.md` writes to the
         # console, not a file, so the page is rejected on every OS.
         member = wrap_tree({"members": [{"id": "CON"}]})["members"][0]
@@ -449,7 +449,7 @@ class TestRenderProcessorImplPageSubject:
 
     def test_scalar_inlines(self) -> None:
         engine = _MockEngine(render_return="hello")
-        processor = RenderProcessorImpl(engine=engine)  # type: ignore[arg-type]
+        processor = RenderProcessorImpl(engine=engine)
         result = processor("x.md", "just a string")
 
         assert engine.rendered == [("x.md", "just a string")]
