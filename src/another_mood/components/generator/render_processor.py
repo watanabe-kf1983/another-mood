@@ -1,22 +1,18 @@
 # ``_out_path`` reads ``node._meta`` — a template-public field under the
 # reserved ``_`` prefix (see data_tree.py), not a Python-protected attr.
 # pyright: reportPrivateUsage=false
-"""Render processor — {% render %} tag parsing and dispatch.
-
-``mood_view`` is kept as a silent alias of ``render`` (no deprecation
-warning) for the sole live project, which migrates out of band; the alias
-is removed in a later task.  Both spellings share this one parse path."""
-
-from __future__ import annotations
+"""Render processor — the ``render`` filter (``{{ subject | render("tpl") }}``)
+and its dispatch: inline expansion, or the subject's own page."""
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol
 
-from jinja2 import nodes
+from jinja2 import nodes, pass_context
 from jinja2.ext import Extension
 from jinja2.parser import Parser
 from jinja2.runtime import Context
+from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import Node, nearest_ancestor
 from another_mood.components.generator.edition import PagingPolicy
@@ -28,21 +24,29 @@ from another_mood.components.shared.user_source.diagnostic import (
     FileValidationError,
 )
 
-if TYPE_CHECKING:
-    from another_mood.components.generator.template_engine import TemplateEngine
-
 PROCESSOR_KEY = "_render_processor"
+
+
+class Renderer(Protocol):
+    """What the processor needs of the template engine: rendering a
+    subject inline, or out to a file."""
+
+    def render(self, template_name: str, subject: object) -> str: ...
+
+    def render_to_file(
+        self, template_name: str, subject: object, out_path: Path
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
 class RenderProcessorImpl:
-    """Routes a {% render %} invocation: inline expansion, or its own
-    page via the engine at the subject's output path.
+    """Routes a render invocation: inline expansion, or its own page
+    via the engine at the subject's output path.
 
     Whether a subject splits is driven by ``file_per`` (see
     :meth:`_splits`)."""
 
-    engine: TemplateEngine
+    engine: Renderer
     paging: PagingPolicy = PagingPolicy()
 
     def __call__(self, template_name: str, subject: object) -> str:
@@ -54,6 +58,22 @@ class RenderProcessorImpl:
             return ""
         else:
             return self.engine.render(template_name, subject)
+
+    @pass_context
+    def render_filter(
+        self, context: Context, subject: object, template_name: str
+    ) -> Markup:
+        """The ``render`` filter: ``{{ subject | render("tpl") }}``.
+
+        A subtree-guard error points at the enclosing template
+        (``context.name``) without a line — a filter has no source
+        location at runtime.
+        """
+        _guard_subtree(subject, context.resolve("this"), context.name, None)
+        # Markup, not str: a filter's return value passes through the
+        # environment's finalize, and the already-rendered output must
+        # not be escaped a second time.
+        return Markup(self(template_name, subject))
 
     def _splits(self, node: Node) -> bool:
         """Whether the node becomes its own page (else inlined): its
@@ -68,9 +88,11 @@ class RenderProcessorImpl:
 class RenderExtension(Extension):
     """Jinja2 extension for the {% render "template" with data %} tag.
 
-    ``mood_view`` is registered as a silent alias: both tag names route
-    through the same :meth:`parse` (which consumes whichever keyword opened
-    the tag), so they are behaviourally identical."""
+    Deprecated: superseded by the ``render`` filter.  The tag is kept only
+    for live projects that still use it and is removed, extension and all,
+    once they have migrated.  ``mood_view`` is registered as a silent alias:
+    both tag names route through the same :meth:`parse` (which consumes
+    whichever keyword opened the tag), so they are behaviourally identical."""
 
     tags = {"render", "mood_view"}
 
@@ -112,10 +134,11 @@ class RenderExtension(Extension):
 
 
 def _guard_subtree(
-    subject: object, host: object, filename: str | None, lineno: int
+    subject: object, host: object, filename: str | None, lineno: int | None
 ) -> None:
-    """Reject a ``{% render %}`` whose node subject lies outside the host's
-    subtree, pointing the error at the tag's own source location.
+    """Reject a render whose node subject lies outside the host's subtree,
+    pointing the error at the invocation's source location (the tag knows
+    its exact line; the filter only its template).
 
     A node is drawn on exactly one page fixed by its data position
     (``PagingPolicy.page_path``); link resolution rides on that invariant (a
@@ -152,7 +175,7 @@ def _guard_subtree(
                 line=lineno,
                 column=None,
                 message=(
-                    f"{{% render %}} can only render a node within its host's "
+                    f"`render` can only render a node within its host's "
                     f"subtree, but {subject._meta.anchor_path} is not a descendant "
                     f"of {host_desc}. A node is drawn on exactly one page fixed by "
                     f"its data position, so embedding one off its home page breaks "

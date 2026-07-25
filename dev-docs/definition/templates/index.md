@@ -1,7 +1,7 @@
 {% set ordered = prose | sort(attribute="order_key") %}
 {% set root = ordered | selectattr("depth", "equalto", 1) | first %}
 {% set chapters = ordered | rejectattr("depth", "equalto", 1) | list %}
-{% render "prose.md" with root %}
+{{- root | render("prose.md") }}
 
 ## 目次
 
@@ -12,15 +12,8 @@
 - {{ node(path="/roadmap") | link("ロードマップ") }}
 
 {% for record in chapters %}
-{% filter under_heading("#" * (record.depth - 1)) %}
-{% render "prose.md" with record %}
-{% endfilter %}
-
+{{- record | render("prose.md") | under_heading("#" * (record.depth - 1)) }}
 {% endfor %}
-{% filter under_heading("#") %}
-{% render "tasks.md" with tasks %}
-{% endfilter %}
+{{- tasks | render("tasks.md") | under_heading("#") }}
 
-{% filter under_heading("#") %}
-{% render "roadmap.md" with roadmap %}
-{% endfilter %}
+{{ roadmap | render("roadmap.md") | under_heading("#") }}

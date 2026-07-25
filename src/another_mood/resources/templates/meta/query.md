@@ -120,7 +120,6 @@
 
 {% filter under_heading("##") %}
     {% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) %}
-        {% render "record_table.md" with entity.id %}
-
+        {{- entity.id | render("record_table.md") -}}
     {% endfor %}
 {% endfilter %}

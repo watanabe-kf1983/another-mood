@@ -4,7 +4,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 
 | Addition | Kind | Purpose |
 |---|---|---|
-| [`render`](#render) | tag | render a subtemplate, as its own page or inline |
+| [`render`](#render) | filter | render a subtemplate, as its own page or inline |
 | [`link`](#link) | filter | Markdown link to a node |
 | [`href`](#href) | filter | the URL targeting a node, alone |
 | [`label`](#label) | filter | the display text for a node, alone |
@@ -33,7 +33,7 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 ## Products
 
 {% for product in products %}
-{% render "product-detail.md" with product %}
+{{- product | render("product-detail.md") -}}
 - {{ product | link }}
 {% endfor %}
 ```
@@ -90,14 +90,16 @@ A path matching no node is a **missing node**, kept visible rather than a dead l
 
 A [prose](schema.md#built-in-schema-prose) record's headings are nodes too. A heading's anchor path is the record's path, `#`, and the heading's slug — `/prose/guides/ordering#placing-an-order` — and a link to it lands directly on the heading.
 
-## Tags
+## Filters
+
+The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
 
 ### `render`
 
-A custom tag that renders a subtemplate, **either as its own page (split) or expanded in place (inline)**.
+A filter that renders a subtemplate against the piped value, **either as its own page (split) or expanded in place (inline)**.
 
 ```jinja2
-{% render "NAME" with DATA %}
+{{ DATA | render("NAME") }}
 ```
 
 | Part | Description |
@@ -117,15 +119,15 @@ A split page's path mirrors where the subject sits in the data: it is the subjec
 
 Two pages that resolve to the same path make the build fail rather than silently overwrite one another.
 
-#### Return value of the tag
+#### Return value
 
-When the subject is **split**, the tag **returns the empty string**: the output file is written as a side effect, so nothing appears at the position where `{% render %}` was placed in the parent template (a tag alone on its line emits nothing under block trimming — see [Whitespace](#whitespace)). When **inline**, the tag returns the rendered text, which appears at the call site.
+When the subject is **split**, the filter **returns the empty string**: the output file is written as a side effect, so nothing appears at the call site in the parent template. When **inline**, it returns the rendered text, which appears at the call site — inserted as-is, like the other Markdown-emitting filters here, so no `| safe`. Either way the call is an expression, so its line keeps its own newline; inside a loop, trim it with whitespace markers ([Whitespace](#whitespace)).
 
-To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `{% render %}` call:
+To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `render` call:
 
 ```jinja2
 {% for product in products %}
-{% render "product-detail.md" with product %}
+{{- product | render("product-detail.md") -}}
 - {{ product | link }}
 {% endfor %}
 ```
@@ -134,7 +136,7 @@ The subpage opens with the subject's own anchor automatically ([Linking](#where-
 
 #### Subtemplate side
 
-The subject passed via `with` is always bound under the fixed name `this`, so a subtemplate can reach the subject itself regardless of its type.
+The piped subject is always bound under the fixed name `this`, so a subtemplate can reach the subject itself regardless of its type.
 
 When the subject is a **map**, its fields are *also* spread as top-level variables, so bare access keeps working — `{{ name }}` and `{{ this.name }}` are equivalent.
 
@@ -159,10 +161,6 @@ When the subject is a **list**, there are no fields to spread, so iterate `this`
 - {{ product.name }}
 {% endfor %}
 ```
-
-## Filters
-
-The Jinja2 built-in `| safe` is covered under [Markdown escaping](#markdown-escaping).
 
 ### `child`
 
@@ -263,14 +261,12 @@ It removes only the *common* minimum, so lines nested deeper than their siblings
 
 `value | under_heading("##")` shifts the headings in an embedded Markdown fragment down so they nest under an enclosing heading. The argument is that enclosing level *as you see it at the call site* — a run of `#` — so every heading in the fragment moves down by that many levels: a fragment's own `#` title becomes `###`, nesting as a subsection directly under the `## …` heading above it. Levels never exceed `######` (H6), so a fragment shifted past the bottom collapses onto it.
 
-Use it as a block filter wrapping embedded output, or piped on prose content:
+Pipe it on embedded output — a [`render`](#render) call or prose content:
 
 ```jinja2
 ## Members
 
-{% filter under_heading("##") %}
-{% render "member.md" with member %}
-{% endfilter %}
+{{ member | render("member.md") | under_heading("##") }}
 
 {{ content | under_heading("##") }}
 ```
@@ -351,7 +347,9 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 
 ## Whitespace
 
-Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}`, `{% render %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
+Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
+
+An expression line is content, not a control tag, so even one that renders nothing — a split [`render`](#render) call, say — leaves its newline behind; trim it with Jinja2's whitespace markers (`{{- … -}}`), pointing each `-` at a neighboring control tag rather than at content or a blank line, which it would eat as well.
 
 To indent a block's body — tags and content together — and strip that indentation back out of the output, wrap it in the [`dedent`](#dedent) filter (best where the output tolerates leftover indentation, such as a Mermaid diagram).
 

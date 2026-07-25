@@ -7,7 +7,7 @@
 | ID | 名前 | 説明 |
 |----|------|------|
 {% for t in テーブル %}
-{% render "テーブル詳細.md" with t %}
+{{- t | render("テーブル詳細.md") -}}
 | {{ code_inline(t.id) }} | {{ t | link(t.名前) }} | {{ t.説明 }} |
 {% endfor %}
 

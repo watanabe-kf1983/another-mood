@@ -1,8 +1,6 @@
 # Music Catalog
 
-{% filter under_heading("#") %}
-{% render "prose.md" with node(path="/prose/background") %}
-{% endfilter %}
+{{ node(path="/prose/background") | render("prose.md") | under_heading("#") }}
 
 ## Artists
 
@@ -11,9 +9,7 @@
 {% endfor %}
 
 {% for artist in artist_discography %}
-{% filter under_heading("##") %}
-{% render "artist-detail.md" with artist %}
-{% endfilter %}
+{{- artist | render("artist-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Albums by genre
@@ -30,9 +26,7 @@ query-to-query reference) - so the template no longer re-joins genres itself.
 {% endfor %}
 
 {% for album in album_tracklist %}
-{% filter under_heading("##") %}
-{% render "album-detail.md" with album %}
-{% endfilter %}
+{{- album | render("album-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Genre hierarchy

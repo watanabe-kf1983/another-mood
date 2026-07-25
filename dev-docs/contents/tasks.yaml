@@ -432,6 +432,22 @@ categories:
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
         phase: 18
+      N4:
+        title: render 語彙の site への改名 (render/ ディレクトリ・render stage)
+        note: >-
+          「render」が二義になった: テンプレート側の render filter (P7) と、
+          Markdown→HTML 段の render/ ディレクトリ・render stage。HTML 側を
+          site へ改名し、render をテンプレート側の唯一の語にする。成果物は
+          HTML 単体でなくテーマ・アセット込みの「ブラウザで開ける一式」なので
+          site が正確 (Hugo 自身の語彙とも一致)。利用者可視: render/ → site/、
+          --render-dir → --site-dir、RB_RENDER_DIR → RB_SITE_DIR、config の
+          render_dir → site_dir、cli.md 同期。内部: pipeline/render.py →
+          site.py (RenderStage / render_stage → Site 系、成果物名 stage は
+          build_report_stage に前例)、pipeline/adapters/renderer.py → hugo.py
+          (generator の Renderer protocol との名前衝突を解消、実体は Hugo
+          アダプタゆえ)。公開 CLI 語彙の変更なので Q1 前に済ませ、
+          エイリアスは置かない (未公開のため)。
+        phase: 14
 
   O:
     title: バグ修正
@@ -521,7 +537,7 @@ categories:
           保つ (診断化しない)。P4 (mood_view→render の静かなエイリアス併存) と
           同じ要領。
         phase: 14
-        proposal: 20-design/70-generator/30-template-spec#render-の-filter-化
+        done: true
       P8:
         title: "{% render %} タグ廃止 (filter 形へ一本化)"
         note: >-
@@ -530,9 +546,20 @@ categories:
           素の Environment だけになり、公開後の語彙にタグ遺産を残さない
           (P5 の mood_view 廃止と同じ理由・要領、Q1 前に畳む)。P6
           (non-evaluating 移行) の hard predecessor — minijinja はカスタム
-          タグ非対応ゆえタグが残ると移行できない。前提 P7。
+          タグ非対応ゆえタグが残ると移行できない。前提 P7。P10 (タグ表記の
+          掃除) を先に畳んでおくと、撤去時に残っているタグ言及は「タグ自体を
+          主題とするもの」だけになり、本タスクで一緒に落とせる。
         phase: 14
-        proposal: 20-design/70-generator/30-template-spec#render-の-filter-化
+      P10:
+        title: dev-docs design/ の {% render %} タグ表記の掃除
+        note: >-
+          P7 の積み残し: filter 形が正の綴りになった時点で、タグ構文で
+          メカニズムを説明している design/ 内の表記 (8 ファイル 11 箇所) は
+          stale になった。filter 形へ書き直す。タグ自体を主題とする言及
+          (trust-model のエンジン評価、template-spec の P8 残件) は撤去まで
+          正当なので残す。前提 N4 (render→site 改名が済むと dev-docs の
+          「render」が filter の一義になり、掃除の検証が grep だけで済む)。
+        phase: 14
 
   Q:
     title: 公開
@@ -550,7 +577,8 @@ categories:
           token はコマンドライン・history・Claude のセッションのいずれにも通さない。
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
-          前提: Q2 / 移行措置を畳む P5, V7 / 0.1.0 を C で出す P7→P8→P6→P9
+          前提: Q2 / 移行措置を畳む P5, V7 / 公開 CLI 語彙を確定する N4 /
+          0.1.0 を C で出す P7→P8→P6→P9
           (RCE を閉じ危険注記を不要化) / Q8, Q9, R2。
         phase: 14
       Q2:

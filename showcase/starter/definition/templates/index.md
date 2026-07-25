@@ -1,17 +1,17 @@
 # Project Members
 
-{% render "prose.md" with node("prose", "about") %}
+{{ node("prose", "about") | render("prose.md") }}
 
 ## Members
 
 {% for member in members %}
-{% render "member.md" with member %}
+{{- member | render("member.md") -}}
 - {{ member | link }} — {{ member.role }}
 {% endfor %}
 
 ## By Role
 
 {% for entry in by_role %}
-{% render "by_role.md" with entry %}
+{{- entry | render("by_role.md") -}}
 - {{ entry | link }}
 {% endfor %}
