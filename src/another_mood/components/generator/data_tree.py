@@ -8,13 +8,20 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, cast
+from typing import Any, cast, final
 
+from another_mood.components.generator.inert import (
+    InertArray,
+    InertMapping,
+    InertValue,
+)
 from another_mood.components.generator.url import url_escape
 
 
 class Node(ABC):
     """An anchorable data-tree node that links back to its container."""
+
+    __slots__ = ()
 
     # Members are instance attributes set in ``__init__``, so they are
     # declared here as plain annotations, not ``@abstractmethod`` — the
@@ -41,8 +48,12 @@ class Node(ABC):
         """
 
 
-class ArrayNode(list[Any], Node):
-    """List subclass holding a ``_parent`` reference to its container."""
+@final
+class ArrayNode(InertArray, Node):
+    """A :class:`InertArray` that also anchors — holding a ``_parent`` reference
+    to its container."""
+
+    __slots__ = ("_parent", "_segment", "_meta")
 
     def __init__(
         self,
@@ -58,17 +69,21 @@ class ArrayNode(list[Any], Node):
         self._meta: "_NodeMeta" = _NodeMeta(self, type_index)
 
     def _children(self) -> "Iterator[Node]":
-        """The element nodes; id-less elements pass through raw and are skipped."""
+        """The element nodes; anchor-less (id-less) elements are skipped."""
         return (item for item in self if isinstance(item, Node))
 
 
-class MappingNode(dict[str, Any], Node):
-    """Dict subclass holding ``_parent`` and a lazy ``_parent_record``.
+@final
+class MappingNode(InertMapping, Node):
+    """A :class:`InertMapping` that also anchors — holding ``_parent`` and a lazy
+    ``_parent_record``.
 
     ``_parent_record`` returns the nearest ``MappingNode`` ancestor,
     skipping any intervening ``ArrayNode`` layers so that a list
     element resolves directly to the containing record.
     """
+
+    __slots__ = ("_parent", "_segment", "_meta")
 
     def __init__(
         self,
@@ -91,7 +106,7 @@ class MappingNode(dict[str, Any], Node):
         return node if isinstance(node, MappingNode) else None
 
     def _children(self) -> "Iterator[Node]":
-        """The node-valued entries; raw scalar / pass-through values are skipped."""
+        """The node-valued entries; scalars and anchor-less values are skipped."""
         return (value for value in self.values() if isinstance(value, Node))
 
 
@@ -286,25 +301,25 @@ def _anchor_for(origin_item_type: str) -> _Anchor:
     return _ANCHOR_BY_ORIGIN.get(origin_item_type, _DEFAULT_ANCHOR)
 
 
-def wrap_tree(data: Mapping[str, Any]) -> MappingNode:
-    """Wrap ``data`` into a tree of :class:`MappingNode` / :class:`ArrayNode`.
+def wrap_tree(data: InertMapping) -> MappingNode:
+    """Anchor an inert tree: add parent references and node metadata.
 
-    The root :class:`MappingNode` carries ``_parent = None`` and an
-    empty ``_segment``.  Inside an Array, only Mapping elements with an
-    ``id`` field are wrapped — the others have no anchor path and so
-    do their subtrees, so they pass through raw.
+    Anchorable containers become :class:`MappingNode` / :class:`ArrayNode`;
+    where no anchor path reaches — an id-less Array element or a nested Array
+    — the inert container is kept as-is.  Input is already inert (see
+    :func:`ensure_inert`), so this only anchors.
     """
     return _wrap_mapping(
         data, parent=None, segment="", type_index=_build_type_index(data)
     )
 
 
-def build_node_map(data: Mapping[str, Any]) -> Mapping[str, Node]:
-    """Index a wrapped data tree by anchor path in a single wrap pass.
+def build_node_map(data: InertMapping) -> Mapping[str, Node]:
+    """Index a wrapped data tree by anchor path.
 
     Maps each anchorable node's ``_meta.anchor_path`` to the node; the
-    root is reachable as ``result["/"]``.  Only wrapped nodes appear —
-    id-less Array elements and nested Arrays pass through raw (see
+    root is reachable as ``result["/"]``.  Only anchored nodes appear —
+    id-less Array elements and nested Arrays are anchor-less (see
     :func:`wrap_tree`) and carry no anchor path.  Built on a flat
     full-path key so the prose/blob ``/``-keeping exception needs no
     special case here: each node's own ``anchor_path`` already encodes
@@ -317,7 +332,7 @@ def iter_nodes(node: Node) -> Iterator[Node]:
     """Walk every wrapped node depth-first, ``node`` itself first.
 
     Descends via each node's :meth:`Node._children`, which already yields
-    only anchorable :class:`Node` instances — raw pass-through dicts/lists
+    only anchorable :class:`Node` instances — anchor-less inert containers
     (and their subtrees) are skipped without re-deriving any wrapping rule.
     """
     yield node
@@ -359,17 +374,15 @@ def child(node: Node, seg: object) -> Node | None:
     return next((c for c in node._children() if c._segment == key), None)
 
 
-def _build_type_index(data: Mapping[str, Any]) -> Mapping[str, str]:
+def _build_type_index(data: InertMapping) -> Mapping[str, str]:
     """Map each ObjectType id to its ``origin_item_type`` (empty without a catalog)."""
-    entities = cast(
-        Sequence[Mapping[str, Any]],
-        data.get("__definition", {}).get("entities", []),
-    )
+    definition = cast(Mapping[str, Any], data.get("__definition") or {})
+    entities = cast(Sequence[Mapping[str, Any]], definition.get("entities") or [])
     return {e["item_type"]["id"]: e["item_type"]["origin_item_type"] for e in entities}
 
 
 def _wrap_mapping(
-    source: Mapping[str, Any],
+    source: InertMapping,
     *,
     parent: Node | None,
     segment: str,
@@ -377,27 +390,12 @@ def _wrap_mapping(
 ) -> MappingNode:
     node = MappingNode({}, parent=parent, segment=segment, type_index=type_index)
     for key, value in source.items():
-        if isinstance(value, Mapping):
-            node[key] = _wrap_mapping(
-                cast(Mapping[str, Any], value),
-                parent=node,
-                segment=key,
-                type_index=type_index,
-            )
-        elif isinstance(value, list):
-            node[key] = _wrap_array(
-                cast(Iterable[Any], value),
-                parent=node,
-                segment=key,
-                type_index=type_index,
-            )
-        else:
-            node[key] = value
+        node[key] = _wrap_child(value, parent=node, segment=key, type_index=type_index)
     return node
 
 
 def _wrap_array(
-    source: Iterable[Any],
+    source: InertArray,
     *,
     parent: Node,
     segment: str,
@@ -405,19 +403,37 @@ def _wrap_array(
 ) -> ArrayNode:
     node = ArrayNode([], parent=parent, segment=segment, type_index=type_index)
     for value in source:
-        if isinstance(value, Mapping) and "id" in value:
+        if isinstance(value, InertMapping) and "id" in value:
             # Mapping element of an Array — anchor segment is its ``id``.
-            mapping = cast(Mapping[str, Any], value)
             node.append(
                 _wrap_mapping(
-                    mapping,
+                    value,
                     parent=node,
-                    segment=str(mapping["id"]),
+                    segment=str(value["id"]),
                     type_index=type_index,
                 )
             )
         else:
-            # No anchor path reaches scalars, lists, or id-less Mappings
-            # — leave them (and their subtrees) raw.
+            # No anchor path reaches scalars, lists, or id-less Mappings —
+            # keep the already-inert value as-is.
             node.append(value)
     return node
+
+
+def _wrap_child(
+    value: InertValue,
+    *,
+    parent: Node,
+    segment: str,
+    type_index: Mapping[str, str],
+) -> InertValue:
+    """Anchor one Mapping child: an inert container becomes an anchored node, a
+    scalar passes through."""
+    if isinstance(value, InertMapping):
+        return _wrap_mapping(
+            value, parent=parent, segment=segment, type_index=type_index
+        )
+    elif isinstance(value, InertArray):
+        return _wrap_array(value, parent=parent, segment=segment, type_index=type_index)
+    else:
+        return value

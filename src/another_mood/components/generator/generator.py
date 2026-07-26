@@ -12,6 +12,7 @@ from another_mood.components.generator.data_tree import (
     Node,
     build_node_map,
 )
+from another_mood.components.generator.inert import ensure_inert
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
     Edition,
@@ -69,7 +70,7 @@ def generate(
     )
 
     # A page tree per edition, over the shared data model.
-    node_map = build_node_map(load_model(data_dir))
+    node_map = build_node_map(ensure_inert(load_model(data_dir)))
     for edition in editions:
         render_edition(edition, node_map, data_dir / "contents", out_dir)
 

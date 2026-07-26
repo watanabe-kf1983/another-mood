@@ -1,6 +1,7 @@
 """Tests for render_processor — render_filter, RenderExtension, and
 RenderProcessorImpl."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,12 @@ from typing import Any
 import pytest
 from jinja2 import DictLoader, Environment, TemplateSyntaxError
 
-from another_mood.components.generator.data_tree import wrap_tree
+from another_mood.components.generator.data_tree import MappingNode, wrap_tree
+from another_mood.components.generator.inert import (
+    InertArray,
+    InertMapping,
+    ensure_inert,
+)
 from another_mood.components.generator.render_processor import (
     PROCESSOR_KEY,
     RenderExtension,
@@ -24,6 +30,27 @@ from another_mood.components.shared.user_source.diagnostic import FileValidation
 
 
 # -- Helpers --
+
+
+def _at(root: object, *path: object) -> object:
+    """Index a wrapped tree by keys / indices; result feeds ``object``-typed
+    subject / this parameters."""
+    current = root
+    for seg in path:
+        if isinstance(current, InertArray):
+            assert isinstance(seg, int)
+            current = current[seg]
+        elif isinstance(current, InertMapping):
+            assert isinstance(seg, str)
+            current = current[seg]
+        else:
+            raise AssertionError(f"{current!r} is not indexable at {seg!r}")
+    return current
+
+
+def _wrap(data: Mapping[str, Any]) -> MappingNode:
+    """Marshal a raw dict, then anchor it — the two-stage build."""
+    return wrap_tree(ensure_inert(data))
 
 
 @dataclass
@@ -188,28 +215,30 @@ class TestRenderSubtreeGuard:
         return mock, result
 
     def test_descendant_subject_passes(self) -> None:
-        tree = wrap_tree(self._TREE)
+        tree = _wrap(self._TREE)
         mock, result = self._render(
-            '{% render "x.md" with subject %}', this=tree, subject=tree["albums"][0]
+            '{% render "x.md" with subject %}',
+            this=tree,
+            subject=_at(tree, "albums", 0),
         )
         assert result == "OK"
-        assert mock.calls == [("x.md", tree["albums"][0])]
+        assert mock.calls == [("x.md", _at(tree, "albums", 0))]
 
     def test_subject_equal_to_host_passes(self) -> None:
-        tree = wrap_tree(self._TREE)
-        album = tree["albums"][0]
+        tree = _wrap(self._TREE)
+        album = _at(tree, "albums", 0)
         _, result = self._render(
             '{% render "x.md" with subject %}', this=album, subject=album
         )
         assert result == "OK"
 
     def test_non_descendant_subject_raises_at_tag_line(self) -> None:
-        tree = wrap_tree(self._TREE)
+        tree = _wrap(self._TREE)
         with pytest.raises(FileValidationError) as exc:
             self._render(
                 '\n\n{% render "x.md" with subject %}',
-                this=tree["albums"][0],
-                subject=tree["prose"][0],
+                this=_at(tree, "albums", 0),
+                subject=_at(tree, "prose", 0),
             )
         (diag,) = exc.value.diagnostics
         assert diag.line == 3
@@ -222,21 +251,21 @@ class TestRenderSubtreeGuard:
         # `/album_tracklist/x` is a sibling of `/album`, not a descendant, even
         # though its anchor path string-prefixes the host's -- ancestry is by
         # identity, so a prefix shortcut would wrongly accept it.
-        tree = wrap_tree({"album": {"id": "a"}, "album_tracklist": [{"id": "x"}]})
+        tree = _wrap({"album": {"id": "a"}, "album_tracklist": [{"id": "x"}]})
         with pytest.raises(FileValidationError):
             self._render(
                 '{% render "x.md" with subject %}',
-                this=tree["album"],
-                subject=tree["album_tracklist"][0],
+                this=_at(tree, "album"),
+                subject=_at(tree, "album_tracklist", 0),
             )
 
     def test_non_node_subject_is_exempt(self) -> None:
         # A string carries no anchor and no page identity, so it is exempt even
         # under a node host.
-        tree = wrap_tree(self._TREE)
+        tree = _wrap(self._TREE)
         mock, result = self._render(
             '{% render "x.md" with subject %}',
-            this=tree["albums"][0],
+            this=_at(tree, "albums", 0),
             subject="just a string",
         )
         assert result == "OK"
@@ -244,12 +273,12 @@ class TestRenderSubtreeGuard:
 
     def test_node_subject_under_non_node_host_raises(self) -> None:
         # A real node cannot be a descendant of a non-node host.
-        tree = wrap_tree(self._TREE)
+        tree = _wrap(self._TREE)
         with pytest.raises(FileValidationError):
             self._render(
                 '{% render "x.md" with subject %}',
                 this="not a node",
-                subject=tree["albums"][0],
+                subject=_at(tree, "albums", 0),
             )
 
 
@@ -276,12 +305,12 @@ class TestRenderFilter:
         """The guard fires with the host ``this`` resolved from context; a
         filter has no source line, so the diagnostic carries only the
         enclosing template's name."""
-        tree = wrap_tree({"albums": [{"id": "a1"}], "prose": [{"id": "p1"}]})
+        tree = _wrap({"albums": [{"id": "a1"}], "prose": [{"id": "p1"}]})
         processor = RenderProcessorImpl(engine=_MockEngine())
         env = _make_filter_env(processor, {"page.md": '{{ subject | render("x.md") }}'})
         with pytest.raises(FileValidationError) as exc:
             env.get_template("page.md").render(
-                this=tree["albums"][0], subject=tree["prose"][0]
+                this=_at(tree, "albums", 0), subject=_at(tree, "prose", 0)
             )
         (diag,) = exc.value.diagnostics
         assert diag.file == Path("page.md")
@@ -327,7 +356,7 @@ class TestRenderFilterViaEngine:
                 "member.md": "**{{ name }}**",
             },
         )
-        result = engine.render("index.md", wrap_tree(self._TREE))
+        result = engine.render("index.md", _wrap(self._TREE))
 
         assert "**A\\*B**" in result
 
@@ -348,7 +377,7 @@ class TestRenderFilterViaEngine:
             },
             filters={"render": hijack},
         )
-        result = engine.render("index.md", wrap_tree(self._TREE))
+        result = engine.render("index.md", _wrap(self._TREE))
 
         assert "real alice" in result
         assert "HIJACKED" not in result
@@ -363,7 +392,7 @@ class TestRenderProcessorImplFilePerRouting:
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
 
     def _member(self) -> object:
-        return wrap_tree(self._TREE)["members"][0]
+        return _at(_wrap(self._TREE), "members", 0)
 
     def test_node_in_file_per_splits(self) -> None:
         engine = _MockEngine()
@@ -421,7 +450,7 @@ class TestRenderProcessorImplPagePath:
         engine = _MockEngine()
         paging = PagingPolicy(("members.item",))
         processor = RenderProcessorImpl(engine=engine, paging=paging)
-        member = wrap_tree(self._TREE)["members"][0]
+        member = _at(_wrap(self._TREE), "members", 0)
         processor("member.md", member)
 
         # Directory is the view name (``members``), not the template stem.
@@ -438,7 +467,7 @@ class TestRenderProcessorImplReservedName:
         processor = RenderProcessorImpl(engine=engine, paging=paging)
         # `CON` is a Windows device name: `members/CON.md` writes to the
         # console, not a file, so the page is rejected on every OS.
-        member = wrap_tree({"members": [{"id": "CON"}]})["members"][0]
+        member = _at(_wrap({"members": [{"id": "CON"}]}), "members", 0)
         with pytest.raises(WindowsReservedNameError):
             processor("member.md", member)
         assert engine.written == []
@@ -486,7 +515,7 @@ class TestRenderProcessorImplViaEngine:
         paging = PagingPolicy(("members.item",))
         engine = self._make_engine(tmp_path, {"profile.md": "hi {{ id }}"}, paging)
         processor = RenderProcessorImpl(engine=engine, paging=paging)
-        processor("profile.md", wrap_tree(self._TREE)["members"][0])
+        processor("profile.md", _at(_wrap(self._TREE), "members", 0))
 
         # The split page opens with the subject node's own anchor (C9).
         assert (tmp_path / "out" / "members" / "alice.md").read_text() == (

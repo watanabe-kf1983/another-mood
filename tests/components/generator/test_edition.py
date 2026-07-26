@@ -5,7 +5,8 @@ from textwrap import dedent
 
 import pytest
 
-from another_mood.components.generator.data_tree import wrap_tree
+from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
+from another_mood.components.generator.inert import ensure_inert
 from another_mood.components.generator.edition import (
     Edition,
     PagingPolicy,
@@ -185,13 +186,20 @@ class TestPagePath:
 
     def test_no_split_boundary_is_index(self) -> None:
         # Empty file_per -> nearest_ancestor finds nothing -> index.md.
-        root = wrap_tree(self._TREE)
-        assert PagingPolicy().page_path(root["erds"][0]) == "index.md"
+        root = wrap_tree(ensure_inert(self._TREE))
+        erds = root["erds"]
+        assert isinstance(erds, ArrayNode)
+        erd = erds[0]
+        assert isinstance(erd, Node)
+        assert PagingPolicy().page_path(erd) == "index.md"
 
     def test_match_formats_anchor_path_as_md(self) -> None:
         # object_type_id "erds.item" is in file_per, so the erd is its own
         # page: leading "/" dropped, inner "/" kept (removeprefix, not
         # lstrip), ".md" appended.
-        root = wrap_tree(self._TREE)
-        erd = root["erds"][0]
+        root = wrap_tree(ensure_inert(self._TREE))
+        erds = root["erds"]
+        assert isinstance(erds, ArrayNode)
+        erd = erds[0]
+        assert isinstance(erd, Node)
         assert PagingPolicy(("erds.item",)).page_path(erd) == "erds/user-mgmt.md"
