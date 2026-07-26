@@ -510,25 +510,21 @@ categories:
       P9:
         title: marshal 契約の型・構造ロック (先行実装)
         note: >-
-          テンプレートに渡る型を TemplateSafe union に閉じ、型を正直に保つ
-          (本番の値の安全性は動的検査しない)。データツリーは load_model (Any)
-          由来ゆえ、検証を持つ container コンストラクタへ詰め替える
-          (parse, don't validate を型に): SafeMapping(dict[str,TemplateSafe]) /
-          SafeArray(list[TemplateSafe]) を基底に Node がアンカーを足す。
-          wrap_tree が木を全て Safe*/Node へ変換 (raw pass-through も詰め替え、
-          bare dict/list は消える)。①各値を exact-type で構築検証 (Any 源への
-          唯一の runtime 検証、[TemplateSafe] を裏打ち)、②非 _ 属性を __slots__
-          (Node 含む全基底) で封じる、③④非 _ メソッド・危険 dunder が無いことを
-          surface-audit テスト1本で監査 (enumerate 4型)。exact-type ゆえ
-          サブクラスは構築点で弾かれ metaclass/seal は不要 (@final は静的
-          マーカー)。filters/globals は -> TemplateSafe に締め、副作用は
-          capability を closure に閉じた render filter のみ許す。動的検査は
-          原理的に不可 (開いた値モデル) ゆえ規律を型で保つ設計。純 Python で
-          P6 非依存 (minijinja の露出 pin は P11)。dual-mode (デフォルト安全 /
-          信頼プロジェクトのみ評価エンジン解禁) も同じ籠で検討。0.1.0 を C で
-          出すため Q1 の前提。
+          テンプレに渡る値を型・構造で inert に閉じ、安全性は動的検査せず型で
+          保つ (開いた値モデルゆえ動的証明は不可)。露出する二系統を各々閉じる:
+          (a) データは inert 値モデル InertValue で閉じ、load_model (Any) 由来の
+          木を ensure_inert が検証・詰め替え (parse, don't validate)、
+          InertMapping/InertArray を基底に MappingNode/ArrayNode がアンカーを
+          足す。(b) filters/globals の戻り値はエンジン所有の受け入れ列挙
+          TemplateSafe に閉じ、生産者は具体戻り型を正直に宣言する。強制は
+          ①exact-type の構築検証 (Any 源への唯一の runtime 検証)、②__slots__ で
+          非 _ 属性を封じる、③④非 _ メソッド・危険 protocol dunder が無いことを
+          surface-audit テストが TemplateSafe 各型で監査、の三層。副作用は
+          capability を closure に閉じた render filter のみ許す。純 Python で
+          P6 非依存 (minijinja の露出 pin は P11)。0.1.0 を C で出すため Q1 の
+          前提。
         phase: 14
-        proposal: 20-design/70-generator/60-template-trust-model#marshal-契約spike-実測で確定
+        done: true
       P11:
         title: SSTI 回帰テスト (minijinja 露出セマンティクスの pin)
         note: >-
