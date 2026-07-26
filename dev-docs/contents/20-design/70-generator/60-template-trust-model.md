@@ -55,6 +55,25 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 正しい対処は値モデルを叩くのではなく、**値モデルが構造的に安全なエンジンへ移す**（C ＝ minijinja）か、**プロセス / OS 隔離**でビルドごと囲う。0.1.0 は前者を採り、`Environment` を minijinja へ差し替える（[template_engine.py](../../../../src/another_mood/components/generator/template_engine.py) の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
 
+### marshal 契約 ── テンプレに渡る値を型・構造で inert に閉じる
+
+信頼モデル C は「テンプレが触れる値に host capability への経路が無い」ことに懸かる。minijinja は渡した値の非 `_`・非 dunder メンバと container items を露出し呼べるようにする（前提の露出規則は Proposals「marshal 契約の前提」、実 render での pin は P11）。**任意 Python オブジェクトの安全性は動的に確認できない**（`__getattr__` / instance 属性 / ABC 登録で内省を欺けるので `dir()` 監査は後手）── ゆえに契約は runtime 検査でなく、**型と構造でツール側コードの規律を保つ**問題として解く。露出する二系統を各々閉じる:
+
+- **(a) データ**: inert 値モデル `InertValue = str|int|float|bool|None|InertMapping|InertArray` で閉じる。`load_model`（`Any`）由来の木を `ensure_inert` が検証・詰め替え（parse, don't validate）、`MappingNode`/`ArrayNode` が Inert container を継承してアンカーを足す。
+- **(b) filters/globals の戻り値**: エンジン所有の受け入れ列挙 `TemplateSafe = InertValue | Node | Markup | MissingNode | Undefined` で閉じる。
+
+設計の要点:
+
+- **container は exact-type／スカラーは正規化の非対称**: minijinja は container を **wrap**（Python メソッドが漏れる）ので `type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` で敵対的サブクラスを弾く（`isinstance` 不可、`@final` は無料の静的表明）。スカラーは **convert**（ネイティブ型化）でメンバが届かないので `isinstance` 受理＋exact 型へ正規化（安全な `str` サブクラスを誤って弾かないため）。
+- **`TemplateSafe` は基底でなく列挙**: 受け入れ要件は継承で表せない（派生すれば capability を足せる）ので各具体型を列挙。**受け入れ側 `template_safe` が所有しエンジンだけが参照**、生産者は自分の具体戻り型（`Node | MissingNode` 等）を正直に宣言するだけ ── 消費者→生産者の一方向 import ∴ cast も循環も生じない。`Undefined` は現行 jinja2 前提で P6 時に revisit。副作用 callable は原則禁止、`render` filter のみ例外（戻り値 `Markup`、書込 capability は closure captured）。
+
+強制のレイヤ（① データ inert / ② foreign 属性不可 / ③④ 非 `_` メソッド・危険 dunder 不可 を担保）:
+
+- **pyright（静的）**: inert container の `[InertValue]` parametrize と、filters/globals 戻り型のエンジン境界照合。
+- **render 境界ガード（runtime）**: `_bind` が subject を `ensure_inert_mapping` に通す ── 「テンプレに渡るのは inert だけ」を入口一点で強制（already-inert は O(1) 通過、非 inert は raise）。一様性のため内蔵 render も inert を渡す。①は加えて `ensure_inert` の exact-type 構築検証が担保。
+- **surface-audit テスト**: `TemplateSafe` 各型の非 `_` 表面が参照形（container=素 dict/list、`MissingNode`=宣言 field で各値 inert）に一致し、foreign 属性を植えられず（`__slots__`/frozen）、body に想定外 protocol dunder（`__getattr__`/`__getitem__`/`__call__`）が無いことを MRO 全域で監査。`Markup`/`Undefined` は engine 露出方式依存 ∴ P11 へ。
+- **残余**: `__slots__` 除去等は behavioral テストが捕まえるが、**surface-audit テスト自体の削除は型でもテストでも防げず code review が担う**。
+
 ## Proposals
 
 未実装。1.0 の配布 / 共有機能に向けて詰める。
@@ -86,9 +105,9 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 **決定（P6）: minijinja 採用。** 決め手は移行コストの少なさ（macro 0・Jinja 互換・`finalizer` あり）と LLM 執筆性（Jinja系の訓練データ相続）。安全は言語構造保証（liquid）ではなく **marshal 契約**で確保し、その構築を P9 として engine 差し替え（P6）から分離する。liquid は「未信頼テンプレを既定安全で build する」へ倒す場合の対抗案として残す。
 
-### marshal 契約（spike 実測で確定）
+### marshal 契約の前提: minijinja の露出ルール（spike 実測）
 
-#### minijinja の露出ルール
+> 実装済みの marshal 契約（型・構造ロック）は Internal Design「marshal 契約」節を参照。本節はその契約が前提とする minijinja の露出規則で、engine 差し替え（P6）で現実になり、P11 が実 render で pin する。
 
 minijinja がテンプレートに露出するのは、渡した値の **非 `_`・非 dunder のメンバ**（属性・メソッド）と container の items。実測で確定した規則:
 
@@ -99,65 +118,6 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 - **globals**: `_` ブロックは**属性は守るが global 名は守らない** — `_render_processor` は `_` 名でも丸見えで `.engine.render_to_file("p")` が実際にファイルを書いた。
 
 marshaling は **convert / wrap の非対称**: **スカラー（str/int/float/bool/None）は minijinja ネイティブ型へ*変換*される**（Python の str メソッドではなく minijinja 独自の string メソッドが露出する — `format`/`upper` 等は在るが、その `format` はフィールドに属性 traversal を持たず（`"{0.__class__}"` は「引数が見つからない」）、Python 専用の `format_map` も無い ＝ `str.format` 反射経由の format-string SSTI は不成立）。**オブジェクト（dict/list 派生を含む）は*wrap*される**（Python メソッドが漏れる）。ゆえに危険は「wrap される非スカラー（オブジェクト）経由で非 `_` capability に届く」経路に限られる。
-
-#### 動的検査ではなく「閉じた構築路＋型ロック」
-
-**任意の Python オブジェクトが安全かを動的に確認するのは不可能**（Python の値モデルは開いていて `__getattr__`/`__getattribute__`/instance 属性/ABC 登録で内省を欺ける — `dir()` 監査は SandboxedEnvironment のブロックリストと同じ後手）。ゆえに marshal 契約は「テンプレートの攻撃を実行時に弾く」ではなく、**ツール側コードの規律を型と構造で保つ**問題として解く:
-
-- **単一入口＋境界ガード**: ユーザテンプレートに渡る*データ*は generator の `build_node_map(load_model(...))` 一点で inert 木として構築される（`load_model` は逆シリアライザなので産物は inert ＝ live capability を*作れない*）。ただし安全性の担保はこの構築点だけに委ねず、**エンジンの render 境界（`_bind`）で `ensure_inert_mapping` により再表明する**。理由: 型に `TemplateSafe` / `InertValue` と名を付ける以上、「テンプレに渡す直前」に可視なガードが無いと、後から読む人に契約の強制点が伝わらない。境界ガードは already-inert な subject に対して O(1) identity 返し（構築点との二重作業にならない）、非 inert な subject（内蔵 render が渡す live オブジェクト等）は raise で弾く。もう一系統は curated な filters/globals（小さな手書き集合）。
-- **二段の型ロック**: (a) テンプレに渡る*データ*は inert 値モデル（`InertValue`）で閉じ、**render 境界（`_bind` → `InertMapping`）で強制**する、(b) filters/globals の戻り値は **`TemplateSafe`（エンジン所有の受け入れ列挙）** でエンジン境界の引数型として閉じる。下記。
-- **本番ビルドは値の安全性を動的検査しない**（主機構は型＋テスト）。`ensure_inert` の詰め替え検証だけが唯一の runtime 検証で、`Any` 源を exact-type で弾く narrow なもの。
-
-#### inert 値モデル ── テンプレに渡るデータの型（`InertValue`）
-
-データツリーは `load_model`（`Any`）由来なので、型を*正直*に保つ鍵は **検証を持つ container へ値を詰め替える**こと（parse, don't validate を型にする）:
-
-```python
-type InertValue = str | int | float | bool | None | InertMapping | InertArray
-class InertMapping(dict[str, InertValue]):       # アンカー無しの inert container（基底）
-    __slots__ = ()
-class InertArray(list[InertValue]):
-    __slots__ = ()
-class MappingNode(InertMapping, Node):            # ＋ アンカー（_parent/_segment/_meta）
-    __slots__ = ("_parent", "_segment", "_meta")
-class ArrayNode(InertArray, Node):
-    __slots__ = ("_parent", "_segment", "_meta")
-```
-
-marshal（`ensure_inert`）と anchoring（`wrap_tree`）は分離: `ensure_inert` が `Any` 境界で木を検証・詰め替え、`wrap_tree` は詰め替え済み inert ツリーを受けてアンカー（MappingNode/ArrayNode）を付ける。
-
-| 要件 | 手段 |
-|---|---|
-| ① container が非 InertValue を保持しない | **`ensure_inert` の構築検証**: 各葉を分岐 ── スカラー（str/int/float/bool/None）は受理し**exact 型へ正規化**、dict/list は **exact-type** で Inert* へ変換（再帰）、それ以外は raise。`Any` 源に対する唯一の runtime 検証 |
-| ② 非 `_` 属性を持てない（`self.pub=os`） | **`__slots__`**（`Node` 含む全基底に宣言 — 一つ欠くと `__dict__` 復活） |
-| ③④ 非 `_` メソッド・危険な dunder override を持たない | **surface-audit テスト1本**: 4型（InertMapping/InertArray/MappingNode/ArrayNode）の非 `_` 表面 == 素 dict/list ＋ body に想定外 dunder 無し を assert |
-
-- **container は exact-type（`isinstance` ではない）／スカラーは正規化**: 許容 container を `type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` で判定。`isinstance` だと敵対的サブクラスを通す（minijinja が container を **wrap** し非 `_` メソッドが漏れる）。exact-type ゆえ container サブクラスは構築点で悉く弾かれ、`@typing.final` は静的 no-subclass 表明として無料で残す。**スカラーは非対称に扱う**: minijinja はスカラーを **convert**（ネイティブ型へ）するのでサブクラスの属性・メソッドはテンプレに届かず安全 ── ゆえに `isinstance` で受理し、downstream の「exact 型のみ」を保つため exact 型へ正規化する（例: 位置注釈付き `UserStr` → `str`）。この正規化が無いと、`str` サブクラス（診断用の provenance 付き文字列など）を安全なのに誤って弾く。
-- **④「危険 dunder」の実体は body での protocol dunder override**: minijinja は `__class__` 等の dunder を構造封鎖する（上記露出ルール）ので、危険は dunder が*見える*ことではなく、minijinja が render 中に invoke する protocol dunder（属性アクセス / `__getitem__` / `__call__`）を我々の body が override して非 inert 値を返すこと。surface-audit はこれを MRO 全域で監査するため、`Node` や sub-class 裏に紛れた foreign base の dunder も捕える。
-
-#### `TemplateSafe` ── 型ではなく、エンジンが所有する受け入れ列挙
-
-**`TemplateSafe` は型ではない**。filters/globals がテンプレに露出してよい**具体型の whitelist に名を付けた union alias** にすぎない。
-
-- 受け入れ要件（capability-free な表面・exact-type）は**継承で表現できない性質** ── どんなクラスも派生させれば非 `_` メンバや capability を足せて Safe でなくなる（だから `ensure_inert` も `type(v) in {...}`）。「TemplateSafe を継承する基底」は作れず、**受け入れ可能な各具体型を列挙する**しかない。各メンバは `TemplateSafe` の派生ではなく、列挙された要素。
-- whitelist は**受け入れる側（エンジン部分系の専用モジュール `template_safe`）が所有し、エンジン側だけが参照する**。**生産者（filters/globals を書くモジュール）は `TemplateSafe` を参照しない** ── 各生産者は自分の具体戻り型（`Node | MissingNode` / `Markup` / `InertValue | Undefined` 等）を正直に宣言するだけ。「安全か」は生産者が型で主張するものではなく、境界でエンジンが下す判定。
-- 列挙: `TemplateSafe = InertValue | Node | Markup | MissingNode | Undefined`。`template_safe` が各メンバを**それぞれの住処から import** して組む（`InertValue`←inert / `Node`←data_tree / `MissingNode`←data_tree_filters / `Markup`←markupsafe / `Undefined`←jinja2）。**消費者→生産者の一方向 import** ゆえ循環しない（生産者は `template_safe` を import しないため）。
-    - `MissingNode` は生産者 data_tree_filters に**据え置く**（値型を「土台」へ動かす必要はない ── whitelist が生産者の型を列挙するだけ）。
-    - `Undefined`（欠損 lookup の sentinel、finalize で `""`）は capability-free な露出値なのでメンバ。これは現行 jinja2 前提の列挙で、engine 差し替え（P6）時に revisit。P9 の engine-independent は「差し替え前に着手可能」の意で、差し替え前に jinja2 を参照するのは妥当（要件自体が minijinja の露出仕様から逆算されている）。
-
-**依存の向き（cast を生まない DAG）**: 具体値型・生産者（inert / data_tree / data_tree_filters / markupsafe / jinja2）を、`template_safe` が下向きに import して `TemplateSafe` を組み、`template_engine` が境界で強制する。生産者側にもオーケストレーション側にも `-> TemplateSafe` 注釈や cast は現れない。cast が要る設計はこの依存の向きが歪んでいる兆候。
-
-**強制**: エンジンの引数型 `filters/globals: Mapping[str, Callable[..., TemplateSafe]]`。生産者が組んだ正直型の filter マップをここへ渡す点で pyright が「各 filter の具体戻り型 ∈ 列挙」を照合する。`markdown_engine`（MD 束縛のエンジン構築）は filters を転送するため列挙を参照するが、生産者ではなく**エンジン部分系**なので generator でなくエンジン側に置く（`md ↔ template_engine` の循環を避け、`MD`＋`TemplateEngine`＋`TemplateSafe` を束ねる薄い専用モジュール）。
-
-**副作用の例外**: 副作用 callable は原則禁止だが、`render` filter が唯一の sanctioned 例外。戻り値は `Markup` で、書込 capability は closure に captured されテンプレから到達不能（`_` 名 global 露出を render=filter 化が閉じる）。
-
-#### 強制のレイヤと残余
-
-- **pyright**（静的）: (a) inert container が `[InertValue]` で正直に parametrize、(b) filters/globals の具体戻り型がエンジン境界で列挙 `TemplateSafe` と照合。
-- **render 境界ガード**（runtime, render ごと）: エンジンの `_bind` が subject を `ensure_inert_mapping` に通し `InertMapping` を返す ── 「テンプレに渡るのは inert だけ」を値がテンプレに入る直前の一点で強制する。データ木は構築点で既に inert なので already-inert subject は O(1) identity 通過、非 inert（内蔵 render の live オブジェクト等）は raise。この一様な不変条件を保つため、内蔵 render も inert なデータを渡す（cover は Edition の live オブジェクトでなく参照3フィールドの inert 射影を渡す）。
-- **構築検証**（runtime, 一度）: `ensure_inert` が exact-type で各葉を検証し木を Inert* へ詰め替え ── ①の担保。
-- **surface-audit テスト**（一度）: 4型の非 `_` 表面＋body dunder を監査（`__slots__` の `__dict__` 抑止も pin）。素 dict/list の継承ビルトイン表面は露出・呼べるが inert な中身しか触らない capability-free として一度監査。
-- **残余**: 構築検証・`__slots__` を外す編集は behavioral テスト（foreign 拒否／`__dict__` 抑止）が捕まえる。**surface-audit テスト*自体*の削除は型でもテストでも防げず**、code review が担う。
 
 ### SSTI 回帰テスト（P6 依存・別タスク）
 
