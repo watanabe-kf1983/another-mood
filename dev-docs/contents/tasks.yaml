@@ -434,19 +434,6 @@ categories:
         phase: 18
       N4:
         title: render 語彙の site への改名 (render/ ディレクトリ・render stage)
-        note: >-
-          「render」が二義になった: テンプレート側の render filter (P7) と、
-          Markdown→HTML 段の render/ ディレクトリ・render stage。HTML 側を
-          site へ改名し、render をテンプレート側の唯一の語にする。成果物は
-          HTML 単体でなくテーマ・アセット込みの「ブラウザで開ける一式」なので
-          site が正確 (Hugo 自身の語彙とも一致)。利用者可視: render/ → site/、
-          --render-dir → --site-dir、RB_RENDER_DIR → RB_SITE_DIR、config の
-          render_dir → site_dir、cli.md 同期。内部: pipeline/render.py →
-          site.py (RenderStage / render_stage → Site 系、成果物名 stage は
-          build_report_stage に前例)、pipeline/adapters/renderer.py → hugo.py
-          (generator の Renderer protocol との名前衝突を解消、実体は Hugo
-          アダプタゆえ)。公開 CLI 語彙の変更なので Q1 前に済ませ、
-          エイリアスは置かない (未公開のため)。
         phase: 14
         done: true
 
@@ -509,20 +496,6 @@ categories:
         proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
       P9:
         title: marshal 契約の型・構造ロック (先行実装)
-        note: >-
-          テンプレに渡る値を型・構造で inert に閉じ、安全性は動的検査せず型で
-          保つ (開いた値モデルゆえ動的証明は不可)。露出する二系統を各々閉じる:
-          (a) データは inert 値モデル InertValue で閉じ、load_model (Any) 由来の
-          木を ensure_inert が検証・詰め替え (parse, don't validate)、
-          InertMapping/InertArray を基底に MappingNode/ArrayNode がアンカーを
-          足す。(b) filters/globals の戻り値はエンジン所有の受け入れ列挙
-          TemplateSafe に閉じ、生産者は具体戻り型を正直に宣言する。強制は
-          ①exact-type の構築検証 (Any 源への唯一の runtime 検証)、②__slots__ で
-          非 _ 属性を封じる、③④非 _ メソッド・危険 protocol dunder が無いことを
-          surface-audit テストが TemplateSafe 各型で監査、の三層。副作用は
-          capability を closure に閉じた render filter のみ許す。純 Python で
-          P6 非依存 (minijinja の露出 pin は P11)。0.1.0 を C で出すため Q1 の
-          前提。
         phase: 14
         done: true
       P11:
@@ -540,15 +513,6 @@ categories:
         proposal: 20-design/70-generator/60-template-trust-model#ssti-回帰テストp6-依存別タスク
       P7:
         title: render filter 形の追加 ({% render %} タグと併存)
-        note: >-
-          render を filter 形 `subject | render("tpl")` でも呼べるようにし、
-          {% render %} タグと併存させる (稼働プロジェクトは out-of-band で
-          filter へ移行)。filter は node / link と同じ curated helper のパイプ
-          語彙に揃い、engine 中立で現 Jinja2 でも実施可。filter 形を主として
-          採り (function 形より一貫)、this は pass_context / pass_state で取得。
-          split 時の "" は edition (Web/Book) 両立の load-bearing ゆえ静かに
-          保つ (診断化しない)。P4 (mood_view→render の静かなエイリアス併存) と
-          同じ要領。
         phase: 14
         done: true
       P8:
@@ -565,13 +529,6 @@ categories:
         phase: 14
       P10:
         title: dev-docs design/ の {% render %} タグ表記の掃除
-        note: >-
-          P7 の積み残し: filter 形が正の綴りになった時点で、タグ構文で
-          メカニズムを説明している design/ 内の表記 (8 ファイル 11 箇所) は
-          stale になった。filter 形へ書き直す。タグ自体を主題とする言及
-          (trust-model のエンジン評価、template-spec の P8 残件) は撤去まで
-          正当なので残す。前提 N4 (render→site 改名が済むと dev-docs の
-          「render」が filter の一義になり、掃除の検証が grep だけで済む)。
         phase: 14
         done: true
 
