@@ -492,6 +492,9 @@ categories:
           で、安全の残り (非 _ グラフ / globals) は marshal 契約 P9 が担保する。
           前提 P8 (minijinja はカスタムタグ非対応ゆえ、タグ廃止まで済ませる)。
           0.1.0 を C で出すため Q1 の前提 (P9 と対で安全化を完了させる)。
+          Q9 からの繰り越し DoD: 対象プラットフォームで minijinja-py の
+          compiled wheel が解決することの確認 (Rust バインディング依存が
+          実際に入るのは本タスクのため)。
         phase: 14
         proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
       P9:
@@ -633,6 +636,7 @@ categories:
           API token の発行は使い捨て運用のため publish 直前に行う (Q1 側)。
           Q1 の前提。
         phase: 14
+        done: true
       Q9:
         title: パッケージメタデータの最小整備 (LICENSE + pyproject)
         note: >-
@@ -643,8 +647,10 @@ categories:
           showcase / テスト等の開発専用物が混入しないこと。twine check 通過。
           minijinja 移行 (P6) で Rust バインディング依存が増えるため、対象
           プラットフォームで minijinja-py の compiled wheel が解決することも
-          DoD に含める。Q1 の前提。
+          DoD に含める (未検証 — P6 で engine が実際に替わる際に確認する、
+          P6 note に繰り越し済み)。Q1 の前提。
         phase: 14
+        done: true
 
   R:
     title: ユーザドキュメント・サンプルプロジェクト改善
@@ -664,7 +670,14 @@ categories:
           (PyPI) / 最小の使い方 / メンテナンス期待値の明文化 (as-is, no-SLA,
           fork 歓迎)。docs/guides.md の install 節の PyPI 化 (git+https →
           パッケージ名) も含む — docs/ は wheel に同梱されるため upload 前の
-          書き換えが必須。ローンチの顔としての全面改稿は R3。
+          書き換えが必須。README は readme 宣言により PyPI の project description
+          としてそのままレンダリングされ、旧版ページにも凍結コピーが残る。
+          リポジトリ相対リンクは PyPI 上で 404 になるため全て絶対 URL 化する
+          (画像は絶対 HTTPS のみ表示)。行き先は repo ルート・tree/main/docs・
+          動かないルート級ファイルなど粗く安定した先に限る。旧版ページのリンクが
+          現在の main を指す版ドリフトは業界標準どおり受容する (PyPI README は
+          版の凍結文書ではなく現在への案内板、が生態系の合意。attrs 等の実測で
+          版 pin リンクは皆無)。ローンチの顔としての全面改稿は R3。
           Q1 の前提。
         phase: 14
       R3:
