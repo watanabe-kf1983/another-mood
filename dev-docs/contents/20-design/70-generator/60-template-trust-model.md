@@ -55,6 +55,25 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 正しい対処は値モデルを叩くのではなく、**値モデルが構造的に安全なエンジンへ移す**（C ＝ minijinja）か、**プロセス / OS 隔離**でビルドごと囲う。0.1.0 は前者を採り、`Environment` を minijinja へ差し替える（[template_engine.py](../../../../src/another_mood/components/generator/template_engine.py) の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
 
+### marshal 契約 ── テンプレに渡る値を型・構造で inert に閉じる
+
+信頼モデル C は「テンプレが触れる値に host capability への経路が無い」ことに懸かる。minijinja は渡した値の非 `_`・非 dunder メンバと container items を露出し呼べるようにする（前提の露出規則は Proposals「marshal 契約の前提」、実 render での pin は P11）。**任意 Python オブジェクトの安全性は動的に確認できない**（`__getattr__` / instance 属性 / ABC 登録で内省を欺けるので `dir()` 監査は後手）── ゆえに契約は runtime 検査でなく、**型と構造でツール側コードの規律を保つ**問題として解く。露出する二系統を各々閉じる:
+
+- **(a) データ**: inert 値モデル `InertValue = str|int|float|bool|None|InertMapping|InertArray` で閉じる。`load_model`（`Any`）由来の木を `ensure_inert` が検証・詰め替え（parse, don't validate）、`MappingNode`/`ArrayNode` が Inert container を継承してアンカーを足す。
+- **(b) filters/globals の戻り値**: エンジン所有の受け入れ列挙 `TemplateSafe = InertValue | Node | Markup | MissingNode | Undefined` で閉じる。
+
+設計の要点:
+
+- **container は exact-type／スカラーは正規化の非対称**: minijinja は container を **wrap**（Python メソッドが漏れる）ので `type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` で敵対的サブクラスを弾く（`isinstance` 不可、`@final` は無料の静的表明）。スカラーは **convert**（ネイティブ型化）でメンバが届かないので `isinstance` 受理＋exact 型へ正規化（安全な `str` サブクラスを誤って弾かないため）。
+- **`TemplateSafe` は基底でなく列挙**: 受け入れ要件は継承で表せない（派生すれば capability を足せる）ので各具体型を列挙。**受け入れ側 `template_safe` が所有しエンジンだけが参照**、生産者は自分の具体戻り型（`Node | MissingNode` 等）を正直に宣言するだけ ── 消費者→生産者の一方向 import ∴ cast も循環も生じない。`Undefined` は現行 jinja2 前提で P6 時に revisit。副作用 callable は原則禁止、`render` filter のみ例外（戻り値 `Markup`、書込 capability は closure captured）。
+
+強制のレイヤ（① データ inert / ② foreign 属性不可 / ③④ 非 `_` メソッド・危険 dunder 不可 を担保）:
+
+- **pyright（静的）**: inert container の `[InertValue]` parametrize と、filters/globals 戻り型のエンジン境界照合。
+- **render 境界ガード（runtime）**: `_bind` が subject を `ensure_inert_mapping` に通す ── 「テンプレに渡るのは inert だけ」を入口一点で強制（already-inert は O(1) 通過、非 inert は raise）。一様性のため内蔵 render も inert を渡す。①は加えて `ensure_inert` の exact-type 構築検証が担保。
+- **surface-audit テスト**: `TemplateSafe` 各型の非 `_` 表面が参照形（container=素 dict/list、`MissingNode`=宣言 field で各値 inert）に一致し、foreign 属性を植えられず（`__slots__`/frozen）、body に想定外 protocol dunder（`__getattr__`/`__getitem__`/`__call__`）が無いことを MRO 全域で監査。`Markup`/`Undefined` は engine 露出方式依存 ∴ P11 へ。
+- **残余**: `__slots__` 除去等は behavioral テストが捕まえるが、**surface-audit テスト自体の削除は型でもテストでも防げず code review が担う**。
+
 ## Proposals
 
 未実装。1.0 の配布 / 共有機能に向けて詰める。
@@ -68,7 +87,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 | **「build = コードを走らせる」と理解させる**（ビルドツールとして正直に立つ） | **A ＋ untrusted build は OS / コンテナ隔離**。言語は不変、showcase もそのまま |
 | **「テンプレは安全なコンテンツ、知らない人が無警戒に build してよい」を維持** | **C（non-evaluating エンジン）**。知覚を「安全なコンテンツ」に保つには実態もそう作る |
 
-**決定: 0.1.0 から C（minijinja ＋ marshal 契約）。** 当初は A@0.1.0（注記のみ）→ C@1.0 の段階論だったが、C の実測軽量さ（[背景節](#external-design)）ゆえ前倒しした。C は **P6（engine 差し替え）＋ P9（marshal 契約）**で構成し、両者 phase 14（Q1 = 0.1.0 公開の前）。依存の鎖は **P7（render filter 追加）→ P8（タグ廃止）→ P6 → P9 → Q1**。B は上表の通り不採。
+**決定: 0.1.0 から C（minijinja ＋ marshal 契約）。** 当初は A@0.1.0（注記のみ）→ C@1.0 の段階論だったが、C の実測軽量さ（[背景節](#external-design)）ゆえ前倒しした。C は **P6（engine 差し替え）＋ P9（marshal 契約の型・構造）＋ P11（SSTI 回帰テスト）**で構成し、全て phase 14（Q1 = 0.1.0 公開の前）。**P9 は純 Python で P6 非依存**（型・構造ロックの先行実装）、**P11 は minijinja の実 render が要り前提 P6**。依存の鎖は **P7（render filter 追加）→ P8（タグ廃止）→ P6**、P9 は並行、**P11 は P6 の後**、Q1 は P6・P9・P11 の後。B は上表の通り不採。
 
 配布（1.0）は C を hard predecessor に持つが、その C が 0.1.0 で済むため「配布は始まったが安全化は未了」の順序事故は最初から起きない。showcase / dev-docs 全テンプレートは既に minijinja 表現可能圏（parity 実測で確認）に収まっており、0.1.0 から minijinja で回る。
 
@@ -86,16 +105,23 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 **決定（P6）: minijinja 採用。** 決め手は移行コストの少なさ（macro 0・Jinja 互換・`finalizer` あり）と LLM 執筆性（Jinja系の訓練データ相続）。安全は言語構造保証（liquid）ではなく **marshal 契約**で確保し、その構築を P9 として engine 差し替え（P6）から分離する。liquid は「未信頼テンプレを既定安全で build する」へ倒す場合の対抗案として残す。
 
-### minijinja を選ぶ場合の安全規律（marshal 契約）
+### marshal 契約の前提: minijinja の露出ルール（spike 実測）
 
-minijinja は dunder は構造封鎖するが、**渡したオブジェクトの非 `_` グラフは全開**（属性・メソッド・その戻り値を辿れる）。安全は「テンプレートに live capability を到達させない」契約で、次で機械化する:
+> 実装済みの marshal 契約（型・構造ロック）は Internal Design「marshal 契約」節を参照。本節はその契約が前提とする minijinja の露出規則で、engine 差し替え（P6）で現実になり、P11 が実 render で pin する。
 
-- **`_` 接頭辞境界**: minijinja は `_` 属性・`_` メソッドを既定で拒否（"insecure method call"）。another-mood は構造参照（`_parent`→木全体、`_meta`→アンカー戦略、`_children`）を既に `_` 予約接頭辞に置いており、**minijinja の `_` ブロックと一致 → 参照グラフは不可視**（テンプレは `_` フィールドを直接触っていない＝壊れない）。navigation は filter が Python 側で行う。
-- **唯一の構築時ガード**: `MappingNode`/`ArrayNode`（＝dict/list 派生）の内容は minijinja が map/seq の items として露出する。ゆえに **composer の単一構築点で「値・要素は primitive か Node のみ」を再帰 assert**。型 `TemplateValue = primitive | Markup | Node | Mapping | Sequence` で pyright を一次ガードに。
-- **globals 衛生（地雷）**: `_` 接頭辞は**属性は守るが global 名は守らない**。`env.globals[PROCESSOR_KEY]`（`"_render_processor"`）は `_` 名でも露出し、`.engine.render_to_file(...)` という**非 `_` メソッドでファイル書込 capability が開く**（実証）。→ globals は純粋 callable のみ。**`{% render %}` の filter 化で processor は closure に captured され global から消える**（minijinja は closure 変数を触らせない）＝この設計判断が安全にも効く。
-- **CI 回帰テスト**: `{{ x.__class__… }}` / `{{ node.非_メソッド() }}` / `{{ operational_global.… }}` を実 render に撃ち無害を assert（値モデル＋オブジェクト集合＋globals が閉じたままかを守る）。
+minijinja がテンプレートに露出するのは、渡した値の **非 `_`・非 dunder のメンバ**（属性・メソッド）と container の items。実測で確定した規則:
 
-残る恒久義務は「非 `_` に capability を置かない」＋「globals は純粋 callable」の2点で、`_` 規約と render=filter が大半を肩代わりする。
+- **dunder（`__class__` 等）**: 構造封鎖（undefined）。
+- **`_` 接頭辞の属性・メソッド**: 既定で拒否（"insecure method call"）。**dict/list 派生かは無関係、純粋に `_` の有無**。
+- **非 `_` の属性・メソッド**: 露出し、**呼べる**（dict 派生に生やした `danger()` が `os.getcwd()` を実行）。戻り値もさらに辿れる。
+- **container items**（dict 値 / list 要素）: map/seq として露出。
+- **globals**: `_` ブロックは**属性は守るが global 名は守らない** — `_render_processor` は `_` 名でも丸見えで `.engine.render_to_file("p")` が実際にファイルを書いた。
+
+marshaling は **convert / wrap の非対称**: **スカラー（str/int/float/bool/None）は minijinja ネイティブ型へ*変換*される**（Python の str メソッドではなく minijinja 独自の string メソッドが露出する — `format`/`upper` 等は在るが、その `format` はフィールドに属性 traversal を持たず（`"{0.__class__}"` は「引数が見つからない」）、Python 専用の `format_map` も無い ＝ `str.format` 反射経由の format-string SSTI は不成立）。**オブジェクト（dict/list 派生を含む）は*wrap*される**（Python メソッドが漏れる）。ゆえに危険は「wrap される非スカラー（オブジェクト）経由で非 `_` capability に届く」経路に限られる。
+
+### SSTI 回帰テスト（P6 依存・別タスク）
+
+上記の安全性は minijinja の露出セマンティクスに依存し、その pin は**実 render に撃つ回帰テスト**が担う。**現行 minijinja-py での実測は確定したが露出規則は将来版で変わりうる**ため「現行で安全、それを回帰テストで固定する」姿勢を採る。payload: dunder 直記法 / `attr('__class__')` / `str.format`・`format_map` の format-string 系 / `_` 名 global 露出 / 非 `_` メソッド dispatch（いずれも周知の古典で新規開示にはならない）。**minijinja を実行環境に入れる P6 まで走らせられない**ため、型・構造の先行実装（P9）とは別タスク（P11）に分ける。
 
 ### 移行コスト・エラー品質・執筆性（spike 実施済）
 

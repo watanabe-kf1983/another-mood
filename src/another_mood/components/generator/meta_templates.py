@@ -5,12 +5,17 @@ from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
 from itertools import chain, pairwise
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import yaml
 from jinja2 import Undefined
 
 from another_mood.components.generator.edition import Edition, PagingPolicy
+from another_mood.components.generator.inert import (
+    InertArray,
+    InertValue,
+    ensure_inert,
+)
 from another_mood.components.shared import json_data_model
 
 META_TEMPLATES_DIR = Path(
@@ -18,7 +23,7 @@ META_TEMPLATES_DIR = Path(
 )
 
 
-def pluck(row: object, key_path: str) -> object:
+def pluck(row: object, key_path: str) -> InertValue | Undefined:
     """Jinja2 filter wrapper around :func:`json_data_model.pluck`.
 
     Missing keys and broken intermediate steps yield Jinja2's
@@ -28,32 +33,34 @@ def pluck(row: object, key_path: str) -> object:
     if not isinstance(row, Mapping):
         return Undefined()
     try:
-        return json_data_model.pluck(cast(Mapping[str, object], row), key_path)
+        value = json_data_model.pluck(cast(Mapping[str, object], row), key_path)
     except KeyError:
         return Undefined()
+    # The shared pluck is typed to return `object`; re-marshal to inert.
+    return ensure_inert(value)
 
 
 def walk_entity(
     views: object,
     entity_id: str,
     entities: Sequence[Mapping[str, object]],
-) -> object:
+) -> InertArray:
     """Collect all rows of ``entity_id`` (root or descendant) from
     the ``views`` mapping.
 
     Descent for child entities follows the catalog's ``parent_entity``
     chain rather than parsing the dotted id, so singleton-traversed
     paths like ``__definition.entities.item_type.attributes`` resolve
-    via :func:`json_data_model.pluck`'s dotted lookup. Missing root key
-    or absent intermediate keys collapse to an empty list — the
-    ``{% if rows %}`` guard in built-in templates renders ``(no records)``
-    either way.
+    via :func:`json_data_model.pluck`'s dotted lookup. A non-mapping
+    ``views``, a missing root key, or an absent intermediate key all
+    collapse to an empty list — the ``{% if rows %}`` guard in built-in
+    templates renders ``(no records)`` either way.
     """
     if not isinstance(views, Mapping):
-        return Undefined()
+        return InertArray()
     by_id = {cast(str, e["id"]): e for e in entities}
     ancestors = _ancestor_chain(entity_id, by_id)
-    rows: Sequence[object] = _safe_pluck(
+    rows: Sequence[InertValue] = _safe_pluck(
         cast(Mapping[str, object], views), ancestors[0]
     )
     for parent_id, child_id in pairwise(ancestors):
@@ -64,7 +71,7 @@ def walk_entity(
                 for row in cast(Sequence[Mapping[str, object]], rows)
             )
         )
-    return rows
+    return InertArray(rows)
 
 
 def to_yaml(value: object, flow: bool = False) -> str:
@@ -92,7 +99,7 @@ def to_yaml(value: object, flow: bool = False) -> str:
     ).rstrip()
 
 
-META_TEMPLATES_FILTERS: Mapping[str, Callable[..., Any]] = {
+META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue | Undefined]] = {
     "pluck": pluck,
     "to_yaml": to_yaml,
     "walk_entity": walk_entity,
@@ -130,16 +137,17 @@ def _ancestor_chain(
     return chain_
 
 
-def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[object]:
+def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[InertValue]:
     """``json_data_model.pluck`` returning ``[]`` for missing keys,
     list-wrapping scalars."""
     try:
         value = json_data_model.pluck(row, key_path)
     except KeyError:
         return []
-    if isinstance(value, list):
-        return cast(Sequence[object], value)
-    return [value]
+    inert = ensure_inert(value)
+    if isinstance(inert, InertArray):
+        return inert
+    return [inert]
 
 
 # ── to_yaml dumpers and representers ─────────────────────────────────

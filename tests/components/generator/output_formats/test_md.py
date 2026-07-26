@@ -6,6 +6,7 @@ from jinja2 import Environment
 from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import Node, build_node_map
+from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.data_tree_filters import (
     MissingNode,
     make_data_tree_filters,
@@ -245,11 +246,14 @@ class TestMdLink:
 class TestMdAnchor:
     def test_returns_markup(self) -> None:
         assert isinstance(
-            md_anchor(build_node_map(_ANCHOR_DATA)["/members/alice"]), Markup
+            md_anchor(
+                build_node_map(ensure_inert_mapping(_ANCHOR_DATA))["/members/alice"]
+            ),
+            Markup,
         )
 
     def test_emits_closed_anchor_with_node_anchor_path(self) -> None:
-        node = build_node_map(_ANCHOR_DATA)["/members/alice"]
+        node = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))["/members/alice"]
         # The id reuses the node's anchor path — the same string href puts in
         # the fragment — so the two ends of a link match by construction.
         assert md_anchor(node) == '<a id="/members/alice"></a>'
@@ -263,7 +267,9 @@ class TestMdAnchor:
         # A heading's id is emitted natively by the renderer (Goldmark/GitHub);
         # stamping it too would duplicate the id, so the landing is left to
         # the renderer (`stamps_anchor` false).
-        heading = build_node_map(_ANCHOR_DATA)["/prose/design/architecture#エラー処理"]
+        heading = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))[
+            "/prose/design/architecture#エラー処理"
+        ]
         assert md_anchor(heading) == ""
 
 
@@ -272,14 +278,14 @@ class TestMdPostProcess:
     top of its output (C9), and leaves a non-node render untouched."""
 
     def test_stamps_node_subject_anchor_on_its_own_line(self) -> None:
-        node = build_node_map(_ANCHOR_DATA)["/members/alice"]
+        node = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))["/members/alice"]
         # Newline-separated so the anchor cannot glue onto a following heading.
         assert (
             stamp_anchor("# Alice\n", node) == '<a id="/members/alice"></a>\n# Alice\n'
         )
 
     def test_stamps_root_node_anchor(self) -> None:
-        root = build_node_map(_ANCHOR_DATA)["/"]
+        root = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))["/"]
         assert stamp_anchor("# Index\n", root) == '<a id="/"></a>\n# Index\n'
 
     def test_non_node_subject_is_returned_untouched(self) -> None:
@@ -290,7 +296,9 @@ class TestMdPostProcess:
     def test_prose_heading_subject_is_left_unstamped(self) -> None:
         # A heading lands on the renderer's native id, so the auto-stamp
         # (like the `anchor` filter) emits nothing for it.
-        heading = build_node_map(_ANCHOR_DATA)["/prose/design/architecture#エラー処理"]
+        heading = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))[
+            "/prose/design/architecture#エラー処理"
+        ]
         assert stamp_anchor("## エラー処理\n", heading) == "## エラー処理\n"
 
 
@@ -344,7 +352,7 @@ _ANCHOR_FILE_PER = ("members.item", "by_role.item", "prose.item")
 
 
 def _anchors() -> dict[str, Node]:
-    return dict(build_node_map(_ANCHOR_DATA))
+    return dict(build_node_map(ensure_inert_mapping(_ANCHOR_DATA)))
 
 
 def _paging() -> PagingPolicy:

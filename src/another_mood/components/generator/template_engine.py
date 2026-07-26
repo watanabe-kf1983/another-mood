@@ -3,7 +3,7 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from jinja2 import (
     ChainableUndefined,
@@ -19,6 +19,8 @@ from another_mood.components.generator.render_processor import (
     RenderProcessorImpl,
 )
 from another_mood.components.generator.edition import PagingPolicy
+from another_mood.components.generator.inert import InertMapping, ensure_inert_mapping
+from another_mood.components.generator.template_safe import TemplateSafe
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -76,18 +78,21 @@ def make_environment(output_format: OutputFormat) -> Environment:
     )
 
 
-def _bind(subject: object) -> Mapping[str, object]:
+def _bind(subject: object) -> InertMapping:
     """Build a template's render context: bind the subject as ``this``.
 
     A Mapping subject additionally spreads its keys as top-level names, so
     bare ``{{ field }}`` access works without a ``this.`` prefix.  ``this``
     is reserved: a subject key of that name is shadowed by the binding.
+
+    The context is marshaled to inert, raising if the subject is not.
     """
     if isinstance(subject, Mapping):
         fields = cast(Mapping[str, object], subject)
-        return {**fields, "this": fields}
+        context: Mapping[str, object] = {**fields, "this": fields}
     else:
-        return {"this": subject}
+        context = {"this": subject}
+    return ensure_inert_mapping(context)
 
 
 class PageCollisionError(UserError):
@@ -161,8 +166,8 @@ class TemplateEngine:
         *,
         templates_dir: Path,
         output_format: OutputFormat,
-        filters: Mapping[str, Callable[..., Any]],
-        globals: Mapping[str, Callable[..., Any]] = {},
+        filters: Mapping[str, Callable[..., TemplateSafe]],
+        globals: Mapping[str, Callable[..., TemplateSafe]] = {},
         paging: PagingPolicy = PagingPolicy(),
     ) -> None:
         self._out_dir = out_dir

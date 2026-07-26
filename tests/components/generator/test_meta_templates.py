@@ -3,7 +3,8 @@
 import pytest
 from jinja2 import Undefined
 
-from another_mood.components.generator.data_tree import wrap_tree
+from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
+from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.meta_templates import (
     META_EDITION,
     pluck,
@@ -22,7 +23,10 @@ class TestMetaEdition:
 
     @pytest.mark.parametrize("view", ["__entity_defs", "__entity_data", "__queries"])
     def test_meta_query_item_splits_to_its_page(self, view: str) -> None:
-        node = wrap_tree({view: [{"id": "sample"}]})[view][0]
+        array = wrap_tree(ensure_inert_mapping({view: [{"id": "sample"}]}))[view]
+        assert isinstance(array, ArrayNode)
+        node = array[0]
+        assert isinstance(node, Node)
         assert META_EDITION.paging.page_path(node) == f"{view}/sample.md"
 
 

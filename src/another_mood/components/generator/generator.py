@@ -2,16 +2,17 @@
 and reconcile the output with the propagated BuildReport.
 """
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from another_mood.components.generator.data_tree import (
     MappingNode,
     Node,
     build_node_map,
 )
+from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
     Edition,
@@ -26,6 +27,7 @@ from another_mood.components.generator.output_formats.md import (
     make_link_filters,
 )
 from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.generator.template_safe import TemplateSafe
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
@@ -43,7 +45,7 @@ _COVER_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "cover")
 )
 
-_NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
+_NO_FILTERS: Mapping[str, Callable[..., TemplateSafe]] = {}
 
 _BLOB_NAMESPACE = "/blob/"
 
@@ -61,15 +63,10 @@ def generate(
     user_editions = load_editions(reports_file, templates_dir)
     editions = (META_EDITION, *user_editions)
 
-    # The root cover just lists the editions — no data model, so no filters.
-    markdown_engine(out_dir, _COVER_TEMPLATES_DIR).render_to_file(
-        "index.md",
-        {"editions": editions, "project_name": project_name},
-        Path("index.md"),
-    )
+    render_editions_index(editions, project_name, out_dir)
 
     # A page tree per edition, over the shared data model.
-    node_map = build_node_map(load_model(data_dir))
+    node_map = build_node_map(ensure_inert_mapping(load_model(data_dir)))
     for edition in editions:
         render_edition(edition, node_map, data_dir / "contents", out_dir)
 
@@ -124,6 +121,29 @@ def _append_warnings_link(index_md: Path, count: int) -> None:
     )
 
 
+def render_editions_index(
+    editions: Sequence[Edition], project_name: str, out_dir: Path
+) -> None:
+    """Render the root cover listing the editions (no data model, no filters)."""
+    # Project each edition to the fields the cover reads: the render boundary
+    # marshals subjects to inert, and a live Edition (callables / paths) is not.
+    markdown_engine(out_dir, _COVER_TEMPLATES_DIR).render_to_file(
+        "index.md",
+        {
+            "editions": [
+                {
+                    "name": e.name,
+                    "dir_segment": e.dir_segment,
+                    "is_system": e.is_system,
+                }
+                for e in editions
+            ],
+            "project_name": project_name,
+        },
+        Path("index.md"),
+    )
+
+
 def render_edition(
     edition: Edition,
     node_map: Mapping[str, Node],
@@ -165,8 +185,8 @@ def markdown_engine(
     out_dir: Path,
     templates_dir: Path,
     *,
-    filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
-    globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
+    filters: Mapping[str, Callable[..., TemplateSafe]] = _NO_FILTERS,
+    globals: Mapping[str, Callable[..., TemplateSafe]] = _NO_FILTERS,
     paging: PagingPolicy = PagingPolicy(),
 ) -> TemplateEngine:
     """A ``TemplateEngine`` bound to the Markdown output format and its helpers.
