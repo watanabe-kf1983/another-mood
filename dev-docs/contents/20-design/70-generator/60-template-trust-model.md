@@ -130,9 +130,10 @@ marshal（`ensure_inert`）と anchoring（`wrap_tree`）は分離: `ensure_iner
 |---|---|
 | ① container が非 InertValue を保持しない | **`ensure_inert` の構築検証**: 各葉を **exact-type** で分岐 ── スカラー（str/int/float/bool/None）はそのまま、dict/list は Inert* へ変換（再帰）、それ以外は raise。`Any` 源に対する唯一の runtime 検証 |
 | ② 非 `_` 属性を持てない（`self.pub=os`） | **`__slots__`**（`Node` 含む全基底に宣言 — 一つ欠くと `__dict__` 復活） |
-| ③④ 非 `_` メソッド・危険 dunder を持たない | **surface-audit テスト1本**: 4型（InertMapping/InertArray/MappingNode/ArrayNode）の非 `_` 表面 == 素 dict/list ＋ body に想定外 dunder 無し を assert |
+| ③④ 非 `_` メソッド・危険な dunder override を持たない | **surface-audit テスト1本**: 4型（InertMapping/InertArray/MappingNode/ArrayNode）の非 `_` 表面 == 素 dict/list ＋ body に想定外 dunder 無し を assert |
 
 - **exact-type（`isinstance` ではない）**: 許容 container を `type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` で判定。`isinstance` だと敵対的サブクラスを通す（minijinja が wrap し非 `_` メソッドが漏れる）。exact-type ゆえサブクラスは構築点で悉く弾かれ、`@typing.final` は静的 no-subclass 表明として無料で残す。
+- **④「危険 dunder」の実体は body での protocol dunder override**: minijinja は `__class__` 等の dunder を構造封鎖する（上記露出ルール）ので、危険は dunder が*見える*ことではなく、minijinja が render 中に invoke する protocol dunder（属性アクセス / `__getitem__` / `__call__`）を我々の body が override して非 inert 値を返すこと。surface-audit はこれを MRO 全域で監査するため、`Node` や sub-class 裏に紛れた foreign base の dunder も捕える。
 
 #### `TemplateSafe` ── 型ではなく、エンジンが所有する受け入れ列挙
 
