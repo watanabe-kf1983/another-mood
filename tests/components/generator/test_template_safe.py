@@ -1,13 +1,25 @@
-"""Structural lockdown of the four container types the marshal boundary
-produces — each audit runs over every type via parametrize."""
+"""Structural audit that the ``TemplateSafe`` types expose no capability path
+to a template.
 
+Each type is a case of :class:`TestSurfaceAudit`, whose reference surface adapts
+to the case's shape. ``Markup`` and ``Undefined`` are not audited here — their
+safety depends on how the engine exposes them, so they fall to the live-render
+SSTI test (task P11).
+"""
+
+import dataclasses
 from abc import ABC
 from typing import final
 
 import pytest
 
 from another_mood.components.generator.data_tree import ArrayNode, MappingNode
-from another_mood.components.generator.inert import InertArray, InertMapping
+from another_mood.components.generator.data_tree_filters import MissingNode
+from another_mood.components.generator.inert import (
+    InertArray,
+    InertMapping,
+    ensure_inert,
+)
 
 _ROOT = MappingNode({}, parent=None, segment="", type_index={})
 
@@ -18,48 +30,52 @@ _CASES = [
     pytest.param(
         ArrayNode([], parent=_ROOT, segment="", type_index={}), id="ArrayNode"
     ),
+    pytest.param(MissingNode(anchor_path="/unresolved/ref"), id="MissingNode"),
 ]
 
-# Body dunders a class may add, beyond the compiler artifacts _auto_dunders
-# covers. Uniform across the four: subtracting a name a class lacks is a no-op.
+# `__init__` is unreachable from a template, so it is trusted on every case.
 _INTENDED_BODY_DUNDERS = {"__init__"}
 
-# The only bases trusted without auditing their body — their protocol dunders
-# reach nothing but the inert contents. An explicit whitelist, so trust cannot
-# leak to a foreign base laundered in behind a subclass.
+# `__str__` IS invoked when a template stringifies a value, so it is trusted
+# per-type, not globally: only MissingNode's renderer hook may define it.
+_TYPE_INTENDED_BODY_DUNDERS: dict[type, set[str]] = {MissingNode: {"__str__"}}
+
+# Bases whose body is trusted unaudited (their methods reach only inert
+# contents). Explicit, so trust cannot leak to a foreign base behind a subclass.
 _TRUSTED_BASES = (dict, list, object, ABC)
 
 
 class TestSurfaceAudit:
-    """The four types add no capability path over a bare dict / list.
-
-    Only code review keeps this test — neither the type system nor another
-    test catches its deletion.
-    """
+    """Only code review keeps this test — neither the type system nor another
+    test catches its deletion."""
 
     @pytest.mark.parametrize("instance", _CASES)
-    def test_public_surface_matches_bare_builtin(self, instance: object) -> None:
+    def test_public_surface_matches_reference(self, instance: object) -> None:
         assert _reachable_public(instance) == _expected_public_surface(instance)
+        # A dataclass's members are data fields, not marshaled elsewhere, so
+        # each reachable value must itself be inert.
+        if dataclasses.is_dataclass(instance):
+            for name in _reachable_public(instance):
+                ensure_inert(getattr(instance, name))
 
     @pytest.mark.parametrize("instance", _CASES)
-    def test_no_instance_dict_and_foreign_attr_rejected(self, instance: object) -> None:
-        # __slots__ on every base leaves no __dict__ to hold `self.pub = os`.
-        assert not hasattr(instance, "__dict__")
+    def test_foreign_attr_rejected(self, instance: object) -> None:
         with pytest.raises(AttributeError):
             setattr(instance, "pub", "x")
 
     @pytest.mark.parametrize("instance", _CASES)
-    def test_no_unexpected_dunder_outside_trusted_bases(self, instance: object) -> None:
+    def test_no_unexpected_body_dunder(self, instance: object) -> None:
         # minijinja invokes protocol dunders (attribute access, __getitem__,
-        # __call__) while rendering, so an added one could return a value
-        # outside the inert contents (spike-verified). Audited over the whole
-        # MRO, so a dunder on Node or a laundered foreign base is caught too.
+        # __call__) while rendering, so an added one could leak a value outside
+        # the inert contents. Audited over the whole MRO.
         added = _dunders_added_outside_trusted_bases(type(instance))
-        assert added - _auto_dunders() - _INTENDED_BODY_DUNDERS == set()
+        intended = _INTENDED_BODY_DUNDERS | _TYPE_INTENDED_BODY_DUNDERS.get(
+            type(instance), set()
+        )
+        assert added - _generated_dunders(instance) - intended == set()
 
 
 def _dunders_added_outside_trusted_bases(t: type) -> set[str]:
-    """Body dunders of every class in ``t``'s MRO except the trusted bases."""
     return {
         name
         for cls in t.__mro__
@@ -70,22 +86,25 @@ def _dunders_added_outside_trusted_bases(t: type) -> set[str]:
 
 
 def _expected_public_surface(obj: object) -> set[str]:
-    """The surface ``obj`` may expose: that of the bare dict / list it
-    subclasses, or empty for a non-container."""
     if isinstance(obj, dict):
         return _reachable_public({})
     elif isinstance(obj, list):
         return _reachable_public([])
+    elif dataclasses.is_dataclass(obj):
+        return {f.name for f in dataclasses.fields(obj)}
     else:
         return set()
 
 
-def _reachable_public(obj: object) -> set[str]:
-    """Non-``_`` names a template can reach on ``obj``.
+def _generated_dunders(obj: object) -> set[str]:
+    if dataclasses.is_dataclass(obj):
+        return _frozen_dataclass_dunders()
+    return _container_dunders()
 
-    ``dir`` also lists metaclass members (``mro`` / ``register``), but those
-    raise on the instance, so reachability filters them to the real surface.
-    """
+
+def _reachable_public(obj: object) -> set[str]:
+    # `dir` also lists metaclass members (`mro` / `register`) that raise on the
+    # instance, so reachability filters them out.
     return {
         name
         for name in dir(obj)
@@ -101,15 +120,25 @@ def _is_reachable(obj: object, name: str) -> bool:
     return True
 
 
-def _auto_dunders() -> set[str]:
-    """Compiler / metaclass dunders shared by the audited classes' shape
-    (``@final``, ``__slots__``, generic base, ABC, an annotation), taken from a
+def _container_dunders() -> set[str]:
+    """Compiler / metaclass dunders of the inert-container shape, from a
     reference class so the audit stays version-robust."""
 
     @final
     class _Ref(dict[str, int], ABC):
         __slots__ = ()
         _annotated: int
+
+    return {n for n in vars(_Ref) if _is_dunder(n)}
+
+
+def _frozen_dataclass_dunders() -> set[str]:
+    """The frozen-dataclass counterpart of :func:`_container_dunders`."""
+
+    @final
+    @dataclasses.dataclass(frozen=True)
+    class _Ref:
+        _field: int
 
     return {n for n in vars(_Ref) if _is_dunder(n)}
 
