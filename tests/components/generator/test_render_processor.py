@@ -13,7 +13,7 @@ from another_mood.components.generator.data_tree import MappingNode, wrap_tree
 from another_mood.components.generator.inert import (
     InertArray,
     InertMapping,
-    ensure_inert,
+    ensure_inert_mapping,
 )
 from another_mood.components.generator.render_processor import (
     PROCESSOR_KEY,
@@ -50,7 +50,7 @@ def _at(root: object, *path: object) -> object:
 
 def _wrap(data: Mapping[str, Any]) -> MappingNode:
     """Marshal a raw dict, then anchor it — the two-stage build."""
-    return wrap_tree(ensure_inert(data))
+    return wrap_tree(ensure_inert_mapping(data))
 
 
 @dataclass

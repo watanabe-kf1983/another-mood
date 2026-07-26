@@ -7,7 +7,7 @@ is tested with the format that owns them, in ``output_formats/test_md.py``.
 """
 
 from another_mood.components.generator.data_tree import Node, build_node_map
-from another_mood.components.generator.inert import ensure_inert
+from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.data_tree_filters import (
     MissingNode,
     build_anchor_path,
@@ -46,7 +46,7 @@ _FILE_PER = ("members.item", "by_role.item", "prose.item")
 
 
 def _node_map() -> dict[str, Node]:
-    return dict(build_node_map(ensure_inert(_DATA)))
+    return dict(build_node_map(ensure_inert_mapping(_DATA)))
 
 
 def _paging() -> PagingPolicy:
@@ -211,7 +211,7 @@ class TestNodeLabel:
         assert node_label(nodes["/members/alice"]) == "Alice"
 
     def test_falls_back_to_id(self) -> None:
-        nodes = build_node_map(ensure_inert({"items": [{"id": "only-id"}]}))
+        nodes = build_node_map(ensure_inert_mapping({"items": [{"id": "only-id"}]}))
         assert node_label(nodes["/items/only-id"]) == "only-id"
 
     def test_falls_back_to_anchor_path(self) -> None:
@@ -221,7 +221,7 @@ class TestNodeLabel:
 
     def test_mapping_without_title_name_id_falls_back_to_anchor_path(self) -> None:
         # A singleton mapping carrying none of the keys uses its path.
-        nodes = build_node_map(ensure_inert({"overview": {"foo": "bar"}}))
+        nodes = build_node_map(ensure_inert_mapping({"overview": {"foo": "bar"}}))
         assert node_label(nodes["/overview"]) == "/overview"
 
     def test_missing_node_renders_its_path(self) -> None:

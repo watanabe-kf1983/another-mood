@@ -20,13 +20,13 @@ from another_mood.components.generator.data_tree import (
 from another_mood.components.generator.inert import (
     InertArray,
     InertMapping,
-    ensure_inert,
+    ensure_inert_mapping,
 )
 
 
 def _wrap(data: Mapping[str, Any]) -> MappingNode:
     """Marshal a raw dict, then anchor it — the two-stage build under test."""
-    return wrap_tree(ensure_inert(data))
+    return wrap_tree(ensure_inert_mapping(data))
 
 
 def _at(root: object, *path: object) -> object:
@@ -460,7 +460,7 @@ class TestBuildNodeMap:
 
     def test_each_node_keyed_by_its_anchor_path(self) -> None:
         nodes = build_node_map(
-            ensure_inert({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
+            ensure_inert_mapping({"erds": [{"id": "u", "entities": [{"id": "x"}]}]})
         )
         for path, node in nodes.items():
             assert node._meta.anchor_path == path
@@ -470,7 +470,7 @@ class TestBuildNodeMap:
         assert nodes["/erds/u/entities/x"] is _at(u, "entities", 0)
 
     def test_root_is_the_slash_entry(self) -> None:
-        nodes = build_node_map(ensure_inert({"overview": {}}))
+        nodes = build_node_map(ensure_inert_mapping({"overview": {}}))
         assert isinstance(nodes["/"], MappingNode)
         assert nodes["/"]._parent is None
 

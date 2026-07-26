@@ -151,7 +151,7 @@ def _longest_backtick_run(text: str) -> int:
 
 def make_link_filters(
     paging: PagingPolicy, node_map: Mapping[str, Node]
-) -> Mapping[str, Callable[..., object]]:
+) -> Mapping[str, Callable[..., Markup]]:
     """The markdown link filters, bound to ``paging`` and the build's node map:
     ``href`` / ``link`` / ``anchor`` render a resolved node, and ``relink``
     rewrites a prose body's inline ``node:`` destinations.
@@ -242,11 +242,12 @@ MD = OutputFormat(
 
 # The format's binding-free template helpers, for the caller to inject (the
 # config / node-map-bound ones come from `make_link_filters`).
-MD_GLOBALS: Mapping[str, Callable[..., object]] = {
+MD_GLOBALS: Mapping[str, Callable[..., Markup]] = {
     "code_inline": code_inline,
     "code_fenced": code_fenced,
 }
-MD_FILTERS: Mapping[str, Callable[..., object]] = {
+# `dedent` returns bare `str`; the rest emit `Markup`.
+MD_FILTERS: Mapping[str, Callable[..., Markup | str]] = {
     "in_cell": in_cell,
     "as_url": as_url,
     "dedent": dedent,

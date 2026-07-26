@@ -5,14 +5,14 @@ and reconcile the output with the propagated BuildReport.
 from collections.abc import Callable, Mapping
 from importlib import resources
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from another_mood.components.generator.data_tree import (
     MappingNode,
     Node,
     build_node_map,
 )
-from another_mood.components.generator.inert import ensure_inert
+from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.data_tree_filters import make_data_tree_filters
 from another_mood.components.generator.edition import (
     Edition,
@@ -27,6 +27,7 @@ from another_mood.components.generator.output_formats.md import (
     make_link_filters,
 )
 from another_mood.components.generator.template_engine import TemplateEngine
+from another_mood.components.generator.template_safe import TemplateSafe
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
@@ -44,7 +45,7 @@ _COVER_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "cover")
 )
 
-_NO_FILTERS: Mapping[str, Callable[..., Any]] = {}
+_NO_FILTERS: Mapping[str, Callable[..., TemplateSafe]] = {}
 
 _BLOB_NAMESPACE = "/blob/"
 
@@ -70,7 +71,7 @@ def generate(
     )
 
     # A page tree per edition, over the shared data model.
-    node_map = build_node_map(ensure_inert(load_model(data_dir)))
+    node_map = build_node_map(ensure_inert_mapping(load_model(data_dir)))
     for edition in editions:
         render_edition(edition, node_map, data_dir / "contents", out_dir)
 
@@ -166,8 +167,8 @@ def markdown_engine(
     out_dir: Path,
     templates_dir: Path,
     *,
-    filters: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
-    globals: Mapping[str, Callable[..., Any]] = _NO_FILTERS,
+    filters: Mapping[str, Callable[..., TemplateSafe]] = _NO_FILTERS,
+    globals: Mapping[str, Callable[..., TemplateSafe]] = _NO_FILTERS,
     paging: PagingPolicy = PagingPolicy(),
 ) -> TemplateEngine:
     """A ``TemplateEngine`` bound to the Markdown output format and its helpers.

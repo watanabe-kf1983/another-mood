@@ -3,7 +3,7 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from jinja2 import (
     ChainableUndefined,
@@ -19,6 +19,7 @@ from another_mood.components.generator.render_processor import (
     RenderProcessorImpl,
 )
 from another_mood.components.generator.edition import PagingPolicy
+from another_mood.components.generator.template_safe import TemplateSafe
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -161,8 +162,8 @@ class TemplateEngine:
         *,
         templates_dir: Path,
         output_format: OutputFormat,
-        filters: Mapping[str, Callable[..., Any]],
-        globals: Mapping[str, Callable[..., Any]] = {},
+        filters: Mapping[str, Callable[..., TemplateSafe]],
+        globals: Mapping[str, Callable[..., TemplateSafe]] = {},
         paging: PagingPolicy = PagingPolicy(),
     ) -> None:
         self._out_dir = out_dir

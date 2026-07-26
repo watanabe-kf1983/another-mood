@@ -22,32 +22,6 @@ from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.url import url_escape
 
 
-def make_data_tree_filters(
-    node_map: Mapping[str, Node],
-) -> tuple[
-    Mapping[str, Callable[..., object]],
-    Mapping[str, Callable[..., object]],
-]:
-    """The format-neutral data-tree filters, bound to one build's node map.
-
-    Returns ``(globals, filters)``.  ``node`` is a global only: it tells
-    escaped positional segments from a verbatim ``path=`` by keyword, which a
-    pipe (``x | node``) cannot carry.  ``label`` / ``child`` are filters.
-    """
-
-    def node(*segs: object, path: object = None, fragment: object = None) -> object:
-        return resolve_node(node_map, *segs, path=path, fragment=fragment)
-
-    globals_map: Mapping[str, Callable[..., object]] = {
-        "node": node,
-    }
-    filters_map: Mapping[str, Callable[..., object]] = {
-        "label": node_label,
-        "child": child,
-    }
-    return globals_map, filters_map
-
-
 @dataclass(frozen=True)
 class MissingNode:
     """Stands in for a reference that did not resolve, carrying the attempted
@@ -59,12 +33,40 @@ class MissingNode:
         return self.anchor_path
 
 
+def make_data_tree_filters(
+    node_map: Mapping[str, Node],
+) -> tuple[
+    Mapping[str, Callable[..., Node | MissingNode]],
+    Mapping[str, Callable[..., Node | MissingNode | str]],
+]:
+    """The format-neutral data-tree filters, bound to one build's node map.
+
+    Returns ``(globals, filters)``.  ``node`` is a global only: it tells
+    escaped positional segments from a verbatim ``path=`` by keyword, which a
+    pipe (``x | node``) cannot carry.  ``label`` / ``child`` are filters.
+    """
+
+    def node(
+        *segs: object, path: object = None, fragment: object = None
+    ) -> Node | MissingNode:
+        return resolve_node(node_map, *segs, path=path, fragment=fragment)
+
+    globals_map: Mapping[str, Callable[..., Node | MissingNode]] = {
+        "node": node,
+    }
+    filters_map: Mapping[str, Callable[..., Node | MissingNode | str]] = {
+        "label": node_label,
+        "child": child,
+    }
+    return globals_map, filters_map
+
+
 def resolve_node(
     node_map: Mapping[str, Node],
     *segs: object,
     path: object = None,
     fragment: object = None,
-) -> object:
+) -> Node | MissingNode:
     """Resolve an anchor path to its node, or a :class:`MissingNode`.
 
     ``path`` (a ready-made address) is a verbatim prefix; positional ``segs``
@@ -92,7 +94,7 @@ def build_anchor_path(*segs: object) -> str:
     return "".join("/" + url_escape(str(p), safe="") for p in segs)
 
 
-def child(parent: object, seg: object) -> object:
+def child(parent: object, seg: object) -> Node | MissingNode:
     """The ``child`` filter (``parent | child(seg)``): the relative
     counterpart to ``node``'s absolute lookup.
 

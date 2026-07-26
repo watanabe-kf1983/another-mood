@@ -140,12 +140,12 @@ marshal（`ensure_inert`）と anchoring（`wrap_tree`）は分離: `ensure_iner
 **`TemplateSafe` は型ではない**。filters/globals がテンプレに露出してよい**具体型の whitelist に名を付けた union alias** にすぎない。
 
 - 受け入れ要件（capability-free な表面・exact-type）は**継承で表現できない性質** ── どんなクラスも派生させれば非 `_` メンバや capability を足せて Safe でなくなる（だから `ensure_inert` も `type(v) in {...}`）。「TemplateSafe を継承する基底」は作れず、**受け入れ可能な各具体型を列挙する**しかない。各メンバは `TemplateSafe` の派生ではなく、列挙された要素。
-- whitelist は**受け入れる側（テンプレートエンジン）が所有し、エンジンだけが参照する**。**生産者（filters/globals を書くモジュール）は `TemplateSafe` を参照しない** ── 各生産者は自分の具体戻り型（`Node | MissingNode` / `Markup` / `InertValue | Undefined` 等）を正直に宣言するだけ。「安全か」は生産者が型で主張するものではなく、境界でエンジンが下す判定。
-- 列挙: `TemplateSafe = InertValue | Node | Markup | MissingNode | Undefined`。エンジンが各メンバを**それぞれの住処から import** する（`InertValue`←inert / `Node`←data_tree / `MissingNode`←data_tree_filters / `Markup`←markupsafe / `Undefined`←jinja2）。**消費者→生産者の一方向 import** ゆえ循環しない（生産者はエンジンを import しないため）。
+- whitelist は**受け入れる側（エンジン部分系の専用モジュール `template_safe`）が所有し、エンジン側だけが参照する**。**生産者（filters/globals を書くモジュール）は `TemplateSafe` を参照しない** ── 各生産者は自分の具体戻り型（`Node | MissingNode` / `Markup` / `InertValue | Undefined` 等）を正直に宣言するだけ。「安全か」は生産者が型で主張するものではなく、境界でエンジンが下す判定。
+- 列挙: `TemplateSafe = InertValue | Node | Markup | MissingNode | Undefined`。`template_safe` が各メンバを**それぞれの住処から import** して組む（`InertValue`←inert / `Node`←data_tree / `MissingNode`←data_tree_filters / `Markup`←markupsafe / `Undefined`←jinja2）。**消費者→生産者の一方向 import** ゆえ循環しない（生産者は `template_safe` を import しないため）。
     - `MissingNode` は生産者 data_tree_filters に**据え置く**（値型を「土台」へ動かす必要はない ── whitelist が生産者の型を列挙するだけ）。
     - `Undefined`（欠損 lookup の sentinel、finalize で `""`）は capability-free な露出値なのでメンバ。これは現行 jinja2 前提の列挙で、engine 差し替え（P6）時に revisit。P9 の engine-independent は「差し替え前に着手可能」の意で、差し替え前に jinja2 を参照するのは妥当（要件自体が minijinja の露出仕様から逆算されている）。
 
-**依存の向き（cast を生まない DAG）**: 具体値型・生産者（inert / data_tree / data_tree_filters / markupsafe / jinja2）を、`template_engine` が下向きに import して `TemplateSafe` を組み・境界で強制する。生産者側にもオーケストレーション側にも `-> TemplateSafe` 注釈や cast は現れない。cast が要る設計はこの依存の向きが歪んでいる兆候。
+**依存の向き（cast を生まない DAG）**: 具体値型・生産者（inert / data_tree / data_tree_filters / markupsafe / jinja2）を、`template_safe` が下向きに import して `TemplateSafe` を組み、`template_engine` が境界で強制する。生産者側にもオーケストレーション側にも `-> TemplateSafe` 注釈や cast は現れない。cast が要る設計はこの依存の向きが歪んでいる兆候。
 
 **強制**: エンジンの引数型 `filters/globals: Mapping[str, Callable[..., TemplateSafe]]`。生産者が組んだ正直型の filter マップをここへ渡す点で pyright が「各 filter の具体戻り型 ∈ 列挙」を照合する。`markdown_engine`（MD 束縛のエンジン構築）は filters を転送するため列挙を参照するが、生産者ではなく**エンジン部分系**なので generator でなくエンジン側に置く（`md ↔ template_engine` の循環を避け、`MD`＋`TemplateEngine`＋`TemplateSafe` を束ねる薄い専用モジュール）。
 

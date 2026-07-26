@@ -6,7 +6,7 @@ from textwrap import dedent
 import pytest
 
 from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
-from another_mood.components.generator.inert import ensure_inert
+from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.edition import (
     Edition,
     PagingPolicy,
@@ -186,7 +186,7 @@ class TestPagePath:
 
     def test_no_split_boundary_is_index(self) -> None:
         # Empty file_per -> nearest_ancestor finds nothing -> index.md.
-        root = wrap_tree(ensure_inert(self._TREE))
+        root = wrap_tree(ensure_inert_mapping(self._TREE))
         erds = root["erds"]
         assert isinstance(erds, ArrayNode)
         erd = erds[0]
@@ -197,7 +197,7 @@ class TestPagePath:
         # object_type_id "erds.item" is in file_per, so the erd is its own
         # page: leading "/" dropped, inner "/" kept (removeprefix, not
         # lstrip), ".md" appended.
-        root = wrap_tree(ensure_inert(self._TREE))
+        root = wrap_tree(ensure_inert_mapping(self._TREE))
         erds = root["erds"]
         assert isinstance(erds, ArrayNode)
         erd = erds[0]
