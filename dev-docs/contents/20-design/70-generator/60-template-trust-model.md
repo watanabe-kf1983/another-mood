@@ -104,8 +104,8 @@ marshaling は **convert / wrap の非対称**: **スカラー（str/int/float/b
 
 **任意の Python オブジェクトが安全かを動的に確認するのは不可能**（Python の値モデルは開いていて `__getattr__`/`__getattribute__`/instance 属性/ABC 登録で内省を欺ける — `dir()` 監査は SandboxedEnvironment のブロックリストと同じ後手）。ゆえに marshal 契約は「テンプレートの攻撃を実行時に弾く」ではなく、**ツール側コードの規律を型と構造で保つ**問題として解く:
 
-- **単一入口**: ユーザテンプレートに渡る*データ*は generator の `build_node_map(load_model(...))` 一点。`load_model` は逆シリアライザなので産物は inert（live capability を*作れない*）。ここが自明性の根で、各変換が inert を保存すれば出力の inert さは帰納で従う。もう一系統は curated な filters/globals（小さな手書き集合）。
-- **二段の型ロック**: (a) テンプレに渡る*データ*は inert 値モデル（`InertValue`）で閉じる、(b) filters/globals の戻り値は **`TemplateSafe`（エンジン所有の受け入れ列挙）** で閉じる。下記。
+- **単一入口＋境界ガード**: ユーザテンプレートに渡る*データ*は generator の `build_node_map(load_model(...))` 一点で inert 木として構築される（`load_model` は逆シリアライザなので産物は inert ＝ live capability を*作れない*）。ただし安全性の担保はこの構築点だけに委ねず、**エンジンの render 境界（`_bind`）で `ensure_inert_mapping` により再表明する**。理由: 型に `TemplateSafe` / `InertValue` と名を付ける以上、「テンプレに渡す直前」に可視なガードが無いと、後から読む人に契約の強制点が伝わらない。境界ガードは already-inert な subject に対して O(1) identity 返し（構築点との二重作業にならない）、非 inert な subject（内蔵 render が渡す live オブジェクト等）は raise で弾く。もう一系統は curated な filters/globals（小さな手書き集合）。
+- **二段の型ロック**: (a) テンプレに渡る*データ*は inert 値モデル（`InertValue`）で閉じ、**render 境界（`_bind` → `InertMapping`）で強制**する、(b) filters/globals の戻り値は **`TemplateSafe`（エンジン所有の受け入れ列挙）** でエンジン境界の引数型として閉じる。下記。
 - **本番ビルドは値の安全性を動的検査しない**（主機構は型＋テスト）。`ensure_inert` の詰め替え検証だけが唯一の runtime 検証で、`Any` 源を exact-type で弾く narrow なもの。
 
 #### inert 値モデル ── テンプレに渡るデータの型（`InertValue`）
@@ -128,11 +128,11 @@ marshal（`ensure_inert`）と anchoring（`wrap_tree`）は分離: `ensure_iner
 
 | 要件 | 手段 |
 |---|---|
-| ① container が非 InertValue を保持しない | **`ensure_inert` の構築検証**: 各葉を **exact-type** で分岐 ── スカラー（str/int/float/bool/None）はそのまま、dict/list は Inert* へ変換（再帰）、それ以外は raise。`Any` 源に対する唯一の runtime 検証 |
+| ① container が非 InertValue を保持しない | **`ensure_inert` の構築検証**: 各葉を分岐 ── スカラー（str/int/float/bool/None）は受理し**exact 型へ正規化**、dict/list は **exact-type** で Inert* へ変換（再帰）、それ以外は raise。`Any` 源に対する唯一の runtime 検証 |
 | ② 非 `_` 属性を持てない（`self.pub=os`） | **`__slots__`**（`Node` 含む全基底に宣言 — 一つ欠くと `__dict__` 復活） |
 | ③④ 非 `_` メソッド・危険な dunder override を持たない | **surface-audit テスト1本**: 4型（InertMapping/InertArray/MappingNode/ArrayNode）の非 `_` 表面 == 素 dict/list ＋ body に想定外 dunder 無し を assert |
 
-- **exact-type（`isinstance` ではない）**: 許容 container を `type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` で判定。`isinstance` だと敵対的サブクラスを通す（minijinja が wrap し非 `_` メソッドが漏れる）。exact-type ゆえサブクラスは構築点で悉く弾かれ、`@typing.final` は静的 no-subclass 表明として無料で残す。
+- **container は exact-type（`isinstance` ではない）／スカラーは正規化**: 許容 container を `type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` で判定。`isinstance` だと敵対的サブクラスを通す（minijinja が container を **wrap** し非 `_` メソッドが漏れる）。exact-type ゆえ container サブクラスは構築点で悉く弾かれ、`@typing.final` は静的 no-subclass 表明として無料で残す。**スカラーは非対称に扱う**: minijinja はスカラーを **convert**（ネイティブ型へ）するのでサブクラスの属性・メソッドはテンプレに届かず安全 ── ゆえに `isinstance` で受理し、downstream の「exact 型のみ」を保つため exact 型へ正規化する（例: 位置注釈付き `UserStr` → `str`）。この正規化が無いと、`str` サブクラス（診断用の provenance 付き文字列など）を安全なのに誤って弾く。
 - **④「危険 dunder」の実体は body での protocol dunder override**: minijinja は `__class__` 等の dunder を構造封鎖する（上記露出ルール）ので、危険は dunder が*見える*ことではなく、minijinja が render 中に invoke する protocol dunder（属性アクセス / `__getitem__` / `__call__`）を我々の body が override して非 inert 値を返すこと。surface-audit はこれを MRO 全域で監査するため、`Node` や sub-class 裏に紛れた foreign base の dunder も捕える。
 
 #### `TemplateSafe` ── 型ではなく、エンジンが所有する受け入れ列挙
@@ -154,6 +154,7 @@ marshal（`ensure_inert`）と anchoring（`wrap_tree`）は分離: `ensure_iner
 #### 強制のレイヤと残余
 
 - **pyright**（静的）: (a) inert container が `[InertValue]` で正直に parametrize、(b) filters/globals の具体戻り型がエンジン境界で列挙 `TemplateSafe` と照合。
+- **render 境界ガード**（runtime, render ごと）: エンジンの `_bind` が subject を `ensure_inert_mapping` に通し `InertMapping` を返す ── 「テンプレに渡るのは inert だけ」を値がテンプレに入る直前の一点で強制する。データ木は構築点で既に inert なので already-inert subject は O(1) identity 通過、非 inert（内蔵 render の live オブジェクト等）は raise。この一様な不変条件を保つため、内蔵 render も inert なデータを渡す（cover は Edition の live オブジェクトでなく参照3フィールドの inert 射影を渡す）。
 - **構築検証**（runtime, 一度）: `ensure_inert` が exact-type で各葉を検証し木を Inert* へ詰め替え ── ①の担保。
 - **surface-audit テスト**（一度）: 4型の非 `_` 表面＋body dunder を監査（`__slots__` の `__dict__` 抑止も pin）。素 dict/list の継承ビルトイン表面は露出・呼べるが inert な中身しか触らない capability-free として一度監査。
 - **残余**: 構築検証・`__slots__` を外す編集は behavioral テスト（foreign 拒否／`__dict__` 抑止）が捕まえる。**surface-audit テスト*自体*の削除は型でもテストでも防げず**、code review が担う。

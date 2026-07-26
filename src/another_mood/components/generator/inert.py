@@ -66,16 +66,21 @@ def ensure_inert_array(items: list[Any]) -> InertArray:
     return InertArray([ensure_inert(v) for v in items])
 
 
-_SCALAR_TYPES = (str, int, float, bool)
+# bool before int: bool is an int subclass, so an isinstance test for int
+# would also match a bool and normalize it to 0 / 1.
+_SCALAR_TYPES = (bool, int, float, str)
 
 
 def _inert_scalar(value: Any) -> InertValue:
-    """Accept an exact ``InertValue`` scalar leaf (str/int/float/bool/None),
-    or raise — the one runtime check backing the ``[InertValue]`` element
-    type.  Exact-type, not ``isinstance``, so a scalar subclass cannot slip in.
+    """Accept an ``InertValue`` scalar leaf (str/int/float/bool/None),
+    normalizing a scalar *subclass* to its exact type; raise on anything else.
+    The one runtime check backing the ``[InertValue]`` element type.
     """
-    if value is None or type(value) in _SCALAR_TYPES:
+    if value is None:
         return value
+    for scalar_type in _SCALAR_TYPES:
+        if isinstance(value, scalar_type):
+            return value if type(value) is scalar_type else scalar_type(value)
     raise TypeError(
         f"Non-inert value of type {type(value).__name__!r} reached "
         f"the data tree: {value!r}"
