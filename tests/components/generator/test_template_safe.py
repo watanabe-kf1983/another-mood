@@ -12,6 +12,8 @@ from abc import ABC
 from typing import final
 
 import pytest
+from jinja2 import ChainableUndefined
+from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import ArrayNode, MappingNode
 from another_mood.components.generator.data_tree_filters import MissingNode
@@ -20,6 +22,7 @@ from another_mood.components.generator.inert import (
     InertMapping,
     ensure_inert,
 )
+from another_mood.components.generator.template_safe import ensure_template_safe
 
 _ROOT = MappingNode({}, parent=None, segment="", type_index={})
 
@@ -73,6 +76,31 @@ class TestSurfaceAudit:
             type(instance), set()
         )
         assert added - _generated_dunders(instance) - intended == set()
+
+
+class TestEnsureTemplateSafe:
+    """The render boundary accepts every ``TemplateSafe`` member, by identity
+    for the engine-owned ones and by marshaling for data."""
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(ChainableUndefined(name="missing"), id="Undefined"),
+            pytest.param(MissingNode(anchor_path="/unresolved/ref"), id="MissingNode"),
+            pytest.param(Markup("<b>x</b>"), id="Markup"),
+            pytest.param(_ROOT, id="Node"),
+            pytest.param(InertMapping(), id="InertMapping"),
+        ],
+    )
+    def test_passes_through_by_identity(self, value: object) -> None:
+        assert ensure_template_safe(value) is value
+
+    def test_marshals_raw_data(self) -> None:
+        assert ensure_template_safe({"a": [1]}) == InertMapping({"a": InertArray([1])})
+
+    def test_rejects_a_non_template_safe_value(self) -> None:
+        with pytest.raises(TypeError, match="Non-inert value"):
+            ensure_template_safe(object())
 
 
 def _dunders_added_outside_trusted_bases(t: type) -> set[str]:

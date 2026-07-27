@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from markupsafe import Markup
 
+from another_mood.components.generator.data_tree_filters import MissingNode
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.template_engine import (
     OutputFormat,
@@ -59,6 +60,47 @@ class TestThisBinding:
         engine = self._engine(tmp_path, "{{ this.name }}/{{ name }}")
         subject = {"name": "Bob", "this": "ignored"}
         assert engine.render("t.md", subject) == "Bob/Bob"
+
+
+class TestRenderBoundaryAcceptsTemplateSafe:
+    """A render subject comes from a template expression, so it is
+    ``TemplateSafe`` — wider than the inert data model."""
+
+    def _engine(
+        self, tmp_path: Path, body: str, output_format: OutputFormat = MD
+    ) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text(body)
+        (templates_dir / "sub.md").write_text("[{{ this }}]")
+        return TemplateEngine(
+            tmp_path,
+            templates_dir=templates_dir,
+            output_format=output_format,
+            filters={},
+        )
+
+    def test_undefined_subject_renders_as_empty(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, '{{ mispelled | render("sub.md") }}')
+        assert engine.render("t.md", {"spelled": "x"}) == "[]"
+
+    def test_missing_node_subject_is_rendered(self, tmp_path: Path) -> None:
+        # `upper` keeps the assertion off md's punctuation escaping.
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        engine = self._engine(tmp_path, '{{ this | render("sub.md") }}', fmt)
+        subject = MissingNode(anchor_path="/unresolved/ref")
+        assert engine.render("t.md", subject) == "[/UNRESOLVED/REF]"
+
+    def test_markup_subject_is_not_escaped_a_second_time(self, tmp_path: Path) -> None:
+        # A str subclass: normalized to a bare str, finalize would escape it.
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        engine = self._engine(tmp_path, '{{ this | render("sub.md") }}', fmt)
+        assert engine.render("t.md", Markup("already")) == "[already]"
+
+    def test_non_template_safe_subject_is_still_rejected(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "{{ this }}")
+        with pytest.raises(TypeError, match="Non-inert value"):
+            engine.render("t.md", object())
 
 
 class TestFiltersParam:

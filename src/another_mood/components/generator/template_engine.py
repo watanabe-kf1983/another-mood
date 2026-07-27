@@ -19,8 +19,10 @@ from another_mood.components.generator.render_processor import (
     RenderProcessorImpl,
 )
 from another_mood.components.generator.edition import PagingPolicy
-from another_mood.components.generator.inert import InertMapping, ensure_inert_mapping
-from another_mood.components.generator.template_safe import TemplateSafe
+from another_mood.components.generator.template_safe import (
+    TemplateSafe,
+    ensure_template_safe,
+)
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -78,21 +80,22 @@ def make_environment(output_format: OutputFormat) -> Environment:
     )
 
 
-def _bind(subject: object) -> InertMapping:
+def _bind(subject: object) -> Mapping[str, TemplateSafe]:
     """Build a template's render context: bind the subject as ``this``.
 
     A Mapping subject additionally spreads its keys as top-level names, so
     bare ``{{ field }}`` access works without a ``this.`` prefix.  ``this``
     is reserved: a subject key of that name is shadowed by the binding.
 
-    The context is marshaled to inert, raising if the subject is not.
+    Each binding is marshaled through the render boundary, raising if it is not
+    template-safe.
     """
     if isinstance(subject, Mapping):
         fields = cast(Mapping[str, object], subject)
         context: Mapping[str, object] = {**fields, "this": fields}
     else:
         context = {"this": subject}
-    return ensure_inert_mapping(context)
+    return {name: ensure_template_safe(value) for name, value in context.items()}
 
 
 class PageCollisionError(UserError):
