@@ -70,7 +70,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 強制のレイヤ（① データ inert / ② foreign 属性不可 / ③④ 非 `_` メソッド・危険 dunder 不可 を担保）:
 
 - **pyright（静的）**: inert container の `[InertValue]` parametrize と、filters/globals 戻り型のエンジン境界照合。
-- **render 境界ガード（runtime）**: `_bind` が subject を `ensure_inert_mapping` に通す ── 「テンプレに渡るのは inert だけ」を入口一点で強制（already-inert は O(1) 通過、非 inert は raise）。一様性のため内蔵 render も inert を渡す。①は加えて `ensure_inert` の exact-type 構築検証が担保。
+- **render 境界ガード（runtime）**: `_bind` が各 binding を `ensure_template_safe` に通す ── 「テンプレに渡るのは `TemplateSafe` だけ」を入口一点で強制（engine 所有の非 inert メンバは素通し、data は `ensure_inert` へ、それ以外は raise）。一様性のため内蔵 render も同じ境界を通る。①は加えて `ensure_inert` の exact-type 構築検証が担保。
 - **surface-audit テスト**: `TemplateSafe` 各型の非 `_` 表面が参照形（container=素 dict/list、`MissingNode`=宣言 field で各値 inert）に一致し、foreign 属性を植えられず（`__slots__`/frozen）、body に想定外 protocol dunder（`__getattr__`/`__getitem__`/`__call__`）が無いことを MRO 全域で監査。`Markup`/`Undefined` は engine 露出方式依存 ∴ P11 へ。
 - **残余**: `__slots__` 除去等は behavioral テストが捕まえるが、**surface-audit テスト自体の削除は型でもテストでも防げず code review が担う**。
 
