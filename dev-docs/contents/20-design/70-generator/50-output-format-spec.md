@@ -18,7 +18,7 @@
 
 ```python
 def md_escape(text: str) -> str:
-    return re.sub(r'([!-/:-@\[-`{-~])', r'\\\1', text)
+    return re.sub(r"([!-/:-@\[-`{-~])", r"\\\1", text)
 ```
 
 選んだ理由:
