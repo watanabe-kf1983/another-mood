@@ -737,11 +737,27 @@ categories:
     title: ビルドインフラ
     impl_paths:
       - Makefile
+      - .github/workflows/
     tasks:
       T1:
         title: Makefile build-projects を全 showcase blueprint 自動列挙化
         phase: 10
         done: true
+      T2:
+        title: 依存更新の取り込み運用の確立
+        note: >-
+          現状 uv.lock が動く経路は二つだけ: Dependabot のセキュリティ更新
+          (dependabot.yml 無しで稼働する範囲) と、週次 Fresh dependency check が
+          赤くなったときの手動 `uv lock --upgrade`。通常の版上げは赤を待つ受動運用で、
+          実際 ruff 0.16 (md 内 python コードブロックが format 対象化) では
+          赤を契機に一括更新した。受動運用のままだと、新しい dev ツールの規則は
+          pinned 環境に効かず週次ジョブでしか検出されない期間が生じる。
+          選択肢: (a) 現行の受動運用を意図として DEVELOPMENT.md に明文化、
+          (b) 定期的に lock 更新 PR を生成するワークフローを足す、
+          (c) Dependabot の version updates を有効化。(c) は Q7 の
+          「Dependabot は有効化しない」方針と衝突するため、採るならその再検討を含む。
+          リリース運用 (Q6) と同じ CI プロセス面なので同フェーズ。
+        phase: 15
 
   U:
     title: テンプレートエンジン出力フォーマット対応
