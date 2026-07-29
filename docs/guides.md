@@ -68,9 +68,9 @@ What the tool generates (under `.another-mood/my-project/`):
 │   ├── index.md                              # cover: your reports + link to __db/
 │   └── __db/                                 # the database's self-description
 │       ├── index.md                          # auto overview (entities + views)
+│       ├── __data/                           # described later
 │       ├── __entity_defs/                    # described later
-│       ├── __entity_data/                    # described later
-│       └── __views/                          # described later
+│       └── __view_defs/                      # described later
 └── site/                                     # HTML
 ```
 
@@ -115,8 +115,8 @@ In the table below, "where to write" paths are relative to the project directory
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
 | 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__entity_data/<entity>` |
-| 3 | View | `definition/views/**/*.yaml` | `/__db/__views/<view>` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
+| 3 | View | `definition/views/**/*.yaml` | `/__db/__view_defs/<view>` (definition and shape)<br>`/__db/__data/<view>` (records) |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
 Schema and content are required; views are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, views, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
@@ -213,7 +213,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__entity_data/<entity>` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__data/<entity>` (whether the data is being loaded as expected).
 
 There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
 
@@ -503,7 +503,7 @@ A subtemplate can itself call `render`, so a subpage can generate further subpag
 
 ### Where subpages land
 
-A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` view's groups (given an `id` by the `as: id` trick from the views chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__entity_data/` and `__db/__views/`, where it appears as `_anchor_path`.
+A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` view's groups (given an `id` by the `as: id` trick from the views chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__data/`, where it appears as `_anchor_path`.
 
 A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
 
@@ -543,7 +543,7 @@ Assets can be linked from a template as well: the same [`link`](reference/templa
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__entity_data/` and the shape of each view in `__db/__views/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__data/` and the shape of each view in `__db/__view_defs/` ([Workflow](#workflow)).
 
 ## Further reading
 
