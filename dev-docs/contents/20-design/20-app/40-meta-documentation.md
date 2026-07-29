@@ -173,6 +173,43 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ## Proposals
 
+### メタページ構成の対称化 (`__entity_defs` / `__view_defs` / `__data`)
+
+[Entity と Query のページ構成 (非対称)](#entity-と-query-のページ構成-非対称) を廃し、メタページを次の 3 ディレクトリに再編する案。G11 (query → view 語彙改名) の追加ステップとして実施する。
+
+| ディレクトリ | ページ見出し | 内容 |
+|---|---|---|
+| `__entity_defs/<id>` | `Entity Definition: <id>` | 現行どおり: schema 由来の定義 (型表 + 近傍 ER 図) |
+| `__view_defs/<id>` | `View Definition: <id>` | 現 `__views` から Data 節を除いたもの: Source Diagram + Definition + Shape |
+| `__data/<id>` | `Data: <id>` | 現 `__entity_data` に view の data を加えたもの: 全 root source の record table |
+
+- 定義側は「何で定義されたか」(schema / query) で分かれ、データ側は一様。entity と view は 1 つの source namespace を共有しているので、`__data` への統合は名前空間の実態どおり
+- 相互リンクは現行の defs ↔ data パターンを踏襲する。`__data` からの戻りリンクは source の種別で `__entity_defs` / `__view_defs` に分岐 (リンク文言は遷移先の見出しに合わせ `→ Data` / `← Entity Definition` / `← View Definition`)
+- Shape は definition から決定的に導出される型情報なので `__view_defs` 側に残る。entity def ページが「schema 定義 + 正規化後の型表」を見せるのと同じ構図 (定義 + そこから決まる型) になる
+
+#### 背景: 非対称の論拠が G11 の語彙改名で崩れた
+
+旧構成 (Query は Definition / Shape / Results の 3 セクション 1 ページ) を支えていた論拠を再検証した結果:
+
+1. **往復論はページ構成を支えない** — 「Results を味見して DSL を修正するのは日常」は事実だが、その往復の実体は「エディタ上の view YAML ↔ Data 表示」であり、メタページの Definition 節はどちらの脚でもない (編集面ではなくレンダリングされた写し)。往復が日常であることから、写しが Data の上に載っているべきだという結論は導けない
+2. **ページ長の問題は Entity と同型** — view の data も数千行になりうる。Entity で Data を別ページに分けた事情 (定義が巨大な表の上に埋まる) は view にも同じ強さで効く
+3. **業界慣例はむしろ対称を示す** — DBeaver / Snowsight で view を開くとテーブルと同様に DDL タブ + Data タブが並ぶ。旧記述が引いていた「SQL エディタ + Results pane」はアドホックなクエリ実行 UI であり、保存済み view の閲覧 UI ではない。「Query Result」という (G11 で誤りと判明した) 呼称がこの取り違えを自然に見せていた
+
+なお 3 成果物の provenance 論 (Shape / Data は Definition の帰結) 自体は正しいが、それは「Shape が definition ページに同居する」ことの根拠にはなっても、data まで束ねる根拠にはならない。
+
+#### 背景: 命名
+
+`__views` (Data 除去後) を `__view_defs` に改める理由: G11 後の語彙では view = named dataset そのものであり、Data を失ったページが見せるのは view ではなく view definition。ページの中身を正しく名指しし、`__entity_defs` と対になる。`__data` は見出し `Data: <id>` とディレクトリ名が一致し、ソースレイアウト (定義 2 種 `definition/schema.yaml` + `definition/views/` に対しデータは一様) とも相似形になる。
+
+`__queries` → `__views` (S3) → `__view_defs` の二段改名になるが、いずれも同一 draft PR 内で公開前のため互換コストは無い。
+
+#### 実装メモ
+
+- union 不要: view は導出時点で `view: true` の entity としてカタログに載っている。`__data` は `__definition.entities` の root 全件 (`parent_entity` 無し・`__` 除外) を読むだけで entity と view の両方を拾える
+- `META_EDITION.file_per` に `__data.item` は rename で対応 (`.item` paging は既存機構)
+- record_table / walk_entity は view entity を既に処理できる (現 `__views` ページの Results 節が同じループ)
+- 実施時にこの節を削除し、[Entity と Query のページ構成 (非対称)](#entity-と-query-のページ構成-非対称)・業界ツールとの対応・[Query View の Shape が必須な理由](#query-view-の-shape-が必須な理由) を対称構成の記述に書き換える
+
 ### 内部オブジェクト診断の `--debug` 復活スイッチ
 
 [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) で `__definition.*` やメタビュー自身のページを抑止したが、カタログ自体をデバッグしたい場面 (built-in の挙動を疑うとき等) では見たくなりうる。その際は `mood build --debug` 相当のスイッチで `where.not` を外し、内部オブジェクトのページも出す案。常時は出さず opt-in にすることで、通常出力のノイズと debug 時の網羅性を両立する。スイッチの粒度 (build 全体か meta だけか) は実装時に確定。
