@@ -74,7 +74,7 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     """Parse a source file into data — YAML / Markdown, else a ``blob``
     record — or None if it is hidden (a dotfile or under a dotdirectory).
 
-    A source tree with no ``blob`` collection in its schema (queries_dir)
+    A source tree with no ``blob`` collection in its schema (views_dir)
     rejects such a file at validation rather than skipping it silently.
     """
     if FileType.MARKDOWN.match(src):

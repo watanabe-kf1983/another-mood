@@ -16,7 +16,7 @@
 
 The genre name comes straight from the `genres_with_albums` view, which
 reads the grouped `albums_by_genre` view and joins `genres` onto it (a
-query-to-query reference) - so the template no longer re-joins genres itself.
+view-to-view reference) - so the template no longer re-joins genres itself.
 
 {% for entry in genres_with_albums %}
 - **{{ entry.genre.name }}**
@@ -51,7 +51,7 @@ query-to-query reference) - so the template no longer re-joins genres itself.
 
 ## Concert recordings
 
-These albums are surfaced by the `live_albums` query (`where: { id: { startswith: live_ } }`).
+These albums are surfaced by the `live_albums` view (`where: { id: { startswith: live_ } }`).
 
 {% for album in live_albums %}
 - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
@@ -98,7 +98,7 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 ## Playlists
 
 Each playlist's track list comes from the `playlists_with_tracks` view, a
-two-hop query-to-query chain: `playlist_entries` joins `tracks` onto
+two-hop view-to-view chain: `playlist_entries` joins `tracks` onto
 `playlist_tracks` (so the title travels with each link), and
 `playlists_with_tracks` nests those entries under each playlist - so the
 template neither re-filters `playlist_tracks` nor re-looks-up track titles.

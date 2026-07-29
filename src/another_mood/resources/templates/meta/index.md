@@ -5,8 +5,8 @@
 ## Entity Relationships
 
 {# `prose` is always a built-in root entity, so __entity_tree / __entity_defs
-   are never empty — no empty-state branch here (cf. ## Queries, which keeps
-   one: user queries can be absent). #}
+   are never empty — no empty-state branch here (cf. ## Views, which keeps
+   one: user views can be absent). #}
 {% filter dedent %}
     ```mermaid
     classDiagram
@@ -37,22 +37,26 @@
     {% for entity in __entity_defs %}
         {{- entity | render("entity_def.md") -}}
     {% endfor %}
-    {% for entity in __entity_data %}
-        {{- entity | render("entity_data.md") -}}
-    {% endfor %}
 {% endfilter %}
 
-## Queries
+## Views
 
-{% if __queries %}
+{% if __view_defs %}
 {% filter dedent %}
-    {% for query in __queries %}
-        - {{ query | link }}
+    {% for view in __view_defs %}
+        - {{ view | link }}
     {% endfor %}
-    {% for query in __queries %}
-        {{- query | render("query.md") -}}
+    {% for view in __view_defs %}
+        {{- view | render("view_def.md") -}}
     {% endfor %}
 {% endfilter %}
 {% else %}
-(no queries defined yet)
+(no views defined yet)
 {% endif %}
+{# Data pages for every root source, entities and views alike; each
+   render splits to its own /__data/{id} page, so nothing shows inline. #}
+{% filter dedent %}
+    {% for source in __data %}
+        {{- source | render("data.md") -}}
+    {% endfor %}
+{% endfilter %}

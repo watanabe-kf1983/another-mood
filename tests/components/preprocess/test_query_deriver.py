@@ -10,7 +10,7 @@ import yaml
 from another_mood.components.preprocess.query_deriver import (
     _derive_all,  # pyright: ignore[reportPrivateUsage]
     _source_name_conflicts,  # pyright: ignore[reportPrivateUsage]
-    build_query_schema,
+    build_view_schema,
     derive_queries,
 )
 from another_mood.components.shared import data_catalog as dc
@@ -38,9 +38,9 @@ def _write(path: Path, text: str) -> None:
 def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
     """Write a data-catalog dir including the ``__definition.*`` entries.
 
-    Built-in queries reference ``__definition.entities`` and
-    ``__definition.queries``; tests that exercise ``derive_queries``
-    need these entries so the bundled built-in queries pass
+    Built-in views reference ``__definition.entities`` and
+    ``__definition.views``; tests that exercise ``derive_queries``
+    need these entries so the bundled built-in views pass
     ``derive``-time validation.  Mirrors what
     ``schema_inspector._emit_definition_catalog`` writes in the real
     pipeline — kept linked through the dataclass ``catalog`` ClassVars
@@ -49,7 +49,7 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
     """
     entities = [
         *dc.flatten_tree(dc.Entity.catalog, "__definition.entities"),
-        *dc.flatten_tree(Query.catalog, "__definition.queries"),
+        *dc.flatten_tree(Query.catalog, "__definition.views"),
     ]
     save_model(
         catalog_dir / "data" / "__builtin" / "__definition.yaml",
@@ -63,13 +63,13 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
         _write(catalog_dir / "data" / f"extra_{i}.yaml", text)
 
 
-class TestBuildQuerySchema:
-    """build_query_schema: validate against built-in QuerySchema."""
+class TestBuildViewSchema:
+    """build_view_schema: validate against built-in ViewSchema."""
 
     def _validate(self, data: Mapping[str, object]) -> list[object]:
         from another_mood.components.shared.user_source.validator import Validator
 
-        validator = Validator(build_query_schema())
+        validator = Validator(build_view_schema())
         return list(validator.validate(data))
 
     def test_valid_query_accepted(self) -> None:
@@ -104,10 +104,10 @@ class TestBuildQuerySchema:
 class TestDeriveQueries:
     """derive_queries: component smoke test."""
 
-    def test_emits_queries_and_derived_entities(self, tmp_path: Path) -> None:
-        queries = tmp_path / "queries"
+    def test_emits_views_and_derived_entities(self, tmp_path: Path) -> None:
+        views = tmp_path / "views"
         _write(
-            queries / "names.yaml",
+            views / "names.yaml",
             "names:\n  from: items\n  select:\n    - item: name\n",
         )
 
@@ -124,7 +124,7 @@ class TestDeriveQueries:
 
         out = tmp_path / "derived"
         derive_queries(
-            queries_dir=queries,
+            views_dir=views,
             data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
@@ -132,7 +132,7 @@ class TestDeriveQueries:
         data = yaml.safe_load((out / "data" / "names.yaml.yaml").read_text())
         assert data == {
             "__definition": {
-                "queries": [
+                "views": [
                     {
                         "id": "names",
                         "from": "items",
@@ -159,9 +159,9 @@ class TestDeriveQueries:
     def test_query_body_passes_through_untouched(self, tmp_path: Path) -> None:
         """Query body passes through the normalizer verbatim — the
         schema-driven normalizer stops at the top level."""
-        queries = tmp_path / "queries"
+        views = tmp_path / "views"
         _write(
-            queries / "filtered.yaml",
+            views / "filtered.yaml",
             "phase10:\n"
             "  from: items\n"
             "  where:\n"
@@ -184,13 +184,13 @@ class TestDeriveQueries:
 
         out = tmp_path / "derived"
         derive_queries(
-            queries_dir=queries,
+            views_dir=views,
             data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
 
         data = yaml.safe_load((out / "data" / "filtered.yaml.yaml").read_text())
-        assert data["__definition"]["queries"] == [
+        assert data["__definition"]["views"] == [
             {
                 "id": "phase10",
                 "from": "items",
@@ -199,29 +199,29 @@ class TestDeriveQueries:
             }
         ]
 
-    def test_empty_user_queries_still_emits_builtin(self, tmp_path: Path) -> None:
-        """Built-in queries are processed regardless of user input.
+    def test_empty_user_views_still_emits_builtin(self, tmp_path: Path) -> None:
+        """Built-in views are processed regardless of user input.
 
-        With no user queries provided, the merged output must still
-        contain the bundled built-in queries — the built-in __root
+        With no user views provided, the merged output must still
+        contain the bundled built-in views — the built-in __root
         template depends on them — and each must have produced a
         ``view: true`` derivation entry.  Asserts the invariant on the
         merged ``__definition`` document so the test does not pin the
-        specific set of bundled queries.
+        specific set of bundled views.
         """
-        queries = tmp_path / "queries"
-        queries.mkdir()
+        views = tmp_path / "views"
+        views.mkdir()
         _write_catalog(tmp_path / "data-catalog")
 
         out = tmp_path / "derived"
         derive_queries(
-            queries_dir=queries,
+            views_dir=views,
             data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
 
         merged = load_model(out / "data")["__definition"]
-        derived_query_ids = {q["id"] for q in merged["queries"]}
+        derived_query_ids = {q["id"] for q in merged["views"]}
         derived_view_ids = {e["id"] for e in merged["entities"] if e["view"]}
         # Every bundled query produces a same-named view entity.  Extra
         # descendant view entities (e.g. from grouped or from selecting an
@@ -239,11 +239,11 @@ class TestIdentifierDiagnostics:
         # wrapper's error-propagation context, so FileValidationError
         # surfaces to the test rather than being captured into a build
         # report.
-        _write(tmp_path / "queries" / "q.yaml", query_yaml)
+        _write(tmp_path / "views" / "q.yaml", query_yaml)
         _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
         out = tmp_path / "out"
         derive_queries.fn(
-            queries_dir=tmp_path / "queries",
+            views_dir=tmp_path / "views",
             data_catalog_dir=tmp_path / "catalog",
             out_dir=out,
         )
@@ -260,7 +260,7 @@ class TestIdentifierDiagnostics:
             self._run(tmp_path, query_yaml)
         diags = exc_info.value.diagnostics
         assert len(diags) == 1
-        assert diags[0].file == tmp_path / "queries" / "q.yaml"
+        assert diags[0].file == tmp_path / "views" / "q.yaml"
         assert diags[0].line == 2
         assert diags[0].column == 9
         assert "missing" in diags[0].message
@@ -326,8 +326,8 @@ class TestIdentifierDiagnostics:
 class TestSourceNameConflicts:
     """_source_name_conflicts: shadowing detection over a flat name list.
 
-    A query name shadows another source when it reuses a catalog entity
-    id, repeats an earlier query name, or takes the reserved ``__``
+    A view name shadows another source when it reuses a catalog entity
+    id, repeats an earlier view name, or takes the reserved ``__``
     built-in prefix.  Each conflict is reported as ``(message, name)``.
     """
 
@@ -341,24 +341,24 @@ class TestSourceNameConflicts:
 
     def test_entity_collision(self) -> None:
         assert self._conflicts(["items"]) == [
-            ("query name 'items' collides with data entity 'items'", "items")
+            ("view name 'items' collides with data entity 'items'", "items")
         ]
 
     def test_duplicate_reports_only_the_later_occurrence(self) -> None:
         assert self._conflicts(["ranked", "named", "ranked"]) == [
-            ("duplicate query name 'ranked'", "ranked")
+            ("duplicate view name 'ranked'", "ranked")
         ]
 
     def test_reserved_prefix(self) -> None:
         assert self._conflicts(["__mine"]) == [
-            ("query name '__mine' is reserved: '__' marks built-in names", "__mine")
+            ("view name '__mine' is reserved: '__' marks built-in names", "__mine")
         ]
 
     def test_reserved_prefix_takes_precedence_over_entity_collision(self) -> None:
         # An entity can never be named ``__items`` (schema forbids it), but
         # the ordering still matters: the ``__`` check runs first.
         assert self._conflicts(["__items"]) == [
-            ("query name '__items' is reserved: '__' marks built-in names", "__items")
+            ("view name '__items' is reserved: '__' marks built-in names", "__items")
         ]
 
     def test_conflicts_preserve_input_order(self) -> None:
@@ -368,22 +368,22 @@ class TestSourceNameConflicts:
 
 class TestSourceNameDiagnostics:
     """derive_queries surfaces a source-name conflict as a positioned
-    diagnostic anchored at the query name's YAML key."""
+    diagnostic anchored at the view name's YAML key."""
 
     def test_collision_points_at_the_query_key(self, tmp_path: Path) -> None:
-        _write(tmp_path / "queries" / "q.yaml", "items:\n  from: items\n")
+        _write(tmp_path / "views" / "q.yaml", "items:\n  from: items\n")
         _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
         with pytest.raises(FileValidationError) as exc_info:
             derive_queries.fn(
-                queries_dir=tmp_path / "queries",
+                views_dir=tmp_path / "views",
                 data_catalog_dir=tmp_path / "catalog",
                 out_dir=tmp_path / "out",
             )
         diags = exc_info.value.diagnostics
         assert len(diags) == 1
-        assert diags[0].file == tmp_path / "queries" / "q.yaml"
+        assert diags[0].file == tmp_path / "views" / "q.yaml"
         assert diags[0].line == 1
-        assert diags[0].column == 1  # the query name key, not the ``from:`` value
+        assert diags[0].column == 1  # the view name key, not the ``from:`` value
         assert "collides with data entity 'items'" in diags[0].message
 
     def test_name_conflict_short_circuits_derivation(self, tmp_path: Path) -> None:
@@ -392,11 +392,11 @@ class TestSourceNameDiagnostics:
         # Fail-fast reports only the name conflict: deriving over an
         # ambiguous namespace is unreliable, so name checking short-circuits
         # before derivation runs.
-        _write(tmp_path / "queries" / "q.yaml", "items:\n  from: missing\n")
+        _write(tmp_path / "views" / "q.yaml", "items:\n  from: missing\n")
         _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
         with pytest.raises(FileValidationError) as exc_info:
             derive_queries.fn(
-                queries_dir=tmp_path / "queries",
+                views_dir=tmp_path / "views",
                 data_catalog_dir=tmp_path / "catalog",
                 out_dir=tmp_path / "out",
             )
@@ -411,10 +411,10 @@ class TestQueryReferences:
     cascade from a failed or cyclic reference."""
 
     def _run_fn(self, tmp_path: Path, query_yaml: str) -> None:
-        _write(tmp_path / "queries" / "q.yaml", query_yaml)
+        _write(tmp_path / "views" / "q.yaml", query_yaml)
         _write_catalog(tmp_path / "catalog", _CATALOG_YAML)
         derive_queries.fn(
-            queries_dir=tmp_path / "queries",
+            views_dir=tmp_path / "views",
             data_catalog_dir=tmp_path / "catalog",
             out_dir=tmp_path / "out",
         )

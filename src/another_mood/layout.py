@@ -7,6 +7,10 @@ from pathlib import Path
 from another_mood.components.manifest import MANIFEST_FILENAME
 from another_mood.components.shared.user_error import UserError
 
+VIEWS_DIR_NAME = "views"
+VIEWS_DIR_ALIAS = "queries"
+"""The former name of ``views/``, still read when a project has only that one."""
+
 
 @dataclass(frozen=True)
 class SourceLayout:
@@ -15,7 +19,7 @@ class SourceLayout:
     schema_file: Path
     reports_file: Path
     contents_dir: Path
-    queries_dir: Path
+    views_dir: Path
     templates_dir: Path
 
     @classmethod
@@ -30,13 +34,15 @@ class SourceLayout:
             schema_file=definition / "schema.yaml",
             reports_file=definition / "reports.yaml",
             contents_dir=project_dir / "contents",
-            queries_dir=definition / "queries",
+            views_dir=_views_dir(definition),
             templates_dir=definition / "templates",
         )
 
     def verify(self) -> None:
-        """Raise SourceLayoutError for paths missing on disk, then for
-        unknown entries under ``definition_dir``."""
+        """Raise SourceLayoutError for an ambiguous views directory, then for
+        paths missing on disk, then for unknown entries under
+        ``definition_dir``."""
+        self._verify_one_views_dir()
         self._verify_paths_exist()
         self._verify_definition_entries()
 
@@ -44,6 +50,17 @@ class SourceLayout:
         """Raise ProjectExistsError if any of these paths exists on disk."""
         if existing := sorted(path for _, path in self._paths() if path.exists()):
             raise ProjectExistsError(existing)
+
+    def _verify_one_views_dir(self) -> None:
+        """Reject a half-finished rename: ``views/`` beside its alias.  Which
+        of the two holds the project's views would be a guess, so refuse."""
+        alias = self.definition_dir / VIEWS_DIR_ALIAS
+        if alias.is_dir() and alias != self.views_dir:
+            raise SourceLayoutError(
+                f"Both of these exist:\n  {self.views_dir}\n  {alias}\n"
+                f"'{VIEWS_DIR_ALIAS}/' is the former name of "
+                f"'{VIEWS_DIR_NAME}/' — keep one."
+            )
 
     def _verify_paths_exist(self) -> None:
         missing = [
@@ -107,3 +124,10 @@ def verify_absent(project_dir: Path) -> None:
     :func:`resolve_layout`, raising ProjectExistsError if *project_dir*
     already holds a project."""
     SourceLayout.for_project(project_dir).verify_absent()
+
+
+def _views_dir(definition_dir: Path) -> Path:
+    """``views/``, except in an unmigrated project holding only the alias."""
+    alias = definition_dir / VIEWS_DIR_ALIAS
+    views = definition_dir / VIEWS_DIR_NAME
+    return alias if alias.is_dir() and not views.is_dir() else views

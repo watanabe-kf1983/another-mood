@@ -68,18 +68,18 @@ PoC で Mermaid v11 (CDN 経由、Chromium ヘッドレス + Noto CJK) に対し
 `showcase/japanese-table-design/definition/templates/index.md` を Jinja2 の素の機能と既存組み込みフィルタのみで実装できた。新規 Jinja2 フィルタも新規 DSL 機能も不要。
 
 - **erDiagram**: `{% for t in テーブル %}` でそのまま展開
-- **classDiagram**: `列_with_ドメイン型` クエリ (`from: テーブル` / `flatten: { of: 列, as: 列 }` / `join: { to: 型対応, on: { left: 列.型, right: id }, flatten: { as: 型情報 } }`) でテーブル × 列 × 型対応を結合 → template 側で `groupby('テーブルID')` してクラスに復元
+- **classDiagram**: `列_with_ドメイン型` ビュー (`from: テーブル` / `flatten: { of: 列, as: 列 }` / `join: { to: 型対応, on: { left: 列.型, right: id }, flatten: { as: 型情報 } }`) でテーブル × 列 × 型対応を結合 → template 側で `groupby('テーブルID')` してクラスに復元
 - composition edge: 本題材には親子 entity が無いため出現せず (将来 PoC を拡張するなら確認余地あり)
 - association edge: `{% for c in t.列 if c.参照 %}` で `参照` フィールドを持つ列だけ拾う
 
-`列_with_ドメイン型` クエリは flatten + join + nested key (`列.型`) の組合せを 1 クエリで実証している (music の `tracks_with_artist` 級の複雑さ)。これが user-land で素直に書けたことで、F4 の built-in 側で同等パターンが必要になっても primitive が足りる見込み。
+`列_with_ドメイン型` ビューは flatten + join + nested key (`列.型`) の組合せを 1 本のクエリで実証している (music の `tracks_with_artist` 級の複雑さ)。これが user-land で素直に書けたことで、F4 の built-in 側で同等パターンが必要になっても primitive が足りる見込み。
 
 ユーザ ID 空間にはドット (`.`) が含まれない想定なので、F4 の `mermaid_class_id` フィルタのような alias 化は user-land では不要だった。
 
 #### F4 への含意
 
 - F4 (built-in) の **classDiagram 採用は維持**。catalog 由来の型 (`string` / `integer` / `object`) は括弧無しの論理型なので、S1 で発覚した「括弧入り型 → method 誤判定」問題は起きない
-- F4 の `__entity_tree` クエリの蓋然性が S1 で間接的に裏付けられた (flatten + join + nested key を持つクエリが user-land でも素直に書ける)
+- F4 の `__entity_tree` ビューの蓋然性が S1 で間接的に裏付けられた (flatten + join + nested key を持つクエリが user-land でも素直に書ける)
 - ヘッダのみの全体図 (`F4a`) は実機ではかなり「ガラ空き」の見た目になる。実装は予定通り進めつつ、`F4b` 近傍図と並べて読み心地を判断する
 - 不足プリミティブは見つからなかった (新規 Jinja2 フィルタ追加なし)
 

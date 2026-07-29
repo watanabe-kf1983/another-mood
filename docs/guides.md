@@ -8,7 +8,7 @@ Requirements specifications, product catalogs, maintenance manuals, training mat
 
 A **source-based database** is a database made of files that you create, update, and delete — these files are referred to as **sources** in the rest of this guide. Sources are written in formats like YAML and Markdown (the specific layout is covered in [Source structure](#source-structure)). Editing sources directly in an editor is the only way to interact with the database.
 
-Another Mood reads the sources and produces query results, data tables, and template-based documents. You review these outputs and keep editing the sources accordingly.
+Another Mood reads the sources and generates the output documents, along with pages that describe the database itself. You review these outputs and keep editing the sources accordingly.
 
 ### Prerequisites
 
@@ -42,7 +42,7 @@ my-project/
 ├── definition/
 │   ├── schema.yaml                       # data types
 │   ├── reports.yaml                      # which records become their own page
-│   ├── queries/
+│   ├── views/
 │   │   ├── by_role.yaml                  # group by role
 │   │   └── active_members.yaml           # filter to active members
 │   └── templates/
@@ -67,16 +67,16 @@ What the tool generates (under `.another-mood/my-project/`):
 │   │   └── by_role/{engineer,designer}.md
 │   ├── index.md                              # cover: your reports + link to __db/
 │   └── __db/                                 # the database's self-description
-│       ├── index.md                          # auto overview (entities + queries)
+│       ├── index.md                          # auto overview (entities + views)
+│       ├── __data/                           # described later
 │       ├── __entity_defs/                    # described later
-│       ├── __entity_data/                    # described later
-│       └── __queries/                        # described later
+│       └── __view_defs/                      # described later
 └── site/                                     # HTML
 ```
 
 Your templates render to `output/default/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.
 
-Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the database's self-description: an overview (`__db/index.md`, the entities and queries) plus the `__`-prefixed diagnostic directories. Independent of your templates, they let you check the current state of the schema, data, and queries while writing — see the [Workflow](#workflow) chapter for details.
+Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the database's self-description: an overview (`__db/index.md`, the entities and views) plus the `__`-prefixed diagnostic directories. Independent of your templates, they let you check the current state of the schema, data, and views while writing — see the [Workflow](#workflow) chapter for details.
 
 ### Try the live preview
 
@@ -99,29 +99,29 @@ There are four kinds of sources.
   - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...).
   - **Prose** — Text written directly in Markdown. No user-defined schema needed (structured by the tool's built-in schema).
   - **Assets** — Any other file (images, PDFs, ...). Opaque to the tool; copied into the output and referenceable by id. No user-defined schema needed.
-- **Query** — Creates a view that reshapes structured data into a more convenient form for reference.
-- **Template** — A file describing the shape of the final output page. References data or query results.
+- **View** — A definition of a named dataset derived from structured data, reshaped into a more convenient form for reference.
+- **Template** — A file describing the shape of the final output page. References data or views.
 
-Details on each in [Schema and content](#schema-and-content), [Queries](#queries), and [Templates](#templates). For the order of writing and how to verify, see the next chapter, [Workflow](#workflow).
+Details on each in [Schema and content](#schema-and-content), [Views](#views), and [Templates](#templates). For the order of writing and how to verify, see the next chapter, [Workflow](#workflow).
 
 One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, at the project root next to `definition/` and `contents/`. It is not material for the pages — it declares what the project is (display title, format generation). Every project has one: `mood init` generates it, and `mood build` refuses a directory that lacks it. See [Manifest](reference/manifest.md).
 
 ## Workflow
 
-You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the queries are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
+You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the views are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
 In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__entity_defs/<entity>.md`).
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
 | 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__entity_data/<entity>` |
-| 3 | Query | `definition/queries/**/*.yaml` | `/__db/__queries/<query>` |
+| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
+| 3 | View | `definition/views/**/*.yaml` | `/__db/__view_defs/<view>` (definition and shape)<br>`/__db/__data/<view>` (records) |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
-Schema and content are required; queries are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, queries, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
+Schema and content are required; views are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, views, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
 
-With `mood watch` running, the output of each stage updates in the browser as you edit. By the time you start writing templates, the shapes of the data and query results they reference are already settled, so you can focus on the templates. Syntax errors in your sources show up in the browser through the same mechanism, and you watch and fix them as you go — this "write, check, fix" loop is what the workflow looks like in practice.
+With `mood watch` running, the output of each stage updates in the browser as you edit. By the time you start writing templates, the shapes of the data and views they reference are already settled, so you can focus on the templates. Syntax errors in your sources show up in the browser through the same mechanism, and you watch and fix them as you go — this "write, check, fix" loop is what the workflow looks like in practice.
 
 ### When to use `mood build` vs `mood watch`
 
@@ -136,7 +136,7 @@ The deciding factor: whether errors are read by a human or picked up by a machin
 
 Member lists, product lists, screen definitions, order histories — kinds of data where many records share the same shape go in **content files** (`contents/*.yaml`). Before writing them, declare the shape in the **schema file** (`definition/schema.yaml`).
 
-Data without a schema declaration causes a build error. Likewise, writing mistakes (missing required fields, type mismatches, undeclared fields) are caught at build time and stop the build. The intent is to prevent broken data from flowing downstream (to queries and templates) without the writer noticing.
+Data without a schema declaration causes a build error. Likewise, writing mistakes (missing required fields, type mismatches, undeclared fields) are caught at build time and stop the build. The intent is to prevent broken data from flowing downstream (to views and templates) without the writer noticing.
 
 Schemas are written in **JSON Schema** (for the supported vocabulary and minor differences from the original spec, see [Schema](reference/schema.md)). A sample schema file:
 
@@ -213,7 +213,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and queries. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__entity_data/<entity>` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__data/<entity>` (whether the data is being loaded as expected).
 
 There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
 
@@ -369,15 +369,15 @@ blob:
 
 How to link to one from a template is covered in the [Templates](#templates) chapter.
 
-## Queries
+## Views
 
-A query is a mechanism that reshapes structured data into a more convenient form for reference. The result becomes a named **view** that templates — and other queries — can reference the same way as structured data. Add queries as needed.
+A **view** is a named dataset derived from structured data, reshaped into a more convenient form for reference. Templates reference it by name exactly as they reference an entity, and one view can be derived from another.
 
-Typical situations for writing a query: grouping (by category, by role, ...), selecting or renaming fields, or reusing the same transformed result across multiple templates.
+Typical situations for defining a view: grouping (by category, by role, ...), selecting or renaming fields, or reusing the same transformed result across multiple templates.
 
 ### Example: grouping by role
 
-An example query from the member-list sample. The source data (the `members` array normalized in the [Schema and content](#schema-and-content) chapter) looks like this:
+An example view from the member-list sample. The source data (the `members` array normalized in the [Schema and content](#schema-and-content) chapter) looks like this:
 
 ```yaml
 members:
@@ -386,10 +386,10 @@ members:
   - { id: carol, name: Carol, role: designer }
 ```
 
-A query that groups it by `role`:
+A view definition that groups it by `role`:
 
 ```yaml
-# definition/queries/by_role.yaml
+# definition/views/by_role.yaml
 by_role:                  # ← the file's top-level key becomes the view name
   from: members           # source data
   grouped:
@@ -401,7 +401,7 @@ by_role:                  # ← the file's top-level key becomes the view name
     - item: members
 ```
 
-This produces the view `by_role`. From templates it appears as:
+This defines the view `by_role`, which templates see as:
 
 ```yaml
 by_role:
@@ -422,7 +422,7 @@ A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) 
 
 | Block | Role |
 |---|---|
-| `from` | Specifies the source data by name — an entity, or another query's view. |
+| `from` | Specifies the source data by name — an entity, or another view. |
 | `flatten` | Unwinds an array attribute — one input row produces N output rows where N is the array length. |
 | `join` | Attaches matching rows from another entity onto each input row. |
 | `where` | Filters records by a predicate (e.g. `{ active: true }`). |
@@ -430,9 +430,9 @@ A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) 
 | `select` | Lists fields to include in the output. Use `as` to rename. |
 | `sort` | Orders the output records by one field (e.g. `{ by: name }`). |
 
-File names and splitting under `definition/queries/` are as flexible as for content files: multiple views per file and subdirectories are both allowed.
+File names and splitting under `definition/views/` are as flexible as for content files: multiple views per file and subdirectories are both allowed.
 
-For full syntax and examples, see [Query](reference/query.md).
+For full syntax and examples, see [View](reference/view.md).
 
 ## Templates
 
@@ -503,7 +503,7 @@ A subtemplate can itself call `render`, so a subpage can generate further subpag
 
 ### Where subpages land
 
-A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` query's groups (given an `id` by the `as: id` trick from the queries chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__entity_data/` and `__db/__queries/`, where it appears as `_anchor_path`.
+A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` view's groups (given an `id` by the `as: id` trick from the views chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__data/`, where it appears as `_anchor_path`.
 
 A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
 
@@ -543,7 +543,7 @@ Assets can be linked from a template as well: the same [`link`](reference/templa
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__entity_data/` and the shape of query results in `__db/__queries/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__data/` and the shape of each view in `__db/__view_defs/` ([Workflow](#workflow)).
 
 ## Further reading
 

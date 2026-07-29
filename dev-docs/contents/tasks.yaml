@@ -215,7 +215,7 @@ categories:
     impl_paths:
       - src/another_mood/components/composer/query.py
       - src/another_mood/resources/schemas/
-    spec: 20-design/60-composer/10-queries-spec
+    spec: 20-design/60-composer/10-query-dsl-spec
     tasks:
       E1:
         title: where 句の仕様詰め + 実装
@@ -230,7 +230,7 @@ categories:
         phase: 10
         done: true
       E6:
-        title: クエリ名と正規化済みデータ名の同名禁止チェック
+        title: ビュー名と正規化済みデータ名の同名禁止チェック
         phase: 13
         done: true
       E8:
@@ -250,7 +250,7 @@ categories:
         phase: 10
         done: true
       E12:
-        title: "クエリ間参照 (`from:` / `join.to:` にクエリ名)"
+        title: "ビュー間参照 (`from:` / `join.to:` にビュー名)"
         phase: 13
         done: true
 
@@ -270,7 +270,7 @@ categories:
         phase: 10
         done: true
       F4c:
-        title: ER 図テンプレート — per-query 図
+        title: ER 図テンプレート — per-view 図
         phase: 10
         done: true
       F7:
@@ -330,9 +330,11 @@ categories:
           稼働プロジェクトを移行前に壊す)、(3) docs / MCP instructions は views
           のみを語り、query.md → view.md へ改名 (DSL 本文の説明語彙としての
           query は残る)、(4) __db/__queries → __views は生成物側なので併走なしで
-          一斉切り替え。内部識別子 (shared/query.py・derive_queries・
-          __definition.queries キー) は利用者契約ではないため追随は任意。
+          一斉切り替え (その後、メタページの対称化で __view_defs / __data に再編)。
+          内部識別子 (shared/query.py・derive_queries・__definition.queries キー)
+          は利用者契約ではないため追随は任意。
         phase: 14
+        done: true
       G12:
         title: "queries/ エイリアス廃止"
         note: >-
@@ -380,13 +382,13 @@ categories:
       - src/another_mood/
     tasks:
       J3:
-        title: "クエリ結果の機械可読エクスポート (mood export + MCP)"
+        title: "compose 結果のエクスポート (mood export + MCP)"
         note: >-
           計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
           (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
           歴史の轍を踏まない)。代わりに compose 結果を一塊で取り出す経路を用意し、
           計算は外部プログラムに委ねる (動機となった実例: 設計ドキュメントの構造化
-          データから Function Point を算出する)。現 __db/__queries は人間向け診断
+          データから Function Point を算出する)。現 __db/__data は人間向け診断
           Markdown で結果データではないため、機械可読の経路が別に要る。
           MCP には jq 引数 (jq 式。query の語はビュー定義 DSL に予約) を持たせる —
           export の実行はファイル操作ではなくコマンド実行であり、シェルを持たない
@@ -396,7 +398,7 @@ categories:
           還流が不要と確認できたため対象外 (還流自体は現状でも可能)。クエリ DSL への
           集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
         phase: 15
-        proposal: 20-design/60-composer/20-export-spec#クエリ結果の機械可読エクスポート-j3
+        proposal: 20-design/60-composer/20-export-spec#compose-結果のエクスポート-j3
 
   L:
     title: dog-fooding リファクタ
@@ -409,7 +411,7 @@ categories:
         phase: 13
         done: true
       L2:
-        title: スキーマ + クエリ + テンプレート群の構築
+        title: スキーマ + ビュー + テンプレート群の構築
         phase: 13
         done: true
       L3:

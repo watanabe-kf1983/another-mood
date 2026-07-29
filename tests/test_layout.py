@@ -16,7 +16,7 @@ from another_mood.layout import (
 def scaffold_sources(project_dir: Path) -> None:
     """Create the minimal source layout ``resolve_layout`` requires."""
     definition = project_dir / "definition"
-    (definition / "queries").mkdir(parents=True)
+    (definition / "views").mkdir(parents=True)
     (definition / "templates").mkdir(parents=True)
     (project_dir / "contents").mkdir(parents=True)
     (definition / "schema.yaml").write_text("")
@@ -32,7 +32,7 @@ class TestResolveLayout:
         assert layout.schema_file == tmp_path / "definition" / "schema.yaml"
         assert layout.reports_file == tmp_path / "definition" / "reports.yaml"
         assert layout.contents_dir == tmp_path / "contents"
-        assert layout.queries_dir == tmp_path / "definition" / "queries"
+        assert layout.views_dir == tmp_path / "definition" / "views"
         assert layout.templates_dir == tmp_path / "definition" / "templates"
 
     def test_lists_every_missing_path(self, tmp_path: Path) -> None:
@@ -46,7 +46,7 @@ class TestResolveLayout:
             "schema_file",
             "reports_file",
             "contents_dir",
-            "queries_dir",
+            "views_dir",
             "templates_dir",
         )
         assert all(name in message for name in names)
@@ -72,6 +72,41 @@ class TestResolveLayout:
         (tmp_path / "definition" / "schema.yaml").mkdir()
         with pytest.raises(SourceLayoutError, match="schema_file"):
             resolve_layout(tmp_path)
+
+
+class TestViewsDirAlias:
+    """``definition/queries/`` is the former name of ``definition/views/``."""
+
+    def test_reads_the_alias_when_it_is_the_only_one(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / "views").rmdir()
+        (tmp_path / "definition" / "queries").mkdir()
+
+        layout = resolve_layout(tmp_path)
+
+        assert layout.views_dir == tmp_path / "definition" / "queries"
+
+    def test_rejects_both_at_once(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / "queries").mkdir()
+
+        with pytest.raises(SourceLayoutError) as exc_info:
+            resolve_layout(tmp_path)
+
+        message = exc_info.value.user_error_message
+        assert "Both of these exist:" in message
+        assert str(tmp_path / "definition" / "views") in message
+        assert str(tmp_path / "definition" / "queries") in message
+
+    def test_names_views_when_neither_exists(self, tmp_path: Path) -> None:
+        """The missing-path report points at the current name, not the alias."""
+        scaffold_sources(tmp_path)
+        (tmp_path / "definition" / "views").rmdir()
+
+        with pytest.raises(SourceLayoutError, match="views_dir") as exc_info:
+            resolve_layout(tmp_path)
+
+        assert str(tmp_path / "definition" / "views") in str(exc_info.value)
 
 
 class TestUnknownDefinitionEntries:
@@ -100,7 +135,7 @@ class TestUnknownDefinitionEntries:
     def test_allows_unknown_entries_below_top_level(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)
         (tmp_path / "definition" / "templates" / "partials").mkdir()
-        (tmp_path / "definition" / "queries" / "notes.txt").write_text("")
+        (tmp_path / "definition" / "views" / "notes.txt").write_text("")
         resolve_layout(tmp_path)
 
     def test_allows_unknown_entries_beside_definition(self, tmp_path: Path) -> None:

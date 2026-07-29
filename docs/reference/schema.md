@@ -83,7 +83,7 @@ users:
     name: Suzuki Hanako
 ```
 
-What queries and templates reference is this normalized form.
+What views and templates reference is this normalized form.
 
 **Nesting**: when an `additionalProperties` contains another `additionalProperties`, each level is recursively turned into an array.
 

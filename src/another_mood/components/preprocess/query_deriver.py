@@ -1,9 +1,9 @@
-"""Query deriver — validate query DSL files and derive view entities.
+"""Query deriver — validate the view files' query DSL and derive view entities.
 
-Validates query files against the built-in query schema, parses each
-into a typed Query, and derives the synthesized catalog entities
-(``view: true``) by composing the query's catalog transform against
-the data catalog.  Output YAML carries both the queries and the
+Validates view files against the built-in view schema, parses each
+view's body into a typed Query, and derives the synthesized catalog
+entities (``view: true``) by composing the query's catalog transform
+against the data catalog.  Output YAML carries both the views and the
 derived entities under ``__definition``.
 """
 
@@ -32,27 +32,27 @@ from another_mood.components.shared.query import (
     evaluation_order,
 )
 
-_QUERY_SCHEMA_FILE = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
+_VIEW_SCHEMA_FILE = Path(
+    str(resources.files("another_mood.resources") / "schemas" / "view-schema.yaml")
 )
 
-_BUILTIN_QUERIES_DIR = Path(str(resources.files("another_mood.resources") / "queries"))
+_BUILTIN_VIEWS_DIR = Path(str(resources.files("another_mood.resources") / "views"))
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_catalog_dir"])
 def derive_queries(
-    queries_dir: Path,
+    views_dir: Path,
     *,
     data_catalog_dir: Path,
     out_dir: Path,
 ) -> None:
-    """Validate query files and derive view entities into out_dir."""
-    schema = build_query_schema()
+    """Validate view files and derive view entities into out_dir."""
+    schema = build_view_schema()
     catalog_entities = _load_catalog(data_catalog_dir)
     catalog = dc.build_tree(catalog_entities)
 
-    user_files = list(_iter_top_level(queries_dir, schema))
-    builtin_files = list(_iter_top_level(_BUILTIN_QUERIES_DIR, schema))
+    user_files = list(_iter_top_level(views_dir, schema))
+    builtin_files = list(_iter_top_level(_BUILTIN_VIEWS_DIR, schema))
 
     # Reject up front, not pooled with the derive-time errors below:
     # deriving over an ambiguous namespace is meaningless, and cross-query
@@ -63,8 +63,8 @@ def derive_queries(
     )
 
     file_groups = [
-        (queries_dir, out_dir, user_files),
-        (_BUILTIN_QUERIES_DIR, out_dir / "__builtin", builtin_files),
+        (views_dir, out_dir, user_files),
+        (_BUILTIN_VIEWS_DIR, out_dir / "__builtin", builtin_files),
     ]
     all_queries = {
         cast(str, raw["id"]): Query.from_dict(raw)
@@ -85,7 +85,7 @@ def derive_queries(
                 dst,
                 {
                     "__definition": {
-                        "queries": list(queries),
+                        "views": list(queries),
                         "entities": [
                             entity
                             for raw in queries
@@ -96,16 +96,16 @@ def derive_queries(
             )
 
 
-def build_query_schema() -> Mapping[str, object]:
-    """Build a validation/normalization schema for query files."""
-    return load_model(_QUERY_SCHEMA_FILE)
+def build_view_schema() -> Mapping[str, object]:
+    """Build a validation/normalization schema for view files."""
+    return load_model(_VIEW_SCHEMA_FILE)
 
 
 def _iter_top_level(
     src_dir: Path, schema: Mapping[str, object]
 ) -> Iterator[tuple[Path, list[Mapping[str, object]]]]:
-    """Validate src_dir and yield top-level dict→list converted query
-    lists, with each body canonicalized via ``normalize_query``.
+    """Validate src_dir and yield top-level dict→list converted view
+    lists, with each view's body canonicalized via ``normalize_query``.
 
     The catalog boundary stops at the top level — query body structure
     (e.g. the ``where:`` AST) is not normalized as catalog data. See
@@ -131,7 +131,7 @@ def _reject_source_name_conflicts(
     names: Sequence[str], entity_ids: frozenset[str]
 ) -> None:
     """Raise :class:`FileValidationError` for name conflicts, each diagnostic
-    positioned at the offending query name's YAML location."""
+    positioned at the offending view name's YAML location."""
     conflicts = [
         _diagnostic_from(QueryDeriveError(message, offender=name))
         for message, name in _source_name_conflicts(names, entity_ids)
@@ -143,22 +143,22 @@ def _reject_source_name_conflicts(
 def _source_name_conflicts(
     names: Sequence[str], entity_ids: frozenset[str]
 ) -> list[tuple[str, str]]:
-    """Find query names that shadow another source, as ``(message, name)``.
+    """Find view names that shadow another source, as ``(message, name)``.
 
-    Data entities and queries share one flat source namespace, so a
+    Data entities and views share one flat source namespace, so a
     reused name would silently shadow its source in the composer.  The
     ``__`` prefix is reserved for built-in sources — which is also why
-    built-in query names never need this check.
+    built-in view names never need this check.
     """
     conflicts: list[tuple[str, str]] = []
     seen: set[str] = set()
     for name in names:
         if name.startswith("__"):
-            message = f"query name '{name}' is reserved: '__' marks built-in names"
+            message = f"view name '{name}' is reserved: '__' marks built-in names"
         elif name in entity_ids:
-            message = f"query name '{name}' collides with data entity '{name}'"
+            message = f"view name '{name}' collides with data entity '{name}'"
         elif name in seen:
-            message = f"duplicate query name '{name}'"
+            message = f"duplicate view name '{name}'"
         else:
             seen.add(name)
             continue
@@ -185,8 +185,8 @@ def _derive_all(
     poisoned: set[str] = set()
     for name in order:
         query = queries[name]
-        # ``poisoned`` only ever holds query names, so a data-entity source
-        # is never in it — no need to filter source_names to queries here.
+        # ``poisoned`` only ever holds view names, so a data-entity source
+        # is never in it — no need to filter source_names to views here.
         if any(source in poisoned for source in query.source_names()):
             poisoned.add(name)
         else:

@@ -95,7 +95,7 @@ loud に失敗させること。マイグレーション（自動移行）はス
 | 契約面 | 契約書 |
 |---|---|
 | schema | `resources/schemas/schema-schema.yaml` |
-| query | `resources/schemas/query-schema.yaml` |
+| view | `resources/schemas/view-schema.yaml` |
 | parser/prose | Markdown 解釈規約 + `content-schema.yaml`（組み込み prose/blob）+ 埋め込み構文 |
 | template | フィルタ・タグ・グローバルの登録面（コードが契約） |
 | layout | プロジェクト配置規約（`definition/` / `contents/`） |
@@ -149,7 +149,7 @@ Means 定義）。ゆえにスペックの語彙に
 監査（2026-07）。面の区切りは世代の運用の契約面台帳と同じ — 台帳が道具1 の判定基準、
 この監査が道具3 の網羅確認で、どちらも「mood 由来の語彙」の同じ境界を見る:
 
-- **schema / query** — 完備。メタスキーマが `additionalProperties: false` を徹底しており
+- **schema / view** — 完備。メタスキーマが `additionalProperties: false` を徹底しており
   未知キーは検証エラー（contents の語彙はユーザの schema.yaml の管轄であり対象外 —
   世代の運用と同じ整理）
 - **parser/prose** — 道具3 の適用対象外（構造的に）。prose 本文は自由な Markdown で
@@ -165,7 +165,7 @@ Means 定義）。ゆえにスペックの語彙に
 - **layout** — 完備。プロジェクト直下は `.git` / `README.md` 等との同居が
   設計であり loud 化は構造的に不可（scaffold の `cargo init` 型と同根の判断）。
   mood の管轄領域である `definition/` 直下は既知エントリ以外を拒否する。深さを直下で
-  止めても完備なのは、その下が `queries/` はクエリスキーマ検証の管轄、`templates/` は
+  止めても完備なのは、その下が `views/` はビュースキーマ検証の管轄、`templates/` は
   ユーザが名付ける開いた名前空間で閉じた既知集合を持たないため
 - **manifest** — 完備。二段読みの厳格検証（未知キー拒否）が道具3 を兼ねる
 

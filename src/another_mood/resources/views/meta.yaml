@@ -1,0 +1,77 @@
+# Built-in meta diagnostic views.  Each top-level key is a view that
+# powers an auto-generated diagnostic surface (the per-item pages, the
+# index's Entity/View lists, the ER diagram) describing the user's own
+# schema, data, and views.  All are scoped to user content:
+# catalog-internal entities/views (ids starting with `__`, e.g.
+# __definition.*) are excluded so their internals do not clutter the
+# output.
+#
+# The two entity views form a containment chain (the child reads its
+# parent by name, so the shared `from` + `where` are written once):
+#
+#   __entity_tree  — every user content entity, roots and children
+#     └ __entity_defs — the roots only (parent_entity absent)
+#
+# __data stands outside the chain: it covers every root source — views
+# included — so it reads __definition.entities directly rather than the
+# entity-only chain above.
+
+# Node set for the built-in ER diagram on the index template.  Every user
+# content entity, including child entities like `artists.members` (no
+# `parent_entity` filter), so the diagram can draw the composition edges.
+# The base of the entity chain: __entity_defs narrows it to roots.  Not
+# split to pages (absent from META_EDITION's file_per) — a pure helper
+# feeding the diagram and the view below.
+__entity_tree:
+  from: __definition.entities
+  where:
+    view: false
+    not:
+      id: { startswith: __ }
+  select:
+    - item: id
+    - item: parent_entity
+    - item: builtin
+    - item: item_type
+
+# Per-entity Entity Definition pages, and the index's Entity list.  The
+# root content entities (parent_entity absent) — user-authored plus
+# user-facing built-ins like `prose`.  One result item per entity; its
+# anchor path (/__entity_defs/{id}) is the page the built-in root template
+# splits it to.  Parallel to __data (a distinct anchor root) so the
+# definition and data views land on separate pages without a
+# one-node-two-pages collision.
+__entity_defs:
+  from: __entity_tree
+  where:
+    parent_entity: { exists: false }
+  select:
+    - item: id
+    - item: builtin
+    - item: item_type
+  sort: { by: builtin }
+
+# Per-source Data pages.  Every root source — entities and views alike:
+# views sit in the catalog as `view: true` entities, so reading the
+# roots of __definition.entities covers both kinds without a union.  A
+# distinct anchor root (/__data/{id}) so each data view lands on its own
+# page.
+__data:
+  from: __definition.entities
+  where:
+    parent_entity: { exists: false }
+    not:
+      id: { startswith: __ }
+  select:
+    - item: id
+
+# Per-view View Definition pages, and the index's Views list.
+# User-defined views only.  Passthrough (no select) so each item carries
+# the full query the view template renders (from / flatten / join /
+# where / grouped / select); its anchor path (/__view_defs/{id}) is the
+# page it splits to.
+__view_defs:
+  from: __definition.views
+  where:
+    not:
+      id: { startswith: __ }

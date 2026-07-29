@@ -25,7 +25,7 @@ ERD、DFD、CRUDマトリクス等の要件定義成果物を生成しようと�
 
 - **Schema**: データ構造を定義（`definition/schema.yaml` 1 ファイル、素の JSON Schema サブセット）。参照整合性 (references) は将来仕様
 - **Data**: 実際の値（YAML ファイル群、Git管理）
-- **Queries**: データの結合・集約を定義（YAML DSL）
+- **Views**: データの結合・集約を定義（YAML DSL）
 - **Templates**: 見た目の定義（Jinja2）
 - **Normalizer**: スキーマ検証 + 辞書→配列の正規化
 - **Composer**: クエリ評価によるビュー生成

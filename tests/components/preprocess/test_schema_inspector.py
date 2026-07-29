@@ -660,7 +660,7 @@ class TestInspectSchema:
         assert {e["id"] for e in entities} == {
             "__definition.entities",
             "__definition.entities.item_type.attributes",
-            "__definition.queries",
+            "__definition.views",
         }
         assert all(e["builtin"] for e in entities)
 

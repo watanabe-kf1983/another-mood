@@ -29,7 +29,7 @@ app.add_typer(docs_app, name="docs")
 def callback() -> None:
     """Another Mood: a processor of source-based databases, keeping related documents in sync.
 
-    Before authoring or editing schema, queries, or templates, read the spec:
+    Before authoring or editing schema, views, or templates, read the spec:
     run `mood docs list`, then `mood docs read <uri>` for the relevant page.
     """
 

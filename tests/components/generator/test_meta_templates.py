@@ -21,7 +21,7 @@ class TestMetaEdition:
     non-split node, so asserting the path covers both the split decision
     and its derivation."""
 
-    @pytest.mark.parametrize("view", ["__entity_defs", "__entity_data", "__queries"])
+    @pytest.mark.parametrize("view", ["__entity_defs", "__view_defs", "__data"])
     def test_meta_query_item_splits_to_its_page(self, view: str) -> None:
         array = wrap_tree(ensure_inert_mapping({view: [{"id": "sample"}]}))[view]
         assert isinstance(array, ArrayNode)

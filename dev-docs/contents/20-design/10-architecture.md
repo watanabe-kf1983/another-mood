@@ -38,13 +38,13 @@ IN: `contents_dir`、`inspect_schemas_dir`
 OUT: `normalize_contents_dir`
 
 **Query Deriver**
-queries 入力を検証・正規化し、各クエリをパースして派生エンティティ（`view: true`）をデータカタログから生成する。
-出力 YAML には `__definition.queries` と `__definition.entities` の両方を書き出す。
-IN: `queries_dir`、`inspect_schemas_dir`
+views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をデータカタログから生成する。
+出力 YAML には `__definition.views` と `__definition.entities` の両方を書き出す。
+IN: `views_dir`、`inspect_schemas_dir`
 OUT: `derive_queries_dir`
 
 **Composer**
-正規化済みデータを自動的にビューとしてパススルーし、さらにクエリ定義があれば contents に対して適用して結果を出力する。派生エンティティは Query Deriver で生成済みのため Composer は queries の passthrough として伝搬させる。
+正規化済みデータを自動的にビューとしてパススルーし、さらにビュー定義があれば contents に対して適用して結果を出力する。派生エンティティは Query Deriver で生成済みのため Composer は views の passthrough として伝搬させる。
 IN: `inspect_schemas_dir`、`normalize_contents_dir`、`derive_queries_dir`
 OUT: `compose_dir`
 

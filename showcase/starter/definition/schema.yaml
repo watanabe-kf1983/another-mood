@@ -16,7 +16,7 @@ properties:
           description: Role the member fills (e.g. "engineer", "designer").
         active:
           type: boolean
-          description: Whether the member is currently active. Used by the `active_members` query as the filter key.
+          description: Whether the member is currently active. Used by the `active_members` view as the filter key.
         description:
           type: string
           description: Short prose blurb shown on the member's detail page.

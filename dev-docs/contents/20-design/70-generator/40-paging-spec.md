@@ -39,11 +39,11 @@
   index.md                                     ← 表紙（cover。H1=project 名 / Reports + Database Information）
   default/   (form B なら web/ print/)          ← ユーザ edition（report 本体）
   __db/                                        ← DB 自己記述（メタ edition のマウント先）
-    index.md                                     メタ index（ER 図・entity/query 一覧）
-    __entity_defs/  __entity_data/  __queries/   診断（edition 横断・常に __db 内の同位置）
+    index.md                                     メタ index（ER 図・entity/view 一覧）
+    __data/  __entity_defs/  __view_defs/        診断（edition 横断・常に __db 内の同位置）
 ```
 
-`__db` マウントと各アンカールート（`__entity_defs` 等）はどちらも `__` 始まりだが要求する事情は別レイヤ: `__db` は edition 名のユーザ空間（`__` 始まりは検証で禁止）との衝突回避、`__entity_defs` はグローバル node_map でのユーザ entity/query 名との衝突回避。ゆえに `__db/entity_defs` にはできず `__db/__entity_defs` になる（[予約プレフィックス](../40-communication/10-json-data-model.md#予約プレフィックス)）。診断系は `__db` 内で edition 横断・常に同位置。
+`__db` マウントと各アンカールート（`__entity_defs` 等）はどちらも `__` 始まりだが要求する事情は別レイヤ: `__db` は edition 名のユーザ空間（`__` 始まりは検証で禁止）との衝突回避、`__entity_defs` はグローバル node_map でのユーザ entity/view 名との衝突回避。ゆえに `__db/entity_defs` にはできず `__db/__entity_defs` になる（[予約プレフィックス](../40-communication/10-json-data-model.md#予約プレフィックス)）。診断系は `__db` 内で edition 横断・常に同位置。
 
 出力は **deliverable（著者の reports）と DB 自己記述（`__db/`）の 2 種**で捉え、表紙で reports を前面・`__db/` を控えめな別エントリに置く。`__db/` を reports / edition の軸には混ぜない（自己記述面を「体裁違いのレポート」に誤ラベルさせないため）。`__warnings/`（reconcile の警告ページ）は build-report 層で自己記述とは別軸ゆえ `{outDir}/__warnings/` 直下、リンクは表紙 `index.md` に append。
 
@@ -53,9 +53,9 @@
 
 ### meta 診断の分割
 
-meta 診断ページ（`__entity_defs` / `__entity_data` / `__queries`）の主題は **実データツリーノード**（`resources/queries/` のビルトインクエリが生む）で、分割は通常の[分割ルール](#分割ルール)そのもの。meta には利用者の `reports.yaml` が無いので paging は固定（`META_EDITION.paging`）。
+meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は **実データツリーノード**（`resources/views/` のビルトインビューが生む）で、分割は通常の[分割ルール](#分割ルール)そのもの。meta には利用者の `reports.yaml` が無いので paging は固定（`META_EDITION.paging`）。
 
-> **決定: 別ページが要るならノードを一つ立てる.** 1 ノードは（データ位置で定まる）1 ページにだけ描かれる。同一 entity を Definition と Data の 2 ページに出すのに `__entity_defs` / `__entity_data` の **2 クエリ＝2 アンカールート**を立てるのがこの実践 — 予約キーや fallback で 1 ノードを複数ページに割る手は採らない。
+> **決定: 別ページが要るならノードを一つ立てる.** 1 ノードは（データ位置で定まる）1 ページにだけ描かれる。同一 entity を Definition と Data の 2 ページに出すのに `__entity_defs` / `__data` の **2 ビュー＝2 アンカールート**を立てるのがこの実践 — 予約キーや fallback で 1 ノードを複数ページに割る手は採らない。
 
 ### render ループ
 

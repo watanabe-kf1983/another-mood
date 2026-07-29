@@ -30,8 +30,8 @@ $defs:
               description: >-
                 Entity names must not start with `__`: that prefix is
                 reserved for built-in sources (`__definition.*` and the
-                built-in queries), which share one source namespace with
-                user entities and queries. Applies to top-level entity
+                built-in views), which share one source namespace with
+                user entities and views. Applies to top-level entity
                 names only; the general identifier pattern for every
                 nesting level lives in jsonSchemaSubset.
               pattern: "^(?!__)"

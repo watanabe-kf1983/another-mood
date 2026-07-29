@@ -88,7 +88,7 @@ def _emit_definition_catalog(dst: Path) -> None:
     """
     entities = [
         *dc.flatten_tree(dc.Entity.catalog, "__definition.entities"),
-        *dc.flatten_tree(Query.catalog, "__definition.queries"),
+        *dc.flatten_tree(Query.catalog, "__definition.views"),
     ]
     entities = [replace(e, builtin=True) for e in entities]
     save_model(
