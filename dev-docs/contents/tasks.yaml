@@ -330,9 +330,11 @@ categories:
           稼働プロジェクトを移行前に壊す)、(3) docs / MCP instructions は views
           のみを語り、query.md → view.md へ改名 (DSL 本文の説明語彙としての
           query は残る)、(4) __db/__queries → __views は生成物側なので併走なしで
-          一斉切り替え。内部識別子 (shared/query.py・derive_queries・
-          __definition.queries キー) は利用者契約ではないため追随は任意。
+          一斉切り替え (その後、メタページの対称化で __view_defs / __data に再編)。
+          内部識別子 (shared/query.py・derive_queries・__definition.queries キー)
+          は利用者契約ではないため追随は任意。
         phase: 14
+        done: true
       G12:
         title: "queries/ エイリアス廃止"
         note: >-
