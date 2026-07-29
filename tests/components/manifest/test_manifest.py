@@ -10,6 +10,7 @@ from another_mood.components.manifest import (
     Manifest,
     ManifestError,
     MinimumVersionError,
+    MissingManifestError,
     UnsupportedSbdbVersionError,
     read_manifest,
 )
@@ -36,9 +37,13 @@ def _with_minimum_version(minimum: str) -> str:
 # ── missing / valid ────────────────────────────────────────────────
 
 
-def test_missing_manifest_is_empty(tmp_path: Path) -> None:
-    # No sbdb.yaml: no error, no title (the caller falls back to the dir name).
-    assert read_manifest(tmp_path) == Manifest()
+def test_missing_manifest_fails(tmp_path: Path) -> None:
+    # Absent is never "assume the current generation".
+    with pytest.raises(MissingManifestError) as exc_info:
+        read_manifest(tmp_path)
+    message = exc_info.value.user_error_message
+    assert "sbdb.yaml" in message
+    assert str(tmp_path) in message
 
 
 def test_reads_title(tmp_path: Path) -> None:

@@ -56,6 +56,16 @@ class ManifestError(UserError):
         return [d.to_entry() for d in self.diagnostics]
 
 
+class MissingManifestError(UserError):
+    """No sbdb.yaml at all — the manifest is what makes a directory a project."""
+
+    def __init__(self, project_dir: Path) -> None:
+        self.project_dir = project_dir
+        super().__init__(
+            f"No {MANIFEST_FILENAME} in {project_dir}: not an Another Mood project."
+        )
+
+
 class MinimumVersionError(UserError):
     """The running another-mood is older than the project's declared minimum.
 
@@ -93,8 +103,7 @@ class UnsupportedSbdbVersionError(UserError):
 def read_manifest(project_dir: Path) -> Manifest:
     manifest_file = project_dir / MANIFEST_FILENAME
     if not manifest_file.is_file():
-        # Grace period: a missing manifest reads as sbdb_version 1, silently.
-        return Manifest()
+        raise MissingManifestError(project_dir)
     data = _parse(manifest_file)
     # Gates run before validation: a manifest from a future generation must
     # fail as "unsupported generation", not on whatever unknown key it happens

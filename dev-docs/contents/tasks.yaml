@@ -865,11 +865,5 @@ categories:
         done: true
       V7:
         title: sbdb.yaml の必須化 (欠落 = エラー)
-        note: >-
-          移行措置として置いた「欠落時は警告なしで sbdb_version 1 とみなす」猶予を畳み、
-          sbdb.yaml 欠落を ManifestError にする。期限は min(Q1, 最初の sbdb_version bump)
-          — sbdb_version が複数になった瞬間に「欠落 = 1」の仮定が ambiguous になるため、
-          運用判断ではなく構造的期限。公開後は未知の利用者が現れるので Q1 (PyPI 公開) 前に
-          必ず畳む。着手条件は稼働プロジェクトの移行完了 (P5 と同条件)。
-          設計は 20-app/60-sbdb-manifest の移行措置節。前提 V4。
         phase: 14
+        done: true

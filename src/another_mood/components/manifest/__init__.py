@@ -6,6 +6,7 @@ from another_mood.components.manifest.manifest import (
     Manifest,
     ManifestError,
     MinimumVersionError,
+    MissingManifestError,
     UnsupportedSbdbVersionError,
     read_manifest,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "Manifest",
     "ManifestError",
     "MinimumVersionError",
+    "MissingManifestError",
     "UnsupportedSbdbVersionError",
     "read_manifest",
 ]

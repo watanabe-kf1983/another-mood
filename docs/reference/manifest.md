@@ -11,7 +11,7 @@ tools:
     minimum_version: "0.1.0"
 ```
 
-`mood init` and `mood blueprint apply` generate this file — titled after the project directory, with `minimum_version` set to the Another Mood that generated it; edit `title` to taste.
+Every project has one: a build refuses a project directory without a manifest. `mood init` and `mood blueprint apply` generate this file — titled after the project directory, with `minimum_version` set to the Another Mood that generated it; edit `title` to taste.
 
 ## Fields
 

@@ -21,6 +21,7 @@ def scaffold_sources(project_dir: Path) -> None:
     (project_dir / "contents").mkdir(parents=True)
     (definition / "schema.yaml").write_text("")
     (definition / "reports.yaml").write_text("")
+    (project_dir / "sbdb.yaml").write_text("sbdb_version: 1\n")
 
 
 class TestResolveLayout:
@@ -40,6 +41,7 @@ class TestResolveLayout:
         message = exc_info.value.user_error_message
         assert "Source paths not found:" in message
         names = (
+            "manifest_file",
             "definition_dir",
             "schema_file",
             "reports_file",
@@ -49,14 +51,13 @@ class TestResolveLayout:
         )
         assert all(name in message for name in names)
 
-    def test_tolerates_a_missing_manifest(self, tmp_path: Path) -> None:
-        """The manifest is optional while "absent means sbdb_version 1" holds."""
+    def test_requires_the_manifest(self, tmp_path: Path) -> None:
+        """The backstop: in a build ``read_manifest`` gets there first."""
         scaffold_sources(tmp_path)
+        (tmp_path / "sbdb.yaml").unlink()
 
-        layout = resolve_layout(tmp_path)
-
-        assert layout.manifest_file == tmp_path / "sbdb.yaml"
-        assert not layout.manifest_file.exists()
+        with pytest.raises(SourceLayoutError, match="manifest_file"):
+            resolve_layout(tmp_path)
 
     def test_reports_only_missing_paths(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)
@@ -133,7 +134,6 @@ class TestVerifyAbsent:
         assert list(exc_info.value.existing) == [tmp_path / "contents"]
 
     def test_rejects_a_lone_manifest(self, tmp_path: Path) -> None:
-        """Optional for ``verify``, occupied for ``verify_absent``."""
         (tmp_path / "sbdb.yaml").write_text("sbdb_version: 1\n")
 
         with pytest.raises(ProjectExistsError, match="sbdb.yaml"):
