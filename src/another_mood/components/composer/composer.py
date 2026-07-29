@@ -36,7 +36,7 @@ def compose(
     sources = load_model(contents_out, data_catalog_out, queries_out)
     raw_queries = cast(
         list[dict[str, object]],
-        sources.get("__definition", {}).get("queries", []),
+        sources.get("__definition", {}).get("views", []),
     )
 
     queries = {cast(str, raw["id"]): Query.from_dict(raw) for raw in raw_queries}

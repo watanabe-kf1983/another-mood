@@ -1,14 +1,13 @@
-# Built-in meta diagnostic queries.  Each top-level key is a view that
+# Built-in meta diagnostic views.  Each top-level key is a view that
 # powers an auto-generated diagnostic surface (the per-item pages, the
-# index's Entity/Query lists, the ER diagram) describing the user's own
-# schema, data, and queries.  All are scoped to user content:
-# catalog-internal entities/queries (ids starting with `__`, e.g.
+# index's Entity/View lists, the ER diagram) describing the user's own
+# schema, data, and views.  All are scoped to user content:
+# catalog-internal entities/views (ids starting with `__`, e.g.
 # __definition.*) are excluded so their internals do not clutter the
 # output.
 #
 # The three entity views form a containment chain (each reads the one
-# above via a query-to-query reference, so the shared `from` +
-# `where` are written once):
+# above by name, so the shared `from` + `where` are written once):
 #
 #   __entity_tree  — every user content entity, roots and children
 #     └ __entity_defs — the roots only (parent_entity absent)
@@ -57,13 +56,12 @@ __entity_data:
   select:
     - item: id
 
-# Per-query meta pages, and the index's Queries list.  User-defined
-# queries only.  Passthrough (no select) so each item carries the full
-# query definition the query template renders (from / flatten / join /
-# where / grouped / select); its anchor path (/__queries/{id}) is the page
-# it splits to.
-__queries:
-  from: __definition.queries
+# Per-view meta pages, and the index's Views list.  User-defined views
+# only.  Passthrough (no select) so each item carries the full query the
+# view template renders (from / flatten / join / where / grouped /
+# select); its anchor path (/__views/{id}) is the page it splits to.
+__views:
+  from: __definition.views
   where:
     not:
       id: { startswith: __ }

@@ -36,7 +36,7 @@ _QUERY_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
 )
 
-_BUILTIN_QUERIES_DIR = Path(str(resources.files("another_mood.resources") / "queries"))
+_BUILTIN_VIEWS_DIR = Path(str(resources.files("another_mood.resources") / "views"))
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_catalog_dir"])
@@ -52,7 +52,7 @@ def derive_queries(
     catalog = dc.build_tree(catalog_entities)
 
     user_files = list(_iter_top_level(queries_dir, schema))
-    builtin_files = list(_iter_top_level(_BUILTIN_QUERIES_DIR, schema))
+    builtin_files = list(_iter_top_level(_BUILTIN_VIEWS_DIR, schema))
 
     # Reject up front, not pooled with the derive-time errors below:
     # deriving over an ambiguous namespace is meaningless, and cross-query
@@ -64,7 +64,7 @@ def derive_queries(
 
     file_groups = [
         (queries_dir, out_dir, user_files),
-        (_BUILTIN_QUERIES_DIR, out_dir / "__builtin", builtin_files),
+        (_BUILTIN_VIEWS_DIR, out_dir / "__builtin", builtin_files),
     ]
     all_queries = {
         cast(str, raw["id"]): Query.from_dict(raw)
@@ -85,7 +85,7 @@ def derive_queries(
                 dst,
                 {
                     "__definition": {
-                        "queries": list(queries),
+                        "views": list(queries),
                         "entities": [
                             entity
                             for raw in queries

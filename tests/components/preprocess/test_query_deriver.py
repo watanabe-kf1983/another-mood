@@ -38,9 +38,9 @@ def _write(path: Path, text: str) -> None:
 def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
     """Write a data-catalog dir including the ``__definition.*`` entries.
 
-    Built-in queries reference ``__definition.entities`` and
-    ``__definition.queries``; tests that exercise ``derive_queries``
-    need these entries so the bundled built-in queries pass
+    Built-in views reference ``__definition.entities`` and
+    ``__definition.views``; tests that exercise ``derive_queries``
+    need these entries so the bundled built-in views pass
     ``derive``-time validation.  Mirrors what
     ``schema_inspector._emit_definition_catalog`` writes in the real
     pipeline — kept linked through the dataclass ``catalog`` ClassVars
@@ -49,7 +49,7 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
     """
     entities = [
         *dc.flatten_tree(dc.Entity.catalog, "__definition.entities"),
-        *dc.flatten_tree(Query.catalog, "__definition.queries"),
+        *dc.flatten_tree(Query.catalog, "__definition.views"),
     ]
     save_model(
         catalog_dir / "data" / "__builtin" / "__definition.yaml",
@@ -132,7 +132,7 @@ class TestDeriveQueries:
         data = yaml.safe_load((out / "data" / "names.yaml.yaml").read_text())
         assert data == {
             "__definition": {
-                "queries": [
+                "views": [
                     {
                         "id": "names",
                         "from": "items",
@@ -190,7 +190,7 @@ class TestDeriveQueries:
         )
 
         data = yaml.safe_load((out / "data" / "filtered.yaml.yaml").read_text())
-        assert data["__definition"]["queries"] == [
+        assert data["__definition"]["views"] == [
             {
                 "id": "phase10",
                 "from": "items",
@@ -221,7 +221,7 @@ class TestDeriveQueries:
         )
 
         merged = load_model(out / "data")["__definition"]
-        derived_query_ids = {q["id"] for q in merged["queries"]}
+        derived_query_ids = {q["id"] for q in merged["views"]}
         derived_view_ids = {e["id"] for e in merged["entities"] if e["view"]}
         # Every bundled query produces a same-named view entity.  Extra
         # descendant view entities (e.g. from grouped or from selecting an

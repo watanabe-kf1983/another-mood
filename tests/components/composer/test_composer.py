@@ -36,7 +36,7 @@ class TestCompose:
             queries / "name_query.yaml",
             dedent("""\
                 __definition:
-                  queries:
+                  views:
                     - id: names
                       from: items
                       select:
@@ -110,7 +110,7 @@ class TestCompose:
             queries / "con_query.yaml",
             dedent("""\
                 __definition:
-                  queries:
+                  views:
                     - id: con
                       from: items
                       select:
@@ -154,7 +154,7 @@ class TestCompose:
         ``sources``.  Correct output proves evaluation follows dependency
         (topological) order, not file order.
 
-        Only ``__definition.queries`` drives evaluation, so the derived
+        Only ``__definition.views`` drives evaluation, so the derived
         view entities and the data catalog are irrelevant here and left
         out.  ``compose.fn`` runs the bare function without the Component
         wrapper's ``data/`` output subdir.
@@ -174,7 +174,7 @@ class TestCompose:
             queries / "chain.yaml",
             dedent("""\
                 __definition:
-                  queries:
+                  views:
                     - id: high_values
                       from: projected
                       where: {value: {gte: 3}}
@@ -237,7 +237,7 @@ class TestCompose:
             queries / "all_entities.yaml",
             dedent("""\
                 __definition:
-                  queries:
+                  views:
                     - id: entity_ids
                       from: __definition.entities
                       select:
