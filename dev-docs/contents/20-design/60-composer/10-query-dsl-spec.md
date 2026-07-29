@@ -1,4 +1,4 @@
-# Queries Specification
+# Query DSL Specification
 
 ## External Design
 
@@ -98,12 +98,12 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 **インラインサブクエリ**（`from:` にクエリオブジェクトをネストさせる、SQL のサブクエリ相当）は採らない:
 
 - RDBMS 現場の「ビュー禁止」文化の根拠（オプティマイザの実行計画不透明性、ビュー重ね掛けの性能崖）は、ビルド時に全クエリを一度だけ決定的な順序で評価し結果を実体化する本ツールには存在しない。ここでのクエリ参照は RDBMS の view より「スクリプト内の中間変数」に近い
-- 入れ子の内側は本ツールで唯一「中間結果が実体化されない」場所になり、`query-results/` を読んで段ごとに確かめられる実体化デバッグの強みに穴を開ける
+- 入れ子の内側は本ツールで唯一「中間結果が実体化されない」場所になり、`view-results/` を読んで段ごとに確かめられる実体化デバッグの強みに穴を開ける
 - YAML で再帰構造を書く人間工学は SQL の括弧より悪い
 - 局所性が本当に効く場所には既に制限付きインライン（`join.to:` + `join.where:`）があり、全面開放の圧力はない
 - 名前付き参照からインライン併用への拡張は純粋な追加（`from:` が名前 or クエリオブジェクトを取る schema 再帰化）なので、命名疲れの実例が積み上がってから再検討できる
 
-**提示順は不変**: クエリ間参照は評価順（依存 → 依存元の topo 順）にのみ影響し、`__definition.queries` の並びはファイル順のまま。評価の実装（依存グラフ・サイクル診断・derive 失敗のカスケード抑制）は [query.py](../../../../src/another_mood/components/shared/query.py) の `evaluation_order` と query_deriver の `_derive_all` の docstring を参照。
+**提示順は不変**: クエリ間参照は評価順（依存 → 依存元の topo 順）にのみ影響し、`__definition.views` の並びはファイル順のまま。評価の実装（依存グラフ・サイクル診断・derive 失敗のカスケード抑制）は [query.py](../../../../src/another_mood/components/shared/query.py) の `evaluation_order` と query_deriver の `_derive_all` の docstring を参照。
 
 **受容済みの制約 — 名前空間汚染**: 中間段のためだけの補助クエリも、テンプレートから見え、メタドキュメンテーション（ER 図・クエリカタログ）に載る。当面は命名規約で凌ぎ、痛くなったら `internal: true` 等の可視性フラグを検討する。
 

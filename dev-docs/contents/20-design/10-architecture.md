@@ -39,8 +39,8 @@ OUT: `normalize_contents_dir`
 
 **Query Deriver**
 queries 入力を検証・正規化し、各クエリをパースして派生エンティティ（`view: true`）をデータカタログから生成する。
-出力 YAML には `__definition.queries` と `__definition.entities` の両方を書き出す。
-IN: `queries_dir`、`inspect_schemas_dir`
+出力 YAML には `__definition.views` と `__definition.entities` の両方を書き出す。
+IN: `views_dir`、`inspect_schemas_dir`
 OUT: `derive_queries_dir`
 
 **Composer**

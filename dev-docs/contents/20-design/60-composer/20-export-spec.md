@@ -45,7 +45,7 @@ export(project_dir, jq=None)
 - `jq` を指定すると jq 式として評価し、結果を返す
 - 省略すると出力をファイルに書き、そのパスを返す
 
-パラメータ名は `query` ではなく `jq` とする（`gh` CLI の `--jq` フラグに倣う）。`query` の語はビュー定義の DSL（[queries-spec](10-queries-spec.md)）に予約されており、jq 式を query と呼ぶと語彙が衝突する。名前から「jq 式である」ことが自明になる利点もある。
+パラメータ名は `query` ではなく `jq` とする（`gh` CLI の `--jq` フラグに倣う）。`query` の語はビュー定義の DSL（[query-dsl-spec](10-query-dsl-spec.md)）に予約されており、jq 式を query と呼ぶと語彙が衝突する。名前から「jq 式である」ことが自明になる利点もある。
 
 **payload を返り値に載せない**のが要点。200KB の木を tool result に乗せるとエージェントのコンテキストを圧迫する。
 

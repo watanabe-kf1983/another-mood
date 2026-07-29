@@ -66,7 +66,7 @@ MCP Resources の URI スキームに `docs://` カスタムスキーム + `docs
 
 選定理由:
 
-- **Markdown 内の相対リンクが RFC 3986 の URI 解決規則で正しく結合される**。`docs://reference/cli.md` 上の `[query](query.md)` は `docs://reference/query.md` に解決される。docs/ の Markdown は GitHub 直閲覧用に書かれた相対リンクをそのまま AI 向けにも使える
+- **Markdown 内の相対リンクが RFC 3986 の URI 解決規則で正しく結合される**。`docs://reference/cli.md` 上の `[view](view.md)` は `docs://reference/view.md` に解決される。docs/ の Markdown は GitHub 直閲覧用に書かれた相対リンクをそのまま AI 向けにも使える
 - MCP の resource URI は仕様上「サーバ内で識別子として機能すればよく、外部リゾルバブルである必要はない」。`<scheme>://<path>` パターンは公式サンプル（`file://` / `git://` / `screen://` 等）に倣う慣習的な書式
 - 別案 `file://` は不採用。実ファイルパスと誤解されうる（クライアントがホスト OS のファイルパスとしてリゾルブを試みる挙動を誘発しうる）
 

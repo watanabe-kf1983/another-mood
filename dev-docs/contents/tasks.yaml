@@ -215,7 +215,7 @@ categories:
     impl_paths:
       - src/another_mood/components/composer/query.py
       - src/another_mood/resources/schemas/
-    spec: 20-design/60-composer/10-queries-spec
+    spec: 20-design/60-composer/10-query-dsl-spec
     tasks:
       E1:
         title: where 句の仕様詰め + 実装
@@ -386,7 +386,7 @@ categories:
           (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
           歴史の轍を踏まない)。代わりに compose 結果を一塊で取り出す経路を用意し、
           計算は外部プログラムに委ねる (動機となった実例: 設計ドキュメントの構造化
-          データから Function Point を算出する)。現 __db/__queries は人間向け診断
+          データから Function Point を算出する)。現 __db/__views は人間向け診断
           Markdown で結果データではないため、機械可読の経路が別に要る。
           MCP には jq 引数 (jq 式。query の語はビュー定義 DSL に予約) を持たせる —
           export の実行はファイル操作ではなくコマンド実行であり、シェルを持たない
