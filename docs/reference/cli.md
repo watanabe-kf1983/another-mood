@@ -34,6 +34,7 @@ Source paths are fixed — they are part of the project structure, not configura
 
 | Kind | Path |
 |---|---|
+| [Manifest](manifest.md) | `<project_dir>/sbdb.yaml` |
 | Schema | `<project_dir>/definition/schema.yaml` |
 | Reports | `<project_dir>/definition/reports.yaml` |
 | Content | `<project_dir>/contents` |
@@ -41,8 +42,6 @@ Source paths are fixed — they are part of the project structure, not configura
 | Templates | `<project_dir>/definition/templates` |
 
 If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
-
-The project [manifest](manifest.md) (`<project_dir>/sbdb.yaml`) also lives at a fixed path.
 
 ### Output path resolution
 
