@@ -29,11 +29,11 @@ class TestCompose:
             """),
         )
 
-        # Queries dir simulates query_deriver output: queries plus their
+        # Views dir simulates query_deriver output: views plus their
         # derived view entities under __definition.
-        queries = tmp_path / "queries" / "data"
+        views = tmp_path / "views" / "data"
         _write(
-            queries / "name_query.yaml",
+            views / "name_query.yaml",
             dedent("""\
                 __definition:
                   views:
@@ -67,10 +67,10 @@ class TestCompose:
             """),
         )
 
-        out = tmp_path / "views"
+        out = tmp_path / "composed"
         compose(
             contents_dir=tmp_path / "contents",
-            queries_dir=tmp_path / "queries",
+            views_dir=tmp_path / "views",
             data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
@@ -80,19 +80,19 @@ class TestCompose:
         for src, sub in (
             (contents, "contents"),
             (data_catalog, "data-catalog"),
-            (queries, "queries"),
+            (views, "views"),
         ):
             for f in src.rglob("*.yaml"):
                 dst = data_out / sub / f.relative_to(src)
                 assert dst.read_text() == f.read_text()
 
-        # Query result: applied records only; entities flow via the queries passthrough.
+        # View result: applied records only; entities flow via the views passthrough.
         assert yaml.safe_load(
-            (data_out / "query-results" / "names.yaml").read_text()
+            (data_out / "view-results" / "names.yaml").read_text()
         ) == {"names": [{"name": "a"}, {"name": "b"}]}
 
     def test_rejects_reserved_query_id(self, tmp_path: Path) -> None:
-        # A query whose id is `con` would write query-results/con.yaml — a
+        # A query whose id is `con` would write view-results/con.yaml — a
         # Windows device name. Caught here, before the generator, since an
         # unrendered query never reaches the page-path check. Uses
         # ``compose.fn`` so the raise surfaces directly rather than as a
@@ -105,9 +105,9 @@ class TestCompose:
                   - {name: a, value: 1}
             """),
         )
-        queries = tmp_path / "queries"
+        views = tmp_path / "views"
         _write(
-            queries / "con_query.yaml",
+            views / "con_query.yaml",
             dedent("""\
                 __definition:
                   views:
@@ -123,22 +123,22 @@ class TestCompose:
         with pytest.raises(WindowsReservedNameError):
             compose.fn(
                 contents_dir=contents,
-                queries_dir=queries,
+                views_dir=views,
                 data_catalog_dir=data_catalog,
-                out_dir=tmp_path / "views",
+                out_dir=tmp_path / "composed",
             )
 
-    def test_empty_queries_dir(self, tmp_path: Path) -> None:
+    def test_empty_views_dir(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents" / "data"
         _write(contents / "data.yaml", "key: value\n")
 
-        (tmp_path / "queries" / "data").mkdir(parents=True)
+        (tmp_path / "views" / "data").mkdir(parents=True)
         (tmp_path / "data-catalog" / "data").mkdir(parents=True)
 
-        out = tmp_path / "views"
+        out = tmp_path / "composed"
         compose(
             contents_dir=tmp_path / "contents",
-            queries_dir=tmp_path / "queries",
+            views_dir=tmp_path / "views",
             data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
@@ -169,9 +169,9 @@ class TestCompose:
             """),
         )
 
-        queries = tmp_path / "queries"
+        views = tmp_path / "views"
         _write(
-            queries / "chain.yaml",
+            views / "chain.yaml",
             dedent("""\
                 __definition:
                   views:
@@ -189,15 +189,15 @@ class TestCompose:
         data_catalog = tmp_path / "data-catalog"
         data_catalog.mkdir()
 
-        out = tmp_path / "views"
+        out = tmp_path / "composed"
         compose.fn(
             contents_dir=contents,
-            queries_dir=queries,
+            views_dir=views,
             data_catalog_dir=data_catalog,
             out_dir=out,
         )
 
-        results = out / "query-results"
+        results = out / "view-results"
         assert yaml.safe_load((results / "projected.yaml").read_text()) == {
             "projected": [{"name": "a", "value": 1}, {"name": "b", "value": 3}]
         }
@@ -232,9 +232,9 @@ class TestCompose:
             """),
         )
 
-        queries = tmp_path / "queries" / "data"
+        views = tmp_path / "views" / "data"
         _write(
-            queries / "all_entities.yaml",
+            views / "all_entities.yaml",
             dedent("""\
                 __definition:
                   views:
@@ -246,14 +246,14 @@ class TestCompose:
             """),
         )
 
-        out = tmp_path / "views"
+        out = tmp_path / "composed"
         compose(
             contents_dir=tmp_path / "contents",
-            queries_dir=tmp_path / "queries",
+            views_dir=tmp_path / "views",
             data_catalog_dir=tmp_path / "data-catalog",
             out_dir=out,
         )
 
         assert yaml.safe_load(
-            (out / "data" / "query-results" / "entity_ids.yaml").read_text()
+            (out / "data" / "view-results" / "entity_ids.yaml").read_text()
         ) == {"entity_ids": [{"id": "alpha"}, {"id": "beta"}]}

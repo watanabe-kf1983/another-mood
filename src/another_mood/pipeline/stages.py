@@ -50,12 +50,12 @@ def normalize_contents_stage(workspace: Workspace) -> Task:
 
 
 def derive_queries_stage(workspace: Workspace) -> Task:
-    """Validate query files and derive view entities."""
+    """Validate view files and derive view entities."""
     layout = workspace.layout
     inspect_out = workspace.component_output(inspect_schema)
     out = workspace.component_output(derive_queries)
     call = derive_queries.bind(
-        queries_dir=layout.views_dir,
+        views_dir=layout.views_dir,
         data_catalog_dir=inspect_out.dir,
         out_dir=out.dir,
     )
@@ -69,19 +69,19 @@ def derive_queries_stage(workspace: Workspace) -> Task:
 def compose_stage(workspace: Workspace) -> Task:
     """Compose views from normalized contents + query evaluation."""
     contents_out = workspace.component_output(normalize_contents)
-    queries_out = workspace.component_output(derive_queries)
+    views_out = workspace.component_output(derive_queries)
     inspect_out = workspace.component_output(inspect_schema)
     out = workspace.component_output(compose)
     call = compose.bind(
         contents_dir=contents_out.dir,
-        queries_dir=queries_out.dir,
+        views_dir=views_out.dir,
         data_catalog_dir=inspect_out.dir,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
         watch_paths=[],
-        upstreams=[contents_out, queries_out, inspect_out],
+        upstreams=[contents_out, views_out, inspect_out],
     )
 
 
