@@ -2,8 +2,8 @@
 #
 # Each entry registers one resource at the URI `docs://<path>`.  Markdown
 # relative links between resources resolve correctly under that scheme
-# per RFC 3986 (e.g. `[query](query.md)` on `docs://reference/cli.md`
-# points to `docs://reference/query.md`).
+# per RFC 3986 (e.g. `[view](view.md)` on `docs://reference/cli.md`
+# points to `docs://reference/view.md`).
 #
 # `description` is shown to AI agents in `resources/list` responses, so
 # it must be self-contained — keep it in sync with the Guides / Reference
@@ -28,7 +28,7 @@ resources:
     description: >-
       Schema definition reference — a JSON Schema subset plus the built-in
       prose and blob schemas.
-  - path: reference/query.md
+  - path: reference/view.md
     description: >-
       Query syntax reference — `from` / `grouped` / `select`.
   - path: reference/template.md
@@ -47,7 +47,7 @@ resources:
     description: >-
       Built-in schema merged with the user's schema.yaml at validation
       time so all content files are validated uniformly.
-  - path: reference/schemas/query-schema.yaml
+  - path: reference/schemas/view-schema.yaml
     description: >-
       Schema validating user-defined query files under queries_dir.
   - path: reference/schemas/schema-schema.yaml

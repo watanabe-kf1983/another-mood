@@ -32,8 +32,8 @@ from another_mood.components.shared.query import (
     evaluation_order,
 )
 
-_QUERY_SCHEMA_FILE = Path(
-    str(resources.files("another_mood.resources") / "schemas" / "query-schema.yaml")
+_VIEW_SCHEMA_FILE = Path(
+    str(resources.files("another_mood.resources") / "schemas" / "view-schema.yaml")
 )
 
 _BUILTIN_VIEWS_DIR = Path(str(resources.files("another_mood.resources") / "views"))
@@ -98,7 +98,7 @@ def derive_queries(
 
 def build_query_schema() -> Mapping[str, object]:
     """Build a validation/normalization schema for query files."""
-    return load_model(_QUERY_SCHEMA_FILE)
+    return load_model(_VIEW_SCHEMA_FILE)
 
 
 def _iter_top_level(

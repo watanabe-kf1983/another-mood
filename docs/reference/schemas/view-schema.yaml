@@ -3,7 +3,7 @@ description: >-
   Validates user-defined query files under queries_dir. Each
   top-level key names a query (= view) and maps to a definition with a
   required `from:` data source and optional `where:` / `grouped:` /
-  `select:` clauses. See docs/reference/query.md for the prose
+  `select:` clauses. See docs/reference/view.md for the prose
   specification.
 
 type: object
@@ -19,7 +19,7 @@ additionalProperties:
     data source; optional `flatten:` unwinds intrinsic arrays; optional
     `join:` attaches a related entity; optional `where:` filters
     records; optional `grouped:` reshapes them into groups; optional
-    `select:` projects output fields. See docs/reference/query.md for
+    `select:` projects output fields. See docs/reference/view.md for
     semantics.
   type: object
   properties:

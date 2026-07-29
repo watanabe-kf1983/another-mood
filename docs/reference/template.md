@@ -40,7 +40,7 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 
 ## Template context
 
-From templates, you can reference both entity data declared in [Schema](schema.md) and views defined by [Query](query.md) in the **same namespace**.
+From templates, you can reference both entity data declared in [Schema](schema.md) and views defined by [Query](view.md) in the **same namespace**.
 
 - Entities: keys under `properties` in schema.yaml
 - Query views: top-level keys within files under `definition/queries/`

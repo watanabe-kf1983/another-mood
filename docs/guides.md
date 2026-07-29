@@ -432,7 +432,7 @@ A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) 
 
 File names and splitting under `definition/queries/` are as flexible as for content files: multiple views per file and subdirectories are both allowed.
 
-For full syntax and examples, see [Query](reference/query.md).
+For full syntax and examples, see [Query](reference/view.md).
 
 ## Templates
 

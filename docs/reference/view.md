@@ -410,6 +410,6 @@ For `from: members` with three records `[{name: alice, age: 30}, {name: bob}, {n
 
 Each query's result is exposed via an auto-generated meta page at `output/__db/__queries/<query>.md`. While writing a query, you can verify the result in real time on `mood watch`.
 
-## Full query-schema
+## Full view-schema
 
-The schema that constrains the form of query files. The canonical specification is the YAML at [`./schemas/query-schema.yaml`](./schemas/query-schema.yaml).
+The schema that constrains the form of query files. The canonical specification is the YAML at [`./schemas/view-schema.yaml`](./schemas/view-schema.yaml).
