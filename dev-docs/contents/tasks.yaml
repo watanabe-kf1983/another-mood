@@ -354,18 +354,22 @@ categories:
       - src/another_mood/
     tasks:
       J3:
-        title: "外部計算とのデータ受け渡し境界の整備 (例: Function Point 算出の掲載)"
+        title: "クエリ結果の機械可読エクスポート (mood export + MCP)"
         note: >-
           計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
           (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
-          歴史の轍を踏まない)。集計・導出値の掲載ニーズには受け渡し境界の両側で応える:
-          (1) 入力側 = 計算結果を通常の contents YAML として還流 — 既に可能で
-          schema / x-ref 検証も効く、(2) 出力側 = クエリ結果の機械可読エクスポート (YAML) —
-          未提供 (現 __db/__queries は人間向け診断 Markdown で結果データではない)。
-          実需が具体化した時点で (2) の安定契約と「export → 外部計算 → contents 還流」
-          ラウンドトリップのガイド化を仕様検討する。クエリ DSL への集約関数追加
-          (sum / count 等) は、それでも足りない場合の後続候補。
-        phase: 18
+          歴史の轍を踏まない)。代わりに compose 結果を一塊で取り出す経路を用意し、
+          計算は外部プログラムに委ねる (動機となった実例: 設計ドキュメントの構造化
+          データから Function Point を算出する)。現 __db/__queries は人間向け診断
+          Markdown で結果データではないため、機械可読の経路が別に要る。
+          MCP には query 引数 (jq 式) を持たせる — export の実行はファイル操作では
+          なくコマンド実行であり、シェルを持たない MCP クライアントでは生成できても
+          照会できないため。CLI にも同じ --query を置き機能を一致させる。
+          当初含めていた「export → 外部計算 → contents 還流」のガイド化は、実需側で
+          還流が不要と確認できたため対象外 (還流自体は現状でも可能)。クエリ DSL への
+          集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
+        phase: 15
+        proposal: 20-design/60-composer/20-export-spec#クエリ結果の機械可読エクスポート-j3
 
   L:
     title: dog-fooding リファクタ
@@ -406,6 +410,28 @@ categories:
         title: prose レコードの body 廃止 (フラット化)
         phase: 13
         done: true
+      M10:
+        title: ステージ間中間表現を YAML から JSON へ差し替え (ビルド時間短縮)
+        note: >-
+          dev-docs のビルド 2.15s のうち ruamel.yaml が 0.84s (39%) を占める
+          (load 0.59s/131 回、dump 0.25s/59 回)。同じデータで json は load 0.5ms /
+          dump 0.8ms と 300 倍以上速く、差し替えれば大半が消える見込み。
+          temp dir は外部契約ではないので変更は閉じている。
+          PyYAML の CSafeLoader/Dumper (libyaml) なら YAML のまま 15 倍速くなるが
+          採れない — PyYAML は YAML 1.1 で、yes/no の boolean 化や 8 進リテラルなど
+          利用者データの解釈が変わる (ruamel を選び YAML 1.2 と明記しているのは
+          まさにそのため)。その点 JSON は 1.1/1.2 の曖昧さが構造的に無い。
+          定義域は確認済み: スキーマが宣言できる型は JSON のそれに限られ、YAML 超過分で
+          唯一実害のある date/datetime は検証が既に弾く
+          ("datetime.date(...) is not of type 'string'")。
+          着手時の確認事項 = (a) 正規化が temp へ書く前に検証しているか
+          (書いてから検証だと json.dumps が先に落ち、エラーメッセージが失われる)、
+          (b) スキーマ内 metadata 等の自由形式領域に日付が書けるか。
+          pickle/marshal も測ったが load はほぼ同速で差は 1ms 未満。可読性を失うだけ
+          (marshal は版間互換を保証せず、watch の prev_out_dir 再利用と相性が悪い)。
+          転送層は非対象 — transfer_tree はハードリンクで 874 回 21ms、実質タダ。
+          計測は build report の StageResult.timestamp 差分で取れる (新規の計装不要)。
+        phase: 15
 
   N:
     title: レンダリング / 出力形式
@@ -495,6 +521,12 @@ categories:
           Q9 からの繰り越し DoD: 対象プラットフォームで minijinja-py の
           compiled wheel が解決することの確認 (Rust バインディング依存が
           実際に入るのは本タスクのため)。
+          性能は選定理由ではないが副次効果になりうる: dev-docs のビルド 2.15s のうち
+          jinja2.render が 0.68s (32%、99 回) を占める。ただし速くなる保証はない —
+          カスタムフィルタ (data_tree_filters / メタテンプレートの filters) は
+          呼び出しごとに Python↔Rust 境界を越え、親参照付きデータツリー
+          (MappingNode / ArrayNode) の変換コストも乗るため、相殺されうる。
+          差し替え後に実測して判断する。
         phase: 14
         proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
       P9:
