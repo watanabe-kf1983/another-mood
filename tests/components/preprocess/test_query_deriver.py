@@ -10,7 +10,7 @@ import yaml
 from another_mood.components.preprocess.query_deriver import (
     _derive_all,  # pyright: ignore[reportPrivateUsage]
     _source_name_conflicts,  # pyright: ignore[reportPrivateUsage]
-    build_query_schema,
+    build_view_schema,
     derive_queries,
 )
 from another_mood.components.shared import data_catalog as dc
@@ -63,13 +63,13 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
         _write(catalog_dir / "data" / f"extra_{i}.yaml", text)
 
 
-class TestBuildQuerySchema:
-    """build_query_schema: validate against built-in QuerySchema."""
+class TestBuildViewSchema:
+    """build_view_schema: validate against built-in ViewSchema."""
 
     def _validate(self, data: Mapping[str, object]) -> list[object]:
         from another_mood.components.shared.user_source.validator import Validator
 
-        validator = Validator(build_query_schema())
+        validator = Validator(build_view_schema())
         return list(validator.validate(data))
 
     def test_valid_query_accepted(self) -> None:

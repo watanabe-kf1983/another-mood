@@ -8,7 +8,7 @@ For a guided walkthrough, see [Guides](../guides.md); this side is for targeted 
 
 - [CLI](cli.md) — `mood` command reference (`init` / `build` / `watch` / `blueprint` / `docs`)
 - [Schema](schema.md) — schema definition (a JSON Schema subset plus the built-in prose and blob schemas)
-- [Query](view.md) — query syntax (`from` / `grouped` / `select`)
+- [View](view.md) — view definition and query syntax (`from` / `grouped` / `select`)
 - [Template](template.md) — template syntax (Jinja2 plus the `render` filter and other additions)
 - [Reports](reports.md) — report output configuration (`definition/reports.yaml` — paging and editions)
 - [Manifest](manifest.md) — project manifest (`sbdb.yaml`) — project title and version compatibility

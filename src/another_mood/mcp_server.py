@@ -29,7 +29,7 @@ The source files live under `<project_dir>/` and fall into four kinds:
 
 - `definition/schema.yaml` declares data types
 - `contents/` holds data (YAML records or Markdown prose)
-- `definition/queries/` (optional) reshapes data into views
+- `definition/views/` (optional) declares views that reshape data
 - `definition/templates/` describes output pages
 
 Workflow:
@@ -38,11 +38,11 @@ Workflow:
   `list_blueprints` + `apply_blueprint(name, project_dir)` to pick a
   specific blueprint.
 - After editing sources: call `build(project_dir)` and inspect the result.
-  The `output/__entity_defs/`, `__entity_data/`, and `__queries/`
+  The `output/__entity_defs/`, `__entity_data/`, and `__views/`
   subdirectories under the build output are auto-generated diagnostic
-  views — read them mid-edit to verify how schema, data, and queries
+  views — read them mid-edit to verify how schema, data, and views
   resolved.
-- Before editing schema, query, or template files, consult the reference:
+- Before editing schema, view, or template files, consult the reference:
   call `list_docs()` for the catalog, then `read_doc(uri)` with a
   `docs://` URI from the listing.
 

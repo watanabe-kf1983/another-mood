@@ -1,6 +1,6 @@
 """Query deriver — validate the view files' query DSL and derive view entities.
 
-Validates view files against the built-in query schema, parses each
+Validates view files against the built-in view schema, parses each
 view's body into a typed Query, and derives the synthesized catalog
 entities (``view: true``) by composing the query's catalog transform
 against the data catalog.  Output YAML carries both the views and the
@@ -47,7 +47,7 @@ def derive_queries(
     out_dir: Path,
 ) -> None:
     """Validate view files and derive view entities into out_dir."""
-    schema = build_query_schema()
+    schema = build_view_schema()
     catalog_entities = _load_catalog(data_catalog_dir)
     catalog = dc.build_tree(catalog_entities)
 
@@ -96,8 +96,8 @@ def derive_queries(
             )
 
 
-def build_query_schema() -> Mapping[str, object]:
-    """Build a validation/normalization schema for query files."""
+def build_view_schema() -> Mapping[str, object]:
+    """Build a validation/normalization schema for view files."""
     return load_model(_VIEW_SCHEMA_FILE)
 
 

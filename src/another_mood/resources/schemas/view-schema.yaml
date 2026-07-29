@@ -1,21 +1,20 @@
-title: QuerySchema
+title: ViewSchema
 description: >-
-  Validates user-defined query files under queries_dir. Each
-  top-level key names a query (= view) and maps to a definition with a
-  required `from:` data source and optional `where:` / `grouped:` /
-  `select:` clauses. See docs/reference/view.md for the prose
-  specification.
+  Validates user-defined view files under views_dir. Each top-level key
+  names a view and maps to its query body: a required `from:` data
+  source and optional `where:` / `grouped:` / `select:` clauses. See
+  docs/reference/view.md for the prose specification.
 
 type: object
 propertyNames:
   description: >-
-    Query name pattern: starts with a Unicode letter or underscore,
+    View name pattern: starts with a Unicode letter or underscore,
     followed by Unicode letters, digits, or underscores.
   pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
 additionalProperties:
-  title: Query definition
+  title: View definition
   description: >-
-    A single query (view) definition. `from:` selects the normalized
+    A single view definition. `from:` selects the normalized
     data source; optional `flatten:` unwinds intrinsic arrays; optional
     `join:` attaches a related entity; optional `where:` filters
     records; optional `grouped:` reshapes them into groups; optional

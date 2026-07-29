@@ -12,10 +12,10 @@ albums_by_genre:
     - item: albums
 
 # Each genre group with its genre record attached - exercises a
-# query-to-query reference (``from:`` names the ``albums_by_genre`` view
+# view-to-view reference (``from:`` names the ``albums_by_genre`` view
 # above, not a data entity). The genre name can't be joined in
 # ``albums_by_genre`` itself because ``join:`` runs before ``grouped:``
-# in the fixed pipeline order; splitting into two queries and referencing
+# in the fixed pipeline order; splitting into two views and referencing
 # the first from the second is the escape hatch. Without it the template
 # would have to re-join genres on its own
 # (``node("genres", entry.genre_id).name``).

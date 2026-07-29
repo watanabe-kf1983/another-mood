@@ -38,7 +38,7 @@ Source paths are fixed — they are part of the project structure, not configura
 | Schema | `<project_dir>/definition/schema.yaml` |
 | Reports | `<project_dir>/definition/reports.yaml` |
 | Content | `<project_dir>/contents` |
-| Queries | `<project_dir>/definition/queries` |
+| Views | `<project_dir>/definition/views` |
 | Templates | `<project_dir>/definition/templates` |
 
 If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
@@ -77,7 +77,7 @@ mood build <project_dir> [--strict]
 Steps:
 
 1. Loads `<project_dir>/definition/schema.yaml` and normalizes `<project_dir>/contents`.
-2. Evaluates the queries under `<project_dir>/definition/queries` to build views.
+2. Evaluates the views defined under `<project_dir>/definition/views`.
 3. Renders Markdown to `output/` using the templates in `<project_dir>/definition/templates`.
 4. Renders the Markdown in `output/` into HTML in `site/`.
 
@@ -95,7 +95,7 @@ Watch files for changes, rebuild automatically, and serve a live preview.
 mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>]
 ```
 
-When a change is detected on an input path (the schema file or the contents / queries / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
+When a change is detected on an input path (the schema file or the contents / views / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
 
 By default `watch` writes nothing into the project — the preview is served live from a temporary working directory, and the diagnostic views are browsable at `/__db/`. Use `--out-dir` to also publish the Markdown tree to disk.
 
@@ -136,7 +136,7 @@ To watch multiple `<project_dir>` values at the same time, start one process per
 
 ## blueprint
 
-A *blueprint* is a working sample project (schema, contents, queries, templates) bundled with Another Mood. The `blueprint` command group lists them and applies them to a target directory.
+A *blueprint* is a working sample project (schema, contents, views, templates) bundled with Another Mood. The `blueprint` command group lists them and applies them to a target directory.
 
 ### blueprint list
 

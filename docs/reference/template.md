@@ -40,14 +40,14 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 
 ## Template context
 
-From templates, you can reference both entity data declared in [Schema](schema.md) and views defined by [Query](view.md) in the **same namespace**.
+From templates, you can reference both entity data declared in [Schema](schema.md) and views defined by [View](view.md) in the **same namespace**.
 
 - Entities: keys under `properties` in schema.yaml
-- Query views: top-level keys within files under `definition/queries/`
+- Views: top-level keys within files under `definition/views/`
 - Prose view (`prose`): auto-generated from Markdown files under `contents/` (see [Schema — Built-in schema: prose](schema.md#built-in-schema-prose))
 
 ```jinja2
-{# `products` is a structured-data entity, `bestsellers` is a query view #}
+{# `products` is a structured-data entity, `bestsellers` is a view #}
 {% for product in products %}
   ...
 {% endfor %}
@@ -61,7 +61,7 @@ A subtemplate additionally sees its subject — the data passed to the `render` 
 
 ## Linking
 
-A link names a node — a record, a query group, a singleton, a nested object — and resolves to wherever that node is rendered. The [`link`](#link) / [`href`](#href) / [`anchor`](#anchor) filters build it for you; this section is the model they rest on.
+A link names a node — a record, a view group, a singleton, a nested object — and resolves to wherever that node is rendered. The [`link`](#link) / [`href`](#href) / [`anchor`](#anchor) filters build it for you; this section is the model they rest on.
 
 ### Where a node is rendered
 
@@ -86,7 +86,7 @@ The node a link points at is often not in the template's context — a foreign k
 {{ node("categories", product.category_id) | link }}
 ```
 
-A path matching no node is a **missing node**, kept visible rather than a dead link. The `__db/__entity_data/` and `__db/__queries/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
+A path matching no node is a **missing node**, kept visible rather than a dead link. The `__db/__entity_data/` and `__db/__views/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
 
 A [prose](schema.md#built-in-schema-prose) record's headings are nodes too. A heading's anchor path is the record's path, `#`, and the heading's slug — `/prose/guides/ordering#placing-an-order` — and a link to it lands directly on the heading.
 
@@ -366,7 +366,7 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 | {{ spec.id }} | {{ spec.metadata.title }} |
 ```
 
-Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__entity_data/` and the shape of query results via `__db/__queries/`.
+Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__entity_data/` and the shape of each view via `__db/__views/`.
 
 ## Markdown escaping
 

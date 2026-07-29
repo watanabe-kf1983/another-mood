@@ -1,15 +1,15 @@
-# Query
+# View
 
-A **query** is a mechanism that reshapes structured data into a more convenient form for reference, producing a named **view**. Queries can express grouping, field projection, and similar transformations.
+A **view** is a named dataset derived from structured data, reshaped into a more convenient form for reference. It is defined by a **query**, which can express grouping, field projection, and similar transformations.
 
-Queries live in YAML files under `{project}/definition/queries/` (`.yaml` or `.yml`, case-insensitive). The number of files, how they are split, and any subdirectory layout are flexible; all queries are evaluated together at build time. A single file can hold multiple queries — each top-level key becomes a view name, which must not reuse an entity name or another view name (views and entities share one namespace).
+View definitions live in YAML files under `{project}/definition/views/` (`.yaml` or `.yml`, case-insensitive). The number of files, how they are split, and any subdirectory layout are flexible; all views are evaluated together at build time. A single file can hold multiple views — each top-level key becomes a view name, which must not reuse an entity name or another view name (views and entities share one namespace).
 
-## Basic query structure
+## Basic view structure
 
 Structure of a view definition:
 
 ```yaml
-# queries/by_role.yaml
+# views/by_role.yaml
 by_role:                     # ← top-level key of the file becomes the view name
   from: members              # required
   where:                     # optional
@@ -37,11 +37,11 @@ Evaluation order: `from` → `flatten` → `join` → `where` → `grouped` → 
 
 ## Automatic pass-through
 
-Data for entities declared in [Schema](schema.md) is automatically passed through and can be referenced from templates by entity name without writing any query. Queries are only needed when you want an additional view (grouping, projection, and so on).
+Data for entities declared in [Schema](schema.md) is automatically passed through and can be referenced from templates by entity name without defining any view. Views are only needed when you want an additional shape (grouping, projection, and so on).
 
 ## from
 
-Specifies the source to read from. The value is a **source name**: either an entity name (= the top-level key in source YAML, declared under `properties` in schema.yaml) or the name of another query's view (a join's [`to:`](#join) accepts the same).
+Specifies the source to read from. The value is a **source name**: either an entity name (= the top-level key in source YAML, declared under `properties` in schema.yaml) or the name of another view (a join's [`to:`](#join) accepts the same).
 
 ```yaml
 from: members
@@ -194,7 +194,7 @@ The shorthand `flatten: true` stands for the all-defaults form `flatten: {}` —
 
 | Key | Required | Role |
 |---|---|---|
-| `to` | Required | Id of the source to match against — a data entity or another query's view. |
+| `to` | Required | Id of the source to match against — a data entity or another view. |
 | `on` | Required | `{ left, right }` — match rows where the input row's `left:` attribute equals the other entity's `right:` attribute. |
 | `as` | Optional | Name given to the matches on each output row. Defaults to the value of `to:`. |
 | `where` | Optional | Pre-join filter applied to `to:` before matching. Same grammar as the top-level `where:`. |
@@ -408,8 +408,8 @@ For `from: members` with three records `[{name: alice, age: 30}, {name: bob}, {n
 
 ## Inspecting a view
 
-Each query's result is exposed via an auto-generated meta page at `output/__db/__queries/<query>.md`. While writing a query, you can verify the result in real time on `mood watch`.
+Each view is exposed via an auto-generated meta page at `output/__db/__views/<view>.md`. While writing a query, you can verify the result in real time on `mood watch`.
 
 ## Full view-schema
 
-The schema that constrains the form of query files. The canonical specification is the YAML at [`./schemas/view-schema.yaml`](./schemas/view-schema.yaml).
+The schema that constrains the form of view files. The canonical specification is the YAML at [`./schemas/view-schema.yaml`](./schemas/view-schema.yaml).
