@@ -55,13 +55,13 @@ def derive_queries_stage(workspace: Workspace) -> Task:
     inspect_out = workspace.component_output(inspect_schema)
     out = workspace.component_output(derive_queries)
     call = derive_queries.bind(
-        queries_dir=layout.queries_dir,
+        queries_dir=layout.views_dir,
         data_catalog_dir=inspect_out.dir,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
-        watch_paths=[layout.queries_dir],
+        watch_paths=[layout.views_dir],
         upstreams=[inspect_out],
     )
 
