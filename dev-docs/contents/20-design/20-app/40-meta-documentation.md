@@ -1,6 +1,6 @@
 # メタドキュメンテーション
 
-ユーザが書いたスキーマ定義とクエリ定義を、ツールが内蔵のテンプレートで自動的に可視化する機能。
+ユーザが書いたスキーマ定義とビュー定義を、ツールが内蔵のテンプレートで自動的に可視化する機能。
 
 ## External Design
 
@@ -65,7 +65,7 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 - `__root` 全体図 (F4a) — カタログ全体の関係を俯瞰
 - `__entity_defs/<id>.md` 近傍図 (F4b) — focus entity の周辺
-- `__views/<id>.md` Source Diagram (F4c) — クエリのソース entity 群
+- `__views/<id>.md` Source Diagram (F4c) — ビューのソース entity 群
 
 3 図の variation:
 
@@ -114,7 +114,7 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 ### `__views/<id>.md` の Source Diagram
 
-各 query ページの先頭 (タイトル直下、`## Definition` の直前) に、クエリのソース entity 群とその関係を示す classDiagram を出す。MS Access のクエリデザインビュー上部に並ぶ「テーブルとそれを結ぶ関係線」に相当するビュー。各 variation は ER 図シリーズ節の表を参照。
+各ビューページの先頭 (タイトル直下、`## Definition` の直前) に、ビューのソース entity 群とその関係を示す classDiagram を出す。MS Access のクエリデザインビュー上部に並ぶ「テーブルとそれを結ぶ関係線」に相当するビュー。各 variation は ER 図シリーズ節の表を参照。
 
 #### 背景: association edge は subtree-aggregated
 
@@ -124,7 +124,7 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 #### 背景: 属性表示はヘッダのみ
 
-per-query 図の目的は「このクエリがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= apply_to_catalog による出力形状) や `__entity_defs/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
+per-view 図の目的は「このビューがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= apply_to_catalog による出力形状) や `__entity_defs/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
 
 ## Internal Design
 
@@ -151,7 +151,7 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### メタドキュメンテーションの DSL 化境界
 
-built-in メタドキュメンテーション (`__entity_defs` / `__entity_data` / `__views` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名クエリがそれ。同じクエリが index の一覧も駆動する — [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) 参照)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
+built-in メタドキュメンテーション (`__entity_defs` / `__entity_data` / `__views` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名ビューがそれ。同じビューが index の一覧も駆動する — [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) 参照)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
 
 #### 背景
 
@@ -161,19 +161,19 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ### 診断対象は user コンテンツに限定
 
-ページ生成クエリ (`__entity_defs` / `__entity_data` / `__views`) は、id が `__` で始まる catalog-internal なエンティティ・クエリを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.views`) や built-in メタクエリ自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
+ページ生成ビュー (`__entity_defs` / `__entity_data` / `__views`) は、id が `__` で始まる catalog-internal なエンティティ・ビューを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.views`) や built-in メタビュー自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
 
-これらのクエリは index の一覧 (Entities / Queries) と各 per-item ページの両方を 1 本で駆動する。以前は一覧用 (`__user_entity_roots` / `__user_queries`、user 限定) とページ生成用 (内部オブジェクト込みの全件) を別クエリに分け、内部オブジェクトのページも生成していた。
+これらのビューは index の一覧 (Entities / Views) と各 per-item ページの両方を 1 本で駆動する。以前は一覧用 (`__user_entity_roots` / `__user_queries`、user 限定) とページ生成用 (内部オブジェクト込みの全件) を別ビューに分け、内部オブジェクトのページも生成していた。
 
 #### 背景: なぜ内部オブジェクトのページを出さないか
 
-`__definition.*` やメタクエリ自身のページは meta-meta な診断で、日常の編集では参照されない。出力ツリーに常時並ぶと、利用者が見たい自分のエンティティ・クエリのページが埋もれる。カタログの「データ」自体は composer の上流出力として常に存在し ([自己記述カタログ](#自己記述カタログ-__definition)) テンプレートを駆動し続けるので、抑止するのは診断「ページ」だけで、機能は失われない。
+`__definition.*` やメタビュー自身のページは meta-meta な診断で、日常の編集では参照されない。出力ツリーに常時並ぶと、利用者が見たい自分のエンティティ・ビューのページが埋もれる。カタログの「データ」自体は composer の上流出力として常に存在し ([自己記述カタログ](#自己記述カタログ-__definition)) テンプレートを駆動し続けるので、抑止するのは診断「ページ」だけで、機能は失われない。
 
-一覧用クエリとページ生成用クエリは user フィルタを足すと `from` / `where` がほぼ一致するため、1 本に統合した (`__entity_defs` が `__user_entity_roots` を、`__views` が `__user_queries` を吸収)。ER 図用の `__entity_tree` は descendant を含む別形なので残す。
+一覧用ビューとページ生成用ビューは user フィルタを足すと `from` / `where` がほぼ一致するため、1 本に統合した (`__entity_defs` が `__user_entity_roots` を、`__views` が `__user_queries` を吸収)。ER 図用の `__entity_tree` は descendant を含む別形なので残す。
 
 ## Proposals
 
 ### 内部オブジェクト診断の `--debug` 復活スイッチ
 
-[診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) で `__definition.*` やメタクエリ自身のページを抑止したが、カタログ自体をデバッグしたい場面 (built-in の挙動を疑うとき等) では見たくなりうる。その際は `mood build --debug` 相当のスイッチで `where.not` を外し、内部オブジェクトのページも出す案。常時は出さず opt-in にすることで、通常出力のノイズと debug 時の網羅性を両立する。スイッチの粒度 (build 全体か meta だけか) は実装時に確定。
+[診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) で `__definition.*` やメタビュー自身のページを抑止したが、カタログ自体をデバッグしたい場面 (built-in の挙動を疑うとき等) では見たくなりうる。その際は `mood build --debug` 相当のスイッチで `where.not` を外し、内部オブジェクトのページも出す案。常時は出さず opt-in にすることで、通常出力のノイズと debug 時の網羅性を両立する。スイッチの粒度 (build 全体か meta だけか) は実装時に確定。
 

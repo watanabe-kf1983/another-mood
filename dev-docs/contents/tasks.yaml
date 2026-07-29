@@ -230,7 +230,7 @@ categories:
         phase: 10
         done: true
       E6:
-        title: クエリ名と正規化済みデータ名の同名禁止チェック
+        title: ビュー名と正規化済みデータ名の同名禁止チェック
         phase: 13
         done: true
       E8:
@@ -250,7 +250,7 @@ categories:
         phase: 10
         done: true
       E12:
-        title: "クエリ間参照 (`from:` / `join.to:` にクエリ名)"
+        title: "ビュー間参照 (`from:` / `join.to:` にビュー名)"
         phase: 13
         done: true
 
@@ -270,7 +270,7 @@ categories:
         phase: 10
         done: true
       F4c:
-        title: ER 図テンプレート — per-query 図
+        title: ER 図テンプレート — per-view 図
         phase: 10
         done: true
       F7:
@@ -380,7 +380,7 @@ categories:
       - src/another_mood/
     tasks:
       J3:
-        title: "クエリ結果の機械可読エクスポート (mood export + MCP)"
+        title: "compose 結果のエクスポート (mood export + MCP)"
         note: >-
           計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
           (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
@@ -396,7 +396,7 @@ categories:
           還流が不要と確認できたため対象外 (還流自体は現状でも可能)。クエリ DSL への
           集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
         phase: 15
-        proposal: 20-design/60-composer/20-export-spec#クエリ結果の機械可読エクスポート-j3
+        proposal: 20-design/60-composer/20-export-spec#compose-結果のエクスポート-j3
 
   L:
     title: dog-fooding リファクタ
@@ -409,7 +409,7 @@ categories:
         phase: 13
         done: true
       L2:
-        title: スキーマ + クエリ + テンプレート群の構築
+        title: スキーマ + ビュー + テンプレート群の構築
         phase: 13
         done: true
       L3:

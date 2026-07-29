@@ -14,7 +14,7 @@ contents / views / templates の三層構造は MS-Access の Table / Query / Fo
 
 Access の Query は SQL で書く。テンプレートエンジンで Query を書くのは、Excel のセルに SQL を文字列として組み立てるようなもの。Query にはクエリ言語を使うべき。
 
-さらに、Access の Query Design View は SQL を書かずに GUI でクエリを構築できる。views/ を YAML DSL で定義することで、クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。
+さらに、Access の Query Design View は SQL を書かずに GUI でクエリを構築できる。ビューを YAML DSL で定義することで、クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。
 
 ### 背景: ソースコードリポジトリ内での配置
 
