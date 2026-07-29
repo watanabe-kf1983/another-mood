@@ -291,6 +291,7 @@ categories:
     impl_paths:
       - src/another_mood/cli.py
       - src/another_mood/config.py
+      - src/another_mood/layout.py
     spec: 20-design/20-app/20-config-spec
     tasks:
       G2:
@@ -314,6 +315,31 @@ categories:
         title: ソースレイアウトの ProjectConfig からの分離 + RB_ レイアウトオーバーライド廃止
         phase: 14
         done: true
+      G11:
+        title: "definition/queries/ → definition/views/ 改名 (静かなエイリアス併存)"
+        note: >-
+          利用者が名前を付ける保存済み導出データセットの RDBMS 一般語彙は view で、
+          query はその定義本文 (CREATE VIEW name AS <query> の関係)。現状は
+          consumer 側 (template.md・generator) が既に view 語彙なのに producer 側
+          (definition/queries/・query.md) だけ query 語彙という非対称があり、
+          これを解消する。docs は LLM が MCP 経由で読むため、SQL の view
+          セマンティクス (名前付き・導出・読み取り専用) を priming できる利も大きい。
+          決定事項: (1) SourceLayout が views/ と queries/ の「ある方」を探す。
+          両方あれば移行ミスなのでビルドエラー、(2) エイリアスは静かに —
+          deprecation warning は出さない (P4 と同じ判断。warning は --strict の
+          稼働プロジェクトを移行前に壊す)、(3) docs / MCP instructions は views
+          のみを語り、query.md → view.md へ改名 (DSL 本文の説明語彙としての
+          query は残る)、(4) __db/__queries → __views は生成物側なので併走なしで
+          一斉切り替え。内部識別子 (shared/query.py・derive_queries・
+          __definition.queries キー) は利用者契約ではないため追随は任意。
+        phase: 14
+      G12:
+        title: "queries/ エイリアス廃止"
+        note: >-
+          稼働プロジェクトの移行完了後に queries/ の読み込みを撤去する。
+          公開後の語彙に遺産を持ち込まないため、Q1 (PyPI 公開) 前に必ず畳む。
+          前提 G11。
+        phase: 14
 
   H:
     title: バイナリファイルの取り扱い
@@ -362,9 +388,10 @@ categories:
           計算は外部プログラムに委ねる (動機となった実例: 設計ドキュメントの構造化
           データから Function Point を算出する)。現 __db/__queries は人間向け診断
           Markdown で結果データではないため、機械可読の経路が別に要る。
-          MCP には query 引数 (jq 式) を持たせる — export の実行はファイル操作では
-          なくコマンド実行であり、シェルを持たない MCP クライアントでは生成できても
-          照会できないため。CLI にも同じ --query を置き機能を一致させる。
+          MCP には jq 引数 (jq 式。query の語はビュー定義 DSL に予約) を持たせる —
+          export の実行はファイル操作ではなくコマンド実行であり、シェルを持たない
+          MCP クライアントでは生成できても照会できないため。CLI にも同じ --jq を
+          置き機能を一致させる。
           当初含めていた「export → 外部計算 → contents 還流」のガイド化は、実需側で
           還流が不要と確認できたため対象外 (還流自体は現状でも可能)。クエリ DSL への
           集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
