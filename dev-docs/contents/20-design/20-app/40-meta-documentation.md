@@ -4,49 +4,7 @@
 
 ## External Design
 
-### Entity と Query のページ構成 (非対称)
-
-Entity と Query でページ分け方が異なる:
-
-| 種別 | ページ構成 |
-|---|---|
-| Entity | `__entity_defs` (Schema) と `__entity_data` (Data) の **2 ページ**、相互リンクで往復 |
-| Query | `__views` に Definition / Shape / Results の **3 セクション 1 ページ** |
-
-#### 背景: なぜ非対称か
-
-**artifact の結合度**で決めている。
-
-**Entity** は Schema と Data が独立した user source:
-
-- Schema: user が JSON Schema として authoring した定義
-- Data: user が YAML として authoring したレコード
-- どちらも単独で意味を持つ (「このフィールドは何?」 vs 「このレコードは?」)
-- → **分離 2 ページ**、それぞれ別の読者の問いに答える
-
-**Query** は Definition / Shape / Results が 1 つの recipe 由来の束:
-
-- Definition: user が書いた DSL
-- Shape: Definition から deterministic に推論 (`apply_to_catalog`)
-- Results: Definition + 上流データから生成
-- どれも単独では不完全: Definition は抽象 recipe、Shape は「結果の形」単独で
-  意味が薄く、Results は Definition 無しに「何のクエリか」分からない
-- → **統合 1 ページ**、3 者がセットで初めて意味を成す
-
-Entity の Data を見て味見して Schema を直すことは普通はないが、Query の Results
-を味見して DSL (Recipe) を修正するのは日常。Author の feedback loop が
-そのまま結合度の差を裏付けている。
-
-#### 業界ツールとの対応
-
-- **DBeaver / Snowsight / MS Access のテーブルブラウザ**: Schema (DDL / Properties)
-  と Data (Datasheet) は別タブ — 本ツールの Entity 2 ページに対応
-- **SQL エディタ + Results pane** (DBeaver の SQL Editor, Snowsight の worksheet):
-  Query と Results は同ウィンドウ上下 — 本ツールの Query 1 ページに対応
-
-この非対称は artifact 結合度の差を反映しており、業界慣例とも整合する。
-
-### Query View の Shape が必須な理由
+### View の Shape が必須な理由
 
 本ツールは複合型 (object / object[]) を許容するため、カラムヘッダと
 サンプル行だけでは結果形状が伝わらない (`tasks` カラムが scalar 文字列なのか、
@@ -57,7 +15,10 @@ Shape セクションで各出力フィールドの型 + entity ref を明示す
 programmatic に伝わる。SQL クライアントが (全カラムスカラ前提で) 型表示を
 省略できるのと対照的。
 
-Shape は Query Object の `apply_to_catalog` が生成する。
+Shape は Query Object の `apply_to_catalog` が生成する。定義から deterministic
+に導出される型情報なので、置き場所は `__data` ではなく `__view_defs`:
+entity def ページが「schema 定義 + 正規化後の型表」を見せるのと同じ、
+「定義 + そこから決まる型」の構図になる。
 
 ### ER 図シリーズ
 
@@ -65,11 +26,11 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 - `__root` 全体図 (F4a) — カタログ全体の関係を俯瞰
 - `__entity_defs/<id>.md` 近傍図 (F4b) — focus entity の周辺
-- `__views/<id>.md` Source Diagram (F4c) — ビューのソース entity 群
+- `__view_defs/<id>.md` Source Diagram (F4c) — ビューのソース entity 群
 
 3 図の variation:
 
-| 観点 | `__root` 全体図 (F4a) | `__entity_defs` 近傍図 (F4b) | `__views` Source Diagram (F4c) |
+| 観点 | `__root` 全体図 (F4a) | `__entity_defs` 近傍図 (F4b) | `__view_defs` Source Diagram (F4c) |
 |---|---|---|---|
 | node 集合 | user 領域 + `prose` 全体 | focus + descendants + focus subtree からの FK out 先 | `query.from` ∪ `query.join[].to` (top-level entity に閉じる) |
 | 属性表示 | 全 node ヘッダのみ | focus + descendants は全属性、FK out 先はヘッダのみ | 全 node ヘッダのみ |
@@ -101,7 +62,7 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 ### `__entity_defs/<id>.md` の近傍 ER 図
 
-各 entity ページの先頭 (タイトル直下、`[→ Entity Data]` リンクの直下) に、focus entity + その descendants + focus subtree が FK 参照する先だけを描く小さな classDiagram を出す。各 variation は ER 図シリーズ節の表を参照。
+各 entity ページの先頭 (タイトル直下、`[→ Data]` リンクの直下) に、focus entity + その descendants + focus subtree が FK 参照する先だけを描く小さな classDiagram を出す。各 variation は ER 図シリーズ節の表を参照。
 
 #### 背景: attribute 表との重複は許容
 
@@ -112,9 +73,9 @@ Shape は Query Object の `apply_to_catalog` が生成する。
 
 役割が分かれており、片方を削ると失われる読者の問いがある。S1 / showcase/music の実機検証でも視覚的にうるさく感じなかったため、いったん両方を残す。
 
-### `__views/<id>.md` の Source Diagram
+### `__view_defs/<id>.md` の Source Diagram
 
-各ビューページの先頭 (タイトル直下、`## Definition` の直前) に、ビューのソース entity 群とその関係を示す classDiagram を出す。MS Access のクエリデザインビュー上部に並ぶ「テーブルとそれを結ぶ関係線」に相当するビュー。各 variation は ER 図シリーズ節の表を参照。
+各ビュー定義ページの先頭 (タイトル直下、`[→ Data]` リンクの直下) に、ビューのソース entity 群とその関係を示す classDiagram を出す。MS Access のクエリデザインビュー上部に並ぶ「テーブルとそれを結ぶ関係線」に相当するビュー。各 variation は ER 図シリーズ節の表を参照。
 
 #### 背景: association edge は subtree-aggregated
 
@@ -151,7 +112,7 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### メタドキュメンテーションの DSL 化境界
 
-built-in メタドキュメンテーション (`__entity_defs` / `__entity_data` / `__views` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名ビューがそれ。同じビューが index の一覧も駆動する — [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) 参照)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
+built-in メタドキュメンテーション (`__entity_defs` / `__view_defs` / `__data` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名ビューがそれ。`__entity_defs` / `__view_defs` は index の一覧も駆動する — [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) 参照)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
 
 #### 背景
 
@@ -161,54 +122,17 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ### 診断対象は user コンテンツに限定
 
-ページ生成ビュー (`__entity_defs` / `__entity_data` / `__views`) は、id が `__` で始まる catalog-internal なエンティティ・ビューを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.views`) や built-in メタビュー自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
+ページ生成ビュー (`__entity_defs` / `__view_defs` / `__data`) は、id が `__` で始まる catalog-internal なエンティティ・ビューを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.views`) や built-in メタビュー自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
 
-これらのビューは index の一覧 (Entities / Views) と各 per-item ページの両方を 1 本で駆動する。以前は一覧用 (`__user_entity_roots` / `__user_queries`、user 限定) とページ生成用 (内部オブジェクト込みの全件) を別ビューに分け、内部オブジェクトのページも生成していた。
+`__entity_defs` / `__view_defs` は index の一覧 (Entities / Views) と各 per-item ページの両方を 1 本で駆動する (`__data` が駆動するのはページ生成のみ)。以前は一覧用 (`__user_entity_roots` / `__user_queries`、user 限定) とページ生成用 (内部オブジェクト込みの全件) を別ビューに分け、内部オブジェクトのページも生成していた。
 
 #### 背景: なぜ内部オブジェクトのページを出さないか
 
 `__definition.*` やメタビュー自身のページは meta-meta な診断で、日常の編集では参照されない。出力ツリーに常時並ぶと、利用者が見たい自分のエンティティ・ビューのページが埋もれる。カタログの「データ」自体は composer の上流出力として常に存在し ([自己記述カタログ](#自己記述カタログ-__definition)) テンプレートを駆動し続けるので、抑止するのは診断「ページ」だけで、機能は失われない。
 
-一覧用ビューとページ生成用ビューは user フィルタを足すと `from` / `where` がほぼ一致するため、1 本に統合した (`__entity_defs` が `__user_entity_roots` を、`__views` が `__user_queries` を吸収)。ER 図用の `__entity_tree` は descendant を含む別形なので残す。
+一覧用ビューとページ生成用ビューは user フィルタを足すと `from` / `where` がほぼ一致するため、1 本に統合した (`__entity_defs` が `__user_entity_roots` を、`__view_defs` が `__user_queries` を吸収)。ER 図用の `__entity_tree` は descendant を含む別形なので残す。
 
 ## Proposals
-
-### メタページ構成の対称化 (`__entity_defs` / `__view_defs` / `__data`)
-
-[Entity と Query のページ構成 (非対称)](#entity-と-query-のページ構成-非対称) を廃し、メタページを次の 3 ディレクトリに再編する案。G11 (query → view 語彙改名) の追加ステップとして実施する。
-
-| ディレクトリ | ページ見出し | 内容 |
-|---|---|---|
-| `__entity_defs/<id>` | `Entity Definition: <id>` | 現行どおり: schema 由来の定義 (型表 + 近傍 ER 図) |
-| `__view_defs/<id>` | `View Definition: <id>` | 現 `__views` から Data 節を除いたもの: Source Diagram + Definition + Shape |
-| `__data/<id>` | `Data: <id>` | 現 `__entity_data` に view の data を加えたもの: 全 root source の record table |
-
-- 定義側は「何で定義されたか」(schema / query) で分かれ、データ側は一様。entity と view は 1 つの source namespace を共有しているので、`__data` への統合は名前空間の実態どおり
-- 相互リンクは現行の defs ↔ data パターンを踏襲する。`__data` からの戻りリンクは source の種別で `__entity_defs` / `__view_defs` に分岐 (リンク文言は遷移先の見出しに合わせ `→ Data` / `← Entity Definition` / `← View Definition`)
-- Shape は definition から決定的に導出される型情報なので `__view_defs` 側に残る。entity def ページが「schema 定義 + 正規化後の型表」を見せるのと同じ構図 (定義 + そこから決まる型) になる
-
-#### 背景: 非対称の論拠が G11 の語彙改名で崩れた
-
-旧構成 (Query は Definition / Shape / Results の 3 セクション 1 ページ) を支えていた論拠を再検証した結果:
-
-1. **往復論はページ構成を支えない** — 「Results を味見して DSL を修正するのは日常」は事実だが、その往復の実体は「エディタ上の view YAML ↔ Data 表示」であり、メタページの Definition 節はどちらの脚でもない (編集面ではなくレンダリングされた写し)。往復が日常であることから、写しが Data の上に載っているべきだという結論は導けない
-2. **ページ長の問題は Entity と同型** — view の data も数千行になりうる。Entity で Data を別ページに分けた事情 (定義が巨大な表の上に埋まる) は view にも同じ強さで効く
-3. **業界慣例はむしろ対称を示す** — DBeaver / Snowsight で view を開くとテーブルと同様に DDL タブ + Data タブが並ぶ。旧記述が引いていた「SQL エディタ + Results pane」はアドホックなクエリ実行 UI であり、保存済み view の閲覧 UI ではない。「Query Result」という (G11 で誤りと判明した) 呼称がこの取り違えを自然に見せていた
-
-なお 3 成果物の provenance 論 (Shape / Data は Definition の帰結) 自体は正しいが、それは「Shape が definition ページに同居する」ことの根拠にはなっても、data まで束ねる根拠にはならない。
-
-#### 背景: 命名
-
-`__views` (Data 除去後) を `__view_defs` に改める理由: G11 後の語彙では view = named dataset そのものであり、Data を失ったページが見せるのは view ではなく view definition。ページの中身を正しく名指しし、`__entity_defs` と対になる。`__data` は見出し `Data: <id>` とディレクトリ名が一致し、ソースレイアウト (定義 2 種 `definition/schema.yaml` + `definition/views/` に対しデータは一様) とも相似形になる。
-
-`__queries` → `__views` (S3) → `__view_defs` の二段改名になるが、いずれも同一 draft PR 内で公開前のため互換コストは無い。
-
-#### 実装メモ
-
-- union 不要: view は導出時点で `view: true` の entity としてカタログに載っている。`__data` は `__definition.entities` の root 全件 (`parent_entity` 無し・`__` 除外) を読むだけで entity と view の両方を拾える
-- `META_EDITION.file_per` に `__data.item` は rename で対応 (`.item` paging は既存機構)
-- record_table / walk_entity は view entity を既に処理できる (現 `__views` ページの Results 節が同じループ)
-- 実施時にこの節を削除し、[Entity と Query のページ構成 (非対称)](#entity-と-query-のページ構成-非対称)・業界ツールとの対応・[Query View の Shape が必須な理由](#query-view-の-shape-が必須な理由) を対称構成の記述に書き換える
 
 ### 内部オブジェクト診断の `--debug` 復活スイッチ
 
