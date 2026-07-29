@@ -98,7 +98,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 | 候補 | 系統 | 評価（spike 済） |
 |---|---|---|
 | **python-liquid** | non-evaluating が言語仕様 | 呼び出し構文が host allowlist（filter/tag）のみ ＝ **安全がバインディング非依存**。注入した capability オブジェクトすら *呼べない*。helper は filter/context-aware filter/custom tag で全表現可（実証）。エスケープは `OutputNode.render_to_output` の override（~10行、実証）。macro 無し／`groupby`・`format`・文字列×n 無し ＝ 移行時にテンプレ logic をクエリ・custom filter へ押し出す（現テンプレでの要手当ては 3 箇所のみ、いずれも「テンプレに漏れた logic」） |
-| **minijinja (`minijinja-py`)** | 閉じた値モデル（Rust） | 評価器は Rust、素データは Rust `Value` に marshal され Python 不在 ＝ dunder 経路は**構造封鎖**。**ただし RCE 閉包は dunder だけの必要条件で不十分** — 渡したオブジェクトの**非 `_` 属性・メソッド・非 `_` 名 global** は露出し呼べる（`x.pub.getcwd()` / `render_to_file()` 実行を確認）。よって安全は**境界の marshal 契約**（下記）。Jinja 互換で書き直し最小（macro native・`env.finalizer` フックあり・`{% render %}` は filter 化）。エラーは最厚（前後行＋キャレット＋変数）で LLM 執筆に有利 |
+| **minijinja (`minijinja-py`)** | 閉じた値モデル（Rust） | 評価器は Rust、素データは Rust `Value` に marshal され Python 不在 ＝ dunder 経路は**構造封鎖**。**ただし RCE 閉包は dunder だけの必要条件で不十分** — 渡したオブジェクトの**非 `_` 属性・メソッド・非 `_` 名 global** は露出し呼べる（`x.pub.getcwd()` / `render_to_file()` 実行を確認）。よって安全は**境界の marshal 契約**（下記）。Jinja 互換で書き直し最小（macro native・`env.finalizer` フックあり・`{% render %}` は filter 化済み [P8](node:/tasks/P/tasks/P8)）。エラーは最厚（前後行＋キャレット＋変数）で LLM 執筆に有利 |
 | 小さな自作評価器 | logic-less / 許可リスト | 言語は安全にできるが、真に難しい**コンテキスト別エスケープ**（`finalize`/`Markup`/whitespace）を再オープンする。不採 |
 
 二択の軸: **liquid＝言語で構造保証（未信頼テンプレを既定安全で build する世界）／ minijinja＝ほぼ drop-in ＋ marshal 契約（自作・半信頼の世界）**。

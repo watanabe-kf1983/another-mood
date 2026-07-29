@@ -6,11 +6,9 @@ and its dispatch: inline expansion, or the subject's own page."""
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
-from jinja2 import nodes, pass_context
-from jinja2.ext import Extension
-from jinja2.parser import Parser
+from jinja2 import pass_context
 from jinja2.runtime import Context
 from markupsafe import Markup
 
@@ -23,8 +21,6 @@ from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
-
-PROCESSOR_KEY = "_render_processor"
 
 
 class Renderer(Protocol):
@@ -69,7 +65,7 @@ class RenderProcessorImpl:
         (``context.name``) without a line — a filter has no source
         location at runtime.
         """
-        _guard_subtree(subject, context.resolve("this"), context.name, None)
+        _guard_subtree(subject, context.resolve("this"), context.name)
         # Markup, not str: a filter's return value passes through the
         # environment's finalize, and the already-rendered output must
         # not be escaped a second time.
@@ -85,60 +81,9 @@ class RenderProcessorImpl:
         return ensure_not_windows_reserved(Path(self.paging.page_path(node)))
 
 
-class RenderExtension(Extension):
-    """Jinja2 extension for the {% render "template" with data %} tag.
-
-    Deprecated: superseded by the ``render`` filter.  The tag is kept only
-    for live projects that still use it and is removed, extension and all,
-    once they have migrated.  ``mood_view`` is registered as a silent alias:
-    both tag names route through the same :meth:`parse` (which consumes
-    whichever keyword opened the tag), so they are behaviourally identical."""
-
-    tags = {"render", "mood_view"}
-
-    def parse(self, parser: Parser) -> nodes.Node:
-        lineno = next(parser.stream).lineno
-        template_name = parser.parse_expression()
-        parser.stream.expect("name:with")
-        data = parser.parse_expression()
-
-        # Pass the render context (for the host ``this``) and the tag's own
-        # source location, baked in at parse time, so :meth:`_render` can point
-        # a subtree-guard error at the exact ``{% render %}`` line.
-        args: list[nodes.Expr] = [
-            nodes.ContextReference(),
-            template_name,
-            data,
-            nodes.Const(parser.filename),
-            nodes.Const(lineno),
-        ]
-        return nodes.CallBlock(
-            self.call_method("_render", args),
-            [],
-            [],
-            [],
-        ).set_lineno(lineno)
-
-    def _render(
-        self,
-        context: Context,
-        template_name: str,
-        subject: object,
-        filename: str | None,
-        lineno: int,
-        caller: Any,
-    ) -> str:
-        _guard_subtree(subject, context.resolve("this"), filename, lineno)
-        processor = self.environment.globals[PROCESSOR_KEY]
-        return processor(template_name, subject)  # type: ignore[return-value]
-
-
-def _guard_subtree(
-    subject: object, host: object, filename: str | None, lineno: int | None
-) -> None:
+def _guard_subtree(subject: object, host: object, filename: str | None) -> None:
     """Reject a render whose node subject lies outside the host's subtree,
-    pointing the error at the invocation's source location (the tag knows
-    its exact line; the filter only its template).
+    pointing the error at the enclosing template (a filter carries no line).
 
     A node is drawn on exactly one page fixed by its data position
     (``PagingPolicy.page_path``); link resolution rides on that invariant (a
@@ -172,7 +117,7 @@ def _guard_subtree(
         [
             Diagnostic(
                 file=Path(filename) if filename else None,
-                line=lineno,
+                line=None,
                 column=None,
                 message=(
                     f"`render` can only render a node within its host's "

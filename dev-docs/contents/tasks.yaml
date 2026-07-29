@@ -528,11 +528,8 @@ categories:
         done: true
       P5:
         title: mood_view エイリアス廃止
-        note: >-
-          稼働プロジェクトの移行完了後に mood_view エイリアスを撤去する。
-          公開後の語彙に遺産を持ち込まないため、Q1 (PyPI 公開) 前に必ず畳む。
-          前提 P4。
         phase: 14
+        done: true
       P6:
         title: テンプレートエンジンを minijinja へ差し替え (C)
         note: >-
@@ -579,16 +576,8 @@ categories:
         done: true
       P8:
         title: "{% render %} タグ廃止 (filter 形へ一本化)"
-        note: >-
-          稼働プロジェクトの filter 形への移行完了後、{% render %} タグと
-          唯一の Jinja 拡張 RenderExtension を撤去し filter 形へ一本化する。
-          素の Environment だけになり、公開後の語彙にタグ遺産を残さない
-          (P5 の mood_view 廃止と同じ理由・要領、Q1 前に畳む)。P6
-          (non-evaluating 移行) の hard predecessor — minijinja はカスタム
-          タグ非対応ゆえタグが残ると移行できない。前提 P7。P10 (タグ表記の
-          掃除) を先に畳んでおくと、撤去時に残っているタグ言及は「タグ自体を
-          主題とするもの」だけになり、本タスクで一緒に落とせる。
         phase: 14
+        done: true
       P10:
         title: dev-docs design/ の {% render %} タグ表記の掃除
         phase: 14
