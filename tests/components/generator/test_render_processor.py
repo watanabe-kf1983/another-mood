@@ -1,5 +1,4 @@
-"""Tests for render_processor — render_filter, RenderExtension, and
-RenderProcessorImpl."""
+"""Tests for render_processor — render_filter and RenderProcessorImpl."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -7,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jinja2 import DictLoader, Environment, TemplateSyntaxError
+from jinja2 import DictLoader, Environment
 
 from another_mood.components.generator.data_tree import MappingNode, wrap_tree
 from another_mood.components.generator.inert import (
@@ -15,11 +14,7 @@ from another_mood.components.generator.inert import (
     InertMapping,
     ensure_inert_mapping,
 )
-from another_mood.components.generator.render_processor import (
-    PROCESSOR_KEY,
-    RenderExtension,
-    RenderProcessorImpl,
-)
+from another_mood.components.generator.render_processor import RenderProcessorImpl
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.template_engine import TemplateEngine
@@ -54,24 +49,6 @@ def _wrap(data: Mapping[str, Any]) -> MappingNode:
 
 
 @dataclass
-class MockProcessor:
-    """Records calls and returns a fixed string."""
-
-    calls: list[tuple[str, dict[str, Any]]] = field(default_factory=lambda: [])
-    return_value: str = ""
-
-    def __call__(self, template_name: str, data: dict[str, Any]) -> str:
-        self.calls.append((template_name, data))
-        return self.return_value
-
-
-def _make_extension_env(processor: MockProcessor) -> Environment:
-    env = Environment(extensions=[RenderExtension], keep_trailing_newline=True)
-    env.globals[PROCESSOR_KEY] = processor  # type: ignore[assignment]
-    return env
-
-
-@dataclass
 class _MockEngine:
     """Captures calls to render / render_to_file for routing assertions."""
 
@@ -97,151 +74,48 @@ def _make_filter_env(
     return env
 
 
-# -- RenderExtension --
-
-
-class TestRenderParsing:
-    """Extension correctly parses template name and data from the tag."""
-
-    def test_receives_template_name_and_data(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string('{% render "profile.md" with user %}')
-        template.render(user={"id": "alice", "name": "Alice"})
-
-        assert len(mock.calls) == 1
-        assert mock.calls[0][0] == "profile.md"
-        assert mock.calls[0][1] == {"id": "alice", "name": "Alice"}
-
-    def test_data_is_resolved_expression(self) -> None:
-        """The with-expression is evaluated, not passed as a string."""
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string('{% render "card.md" with items[0] %}')
-        template.render(items=[{"id": "x", "val": 42}])
-
-        assert mock.calls[0][1] == {"id": "x", "val": 42}
-
-    def test_called_once_per_tag(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string(
-            '{% render "a.md" with x %}{% render "b.md" with y %}'
-        )
-        template.render(x={"id": "1"}, y={"id": "2"})
-
-        assert len(mock.calls) == 2
-        assert mock.calls[0][0] == "a.md"
-        assert mock.calls[1][0] == "b.md"
-
-    def test_inside_for_loop(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string(
-            '{% for item in items %}{% render "detail.md" with item %}{% endfor %}'
-        )
-        template.render(items=[{"id": "a"}, {"id": "b"}, {"id": "c"}])
-
-        assert len(mock.calls) == 3
-        assert [c[1]["id"] for c in mock.calls] == ["a", "b", "c"]
-
-
-class TestRenderOutput:
-    """Extension returns renderer's output into the Jinja2 result."""
-
-    def test_return_value_appears_in_output(self) -> None:
-        mock = MockProcessor(return_value="REPLACED")
-        env = _make_extension_env(mock)
-        template = env.from_string('before{% render "x.md" with d %}after')
-        result = template.render(d={"id": "1"})
-
-        assert result == "beforeREPLACEDafter"
-
-    def test_empty_return_produces_nothing(self) -> None:
-        mock = MockProcessor(return_value="")
-        env = _make_extension_env(mock)
-        template = env.from_string('before{% render "x.md" with d %}after')
-        result = template.render(d={"id": "1"})
-
-        assert result == "beforeafter"
-
-
-class TestRenderSyntaxError:
-    def test_missing_with_keyword(self) -> None:
-        env = _make_extension_env(MockProcessor())
-        with pytest.raises(TemplateSyntaxError, match="expected token 'with'"):
-            env.from_string('{% render "profile.md" user %}')
-
-
-class TestMoodViewAlias:
-    """``mood_view`` is a silent alias of ``render``: same parse, same
-    dispatch, no warning (P4 — kept until the sole live project migrates)."""
-
-    def test_alias_parses_and_dispatches_identically(self) -> None:
-        mock = MockProcessor(return_value="OUT")
-        env = _make_extension_env(mock)
-        template = env.from_string('{% mood_view "profile.md" with user %}')
-        result = template.render(user={"id": "alice"})
-
-        assert result == "OUT"
-        assert mock.calls == [("profile.md", {"id": "alice"})]
-
-    def test_both_spellings_coexist_in_one_template(self) -> None:
-        mock = MockProcessor()
-        env = _make_extension_env(mock)
-        template = env.from_string(
-            '{% render "a.md" with x %}{% mood_view "b.md" with y %}'
-        )
-        template.render(x={"id": "1"}, y={"id": "2"})
-
-        assert [c[0] for c in mock.calls] == ["a.md", "b.md"]
+# -- render_filter --
 
 
 class TestRenderSubtreeGuard:
     """A node subject must lie within the host ``this``'s subtree; otherwise
-    the tag raises a build error pointing at its own source line (B12)."""
+    the render raises a build error (B12)."""
 
     _TREE = {
         "albums": [{"id": "a1", "title": "A1"}],
         "prose": [{"id": "p1", "content": "note"}],
     }
 
-    def _render(
-        self, template: str, this: object, subject: object
-    ) -> tuple[MockProcessor, str]:
-        mock = MockProcessor(return_value="OK")
-        env = _make_extension_env(mock)
-        result = env.from_string(template).render(this=this, subject=subject)
-        return mock, result
+    def _render(self, this: object, subject: object) -> tuple[_MockEngine, str]:
+        engine = _MockEngine(render_return="OK")
+        env = _make_filter_env(RenderProcessorImpl(engine=engine))
+        result = env.from_string('{{ subject | render("x.md") }}').render(
+            this=this, subject=subject
+        )
+        return engine, result
 
     def test_descendant_subject_passes(self) -> None:
         tree = _wrap(self._TREE)
-        mock, result = self._render(
-            '{% render "x.md" with subject %}',
-            this=tree,
-            subject=_at(tree, "albums", 0),
-        )
+        engine, result = self._render(this=tree, subject=_at(tree, "albums", 0))
+
         assert result == "OK"
-        assert mock.calls == [("x.md", _at(tree, "albums", 0))]
+        assert engine.rendered == [("x.md", _at(tree, "albums", 0))]
 
     def test_subject_equal_to_host_passes(self) -> None:
         tree = _wrap(self._TREE)
         album = _at(tree, "albums", 0)
-        _, result = self._render(
-            '{% render "x.md" with subject %}', this=album, subject=album
-        )
+        _, result = self._render(this=album, subject=album)
+
         assert result == "OK"
 
-    def test_non_descendant_subject_raises_at_tag_line(self) -> None:
+    def test_non_descendant_subject_raises(self) -> None:
         tree = _wrap(self._TREE)
         with pytest.raises(FileValidationError) as exc:
             self._render(
-                '\n\n{% render "x.md" with subject %}',
                 this=_at(tree, "albums", 0),
                 subject=_at(tree, "prose", 0),
             )
         (diag,) = exc.value.diagnostics
-        assert diag.line == 3
         assert diag.source == "render"
         # The error names both the off-subtree subject and the host.
         assert "/prose/p1" in diag.message
@@ -254,7 +128,6 @@ class TestRenderSubtreeGuard:
         tree = _wrap({"album": {"id": "a"}, "album_tracklist": [{"id": "x"}]})
         with pytest.raises(FileValidationError):
             self._render(
-                '{% render "x.md" with subject %}',
                 this=_at(tree, "album"),
                 subject=_at(tree, "album_tracklist", 0),
             )
@@ -263,32 +136,24 @@ class TestRenderSubtreeGuard:
         # A string carries no anchor and no page identity, so it is exempt even
         # under a node host.
         tree = _wrap(self._TREE)
-        mock, result = self._render(
-            '{% render "x.md" with subject %}',
-            this=_at(tree, "albums", 0),
-            subject="just a string",
+        engine, result = self._render(
+            this=_at(tree, "albums", 0), subject="just a string"
         )
+
         assert result == "OK"
-        assert mock.calls == [("x.md", "just a string")]
+        assert engine.rendered == [("x.md", "just a string")]
 
     def test_node_subject_under_non_node_host_raises(self) -> None:
         # A real node cannot be a descendant of a non-node host.
         tree = _wrap(self._TREE)
         with pytest.raises(FileValidationError):
-            self._render(
-                '{% render "x.md" with subject %}',
-                this="not a node",
-                subject=_at(tree, "albums", 0),
-            )
-
-
-# -- render_filter --
+            self._render(this="not a node", subject=_at(tree, "albums", 0))
 
 
 class TestRenderFilter:
     """Only the filter's own wiring: routing to the processor and guard.
-    The routing decisions themselves (split / inline / paths / guard
-    semantics) are covered by the RenderProcessorImpl and tag tests."""
+    The routing decisions themselves (split / inline / paths) are covered
+    by the RenderProcessorImpl tests, the guard semantics above."""
 
     def test_dispatches_template_name_and_subject(self) -> None:
         engine = _MockEngine(render_return="OUT")

@@ -13,11 +13,7 @@ from jinja2 import (
     Undefined,
 )
 
-from another_mood.components.generator.render_processor import (
-    PROCESSOR_KEY,
-    RenderExtension,
-    RenderProcessorImpl,
-)
+from another_mood.components.generator.render_processor import RenderProcessorImpl
 from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.template_safe import (
     TemplateSafe,
@@ -71,7 +67,6 @@ def make_environment(output_format: OutputFormat) -> Environment:
     # format's own helpers plus its config / node-map-bound ones) and passes
     # them to TemplateEngine, which registers them on this env.
     return Environment(
-        extensions=[RenderExtension],
         keep_trailing_newline=True,
         trim_blocks=output_format.trim_blocks,
         lstrip_blocks=output_format.lstrip_blocks,
@@ -183,10 +178,7 @@ class TemplateEngine:
         for name, func in globals.items():
             self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
         processor = RenderProcessorImpl(engine=self, paging=paging)
-        # The render extension dispatches via env.globals[PROCESSOR_KEY]; the
-        # filter form is bound to the processor directly.  Registered after
-        # the caller's filters: engine-owned, not overridable.
-        self._env.globals[PROCESSOR_KEY] = processor  # pyright: ignore[reportArgumentType]
+        # Registered after the caller's filters: engine-owned, not overridable.
         self._env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
 
     def render(self, template_name: str, subject: object) -> str:
