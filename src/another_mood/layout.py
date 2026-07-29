@@ -3,7 +3,6 @@
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import ClassVar
 
 from another_mood.components.manifest import MANIFEST_FILENAME
 from another_mood.components.shared.user_error import UserError
@@ -18,10 +17,6 @@ class SourceLayout:
     contents_dir: Path
     queries_dir: Path
     templates_dir: Path
-
-    # A build tolerates a missing manifest for as long as "absent means
-    # sbdb_version 1" holds; drop once the manifest becomes mandatory.
-    OPTIONAL_PATHS: ClassVar[frozenset[str]] = frozenset({"manifest_file"})
 
     @classmethod
     def for_project(cls, project_dir: Path) -> "SourceLayout":
@@ -46,8 +41,7 @@ class SourceLayout:
         self._verify_definition_entries()
 
     def verify_absent(self) -> None:
-        """Raise ProjectExistsError if any of these paths exists on disk,
-        :attr:`OPTIONAL_PATHS` included."""
+        """Raise ProjectExistsError if any of these paths exists on disk."""
         if existing := sorted(path for _, path in self._paths() if path.exists()):
             raise ProjectExistsError(existing)
 
@@ -55,8 +49,7 @@ class SourceLayout:
         missing = [
             (name, path)
             for name, path in self._paths()
-            if name not in self.OPTIONAL_PATHS
-            and not (path.is_file() if name.endswith("_file") else path.is_dir())
+            if not (path.is_file() if name.endswith("_file") else path.is_dir())
         ]
         if missing:
             lines = [f"  {name}: {path}" for name, path in missing]

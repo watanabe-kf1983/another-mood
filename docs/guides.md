@@ -104,7 +104,7 @@ There are four kinds of sources.
 
 Details on each in [Schema and content](#schema-and-content), [Queries](#queries), and [Templates](#templates). For the order of writing and how to verify, see the next chapter, [Workflow](#workflow).
 
-One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, at the project root next to `definition/` and `contents/`. It is not material for the pages — it declares what the project is (display title, format generation). `mood init` generates it; see [Manifest](reference/manifest.md).
+One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, at the project root next to `definition/` and `contents/`. It is not material for the pages — it declares what the project is (display title, format generation). Every project has one: `mood init` generates it, and `mood build` refuses a directory that lacks it. See [Manifest](reference/manifest.md).
 
 ## Workflow
 
