@@ -107,7 +107,7 @@ META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue | Undefined]] = {
 
 
 META_EDITION = Edition(
-    paging=PagingPolicy(("__entity_defs.item", "__entity_data.item", "__views.item")),
+    paging=PagingPolicy(("__entity_defs.item", "__view_defs.item", "__data.item")),
     name="__db",
     templates_dir=META_TEMPLATES_DIR,
     extra_filters=META_TEMPLATES_FILTERS,

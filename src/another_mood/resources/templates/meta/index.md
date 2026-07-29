@@ -37,22 +37,26 @@
     {% for entity in __entity_defs %}
         {{- entity | render("entity_def.md") -}}
     {% endfor %}
-    {% for entity in __entity_data %}
-        {{- entity | render("entity_data.md") -}}
-    {% endfor %}
 {% endfilter %}
 
 ## Views
 
-{% if __views %}
+{% if __view_defs %}
 {% filter dedent %}
-    {% for view in __views %}
+    {% for view in __view_defs %}
         - {{ view | link }}
     {% endfor %}
-    {% for view in __views %}
-        {{- view | render("view.md") -}}
+    {% for view in __view_defs %}
+        {{- view | render("view_def.md") -}}
     {% endfor %}
 {% endfilter %}
 {% else %}
 (no views defined yet)
 {% endif %}
+{# Data pages for every root source, entities and views alike; each
+   render splits to its own /__data/{id} page, so nothing shows inline. #}
+{% filter dedent %}
+    {% for source in __data %}
+        {{- source | render("data.md") -}}
+    {% endfor %}
+{% endfilter %}

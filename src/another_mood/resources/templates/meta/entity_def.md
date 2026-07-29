@@ -2,7 +2,7 @@
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 # Entity Definition: {{ id }}{% if builtin %} (built-in){% endif +%}
 
-[→ Entity Data]({{ node("__entity_data", id) | href }})
+[→ Data]({{ node("__data", id) | href }})
 
 ## Type Diagram
 

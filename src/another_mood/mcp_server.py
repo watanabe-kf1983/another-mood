@@ -38,7 +38,7 @@ Workflow:
   `list_blueprints` + `apply_blueprint(name, project_dir)` to pick a
   specific blueprint.
 - After editing sources: call `build(project_dir)` and inspect the result.
-  The `output/__entity_defs/`, `__entity_data/`, and `__views/`
+  The `output/__entity_defs/`, `__view_defs/`, and `__data/`
   subdirectories under the build output are auto-generated diagnostic
   views — read them mid-edit to verify how schema, data, and views
   resolved.
