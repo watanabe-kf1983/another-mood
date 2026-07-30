@@ -1,25 +1,30 @@
 # Another Mood
 
-A processor of source-based databases, keeping related documents in sync. Generates structured documents from related sources (YAML / Markdown) and templates.
+A processor of source-based databases, keeping related documents in sync.
 
-## Quick Start
+Requirements specifications, product catalogs, maintenance manuals, training materials — documents like these keep describing the same things in different shapes. Introduce one new thing and you have to chase the same edit through several files, miss one, and let the set drift out of sync.
+
+Another Mood keeps that set consistent. You write the data once as **sources** — YAML records and Markdown prose — alongside templates that say how pages are built from them. Edit a source, rebuild, and every page derived from it regenerates together.
+
+## Install
+
+Requires Python 3.13 or later.
 
 ```bash
-uv sync
-uv run mood build showcase/music
+pipx install git+https://github.com/watanabe-kf1983/another-mood.git
 ```
 
-Output is written to `.another-mood/showcase/music/output/`.
+If you use [uv](https://docs.astral.sh/uv/), `uv tool install` takes the same argument and fetches a suitable Python for you. Either way you get the `mood` command on your PATH, along with `mood-mcp` for coding agents.
 
-## Status
+## Quick start
 
-Under development (private).
+```bash
+mood init my-project
+mood build my-project
+```
 
-For design decisions and background, see [background/product.md](dev-docs/contents/10-background/10-product.md).
+`mood init` scaffolds a small sample database; `mood build` turns it into Markdown and HTML under `.another-mood/my-project/`.
 
 ## Documentation
 
-- [docs/guides.md](docs/guides.md) — User guide
-- [docs/mcp.md](docs/mcp.md) — Using Another Mood with AI agents (MCP)
-- [DEVELOPMENT.md](DEVELOPMENT.md) — Developer guide
-- [showcase/music/](showcase/music/) — Example project
+[User guide](https://github.com/watanabe-kf1983/another-mood/blob/main/docs/index.md) — concepts and walkthrough, per-feature reference, and how to give coding agents the same operations over MCP. It ships with the package too, so an agent can read it through the MCP server without leaving your project.

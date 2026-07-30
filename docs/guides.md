@@ -10,21 +10,23 @@ A **source-based database** is a database made of files that you create, update,
 
 Another Mood reads the sources and generates the output documents, along with pages that describe the database itself. You review these outputs and keep editing the sources accordingly.
 
-### Prerequisites
-
-- [uv](https://docs.astral.sh/uv/) — Python package and project manager.
-
 ## Quick Start
 
 ### Install
 
-With uv installed:
+Install [uv](https://docs.astral.sh/uv/) first, and it takes care of Python for you — including on a machine that has none:
 
 ```bash
 uv tool install git+https://github.com/watanabe-kf1983/another-mood.git
 ```
 
-This puts the `mood` command on your PATH (along with `mood-mcp` — see [Using with AI agents](mcp.md)).
+With Python 3.13 or later already installed, [pipx](https://pipx.pypa.io/) does the same:
+
+```bash
+pipx install git+https://github.com/watanabe-kf1983/another-mood.git
+```
+
+Either way you get the `mood` command on your PATH (along with `mood-mcp` — see [Using with AI agents](mcp.md)).
 
 ### Scaffold a sample and build
 

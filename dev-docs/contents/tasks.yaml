@@ -581,13 +581,16 @@ categories:
         note: >-
           名前確保を兼ねた静かな初回公開 (告知・宣伝は Q3。PyPI に予約制度はなく、
           動く最小版を早めに上げるのが実質の名前確保)。手順は「PR merge → 即
-          upload」の一続き: R2 が用意した公開後版ドキュメントの draft PR を merge し、
-          続けてアカウントスコープ token を発行、使い捨てシェルで
+          upload」の一続き: R2 が書いた install 行の git+https URL をパッケージ名へ
+          差し替える PR (README 1 + docs/guides.md 2 の計 3 行) を merge し、続けて
+          アカウントスコープ token を発行、使い捨てシェルで
           `read -rs` → export → uv build && uv publish → シェル破棄 + 即 revoke。
           token はコマンドライン・history・Claude のセッションのいずれにも通さない。
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
-          前提: R2 (他の前提は全て完了済み)。
+          差し替え PR の merge が upload より前でなければならないのは、docs/ が
+          wheel に同梱されるため (hatch の force-include)。
+          前提: R2 (完了済み。他の前提も全て完了済み)。
         phase: 14
       Q12:
         title: requires-python を 3.12 へ引き下げ
@@ -605,10 +608,11 @@ categories:
           検証経路が要る)。
           Q1 に対しては optional — 静かなリリースで受益者がまだいないため、3.13 の
           ままでも公開自体は成立する。0.1.0 までには入れる。
-          R2 とは順不同で、R2 が先行する想定。その場合 install 手引きは一旦 3.13 で
-          書かれるので、本タスクでは main と R2 の公開後版 draft PR の両方で
-          Python 要求の数字を更新すること (下げると pipx 主の手引きがより広く成立する
-          という関係で、手引きの構造自体は下限に依存しない)。
+          R2 が先行済みで install 手引きは 3.13 で書かれているため、本タスクでは
+          README の "Requires Python 3.13 or later" と docs/guides.md の
+          "Python 3.13 or later already installed" の 2 箇所も更新すること
+          (下限を下げると pipx 経路がより広く成立するという関係で、手引きの構造
+          自体は下限に依存しない)。
         phase: 14
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
@@ -701,45 +705,22 @@ categories:
         phase: 10
         done: true
       R2:
-        title: 0.1.0 向け利用者ドキュメント書き直し (公開前後の 2 版を用意)
-        note: >-
-          開発者向けの現 README を利用者向けに書き直す: 何であるか / install /
-          最小の使い方 / メンテナンス期待値の明文化 (as-is, no-SLA, fork 歓迎)。
-          docs/guides.md の Prerequisites と Install 節も同じ籠で扱う (現状の
-          「uv が要る」は開発者向け README の名残であり、PyPI の project
-          description に出す文言ではない)。
-          install モデル: uv 前提を剥がし、Python 要求を明記したうえで pipx を主
-          (PEP 668 により system Python への素の pip は externally-managed-environment
-          で弾かれる)、既存 venv 向けに pip、uv tool install は等価な選択肢として
-          1 行添える程度。uvx は手引きしない — script 名 (mood) と package 名
-          (another-mood) が違うため --from が要るうえ、uvx のキャッシュ固着が
-          sbdb.yaml の minimum_version 毎ビルド検査と噛み合わない (CLI と MCP が
-          別版に固着し、同じプロジェクトで MCP 側だけ弾かれうる)。よって
-          docs/mcp.md の "command": "mood-mcp" は現状維持。依存の可搬性は確認済み
-          (hugo / minijinja とも macOS・manylinux/musllinux・Windows に wheel あり)。
-          成果物は 2 枚: 公開前版 (install は git+https のまま) を main へ入れ、
-          公開後版 (install は PyPI パッケージ名) は draft PR として用意しておく。
-          差し替えの実行は Q1 — docs/ は wheel に同梱されるため、公開後版のマージは
-          upload より前でなければならない。
-          README は readme 宣言により PyPI の project description
-          としてそのままレンダリングされ、旧版ページにも凍結コピーが残る。
-          リポジトリ相対リンクは PyPI 上で 404 になるため全て絶対 URL 化する
-          (画像は絶対 HTTPS のみ表示)。行き先は repo ルート・tree/main/docs・
-          動かないルート級ファイルなど粗く安定した先に限る。旧版ページのリンクが
-          現在の main を指す版ドリフトは業界標準どおり受容する (PyPI README は
-          版の凍結文書ではなく現在への案内板、が生態系の合意。attrs 等の実測で
-          版 pin リンクは皆無)。
-          Python 要求は執筆時点の requires-python をそのまま書く (引き下げは Q12、
-          順不同)。ローンチの顔としての全面改稿は R3。Q1 の前提。
+        title: 0.1.0 向け利用者ドキュメント書き直し
         phase: 14
+        done: true
       R3:
         title: README の 1.0.0 向け全面改稿
         note: >-
           ローンチの顔としての書き直し。R2 の最小版を、告知に耐える体裁へ
-          格上げする。classifiers / keywords / description 磨きなど Q9 で
-          最小に留めた残メタデータも同じ籠で拾う。PyPI ページはリリース時の
-          同梱 README で更新されるため、1.0.0 の tag より前に main へ入って
-          いればよい。Q3 の前提。
+          格上げする。R2 は README を「何であるか / Install / Quick start /
+          Documentation」の 4 節に絞り、Status・License・DEVELOPMENT.md 導線は
+          意図的に置いていない。メンテナンス期待値 (as-is / no-SLA / fork 歓迎) の
+          文言は Q7 が持つので、README に戻すならそちらと揃える。
+          classifiers / keywords / description 磨きなど Q9 で最小に留めた残メタ
+          データも同じ籠で拾う (「どのくらい枯れているか」は README の散文ではなく
+          classifiers の Development Status がサイドバーに出す生態系の定位置)。
+          PyPI ページはリリース時の同梱 README で更新されるため、1.0.0 の tag より
+          前に main へ入っていればよい。Q3 の前提。
         phase: 17
       R4:
         title: context7.json 設置 + Context7 登録
