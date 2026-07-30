@@ -2,15 +2,17 @@
 
 ## External Design
 
-### 背景: なぜ Undefined をエラーにしないか
+### 背景: なぜ undefined アクセスをエラーにしないか
 
-Jinja2 は `undefined` クラスを差し替え可能で、厳密な `StrictUndefined`（全ての undefined アクセスでエラー）、チェイン可能な `ChainableUndefined`、デフォルトの `Undefined`（1 階層目はサイレント、チェインはエラー）の 3 段階を提供する。
+minijinja は `undefined_behavior` で undefined アクセスの扱いを選べる: 厳密な `strict`（全ての undefined アクセスでエラー）、チェイン可能な `chainable`、既定の `lenient`（1 階層目はサイレント、`{{ x.a }}` のチェインはエラー）の 3 段階を提供する。
 
-本プロジェクトは `ChainableUndefined` を採用する。理由:
+本プロジェクトは `chainable` を明示指定する（既定のままでは `{{ x.a }}` がエラーになる）。理由:
 
 - 内蔵テンプレート・ユーザテンプレートのいずれも、スキーマから抽出される optional フィールド（`metadata`, `validation` 等）を頻繁に参照するため、ガードの記述負荷が重い
-- デフォルトの `Undefined` は 1 階層目の typo も同様にサイレント失敗するため、チェインだけエラーにする中途半端な挙動になっている
-- 厳密な typo 検出が必要になった時点で `StrictUndefined` への切り替えを検討する（その際は内蔵テンプレート側のガード追加が必要）
+- `lenient` は 1 階層目の typo も同様にサイレント失敗するため、チェインだけエラーにする中途半端な挙動になっている
+- 厳密な typo 検出が必要になった時点で `strict` への切り替えを検討する（その際は内蔵テンプレート側のガード追加が必要）
+
+なお `chainable` でも minijinja 組込みフィルタは undefined を受けない（`{{ x | length }}` は raise。jinja2 の `ChainableUndefined` は `0` を返した）。次節の「何も描かない」規則が及ぶのは本ツールのヘルパー。
 
 ### 欠損値は何も描かない
 
@@ -41,13 +43,3 @@ Jinja2 は `undefined` クラスを差し替え可能で、厳密な `StrictUnde
 **フィルタ入口で `None` を「空文字で描かれる番兵」へ変換する。** jinja2 の配置をそのまま再現でき、フィルタは無改造で済む。外した理由は、(a) 意図的に渡された `null` と欠損を区別できない、(b) 全フィルタ呼び出しに引数走査の層が乗る、(c) フィルタが `None` を返す形は迂回ではなく素直な意味論であり、番兵という間接層を挟む必要がない。
 
 **`link` の `text` が欠損したら label へフォールバックする。** リンクが使える形で残るのは利点だが、著者が `t.別名` と書いたのに黙って `名前` を出すのは、フィルタに暗黙の `default()` を埋め込むこと。フォールバックが要る著者には `t.別名 or t.名前` / `| default(...)` という明示手段があり、*explicit is better than implicit* に反する。データ欠損が出力から検出できなくなる点も悪い（空なら表セルが空くので気づける）。
-
-## Proposals
-
-### `undefined_behavior` への読み替え (P6 の一部)
-
-上の External Design「なぜ Undefined をエラーにしないか」は minijinja の語彙へ書き換える。3 段階はそのまま対応する: `StrictUndefined` → `strict`、`ChainableUndefined` → `chainable`、デフォルトの `Undefined` → `lenient`。採用は `chainable` で、判断の理由は変わらない。
-
-**minijinja の既定は `lenient`** で、その場合 `{{ x.a }}` が**エラーになる**（jinja2 の既定 `Undefined` と同じ中途半端な段）。明示指定が必須。
-
-16 パターンの実測で `ChainableUndefined` との差は `{{ x | length }}` の 1 つだけ（jinja2 は `0`、minijinja は raise）。実テンプレートの `| length` は 2 箇所とも保護済み（`(row | pluck(x) or []) | length` と定義済み文字列）なので踏まない。
