@@ -554,6 +554,7 @@ categories:
           (MappingNode / ArrayNode) の変換コストも乗るため、相殺されうる。
           差し替え後に実測して判断する。
         phase: 14
+        done: true
         proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
       P9:
         title: marshal 契約の型・構造ロック (先行実装)
