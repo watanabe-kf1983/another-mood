@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from markupsafe import Markup
+from minijinja import TemplateError
 
 from another_mood.components.generator.data_tree_filters import MissingNode
 from another_mood.components.generator.output_formats.md import MD
@@ -181,6 +182,20 @@ class TestMakeEnvironment:
         env = make_environment(OutputFormat(name="upper", escape=lambda s: s.upper()))
         env.add_filter("raw", raw)
         assert env.render_str("{{ 'hi' | raw }}") == "hi"
+
+    def test_python_methods_are_not_reachable(self) -> None:
+        # pycompat is off, so the Python resemblance stops at the syntax: a
+        # value carries no Python methods, and reaching for one is an error
+        # naming the method rather than a silent empty render.
+        env = make_environment(OutputFormat(name="plain", escape=lambda s: s))
+        with pytest.raises(TemplateError, match="startswith"):
+            env.render_str("{{ value.startswith('a') }}", value="ab")
+
+    def test_string_prefix_suffix_are_reached_as_tests(self) -> None:
+        # What replaces the dropped methods, and what the meta templates use.
+        env = make_environment(OutputFormat(name="plain", escape=lambda s: s))
+        template = "{{ value is startingwith('a') }}|{{ value is endingwith('b') }}"
+        assert env.render_str(template, value="ab") == "True|True"
 
 
 class TestTemplateEngineMdEscape:

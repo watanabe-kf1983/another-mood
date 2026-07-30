@@ -29,7 +29,7 @@
     {% endfor %}
     {% for top_id in node_ids %}
         {% set top_entity = entities | child(top_id) %}
-        {% for entity in entities if entity.id == top_id or entity.id.startswith(top_id ~ ".") %}
+        {% for entity in entities if entity.id == top_id or entity.id is startingwith(top_id ~ ".") %}
             {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
                 {% set target = entities | child(attr.x_ref.entity) %}
                 {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
@@ -98,14 +98,14 @@
 
 ## Shape
 
-{% for entity in entities if entity.view and (entity.id == id or entity.id.startswith(id ~ ".")) %}
+{% for entity in entities if entity.view and (entity.id == id or entity.id is startingwith(id ~ ".")) %}
 ### Type: {{ entity.item_type.id }}
 
 {% if entity.item_type.attributes %}
 | id | type | required | validation | metadata |
 |----|------|----------|------------|----------|
 {% for attr in entity.item_type.attributes %}
-    {% set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" %}
+    {% set array_suffix = "[]" if attr.child_item_type and attr.type is endingwith("[]") else "" %}
     {{- "" }}| {{ code_inline(attr.id) }}
     {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}
     {{- "" }} | {% if attr.required %}yes{% endif %}

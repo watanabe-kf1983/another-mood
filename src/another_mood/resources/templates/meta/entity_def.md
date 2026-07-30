@@ -7,7 +7,7 @@
 ## Type Diagram
 
 {% set ns = namespace(subtree_ids=[], fk_target_ids=[]) %}
-{% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") %}
+{% for entity in entities if entity.id == id or entity.id is startingwith(id ~ ".") %}
     {% set ns.subtree_ids = ns.subtree_ids + [entity.id] %}
 {% endfor %}
 {% for entity in entities if entity.id in ns.subtree_ids %}
@@ -21,7 +21,7 @@
     {% for entity in entities if entity.id in ns.subtree_ids %}
         class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"] {
         {% for attr in entity.item_type.attributes %}
-            {% set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" %}
+            {% set array_suffix = "[]" if attr.child_item_type and attr.type is endingwith("[]") else "" %}
             {{ "  " }}{% if attr.required %}*{% endif %}{{ attr.id | safe }} : {{ ((attr.child_item_type or attr.type) ~ array_suffix) | safe }}{% if attr.x_ref %} [FK]{% endif +%}
         {% endfor %}
         }
@@ -43,7 +43,7 @@
     ```
 {% endfilter %}
 
-{% for entity in entities if entity.id == id or entity.id.startswith(id ~ ".") %}
+{% for entity in entities if entity.id == id or entity.id is startingwith(id ~ ".") %}
 ## Type: {{ entity.item_type.id }}
 
 {% if entity.item_type.metadata %}
@@ -58,7 +58,7 @@
 | id | type | required | references | validation | metadata |
 |----|------|----------|------------|------------|----------|
 {% for attr in entity.item_type.attributes %}
-    {% set array_suffix = "[]" if attr.child_item_type and attr.type.endswith("[]") else "" %}
+    {% set array_suffix = "[]" if attr.child_item_type and attr.type is endingwith("[]") else "" %}
     {% set xr = attr.x_ref %}
     {{- "" }}| {{ code_inline(attr.id) }}
     {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}

@@ -74,9 +74,13 @@ def make_environment(output_format: OutputFormat) -> Environment:
         # off the template's extension — an `.html`-named one would otherwise be
         # HTML-escaped on top.
         auto_escape_callback=lambda name: False,
-        # Explicit though it is the default: the meta templates call Python's
-        # `.startswith()` / `.endswith()`, which only exist under pycompat.
-        pycompat=True,
+        # Off, against the default: a template's vocabulary is filters and
+        # tests, and nothing else.  pycompat grafts Python's own string / list /
+        # dict methods onto values, which would leave users guessing how far the
+        # Python resemblance runs — a boundary neither this tool's reference nor
+        # the engine's can draw, since the methods come from a contrib shim for
+        # migrating Jinja2 templates rather than from the engine proper.
+        pycompat=False,
     )
 
 
