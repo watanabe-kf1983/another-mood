@@ -7,6 +7,7 @@ from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tr
 from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.meta_templates import (
     META_EDITION,
+    anchor_path,
     pluck,
     to_yaml,
     walk_entity,
@@ -28,6 +29,21 @@ class TestMetaEdition:
         node = array[0]
         assert isinstance(node, Node)
         assert META_EDITION.paging.page_path(node) == f"{view}/sample.md"
+
+
+class TestAnchorPathFilter:
+    """Unit tests for the `anchor_path` filter function."""
+
+    def test_node_yields_its_anchor_path(self) -> None:
+        array = wrap_tree(ensure_inert_mapping({"posts": [{"id": "hello"}]}))["posts"]
+        assert isinstance(array, ArrayNode)
+        assert anchor_path(array[0]) == "/posts/hello"
+
+    def test_non_node_yields_none(self) -> None:
+        # An id-less array element stays a plain mapping (no anchor to build
+        # a path from); the table cell renders empty rather than raising.
+        assert anchor_path({"title": "no id"}) is None
+        assert anchor_path(None) is None
 
 
 class TestPluckFilter:

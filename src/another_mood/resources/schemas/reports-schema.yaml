@@ -29,8 +29,9 @@ $defs:
       generator — read as "one file per instance of these ObjectTypes".
       An empty list (or omitted file_per:) means "no splitting —
       everything inlines into a single index.md". Each entry is matched
-      verbatim against the runtime `_meta.object_type_id` of each view
-      node.
+      verbatim against the ObjectType ID the generator resolved for a
+      node — no prefixes, no patterns; the __db/__entity_defs/ and
+      __db/__view_defs/ diagnostics show the exact values.
     type: array
     items:
       $ref: "#/$defs/objectTypeId"

@@ -1,7 +1,7 @@
-# _parent / _parent_record / _meta / _children are template-public node
-# fields under the reserved `_` prefix — reserved precisely so they never
-# shadow a data key on the dict/list-subclass nodes — not Python
-# "protected" attributes.
+# _parent / _parent_record / _meta / _children are node fields under the
+# reserved `_` prefix — reserved precisely so they never shadow a data key
+# on the dict/list-subclass nodes — not Python "protected" attributes.
+# Templates never read them directly; filters do, and pass on what they need.
 # pyright: reportPrivateUsage=false
 """Data-tree wrappers exposing parent references and node metadata to templates."""
 

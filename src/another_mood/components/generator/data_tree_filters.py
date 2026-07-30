@@ -1,5 +1,5 @@
-# ``_meta`` is a template-public node field under the reserved ``_`` prefix
-# (see data_tree.py), not a Python-protected attribute.
+# ``_meta`` is a node field under the reserved ``_`` prefix (see data_tree.py),
+# not a Python-protected attribute.
 # pyright: reportPrivateUsage=false
 """Data-tree Jinja2 filters — turning a reference into a linkable node, its
 display text, and the page-relative URL to it.

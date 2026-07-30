@@ -1,3 +1,6 @@
+# ``_meta`` is a node field under the reserved ``_`` prefix (see data_tree.py),
+# not a Python-protected attribute.
+# pyright: reportPrivateUsage=false
 """Built-in meta templates and their system-only Jinja2 filters."""
 
 import math
@@ -10,6 +13,7 @@ from typing import cast
 import yaml
 from jinja2 import Undefined
 
+from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.edition import Edition, PagingPolicy
 from another_mood.components.generator.inert import (
     InertArray,
@@ -99,7 +103,22 @@ def to_yaml(value: object, flow: bool = False) -> str:
     ).rstrip()
 
 
+def anchor_path(a: object) -> str | None:
+    """Jinja2 filter: a node's anchor path as a string — the template-side
+    reader of ``_meta.anchor_path``.
+
+    A value that is not a node has no address and yields ``None``, which
+    renders as nothing: the same rows reach this filter whether or not they
+    resolved to anchored data.
+    """
+    if isinstance(a, Node):
+        return a._meta.anchor_path
+    else:
+        return None
+
+
 META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue | Undefined]] = {
+    "anchor_path": anchor_path,
     "pluck": pluck,
     "to_yaml": to_yaml,
     "walk_entity": walk_entity,

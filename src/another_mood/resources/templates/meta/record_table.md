@@ -19,7 +19,7 @@
         *{{ (row | pluck(attribute.id) or []) | length }} items*
     {%- else -%}
         {{ row | pluck(attribute.id) | in_cell }}
-    {%- endif %} | {% endfor %}{{ row._meta.anchor_path | in_cell }} |
+    {%- endif %} | {% endfor %}{{ row | anchor_path | in_cell }} |
 {% endfor %}
 {% else %}
 (no records)
