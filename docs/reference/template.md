@@ -359,7 +359,7 @@ To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x 
 
 The engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the Jinja2 docs are a close guide rather than an exact one — in corners they don't settle, behavior can differ.
 
-The three rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
+The four rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
 
 ### Handling undefined access
 
@@ -373,6 +373,16 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 ```
 
 Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__data/` and the shape of each view via `__db/__view_defs/`.
+
+### No Python methods on values
+
+Jinja2 templates run on Python objects, so a Python method call such as `entity.id.startswith("x")` works there. Here it is an error: a value carries no methods, and what acts on one is filters, tests, and operators.
+
+Use the corresponding test or filter instead — for `startswith` / `endswith`, the tests `startingwith` / `endingwith`:
+
+```jinja2
+{% if entity.id is startingwith(prefix) %}
+```
 
 ### Markdown escaping
 
