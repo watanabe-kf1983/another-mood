@@ -13,6 +13,7 @@ from another_mood.components.generator.template_engine import (
     PathRegistry,
     TemplateEngine,
     make_environment,
+    as_template_helper,
 )
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
@@ -320,3 +321,32 @@ class TestTemplateSyntaxErrorConversion:
         assert diags[0].source == "jinja2"
         assert diags[0].line is not None
         assert "bad.md" in str(diags[0].file)
+
+
+class TestAsTemplateHelper:
+    """The intake half of the render boundary: what a template pipes in reaches
+    a text processor as text, or not at all."""
+
+    def test_coerces_a_non_str_subject(self) -> None:
+        def bracket(text: str) -> str:
+            return f"[{text}]"
+
+        assert as_template_helper(bracket)(42) == "[42]"
+
+    def test_absent_subject_skips_the_processor(self) -> None:
+        calls: list[str] = []
+
+        def record(text: str) -> str:
+            calls.append(text)
+            return text
+
+        # `None` never reaches the processor: absence is `finalize`'s to render,
+        # so no processor can stringify it into "None".
+        assert as_template_helper(record)(None) is None
+        assert calls == []
+
+    def test_passes_further_arguments_through(self) -> None:
+        def append(text: str, suffix: str) -> str:
+            return f"{text}{suffix}"
+
+        assert as_template_helper(append)("a", "!") == "a!"

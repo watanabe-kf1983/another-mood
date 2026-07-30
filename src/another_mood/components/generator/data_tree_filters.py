@@ -19,6 +19,7 @@ from typing import cast
 from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.data_tree import child as node_child
 from another_mood.components.generator.edition import PagingPolicy
+from another_mood.components.generator.omitted import OMITTED
 from another_mood.components.generator.url import url_escape
 
 
@@ -36,8 +37,8 @@ class MissingNode:
 def make_data_tree_filters(
     node_map: Mapping[str, Node],
 ) -> tuple[
-    Mapping[str, Callable[..., Node | MissingNode]],
-    Mapping[str, Callable[..., Node | MissingNode | str]],
+    Mapping[str, Callable[..., Node | MissingNode | None]],
+    Mapping[str, Callable[..., Node | MissingNode | str | None]],
 ]:
     """The format-neutral data-tree filters, bound to one build's node map.
 
@@ -47,15 +48,22 @@ def make_data_tree_filters(
     """
 
     def node(
-        *segs: object, path: object = None, fragment: object = None
-    ) -> Node | MissingNode:
+        *segs: object, path: object = OMITTED, fragment: object = OMITTED
+    ) -> Node | MissingNode | None:
         return resolve_node(node_map, *segs, path=path, fragment=fragment)
 
-    globals_map: Mapping[str, Callable[..., Node | MissingNode]] = {
+    def label(a: object) -> str | None:
+        """The ``label`` filter: :func:`node_label` with the absent case, which
+        renders as nothing rather than as a label."""
+        if a is None:
+            return None
+        return node_label(a)
+
+    globals_map: Mapping[str, Callable[..., Node | MissingNode | None]] = {
         "node": node,
     }
-    filters_map: Mapping[str, Callable[..., Node | MissingNode | str]] = {
-        "label": node_label,
+    filters_map: Mapping[str, Callable[..., Node | MissingNode | str | None]] = {
+        "label": label,
         "child": child,
     }
     return globals_map, filters_map
@@ -64,9 +72,9 @@ def make_data_tree_filters(
 def resolve_node(
     node_map: Mapping[str, Node],
     *segs: object,
-    path: object = None,
-    fragment: object = None,
-) -> Node | MissingNode:
+    path: object = OMITTED,
+    fragment: object = OMITTED,
+) -> Node | MissingNode | None:
     """Resolve an anchor path to its node, or a :class:`MissingNode`.
 
     ``path`` (a ready-made address) is a verbatim prefix; positional ``segs``
@@ -78,10 +86,17 @@ def resolve_node(
     input is never an error: a ``/``-leading positional is escaped to
     ``/%2F…`` and, not matching, surfaces as a visible MissingNode — the same
     way any unresolved reference does, rather than crashing the page.
+
+    An absent argument yields no reference at all (``None``), not a MissingNode:
+    these arguments build the address, and an absent one leaves it unknown
+    rather than broken — dropping it would silently address a *different* node
+    (``node("y", path=absent)`` resolving to ``/y``).
     """
-    prefix = "" if path is None else str(path)
+    if path is None or fragment is None or any(seg is None for seg in segs):
+        return None
+    prefix = "" if path is OMITTED else str(path)
     anchor = prefix + build_anchor_path(*segs)
-    if fragment is not None:
+    if fragment is not OMITTED:
         anchor = f"{anchor}#{fragment}"
     node = node_map.get(anchor)
     return node if node is not None else MissingNode(anchor)
@@ -94,14 +109,20 @@ def build_anchor_path(*segs: object) -> str:
     return "".join("/" + url_escape(str(p), safe="") for p in segs)
 
 
-def child(parent: object, seg: object) -> Node | MissingNode:
+def child(parent: object, seg: object) -> Node | MissingNode | None:
     """The ``child`` filter (``parent | child(seg)``): the relative
     counterpart to ``node``'s absolute lookup.
 
     Wraps :func:`data_tree.child`, mapping an unresolved step — a non-node
     parent or no matching child — to a :class:`MissingNode` carrying the
     attempted path, so it renders visibly instead of raising.
+
+    An absent ``parent`` / ``seg`` yields no reference (``None``) instead: a
+    reference that was never stated is not a broken one, so it stays invisible
+    where a MissingNode is deliberately conspicuous.
     """
+    if parent is None or seg is None:
+        return None
     if not isinstance(parent, Node):
         # Nothing to step from (e.g. a chained-off MissingNode); the
         # attempted path is just the bare segment.

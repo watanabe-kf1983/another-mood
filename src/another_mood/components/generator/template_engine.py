@@ -2,8 +2,9 @@
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
-from typing import cast
+from typing import Concatenate, cast
 
 from jinja2 import (
     ChainableUndefined,
@@ -73,6 +74,33 @@ def make_environment(output_format: OutputFormat) -> Environment:
         undefined=ChainableUndefined,
         finalize=_finalize,
     )
+
+
+def as_template_helper[**P, T](
+    processor: Callable[Concatenate[str, P], T],
+) -> Callable[Concatenate[object, P], T | None]:
+    """Wrap a text processor for registration, giving it the subject a template
+    can actually hand over.
+
+    This is the render boundary's intake half, to ``_finalize``'s output half: a
+    format supplies plain text processing, and what reaching one from a template
+    involves is the boundary's business.  Templates pipe in arbitrary values, so
+    the subject is coerced to ``str``.  An absent subject is not text at all: it
+    skips the processor and passes through as ``None``, leaving ``_finalize`` the
+    only place that renders absence — so no processor stringifies it into
+    ``"None"``.
+
+    A helper whose subject is a node rather than text needs neither and is
+    registered as it is.
+    """
+
+    @wraps(processor)
+    def helper(value: object, *args: P.args, **kwargs: P.kwargs) -> T | None:
+        if value is None:
+            return None
+        return processor(str(value), *args, **kwargs)
+
+    return helper
 
 
 def _bind(subject: object) -> Mapping[str, TemplateSafe]:

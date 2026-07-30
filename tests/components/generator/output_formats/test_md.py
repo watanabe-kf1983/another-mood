@@ -100,6 +100,12 @@ class TestDedent:
     def test_ignores_blank_lines_in_common_prefix(self) -> None:
         assert dedent("    a\n\n    b\n") == "a\n\nb\n"
 
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        # The block form always hands over rendered text; the pipe form takes
+        # whatever the template points at, so the coercion is the boundary's
+        # (hence the registered helper's, not this processor's).
+        assert MD_FILTERS["dedent"](42) == "42"
+
 
 class TestCodeInline:
     def test_returns_markup(self) -> None:
@@ -136,8 +142,8 @@ class TestCodeInline:
     def test_does_not_escape_pipes_or_markdown_punctuation(self) -> None:
         assert code_inline("a|b*c") == "`a|b*c`"
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert code_inline(42) == "`42`"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_GLOBALS["code_inline"](42) == "`42`"
 
 
 class TestCodeFenced:
@@ -168,8 +174,8 @@ class TestCodeFenced:
     def test_does_not_escape_backslashes(self) -> None:
         assert code_fenced("a\\n") == "```\na\\n\n```"
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert code_fenced(42) == "```\n42\n```"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_GLOBALS["code_fenced"](42) == "```\n42\n```"
 
 
 class TestInCell:
@@ -194,8 +200,8 @@ class TestInCell:
     def test_empty_value(self) -> None:
         assert in_cell("") == ""
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert in_cell(42) == "42"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_FILTERS["in_cell"](42) == "42"
 
 
 class TestAsUrl:
@@ -221,8 +227,8 @@ class TestAsUrl:
         # IRI form: ucschar pass through so CJK URLs stay readable.
         assert as_url("見") == "見"
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert as_url(42) == "42"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_FILTERS["as_url"](42) == "42"
 
 
 class TestMdLink:
@@ -588,4 +594,55 @@ class TestRelinkFilterWiring:
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == (
             '<a id="/by_role/dev"></a>\n[p](../blob/covers/cover.png#page=3)'
+        )
+
+
+class TestAbsentValues:
+    """The absence contract: what the format exports is each text processor
+    wrapped for the render boundary, so an absent subject renders as nothing
+    rather than being stringified.
+
+    The wrapper itself is tested with the boundary that owns it, in
+    ``test_template_engine.py``; here it is the wiring — every exported helper
+    goes through it.
+    """
+
+    def test_every_exported_text_helper_renders_absence_as_nothing(self) -> None:
+        helpers = {**MD_GLOBALS, **MD_FILTERS}
+        # Nothing reaches the processors, so even `under_heading`'s required
+        # `marker` is not needed to call them.
+        assert {name: helper(None) for name, helper in helpers.items()} == {
+            name: None for name in helpers
+        }
+
+    def test_absent_code_fenced_language_matches_an_unpassed_one(self) -> None:
+        # `language` only shapes the block, so an absent one means no info
+        # string — not a `None` leaking onto the fence.
+        assert code_fenced("x", None) == code_fenced("x")
+
+
+class TestAbsentValuesInLinkFilters:
+    def _render(self, body: str) -> str:
+        """Render ``body`` from the root page, with the link filters bound."""
+        env = _md_env()
+        env.filters.update(make_link_filters(_paging(), _anchors()))
+        globals_map, node_filters = make_data_tree_filters(_anchors())
+        env.filters.update(node_filters)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        env.globals.update(globals_map)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        return env.from_string(body).render(this=_anchors()["/"])
+
+    def test_absent_target_renders_nothing(self) -> None:
+        assert self._render("[{{ none | link }}]") == "[]"
+
+    def test_absent_href_target_renders_nothing(self) -> None:
+        assert self._render("[{{ none | href }}]") == "[]"
+
+    def test_absent_relink_body_renders_nothing(self) -> None:
+        assert self._render("[{{ none | relink }}]") == "[]"
+
+    def test_absent_text_empties_the_text_but_keeps_the_link(self) -> None:
+        # The reference resolved, so only the display slot goes empty: a
+        # display-side gap must not cost the addressing that is still good.
+        assert self._render("{{ node('members', 'alice') | link(none) }}") == (
+            "[](members/alice.md#/members/alice)"
         )
