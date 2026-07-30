@@ -119,6 +119,16 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 
 marshaling は **convert / wrap の非対称**: **スカラー（str/int/float/bool/None）は minijinja ネイティブ型へ*変換*される**（Python の str メソッドではなく minijinja 独自の string メソッドが露出する — `format`/`upper` 等は在るが、その `format` はフィールドに属性 traversal を持たず（`"{0.__class__}"` は「引数が見つからない」）、Python 専用の `format_map` も無い ＝ `str.format` 反射経由の format-string SSTI は不成立）。**オブジェクト（dict/list 派生を含む）は*wrap*される**（Python メソッドが漏れる）。ゆえに危険は「wrap される非スカラー（オブジェクト）経由で非 `_` capability に届く」経路に限られる。
 
+### テンプレートからのデータツリー変更 (P13)
+
+上の wrap 規則の帰結として、`InertMapping` / `InertArray` の dict / list mutator（`pop` / `clear` / `update` / `setdefault` / `append` / `sort` 等）はテンプレートから呼べ、**実際に Python 側のツリーを書き換える**（実測）。ノードはビルド全体で共有されるため、あるページのテンプレートが他ページのデータを壊せる。`dict.items` のような Python callable を木に植えることもでき、「テンプレに渡る値は inert」の不変条件も破れる。
+
+**これは信頼モデル C の穴ではない**: 植えられるのはテンプレートから既に届く値（inert container のメソッド、global の closure）に限られ、新しい capability は得られない ── RCE ではなく**ビルド整合性**の問題。ゆえに 0.1.0 のブロッカーではない。**P12（pycompat 無効化）でも塞がらない**: pycompat が触るのは convert 側（ネイティブ文字列への後付けメソッド）で、mutator は wrap 側の素の属性 lookup。
+
+塞ぎ方は `InertMapping` / `InertArray` に mutator を raise するメソッドとして定義する形。**公開名の集合は plain dict / list と同一のまま**なので、surface-audit テストの参照形は再設計不要で挙動だけが変わる。
+
+**0.1.0 後に後追いで塞いでも互換性を保つ**と判断する。`docs/` に container のメソッド語彙の案内は無く、showcase / dev-docs / 内蔵メタテンプレートでの使用はゼロ。加えて mutation の可視範囲はレンダリング順序依存で、依存できる挙動になっていない ── 削除するのは仕様ではなく壊れ方。ただし塞ぐ実装は**静かな no-op ではなく明示的なエラー**でなければならない（気づけない別の壊れ方に置き換えては意味が無い）。
+
 ### SSTI 回帰テスト（P6 依存・別タスク）
 
 上記の安全性は minijinja の露出セマンティクスに依存し、その pin は**実 render に撃つ回帰テスト**が担う。**現行 minijinja-py での実測は確定したが露出規則は将来版で変わりうる**ため「現行で安全、それを回帰テストで固定する」姿勢を採る。payload: dunder 直記法 / `attr('__class__')` / `str.format`・`format_map` の format-string 系 / `_` 名 global 露出 / 非 `_` メソッド dispatch（いずれも周知の古典で新規開示にはならない）。**minijinja を実行環境に入れる P6 まで走らせられない**ため、型・構造の先行実装（P9）とは別タスク（P11）に分ける。
