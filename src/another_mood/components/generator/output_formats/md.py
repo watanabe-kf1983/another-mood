@@ -9,8 +9,8 @@ import textwrap
 from collections.abc import Callable, Mapping
 from urllib.parse import urlsplit
 
-from jinja2 import pass_context
-from jinja2.runtime import Context
+from minijinja import pass_state
+from minijinja._lowlevel import State
 from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import Node, is_blob
@@ -73,7 +73,7 @@ def code_fenced(text: str, language: object = "") -> Markup:
     return Markup(f"{fence}{tag}\n{body}{fence}")
 
 
-def dedent(text: str) -> str:
+def dedent(text: str) -> Markup:
     """Strip the *common* leading whitespace from a rendered block.
 
     Lets a template indent a ``{% filter dedent %}`` block for readability and
@@ -83,9 +83,9 @@ def dedent(text: str) -> str:
     where output whitespace is significant (Markdown), like ``trim_blocks`` /
     ``lstrip_blocks``.
     """
-    # Bare `str` return: dedented text is not new markup, so finalize still
-    # escapes it.
-    return textwrap.dedent(text)
+    # Markup so finalize does not escape the block a second time: every
+    # interpolation inside it already went through finalize on its way in.
+    return Markup(textwrap.dedent(text))
 
 
 def under_heading(text: str, marker: str) -> Markup:
@@ -171,26 +171,23 @@ def make_link_filters(
     destination from the source ``[text](node:…)``.
     """
 
-    # `href` / `link` / `relink` take `@pass_context` for two reasons: to read
-    # the source page from the render context's `this`, and to stop Jinja2's
-    # optimizer from constant-folding constant-argument calls — a compile-time
-    # `{{ node("/x") | href }}` would bake one source page's relative URL into
-    # the compiled template and break the same template rendered from another
-    # page. `anchor` needs neither (its id is the node's own page-independent
-    # anchor path), so it stays the bare `md_anchor`. Only `relink` touches
-    # `node_map` — it resolves anchor-path strings itself; the others receive an
-    # already-resolved node.
-    @pass_context
-    def href(context: Context, a: object) -> Markup | None:
+    # `href` / `link` / `relink` take `@pass_state` to read the source page from
+    # the render state's `this` — a relative URL depends on the page it is
+    # written on. `anchor` needs no state (its id is the node's own
+    # page-independent anchor path), so it stays the bare `md_anchor`. Only
+    # `relink` touches `node_map` — it resolves anchor-path strings itself; the
+    # others receive an already-resolved node.
+    @pass_state
+    def href(state: State, a: object) -> Markup | None:
         if a is None:
             return None
         if isinstance(a, MissingNode):
             return Markup("")
         # Markup so finalize does not corrupt the URL (see `as_url`).
-        return Markup(node_href(paging, context["this"], a))
+        return Markup(node_href(paging, state.lookup("this"), a))
 
-    @pass_context
-    def link(context: Context, a: object, text: object = OMITTED) -> Markup | None:
+    @pass_state
+    def link(state: State, a: object, text: object = OMITTED) -> Markup | None:
         if a is None:
             return None
         if text is OMITTED:
@@ -207,13 +204,13 @@ def make_link_filters(
             # never a `[..](..)` to a dead URL — the same shape `relink` leaves
             # a dropped `node:` destination, so both broken-link forms read alike.
             return Markup(f"[{md_escape(display)}]")
-        return md_link(display, node_href(paging, context["this"], a))
+        return md_link(display, node_href(paging, state.lookup("this"), a))
 
-    @pass_context
-    def relink(context: Context, value: object) -> Markup | None:
+    @pass_state
+    def relink(state: State, value: object) -> Markup | None:
         if value is None:
             return None
-        source = context["this"]
+        source = state.lookup("this")
 
         def resolve(href: str) -> str | None:
             parts = urlsplit(href)
@@ -271,8 +268,7 @@ MD_GLOBALS: Mapping[str, Callable[..., Markup | None]] = {
     "code_inline": as_template_helper(code_inline),
     "code_fenced": as_template_helper(code_fenced),
 }
-# `dedent` returns bare `str`; the rest emit `Markup`.
-MD_FILTERS: Mapping[str, Callable[..., Markup | str | None]] = {
+MD_FILTERS: Mapping[str, Callable[..., Markup | None]] = {
     "in_cell": as_template_helper(in_cell),
     "as_url": as_template_helper(as_url),
     "dedent": as_template_helper(dedent),

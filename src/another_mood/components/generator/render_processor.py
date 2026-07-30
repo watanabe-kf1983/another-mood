@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from jinja2 import pass_context
-from jinja2.runtime import Context
 from markupsafe import Markup
+from minijinja import pass_state
+from minijinja._lowlevel import State
 
 from another_mood.components.generator.data_tree import Node, nearest_ancestor
 from another_mood.components.generator.edition import PagingPolicy
@@ -55,17 +55,19 @@ class RenderProcessorImpl:
         else:
             return self.engine.render(template_name, subject)
 
-    @pass_context
+    # `pass_state` is typed for the plain one-argument filter; it only stamps an
+    # attribute, so a method taking one more argument is fine at runtime.
+    @pass_state  # pyright: ignore[reportArgumentType]
     def render_filter(
-        self, context: Context, subject: object, template_name: str
+        self, state: State, subject: object, template_name: str
     ) -> Markup:
         """The ``render`` filter: ``{{ subject | render("tpl") }}``.
 
         A subtree-guard error points at the enclosing template
-        (``context.name``) without a line — a filter has no source
+        (``state.name``) without a line — a filter has no source
         location at runtime.
         """
-        _guard_subtree(subject, context.resolve("this"), context.name)
+        _guard_subtree(subject, state.lookup("this"), state.name)
         # Markup, not str: a filter's return value passes through the
         # environment's finalize, and the already-rendered output must
         # not be escaped a second time.

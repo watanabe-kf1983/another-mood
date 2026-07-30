@@ -25,8 +25,6 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import cast
 
-from jinja2 import Undefined
-
 from another_mood.components.generator.data_tree import Node, is_blob, nearest_ancestor
 from another_mood.components.generator.inert import InertValue
 from another_mood.components.generator.url import url_escape
@@ -44,9 +42,7 @@ _REPORTS_SCHEMA_FILE = Path(
 _FORM_A_EDITION_NAME = "default"
 
 # Immutable empty default — a frozen dataclass field rejects a mutable ``{}``.
-_NO_EXTRA_FILTERS: Mapping[str, Callable[..., InertValue | Undefined]] = (
-    MappingProxyType({})
-)
+_NO_EXTRA_FILTERS: Mapping[str, Callable[..., InertValue]] = MappingProxyType({})
 
 
 @dataclass(frozen=True)
@@ -105,9 +101,7 @@ class Edition:
     templates_dir: Path
     name: str = ""
     root_template: str = "index.md"
-    extra_filters: Mapping[str, Callable[..., InertValue | Undefined]] = (
-        _NO_EXTRA_FILTERS
-    )
+    extra_filters: Mapping[str, Callable[..., InertValue]] = _NO_EXTRA_FILTERS
     mirror_blobs: bool = True
 
     @classmethod

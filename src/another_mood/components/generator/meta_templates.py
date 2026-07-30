@@ -1,7 +1,7 @@
 # ``_meta`` is a node field under the reserved ``_`` prefix (see data_tree.py),
 # not a Python-protected attribute.
 # pyright: reportPrivateUsage=false
-"""Built-in meta templates and their system-only Jinja2 filters."""
+"""Built-in meta templates and their system-only template filters."""
 
 import math
 from collections.abc import Callable, Mapping, Sequence
@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import cast
 
 import yaml
-from jinja2 import Undefined
 
 from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.edition import Edition, PagingPolicy
@@ -27,19 +26,18 @@ META_TEMPLATES_DIR = Path(
 )
 
 
-def pluck(row: object, key_path: str) -> InertValue | Undefined:
-    """Jinja2 filter wrapper around :func:`json_data_model.pluck`.
+def pluck(row: object, key_path: str) -> InertValue:
+    """Template filter wrapper around :func:`json_data_model.pluck`.
 
-    Missing keys and broken intermediate steps yield Jinja2's
-    ``Undefined``, which renders as the empty string under the standard
-    Undefined contract and is falsy for ``or []`` / ``length``.
+    Missing keys and broken intermediate steps yield ``None``, which renders as
+    nothing and is falsy — a caller needing a container guards with ``or []``.
     """
     if not isinstance(row, Mapping):
-        return Undefined()
+        return None
     try:
         value = json_data_model.pluck(cast(Mapping[str, object], row), key_path)
     except KeyError:
-        return Undefined()
+        return None
     # The shared pluck is typed to return `object`; re-marshal to inert.
     return ensure_inert(value)
 
@@ -79,15 +77,15 @@ def walk_entity(
 
 
 def to_yaml(value: object, flow: bool = False) -> str:
-    """Jinja2 filter: dump a value as YAML.
+    """Template filter: dump a value as YAML.
 
     Built-in templates use this to render arbitrary Mapping[str, object]
     fields (e.g. Attribute.metadata, Attribute.validation) without
     enumerating known keys. Pass ``flow=True`` for single-line flow style
-    suitable for Markdown table cells. Returns an empty string for
-    None/Undefined.
+    suitable for Markdown table cells. Returns an empty string for an
+    absent value.
     """
-    if value is None or isinstance(value, Undefined):
+    if value is None:
         return ""
     # Disable PyYAML's soft line-wrap in flow mode — wrapping inserts
     # newlines that break the surrounding Markdown table row.
@@ -104,7 +102,7 @@ def to_yaml(value: object, flow: bool = False) -> str:
 
 
 def anchor_path(a: object) -> str | None:
-    """Jinja2 filter: a node's anchor path as a string — the template-side
+    """Template filter: a node's anchor path as a string — the template-side
     reader of ``_meta.anchor_path``.
 
     A value that is not a node has no address and yields ``None``, which
@@ -117,7 +115,7 @@ def anchor_path(a: object) -> str | None:
         return None
 
 
-META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue | Undefined]] = {
+META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue]] = {
     "anchor_path": anchor_path,
     "pluck": pluck,
     "to_yaml": to_yaml,

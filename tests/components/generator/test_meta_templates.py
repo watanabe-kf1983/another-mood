@@ -1,7 +1,6 @@
 """Tests for the system-only Jinja2 filters used by built-in templates."""
 
 import pytest
-from jinja2 import Undefined
 
 from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
 from another_mood.components.generator.inert import ensure_inert_mapping
@@ -59,9 +58,9 @@ class TestPluckFilter:
         assert pluck(row, "hobby.pets") == [{"id": "dog1"}]
         assert pluck(row, "done") is False
 
-    def test_unreachable_path_yields_undefined(self) -> None:
-        assert isinstance(pluck({"x": 1}, "missing"), Undefined)
-        assert isinstance(pluck({"x": 1}, "x.y"), Undefined)
+    def test_unreachable_path_yields_absence(self) -> None:
+        assert pluck({"x": 1}, "missing") is None
+        assert pluck({"x": 1}, "x.y") is None
 
 
 class TestWalkEntityFilter:
@@ -181,11 +180,8 @@ class TestToYamlFilter:
     def test_nested(self) -> None:
         assert to_yaml({"a": {"b": 1}}) == "a:\n  b: 1"
 
-    def test_none_yields_empty(self) -> None:
+    def test_absent_value_yields_empty(self) -> None:
         assert to_yaml(None) == ""
-
-    def test_undefined_yields_empty(self) -> None:
-        assert to_yaml(Undefined()) == ""
 
     def test_flow_style_single_line(self) -> None:
         # `flow=True` keeps the output on a single line — used in Markdown

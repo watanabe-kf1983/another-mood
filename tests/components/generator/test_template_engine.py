@@ -126,8 +126,9 @@ class TestFiltersParam:
 
 
 class TestMakeEnvironment:
-    """`make_environment` wires an OutputFormat's escape into Jinja2's finalize
-    hook.  It registers no filters / globals — the caller supplies those."""
+    """`make_environment` wires an OutputFormat's escape into the engine's
+    finalizer hook.  It registers no filters / globals — the caller supplies
+    those."""
 
     def test_applies_escape_to_bare_strings(self) -> None:
         fmt = OutputFormat(
@@ -135,8 +136,7 @@ class TestMakeEnvironment:
             escape=lambda s: s.upper(),
         )
         env = make_environment(fmt)
-        template = env.from_string("{{ value }}")
-        assert template.render(value="hello") == "HELLO"
+        assert env.render_str("{{ value }}", value="hello") == "HELLO"
 
     def test_passes_markup_through_without_escape(self) -> None:
         fmt = OutputFormat(
@@ -144,32 +144,43 @@ class TestMakeEnvironment:
             escape=lambda s: s.upper(),
         )
         env = make_environment(fmt)
-        template = env.from_string("{{ value }}")
-        assert template.render(value=Markup("hello")) == "hello"
+        assert env.render_str("{{ value }}", value=Markup("hello")) == "hello"
 
     def test_renders_none_as_empty_string(self) -> None:
         fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
         env = make_environment(fmt)
-        template = env.from_string("[{{ value }}]")
-        assert template.render(value=None) == "[]"
+        assert env.render_str("[{{ value }}]", value=None) == "[]"
 
-    def test_renders_undefined_as_empty_string(self) -> None:
+    def test_renders_an_unbound_name_as_empty_string(self) -> None:
         fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
         env = make_environment(fmt)
-        template = env.from_string("[{{ missing }}]")
-        assert template.render() == "[]"
+        assert env.render_str("[{{ missing }}]") == "[]"
+
+    def test_renders_a_broken_chain_as_empty_string(self) -> None:
+        # Chainable undefined: a missing step part-way through keeps resolving
+        # instead of raising, and what falls out renders as nothing.
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        env = make_environment(fmt)
+        assert env.render_str("[{{ a.b.c }}]", a={}) == "[]"
+
+    def test_does_not_auto_escape_by_template_extension(self) -> None:
+        # Escaping is the format's, via the finalizer.  The engine's own
+        # auto-escape keys off the template name, so an `.html` one must not
+        # pull HTML escaping in on top.
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        env = make_environment(fmt)
+        assert env.render_str("{{ value }}", "t.html", value="a<b") == "A<B"
 
     def test_filter_returning_markup_bypasses_finalize_escape(self) -> None:
-        # The finalize hook escapes bare strings but passes Markup through; a
+        # The finalizer escapes bare strings but passes Markup through; a
         # filter (registered by the caller, not the env) that returns Markup
         # must therefore survive unescaped.
         def raw(v: object) -> Markup:
             return Markup(str(v))
 
         env = make_environment(OutputFormat(name="upper", escape=lambda s: s.upper()))
-        env.filters["raw"] = raw
-        template = env.from_string("{{ 'hi' | raw }}")
-        assert template.render() == "hi"
+        env.add_filter("raw", raw)
+        assert env.render_str("{{ 'hi' | raw }}") == "hi"
 
 
 class TestTemplateEngineMdEscape:
@@ -341,23 +352,59 @@ class TestRenderToFileIdempotency:
             engine.render_to_file("b.md", subject, Path("p.md"))
 
 
-class TestTemplateSyntaxErrorConversion:
-    def test_raises_file_validation_error(self, tmp_path: Path) -> None:
+class TestTemplateErrorConversion:
+    """Both a template that will not parse and one that fails mid-render are
+    the template author's to fix, so both become diagnostics."""
+
+    def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        (templates_dir / "bad.md").write_text("{{ unclosed")
-
-        engine = TemplateEngine(
+        (templates_dir / "bad.md").write_text(body)
+        return TemplateEngine(
             tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
         )
+
+    def test_syntax_error_raises_file_validation_error(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "{{ unclosed")
         with pytest.raises(FileValidationError) as exc_info:
             engine.render("bad.md", {})
 
         diags = exc_info.value.diagnostics
         assert len(diags) == 1
-        assert diags[0].source == "jinja2"
+        assert diags[0].source == "minijinja"
         assert diags[0].line is not None
         assert "bad.md" in str(diags[0].file)
+
+    def test_runtime_error_raises_file_validation_error(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "ok\n{{ value | no_such_filter }}")
+        with pytest.raises(FileValidationError) as exc_info:
+            engine.render("bad.md", {"value": "x"})
+
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].source == "minijinja"
+        assert diags[0].line == 2
+        # The file must resolve on disk, or the diagnostic cannot read its
+        # snippet: the engine holds a template *name*, not a path.
+        assert diags[0].file is not None and diags[0].file.is_file()
+
+    def test_our_own_errors_are_not_swallowed(self, tmp_path: Path) -> None:
+        # A Python exception raised by one of our filters is not a template
+        # error and keeps its own type on the way out.
+        def boom(value: object) -> str:
+            raise UserError("filter said no")
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text("{{ 'x' | boom }}")
+        engine = TemplateEngine(
+            tmp_path,
+            templates_dir=templates_dir,
+            output_format=MD,
+            filters={"boom": boom},
+        )
+        with pytest.raises(UserError, match="filter said no"):
+            engine.render("t.md", {})
 
 
 class TestAsTemplateHelper:
