@@ -148,7 +148,7 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 
 露出規則の wrap 側の帰結として、`InertMapping` / `InertArray` の dict / list mutator（`pop` / `clear` / `update` / `setdefault` / `append` / `sort` 等）はテンプレートから呼べ、**実際に Python 側のツリーを書き換える**(実測)。ノードはビルド全体で共有されるため、あるページのテンプレートが他ページのデータを壊せる。`dict.items` のような Python callable を木に植えることもでき、「テンプレに渡る値は inert」の不変条件も破れる。
 
-**これは信頼モデルの穴ではない**: 植えられるのはテンプレートから既に届く値（inert container のメソッド、global の closure）に限られ、新しい capability は得られない ── RCE ではなく**ビルド整合性**の問題で、0.1.0 のブロッカーではない。なお **P12（pycompat 無効化）でも塞がらない**: pycompat が触るのは convert 側（ネイティブ文字列への後付けメソッド）で、mutator は wrap 側の素の属性 lookup。
+**これは信頼モデルの穴ではない**: 植えられるのはテンプレートから既に届く値（inert container のメソッド、global の closure）に限られ、新しい capability は得られない ── RCE ではなく**ビルド整合性**の問題で、0.1.0 のブロッカーではない。なお **[pycompat 無効化](30-template-spec.md#テンプレートの語彙は-filter--test--operator-に限る)（実施済み）では塞がっていない**: pycompat が触るのは convert 側（ネイティブ文字列への後付けメソッド）で、mutator は wrap 側の素の属性 lookup。
 
 塞ぎ方は `InertMapping` / `InertArray` に mutator を raise するメソッドとして定義する形。**公開名の集合は plain dict / list と同一のまま**なので、surface-audit テストの参照形は再設計不要で挙動だけが変わる。
 

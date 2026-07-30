@@ -542,29 +542,8 @@ categories:
         done: true
       P12:
         title: pycompat 無効化 (テンプレートの語彙を filter / test に一本化)
-        note: >-
-          minijinja の pycompat を切り、テンプレートから Python 文字列メソッドを
-          使えなくする。理由は利用者に案内する語彙を Jinja フィルタに揃えること —
-          Python 標準のメソッドを案内に混ぜると、どこまでが Python 相当かの境界が
-          利用者側で判断できない。上流の位置づけも「Jinja2 テンプレートの移行
-          互換シム」であって、正道は filter (COMPATIBILITY.md「Filters should
-          generally be used instead of methods」)。pycompat の実体は
-          minijinja-contrib の unknown_method_callback で、minijinja コアの
-          保証ではない点も同じ向きに働く。
-          作業は内蔵メタテンプレート 3 ファイル・8 箇所の書き換えのみ
-          (entity_def.md 4・view_def.md 3・data.md 1、いずれも startswith /
-          endswith)。`is startingwith` / `is endingwith` テストに 1 対 1 で
-          置換でき、利用者向け showcase・docs での使用はゼロ。
-          置換不能なメソッドは lstrip / rstrip (trim は片側指定を取らない)・
-          find・count(部分文字列)・isdigit / isalpha / isnumeric の 4 系統だが、
-          いずれも未使用なので実害なく落ちる。なお format はメソッドが brace 形式・
-          filter が printf 形式で、取り違えても例外を出さず文字列が素通りする —
-          将来 filter 側を案内するときの注意点 (現状使用箇所なし)。
-          前提 P6。Phase 14 に置くのは Q1 (0.1.0 公開) より前に入れる必要が
-          あるため: pycompat=True で公開すると、docs に書かなくても Python
-          メソッドは動くので、後で切ると公開済み挙動の削除になる。初回公開前なら
-          何も取り上げずに済む。
         phase: 14
+        done: true
       P13:
         title: テンプレートからのデータツリー破壊的変更を塞ぐ
         note: >-

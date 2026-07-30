@@ -22,6 +22,12 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 **`link` の表示テキスト。** 引数を渡さなければ label、渡した値が欠損していれば空のテキスト（`[](url)`）になる。参照は健在なので、表示テキストの欠損でリンクごと消すことはしない。
 
+### テンプレートの語彙は filter / test / operator に限る
+
+値そのものはメソッドを持たない。minijinja の `pycompat` は Python の文字列 / list / dict メソッドを値に生やすが、これを切っている（`.startswith()` は空描画ではなくメソッド名つきのエラー）。
+
+理由は **利用者に案内できる境界が引けること**。pycompat を入れたままだと「どこまでが Python 相当か」を答える主体が居ない — 本ツールの `docs/` には書けず（Python のどの版のどのメソッドか特定できない）、minijinja コアの保証でもない（実体は minijinja-contrib の `unknown_method_callback` で、上流の位置づけも「Jinja2 テンプレートの移行互換シム」。COMPATIBILITY.md も *Filters should generally be used instead of methods* と述べる）。語彙を filter / test / operator に閉じれば、案内できる集合とテンプレートから届く集合が一致する。
+
 ## Internal Design
 
 ### 欠損の描画責務と「引数未指定」の区別
