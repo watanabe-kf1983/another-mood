@@ -317,22 +317,6 @@ categories:
         done: true
       G11:
         title: "definition/queries/ → definition/views/ 改名 (静かなエイリアス併存)"
-        note: >-
-          利用者が名前を付ける保存済み導出データセットの RDBMS 一般語彙は view で、
-          query はその定義本文 (CREATE VIEW name AS <query> の関係)。現状は
-          consumer 側 (template.md・generator) が既に view 語彙なのに producer 側
-          (definition/queries/・query.md) だけ query 語彙という非対称があり、
-          これを解消する。docs は LLM が MCP 経由で読むため、SQL の view
-          セマンティクス (名前付き・導出・読み取り専用) を priming できる利も大きい。
-          決定事項: (1) SourceLayout が views/ と queries/ の「ある方」を探す。
-          両方あれば移行ミスなのでビルドエラー、(2) エイリアスは静かに —
-          deprecation warning は出さない (P4 と同じ判断。warning は --strict の
-          稼働プロジェクトを移行前に壊す)、(3) docs / MCP instructions は views
-          のみを語り、query.md → view.md へ改名 (DSL 本文の説明語彙としての
-          query は残る)、(4) __db/__queries → __views は生成物側なので併走なしで
-          一斉切り替え (その後、メタページの対称化で __view_defs / __data に再編)。
-          内部識別子 (shared/query.py・derive_queries・__definition.queries キー)
-          は利用者契約ではないため追随は任意。
         phase: 14
         done: true
       G12:
@@ -533,46 +517,17 @@ categories:
         phase: 14
         done: true
       P6:
-        title: テンプレートエンジンを minijinja へ差し替え (C)
-        note: >-
-          Jinja2 を minijinja (minijinja-py) へ差し替える。選定理由は移行コスト
-          の少なさ (macro 0・Jinja 互換構文・env.finalizer フックあり) と LLM
-          執筆性 (Jinja系の訓練データを相続)。差し替えで dunder 経路の RCE は
-          構造的に閉じる (Rust の閉じた値モデル)。作業は make_environment の
-          置換・filter/global 登録・finalize→env.finalizer・エラーの構造化
-          Diagnostic 化・テンプレ構文の微差吸収。本タスクは engine 差し替えのみ
-          で、安全の残り (非 _ グラフ / globals) は marshal 契約 P9 が担保する。
-          前提 P8 (minijinja はカスタムタグ非対応ゆえ、タグ廃止まで済ませる)。
-          0.1.0 を C で出すため Q1 の前提 (P9 と対で安全化を完了させる)。
-          Q9 からの繰り越し DoD: 対象プラットフォームで minijinja-py の
-          compiled wheel が解決することの確認 (Rust バインディング依存が
-          実際に入るのは本タスクのため)。
-          性能は選定理由ではないが副次効果になりうる: dev-docs のビルド 2.15s のうち
-          jinja2.render が 0.68s (32%、99 回) を占める。ただし速くなる保証はない —
-          カスタムフィルタ (data_tree_filters / メタテンプレートの filters) は
-          呼び出しごとに Python↔Rust 境界を越え、親参照付きデータツリー
-          (MappingNode / ArrayNode) の変換コストも乗るため、相殺されうる。
-          差し替え後に実測して判断する。
+        title: テンプレートエンジンを minijinja へ差し替え
         phase: 14
         done: true
-        proposal: 20-design/70-generator/60-template-trust-model#段階論-c-を-010-から採る
       P9:
         title: marshal 契約の型・構造ロック (先行実装)
         phase: 14
         done: true
       P11:
         title: SSTI 回帰テスト (minijinja 露出セマンティクスの pin)
-        note: >-
-          marshal 契約 (P9) の安全性は minijinja の露出規則に依存し、それは
-          将来版で変わりうる。dunder 直記法 / attr('__class__') / str.format・
-          format_map の format-string 系 / _ 名 global 露出 / 非 _ メソッド
-          dispatch を実 render に撃ち無害を assert し、現行挙動を固定する
-          (payload は OWASP 等で周知の古典で新規開示にはならない)。minijinja を
-          実行環境に入れる P6 まで走らせられないため P9 (型・構造) と分離。
-          前提 P6。0.1.0 を C で出すため Q1 の前提 (これで RCE 閉包を実証し
-          build/watch の危険注記が不要になる)。
         phase: 14
-        proposal: 20-design/70-generator/60-template-trust-model#ssti-回帰テストp6-依存別タスク
+        done: true
       P7:
         title: render filter 形の追加 ({% render %} タグと併存)
         phase: 14
@@ -652,9 +607,7 @@ categories:
           token はコマンドライン・history・Claude のセッションのいずれにも通さない。
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
-          前提: Q2 / 移行措置を畳む P5, V7 / 公開 CLI 語彙を確定する N4 /
-          0.1.0 を C で出す P7→P8→P6 (＋P9 並行) →P11
-          (RCE を閉じ危険注記を不要化) / Q8, Q9, R2。
+          前提: R2 (他の前提は全て完了済み)。
         phase: 14
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
@@ -730,26 +683,10 @@ categories:
         phase: 17
       Q8:
         title: PyPI アカウント準備 (登録 + 2FA)
-        note: >-
-          リポジトリ外・機長側の作業 (Claude には委任しない)。pypi.org に
-          アカウント登録 (メール確認) と 2FA 設定 (全アップロード者に必須)。
-          審査・承認プロセスはなく、作業・リードタイムとも 15 分程度。
-          API token の発行は使い捨て運用のため publish 直前に行う (Q1 側)。
-          Q1 の前提。
         phase: 14
         done: true
       Q9:
         title: パッケージメタデータの最小整備 (LICENSE + pyproject)
-        note: >-
-          LICENSE ファイル (MIT) の追加と pyproject の license / urls。0.1.0 では
-          最小に留め、classifiers / keywords / description 磨きはローンチ前
-          (R3) に回す。DoD にビルド成立確認を含める: uv build の wheel/sdist
-          に resources/ (テンプレート・bundled docs・blueprint) が同梱され、
-          showcase / テスト等の開発専用物が混入しないこと。twine check 通過。
-          minijinja 移行 (P6) で Rust バインディング依存が増えるため、対象
-          プラットフォームで minijinja-py の compiled wheel が解決することも
-          DoD に含める (未検証 — P6 で engine が実際に替わる際に確認する、
-          P6 note に繰り越し済み)。Q1 の前提。
         phase: 14
         done: true
 
