@@ -3,7 +3,8 @@ to a template.
 
 Each type is a case of :class:`TestSurfaceAudit`, whose reference surface adapts
 to the case's shape. ``Markup`` is not audited here — its safety depends on how
-the engine exposes it, so it falls to the live-render SSTI test (task P11).
+the engine exposes it, so it is pinned by the live-render test in
+``test_ssti``.
 """
 
 import dataclasses
