@@ -1,8 +1,8 @@
 """Tests for the reserved-name check.
 
 Windows' silent reserved-name / trailing-dot behavior cannot be reproduced
-on POSIX, so these exercise the pure ``ntpath``-backed predicate directly
-rather than through an actual file write.
+on POSIX, so these exercise the pure predicate directly rather than through
+an actual file write.
 """
 
 from pathlib import Path
@@ -27,6 +27,10 @@ class TestEnsureNotWindowsReserved:
             "lpt9",
             "trailing.",
             "trailing ",
+            "colon:name",  # reserved on Windows as a file-stream separator
+            "pipe|name",
+            "wild*card",
+            "ctrl\x01char",
         ],
     )
     def test_raises_on_reserved_segment(self, path: str) -> None:
@@ -37,6 +41,10 @@ class TestEnsureNotWindowsReserved:
         # The offending segment need not be the leaf.
         with pytest.raises(WindowsReservedNameError):
             ensure_not_windows_reserved(Path("erds/CON/entities/user.md"))
+
+    def test_raises_on_reserved_segment_under_an_absolute_path(self) -> None:
+        with pytest.raises(WindowsReservedNameError):
+            ensure_not_windows_reserved(Path("/tmp/out/CON.md"))
 
     def test_error_names_the_offending_segment(self) -> None:
         with pytest.raises(WindowsReservedNameError) as excinfo:
@@ -51,6 +59,9 @@ class TestEnsureNotWindowsReserved:
             "erds/user-management/entities/user.md",
             "書籍/モーニング娘。.md",  # non-ASCII ids stay clear
             "com0.txt",  # COM0 is not reserved (COM1..COM9 are)
+            # The anchor of an absolute path carries separators (and a colon on
+            # Windows), but is not a user-chosen id and must not be rejected.
+            "/tmp/out/user.md",
         ],
     )
     def test_passes_clean_paths(self, path: str) -> None:
