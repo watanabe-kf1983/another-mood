@@ -8,6 +8,7 @@ from markupsafe import Markup
 from another_mood.components.generator.data_tree_filters import MissingNode
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.template_engine import (
+    EnvironmentPool,
     OutputFormat,
     PageCollisionError,
     PathRegistry,
@@ -269,6 +270,42 @@ class TestPathRegistry:
             registry.claim(Path("p.md"), {"id": "x"}, "b.md")
         assert not hasattr(exc_info.value, "diagnostic_entries")
         assert exc_info.value.user_error_message == str(exc_info.value)
+
+
+class TestEnvironmentPool:
+    """The two properties the lending rests on: a live render never shares its
+    Environment, and a finished one gives it back — raise or no raise."""
+
+    def _pool(self) -> EnvironmentPool:
+        fmt = OutputFormat(name="plain", escape=lambda s: s)
+        return EnvironmentPool(lambda: make_environment(fmt))
+
+    def test_nested_acquires_get_distinct_environments(self) -> None:
+        pool = self._pool()
+        with pool.acquire() as outer:
+            with pool.acquire() as inner:
+                assert outer is not inner
+
+    def test_sequential_acquires_reuse_one_environment(self) -> None:
+        # Sequential, not nested: nothing is in flight the second time, so the
+        # first Environment comes back rather than a second being built.
+        pool = self._pool()
+        with pool.acquire() as first:
+            pass
+        with pool.acquire() as second:
+            assert first is second
+
+    def test_environment_returns_to_the_pool_when_the_render_raises(self) -> None:
+        pool = self._pool()
+        with pool.acquire() as first:
+            pass
+        with pytest.raises(RuntimeError):
+            with pool.acquire():
+                raise RuntimeError("render failed")
+        # Had the failed render kept it, the pool would be empty here and a
+        # second Environment would be built instead.
+        with pool.acquire() as after:
+            assert after is first
 
 
 class TestRenderToFileIdempotency:

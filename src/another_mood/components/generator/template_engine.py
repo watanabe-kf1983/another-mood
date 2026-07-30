@@ -1,6 +1,7 @@
 """Template engine — Jinja2 rendering behind a simple interface."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
@@ -74,6 +75,28 @@ def make_environment(output_format: OutputFormat) -> Environment:
         undefined=ChainableUndefined,
         finalize=_finalize,
     )
+
+
+class EnvironmentPool:
+    """Lends Environments out, at most one live render to each — minijinja
+    deadlocks when a render re-enters the Environment it is already running on,
+    which the ``render`` filter otherwise does.  Not thread-safe: an engine
+    renders on one thread.
+    """
+
+    def __init__(self, new_environment: Callable[[], Environment]) -> None:
+        self._new_environment = new_environment
+        self._idle: list[Environment] = []
+
+    @contextmanager
+    def acquire(self) -> Generator[Environment]:
+        # Most recently released first, so a given nesting depth keeps landing
+        # on the same Environment and its parse cache stays warm.
+        env = self._idle.pop() if self._idle else self._new_environment()
+        try:
+            yield env
+        finally:
+            self._idle.append(env)
 
 
 def as_template_helper[**P, T](
@@ -199,15 +222,20 @@ class TemplateEngine:
         self._out_dir = out_dir
         self._paths = PathRegistry()
         self._output_format = output_format
-        self._env = make_environment(output_format)
-        self._env.loader = FileSystemLoader(str(templates_dir))
-        for name, func in filters.items():
-            self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
-        for name, func in globals.items():
-            self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
         processor = RenderProcessorImpl(engine=self, paging=paging)
-        # Registered after the caller's filters: engine-owned, not overridable.
-        self._env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
+
+        def new_environment() -> Environment:
+            env = make_environment(output_format)
+            env.loader = FileSystemLoader(str(templates_dir))
+            for name, func in filters.items():
+                env.filters[name] = func  # pyright: ignore[reportArgumentType]
+            for name, func in globals.items():
+                env.globals[name] = func  # pyright: ignore[reportArgumentType]
+            # Registered after the caller's filters: engine-owned, not overridable.
+            env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
+            return env
+
+        self._envs = EnvironmentPool(new_environment)
 
     def render(self, template_name: str, subject: object) -> str:
         return self._render(template_name, subject)
@@ -230,7 +258,8 @@ class TemplateEngine:
 
     def _render(self, template_name: str, subject: object) -> str:
         try:
-            rendered = self._env.get_template(template_name).render(_bind(subject))
+            with self._envs.acquire() as env:
+                rendered = env.get_template(template_name).render(_bind(subject))
         except TemplateSyntaxError as exc:
             raise FileValidationError(
                 [
