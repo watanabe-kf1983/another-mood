@@ -9,10 +9,19 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Both ends of the supported range: the floor declared by
+      # requires-python, and the newest version most users will install on.
+      # setup-uv exports UV_PYTHON, which outranks the .python-version file.
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
 
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - run: uv sync --locked
 
@@ -21,6 +30,6 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: test-reports
+          name: test-reports-py${{ matrix.python-version }}
           path: reports/
           retention-days: 30

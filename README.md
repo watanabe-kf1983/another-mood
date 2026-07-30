@@ -8,7 +8,7 @@ Another Mood keeps that set consistent. You write the data once as **sources** â
 
 ## Install
 
-Requires Python 3.13 or later.
+Requires Python 3.12 or later.
 
 ```bash
 pipx install git+https://github.com/watanabe-kf1983/another-mood.git
