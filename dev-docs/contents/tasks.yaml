@@ -581,12 +581,34 @@ categories:
         note: >-
           名前確保を兼ねた静かな初回公開 (告知・宣伝は Q3。PyPI に予約制度はなく、
           動く最小版を早めに上げるのが実質の名前確保)。手順は「PR merge → 即
-          upload」の一続き: アカウントスコープ token を発行し、使い捨てシェルで
+          upload」の一続き: R2 が用意した公開後版ドキュメントの draft PR を merge し、
+          続けてアカウントスコープ token を発行、使い捨てシェルで
           `read -rs` → export → uv build && uv publish → シェル破棄 + 即 revoke。
           token はコマンドライン・history・Claude のセッションのいずれにも通さない。
           プロジェクトスコープ token は作らない (リリースフローは Q6 で
           trusted publishing に移り、以後 token 自体が不要になるため)。
           前提: R2 (他の前提は全て完了済み)。
+        phase: 14
+      Q12:
+        title: requires-python を 3.12 へ引き下げ
+        note: >-
+          公開前に対応 Python 版の下限を確定する。動機は install 手引きの成立性:
+          Ubuntu 24.04 LTS (サポート 2029 まで) が Python 3.12 で、3.13 のままだと
+          pip / pipx 前提の手引きが素直に成立せず、interpreter を自前調達する uv を
+          利用者に強いることになる。
+          実態は安い: 3.13 専用 API は windows_reserved_name.py の ntpath.isreserved
+          1 箇所のみで、vendor すれば済む。PEP 695 構文 (type 文 / 新ジェネリクス) が
+          広範にあるため 3.12 が構文上の床であり、それ以上は下げない。
+          範囲: pyproject の requires-python、isreserved の vendor、uv.lock の再解決、
+          .python-version を下限に合わせるか最新のまま CI で下限を検証するかの判断
+          (現状 ci.yml に Python 版マトリクスは無く、下限を宣言する以上は下限での
+          検証経路が要る)。
+          Q1 に対しては optional — 静かなリリースで受益者がまだいないため、3.13 の
+          ままでも公開自体は成立する。0.1.0 までには入れる。
+          R2 とは順不同で、R2 が先行する想定。その場合 install 手引きは一旦 3.13 で
+          書かれるので、本タスクでは main と R2 の公開後版 draft PR の両方で
+          Python 要求の数字を更新すること (下げると pipx 主の手引きがより広く成立する
+          という関係で、手引きの構造自体は下限に依存しない)。
         phase: 14
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
@@ -655,9 +677,7 @@ categories:
           (as-is / no-SLA / fork 歓迎)。コントリビューションは積極受け入れしない方針
           — Issues は有効のまま放置・PR も放置・Dependabot は有効化しない。
           うるさくなったら (AI slop 等) そのとき対策を再考。
-          `requires-python >=3.13` の広さも一度判断する (広げるか、最新版のみと宣言するか)。
-          下限の実態: 3.13 要求は ntpath.isreserved の 1 箇所のみ (vendor すれば 3.12 化は安い)。
-          PEP 695 構文 (type 文 / ジェネリクス) が広範にあり 3.12 が構文上の床。
+          対応 Python 版の下限判断は Q12 へ分離した。
           受益者が現れるローンチまで不要なので Phase 17。Q3 の前提。
         phase: 17
       Q8:
@@ -681,21 +701,36 @@ categories:
         phase: 10
         done: true
       R2:
-        title: README の 0.1.0 向け書き直し
+        title: 0.1.0 向け利用者ドキュメント書き直し (公開前後の 2 版を用意)
         note: >-
-          開発者向けの現 README を利用者向けに書き直す: 何であるか / install
-          (PyPI) / 最小の使い方 / メンテナンス期待値の明文化 (as-is, no-SLA,
-          fork 歓迎)。docs/guides.md の install 節の PyPI 化 (git+https →
-          パッケージ名) も含む — docs/ は wheel に同梱されるため upload 前の
-          書き換えが必須。README は readme 宣言により PyPI の project description
+          開発者向けの現 README を利用者向けに書き直す: 何であるか / install /
+          最小の使い方 / メンテナンス期待値の明文化 (as-is, no-SLA, fork 歓迎)。
+          docs/guides.md の Prerequisites と Install 節も同じ籠で扱う (現状の
+          「uv が要る」は開発者向け README の名残であり、PyPI の project
+          description に出す文言ではない)。
+          install モデル: uv 前提を剥がし、Python 要求を明記したうえで pipx を主
+          (PEP 668 により system Python への素の pip は externally-managed-environment
+          で弾かれる)、既存 venv 向けに pip、uv tool install は等価な選択肢として
+          1 行添える程度。uvx は手引きしない — script 名 (mood) と package 名
+          (another-mood) が違うため --from が要るうえ、uvx のキャッシュ固着が
+          sbdb.yaml の minimum_version 毎ビルド検査と噛み合わない (CLI と MCP が
+          別版に固着し、同じプロジェクトで MCP 側だけ弾かれうる)。よって
+          docs/mcp.md の "command": "mood-mcp" は現状維持。依存の可搬性は確認済み
+          (hugo / minijinja とも macOS・manylinux/musllinux・Windows に wheel あり)。
+          成果物は 2 枚: 公開前版 (install は git+https のまま) を main へ入れ、
+          公開後版 (install は PyPI パッケージ名) は draft PR として用意しておく。
+          差し替えの実行は Q1 — docs/ は wheel に同梱されるため、公開後版のマージは
+          upload より前でなければならない。
+          README は readme 宣言により PyPI の project description
           としてそのままレンダリングされ、旧版ページにも凍結コピーが残る。
           リポジトリ相対リンクは PyPI 上で 404 になるため全て絶対 URL 化する
           (画像は絶対 HTTPS のみ表示)。行き先は repo ルート・tree/main/docs・
           動かないルート級ファイルなど粗く安定した先に限る。旧版ページのリンクが
           現在の main を指す版ドリフトは業界標準どおり受容する (PyPI README は
           版の凍結文書ではなく現在への案内板、が生態系の合意。attrs 等の実測で
-          版 pin リンクは皆無)。ローンチの顔としての全面改稿は R3。
-          Q1 の前提。
+          版 pin リンクは皆無)。
+          Python 要求は執筆時点の requires-python をそのまま書く (引き下げは Q12、
+          順不同)。ローンチの顔としての全面改稿は R3。Q1 の前提。
         phase: 14
       R3:
         title: README の 1.0.0 向け全面改稿
