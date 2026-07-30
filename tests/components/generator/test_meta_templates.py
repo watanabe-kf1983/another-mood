@@ -1,12 +1,12 @@
 """Tests for the system-only Jinja2 filters used by built-in templates."""
 
 import pytest
-from jinja2 import Undefined
 
 from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
 from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.meta_templates import (
     META_EDITION,
+    anchor_path,
     pluck,
     to_yaml,
     walk_entity,
@@ -30,6 +30,21 @@ class TestMetaEdition:
         assert META_EDITION.paging.page_path(node) == f"{view}/sample.md"
 
 
+class TestAnchorPathFilter:
+    """Unit tests for the `anchor_path` filter function."""
+
+    def test_node_yields_its_anchor_path(self) -> None:
+        array = wrap_tree(ensure_inert_mapping({"posts": [{"id": "hello"}]}))["posts"]
+        assert isinstance(array, ArrayNode)
+        assert anchor_path(array[0]) == "/posts/hello"
+
+    def test_non_node_yields_none(self) -> None:
+        # An id-less array element stays a plain mapping (no anchor to build
+        # a path from); the table cell renders empty rather than raising.
+        assert anchor_path({"title": "no id"}) is None
+        assert anchor_path(None) is None
+
+
 class TestPluckFilter:
     """Unit tests for the `pluck` filter function."""
 
@@ -43,9 +58,9 @@ class TestPluckFilter:
         assert pluck(row, "hobby.pets") == [{"id": "dog1"}]
         assert pluck(row, "done") is False
 
-    def test_unreachable_path_yields_undefined(self) -> None:
-        assert isinstance(pluck({"x": 1}, "missing"), Undefined)
-        assert isinstance(pluck({"x": 1}, "x.y"), Undefined)
+    def test_unreachable_path_yields_absence(self) -> None:
+        assert pluck({"x": 1}, "missing") is None
+        assert pluck({"x": 1}, "x.y") is None
 
 
 class TestWalkEntityFilter:
@@ -165,11 +180,8 @@ class TestToYamlFilter:
     def test_nested(self) -> None:
         assert to_yaml({"a": {"b": 1}}) == "a:\n  b: 1"
 
-    def test_none_yields_empty(self) -> None:
+    def test_absent_value_yields_empty(self) -> None:
         assert to_yaml(None) == ""
-
-    def test_undefined_yields_empty(self) -> None:
-        assert to_yaml(Undefined()) == ""
 
     def test_flow_style_single_line(self) -> None:
         # `flow=True` keeps the output on a single line — used in Markdown

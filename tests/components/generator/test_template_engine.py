@@ -8,11 +8,13 @@ from markupsafe import Markup
 from another_mood.components.generator.data_tree_filters import MissingNode
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.template_engine import (
+    EnvironmentPool,
     OutputFormat,
     PageCollisionError,
     PathRegistry,
     TemplateEngine,
     make_environment,
+    as_template_helper,
 )
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
@@ -124,8 +126,9 @@ class TestFiltersParam:
 
 
 class TestMakeEnvironment:
-    """`make_environment` wires an OutputFormat's escape into Jinja2's finalize
-    hook.  It registers no filters / globals — the caller supplies those."""
+    """`make_environment` wires an OutputFormat's escape into the engine's
+    finalizer hook.  It registers no filters / globals — the caller supplies
+    those."""
 
     def test_applies_escape_to_bare_strings(self) -> None:
         fmt = OutputFormat(
@@ -133,8 +136,7 @@ class TestMakeEnvironment:
             escape=lambda s: s.upper(),
         )
         env = make_environment(fmt)
-        template = env.from_string("{{ value }}")
-        assert template.render(value="hello") == "HELLO"
+        assert env.render_str("{{ value }}", value="hello") == "HELLO"
 
     def test_passes_markup_through_without_escape(self) -> None:
         fmt = OutputFormat(
@@ -142,32 +144,43 @@ class TestMakeEnvironment:
             escape=lambda s: s.upper(),
         )
         env = make_environment(fmt)
-        template = env.from_string("{{ value }}")
-        assert template.render(value=Markup("hello")) == "hello"
+        assert env.render_str("{{ value }}", value=Markup("hello")) == "hello"
 
     def test_renders_none_as_empty_string(self) -> None:
         fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
         env = make_environment(fmt)
-        template = env.from_string("[{{ value }}]")
-        assert template.render(value=None) == "[]"
+        assert env.render_str("[{{ value }}]", value=None) == "[]"
 
-    def test_renders_undefined_as_empty_string(self) -> None:
+    def test_renders_an_unbound_name_as_empty_string(self) -> None:
         fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
         env = make_environment(fmt)
-        template = env.from_string("[{{ missing }}]")
-        assert template.render() == "[]"
+        assert env.render_str("[{{ missing }}]") == "[]"
+
+    def test_renders_a_broken_chain_as_empty_string(self) -> None:
+        # Chainable undefined: a missing step part-way through keeps resolving
+        # instead of raising, and what falls out renders as nothing.
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        env = make_environment(fmt)
+        assert env.render_str("[{{ a.b.c }}]", a={}) == "[]"
+
+    def test_does_not_auto_escape_by_template_extension(self) -> None:
+        # Escaping is the format's, via the finalizer.  The engine's own
+        # auto-escape keys off the template name, so an `.html` one must not
+        # pull HTML escaping in on top.
+        fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
+        env = make_environment(fmt)
+        assert env.render_str("{{ value }}", "t.html", value="a<b") == "A<B"
 
     def test_filter_returning_markup_bypasses_finalize_escape(self) -> None:
-        # The finalize hook escapes bare strings but passes Markup through; a
+        # The finalizer escapes bare strings but passes Markup through; a
         # filter (registered by the caller, not the env) that returns Markup
         # must therefore survive unescaped.
         def raw(v: object) -> Markup:
             return Markup(str(v))
 
         env = make_environment(OutputFormat(name="upper", escape=lambda s: s.upper()))
-        env.filters["raw"] = raw
-        template = env.from_string("{{ 'hi' | raw }}")
-        assert template.render() == "hi"
+        env.add_filter("raw", raw)
+        assert env.render_str("{{ 'hi' | raw }}") == "hi"
 
 
 class TestTemplateEngineMdEscape:
@@ -270,6 +283,42 @@ class TestPathRegistry:
         assert exc_info.value.user_error_message == str(exc_info.value)
 
 
+class TestEnvironmentPool:
+    """The two properties the lending rests on: a live render never shares its
+    Environment, and a finished one gives it back — raise or no raise."""
+
+    def _pool(self) -> EnvironmentPool:
+        fmt = OutputFormat(name="plain", escape=lambda s: s)
+        return EnvironmentPool(lambda: make_environment(fmt))
+
+    def test_nested_acquires_get_distinct_environments(self) -> None:
+        pool = self._pool()
+        with pool.acquire() as outer:
+            with pool.acquire() as inner:
+                assert outer is not inner
+
+    def test_sequential_acquires_reuse_one_environment(self) -> None:
+        # Sequential, not nested: nothing is in flight the second time, so the
+        # first Environment comes back rather than a second being built.
+        pool = self._pool()
+        with pool.acquire() as first:
+            pass
+        with pool.acquire() as second:
+            assert first is second
+
+    def test_environment_returns_to_the_pool_when_the_render_raises(self) -> None:
+        pool = self._pool()
+        with pool.acquire() as first:
+            pass
+        with pytest.raises(RuntimeError):
+            with pool.acquire():
+                raise RuntimeError("render failed")
+        # Had the failed render kept it, the pool would be empty here and a
+        # second Environment would be built instead.
+        with pool.acquire() as after:
+            assert after is first
+
+
 class TestRenderToFileIdempotency:
     """``render_to_file`` is wired to the registry: a fresh page is
     written, an identical repeat is skipped, a clobbering repeat raises."""
@@ -303,20 +352,85 @@ class TestRenderToFileIdempotency:
             engine.render_to_file("b.md", subject, Path("p.md"))
 
 
-class TestTemplateSyntaxErrorConversion:
-    def test_raises_file_validation_error(self, tmp_path: Path) -> None:
+class TestTemplateErrorConversion:
+    """Both a template that will not parse and one that fails mid-render are
+    the template author's to fix, so both become diagnostics."""
+
+    def _engine(self, tmp_path: Path, body: str) -> TemplateEngine:
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        (templates_dir / "bad.md").write_text("{{ unclosed")
-
-        engine = TemplateEngine(
+        (templates_dir / "bad.md").write_text(body)
+        return TemplateEngine(
             tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
         )
+
+    def test_syntax_error_raises_file_validation_error(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "{{ unclosed")
         with pytest.raises(FileValidationError) as exc_info:
             engine.render("bad.md", {})
 
         diags = exc_info.value.diagnostics
         assert len(diags) == 1
-        assert diags[0].source == "jinja2"
+        assert diags[0].source == "minijinja"
         assert diags[0].line is not None
         assert "bad.md" in str(diags[0].file)
+
+    def test_runtime_error_raises_file_validation_error(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path, "ok\n{{ value | no_such_filter }}")
+        with pytest.raises(FileValidationError) as exc_info:
+            engine.render("bad.md", {"value": "x"})
+
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].source == "minijinja"
+        assert diags[0].line == 2
+        # The file must resolve on disk, or the diagnostic cannot read its
+        # snippet: the engine holds a template *name*, not a path.
+        assert diags[0].file is not None and diags[0].file.is_file()
+
+    def test_our_own_errors_are_not_swallowed(self, tmp_path: Path) -> None:
+        # A Python exception raised by one of our filters is not a template
+        # error and keeps its own type on the way out.
+        def boom(value: object) -> str:
+            raise UserError("filter said no")
+
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text("{{ 'x' | boom }}")
+        engine = TemplateEngine(
+            tmp_path,
+            templates_dir=templates_dir,
+            output_format=MD,
+            filters={"boom": boom},
+        )
+        with pytest.raises(UserError, match="filter said no"):
+            engine.render("t.md", {})
+
+
+class TestAsTemplateHelper:
+    """The intake half of the render boundary: what a template pipes in reaches
+    a text processor as text, or not at all."""
+
+    def test_coerces_a_non_str_subject(self) -> None:
+        def bracket(text: str) -> str:
+            return f"[{text}]"
+
+        assert as_template_helper(bracket)(42) == "[42]"
+
+    def test_absent_subject_skips_the_processor(self) -> None:
+        calls: list[str] = []
+
+        def record(text: str) -> str:
+            calls.append(text)
+            return text
+
+        # `None` never reaches the processor: absence is `finalize`'s to render,
+        # so no processor can stringify it into "None".
+        assert as_template_helper(record)(None) is None
+        assert calls == []
+
+    def test_passes_further_arguments_through(self) -> None:
+        def append(text: str, suffix: str) -> str:
+            return f"{text}{suffix}"
+
+        assert as_template_helper(append)("a", "!") == "a!"

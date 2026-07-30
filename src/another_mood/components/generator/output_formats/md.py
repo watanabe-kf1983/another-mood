@@ -9,8 +9,8 @@ import textwrap
 from collections.abc import Callable, Mapping
 from urllib.parse import urlsplit
 
-from jinja2 import pass_context
-from jinja2.runtime import Context
+from minijinja import pass_state
+from minijinja._lowlevel import State
 from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import Node, is_blob
@@ -23,8 +23,12 @@ from another_mood.components.generator.output_formats.heading_shift import (
     under_heading as _under_heading,
 )
 from another_mood.components.generator.edition import PagingPolicy
+from another_mood.components.generator.omitted import OMITTED
 from another_mood.components.shared.markdown import parse, rewrite_inline_links
-from another_mood.components.generator.template_engine import OutputFormat
+from another_mood.components.generator.template_engine import (
+    OutputFormat,
+    as_template_helper,
+)
 from another_mood.components.generator.url import url_escape
 
 # CommonMark renders any escaped ASCII punctuation identically to the
@@ -43,8 +47,7 @@ def md_escape(text: str) -> str:
     return _MD_ESCAPE_PATTERN.sub(r"\\\1", text)
 
 
-def code_inline(value: object) -> Markup:
-    text = str(value)
+def code_inline(text: str) -> Markup:
     # n+1 backticks (n = longest run in body) so content can't close the
     # fence early. CommonMark 6.1: `\` is literal inside a code span — the
     # body is deliberately not escaped.
@@ -57,18 +60,20 @@ def code_inline(value: object) -> Markup:
     return Markup(f"{fence}{body}{fence}")
 
 
-def code_fenced(value: object, language: str = "") -> Markup:
-    text = str(value)
+def code_fenced(text: str, language: object = "") -> Markup:
+    # An absent `language` only shapes the output, so it means the same as an
+    # unpassed one: no language tag, and the block itself still renders.
+    tag = "" if language is None else language
     # CommonMark requires >=3 backticks for a fenced block, and the opening
     # fence must be longer than any backtick run in the body to avoid early
     # termination. `\` is literal inside, so the body is not escaped.
     fence = "`" * max(3, _longest_backtick_run(text) + 1)
     # Closing fence needs its own line — guarantee a trailing newline.
     body = text if text.endswith("\n") else text + "\n"
-    return Markup(f"{fence}{language}\n{body}{fence}")
+    return Markup(f"{fence}{tag}\n{body}{fence}")
 
 
-def dedent(text: str) -> str:
+def dedent(text: str) -> Markup:
     """Strip the *common* leading whitespace from a rendered block.
 
     Lets a template indent a ``{% filter dedent %}`` block for readability and
@@ -78,31 +83,35 @@ def dedent(text: str) -> str:
     where output whitespace is significant (Markdown), like ``trim_blocks`` /
     ``lstrip_blocks``.
     """
-    return textwrap.dedent(text)
+    # Markup so finalize does not escape the block a second time: every
+    # interpolation inside it already went through finalize on its way in.
+    return Markup(textwrap.dedent(text))
 
 
-def under_heading(value: object, marker: str) -> Markup:
-    """Filter adapter for :func:`.heading_shift.under_heading`."""
-    # The filter boundary is this format's concern, not the transform's: Jinja
-    # pipes in arbitrary values, so coerce to `str`; return Markup so finalize
-    # does not re-escape the shifted Markdown (already valid output, like the
-    # other markdown-emitting filters here).
-    return Markup(_under_heading(str(value), marker))
+def under_heading(text: str, marker: str) -> Markup:
+    """Filter adapter for :func:`.heading_shift.under_heading`.
+
+    An absent ``marker`` is left to raise: it names the enclosing heading level,
+    and without it there is no shift to apply.
+    """
+    # Markup so finalize does not re-escape the shifted Markdown (already valid
+    # output, like the other markdown-emitting helpers here).
+    return Markup(_under_heading(text, marker))
 
 
-def in_cell(value: object) -> Markup:
+def in_cell(text: str) -> Markup:
     # Escape table-structure characters (`|` in particular), then turn
     # embedded newlines into `<br>` — a raw newline would split the row
     # across source lines. Markup-returned so finalize doesn't re-escape
     # the `<br>` we just emitted.
-    return Markup(md_escape(str(value)).replace("\n", "<br>"))
+    return Markup(md_escape(text).replace("\n", "<br>"))
 
 
-def as_url(value: object) -> Markup:
+def as_url(text: str) -> Markup:
     # Keep URL-structural punctuation raw so the link survives, but escape
     # `(` `)` by leaving them out of `safe` — raw, they would close the
     # Markdown link target `[...](...)` early.
-    encoded = url_escape(str(value), safe=":/?#[]@!$&'*+,;=")
+    encoded = url_escape(text, safe=":/?#[]@!$&'*+,;=")
     # Markup-returned to bypass finalize (md_escape would inject backslashes
     # into the URL; Hugo treats those as literal and percent-encodes them to
     # %5C, corrupting the link).
@@ -151,7 +160,7 @@ def _longest_backtick_run(text: str) -> int:
 
 def make_link_filters(
     paging: PagingPolicy, node_map: Mapping[str, Node]
-) -> Mapping[str, Callable[..., Markup]]:
+) -> Mapping[str, Callable[..., Markup | None]]:
     """The markdown link filters, bound to ``paging`` and the build's node map:
     ``href`` / ``link`` / ``anchor`` render a resolved node, and ``relink``
     rewrites a prose body's inline ``node:`` destinations.
@@ -162,35 +171,46 @@ def make_link_filters(
     destination from the source ``[text](node:…)``.
     """
 
-    # `href` / `link` / `relink` take `@pass_context` for two reasons: to read
-    # the source page from the render context's `this`, and to stop Jinja2's
-    # optimizer from constant-folding constant-argument calls — a compile-time
-    # `{{ node("/x") | href }}` would bake one source page's relative URL into
-    # the compiled template and break the same template rendered from another
-    # page. `anchor` needs neither (its id is the node's own page-independent
-    # anchor path), so it stays the bare `md_anchor`. Only `relink` touches
-    # `node_map` — it resolves anchor-path strings itself; the others receive an
-    # already-resolved node.
-    @pass_context
-    def href(context: Context, a: object) -> Markup:
+    # `href` / `link` / `relink` take `@pass_state` to read the source page from
+    # the render state's `this` — a relative URL depends on the page it is
+    # written on. `anchor` needs no state (its id is the node's own
+    # page-independent anchor path), so it stays the bare `md_anchor`. Only
+    # `relink` touches `node_map` — it resolves anchor-path strings itself; the
+    # others receive an already-resolved node.
+    @pass_state
+    def href(state: State, a: object) -> Markup | None:
+        if a is None:
+            return None
         if isinstance(a, MissingNode):
             return Markup("")
         # Markup so finalize does not corrupt the URL (see `as_url`).
-        return Markup(node_href(paging, context["this"], a))
+        return Markup(node_href(paging, state.lookup("this"), a))
 
-    @pass_context
-    def link(context: Context, a: object, text: object = None) -> Markup:
-        display = str(text) if text is not None else node_label(a)
+    @pass_state
+    def link(state: State, a: object, text: object = OMITTED) -> Markup | None:
+        if a is None:
+            return None
+        if text is OMITTED:
+            display = node_label(a)
+        elif text is None:
+            # An absent display text empties the text slot alone: the reference
+            # resolved, so dropping the whole link would make a display-side gap
+            # cost the addressing that is still good.
+            display = ""
+        else:
+            display = str(text)
         if isinstance(a, MissingNode):
             # A broken reference is left as a conspicuous bracketed `[text]`,
             # never a `[..](..)` to a dead URL — the same shape `relink` leaves
             # a dropped `node:` destination, so both broken-link forms read alike.
             return Markup(f"[{md_escape(display)}]")
-        return md_link(display, node_href(paging, context["this"], a))
+        return md_link(display, node_href(paging, state.lookup("this"), a))
 
-    @pass_context
-    def relink(context: Context, value: object) -> Markup:
-        source = context["this"]
+    @pass_state
+    def relink(state: State, value: object) -> Markup | None:
+        if value is None:
+            return None
+        source = state.lookup("this")
 
         def resolve(href: str) -> str | None:
             parts = urlsplit(href)
@@ -242,14 +262,15 @@ MD = OutputFormat(
 
 # The format's binding-free template helpers, for the caller to inject (the
 # config / node-map-bound ones come from `make_link_filters`).
-MD_GLOBALS: Mapping[str, Callable[..., Markup]] = {
-    "code_inline": code_inline,
-    "code_fenced": code_fenced,
+# Each is a text processor above, wrapped for the render boundary: the subject
+# arrives coerced, and an absent one never reaches it (`as_template_helper`).
+MD_GLOBALS: Mapping[str, Callable[..., Markup | None]] = {
+    "code_inline": as_template_helper(code_inline),
+    "code_fenced": as_template_helper(code_fenced),
 }
-# `dedent` returns bare `str`; the rest emit `Markup`.
-MD_FILTERS: Mapping[str, Callable[..., Markup | str]] = {
-    "in_cell": in_cell,
-    "as_url": as_url,
-    "dedent": dedent,
-    "under_heading": under_heading,
+MD_FILTERS: Mapping[str, Callable[..., Markup | None]] = {
+    "in_cell": as_template_helper(in_cell),
+    "as_url": as_template_helper(as_url),
+    "dedent": as_template_helper(dedent),
+    "under_heading": as_template_helper(under_heading),
 }

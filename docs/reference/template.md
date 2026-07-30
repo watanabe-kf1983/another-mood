@@ -18,7 +18,7 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`under_heading`](#under_heading) | filter | shift an embedded fragment's headings to nest under a heading |
 | [`relink`](#relink) | filter | resolve a prose body's `node:` links to their targets |
 
-Two evaluation rules also differ from stock Jinja2: [accessing an undefined name renders as the empty string](#handling-undefined-access), and [every substituted value is Markdown-escaped](#markdown-escaping).
+Where this page departs from the Jinja2 docs is collected under [Differences from Jinja2](#differences-from-jinja2).
 
 ## Template files
 
@@ -355,7 +355,13 @@ To indent a block's body — tags and content together — and strip that indent
 
 To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x %}` keeps the leading indentation, and `{% endif +%}` keeps the trailing newline — useful when an inline `{% if %}…{% endif %}` ends a content line and its line break must be preserved.
 
-## Handling undefined access
+## Differences from Jinja2
+
+The engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the Jinja2 docs are a close guide rather than an exact one — in corners they don't settle, behavior can differ.
+
+The three rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
+
+### Handling undefined access
 
 Accessing an undefined variable or attribute inside a template does not raise an error; it renders as the empty string. Chained attribute access (e.g., `spec.metadata.title`) also yields the empty string when any intermediate key is missing.
 
@@ -368,7 +374,7 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 
 Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__data/` and the shape of each view via `__db/__view_defs/`.
 
-## Markdown escaping
+### Markdown escaping
 
 Substituted values can contain characters that look like Markdown syntax. A `|` inside a value will split a table column; an `_` can flip the rest of a line into italics; a leading `#` can promote a value to a heading. To prevent such accidents, the template engine backslash-escapes every ASCII punctuation character emitted from a `{{ expr }}` substitution.
 
@@ -392,7 +398,7 @@ emits the Markdown source:
 
 which renders as a one-cell table containing the literal text `Acme | Pro`.
 
-### When to use `| safe`
+#### When to use `| safe`
 
 The escape backfires inside Markdown's verbatim regions — places where Markdown reproduces the content as-is and does **not** strip backslashes:
 
@@ -422,7 +428,7 @@ class {{ entity.id | safe }}
 
 Outside the verbatim regions above, `| safe` is unnecessary and only adds source noise.
 
-### Position-aware helpers
+#### Position-aware helpers
 
 A few Markdown positions need handling that the default escape alone cannot provide — table cells need `<br>` for newlines, link URLs need percent-encoding, code spans and fences need to handle backticks inside the value. Four of the built-in additions exist for these positions:
 
@@ -434,3 +440,15 @@ A few Markdown positions need handling that the default escape alone cannot prov
 | Hand-written link URL | the URL isn't percent-encoded | [`as_url`](#as_url) |
 
 For inline code spans and fenced code blocks, `code_inline` / `code_fenced` are an alternative to the `| safe` recipe above. Reach for the helpers when the value comes from data and may contain stray backticks; `| safe` only works if you can trust the value verbatim.
+
+### Non-ASCII names
+
+Non-ASCII names are welcome in the data — entity and view names, record keys, string values, template filenames. What cannot spell them is an identifier in template syntax (variable, attribute, and loop-variable names): the engine build this tool ships does not accept non-ASCII identifiers, so `{{ row.列 }}` is a syntax error. Reach the same value by subscript instead:
+
+```jinja2
+{% for t in this["テーブル"] %}
+| {{ code_inline(t.id) }} | {{ t["名前"] }} | {{ t["説明"] }} |
+{% endfor %}
+```
+
+Subscript form reaches everything. A top-level entity or view is reached through `this` — every template binds its subject as `this`, and the root template's subject is the data root — and any deeper key by subscripting on: `t["列"]["名前"]`. Give loop variables ASCII names and the rest follows.

@@ -12,10 +12,10 @@ oneOf:
   - $ref: "#/$defs/formB"
 
 $defs:
-  objectTypeId:
-    title: ObjectType ID
+  typeId:
+    title: Type ID
     description: >-
-      Dotted ObjectType ID — segments separated by `.`, each segment
+      Dotted type ID — segments separated by `.`, each segment
       is a Unicode identifier. A record type ends in `.item` (e.g.
       `erds.item.entities.item`); the array *of* those records takes a
       trailing `[]` (e.g. `erds.item.entities.item[]`).
@@ -25,15 +25,16 @@ $defs:
   filePerList:
     title: file_per list
     description: >-
-      ObjectType IDs whose nodes are split out as separate files by the
-      generator — read as "one file per instance of these ObjectTypes".
+      Type IDs whose nodes are split out as separate files by the
+      generator — read as "one file per instance of these types".
       An empty list (or omitted file_per:) means "no splitting —
       everything inlines into a single index.md". Each entry is matched
-      verbatim against the runtime `_meta.object_type_id` of each view
-      node.
+      verbatim against the type ID the generator resolved for a
+      node — no prefixes, no patterns; the __db/__entity_defs/ and
+      __db/__view_defs/ diagnostics show the exact values.
     type: array
     items:
-      $ref: "#/$defs/objectTypeId"
+      $ref: "#/$defs/typeId"
 
   formA:
     title: Single-edition report (form A)

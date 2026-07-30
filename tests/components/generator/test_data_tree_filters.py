@@ -320,3 +320,40 @@ class TestMakeDataTreeFilters:
         nodes = _node_map()
         _, filters_map = make_data_tree_filters(nodes)
         assert filters_map["label"](nodes["/members/alice"]) == "Alice"
+
+
+# ── absent values ────────────────────────────────────────────────
+
+
+class TestAbsentValues:
+    """Absence in a reference-building argument yields no reference at all,
+    rather than a MissingNode: a reference that was never stated is not a broken
+    one, so it stays invisible where a MissingNode is deliberately conspicuous.
+
+    The address-building arguments cannot instead treat absence as "nothing to
+    add" — dropping an absent ``path`` would silently address a *different*
+    node.
+    """
+
+    def test_absent_path_yields_no_reference(self) -> None:
+        nodes = _node_map()
+        # `/members/alice` exists, so an absent prefix that simply dropped out
+        # would resolve to it — a wrong link rather than a visible miss.
+        assert resolve_node(nodes, "members", "alice", path=None) is None
+
+    def test_absent_fragment_yields_no_reference(self) -> None:
+        nodes = _node_map()
+        assert resolve_node(nodes, "members", "alice", fragment=None) is None
+
+    def test_absent_segment_yields_no_reference(self) -> None:
+        assert resolve_node(_node_map(), "members", None) is None
+
+    def test_absent_child_parent_yields_no_reference(self) -> None:
+        assert child(None, "alice") is None
+
+    def test_absent_child_segment_yields_no_reference(self) -> None:
+        assert child(_node_map()["/members"], None) is None
+
+    def test_label_filter_renders_nothing_for_an_absent_node(self) -> None:
+        _, filters_map = make_data_tree_filters(_node_map())
+        assert filters_map["label"](None) is None

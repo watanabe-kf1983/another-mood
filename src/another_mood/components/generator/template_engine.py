@@ -1,17 +1,13 @@
-"""Template engine — Jinja2 rendering behind a simple interface."""
+"""Template engine — MiniJinja rendering behind a simple interface."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
-from typing import cast
+from typing import Concatenate, cast
 
-from jinja2 import (
-    ChainableUndefined,
-    Environment,
-    FileSystemLoader,
-    TemplateSyntaxError,
-    Undefined,
-)
+from minijinja import Environment, TemplateError, load_from_path
 
 from another_mood.components.generator.render_processor import RenderProcessorImpl
 from another_mood.components.generator.edition import PagingPolicy
@@ -38,12 +34,12 @@ class OutputFormat:
 
     name: str
     escape: Callable[[str], str]
-    # Jinja2 block whitespace control, owned by the format because whitespace
+    # Block whitespace control, owned by the format because whitespace
     # significance is format-dependent.  lstrip_blocks drops the indentation
     # before a line's `{% %}` tag; trim_blocks drops the newline after it —
     # together they let a control tag sit on its own indented line and emit
     # nothing, so templates can show their structure without leaking spaces or
-    # blank lines.  Defaults match Jinja2's own (off); a format opts in.
+    # blank lines.  Defaults match the engine's own (off); a format opts in.
     trim_blocks: bool = False
     lstrip_blocks: bool = False
     # A format's final pass over a rendered output, given the subject. Runs
@@ -54,10 +50,10 @@ class OutputFormat:
 
 
 def make_environment(output_format: OutputFormat) -> Environment:
-    # Jinja2's autoescape is hard-coded to HTML, so per-format escaping
-    # is implemented via a finalize hook; Markup values are passed through.
+    # Per-format escaping is implemented via the finalizer hook; Markup values
+    # are passed through.
     def _finalize(value: object) -> object:
-        if value is None or isinstance(value, Undefined):
+        if value is None:
             return ""
         if hasattr(value, "__html__"):
             return str(value)
@@ -70,9 +66,67 @@ def make_environment(output_format: OutputFormat) -> Environment:
         keep_trailing_newline=True,
         trim_blocks=output_format.trim_blocks,
         lstrip_blocks=output_format.lstrip_blocks,
-        undefined=ChainableUndefined,
-        finalize=_finalize,
+        # Chainable, so a missing step part-way through `{{ a.b.c }}` keeps
+        # resolving instead of raising; what it yields arrives as `None`.
+        undefined_behavior="chainable",
+        finalizer=_finalize,
+        # Off unconditionally: escaping is `_finalize`'s, and auto-escape keys
+        # off the template's extension — an `.html`-named one would otherwise be
+        # HTML-escaped on top.
+        auto_escape_callback=lambda name: False,
+        # Explicit though it is the default: the meta templates call Python's
+        # `.startswith()` / `.endswith()`, which only exist under pycompat.
+        pycompat=True,
     )
+
+
+class EnvironmentPool:
+    """Lends Environments out, at most one live render to each — minijinja
+    deadlocks when a render re-enters the Environment it is already running on,
+    which the ``render`` filter otherwise does.  Not thread-safe: an engine
+    renders on one thread.
+    """
+
+    def __init__(self, new_environment: Callable[[], Environment]) -> None:
+        self._new_environment = new_environment
+        self._idle: list[Environment] = []
+
+    @contextmanager
+    def acquire(self) -> Generator[Environment]:
+        # Most recently released first, so a given nesting depth keeps landing
+        # on the same Environment and its parse cache stays warm.
+        env = self._idle.pop() if self._idle else self._new_environment()
+        try:
+            yield env
+        finally:
+            self._idle.append(env)
+
+
+def as_template_helper[**P, T](
+    processor: Callable[Concatenate[str, P], T],
+) -> Callable[Concatenate[object, P], T | None]:
+    """Wrap a text processor for registration, giving it the subject a template
+    can actually hand over.
+
+    This is the render boundary's intake half, to ``_finalize``'s output half: a
+    format supplies plain text processing, and what reaching one from a template
+    involves is the boundary's business.  Templates pipe in arbitrary values, so
+    the subject is coerced to ``str``.  An absent subject is not text at all: it
+    skips the processor and passes through as ``None``, leaving ``_finalize`` the
+    only place that renders absence — so no processor stringifies it into
+    ``"None"``.
+
+    A helper whose subject is a node rather than text needs neither and is
+    registered as it is.
+    """
+
+    @wraps(processor)
+    def helper(value: object, *args: P.args, **kwargs: P.kwargs) -> T | None:
+        if value is None:
+            return None
+        return processor(str(value), *args, **kwargs)
+
+    return helper
 
 
 def _bind(subject: object) -> Mapping[str, TemplateSafe]:
@@ -169,17 +223,23 @@ class TemplateEngine:
         paging: PagingPolicy = PagingPolicy(),
     ) -> None:
         self._out_dir = out_dir
+        self._templates_dir = templates_dir
         self._paths = PathRegistry()
         self._output_format = output_format
-        self._env = make_environment(output_format)
-        self._env.loader = FileSystemLoader(str(templates_dir))
-        for name, func in filters.items():
-            self._env.filters[name] = func  # pyright: ignore[reportArgumentType]
-        for name, func in globals.items():
-            self._env.globals[name] = func  # pyright: ignore[reportArgumentType]
         processor = RenderProcessorImpl(engine=self, paging=paging)
-        # Registered after the caller's filters: engine-owned, not overridable.
-        self._env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
+
+        def new_environment() -> Environment:
+            env = make_environment(output_format)
+            env.loader = load_from_path(templates_dir)
+            for name, func in filters.items():
+                env.add_filter(name, func)
+            for name, func in globals.items():
+                env.add_global(name, func)
+            # Registered after the caller's filters: engine-owned, not overridable.
+            env.add_filter("render", processor.render_filter)
+            return env
+
+        self._envs = EnvironmentPool(new_environment)
 
     def render(self, template_name: str, subject: object) -> str:
         return self._render(template_name, subject)
@@ -202,16 +262,23 @@ class TemplateEngine:
 
     def _render(self, template_name: str, subject: object) -> str:
         try:
-            rendered = self._env.get_template(template_name).render(_bind(subject))
-        except TemplateSyntaxError as exc:
+            with self._envs.acquire() as env:
+                rendered = env.render_template(template_name, **_bind(subject))
+        except TemplateError as exc:
+            # Catches syntax and runtime template errors alike.  A Python
+            # exception from one of our own filters is not wrapped in one of
+            # these, so it still propagates on its own terms.
             raise FileValidationError(
                 [
                     Diagnostic(
-                        file=Path(exc.filename or template_name),
-                        line=exc.lineno,
+                        # `exc.name` is the loader key, not a path — rejoin it or
+                        # the diagnostic cannot read the file for its snippet.
+                        file=self._templates_dir / (exc.name or template_name),
+                        line=exc.line,
                         column=None,
-                        message=str(exc.message),
-                        source="jinja2",
+                        # `message` would re-state the location held above.
+                        message=exc.detail or exc.message,
+                        source="minijinja",
                     )
                 ]
             ) from exc

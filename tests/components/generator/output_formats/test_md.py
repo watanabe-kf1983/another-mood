@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from jinja2 import Environment
 from markupsafe import Markup
+from minijinja import Environment
 
 from another_mood.components.generator.data_tree import Node, build_node_map
 from another_mood.components.generator.inert import ensure_inert_mapping
@@ -38,8 +38,10 @@ def _md_env() -> Environment:
     """An env with MD's escape / whitespace plus its injected static helpers —
     what a render gets, since the generator injects ``MD_FILTERS`` / ``MD_GLOBALS``."""
     env = make_environment(MD)
-    env.filters.update(MD_FILTERS)
-    env.globals.update(MD_GLOBALS)  # pyright: ignore[reportCallIssue, reportArgumentType]
+    for name, func in MD_FILTERS.items():
+        env.add_filter(name, func)
+    for name, func in MD_GLOBALS.items():
+        env.add_global(name, func)
     return env
 
 
@@ -75,13 +77,11 @@ class TestMdOutputFormat:
 
     def test_escape_applies_md_escape(self) -> None:
         env = make_environment(MD)
-        template = env.from_string("{{ value }}")
-        assert template.render(value="a|b") == "a\\|b"
+        assert env.render_str("{{ value }}", value="a|b") == "a\\|b"
 
     def test_markup_bypasses_md_escape(self) -> None:
         env = make_environment(MD)
-        template = env.from_string("{{ value | safe }}")
-        assert template.render(value="# heading") == "# heading"
+        assert env.render_str("{{ value | safe }}", value="# heading") == "# heading"
 
     def test_globals_are_the_call_style_helpers(self) -> None:
         assert set(MD_GLOBALS) == {"code_inline", "code_fenced"}
@@ -99,6 +99,34 @@ class TestDedent:
 
     def test_ignores_blank_lines_in_common_prefix(self) -> None:
         assert dedent("    a\n\n    b\n") == "a\n\nb\n"
+
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        # The block form always hands over rendered text; the pipe form takes
+        # whatever the template points at, so the coercion is the boundary's
+        # (hence the registered helper's, not this processor's).
+        assert MD_FILTERS["dedent"](42) == "42"
+
+    def test_block_form_is_not_escaped_a_second_time(self) -> None:
+        # A block filter's result goes through finalize like any other value,
+        # so `dedent` must return Markup: what it hands back is a block whose
+        # every interpolation was already finalized on its way in, and escaping
+        # it again would corrupt the markup the block emits.
+        env = _md_env()
+        rendered = env.render_str(
+            "{% filter dedent %}\n    ```mermaid\n    class {{ name }}\n    ```\n"
+            "{% endfilter %}",
+            name="a_b",
+        )
+        # The block's own backticks survive; only `{{ name }}` is escaped.
+        assert rendered == "```mermaid\nclass a\\_b\n```\n"
+
+    def test_block_form_still_escapes_its_interpolations(self) -> None:
+        # Passing the block through unescaped must not smuggle raw data past
+        # the escape: each `{{ }}` inside it was escaped on its own way in.
+        env = _md_env()
+        assert env.render_str("{% filter dedent %}{{ v }}{% endfilter %}", v="a|b") == (
+            "a\\|b"
+        )
 
 
 class TestCodeInline:
@@ -136,8 +164,8 @@ class TestCodeInline:
     def test_does_not_escape_pipes_or_markdown_punctuation(self) -> None:
         assert code_inline("a|b*c") == "`a|b*c`"
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert code_inline(42) == "`42`"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_GLOBALS["code_inline"](42) == "`42`"
 
 
 class TestCodeFenced:
@@ -168,8 +196,8 @@ class TestCodeFenced:
     def test_does_not_escape_backslashes(self) -> None:
         assert code_fenced("a\\n") == "```\na\\n\n```"
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert code_fenced(42) == "```\n42\n```"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_GLOBALS["code_fenced"](42) == "```\n42\n```"
 
 
 class TestInCell:
@@ -194,8 +222,8 @@ class TestInCell:
     def test_empty_value(self) -> None:
         assert in_cell("") == ""
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert in_cell(42) == "42"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_FILTERS["in_cell"](42) == "42"
 
 
 class TestAsUrl:
@@ -221,8 +249,8 @@ class TestAsUrl:
         # IRI form: ucschar pass through so CJK URLs stay readable.
         assert as_url("見") == "見"
 
-    def test_coerces_non_string_to_str(self) -> None:
-        assert as_url(42) == "42"
+    def test_registered_form_coerces_non_string_to_str(self) -> None:
+        assert MD_FILTERS["as_url"](42) == "42"
 
 
 class TestMdLink:
@@ -307,23 +335,22 @@ class TestHelpersBypassFinalizeEscape:
 
     def test_code_inline_backticks_survive_finalize(self) -> None:
         env = _md_env()
-        template = env.from_string("{{ code_inline(value) }}")
-        assert template.render(value="x") == "`x`"
+        assert env.render_str("{{ code_inline(value) }}", value="x") == "`x`"
 
     def test_code_fenced_backticks_survive_finalize(self) -> None:
         env = _md_env()
-        template = env.from_string("{{ code_fenced(value) }}")
-        assert template.render(value="x") == "```\nx\n```"
+        assert env.render_str("{{ code_fenced(value) }}", value="x") == "```\nx\n```"
 
     def test_in_cell_br_survives_finalize(self) -> None:
         env = _md_env()
-        template = env.from_string("{{ value | in_cell }}")
-        assert template.render(value="a\nb") == "a<br>b"
+        assert env.render_str("{{ value | in_cell }}", value="a\nb") == "a<br>b"
 
     def test_as_url_percent_survives_finalize(self) -> None:
         env = _md_env()
-        template = env.from_string("[label]({{ value | as_url }})")
-        assert template.render(value="a b") == "[label](a%20b)"
+        assert (
+            env.render_str("[label]({{ value | as_url }})", value="a b")
+            == "[label](a%20b)"
+        )
 
 
 # A small tree: members, by_role, and prose are each their own page, so
@@ -461,21 +488,24 @@ class TestUnderHeadingFilter:
         assert isinstance(under_heading("# A", "#"), Markup)
 
     def test_coerces_a_non_str_piped_value(self) -> None:
-        # Jinja can pipe in a Markup (or any object); the adapter str-coerces it.
+        # A template can pipe in a Markup (or any object); the adapter
+        # str-coerces it.
         assert under_heading(Markup("# A"), "#") == "## A"
 
     def test_pipe_form_keeps_shifted_markdown_unescaped(self) -> None:
         env = _md_env()
-        template = env.from_string('{{ body | under_heading("##") }}')
         # Without the Markup wrap, finalize would backslash-escape the `#`.
-        assert template.render(body="# A\n## B") == "### A\n#### B"
+        assert (
+            env.render_str('{{ body | under_heading("##") }}', body="# A\n## B")
+            == "### A\n#### B"
+        )
 
     def test_block_filter_form_wraps_embedded_output(self) -> None:
         env = _md_env()
-        template = env.from_string(
-            '{% filter under_heading("##") %}# Embedded{% endfilter %}'
+        assert (
+            env.render_str('{% filter under_heading("##") %}# Embedded{% endfilter %}')
+            == "### Embedded"
         )
-        assert template.render() == "### Embedded"
 
 
 class TestRelinkFilterWiring:
@@ -588,4 +618,59 @@ class TestRelinkFilterWiring:
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == (
             '<a id="/by_role/dev"></a>\n[p](../blob/covers/cover.png#page=3)'
+        )
+
+
+class TestAbsentValues:
+    """The absence contract: what the format exports is each text processor
+    wrapped for the render boundary, so an absent subject renders as nothing
+    rather than being stringified.
+
+    The wrapper itself is tested with the boundary that owns it, in
+    ``test_template_engine.py``; here it is the wiring — every exported helper
+    goes through it.
+    """
+
+    def test_every_exported_text_helper_renders_absence_as_nothing(self) -> None:
+        helpers = {**MD_GLOBALS, **MD_FILTERS}
+        # Nothing reaches the processors, so even `under_heading`'s required
+        # `marker` is not needed to call them.
+        assert {name: helper(None) for name, helper in helpers.items()} == {
+            name: None for name in helpers
+        }
+
+    def test_absent_code_fenced_language_matches_an_unpassed_one(self) -> None:
+        # `language` only shapes the block, so an absent one means no info
+        # string — not a `None` leaking onto the fence.
+        assert code_fenced("x", None) == code_fenced("x")
+
+
+class TestAbsentValuesInLinkFilters:
+    def _render(self, body: str) -> str:
+        """Render ``body`` from the root page, with the link filters bound."""
+        env = _md_env()
+        globals_map, node_filters = make_data_tree_filters(_anchors())
+        for name, func in {
+            **make_link_filters(_paging(), _anchors()),
+            **node_filters,
+        }.items():
+            env.add_filter(name, func)
+        for name, func in globals_map.items():
+            env.add_global(name, func)
+        return env.render_str(body, this=_anchors()["/"])
+
+    def test_absent_target_renders_nothing(self) -> None:
+        assert self._render("[{{ none | link }}]") == "[]"
+
+    def test_absent_href_target_renders_nothing(self) -> None:
+        assert self._render("[{{ none | href }}]") == "[]"
+
+    def test_absent_relink_body_renders_nothing(self) -> None:
+        assert self._render("[{{ none | relink }}]") == "[]"
+
+    def test_absent_text_empties_the_text_but_keeps_the_link(self) -> None:
+        # The reference resolved, so only the display slot goes empty: a
+        # display-side gap must not cost the addressing that is still good.
+        assert self._render("{{ node('members', 'alice') | link(none) }}") == (
+            "[](members/alice.md#/members/alice)"
         )

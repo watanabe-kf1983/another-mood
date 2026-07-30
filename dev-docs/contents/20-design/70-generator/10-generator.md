@@ -17,7 +17,7 @@ Generator はユーザの `index.md` テンプレートを直接エントリポ�
 
 ### ノードメタデータ
 
-Generator はデータロード直後に views ツリーを `wrap_tree` でラップし、各ノードにテンプレート公開のシステム由来フィールドを注入する。テンプレートは元データを「ちょっと拡張された dict / array」として直接走査する。
+Generator はデータロード直後に views ツリーを `wrap_tree` でラップし、各ノードにシステム由来のフィールドを注入する。テンプレートは元データを素の dict / array として直接走査し、これらのフィールドには**触れない** — 必要な値はフィルタが取り出して渡す。
 
 | フィールド | 対象ノード | 内容 |
 |---|---|---|
@@ -25,6 +25,12 @@ Generator はデータロード直後に views ツリーを `wrap_tree` でラ�
 | `_parent_record` | Mapping のみ | 最も近い Mapping 祖先（間の Array を 1 段飛ばす） |
 | `_meta.anchor_path` | 全ノード | このノードのアンカーパス（[anchor-spec.md](20-anchor-spec.md)） |
 | `_meta.object_type_id` | 全ノード | スキーマ位置を表す catalog 形 ID（Mapping は `X.item`、Array は `X.item[]`） |
+
+> **背景: なぜテンプレートから直接触らせないか.** テンプレートエンジン (minijinja) は `_` 始まりの **Python 属性**アクセスを拒否する（データ側の `_` 始まりキーは通る）。`row["_meta"]` も `attr()` も同じく拒否されるので迂回路は無い。これはホスト側の内部にテンプレートを触らせないという信頼モデルの意図そのもので、押し戻す理由がない。
+>
+> かといって prefix を外して `meta` 等にはしない。ノードは dict / list のサブクラスで、テンプレートからの `row.meta` は getitem を先に引くため、データ側に `meta` キーがあると静かにそちらが勝つ。`_` prefix はまさにこの shadowing を防ぐためにあり、Python 側では load-bearing なまま残す。したがって prefix は据え置き、**テンプレートへの出口だけをフィルタに移す**。
+>
+> 実際の消費者はこれで足りる: テンプレートからの実需はメタテンプレートの診断テーブルが描くアンカーパス列 1 箇所だけで、それはメタテンプレート専用フィルタ `anchor_path`（ノード → 文字列）が担う。残りの `_parent` / `_parent_record` / `_meta.object_type_id` は `render` の subtree guard やリンク解決といったフィルタ実装が Python 側で読むだけで、テンプレートからは元々使われていない。
 
 ラップ対象（id 無し Array 要素・ネスト Array は素の dict / list として除外）、`_parent` / `_parent_record` の二系統セマンティクス、`anchor_path` / `_type_path` の `cached_property` による再帰合成（amortized O(depth)）、prose 例外といった厳密な規則は `data_tree.py` の docstring が正本。
 

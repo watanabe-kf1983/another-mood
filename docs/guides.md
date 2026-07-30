@@ -436,7 +436,7 @@ For full syntax and examples, see [View](reference/view.md).
 
 ## Templates
 
-Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template engine this tool builds on — with the tool's own additions (custom filters such as `link` for linking pages and `render` for splitting output across files).
+Templates are the mechanism for shaping data and views into custom-formatted pages. The notation combines the syntax of [Jinja2](https://jinja.palletsprojects.com/) — the template language this tool builds on — with the tool's own additions (custom filters such as `link` for linking pages and `render` for splitting output across files).
 
 ### Jinja2 basics
 
@@ -448,7 +448,7 @@ At a minimum, know these:
 - `{% if x %}...{% endif %}` — branch
 - `{# ... #}` — comment
 
-For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/).
+For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/) — with a caveat: the engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the match is close but not exact. The differences that matter are documented in [Template — Differences from Jinja2](reference/template.md#differences-from-jinja2).
 
 Templates render with whitespace trimming on, so a control tag alone on its line leaves no blank line in the output. See [Template — Whitespace](reference/template.md#whitespace) for how tag indentation and blank lines carry through.
 

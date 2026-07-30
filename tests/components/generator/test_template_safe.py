@@ -2,9 +2,8 @@
 to a template.
 
 Each type is a case of :class:`TestSurfaceAudit`, whose reference surface adapts
-to the case's shape. ``Markup`` and ``Undefined`` are not audited here — their
-safety depends on how the engine exposes them, so they fall to the live-render
-SSTI test (task P11).
+to the case's shape. ``Markup`` is not audited here — its safety depends on how
+the engine exposes it, so it falls to the live-render SSTI test (task P11).
 """
 
 import dataclasses
@@ -12,7 +11,6 @@ from abc import ABC
 from typing import final
 
 import pytest
-from jinja2 import ChainableUndefined
 from markupsafe import Markup
 
 from another_mood.components.generator.data_tree import ArrayNode, MappingNode
@@ -85,7 +83,6 @@ class TestEnsureTemplateSafe:
     @pytest.mark.parametrize(
         "value",
         [
-            pytest.param(ChainableUndefined(name="missing"), id="Undefined"),
             pytest.param(MissingNode(anchor_path="/unresolved/ref"), id="MissingNode"),
             pytest.param(Markup("<b>x</b>"), id="Markup"),
             pytest.param(_ROOT, id="Node"),

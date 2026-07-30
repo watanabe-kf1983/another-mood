@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jinja2 import DictLoader, Environment
+from minijinja import Environment
 
 from another_mood.components.generator.data_tree import MappingNode, wrap_tree
 from another_mood.components.generator.inert import (
@@ -69,8 +69,8 @@ class _MockEngine:
 def _make_filter_env(
     processor: RenderProcessorImpl, templates: dict[str, str] | None = None
 ) -> Environment:
-    env = Environment(keep_trailing_newline=True, loader=DictLoader(templates or {}))
-    env.filters["render"] = processor.render_filter  # pyright: ignore[reportArgumentType]
+    env = Environment(keep_trailing_newline=True, templates=templates or {})
+    env.add_filter("render", processor.render_filter)
     return env
 
 
@@ -89,8 +89,8 @@ class TestRenderSubtreeGuard:
     def _render(self, this: object, subject: object) -> tuple[_MockEngine, str]:
         engine = _MockEngine(render_return="OK")
         env = _make_filter_env(RenderProcessorImpl(engine=engine))
-        result = env.from_string('{{ subject | render("x.md") }}').render(
-            this=this, subject=subject
+        result = env.render_str(
+            '{{ subject | render("x.md") }}', this=this, subject=subject
         )
         return engine, result
 
@@ -159,8 +159,8 @@ class TestRenderFilter:
         engine = _MockEngine(render_return="OUT")
         processor = RenderProcessorImpl(engine=engine)
         env = _make_filter_env(processor)
-        result = env.from_string('{{ user | render("profile.md") }}').render(
-            user={"id": "alice", "name": "Alice"}
+        result = env.render_str(
+            '{{ user | render("profile.md") }}', user={"id": "alice", "name": "Alice"}
         )
 
         assert result == "OUT"
@@ -174,8 +174,8 @@ class TestRenderFilter:
         processor = RenderProcessorImpl(engine=_MockEngine())
         env = _make_filter_env(processor, {"page.md": '{{ subject | render("x.md") }}'})
         with pytest.raises(FileValidationError) as exc:
-            env.get_template("page.md").render(
-                this=_at(tree, "albums", 0), subject=_at(tree, "prose", 0)
+            env.render_template(
+                "page.md", this=_at(tree, "albums", 0), subject=_at(tree, "prose", 0)
             )
         (diag,) = exc.value.diagnostics
         assert diag.file == Path("page.md")
