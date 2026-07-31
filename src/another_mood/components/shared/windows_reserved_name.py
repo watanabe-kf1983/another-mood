@@ -4,10 +4,17 @@ from pathlib import Path
 
 from another_mood.components.shared.user_error import UserError
 
-# Vendored from CPython's `ntpath._isreservedname` tables. The public
-# `ntpath.isreserved` exists only on 3.13+, and this copy is what lets the
-# supported Python floor stay at 3.12. Re-check against upstream ntpath when
-# raising the floor to 3.13.
+# Vendored from CPython's `ntpath._isreservedname`:
+# https://github.com/python/cpython/blob/main/Lib/ntpath.py
+# The public `ntpath.isreserved` exists only on 3.13+, and this copy is what
+# lets the supported Python floor stay at 3.12. The normative source both it
+# and this derive from is "Naming Files, Paths, and Namespaces":
+# https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+#
+# The tables are stable: they are byte-identical across CPython v3.13.0 (where
+# `isreserved` landed), the 3.13 and 3.14 branches, and main. Drift is caught
+# by the differential test in the test module, which runs wherever the stdlib
+# has `isreserved` -- so the CI matrix's 3.13 job checks this copy every run.
 _RESERVED_CHARS = frozenset(
     {chr(i) for i in range(32)} | {'"', "*", ":", "<", ">", "?", "|", "/", "\\"}
 )
@@ -44,8 +51,6 @@ def ensure_not_windows_reserved(path: Path) -> Path:
 
 
 def _is_reserved_segment(segment: str) -> bool:
-    # Refer to "Naming Files, Paths, and Namespaces":
-    # https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
     # Trailing dots and spaces are reserved.
     if segment[-1:] in (".", " "):
         return segment not in (".", "..")
