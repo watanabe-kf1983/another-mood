@@ -20,7 +20,7 @@ Install [uv](https://docs.astral.sh/uv/) first, and it takes care of Python for 
 uv tool install git+https://github.com/watanabe-kf1983/another-mood.git
 ```
 
-With Python 3.13 or later already installed, [pipx](https://pipx.pypa.io/) does the same:
+With Python 3.12 or later already installed, [pipx](https://pipx.pypa.io/) does the same:
 
 ```bash
 pipx install git+https://github.com/watanabe-kf1983/another-mood.git

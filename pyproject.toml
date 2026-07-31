@@ -5,7 +5,7 @@ description = "A processor of source-based databases, keeping related documents 
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "filelock>=3.25.2",
     "hugo>=0.162.0",
@@ -61,6 +61,9 @@ branch = true
 
 [tool.pyright]
 typeCheckingMode = "strict"
+# Check against the declared floor rather than whichever interpreter happens
+# to be active, so a 3.13-only API is caught locally and in every CI job.
+pythonVersion = "3.12"
 
 [tool.ruff.lint]
 # preview is enabled solely to opt into PLW1514, which is still preview-gated

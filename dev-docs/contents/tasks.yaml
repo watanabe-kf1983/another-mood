@@ -594,26 +594,8 @@ categories:
         phase: 14
       Q12:
         title: requires-python を 3.12 へ引き下げ
-        note: >-
-          公開前に対応 Python 版の下限を確定する。動機は install 手引きの成立性:
-          Ubuntu 24.04 LTS (サポート 2029 まで) が Python 3.12 で、3.13 のままだと
-          pip / pipx 前提の手引きが素直に成立せず、interpreter を自前調達する uv を
-          利用者に強いることになる。
-          実態は安い: 3.13 専用 API は windows_reserved_name.py の ntpath.isreserved
-          1 箇所のみで、vendor すれば済む。PEP 695 構文 (type 文 / 新ジェネリクス) が
-          広範にあるため 3.12 が構文上の床であり、それ以上は下げない。
-          範囲: pyproject の requires-python、isreserved の vendor、uv.lock の再解決、
-          .python-version を下限に合わせるか最新のまま CI で下限を検証するかの判断
-          (現状 ci.yml に Python 版マトリクスは無く、下限を宣言する以上は下限での
-          検証経路が要る)。
-          Q1 に対しては optional — 静かなリリースで受益者がまだいないため、3.13 の
-          ままでも公開自体は成立する。0.1.0 までには入れる。
-          R2 が先行済みで install 手引きは 3.13 で書かれているため、本タスクでは
-          README の "Requires Python 3.13 or later" と docs/guides.md の
-          "Python 3.13 or later already installed" の 2 箇所も更新すること
-          (下限を下げると pipx 経路がより広く成立するという関係で、手引きの構造
-          自体は下限に依存しない)。
         phase: 14
+        done: true
       Q2:
         title: 作成ドキュメントと mood バージョンの互換性担保の仕組み
         phase: 14
