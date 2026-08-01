@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from another_mood.components.preprocess.schema_inspector import (
+    _BUILTIN_CONTENTS_SCHEMA_FILE,  # pyright: ignore[reportPrivateUsage]
     _xref_diagnostic,  # pyright: ignore[reportPrivateUsage]
     _xref_diagnostics,  # pyright: ignore[reportPrivateUsage]
     build_schema_validator,
@@ -331,6 +332,33 @@ _REJECTED_SCHEMA_CASES = [
         """
         type: object
         properties:
+          users: { type: object }
+        additionalProperties: false
+        """,
+        id="bare object (neither properties nor additionalProperties) rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          tags: { type: array }
+        additionalProperties: false
+        """,
+        id="bare array (no items) rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          users: { type: object, additionalProperties: false }
+        additionalProperties: false
+        """,
+        id="additionalProperties: false without properties rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
           users: { type: object, additionalProperties: { type: string } }
         additionalProperties: false
         unknown_key: something
@@ -635,6 +663,12 @@ class TestBuildSchemaValidator:
     def test_rejected(self, src: str) -> None:
         data = yaml.safe_load(src)
         assert len(self._validator.validate(data)) > 0
+
+    def test_builtin_content_schema_conforms(self) -> None:
+        # The built-in content schema is written in the language SchemaSchema
+        # defines and is fed to the same normalizer, so it has to satisfy it.
+        data = yaml.safe_load(_BUILTIN_CONTENTS_SCHEMA_FILE.read_text(encoding="utf-8"))
+        assert self._validator.validate(data) == []
 
 
 # ── check_schema ────────────────────────────────────────────────────

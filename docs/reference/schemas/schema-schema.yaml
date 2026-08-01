@@ -186,6 +186,8 @@ $defs:
           type:
             const: string
 
+    # Cross-keyword rules, in two groups.
+    #
     # Literal values must agree with the declared `type`. JSON Schema does
     # not check this itself — `{type: string, const: 5}` is a valid (merely
     # unsatisfiable) schema, and `default` / `examples` are annotations the
@@ -239,13 +241,31 @@ $defs:
             enum: { items: { $ref: "#/$defs/jsonObject" } }
             examples: { items: { $ref: "#/$defs/jsonObject" } }
 
-    # When `properties:` is present at the same level, `additionalProperties: false`
-    # becomes required. Without `properties:`, `additionalProperties` may be a schema
-    # object (the map pattern that drives map-to-array normalization).
-    if:
-      required: [properties]
-    then:
-      properties:
-        additionalProperties:
-          const: false
-      required: [additionalProperties]
+      # An object or array declaration must be structurally complete. The
+      # two object forms are the record (`properties` + `additionalProperties:
+      # false`) and the map (`additionalProperties: <schema>`, which drives
+      # map-to-array normalization); an array needs `items`. The incomplete
+      # forms describe nothing about what they contain, so whatever sits
+      # underneath goes unvalidated — and the normalizer, which reads a
+      # schema meta-validation has already vetted, cannot build a tree from
+      # them.
+      - if: { required: [properties] }
+        then:
+          properties:
+            additionalProperties: { const: false }
+          required: [additionalProperties]
+      - if:
+          required: [additionalProperties]
+          properties:
+            additionalProperties: { const: false }
+        then:
+          required: [properties]
+      - if:
+          required: [type]
+          properties: { type: { const: object } }
+          not: { required: [properties] }
+        then:
+          required: [additionalProperties]
+      - if: { required: [type], properties: { type: { const: array } } }
+        then:
+          required: [items]

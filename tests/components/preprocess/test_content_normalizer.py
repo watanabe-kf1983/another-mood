@@ -1,6 +1,7 @@
 """Tests for content_normalizer."""
 
 import os
+from datetime import date
 from pathlib import Path
 from textwrap import dedent
 
@@ -59,6 +60,28 @@ class TestBuildContentsSchema:
             }
         )
         assert issues == []
+
+    def test_unknown_field_on_a_prose_record_rejected(self, tmp_path: Path) -> None:
+        # Prose records normally come from Markdown files, but a content
+        # file may declare one by hand; an undeclared field there would
+        # otherwise carry an arbitrary value straight into the data tree.
+        schema = build_contents_schema(tmp_path / "missing.yaml")
+
+        from another_mood.components.shared.user_source.validator import Validator
+
+        issues = Validator(schema).validate(
+            {
+                "prose": [
+                    {
+                        "id": "doc",
+                        "mime_type": "text/markdown",
+                        "content": "x",
+                        "published": date(2024, 1, 1),
+                    }
+                ]
+            }
+        )
+        assert len(issues) >= 1
 
     def test_missing_schema_file_uses_builtin_only(self, tmp_path: Path) -> None:
         schema = build_contents_schema(tmp_path / "missing.yaml")
