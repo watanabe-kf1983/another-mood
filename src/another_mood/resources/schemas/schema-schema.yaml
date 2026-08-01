@@ -52,6 +52,24 @@ $defs:
       entity: { type: string }
       attribute: { type: string }
 
+  jsonValue:
+    title: JSON value
+    description: >-
+      Any value the JSON data model can express. Applied wherever the
+      schema language accepts a literal with no type constraint.
+    # Nested if/then/else rather than the equivalent anyOf, which
+    # collapses the diagnostic to "is not valid under any of the given
+    # schemas".
+    if: { type: array }
+    then:
+      items: { $ref: "#/$defs/jsonValue" }
+    else:
+      if: { type: object }
+      then:
+        additionalProperties: { $ref: "#/$defs/jsonValue" }
+      else:
+        type: [string, number, integer, boolean, "null"]
+
   jsonSchemaSubset:
     title: Accepted JSON Schema subset
     description: >-
@@ -120,7 +138,8 @@ $defs:
       enum:
         type: array
         minItems: 1
-      const: {}
+        items: { $ref: "#/$defs/jsonValue" }
+      const: { $ref: "#/$defs/jsonValue" }
       minimum: { type: number }
       maximum: { type: number }
       exclusiveMinimum: { type: number }
@@ -135,8 +154,10 @@ $defs:
       # --- Meta-data keywords (pass-through) ---
       title: { type: string }
       description: { type: string }
-      default: {}
-      examples: { type: array }
+      default: { $ref: "#/$defs/jsonValue" }
+      examples:
+        type: array
+        items: { $ref: "#/$defs/jsonValue" }
       deprecated: { type: boolean }
       readOnly: { type: boolean }
       writeOnly: { type: boolean }

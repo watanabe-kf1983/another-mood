@@ -197,6 +197,32 @@ _VALID_SCHEMA_CASES = [
         """,
         id="x-ref on property nested under items",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          releases:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [draft, published]
+                  default: draft
+                  examples: [draft, published]
+                channel:
+                  type: string
+                  const: web
+                tags:
+                  type: object
+                  additionalProperties: { type: string }
+                  default: { primary: rock, secondary: null }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="JSON literals in enum / const / default / examples",
+    ),
 ]
 
 _REJECTED_SCHEMA_CASES = [
@@ -522,6 +548,51 @@ _REJECTED_SCHEMA_CASES = [
         )
         for bad_type in ("integer", "number", "boolean", "object", "array")
     ],
+    # YAML builds a datetime.date here; JSON has no such value, so the
+    # keywords that accept an unconstrained literal must reject it.
+    *[
+        pytest.param(
+            f"""
+            type: object
+            properties:
+              releases:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    released:
+                      type: string
+                      {literal}
+                  additionalProperties: false
+            additionalProperties: false
+            """,
+            id=f"non-JSON value in {keyword} rejected",
+        )
+        for keyword, literal in (
+            ("default", "default: 2024-01-01"),
+            ("const", "const: 2024-01-01"),
+            ("enum", "enum: [2024-01-01]"),
+            ("examples", "examples: [2024-01-01]"),
+        )
+    ],
+    pytest.param(
+        """
+        type: object
+        properties:
+          releases:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                window:
+                  type: object
+                  additionalProperties: { type: string }
+                  default: { opens: [2024-01-01] }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="non-JSON value nested inside default rejected",
+    ),
 ]
 
 
