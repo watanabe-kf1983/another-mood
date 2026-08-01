@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -98,6 +99,24 @@ class TestBuildViewSchema:
 
     def test_hyphenated_query_name_rejected(self) -> None:
         data = {"my-query": {"from": "items"}}
+        assert len(self._validate(data)) >= 1
+
+    @pytest.mark.parametrize(
+        "value",
+        ["draft", 42, 1.5, True],
+        ids=["string", "integer", "number", "boolean"],
+    )
+    def test_scalar_eq_accepted(self, value: object) -> None:
+        data = {"q": {"from": "items", "where": {"status": {"eq": value}}}}
+        assert self._validate(data) == []
+
+    @pytest.mark.parametrize(
+        "value",
+        [date(2024, 1, 1), ["a"], {"k": "v"}, None],
+        ids=["date", "array", "object", "null"],
+    )
+    def test_non_scalar_eq_rejected(self, value: object) -> None:
+        data = {"q": {"from": "items", "where": {"status": {"eq": value}}}}
         assert len(self._validate(data)) >= 1
 
 

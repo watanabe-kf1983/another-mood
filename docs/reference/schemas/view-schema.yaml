@@ -310,6 +310,7 @@ $defs:
       eq:
         title: Equality
         description: Strict equality (`==` in Python).
+        type: [string, number, integer, boolean]
       gt:
         title: Greater than
         description: Numeric strict greater than.
