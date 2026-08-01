@@ -211,22 +211,8 @@ categories:
         done: true
       D11:
         title: 非 JSON 値の侵入経路を塞ぐ (スキーマ言語の穴を閉じる)
-        note: >-
-          YAML は JSON のスーパーセットなので、ruamel が構築した datetime.date 等が
-          スキーマ検査をすり抜け、generator の ensure_inert まで到達して
-          "TypeError: Non-inert value of type 'date'" (内部エラー) でビルドが落ちる。
-          型の付いた葉は既に jsonschema が弾いており、漏れるのは型が無制約になる 4 箇所:
-          schema-schema の default / const / enum.items / examples.items、
-          素の type: object 配下、view-schema の predicateBundle.eq、
-          content-schema の prose / blob レコード (additionalProperties なし)。
-          素の type: object を禁止するのは、このツールの object 属性が構造化データのための
-          ものであり、フリーフォームなデータは string 属性で持つべきだから。
-          副次的に、メタ検証を通るのに内部エラーで落ちる 2 形 ({type: array} の
-          KeyError、{type: object, additionalProperties: false} の AttributeError) も消える。
-          M10 の前提ではないが、先に済ませると M10 が「非 JSON 値が到達しえない」状態から
-          始められる。
         phase: 14
-        proposal: 20-design/50-normalizer/20-schema-spec#非-json-値の侵入経路を塞ぐ-d11
+        done: true
 
   E:
     title: YAML DSL クエリ評価拡充

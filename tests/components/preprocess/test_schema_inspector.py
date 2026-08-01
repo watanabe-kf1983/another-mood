@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from another_mood.components.preprocess.schema_inspector import (
+    _BUILTIN_CONTENTS_SCHEMA_FILE,  # pyright: ignore[reportPrivateUsage]
     _xref_diagnostic,  # pyright: ignore[reportPrivateUsage]
     _xref_diagnostics,  # pyright: ignore[reportPrivateUsage]
     build_schema_validator,
@@ -197,6 +198,36 @@ _VALID_SCHEMA_CASES = [
         """,
         id="x-ref on property nested under items",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          releases:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [draft, published]
+                  default: draft
+                  examples: [draft, published]
+                channel:
+                  type: string
+                  const: web
+                tags:
+                  type: object
+                  additionalProperties: { type: string }
+                  default: { primary: rock, secondary: null }
+                history:
+                  type: array
+                  items: { type: string }
+                  default: [draft, published]
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="literals agreeing with the declared type",
+    ),
 ]
 
 _REJECTED_SCHEMA_CASES = [
@@ -296,6 +327,33 @@ _REJECTED_SCHEMA_CASES = [
         additionalProperties: false
         """,
         id="properties without additionalProperties: false rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          users: { type: object }
+        additionalProperties: false
+        """,
+        id="bare object (neither properties nor additionalProperties) rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          tags: { type: array }
+        additionalProperties: false
+        """,
+        id="bare array (no items) rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          users: { type: object, additionalProperties: false }
+        additionalProperties: false
+        """,
+        id="additionalProperties: false without properties rejected",
     ),
     pytest.param(
         """
@@ -522,6 +580,74 @@ _REJECTED_SCHEMA_CASES = [
         )
         for bad_type in ("integer", "number", "boolean", "object", "array")
     ],
+    # A literal must agree with the declared type. `2024-01-01` is the
+    # case that matters most: YAML builds a datetime.date, which no
+    # declared type accepts.
+    *[
+        pytest.param(
+            f"""
+            type: object
+            properties:
+              releases:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    released:
+                      type: {declared}
+                      {literal}
+                  additionalProperties: false
+            additionalProperties: false
+            """,
+            id=f"{literal} on type={declared} rejected",
+        )
+        for declared, literal in (
+            ("string", "default: 2024-01-01"),
+            ("string", "const: 2024-01-01"),
+            ("string", "enum: [2024-01-01]"),
+            ("string", "examples: [2024-01-01]"),
+            ("string", "default: 5"),
+            ("string", "enum: [draft, 5]"),
+            ("integer", "const: five"),
+            ("boolean", "examples: [yes, maybe]"),
+        )
+    ],
+    pytest.param(
+        """
+        type: object
+        properties:
+          releases:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                tags:
+                  type: object
+                  additionalProperties: { type: string }
+                  default: plain-string
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="scalar default on an object-typed property rejected",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          releases:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                window:
+                  type: object
+                  additionalProperties: { type: string }
+                  default: { opens: [2024-01-01] }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="non-JSON value nested inside an object literal rejected",
+    ),
 ]
 
 
@@ -537,6 +663,12 @@ class TestBuildSchemaValidator:
     def test_rejected(self, src: str) -> None:
         data = yaml.safe_load(src)
         assert len(self._validator.validate(data)) > 0
+
+    def test_builtin_content_schema_conforms(self) -> None:
+        # The built-in content schema is written in the language SchemaSchema
+        # defines and is fed to the same normalizer, so it has to satisfy it.
+        data = yaml.safe_load(_BUILTIN_CONTENTS_SCHEMA_FILE.read_text(encoding="utf-8"))
+        assert self._validator.validate(data) == []
 
 
 # ── check_schema ────────────────────────────────────────────────────

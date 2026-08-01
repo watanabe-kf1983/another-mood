@@ -153,6 +153,8 @@ No normalization happens; the value is passed to templates as written.
 
 **Exclusivity**: within the same object, `properties` and `additionalProperties: <schema>` cannot be combined. When `properties` is present, `additionalProperties: false` is required (the meta-schema raises an error otherwise).
 
+**Completeness**: every `type: object` must take one of those two forms, and every `type: array` must declare `items`. A bare `type: object` is rejected — there is no free-form object in this language. Data with no fixed shape belongs in a `string` attribute.
+
 ## Supported keywords
 
 A subset of JSON Schema draft 2020-12. Only the keywords listed below are accepted (unknown keywords are rejected uniformly by the meta-schema's `additionalProperties: false`).

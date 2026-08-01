@@ -9,6 +9,7 @@ description: >-
   (id, mime_type). Both are validated alongside the user's schema.yaml.
 
 type: object
+additionalProperties: false
 properties:
   blob:
     title: Blob collection
@@ -22,6 +23,7 @@ properties:
       title: Blob record
       description: One opaque contents file, referenced by id.
       type: object
+      additionalProperties: false
       properties:
         id:
           title: Blob id
@@ -44,6 +46,7 @@ properties:
       title: Prose record
       description: One Markdown file parsed into an id / title / content record.
       type: object
+      additionalProperties: false
       properties:
         id:
           title: Prose id
@@ -84,6 +87,7 @@ properties:
             title: Prose heading
             description: One heading, a link target within the prose content.
             type: object
+            additionalProperties: false
             properties:
               id:
                 title: Heading id

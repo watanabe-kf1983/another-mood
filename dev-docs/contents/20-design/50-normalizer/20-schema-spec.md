@@ -15,6 +15,16 @@ OpenAPI は API 通信プロトコルを記述するため、エンドポイン�
 - **`$comment`**: YAML のコメント構文（`#`）で代替可能
 - **core の残り**: 本ツールは `definition/schema.yaml` を単一の root schema として扱い、外部 schema 参照も想定しないため、`$id` 等の識別機構は不要
 
+#### 型の付かない領域を残さない
+
+キーワードの絞り込みと同じ理由で、JSON Schema が許す「型の付かない領域」も残していない。`type: object` は record (`properties` + `additionalProperties: false`) か map (`additionalProperties: <schema>`) のどちらかでなければならず、素の `type: object` は書けない。`enum` / `const` / `default` / `examples` に書くリテラルも、宣言した `type` に一致していなければならない (素の JSON Schema は前者を「充足不能なだけの妥当なスキーマ」として通し、後者 2 つは注釈として検証すらしない)。
+
+理由は 2 つある。
+
+**object 属性は構造化データのためのもの** — 形の定まらないデータは string 属性で持つべきで、object で受けるものではない。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。
+
+**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` は SchemaTree がデータカタログへ値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../20-app/40-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
+
 ### 参照整合性制約: x-ref
 
 JSON Schema 本体の property 宣言に `x-ref` キーワードを置き、参照先を構造化形式 (`{ entity, attribute }`) で記述する。JSON Schema 2020-12 は未知キーワードを許容するので、純 JSON Schema としての妥当性は保たれる。Snowflake の宣言的 FK と同じアプローチで、最終的な data-level 整合性は **強制せず警告止め** とする。
@@ -115,55 +125,6 @@ properties:
           additionalProperties: { type: object, properties: { ... } }
 ```
 
-シングルトン (`type: object` + `properties` のみ、`additionalProperties` なし) は現状 entity 化されない (親の attribute としてインライン化される)。entity 化されるのは collection (`additionalProperties` / `items`) のみ。なお、シングルトン配下にさらに singleton がネストする場合、2 段以上深い構造は catalog に現れない (1 段平坦化のみ。entity の濫造を避けるための意図的な制限)。
+シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は現状 entity 化されない (親の attribute としてインライン化される)。entity 化されるのは collection (`additionalProperties` / `items`) のみ。なお、シングルトン配下にさらに singleton がネストする場合、2 段以上深い構造は catalog に現れない (1 段平坦化のみ。entity の濫造を避けるための意図的な制限)。
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
-
-## Proposals
-
-### 非 JSON 値の侵入経路を塞ぐ (D11)
-
-[JSON データモデル](../40-communication/10-json-data-model.md) は「このアプリで扱うデータは JSON データモデルの範囲内に収まる」と宣言しているが、現状これはスキーマ層で担保しきれていない。YAML は JSON のスーパーセットなので、ruamel が構築した `datetime.date` 等がスキーマの検査をすり抜けてパイプラインを流れ、`ensure_inert` の `TypeError: Non-inert value of type 'date'`（内部エラー・トレースバック付き）でビルドが落ちる。
-
-侵入経路は 4 つ。いずれも「型が無制約になる場所」であり、型の付いた葉（`released: { type: string }` に日付）は既に jsonschema が `datetime.date(...) is not of type 'string'` で弾いている。
-
-| # | 経路 | 塞ぎ方 |
-|---|---|---|
-| ① | schema-schema の `default` / `const` / `enum.items` / `examples.items` が型無制約 | 再帰 `$defs.jsonValue` を足して当てる |
-| ② | 素の `type: object`（`properties` も `additionalProperties` も無い）配下は無検査 | `type: object` / `type: array` の不完全形を禁止（下記） |
-| ③ | view-schema の `predicateBundle.eq` だけ型指定が無い | スカラ短縮形と同じ `type: [string, number, integer, boolean]` に揃える |
-| ④ | content-schema の `prose` / `blob` レコードに `additionalProperties: false` が無く、手書きレコードの未知フィールドが素通りする | `additionalProperties: false` を足す |
-
-①の `jsonValue` は「日付でないこと」ではなく **JSON の型を正の側から列挙する** 形で書く（JSON Schema に「日付でない」を表す語彙は無い）。Python jsonschema の型チェッカは isinstance ベースなので、どの型にも該当しない `datetime.date` / `datetime.datetime` が落ちる。日付に限らず、YAML ローダが構築しうるあらゆる非 JSON 値に効く。
-
-```yaml
-jsonValue:
-  anyOf:
-    - type: [string, number, integer, boolean, "null"]
-    - { type: array,  items: { $ref: "#/$defs/jsonValue" } }
-    - { type: object, additionalProperties: { $ref: "#/$defs/jsonValue" } }
-```
-
-②で禁止する形と、その根拠:
-
-- `type: object` は「`properties` + `additionalProperties: false`」か「`additionalProperties: <schema>`」のどちらかを要求する
-- `type: array` は `items` を要求する
-
-**背景: なぜフリーフォームな object 属性を言語から落とすか** — このツールにおける object 属性は構造化データのためのものであり、フリーフォームなデータは string 属性で持つべきものだから。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。コーパス（showcase 3 件 + dev-docs + content-schema）での使用は 0 件。
-
-副次的に、**メタ検証を通過するのに内部エラーで落ちる 2 形が同時に消える**:
-
-| スキーマ | 現状 |
-|---|---|
-| `{type: array}`（`items` なし）| `build_schema_tree` が `KeyError: 'items'` |
-| `{type: object, additionalProperties: false}`（`properties` なし）| `build_schema_tree` が `AttributeError: 'bool' object has no attribute 'get'` |
-
-対象外と確認した箇所: `sbdb.yaml` の `tools:` は意図的なフリーフォーム（他プロセッサ向け名前空間）だが、パイプラインへ渡るのは `manifest.title` だけで中間表現に載らない。`reports.yaml` は全て型付き。
-
-②③④はユーザに見えるスキーマ言語 / クエリ DSL の変更なので、`docs/reference/schema.md` / `view.md` の同期と `make mirror-schemas` による `docs/reference/schemas/` の再生成が要る。
-
-#### 却下案: `parse_yaml` の入力境界で date / datetime を拒否する
-
-`parse_yaml` に 10 行程度のチェックを入れれば 4 経路すべてを一箇所で塞げ、診断も file:line:column 付きの専用メッセージにできる。それでもスキーマ層を選んだのは、②の穴（フリーフォーム object 属性）が **そもそも言語仕様として望ましくない** ためで、値の水際で弾くのは、残すべきでない機能を残したまま症状だけ抑えることになる。
-
-

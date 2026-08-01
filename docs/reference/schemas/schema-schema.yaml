@@ -52,6 +52,35 @@ $defs:
       entity: { type: string }
       attribute: { type: string }
 
+  jsonValue:
+    title: JSON value
+    description: >-
+      Any value the JSON data model can express. Constrains the interior
+      of an object or array literal, where the declared type says nothing
+      about the contents.
+    # Nested if/then/else rather than the equivalent anyOf, which
+    # collapses the diagnostic to "is not valid under any of the given
+    # schemas".
+    if: { type: array }
+    then:
+      items: { $ref: "#/$defs/jsonValue" }
+    else:
+      if: { type: object }
+      then:
+        additionalProperties: { $ref: "#/$defs/jsonValue" }
+      else:
+        type: [string, number, integer, boolean, "null"]
+
+  jsonArray:
+    title: JSON array literal
+    type: array
+    items: { $ref: "#/$defs/jsonValue" }
+
+  jsonObject:
+    title: JSON object literal
+    type: object
+    additionalProperties: { $ref: "#/$defs/jsonValue" }
+
   jsonSchemaSubset:
     title: Accepted JSON Schema subset
     description: >-
@@ -157,13 +186,86 @@ $defs:
           type:
             const: string
 
-    # When `properties:` is present at the same level, `additionalProperties: false`
-    # becomes required. Without `properties:`, `additionalProperties` may be a schema
-    # object (the map pattern that drives map-to-array normalization).
-    if:
-      required: [properties]
-    then:
-      properties:
-        additionalProperties:
-          const: false
-      required: [additionalProperties]
+    # Cross-keyword rules, in two groups.
+    #
+    # Literal values must agree with the declared `type`. JSON Schema does
+    # not check this itself — `{type: string, const: 5}` is a valid (merely
+    # unsatisfiable) schema, and `default` / `examples` are annotations the
+    # spec leaves unvalidated — but here a mismatch is always an authoring
+    # error, and it is the path by which a YAML date reaches the pipeline.
+    # Only the outer type is checkable: validating a literal against its
+    # sibling schema would mean applying a schema to itself, which JSON
+    # Schema cannot express. Hence `jsonValue` for the interior of object
+    # and array literals.
+    allOf:
+      - if: { required: [type], properties: { type: { const: string } } }
+        then:
+          properties:
+            default: { type: string }
+            const: { type: string }
+            enum: { items: { type: string } }
+            examples: { items: { type: string } }
+      - if: { required: [type], properties: { type: { const: number } } }
+        then:
+          properties:
+            default: { type: number }
+            const: { type: number }
+            enum: { items: { type: number } }
+            examples: { items: { type: number } }
+      - if: { required: [type], properties: { type: { const: integer } } }
+        then:
+          properties:
+            default: { type: integer }
+            const: { type: integer }
+            enum: { items: { type: integer } }
+            examples: { items: { type: integer } }
+      - if: { required: [type], properties: { type: { const: boolean } } }
+        then:
+          properties:
+            default: { type: boolean }
+            const: { type: boolean }
+            enum: { items: { type: boolean } }
+            examples: { items: { type: boolean } }
+      - if: { required: [type], properties: { type: { const: array } } }
+        then:
+          properties:
+            default: { $ref: "#/$defs/jsonArray" }
+            const: { $ref: "#/$defs/jsonArray" }
+            enum: { items: { $ref: "#/$defs/jsonArray" } }
+            examples: { items: { $ref: "#/$defs/jsonArray" } }
+      - if: { required: [type], properties: { type: { const: object } } }
+        then:
+          properties:
+            default: { $ref: "#/$defs/jsonObject" }
+            const: { $ref: "#/$defs/jsonObject" }
+            enum: { items: { $ref: "#/$defs/jsonObject" } }
+            examples: { items: { $ref: "#/$defs/jsonObject" } }
+
+      # An object or array declaration must be structurally complete. The
+      # two object forms are the record (`properties` + `additionalProperties:
+      # false`) and the map (`additionalProperties: <schema>`, which drives
+      # map-to-array normalization); an array needs `items`. The incomplete
+      # forms describe nothing about what they contain, so whatever sits
+      # underneath goes unvalidated — and the normalizer, which reads a
+      # schema meta-validation has already vetted, cannot build a tree from
+      # them.
+      - if: { required: [properties] }
+        then:
+          properties:
+            additionalProperties: { const: false }
+          required: [additionalProperties]
+      - if:
+          required: [additionalProperties]
+          properties:
+            additionalProperties: { const: false }
+        then:
+          required: [properties]
+      - if:
+          required: [type]
+          properties: { type: { const: object } }
+          not: { required: [properties] }
+        then:
+          required: [additionalProperties]
+      - if: { required: [type], properties: { type: { const: array } } }
+        then:
+          required: [items]
