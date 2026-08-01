@@ -119,4 +119,51 @@ properties:
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
 
+## Proposals
+
+### 非 JSON 値の侵入経路を塞ぐ (D11)
+
+[JSON データモデル](../40-communication/10-json-data-model.md) は「このアプリで扱うデータは JSON データモデルの範囲内に収まる」と宣言しているが、現状これはスキーマ層で担保しきれていない。YAML は JSON のスーパーセットなので、ruamel が構築した `datetime.date` 等がスキーマの検査をすり抜けてパイプラインを流れ、`ensure_inert` の `TypeError: Non-inert value of type 'date'`（内部エラー・トレースバック付き）でビルドが落ちる。
+
+侵入経路は 4 つ。いずれも「型が無制約になる場所」であり、型の付いた葉（`released: { type: string }` に日付）は既に jsonschema が `datetime.date(...) is not of type 'string'` で弾いている。
+
+| # | 経路 | 塞ぎ方 |
+|---|---|---|
+| ① | schema-schema の `default` / `const` / `enum.items` / `examples.items` が型無制約 | 再帰 `$defs.jsonValue` を足して当てる |
+| ② | 素の `type: object`（`properties` も `additionalProperties` も無い）配下は無検査 | `type: object` / `type: array` の不完全形を禁止（下記） |
+| ③ | view-schema の `predicateBundle.eq` だけ型指定が無い | スカラ短縮形と同じ `type: [string, number, integer, boolean]` に揃える |
+| ④ | content-schema の `prose` / `blob` レコードに `additionalProperties: false` が無く、手書きレコードの未知フィールドが素通りする | `additionalProperties: false` を足す |
+
+①の `jsonValue` は「日付でないこと」ではなく **JSON の型を正の側から列挙する** 形で書く（JSON Schema に「日付でない」を表す語彙は無い）。Python jsonschema の型チェッカは isinstance ベースなので、どの型にも該当しない `datetime.date` / `datetime.datetime` が落ちる。日付に限らず、YAML ローダが構築しうるあらゆる非 JSON 値に効く。
+
+```yaml
+jsonValue:
+  anyOf:
+    - type: [string, number, integer, boolean, "null"]
+    - { type: array,  items: { $ref: "#/$defs/jsonValue" } }
+    - { type: object, additionalProperties: { $ref: "#/$defs/jsonValue" } }
+```
+
+②で禁止する形と、その根拠:
+
+- `type: object` は「`properties` + `additionalProperties: false`」か「`additionalProperties: <schema>`」のどちらかを要求する
+- `type: array` は `items` を要求する
+
+**背景: なぜフリーフォームな object 属性を言語から落とすか** — このツールにおける object 属性は構造化データのためのものであり、フリーフォームなデータは string 属性で持つべきものだから。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。コーパス（showcase 3 件 + dev-docs + content-schema）での使用は 0 件。
+
+副次的に、**メタ検証を通過するのに内部エラーで落ちる 2 形が同時に消える**:
+
+| スキーマ | 現状 |
+|---|---|
+| `{type: array}`（`items` なし）| `build_schema_tree` が `KeyError: 'items'` |
+| `{type: object, additionalProperties: false}`（`properties` なし）| `build_schema_tree` が `AttributeError: 'bool' object has no attribute 'get'` |
+
+対象外と確認した箇所: `sbdb.yaml` の `tools:` は意図的なフリーフォーム（他プロセッサ向け名前空間）だが、パイプラインへ渡るのは `manifest.title` だけで中間表現に載らない。`reports.yaml` は全て型付き。
+
+②③④はユーザに見えるスキーマ言語 / クエリ DSL の変更なので、`docs/reference/schema.md` / `view.md` の同期と `make mirror-schemas` による `docs/reference/schemas/` の再生成が要る。
+
+#### 却下案: `parse_yaml` の入力境界で date / datetime を拒否する
+
+`parse_yaml` に 10 行程度のチェックを入れれば 4 経路すべてを一箇所で塞げ、診断も file:line:column 付きの専用メッセージにできる。それでもスキーマ層を選んだのは、②の穴（フリーフォーム object 属性）が **そもそも言語仕様として望ましくない** ためで、値の水際で弾くのは、残すべきでない機能を残したまま症状だけ抑えることになる。
+
 
