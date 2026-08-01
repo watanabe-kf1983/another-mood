@@ -45,6 +45,7 @@ Workflow:
 - Before editing schema, view, or template files, consult the reference:
   call `list_docs()` for the catalog, then `read_doc(uri)` with a
   `docs://` URI from the listing.
+- To query the project's data rather than its rendered pages, call `tap`.
 
 Another Mood also provides live preview, but not as an MCP tool. Ask the
 user to run `mood watch <project_dir>` in a separate terminal.
@@ -114,6 +115,22 @@ def build(
     config = ProjectConfig(**overrides)  # type: ignore[arg-type]
     config.verify()
     return command.build(config)
+
+
+@mcp.tool()
+def tap(project_dir: str, out_dir: str | None = None) -> BuildResult:
+    """Extract the project's data as one JSON document at
+    `<out_dir>/data.json`. Equivalent to `mood tap <project_dir>`.
+
+    `out_dir` is optional; leave it unset to use the default under
+    `.another-mood/<project_dir>/`. On errors the document is not written.
+    """
+    overrides: dict[str, object] = {"project_dir": Path(project_dir)}
+    if out_dir is not None:
+        overrides["tap_dir"] = Path(out_dir)
+    config = ProjectConfig(**overrides)  # type: ignore[arg-type]
+    config.verify()
+    return command.tap(config)
 
 
 @mcp.tool()

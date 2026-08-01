@@ -192,7 +192,7 @@ def build(
 
 @app.command()
 def tap(project_dir: str = typer.Argument(help="Project directory")) -> None:
-    """Extract the composed data (entities, views, definitions) as one JSON document.
+    """Extract the project's data as one JSON document.
 
     The document is self-describing: `mood tap . | jq 'keys'` lists what is
     inside, and `.__definition.entities` holds the type definitions.
