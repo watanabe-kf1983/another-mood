@@ -1,6 +1,6 @@
 # Blob
 
-blob は `contents_dir` に置かれた YAML・Markdown 以外の「**ツールが解釈しない不透明なファイル**」（画像・PDF・動画・CSV 等）を、内蔵コレクション **`blob`** のレコードとして扱う型。[prose](20-prose-spec.md) と対をなす — prose は `render` フィルタで埋め込む「ページ素材」、blob は id で参照される「リソース」。prose と同じくパイプラインを横断する: preprocess が各ファイルを `{id, mime_type}` レコード化し、generate がバイト列を各 edition 出力へミラーし、relink / href がリンクを解決する。
+blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツールが解釈しない不透明なファイル**」（画像・PDF・動画・CSV 等）を、内蔵コレクション **`blob`** のレコードとして扱う型。[prose](20-prose-spec.md) と対をなす — prose は `render` フィルタで埋め込む「ページ素材」、blob は id で参照される「リソース」。prose と同じくパイプラインを横断する: preprocess が各ファイルを `{id, mime_type}` レコード化し、generate がバイト列を各 edition 出力へミラーし、relink / href がリンクを解決する。
 
 ## External Design
 
@@ -29,9 +29,9 @@ blob は `contents_dir` に置かれた YAML・Markdown 以外の「**ツール�
 
 ### バイトの旅程
 
-**Composer のデータモデルにはメタデータのみ** — composer の JSON データモデルを通るのはメタデータレコードだけ (`load_model` は拡張子で YAML のみ読むため、バイトはモデルへ混入しない)。バイト列自体は normalize が出力 data ツリーに載せ、compose の contents copytree が下流へ相乗りで運ぶ — パイプラインに blob 専用のエッジは足さない。
+**Composer のデータモデルにはメタデータのみ** — composer の JSON データモデルを通るのはメタデータレコードだけ (`load_model` は拡張子で中間表現の形式のみ読むため、バイトはモデルへ混入しない)。バイト列自体は normalize が出力 data ツリーに載せ、compose の contents copytree が下流へ相乗りで運ぶ — パイプラインに blob 専用のエッジは足さない。
 
-**境界コピーは normalize** — normalize が `contents/<id>` のバイトを出力 data ツリーの **contents 相対パスそのまま** (`data/contents/<id>`) にミラーする。レコードファイルは `<rel>.yaml` と拡張子付与されるので、`.yaml` を持ちえない blob (定義上 YAML/Markdown 以外) と構造的に衝突しない — 専用名前空間は不要。generate は下流の `data_dir/contents/<id>` から読んで各 edition ツリーへ `/blob/<id>` としてミラーする (generate の contents 直読み・`contents_dir` パラメータは廃止)。edition ルートがどこかの知識は generator の所有物なので、edition 別ミラーは generate に残す。下流 2 レーン (md publish 行き / Hugo 行き) は既存の運搬機構が自動継承し、`mood watch` (publish なし) のライブプレビューにもバイトが届く。
+**境界コピーは normalize** — normalize が `contents/<id>` のバイトを出力 data ツリーの **contents 相対パスそのまま** (`data/contents/<id>`) にミラーする。レコードファイルは `<rel>.yaml` と拡張子付与されるので、レコード形式の拡張子 (定義上 YAML/JSON/Markdown) を持ちえない blob と構造的に衝突しない — 専用名前空間は不要。この論法はレコードファイル側の拡張子が何であっても成立する (blob の定義がレコード形式の補集合なので、両者の拡張子集合は交わらない)。generate は下流の `data_dir/contents/<id>` から読んで各 edition ツリーへ `/blob/<id>` としてミラーする (generate の contents 直読み・`contents_dir` パラメータは廃止)。edition ルートがどこかの知識は generator の所有物なので、edition 別ミラーは generate に残す。下流 2 レーン (md publish 行き / Hugo 行き) は既存の運搬機構が自動継承し、`mood watch` (publish なし) のライブプレビューにもバイトが届く。
 
 **Hugo レーンは static mount 経由** — prepare_site で blob を content ツリーから分離し `static` mount として渡す。理由は、content dir 内の `.html` が Hugo 既定の `security.allowContent` にビルドごと弾かれるため。運搬機構の実装 (個別 unlink での更新・`HUGO_STATICDIR` 環境変数・削除が restart まで preview に残る Hugo 仕様) とその理由は `_sync_blobs` / `_hugo_env` の docstring に置く。
 

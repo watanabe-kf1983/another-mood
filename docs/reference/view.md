@@ -2,7 +2,7 @@
 
 A **view** is a named dataset derived from structured data, reshaped into a more convenient form for reference. It is defined by a **query**, which can express grouping, field projection, and similar transformations.
 
-View definitions live in YAML files under `{project}/definition/views/` (`.yaml` or `.yml`, case-insensitive). The number of files, how they are split, and any subdirectory layout are flexible; all views are evaluated together at build time. A single file can hold multiple views — each top-level key becomes a view name, which must not reuse an entity name or another view name (views and entities share one namespace).
+View definitions live under `{project}/definition/views/`, in YAML (`.yaml`, `.yml`) or JSON (`.json`) — see [Which files are read](cli.md#which-files-are-read). The number of files, how they are split, and any subdirectory layout are flexible; all views are evaluated together at build time. A single file can hold multiple views — each top-level key becomes a view name, which must not reuse an entity name or another view name (views and entities share one namespace).
 
 ## Basic view structure
 

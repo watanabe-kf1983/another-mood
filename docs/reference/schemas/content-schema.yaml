@@ -14,7 +14,7 @@ properties:
   blob:
     title: Blob collection
     description: >-
-      Collection of blob records, one per opaque (non-YAML/Markdown) file
+      Collection of blob records, one per opaque (non-YAML/JSON/Markdown) file
       in contents_dir, dotfiles and dotdirectories excluded. Each record
       names the file by id and MIME type; the bytes themselves stay out of
       the data model and are mirrored into each edition at generate time.

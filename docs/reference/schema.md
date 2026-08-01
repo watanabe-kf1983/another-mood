@@ -274,7 +274,7 @@ The Markdown source files stay untouched on disk, so they remain browsable and t
 
 ## Built-in schema: blob
 
-Every file under `contents/` that is **not** YAML or Markdown — images, PDFs, audio, spreadsheets — is an **opaque** file the tool does not interpret, automatically collected into the built-in **`blob`** entity, one record per file, without a user-declared schema. An unknown extension is kept as a blob, not skipped; the only files not read at all are hidden ones (see [Source layout](cli.md#source-layout)).
+Every file under `contents/` that is **not** YAML, JSON, or Markdown — images, PDFs, audio, spreadsheets — is an **opaque** file the tool does not interpret, automatically collected into the built-in **`blob`** entity, one record per file, without a user-declared schema. An unknown extension is kept as a blob, not skipped; the only files not read at all are hidden ones (see [Source layout](cli.md#source-layout)).
 
 Record shape:
 
