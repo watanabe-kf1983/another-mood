@@ -200,26 +200,6 @@ def build(
     return result
 
 
-def tap(config: ProjectConfig) -> BuildResult:
-    """Run the pipeline through compose and publish the composed namespace.
-
-    The document lands at ``out_dir/TAP_DOCUMENT_NAME``, with ``out_dir``
-    resolved from ``config.tap_dir`` (default:
-    ``.another-mood/<project_dir>/tap/``). Rendering stages never run, so
-    template problems cannot fail a tap run; schema / contents / view
-    errors can, in which case the destination is left untouched and
-    ``errors`` carries the report.
-    """
-    config = config.resolved_for_tap()
-    out_dir = str(config.tap_dir)
-    manifest = read_manifest(config.project_dir)
-    layout = resolve_layout(config.project_dir)
-    workspace = _session_workspace(config, layout, manifest)
-    result = _to_result(tap_pipeline(workspace).run(), out_dir)
-    _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
-    return result
-
-
 @contextmanager
 def watch(
     config: ProjectConfig,
@@ -249,6 +229,26 @@ def watch(
             port=config.port,
             shutdown=shutdown,
         )
+
+
+def tap(config: ProjectConfig) -> BuildResult:
+    """Run the pipeline through compose and publish the composed namespace.
+
+    The document lands at ``out_dir/TAP_DOCUMENT_NAME``, with ``out_dir``
+    resolved from ``config.tap_dir`` (default:
+    ``.another-mood/<project_dir>/tap/``). Rendering stages never run, so
+    template problems cannot fail a tap run; schema / contents / view
+    errors can, in which case the destination is left untouched and
+    ``errors`` carries the report.
+    """
+    config = config.resolved_for_tap()
+    out_dir = str(config.tap_dir)
+    manifest = read_manifest(config.project_dir)
+    layout = resolve_layout(config.project_dir)
+    workspace = _session_workspace(config, layout, manifest)
+    result = _to_result(tap_pipeline(workspace).run(), out_dir)
+    _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
+    return result
 
 
 # -- Helpers -----------------------------------------------------------------

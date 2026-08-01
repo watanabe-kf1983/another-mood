@@ -1,8 +1,8 @@
 # CLI Reference
 
-`mood` is the command-line entry point for Another Mood. The day-to-day workflow uses `init` (first time), `build` (one-shot rebuild), and `watch` (live preview). `mood blueprint` is a separate command group for managing the built-in sample projects that `init` is built on top of.
+`mood` is the command-line entry point for Another Mood. The day-to-day workflow uses `init` (first time), `build` (one-shot rebuild), and `watch` (live preview). `mood tap` extracts the project's data as one JSON document for external tools. `mood blueprint` is a separate command group for managing the built-in sample projects that `init` is built on top of.
 
-`init`, `build`, and `watch` take the target directory as the first positional argument `<project_dir>`. Typically you run them from inside the project directory and pass `.`:
+`init`, `build`, `watch`, and `tap` take the target directory as the first positional argument `<project_dir>`. Typically you run them from inside the project directory and pass `.`:
 
 ```bash
 mood init .
@@ -17,6 +17,7 @@ mood watch .
 | [`mood init <project_dir>`](#init) | Shortcut for `mood blueprint apply starter <project_dir>`. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
 | [`mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
+| [`mood tap <project_dir>`](#tap) | Extract the project's data (entities and views) as one JSON document. |
 | [`mood blueprint list`](#blueprint-list) | List the available blueprints. |
 | [`mood blueprint apply <name> <project_dir>`](#blueprint-apply) | Apply a blueprint into a project directory. |
 | [`mood docs list`](#docs-list) | List bundled documentation entries with their `docs://` URIs. |
@@ -26,7 +27,7 @@ mood watch .
 
 `<project_dir>` is given as a path relative to the current directory. Input paths are resolved against this directory, and output is written to `.another-mood/<project_dir>/` directly under the current directory.
 
-`build` and `watch` cannot target a `<project_dir>` outside the current directory.
+`build`, `watch`, and `tap` cannot target a `<project_dir>` outside the current directory.
 
 ### Source layout
 
@@ -41,7 +42,7 @@ Source paths are fixed — they are part of the project structure, not configura
 | Views | `<project_dir>/definition/views` |
 | Templates | `<project_dir>/definition/templates` |
 
-If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
+If any of these paths is missing when `build`, `watch`, or `tap` starts, the command fails and exits with code 1. This includes `tap`, which requires the templates directory to exist even though it never renders templates.
 
 #### Which files are read
 
@@ -53,12 +54,13 @@ A YAML or JSON source must have a mapping at its root; a sequence or a bare scal
 
 ### Output path resolution
 
-`build` places its Markdown and HTML output under `.another-mood/<project_dir>/`, relative to the current directory:
+`build` places its Markdown and HTML output — and `tap` its JSON document — under `.another-mood/<project_dir>/`, relative to the current directory:
 
 | Kind | Default | Env var |
 |---|---|---|
 | Markdown output | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
 | HTML output | `.another-mood/<project_dir>/site` | `RB_SITE_DIR` |
+| Tap output | `.another-mood/<project_dir>/tap` | `RB_TAP_DIR` |
 
 Subdirectories matching the input path are created automatically, so that running different `<project_dir>` values in parallel processes does not cause output collisions.
 
@@ -142,6 +144,30 @@ mood watch . --port 8080
 
 To watch multiple `<project_dir>` values at the same time, start one process per project. By default nothing is published, so their outputs cannot collide; ports do — any process after the first needs `--port` to pick a different port. (If you pass `--out-dir`, give each project a distinct directory.)
 
+## tap
+
+Extract the project's data — the entities and the evaluated views — as one JSON document, for external programs that compute over the data and for ad-hoc queries.
+
+```bash
+mood tap <project_dir>
+```
+
+Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document; the same document is also written to `.another-mood/<project_dir>/tap/data.json` for consumers that prefer a path over a pipe. `tap` takes no options.
+
+The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed diagnostic views and `__definition`.
+
+Exits with code 0 on success. Schema, contents, and view errors are printed to stderr and fail the command with exit code 1, writing nothing — stdout stays empty and the previously published document, if any, is left untouched.
+
+### Querying the document
+
+Narrowing the output is left to your own tools (`jq`, a script) — `tap` produces the document, and you pipe it. The document is self-describing, so exploration starts at the top:
+
+```bash
+mood tap . | jq 'keys'                                        # what is inside
+mood tap . | jq '.__definition.entities | map(.id)'           # the entities and views defined
+mood tap . | jq '.members | map(select(.role == "designer"))' # narrow one entity's records
+```
+
 ## blueprint
 
 A *blueprint* is a working sample project (schema, contents, views, templates) bundled with Another Mood. The `blueprint` command group lists them and applies them to a target directory.
@@ -209,3 +235,4 @@ RB_PORT=8080 mood watch .
 | `site_dir` | `build`: `.another-mood/<project_dir>/site`; `watch`: not published | `RB_SITE_DIR` | `--site-dir` (only on `build`) |
 | `host` | `127.0.0.1` | `RB_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `RB_PORT` | `--port` (only on `watch`) |
+| `tap_dir` | `.another-mood/<project_dir>/tap` | `RB_TAP_DIR` | — |
