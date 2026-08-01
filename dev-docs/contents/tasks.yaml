@@ -367,7 +367,7 @@ categories:
       - src/another_mood/
     tasks:
       J3:
-        title: "compose 結果のエクスポート (mood export + MCP)"
+        title: "compose 結果の取り出し (mood tap + MCP)"
         note: >-
           計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
           (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
@@ -375,15 +375,14 @@ categories:
           計算は外部プログラムに委ねる (動機となった実例: 設計ドキュメントの構造化
           データから Function Point を算出する)。現 __db/__data は人間向け診断
           Markdown で結果データではないため、機械可読の経路が別に要る。
-          MCP には jq 引数 (jq 式。query の語はビュー定義 DSL に予約) を持たせる —
-          export の実行はファイル操作ではなくコマンド実行であり、シェルを持たない
-          MCP クライアントでは生成できても照会できないため。CLI にも同じ --jq を
-          置き機能を一致させる。
-          当初含めていた「export → 外部計算 → contents 還流」のガイド化は、実需側で
-          還流が不要と確認できたため対象外 (還流自体は現状でも可能)。クエリ DSL への
-          集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
+          照会の口 (jq 式の引数) は CLI にも MCP にも持たせない — 絞り込みは利用者の
+          道具に委ね、mood は成果物を作るだけにする。出力は jq に直接食わせられる
+          JSON 単独。
+          当初含めていた「tap → 外部計算 → contents 還流」のガイド化は本タスクの
+          対象外 (還流自体は現状でも可能。ガイド化は還流の実需の形が見えてから)。
+          クエリ DSL への集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
         phase: 15
-        proposal: 20-design/60-composer/20-export-spec#compose-結果のエクスポート-j3
+        done: true
 
   L:
     title: dog-fooding

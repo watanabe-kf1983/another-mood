@@ -10,6 +10,7 @@ from another_mood.components import (
     normalize_contents,
     publish,
     reconcile,
+    tap,
 )
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.dir_lock import dir_lock
@@ -83,6 +84,38 @@ def compose_stage(workspace: Workspace) -> Task:
         watch_paths=[],
         upstreams=[contents_out, views_out, inspect_out],
     )
+
+
+def tap_stage(workspace: Workspace) -> Task:
+    """Assemble the composed namespace into one JSON document."""
+    compose_out = workspace.component_output(compose)
+    out = workspace.component_output(tap)
+    call = tap.bind(
+        data_dir=compose_out.dir,
+        out_dir=out.dir,
+    )
+    return Stage(
+        run_fn=call,
+        watch_paths=[],
+        upstreams=[compose_out],
+    )
+
+
+def tap_publish_stage(workspace: Workspace) -> Task:
+    """Copy the tap document from tmp to its public destination."""
+    config = workspace.config
+    tap_out = workspace.component_output(tap)
+    publish_out = workspace.component_output(publish)
+    # Publish only where the destination is set (a bare Workspace may set none).
+    targets = [(tap_out.dir / "data", config.tap_dir)]
+    active = [(src, dist) for src, dist in targets if dist is not None]
+    call = publish.bind(
+        upstream=tap_out.dir,
+        out_dir=publish_out.dir,
+        src_dirs=[src for src, _ in active],
+        dist_dirs=[dist for _, dist in active],
+    )
+    return Stage(run_fn=call, watch_paths=[], upstreams=[tap_out])
 
 
 def generator_stage(workspace: Workspace) -> Task:
@@ -191,6 +224,18 @@ STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     publish_stage,
 )
 
+# Declared as its own sequence (not a slice of STAGE_FACTORIES) so a stage
+# added to the build pipeline is admitted here only by an explicit decision.
+# Also driven by the write-once sweep test.
+TAP_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
+    inspect_schema_stage,
+    normalize_contents_stage,
+    derive_queries_stage,
+    compose_stage,
+    tap_stage,
+    tap_publish_stage,
+)
+
 
 def pipeline(
     workspace: Workspace,
@@ -199,3 +244,9 @@ def pipeline(
     """Create the full pipeline."""
     stages = [factory(workspace) for factory in STAGE_FACTORIES]
     return Pipeline(stages, reporting=build_report_stage(workspace, on_report))
+
+
+def tap_pipeline(workspace: Workspace) -> Pipeline:
+    """Create the tap pipeline: stop after compose, publish one JSON document."""
+    stages = [factory(workspace) for factory in TAP_STAGE_FACTORIES]
+    return Pipeline(stages, reporting=build_report_stage(workspace))

@@ -27,6 +27,10 @@ class ProjectConfig(BaseSettings):
     out_dir: Path | None = Field(default=None)
     site_dir: Path | None = Field(default=None)
 
+    # Tap document destination directory. Unset (None) resolves to the
+    # ``.another-mood/<project>`` default (see resolved_for_tap).
+    tap_dir: Path | None = Field(default=None)
+
     # Working dir. Unset (None) resolves to a fresh system-temp dir at the
     # command layer; set RB_TMP_DIR to pin it to a fixed path.
     tmp_dir: Path | None = Field(default=None)
@@ -44,6 +48,17 @@ class ProjectConfig(BaseSettings):
                 "site_dir": self.site_dir or rb / "site",
             }
         )
+
+    def resolved_for_tap(self) -> "ProjectConfig":
+        """Fill an unset tap_dir with the ``.another-mood/<project>`` default.
+
+        An explicit tap_dir skips even deriving the default, which would
+        require project_dir under CWD.
+        """
+        if self.tap_dir is not None:
+            return self
+        rb = _another_mood_root(self.project_dir)
+        return self.model_copy(update={"tap_dir": rb / "tap"})
 
     def resolved_for_watch(self) -> "ProjectConfig":
         """Drop site_dir — watch never publishes HTML — and keep out_dir as given."""

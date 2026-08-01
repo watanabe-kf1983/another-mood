@@ -15,12 +15,13 @@ Each `mood` CLI command has an MCP counterpart, except `mood watch`:
 | CLI command | MCP tool | Purpose |
 |---|---|---|
 | `mood init` | `init` | Initialize a project at `project_dir` from the `starter` blueprint |
+| `mood build` | `build` | Run a one-shot build of `project_dir`, generating Markdown and HTML and returning the result |
+| `mood watch` | — | Watch for file changes, rebuild incrementally, and serve a live preview |
+| `mood tap` | `tap` | Extract the project's data as one JSON document at `<out_dir>/data.json`; the result reports `out_dir` only — read the document from disk, it is never returned |
 | `mood blueprint list` | `list_blueprints` | List the bundled blueprints (sample projects) |
 | `mood blueprint apply` | `apply_blueprint` | Apply the named blueprint by copying its sources into `project_dir` |
-| `mood build` | `build` | Run a one-shot build of `project_dir`, generating Markdown and HTML and returning the result |
 | `mood docs list` | `list_docs` | List bundled documentation as MCP resource links |
 | `mood docs read` | `read_doc` | Read a bundled document by its `docs://` URI |
-| `mood watch` | — | Watch for file changes, rebuild incrementally, and serve a live preview |
 
 ## Configure your client
 

@@ -25,6 +25,18 @@ class TestAnotherMoodRoot:
         assert config.out_dir == Path(".another-mood/docs/output")
 
 
+class TestResolvedForTap:
+    def test_fills_unset_tap_dir_with_the_default(self) -> None:
+        config = ProjectConfig(project_dir=Path("docs")).resolved_for_tap()
+        assert config.tap_dir == Path(".another-mood/docs/tap")
+
+    def test_keeps_an_explicit_tap_dir(self) -> None:
+        config = ProjectConfig(
+            project_dir=Path("docs"), tap_dir=Path("custom")
+        ).resolved_for_tap()
+        assert config.tap_dir == Path("custom")
+
+
 class TestVerifyProjectDirUnderCwd:
     """project_dir must resolve under CWD; external paths are rejected (G8).
 

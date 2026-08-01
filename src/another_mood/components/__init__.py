@@ -6,6 +6,7 @@ from another_mood.components.preprocess.content_normalizer import normalize_cont
 from another_mood.components.preprocess.query_deriver import derive_queries
 from another_mood.components.preprocess.schema_inspector import inspect_schema
 from another_mood.components.publish.publish import publish
+from another_mood.components.tap.tap import tap
 
 __all__ = [
     "compose",
@@ -15,4 +16,5 @@ __all__ = [
     "normalize_contents",
     "publish",
     "reconcile",
+    "tap",
 ]

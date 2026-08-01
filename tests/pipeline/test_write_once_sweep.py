@@ -10,13 +10,15 @@ test_preparation.py pins the known such site (prepare_site) directly.
 
 import hashlib
 import os
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from another_mood import command
 from another_mood.components.manifest import Manifest
 from another_mood.config import ProjectConfig
 from another_mood.layout import resolve_layout
-from another_mood.pipeline.stages import STAGE_FACTORIES
+from another_mood.pipeline.base import Task
+from another_mood.pipeline.stages import STAGE_FACTORIES, TAP_STAGE_FACTORIES
 from another_mood.pipeline.workspace import Workspace
 
 _BLOB_V1 = b"\x89PNG-fake-bytes-v1"
@@ -54,6 +56,33 @@ def test_no_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
     assert "Alicia" in published_member.read_text(encoding="utf-8")
 
 
+def test_no_tap_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
+    project = _scaffold_project(tmp_path)
+    workspace, published = _make_workspace(tmp_path, project)
+    observers = _Observers(
+        watch_roots=(workspace.root, published), obs_root=tmp_path / "observers"
+    )
+
+    _run_all_stages(
+        workspace, observers, run_label="run1", factories=TAP_STAGE_FACTORIES
+    )
+
+    members = project / "contents" / "members.yaml"
+    members.write_text(
+        members.read_text(encoding="utf-8").replace("Alice", "Alicia"),
+        encoding="utf-8",
+    )
+
+    _run_all_stages(
+        workspace, observers, run_label="run2", factories=TAP_STAGE_FACTORIES
+    )
+
+    # Guard against a vacuous sweep: the change must reach the published
+    # tap document.
+    document = published / "tap" / "data.json"
+    assert "Alicia" in document.read_text(encoding="utf-8")
+
+
 def test_observers_flag_in_place_writes_only(tmp_path: Path) -> None:
     watched = tmp_path / "watched"
     watched.mkdir()
@@ -88,6 +117,7 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
         project_dir=project,
         out_dir=published / "output",
         site_dir=published / "site",
+        tap_dir=published / "tap",
     )
     workspace = Workspace(
         config, tmp_path / "workspace", resolve_layout(project), Manifest()
@@ -96,9 +126,13 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
 
 
 def _run_all_stages(
-    workspace: Workspace, observers: "_Observers", *, run_label: str
+    workspace: Workspace,
+    observers: "_Observers",
+    *,
+    run_label: str,
+    factories: Sequence[Callable[[Workspace], Task]] = STAGE_FACTORIES,
 ) -> None:
-    for factory in STAGE_FACTORIES:
+    for factory in factories:
         factory(workspace).run()
         mutated = observers.mutated()
         assert not mutated, (
