@@ -77,11 +77,13 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     A source tree with no ``blob`` collection in its schema (views_dir)
     rejects such a file at validation rather than skipping it silently.
     """
+    if _is_hidden(src, src_dir):
+        return None
     if FileType.MARKDOWN.match(src):
         return load_prose(src, src_dir, mime_type="text/markdown")
     if FileType.YAML.match(src):
         return parse_yaml(src)
-    return None if _is_hidden(src, src_dir) else load_blob(src, src_dir)
+    return load_blob(src, src_dir)
 
 
 def _is_hidden(src: Path, src_dir: Path) -> bool:

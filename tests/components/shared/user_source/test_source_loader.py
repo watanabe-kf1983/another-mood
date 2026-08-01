@@ -245,13 +245,23 @@ class TestLoadSourceBlobDispatch:
             "mime_type": "text/csv",
         }
 
-    @pytest.mark.parametrize("rel", [".DS_Store", ".hidden/photo.png", ".gitkeep"])
+    @pytest.mark.parametrize(
+        "rel",
+        [
+            ".DS_Store",
+            ".hidden/photo.png",
+            ".gitkeep",
+            ".hidden/notes.yaml",
+            ".hidden/page.md",
+            ".config.yaml",
+        ],
+    )
     def test_dotfile_and_dotdir_excluded(self, tmp_path: Path, rel: str) -> None:
         # The one skip that survives: a dotfile is cruft in any source tree,
         # so it must not reach validation (a .gitkeep lives in queries_dir).
         f = tmp_path / rel
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_bytes(b"x")
+        f.write_text("k: v\n")
         assert load_source(f, tmp_path) is None
 
     def test_yaml_and_markdown_still_parsed(self, tmp_path: Path) -> None:

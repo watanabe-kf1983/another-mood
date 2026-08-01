@@ -43,6 +43,12 @@ Source paths are fixed — they are part of the project structure, not configura
 
 If any of these paths is missing when `build` or `watch` starts, the command fails and exits with code 1.
 
+#### Which files are read
+
+Content and Views are the two trees whose files are not named individually: both are walked recursively, and every file found is read, with the extension (matched case-insensitively) picking the interpretation. Under `contents/`, YAML (`.yaml`, `.yml`) is structured data, Markdown (`.md`) is [prose](schema.md#built-in-schema-prose), and anything else is an opaque [blob](schema.md#built-in-schema-blob). Under `definition/views/`, YAML is the only accepted format — any other file there fails validation rather than being ignored.
+
+**Hidden entries are the one exclusion.** A dotfile, or any file under a dotdirectory (`.DS_Store`, `.vscode/settings.json`, `.gitkeep`), is skipped in both trees whatever its extension, so editor and VCS cruft can sit in a source tree without being read as a source.
+
 ### Output path resolution
 
 `build` places its Markdown and HTML output under `.another-mood/<project_dir>/`, relative to the current directory:
