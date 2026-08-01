@@ -42,7 +42,7 @@ from another_mood.layout import SourceLayout, resolve_layout, verify_absent
 from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
-from another_mood.pipeline.stages import pipeline
+from another_mood.pipeline.stages import pipeline, tap_pipeline
 from another_mood.pipeline.workspace import Workspace
 
 # UserError is re-exported: commands raise its subclasses for pre-pipeline
@@ -59,6 +59,7 @@ __all__ = [
     "list_blueprints",
     "list_docs",
     "read_doc",
+    "tap",
     "watch",
 ]
 
@@ -113,14 +114,15 @@ class WatchSession:
 
 @dataclass(frozen=True)
 class BuildResult:
-    """Outcome of a build, as exposed across the command-layer boundary.
+    """Outcome of a pipeline run, as exposed across the command-layer boundary.
 
     Slim view of a :class:`BuildReport` for CLI / MCP consumers.  Per-stage
     results and per-diagnostic snippets — both useful only for human debugging
     of the on-disk ``__build_report.json`` — are stripped here.
 
-    ``out_dir`` is the resolved directory where rendered output landed
-    (typically ``.another-mood/<project_dir>/output/``).
+    ``out_dir`` is the resolved directory where the run's published output
+    landed (build: ``.another-mood/<project_dir>/output/``, tap:
+    ``.another-mood/<project_dir>/tap/``).
     """
 
     out_dir: str
@@ -194,14 +196,27 @@ def build(
     result = _to_result(
         pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
     )
-    if workspace.temporary:
-        if result.has_internal_error():
-            _logger.error(
-                "build failed internally; kept working dir for post-mortem: %s",
-                workspace.root,
-            )
-        else:
-            shutil.rmtree(workspace.root, ignore_errors=True)
+    _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
+    return result
+
+
+def tap(config: ProjectConfig) -> BuildResult:
+    """Run the pipeline through compose and publish the composed namespace.
+
+    The document lands at ``out_dir/TAP_DOCUMENT_NAME``, with ``out_dir``
+    resolved from ``config.tap_dir`` (default:
+    ``.another-mood/<project_dir>/tap/``). Rendering stages never run, so
+    template problems cannot fail a tap run; schema / contents / view
+    errors can, in which case the destination is left untouched and
+    ``errors`` carries the report.
+    """
+    config = config.resolved_for_tap()
+    out_dir = str(config.tap_dir)
+    manifest = read_manifest(config.project_dir)
+    layout = resolve_layout(config.project_dir)
+    workspace = _session_workspace(config, layout, manifest)
+    result = _to_result(tap_pipeline(workspace).run(), out_dir)
+    _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
     return result
 
 
@@ -253,6 +268,19 @@ def _session_workspace(
     else:
         tmp = Path(tempfile.mkdtemp(prefix="another-mood-"))
         return Workspace(config, tmp, layout, manifest, temporary=True)
+
+
+def _discard_workspace(workspace: Workspace, *, keep_for_post_mortem: bool) -> None:
+    """Remove a throwaway workspace; a user-pinned one is left alone."""
+    if not workspace.temporary:
+        return
+    if keep_for_post_mortem:
+        _logger.error(
+            "run failed internally; kept working dir for post-mortem: %s",
+            workspace.root,
+        )
+    else:
+        shutil.rmtree(workspace.root, ignore_errors=True)
 
 
 def _to_result(report: BuildReport, out_dir: str) -> BuildResult:

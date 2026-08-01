@@ -12,6 +12,7 @@ import typer
 from another_mood import command
 from another_mood.command import BuildResult, UserError
 from another_mood.components.scaffold.blueprints import ScaffoldResult
+from another_mood.components.tap.tap import TAP_DOCUMENT_NAME
 from another_mood.config import ConfigValidationError, ProjectConfig
 
 # add_completion=False drops typer's `--install-completion` / `--show-completion`
@@ -187,6 +188,26 @@ def build(
         raise typer.Exit(1) from exc
     if result.has_errors() or (strict and result.has_warnings()):
         raise SystemExit(1)
+
+
+@app.command()
+def tap(project_dir: str = typer.Argument(help="Project directory")) -> None:
+    """Extract the composed data (entities, views, definitions) as one JSON document.
+
+    The document is self-describing: `mood tap . | jq 'keys'` lists what is
+    inside, and `.__definition.entities` holds the type definitions.
+    """
+    config = _load_config(project_dir=Path(project_dir))
+    try:
+        result = command.tap(config)
+    except UserError as exc:
+        print(exc.user_error_message, file=sys.stderr)
+        raise typer.Exit(1) from exc
+    if result.has_errors():
+        print("Tap failed.", file=sys.stderr)
+        raise SystemExit(1)
+    document = Path(result.out_dir) / TAP_DOCUMENT_NAME
+    print(document.read_text(encoding="utf-8"))
 
 
 @app.command()
