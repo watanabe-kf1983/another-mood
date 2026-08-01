@@ -22,6 +22,18 @@
 
 ## Proposals
 
+### 入力形式に JSON を追加 (M11)
+
+`contents_dir` と `views_dir` で `.json` をデータファイルとして受理する（現状は YAML / Markdown 以外なので [blob](../40-communication/30-blob-spec.md) になる）。受理と同時に **`.json` は blob から外れる**。
+
+**背景: なぜ必要か** — [M10](../40-communication/10-json-data-model.md#ステージ間中間表現を-json-へ-m10) がステージ間中間表現を `.json` にすると、blob-spec の「blob は定義上その拡張子を持ちえないので、レコードファイルと構造的に衝突しない」という論法が単独では崩れる。`.json` を入力データ形式にすれば同じ論法がそのまま成立し、blob のミラー経路に手を入れずに済む。M10 の前提タスク。
+
+**背景: `.json` も ruamel で読む** — YAML 1.2 は JSON のスーパーセットなので、`parse_yaml` がそのまま JSON を解釈でき、`.lc` による位置情報も取れる。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになり、`query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。帰結として `.json` ファイル内に YAML 記法を書いても通ってしまう（緩い方向のズレ）ほか、重複キーは JSON より厳しく `DuplicateKeyError` になる。
+
+**スコープ外: 固定名の定義ファイル** — `definition/schema.yaml` / `reports.yaml` / `sbdb.yaml` は対象外。`SourceLayout` が固定名で解決し `_verify_definition_entries` が未知エントリを弾く構造なので、拡張子の択一は別の変更になる。拡張子でディスパッチするツリー（`contents/`、`definition/views/`）のみを対象とする。
+
+同期が要る箇所: blob の定義（「YAML・Markdown 以外」→ JSON を追加）、`docs/reference/` の入力形式記述、showcase への入出力例。
+
 ### Unique 制約 (D8, D9)
 
 追加の Unique 制約（id 以外のフィールドに対する一意性）の宣言。Phase 10 タスク [D8, D9](node:/tasks/D/tasks/D8)。

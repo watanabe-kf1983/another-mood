@@ -51,6 +51,59 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 ## Proposals
 
+### ステージ間中間表現を JSON へ (M10)
+
+前提タスク: [M11](node:/tasks/M/tasks/M11)（入力形式に JSON を追加）が先。理由は「blob バイトとの構造的衝突」節。[D11](node:/tasks/D/tasks/D11)（非 JSON 値の侵入経路を塞ぐ）は前提ではないが、先に済ませると中間表現に非 JSON 値が到達しえない状態から着手できる。
+
+#### 対象範囲
+
+このプロジェクトの YAML は 3 系統ある。JSON へ差し替えるのは (3) のみ。
+
+| 系統 | 例 | 扱い |
+|---|---|---|
+| (1) ユーザ入力 | `contents/*.yaml`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML のまま（`parse_yaml`。位置情報タグ付けが要る） |
+| (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML のまま（手書き・コメント付き。5 ファイル） |
+| (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | **JSON へ** |
+
+#### `json_data_model` の API 分割
+
+現在 `load_model` が (2) と (3) の両方を担っている。形式が分かれるので関数も分ける:
+
+- `load_model(*paths)` / `save_model(path, data)` — 中間表現（JSON）
+- `load_schema(*paths)` — JSON Schema ドキュメント（YAML）の読み込みと deep-merge。呼び出しは 5 箇所（schema-schema / view-schema / manifest-schema / reports-schema / content-schema + ユーザ schema.yaml のマージ）
+
+シリアライズ設定は `json.dumps(..., ensure_ascii=False, indent=2)`。`_drop_nones`（nullable は項目自体を省略）は維持。literal block scalar の規約は JSON に存在しないので削除する — 複数行文字列は `\n` エスケープの 1 行になり、post-mortem 時の可読性が下がるのが主な代償。
+
+#### 背景: blob バイトとの構造的衝突が M11 を前提にする
+
+[blob](30-blob-spec.md) は「レコードファイルは `<rel>.yaml` と拡張子付与される。blob は定義上 YAML/Markdown 以外なので `.yaml` を持ちえず、構造的に衝突しない」を根拠に blob 専用名前空間を不要としている。中間表現が `.json` になると、この根拠は単独では崩れる: ユーザが `contents/x.json` を置くと、ミラーされたバイト `data/contents/x.json` を `load_model` がモデルファイルとして読み、中身をデータモデルにマージしてしまう（再現確認済み）。
+
+M11 で `.json` を入力データ形式として受理し blob から除外すると、同じ論法がそのまま成立する（`.json` は blob になりえない）。blob のミラー経路には手を入れずに済む。
+
+却下案: ミラーするバイトにも内部拡張子を付け `data/contents/<id>.blob` とする案も成立する（拡張子は置換ではなく付与なので、mirror 名は元の相対パスについて単射で、衝突は起きない）。ただし blob-spec の論法を書き換えて成立させる形になり、M11 を先に入れれば不要になる。
+
+#### 着手時の確認事項への回答
+
+- **(a) 正規化は temp へ書く前に検証しているか** — している。`iter_normalized` は `check(src_dir, schema)` を全ファイル分先に回してから yield するので、`json.dumps` が先に落ちて診断が失われる経路はない
+- **(b) スキーマ内の自由形式領域に日付が書けるか** — 書ける。詳細と対処は [schema-spec の D11 提案](../50-normalizer/20-schema-spec.md#非-json-値の侵入経路を塞ぐ-d11)。なお **現状すでにビルドが落ちる**（generator の `ensure_inert` で `TypeError: Non-inert value of type 'date'`）ので、JSON 化しても退行ではない — 落ちる場所が `inspect_schema` の `json.dumps` へ前倒しになるだけ。よって D11 は M10 の前提ではない
+
+#### 計測 (baseline)
+
+dev-docs の `mood build` 実測 2.52 / 2.64 / 2.66 s。cProfile 下（総 6.07 s）の内訳:
+
+| 経路 | cumtime | 呼び出し |
+|---|---|---|
+| 中間表現 read（`_load_mapping`） | 2.39 s | 120 |
+| 中間表現 write（`save_model`） | 0.90 s | 60 |
+| ユーザ入力 read（`parse_yaml`） | 0.52 s | 13 |
+
+差し替え対象は上 2 行の 3.3 s（プロファイラ倍率込みで総時間の 54%）。実測は build report の `StageResult.timestamp` 差分でも取れる。
+
+#### コミット粒度
+
+1. `load_model` / `load_schema` の分割（YAML のまま、振る舞い不変の純リファクタ）
+2. 中間表現を JSON へ（`load_model` / `save_model` + テスト追随 + 設計文書同期 + 計測結果）
+
 ### 未決事項
 
 - **トップレベルスキーマが `type: array`（additionalProperties でない）の場合**: id を持たない配列のマージ・重複検出をどうするか未定

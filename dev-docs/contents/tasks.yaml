@@ -209,6 +209,24 @@ categories:
         title: 入力境界での一律 NFC 正規化
         phase: 13
         done: true
+      D11:
+        title: 非 JSON 値の侵入経路を塞ぐ (スキーマ言語の穴を閉じる)
+        note: >-
+          YAML は JSON のスーパーセットなので、ruamel が構築した datetime.date 等が
+          スキーマ検査をすり抜け、generator の ensure_inert まで到達して
+          "TypeError: Non-inert value of type 'date'" (内部エラー) でビルドが落ちる。
+          型の付いた葉は既に jsonschema が弾いており、漏れるのは型が無制約になる 4 箇所:
+          schema-schema の default / const / enum.items / examples.items、
+          素の type: object 配下、view-schema の predicateBundle.eq、
+          content-schema の prose / blob レコード (additionalProperties なし)。
+          素の type: object を禁止するのは、このツールの object 属性が構造化データのための
+          ものであり、フリーフォームなデータは string 属性で持つべきだから。
+          副次的に、メタ検証を通るのに内部エラーで落ちる 2 形 ({type: array} の
+          KeyError、{type: object, additionalProperties: false} の AttributeError) も消える。
+          M10 の前提ではないが、先に済ませると M10 が「非 JSON 値が到達しえない」状態から
+          始められる。
+        phase: 14
+        proposal: 20-design/50-normalizer/20-schema-spec#非-json-値の侵入経路を塞ぐ-d11
 
   E:
     title: YAML DSL クエリ評価拡充
@@ -420,6 +438,23 @@ categories:
         title: prose レコードの body 廃止 (フラット化)
         phase: 13
         done: true
+      M11:
+        title: 入力形式に JSON を追加 (blob からは除外)
+        note: >-
+          contents_dir / views_dir で .json をデータファイルとして受理し、同時に blob から
+          外す。M10 の前提タスク — 中間表現が .json になると、blob-spec の「blob は定義上
+          その拡張子を持ちえないのでレコードファイルと構造的に衝突しない」という論法が
+          単独では崩れるため (ミラーされたバイト data/contents/x.json が load_model に
+          モデルとして読まれる。再現確認済み)。.json を入力形式にすれば同じ論法がそのまま
+          成立し、blob のミラー経路に手を入れずに済む。
+          コストが低いのは YAML 1.2 が JSON のスーパーセットで、parse_yaml がそのまま
+          JSON を解釈でき .lc の位置情報も取れるため — UserStr / Location の機構を
+          二重に作らずに済む。
+          固定名の definition/schema.yaml / reports.yaml / sbdb.yaml は対象外
+          (SourceLayout が固定名で解決し未知エントリを弾く構造なので、拡張子の択一は
+          別の変更になる)。
+        phase: 14
+        proposal: 20-design/50-normalizer/10-normalizer#入力形式に-json-を追加-m11
       M10:
         title: ステージ間中間表現を YAML から JSON へ差し替え (ビルド時間短縮)
         note: >-
@@ -431,17 +466,16 @@ categories:
           採れない — PyYAML は YAML 1.1 で、yes/no の boolean 化や 8 進リテラルなど
           利用者データの解釈が変わる (ruamel を選び YAML 1.2 と明記しているのは
           まさにそのため)。その点 JSON は 1.1/1.2 の曖昧さが構造的に無い。
-          定義域は確認済み: スキーマが宣言できる型は JSON のそれに限られ、YAML 超過分で
-          唯一実害のある date/datetime は検証が既に弾く
-          ("datetime.date(...) is not of type 'string'")。
-          着手時の確認事項 = (a) 正規化が temp へ書く前に検証しているか
-          (書いてから検証だと json.dumps が先に落ち、エラーメッセージが失われる)、
-          (b) スキーマ内 metadata 等の自由形式領域に日付が書けるか。
           pickle/marshal も測ったが load はほぼ同速で差は 1ms 未満。可読性を失うだけ
           (marshal は版間互換を保証せず、watch の prev_out_dir 再利用と相性が悪い)。
           転送層は非対象 — transfer_tree はハードリンクで 874 回 21ms、実質タダ。
           計測は build report の StageResult.timestamp 差分で取れる (新規の計装不要)。
+          着手時の確認事項は調査済み (回答は proposal を参照): (a) 正規化は temp へ書く前に
+          全ファイル分の検証を済ませている。(b) 自由形式領域に日付は書けるが現状すでに
+          ビルドが落ちるので退行ではない (対処は D11)。
+          調査で M11 (入力形式に JSON を追加) が前提であることが判明している。
         phase: 15
+        proposal: 20-design/40-communication/10-json-data-model#ステージ間中間表現を-json-へ-m10
 
   N:
     title: レンダリング / 出力形式
