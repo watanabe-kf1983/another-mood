@@ -1,9 +1,8 @@
 """Tests for Component / ComponentCall."""
 
+import json
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 
 from another_mood.components.shared.component.component import Component, ComponentCall
@@ -101,14 +100,14 @@ class TestExclusiveWriteWrapping:
 
 
 class TestErrorPropagationWrapping:
-    def _write_yaml(self, path: Path, data: dict[str, Any]) -> None:
+    def _write_json(self, path: Path, data: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
     def test_skips_fn_on_upstream_errors(self, tmp_path: Path) -> None:
         upstream_dir = tmp_path / "upstream"
-        self._write_yaml(
-            upstream_dir / "reports" / "err.yaml",
+        self._write_json(
+            upstream_dir / "reports" / "err.json",
             {"__build_report": {"errors": [{"message": "upstream"}]}},
         )
 
@@ -132,7 +131,7 @@ class TestErrorPropagationWrapping:
 
     def test_catches_exception_and_writes_errors(self, tmp_path: Path) -> None:
         upstream_dir = tmp_path / "upstream"
-        self._write_yaml(upstream_dir / "reports" / "data.yaml", {"x": 1})
+        self._write_json(upstream_dir / "reports" / "data.json", {"x": 1})
 
         @Component(
             out_dir="out_dir",
@@ -145,7 +144,7 @@ class TestErrorPropagationWrapping:
         out = tmp_path / "output"
         my_fn(src_dir=tmp_path / "src", upstream_dir=upstream_dir, out_dir=out)
 
-        data = yaml.safe_load((out / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out / "reports" / "__build_report.json").read_text())
         assert "boom" in data["__build_report"]["errors"][0]["message"]
 
 
@@ -170,8 +169,8 @@ class TestDiagnosticsInjection:
         assert len(received) == 1
         assert isinstance(received[0], DiagnosticReporter)
 
-        data = yaml.safe_load(
-            (tmp_path / "output" / "reports" / "__build_report.yaml").read_text()
+        data = json.loads(
+            (tmp_path / "output" / "reports" / "__build_report.json").read_text()
         )
         assert data["__build_report"]["diagnostics"][0]["message"] == "heads up"
         assert data["__build_report"]["diagnostics"][0]["severity"] == "warning"

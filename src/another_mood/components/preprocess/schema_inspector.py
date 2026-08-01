@@ -57,15 +57,18 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
-    _write_catalog(user_entities, out_dir / schema_file.name)
+    # Append (not replace) ``.json`` so the catalog keeps naming its
+    # source schema file, as the other stages do for their sources.
+    _write_catalog(user_entities, out_dir / f"{schema_file.name}.json")
     _write_catalog(
-        prose_entities, out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name
+        prose_entities,
+        out_dir / "__builtin" / f"{_BUILTIN_CONTENTS_SCHEMA_FILE.name}.json",
     )
 
     # Emit the self-description catalog so queries can read the catalog
     # itself (e.g. ``from: __definition.entities``).  Data and schema
     # coincide here: each persisted Entity record describes one Entity.
-    _emit_definition_catalog(out_dir / "__builtin" / "__definition.yaml")
+    _emit_definition_catalog(out_dir / "__builtin" / "__definition.json")
 
 
 def _extract_from_file(

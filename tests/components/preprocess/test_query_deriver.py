@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import replace
 from datetime import date
+import json
 from pathlib import Path
 
 import pytest
@@ -53,7 +54,7 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
         *dc.flatten_tree(Query.catalog, "__definition.views"),
     ]
     save_model(
-        catalog_dir / "data" / "__builtin" / "__definition.yaml",
+        catalog_dir / "data" / "__builtin" / "__definition.json",
         {
             "__definition": {
                 "entities": [replace(e, builtin=True).to_dict() for e in entities],
@@ -61,7 +62,9 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
         },
     )
     for i, text in enumerate(extra_yaml):
-        _write(catalog_dir / "data" / f"extra_{i}.yaml", text)
+        # The catalog dir is a stage output (JSON); the fixtures stay
+        # YAML so the shape of the data remains legible here.
+        save_model(catalog_dir / "data" / f"extra_{i}.json", yaml.safe_load(text))
 
 
 class TestBuildViewSchema:
@@ -148,7 +151,7 @@ class TestDeriveQueries:
             out_dir=out,
         )
 
-        data = yaml.safe_load((out / "data" / "names.yaml.yaml").read_text())
+        data = json.loads((out / "data" / "names.yaml.json").read_text())
         assert data == {
             "__definition": {
                 "views": [
@@ -200,7 +203,7 @@ class TestDeriveQueries:
             out_dir=out,
         )
 
-        data = yaml.safe_load((out / "data" / "names.json.yaml").read_text())
+        data = json.loads((out / "data" / "names.json.json").read_text())
         assert data["__definition"]["views"] == [
             {"id": "names", "from": "items", "select": [{"item": "name", "as": "name"}]}
         ]
@@ -238,7 +241,7 @@ class TestDeriveQueries:
             out_dir=out,
         )
 
-        data = yaml.safe_load((out / "data" / "filtered.yaml.yaml").read_text())
+        data = json.loads((out / "data" / "filtered.yaml.json").read_text())
         assert data["__definition"]["views"] == [
             {
                 "id": "phase10",
@@ -369,7 +372,7 @@ class TestIdentifierDiagnostics:
         with pytest.raises(FileValidationError):
             self._run(tmp_path, query_yaml)
         # The pipeline raises before any save_model call.
-        assert not list((tmp_path / "derived" / "data").rglob("*.yaml"))
+        assert not list((tmp_path / "derived" / "data").rglob("*.json"))
 
 
 class TestSourceNameConflicts:

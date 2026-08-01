@@ -81,10 +81,10 @@ def derive_queries(
 
     for src_dir, dst_dir, files in file_groups:
         for src_file, queries in files:
-            # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
+            # Append (not replace) ``.json`` so foo.yaml / foo.yml / foo.md
             # never collide on the same destination.
             rel = src_file.relative_to(src_dir)
-            dst = dst_dir / rel.with_name(rel.name + ".yaml")
+            dst = dst_dir / rel.with_name(rel.name + ".json")
             save_model(
                 dst,
                 {

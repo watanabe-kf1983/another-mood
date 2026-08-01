@@ -1,11 +1,10 @@
 """Tests for error propagation."""
 
 import errno
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
-
-import yaml
 
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -19,15 +18,15 @@ from another_mood.components.shared.component.errors import (
 )
 
 
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
+def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
 class TestErrorPropagation:
     def test_runs_body_when_no_errors(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"items": [1, 2]})
+        _write_json(input_dir / "reports" / "data.json", {"items": [1, 2]})
 
         out_dir = tmp_path / "output"
         with error_propagation([input_dir], out_dir) as data_dirs:
@@ -39,8 +38,8 @@ class TestErrorPropagation:
 
     def test_skips_body_on_upstream_errors(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(
-            input_dir / "reports" / "err.yaml",
+        _write_json(
+            input_dir / "reports" / "err.json",
             {"__build_report": {"errors": [{"message": "upstream"}]}},
         )
 
@@ -54,25 +53,25 @@ class TestErrorPropagation:
 
     def test_catches_exception(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+        _write_json(input_dir / "reports" / "data.json", {"x": 1})
 
         out_dir = tmp_path / "output"
         with error_propagation([input_dir], out_dir) as data_dirs:
             if data_dirs is not None:
                 raise ValueError("boom")
 
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         assert "boom" in data["__build_report"]["errors"][0]["message"]
 
     def test_merges_errors_from_multiple_input_dirs(self, tmp_path: Path) -> None:
         input_a = tmp_path / "input_a"
         input_b = tmp_path / "input_b"
-        _write_yaml(
-            input_a / "reports" / "__build_report.yaml",
+        _write_json(
+            input_a / "reports" / "__build_report.json",
             {"__build_report": {"errors": [{"message": "err_a"}]}},
         )
-        _write_yaml(
-            input_b / "reports" / "__build_report.yaml",
+        _write_json(
+            input_b / "reports" / "__build_report.json",
             {"__build_report": {"errors": [{"message": "err_b"}]}},
         )
 
@@ -83,14 +82,14 @@ class TestErrorPropagation:
                 ran = True
 
         assert not ran
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         messages = [e["message"] for e in data["__build_report"]["errors"]]
         assert "err_a" in messages
         assert "err_b" in messages
 
     def test_writes_success_report_with_stage(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"items": [1, 2]})
+        _write_json(input_dir / "reports" / "data.json", {"items": [1, 2]})
 
         out_dir = tmp_path / "output"
         with patch(
@@ -104,7 +103,7 @@ class TestErrorPropagation:
                     data_dirs.out.mkdir(parents=True, exist_ok=True)
                     (data_dirs.out / "result.yaml").write_text("ok")
 
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         assert data["__build_report"]["stages"] == [
             {
                 "component": "normalize_contents",
@@ -115,7 +114,7 @@ class TestErrorPropagation:
 
     def test_writes_ng_report_with_component_on_error(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+        _write_json(input_dir / "reports" / "data.json", {"x": 1})
 
         out_dir = tmp_path / "output"
         with patch(
@@ -128,7 +127,7 @@ class TestErrorPropagation:
                 if data_dirs is not None:
                     raise ValueError("boom")
 
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         assert data["__build_report"]["stages"] == [
             {
                 "component": "normalize_contents",
@@ -140,7 +139,7 @@ class TestErrorPropagation:
 
     def test_drains_reporter_warnings_into_diagnostics(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+        _write_json(input_dir / "reports" / "data.json", {"x": 1})
 
         out_dir = tmp_path / "output"
         with patch(
@@ -160,7 +159,7 @@ class TestErrorPropagation:
                     )
                 )
 
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         assert data["__build_report"]["stages"][0]["result"] == "ok"
         assert "errors" not in data["__build_report"]
         assert data["__build_report"]["diagnostics"] == [
@@ -177,7 +176,7 @@ class TestErrorPropagation:
 
     def test_keeps_warnings_reported_before_exception(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+        _write_json(input_dir / "reports" / "data.json", {"x": 1})
 
         out_dir = tmp_path / "output"
         with error_propagation([input_dir], out_dir) as ctx:
@@ -193,13 +192,13 @@ class TestErrorPropagation:
             )
             raise ValueError("then it blew up")
 
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         messages = [d["message"] for d in data["__build_report"]["diagnostics"]]
         assert "reported first" in messages
 
     def test_catches_file_validation_error(self, tmp_path: Path) -> None:
         input_dir = tmp_path / "input"
-        _write_yaml(input_dir / "reports" / "data.yaml", {"x": 1})
+        _write_json(input_dir / "reports" / "data.json", {"x": 1})
 
         out_dir = tmp_path / "output"
         with error_propagation([input_dir], out_dir) as data_dirs:
@@ -212,7 +211,7 @@ class TestErrorPropagation:
                     ]
                 )
 
-        data = yaml.safe_load((out_dir / "reports" / "__build_report.yaml").read_text())
+        data = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         assert data["__build_report"] == {
             "errors": [
                 {"message": "FileValidationError: 1 validation error"},

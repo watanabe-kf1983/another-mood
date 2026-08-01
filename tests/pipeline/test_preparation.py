@@ -1,10 +1,10 @@
 """Tests for preparation — Hugo content sync + prepare_site Component."""
 
+import json
 import os
 from pathlib import Path
 from typing import Any
 
-import yaml
 
 from another_mood.pipeline.adapters.preparation import prepare_site, sync
 
@@ -14,9 +14,9 @@ def _write(path: Path, content: str = "# Hello\n") -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
+def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
 class TestSync:
@@ -204,8 +204,8 @@ class TestPrepareRender:
         _write(out_dir / "data" / "foo.md")
 
         # Upstream now carries an error + the build-report index.md from reconcile.
-        _write_yaml(
-            data_dir / "reports" / "__build_report.yaml",
+        _write_json(
+            data_dir / "reports" / "__build_report.json",
             {"__build_report": {"errors": [{"message": "boom"}]}},
         )
         _write(data_dir / "data" / "index.md", "# Build Failed\n\nboom\n")

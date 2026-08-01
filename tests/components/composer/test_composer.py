@@ -1,5 +1,6 @@
 """Tests for Composer — passthrough copy and query application."""
 
+import json
 from pathlib import Path
 from textwrap import dedent
 
@@ -17,11 +18,20 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _write_model(path: Path, yaml_text: str) -> None:
+    """Write an intermediate-representation file from readable YAML text.
+
+    Stage outputs are JSON; the fixtures stay YAML so the shape of the
+    data remains legible in the test source.
+    """
+    _write(path, json.dumps(yaml.safe_load(yaml_text)))
+
+
 class TestCompose:
     def test_passthrough_and_query(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents" / "data"
-        _write(
-            contents / "items.yaml",
+        _write_model(
+            contents / "items.json",
             dedent("""\
                 items:
                   - {name: a, value: 1}
@@ -32,8 +42,8 @@ class TestCompose:
         # Views dir simulates query_deriver output: views plus their
         # derived view entities under __definition.
         views = tmp_path / "views" / "data"
-        _write(
-            views / "name_query.yaml",
+        _write_model(
+            views / "name_query.json",
             dedent("""\
                 __definition:
                   views:
@@ -53,8 +63,8 @@ class TestCompose:
         )
 
         data_catalog = tmp_path / "data-catalog" / "data"
-        _write(
-            data_catalog / "schema.yaml",
+        _write_model(
+            data_catalog / "schema.json",
             dedent("""\
                 __definition:
                   entities:
@@ -82,32 +92,32 @@ class TestCompose:
             (data_catalog, "data-catalog"),
             (views, "views"),
         ):
-            for f in src.rglob("*.yaml"):
+            for f in src.rglob("*.json"):
                 dst = data_out / sub / f.relative_to(src)
                 assert dst.read_text() == f.read_text()
 
         # View result: applied records only; entities flow via the views passthrough.
-        assert yaml.safe_load(
-            (data_out / "view-results" / "names.yaml").read_text()
-        ) == {"names": [{"name": "a"}, {"name": "b"}]}
+        assert json.loads((data_out / "view-results" / "names.json").read_text()) == {
+            "names": [{"name": "a"}, {"name": "b"}]
+        }
 
     def test_rejects_reserved_query_id(self, tmp_path: Path) -> None:
-        # A query whose id is `con` would write view-results/con.yaml — a
+        # A query whose id is `con` would write view-results/con.json — a
         # Windows device name. Caught here, before the generator, since an
         # unrendered query never reaches the page-path check. Uses
         # ``compose.fn`` so the raise surfaces directly rather than as a
         # recorded build-report error.
         contents = tmp_path / "contents"
-        _write(
-            contents / "items.yaml",
+        _write_model(
+            contents / "items.json",
             dedent("""\
                 items:
                   - {name: a, value: 1}
             """),
         )
         views = tmp_path / "views"
-        _write(
-            views / "con_query.yaml",
+        _write_model(
+            views / "con_query.json",
             dedent("""\
                 __definition:
                   views:
@@ -130,7 +140,7 @@ class TestCompose:
 
     def test_empty_views_dir(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents" / "data"
-        _write(contents / "data.yaml", "key: value\n")
+        _write(contents / "data.json", '{"key": "value"}')
 
         (tmp_path / "views" / "data").mkdir(parents=True)
         (tmp_path / "data-catalog" / "data").mkdir(parents=True)
@@ -143,7 +153,9 @@ class TestCompose:
             out_dir=out,
         )
 
-        assert (out / "data" / "contents" / "data.yaml").read_text() == "key: value\n"
+        assert (
+            out / "data" / "contents" / "data.json"
+        ).read_text() == '{"key": "value"}'
 
     def test_query_reads_another_query_out_of_file_order(self, tmp_path: Path) -> None:
         """A query whose ``from:`` names another query is evaluated after
@@ -160,8 +172,8 @@ class TestCompose:
         wrapper's ``data/`` output subdir.
         """
         contents = tmp_path / "contents"
-        _write(
-            contents / "items.yaml",
+        _write_model(
+            contents / "items.json",
             dedent("""\
                 items:
                   - {name: a, value: 1}
@@ -170,8 +182,8 @@ class TestCompose:
         )
 
         views = tmp_path / "views"
-        _write(
-            views / "chain.yaml",
+        _write_model(
+            views / "chain.json",
             dedent("""\
                 __definition:
                   views:
@@ -198,10 +210,10 @@ class TestCompose:
         )
 
         results = out / "view-results"
-        assert yaml.safe_load((results / "projected.yaml").read_text()) == {
+        assert json.loads((results / "projected.json").read_text()) == {
             "projected": [{"name": "a", "value": 1}, {"name": "b", "value": 3}]
         }
-        assert yaml.safe_load((results / "high_values.yaml").read_text()) == {
+        assert json.loads((results / "high_values.json").read_text()) == {
             "high_values": [{"name": "b", "value": 3}]
         }
 
@@ -218,8 +230,8 @@ class TestCompose:
         # Two catalog entries (one user-defined, one builtin) so the
         # query result can be checked for both pass-through and filtering.
         data_catalog = tmp_path / "data-catalog" / "data"
-        _write(
-            data_catalog / "schema.yaml",
+        _write_model(
+            data_catalog / "schema.json",
             dedent("""\
                 __definition:
                   entities:
@@ -233,8 +245,8 @@ class TestCompose:
         )
 
         views = tmp_path / "views" / "data"
-        _write(
-            views / "all_entities.yaml",
+        _write_model(
+            views / "all_entities.json",
             dedent("""\
                 __definition:
                   views:
@@ -254,6 +266,6 @@ class TestCompose:
             out_dir=out,
         )
 
-        assert yaml.safe_load(
-            (out / "data" / "view-results" / "entity_ids.yaml").read_text()
+        assert json.loads(
+            (out / "data" / "view-results" / "entity_ids.json").read_text()
         ) == {"entity_ids": [{"id": "alpha"}, {"id": "beta"}]}

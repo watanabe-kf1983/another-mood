@@ -1,5 +1,6 @@
 """Tests for SchemaInspector — SchemaSchema validation and data catalog extraction."""
 
+import json
 from pathlib import Path
 from textwrap import dedent
 
@@ -752,9 +753,9 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)
 
-        out_file = out_dir / "schema.yaml"
+        out_file = out_dir / "schema.yaml.json"
         assert out_file.exists()
-        data = yaml.safe_load(out_file.read_text())
+        data = json.loads(out_file.read_text())
         entities = data["__definition"]["entities"]
         assert entities[0]["id"] == "recipes"
 
@@ -766,9 +767,9 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)
 
-        out_file = out_dir / "__builtin" / "content-schema.yaml"
+        out_file = out_dir / "__builtin" / "content-schema.yaml.json"
         assert out_file.exists()
-        data = yaml.safe_load(out_file.read_text())
+        data = json.loads(out_file.read_text())
         prose = next(e for e in data["__definition"]["entities"] if e["id"] == "prose")
         assert prose["builtin"] is True
 
@@ -785,9 +786,9 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)
 
-        out_file = out_dir / "__builtin" / "__definition.yaml"
+        out_file = out_dir / "__builtin" / "__definition.json"
         assert out_file.exists()
-        data = yaml.safe_load(out_file.read_text())
+        data = json.loads(out_file.read_text())
         entities = data["__definition"]["entities"]
         assert {e["id"] for e in entities} == {
             "__definition.entities",
@@ -831,7 +832,7 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)
 
-        data = yaml.safe_load((out_dir / "schema.yaml").read_text())
+        data = json.loads((out_dir / "schema.yaml.json").read_text())
         albums = next(
             e for e in data["__definition"]["entities"] if e["id"] == "albums"
         )

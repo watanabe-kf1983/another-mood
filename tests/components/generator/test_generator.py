@@ -1,9 +1,8 @@
 """Tests for generate and reconcile — the Markdown-producing components."""
 
+import json
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from another_mood.components.generator.generator import (
     generate,
@@ -17,16 +16,16 @@ from another_mood.components.shared.component.build_report import (
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 
 
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
-    """Write a Python dict as a YAML file."""
-    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+def _write_model(path: Path, data: dict[str, Any]) -> None:
+    """Write a Python dict as an intermediate-representation file."""
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
 class TestGenerate:
     def test_renders_normal_output(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
-        _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
+        _write_model(data_dir / "data.json", {"title": "Hello"})
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
@@ -67,8 +66,8 @@ class TestGenerate:
         # composed contents tree, keyed by the id (a contents-relative path).
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
-        _write_yaml(
-            data_dir / "data.yaml",
+        _write_model(
+            data_dir / "data.json",
             {
                 "title": "Hello",
                 "blob": [{"id": "covers/cover.png", "mime_type": "image/png"}],
@@ -108,7 +107,7 @@ class TestGenerate:
     ) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
-        _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
+        _write_model(data_dir / "data.json", {"title": "Hello"})
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
@@ -142,7 +141,7 @@ class TestGenerate:
     ) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
-        _write_yaml(data_dir / "data.yaml", {"title": "Hello"})
+        _write_model(data_dir / "data.json", {"title": "Hello"})
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
@@ -161,9 +160,7 @@ class TestGenerate:
             out_dir=out_dir,
         )
 
-        report = yaml.safe_load(
-            (out_dir / "reports" / "__build_report.yaml").read_text()
-        )
+        report = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         stages = report["__build_report"]["stages"]
         assert any(s["component"] == "generate" and s["result"] == "ng" for s in stages)
         messages = [e["message"] for e in report["__build_report"]["errors"]]
@@ -172,7 +169,7 @@ class TestGenerate:
     def test_writes_error_to_reports_on_template_error(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
-        _write_yaml(data_dir / "data.yaml", {"x": 1})
+        _write_model(data_dir / "data.json", {"x": 1})
 
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
@@ -191,9 +188,7 @@ class TestGenerate:
 
         # Generate no longer renders an error page itself; it just records
         # the failure in reports/ and Reconcile turns it into a page later.
-        report = yaml.safe_load(
-            (out_dir / "reports" / "__build_report.yaml").read_text()
-        )
+        report = json.loads((out_dir / "reports" / "__build_report.json").read_text())
         stages = report["__build_report"]["stages"]
         assert any(s["component"] == "generate" and s["result"] == "ng" for s in stages)
         assert report["__build_report"]["errors"]

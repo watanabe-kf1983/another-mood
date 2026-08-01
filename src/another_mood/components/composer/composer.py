@@ -45,6 +45,6 @@ def compose(
     for name in evaluation_order(queries):
         sources[name] = queries[name].apply([sources])
         save_model(
-            ensure_not_windows_reserved(view_results_out / f"{name}.yaml"),
+            ensure_not_windows_reserved(view_results_out / f"{name}.json"),
             {name: sources[name]},
         )
