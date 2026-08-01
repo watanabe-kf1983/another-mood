@@ -74,41 +74,6 @@ class TestResolveLayout:
             resolve_layout(tmp_path)
 
 
-class TestViewsDirAlias:
-    """``definition/queries/`` is the former name of ``definition/views/``."""
-
-    def test_reads_the_alias_when_it_is_the_only_one(self, tmp_path: Path) -> None:
-        scaffold_sources(tmp_path)
-        (tmp_path / "definition" / "views").rmdir()
-        (tmp_path / "definition" / "queries").mkdir()
-
-        layout = resolve_layout(tmp_path)
-
-        assert layout.views_dir == tmp_path / "definition" / "queries"
-
-    def test_rejects_both_at_once(self, tmp_path: Path) -> None:
-        scaffold_sources(tmp_path)
-        (tmp_path / "definition" / "queries").mkdir()
-
-        with pytest.raises(SourceLayoutError) as exc_info:
-            resolve_layout(tmp_path)
-
-        message = exc_info.value.user_error_message
-        assert "Both of these exist:" in message
-        assert str(tmp_path / "definition" / "views") in message
-        assert str(tmp_path / "definition" / "queries") in message
-
-    def test_names_views_when_neither_exists(self, tmp_path: Path) -> None:
-        """The missing-path report points at the current name, not the alias."""
-        scaffold_sources(tmp_path)
-        (tmp_path / "definition" / "views").rmdir()
-
-        with pytest.raises(SourceLayoutError, match="views_dir") as exc_info:
-            resolve_layout(tmp_path)
-
-        assert str(tmp_path / "definition" / "views") in str(exc_info.value)
-
-
 class TestUnknownDefinitionEntries:
     def test_rejects_unknown_file(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)

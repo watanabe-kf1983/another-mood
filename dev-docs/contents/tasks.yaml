@@ -321,11 +321,8 @@ categories:
         done: true
       G12:
         title: "queries/ エイリアス廃止"
-        note: >-
-          稼働プロジェクトの移行完了後に queries/ の読み込みを撤去する。
-          公開後の語彙に遺産を持ち込まないため、Q1 (PyPI 公開) 前に必ず畳む。
-          前提 G11。
         phase: 14
+        done: true
 
   H:
     title: バイナリファイルの取り扱い
