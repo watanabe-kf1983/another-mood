@@ -14,15 +14,33 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 ### シリアライズ形式
 
-コンポーネント間で YAML ファイルとしてデータを受け渡す際のシリアライズ仕様は **YAML 1.2** とする。
+このプロジェクトが読み書きするファイルは 3 系統あり、系統ごとにシリアライズ形式が決まる。
 
-理由:
+| 系統 | 例 | 形式 | 読み書き |
+|---|---|---|---|
+| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON | `parse_mapping` |
+| (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML 1.2 | `load_schema` |
+| (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | JSON | `load_model` / `save_model` |
+
+**YAML を 1.2 とする理由** ((1) (2) に適用):
 
 - ブール値が `true`/`false` のみに限定される。1.1 で問題になる `yes`/`no`/`on`/`off` の意図せぬブール化（通称 Norway 問題: `country: NO` がブール `False` になる）を回避できる。
-- 全ての JSON ドキュメントが valid YAML 1.2 ドキュメントとなる。テストフィクスチャ等で JSON 互換の YAML を扱いやすい。
+- 全ての JSON ドキュメントが valid YAML 1.2 ドキュメントとなる。(1) で JSON 入力を受けるのに追加の parser を要さない。
 - ruamel.yaml の既定が 1.2。`version` 指定が不要。
 
-パイプライン内部の中間ファイルは外部ツールから直接読まれない前提なので、PyYAML の 1.1 既定との互換性は要件にしない。
+**中間表現を JSON とする理由** ((3) に適用):
+
+ビルド時間のうち ruamel.yaml が支配的だったため。差し替え前の `mood build dev-docs` は 2.67 s、うち中間表現の read/write が cProfile 下で 3.3 s（総 6.07 s の 54%）を占めていた。JSON へ差し替えた後は 1.79 s。tmp 配下は外部契約ではないので、変更は内部に閉じる。
+
+PyYAML の CSafeLoader/Dumper (libyaml) なら YAML のまま 15 倍速くなるが採らない。PyYAML は YAML 1.1 なので、上記の 1.2 を選んだ理由がそのまま失われる。JSON はその曖昧さが構造的に無い。pickle / marshal も計測したが load はほぼ同速（差は 1 ms 未満）で、可読性を失うだけ。
+
+代償は複数行文字列の可読性。YAML の literal block scalar に相当する規約が JSON に無いため、`\n` エスケープの 1 行になり post-mortem 時に読みにくい。`indent=2` と `ensure_ascii=False` で構造と非 ASCII 文字の可読性は保つ。
+
+中間表現に非 JSON 値（日付等）が到達すると `json.dumps` が `TypeError` を投げる。到達経路はスキーマ言語の側で塞いである（[schema-spec.md](../50-normalizer/20-schema-spec.md#型の付かない領域を残さない)）。
+
+#### ファイル名の規約
+
+中間表現のファイル名は、元ソースの名前に `.json` を **追記** する（置換しない）。`foo.yaml` / `foo.yml` / `foo.json` / `foo.md` が同じ出力先に衝突しないようにするため。データカタログもこれに倣い、`schema.yaml` から `schema.yaml.json` を書く。
 
 ### 配列内オブジェクトのフィールド統一
 
@@ -50,51 +68,6 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 実装は `json_data_model.py` の `deep_merge` を参照。
 
 ## Proposals
-
-### ステージ間中間表現を JSON へ (M10)
-
-前提の [M11](node:/tasks/M/tasks/M11)（入力形式に JSON を追加）は完了済み。[D11](node:/tasks/D/tasks/D11)（非 JSON 値の侵入経路を塞ぐ）は前提ではなかったが、こちらも完了しているので、中間表現に非 JSON 値が到達しえない状態から着手できる。
-
-#### 対象範囲
-
-このプロジェクトの YAML は 3 系統ある。JSON へ差し替えるのは (3) のみ。
-
-| 系統 | 例 | 扱い |
-|---|---|---|
-| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | 現状のまま（`parse_mapping`。位置情報タグ付けが要る） |
-| (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML のまま（手書き・コメント付き。5 ファイル） |
-| (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | **JSON へ** |
-
-#### `json_data_model` の API 分割
-
-現在 `load_model` が (2) と (3) の両方を担っている。形式が分かれるので関数も分ける:
-
-- `load_model(*paths)` / `save_model(path, data)` — 中間表現（JSON）
-- `load_schema(*paths)` — JSON Schema ドキュメント（YAML）の読み込みと deep-merge。呼び出しは 5 箇所（schema-schema / view-schema / manifest-schema / reports-schema / content-schema + ユーザ schema.yaml のマージ）
-
-シリアライズ設定は `json.dumps(..., ensure_ascii=False, indent=2)`。`_drop_nones`（nullable は項目自体を省略）は維持。literal block scalar の規約は JSON に存在しないので削除する — 複数行文字列は `\n` エスケープの 1 行になり、post-mortem 時の可読性が下がるのが主な代償。
-
-#### 着手時の確認事項への回答
-
-- **(a) 正規化は temp へ書く前に検証しているか** — している。`iter_normalized` は `check(src_dir, schema)` を全ファイル分先に回してから yield するので、`json.dumps` が先に落ちて診断が失われる経路はない
-- **(b) スキーマ内の自由形式領域に日付が書けるか** — 書けない。D11 でスキーマ言語から型無制約の領域を無くした（[schema-spec](../50-normalizer/20-schema-spec.md#型の付かない領域を残さない)）ので、`inspect_schema` の `json.dumps` に非 JSON 値が届く経路は残っていない
-
-#### 計測 (baseline)
-
-dev-docs の `mood build` 実測 2.52 / 2.64 / 2.66 s。cProfile 下（総 6.07 s）の内訳:
-
-| 経路 | cumtime | 呼び出し |
-|---|---|---|
-| 中間表現 read（`_load_mapping`） | 2.39 s | 120 |
-| 中間表現 write（`save_model`） | 0.90 s | 60 |
-| ユーザ入力 read（`parse_mapping`） | 0.52 s | 13 |
-
-差し替え対象は上 2 行の 3.3 s（プロファイラ倍率込みで総時間の 54%）。実測は build report の `StageResult.timestamp` 差分でも取れる。
-
-#### コミット粒度
-
-1. `load_model` / `load_schema` の分割（YAML のまま、振る舞い不変の純リファクタ）
-2. 中間表現を JSON へ（`load_model` / `save_model` + テスト追随 + 設計文書同期 + 計測結果）
 
 ### 未決事項
 
