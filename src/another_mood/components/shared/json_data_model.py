@@ -1,12 +1,18 @@
 """JSON data model — load and save the project's YAML representation.
 
-Reads use ``load_model`` (deep-merge across multiple files / dirs).
-Writes use ``save_model`` (single-file emit applying the project's
-serialization conventions: YAML 1.2, literal-block multiline strings,
-None-key elision).
+Two readers, one per kind of document:
+
+* ``load_model`` — the pipeline's stage-to-stage intermediate
+  representation, read back with ``save_model`` as its writer.
+* ``load_schema`` — JSON Schema documents (the built-in schema
+  resources and the user's schema file).
+
+Both deep-merge across multiple files / dirs.  ``save_model`` is a
+single-file emit applying the project's serialization conventions:
+YAML 1.2, literal-block multiline strings, None-key elision.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from functools import reduce
 from pathlib import Path
 from typing import Any, cast
@@ -26,13 +32,21 @@ type KeyPath = tuple[str, ...]
 
 
 def load_model(*paths: Path) -> dict[str, Any]:
-    """Load YAML files from each path and deep-merge into a single dict.
+    """Load intermediate-representation files and deep-merge into one dict.
 
     Files are loaded in path-sorted order so the merged result is
     deterministic regardless of filesystem iteration order.
     """
-    files = sorted(collect_files(*paths))
-    return reduce(deep_merge, (_load_mapping(f) for f in files), {})
+    return _load_merged(FileType.YAML, paths)
+
+
+def load_schema(*paths: Path) -> dict[str, Any]:
+    """Load JSON Schema documents and deep-merge into a single dict.
+
+    Schema documents are hand-written YAML: the built-in resources
+    under ``resources/schemas/`` and the user's schema file.
+    """
+    return _load_merged(FileType.YAML, paths)
 
 
 def collect_files(*paths: Path) -> list[Path]:
@@ -50,14 +64,22 @@ def collect_files(*paths: Path) -> list[Path]:
     return files
 
 
-def _load_mapping(path: Path) -> dict[str, Any]:
-    """Parse path as a YAML 1.2 mapping; return {} for non-YAML files.
+def _load_merged(file_type: FileType, paths: Sequence[Path]) -> dict[str, Any]:
+    files = sorted(collect_files(*paths))
+    return reduce(deep_merge, (_load_mapping(file_type, f) for f in files), {})
+
+
+def _load_mapping(file_type: FileType, path: Path) -> dict[str, Any]:
+    """Parse path as a YAML 1.2 mapping; return {} on a file-type mismatch.
+
+    A directory can hold files of several types (blob bytes beside
+    records, say), so a mismatch is skipped rather than rejected.
 
     A fresh YAML instance is created per call (see ``save_model`` for
     the thread-safety rationale).  ``typ='safe'`` returns plain Python
     types (dict / list / scalar) — round-trip mode is not needed here.
     """
-    if FileType.YAML.match(path):
+    if file_type.match(path):
         loaded: object = YAML(typ="safe").load(path.read_text(encoding="utf-8"))  # type: ignore[no-untyped-call]
         if not isinstance(loaded, dict):
             raise ValueError(

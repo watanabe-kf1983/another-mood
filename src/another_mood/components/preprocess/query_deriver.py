@@ -25,7 +25,11 @@ from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
-from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.json_data_model import (
+    load_model,
+    load_schema,
+    save_model,
+)
 from another_mood.components.shared.query import (
     Query,
     QueryDeriveError,
@@ -98,7 +102,7 @@ def derive_queries(
 
 def build_view_schema() -> Mapping[str, object]:
     """Build a validation/normalization schema for view files."""
-    return load_model(_VIEW_SCHEMA_FILE)
+    return load_schema(_VIEW_SCHEMA_FILE)
 
 
 def _iter_top_level(

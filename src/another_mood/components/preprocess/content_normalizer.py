@@ -30,7 +30,11 @@ from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     is_blob_file,
 )
-from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.json_data_model import (
+    load_model,
+    load_schema,
+    save_model,
+)
 
 _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "content-schema.yaml")
@@ -80,7 +84,7 @@ def build_contents_schema(
     `properties` level so that each top-level key in a content file is
     validated against the matching entry.
     """
-    return load_model(_BUILTIN_CONTENTS_SCHEMA_FILE, schema_file)
+    return load_schema(_BUILTIN_CONTENTS_SCHEMA_FILE, schema_file)
 
 
 def _mirror_blob_bytes(src_file: Path, data: object, dest: Path, prev: Path) -> None:

@@ -27,7 +27,7 @@ from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
-from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.json_data_model import load_schema, save_model
 from another_mood.components.shared.query import Query
 
 
@@ -129,7 +129,7 @@ def extract_entities(
 
 def build_schema_validator() -> Validator:
     """Build a Validator for the user schema file (against built-in SchemaSchema)."""
-    return Validator(load_model(_SCHEMA_SCHEMA_FILE))
+    return Validator(load_schema(_SCHEMA_SCHEMA_FILE))
 
 
 def check_xref_coherence(

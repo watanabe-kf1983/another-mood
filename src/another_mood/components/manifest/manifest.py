@@ -12,7 +12,7 @@ from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_schema
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -173,6 +173,6 @@ def _gate_version(data: Mapping[str, object], manifest_file: Path) -> None:
 
 
 def _validate(data: Mapping[str, object], manifest_file: Path) -> None:
-    validator = Validator(load_model(_MANIFEST_SCHEMA_FILE))
+    validator = Validator(load_schema(_MANIFEST_SCHEMA_FILE))
     if issues := validator.validate(data):
         raise ManifestError([issue.at_file(manifest_file) for issue in issues])

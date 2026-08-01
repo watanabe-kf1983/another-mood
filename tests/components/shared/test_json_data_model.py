@@ -10,6 +10,7 @@ from another_mood.components.shared.json_data_model import (
     collect_files,
     deep_merge,
     load_model,
+    load_schema,
     pluck,
     save_model,
 )
@@ -141,6 +142,34 @@ class TestLoadModel:
 
         with pytest.raises(ValueError, match="Expected a YAML mapping"):
             load_model(f)
+
+
+class TestLoadSchema:
+    """load_schema: read each YAML schema document and deep-merge them."""
+
+    def test_no_paths_returns_empty(self) -> None:
+        assert load_schema() == {}
+
+    def test_merges_builtin_and_user_schema(self, tmp_path: Path) -> None:
+        builtin = tmp_path / "content-schema.yaml"
+        user = tmp_path / "schema.yaml"
+        _write_yaml(builtin, {"properties": {"prose": {"type": "array"}}})
+        _write_yaml(user, {"properties": {"users": {"type": "array"}}})
+
+        assert load_schema(builtin, user) == {
+            "properties": {
+                "prose": {"type": "array"},
+                "users": {"type": "array"},
+            }
+        }
+
+    def test_missing_path_skipped(self, tmp_path: Path) -> None:
+        present = tmp_path / "content-schema.yaml"
+        _write_yaml(present, {"properties": {"prose": {"type": "array"}}})
+
+        assert load_schema(present, tmp_path / "absent.yaml") == {
+            "properties": {"prose": {"type": "array"}}
+        }
 
 
 class TestSaveModel:
