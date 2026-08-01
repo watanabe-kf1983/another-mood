@@ -53,7 +53,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 ### ステージ間中間表現を JSON へ (M10)
 
-前提タスク: [M11](node:/tasks/M/tasks/M11)（入力形式に JSON を追加）が先。理由は「blob バイトとの構造的衝突」節。[D11](node:/tasks/D/tasks/D11)（非 JSON 値の侵入経路を塞ぐ）は前提ではないが、先に済ませると中間表現に非 JSON 値が到達しえない状態から着手できる。
+前提タスク: [M11](node:/tasks/M/tasks/M11)（入力形式に JSON を追加）が先。理由は「blob バイトとの構造的衝突」節。[D11](node:/tasks/D/tasks/D11)（非 JSON 値の侵入経路を塞ぐ）は前提ではなかったが完了済みなので、中間表現に非 JSON 値が到達しえない状態から着手できる。
 
 #### 対象範囲
 
@@ -85,7 +85,7 @@ M11 で `.json` を入力データ形式として受理し blob から除外す�
 #### 着手時の確認事項への回答
 
 - **(a) 正規化は temp へ書く前に検証しているか** — している。`iter_normalized` は `check(src_dir, schema)` を全ファイル分先に回してから yield するので、`json.dumps` が先に落ちて診断が失われる経路はない
-- **(b) スキーマ内の自由形式領域に日付が書けるか** — 書ける。詳細と対処は [schema-spec の D11 提案](../50-normalizer/20-schema-spec.md#非-json-値の侵入経路を塞ぐ-d11)。なお **現状すでにビルドが落ちる**（generator の `ensure_inert` で `TypeError: Non-inert value of type 'date'`）ので、JSON 化しても退行ではない — 落ちる場所が `inspect_schema` の `json.dumps` へ前倒しになるだけ。よって D11 は M10 の前提ではない
+- **(b) スキーマ内の自由形式領域に日付が書けるか** — 書けない。D11 でスキーマ言語から型無制約の領域を無くした（[schema-spec](../50-normalizer/20-schema-spec.md#型の付かない領域を残さない)）ので、`inspect_schema` の `json.dumps` に非 JSON 値が届く経路は残っていない
 
 #### 計測 (baseline)
 
