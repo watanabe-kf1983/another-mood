@@ -27,7 +27,7 @@ from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
-from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.json_data_model import load_schema, save_model
 from another_mood.components.shared.query import Query
 
 
@@ -57,15 +57,18 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
-    _write_catalog(user_entities, out_dir / schema_file.name)
+    # Append (not replace) ``.json`` so the catalog keeps naming its
+    # source schema file, as the other stages do for their sources.
+    _write_catalog(user_entities, out_dir / f"{schema_file.name}.json")
     _write_catalog(
-        prose_entities, out_dir / "__builtin" / _BUILTIN_CONTENTS_SCHEMA_FILE.name
+        prose_entities,
+        out_dir / "__builtin" / f"{_BUILTIN_CONTENTS_SCHEMA_FILE.name}.json",
     )
 
     # Emit the self-description catalog so queries can read the catalog
     # itself (e.g. ``from: __definition.entities``).  Data and schema
     # coincide here: each persisted Entity record describes one Entity.
-    _emit_definition_catalog(out_dir / "__builtin" / "__definition.yaml")
+    _emit_definition_catalog(out_dir / "__builtin" / "__definition.json")
 
 
 def _extract_from_file(
@@ -129,7 +132,7 @@ def extract_entities(
 
 def build_schema_validator() -> Validator:
     """Build a Validator for the user schema file (against built-in SchemaSchema)."""
-    return Validator(load_model(_SCHEMA_SCHEMA_FILE))
+    return Validator(load_schema(_SCHEMA_SCHEMA_FILE))
 
 
 def check_xref_coherence(

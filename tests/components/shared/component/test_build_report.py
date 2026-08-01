@@ -1,8 +1,7 @@
 """Tests for BuildReport.collect — including DAG-convergence deduplication."""
 
+import json
 from pathlib import Path
-
-import yaml
 
 from another_mood.components.shared.component.build_report import (
     BuildReport,
@@ -14,9 +13,7 @@ from another_mood.components.shared.user_source.diagnostic import DiagnosticEntr
 
 def _write_report(dir_: Path, content: dict[str, object]) -> None:
     dir_.mkdir(parents=True, exist_ok=True)
-    (dir_ / "__build_report.yaml").write_text(
-        yaml.safe_dump({"__build_report": content})
-    )
+    (dir_ / "__build_report.json").write_text(json.dumps({"__build_report": content}))
 
 
 class TestCollect:

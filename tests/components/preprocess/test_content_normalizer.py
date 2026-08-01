@@ -2,11 +2,11 @@
 
 import os
 from datetime import date
+import json
 from pathlib import Path
 from textwrap import dedent
 
 import pytest
-import yaml
 
 from another_mood.components.preprocess.content_normalizer import (
     build_contents_schema,
@@ -133,7 +133,7 @@ class TestNormalizeContents:
             data_catalog_dir=catalog_dir,
         )
 
-        assert yaml.safe_load((out / "data" / "data.yaml.yaml").read_text()) == {
+        assert json.loads((out / "data" / "data.yaml.json").read_text()) == {
             "items": [{"name": "a"}]
         }
 
@@ -163,11 +163,11 @@ class TestNormalizeContents:
             data_catalog_dir=catalog_dir,
         )
 
-        assert yaml.safe_load((out / "data" / "data.json.yaml").read_text()) == {
+        assert json.loads((out / "data" / "data.json.json").read_text()) == {
             "items": [{"name": "a"}]
         }
-        # No byte mirror beside the record: a .json source is not a blob,
-        # so nothing lands where M10's intermediate .json files will go.
+        # The record lands at data.json.json; nothing is mirrored at
+        # data.json, because a .json source is a record, not a blob.
         assert not (out / "data" / "data.json").exists()
 
 
@@ -244,7 +244,7 @@ def test_normalize_contents_reports_dangling_fk_as_warning(tmp_path: Path) -> No
         ),
     ]
     # The normalized data still lands on disk — warnings do not stop the stage.
-    assert (out / "data.yaml.yaml").exists()
+    assert (out / "data.yaml.json").exists()
 
 
 # x-ref schema for the blob FK integration test: albums.jacket → blob.
@@ -314,7 +314,7 @@ def test_blob_file_becomes_record_and_is_fk_target(tmp_path: Path) -> None:
         ),
     ]
     # The blob's metadata record lands on disk.
-    assert yaml.safe_load((out / "covers" / "day1.png.yaml").read_text()) == {
+    assert json.loads((out / "covers" / "day1.png.json").read_text()) == {
         "blob": [{"id": "covers/day1.png", "mime_type": "image/png"}]
     }
 

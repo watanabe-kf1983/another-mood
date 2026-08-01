@@ -1,18 +1,24 @@
-"""JSON data model — load and save the project's YAML representation.
+"""JSON data model — load and save the project's serialized data.
 
-Reads use ``load_model`` (deep-merge across multiple files / dirs).
-Writes use ``save_model`` (single-file emit applying the project's
-serialization conventions: YAML 1.2, literal-block multiline strings,
-None-key elision).
+Two readers, one per kind of document:
+
+* ``load_model`` — the pipeline's stage-to-stage intermediate
+  representation, serialized as JSON with ``save_model`` as its writer.
+* ``load_schema`` — JSON Schema documents (the built-in schema
+  resources and the user's schema file), hand-written as YAML 1.2.
+
+Both deep-merge across multiple files / dirs.  ``save_model`` is a
+single-file emit applying the project's serialization conventions:
+JSON, None-key elision.
 """
 
-from collections.abc import Mapping
+import json
+from collections.abc import Mapping, Sequence
 from functools import reduce
 from pathlib import Path
 from typing import Any, cast
 
 from ruamel.yaml import YAML
-from ruamel.yaml.representer import RoundTripRepresenter
 
 from another_mood.components.shared.file_type import FileType
 
@@ -26,13 +32,21 @@ type KeyPath = tuple[str, ...]
 
 
 def load_model(*paths: Path) -> dict[str, Any]:
-    """Load YAML files from each path and deep-merge into a single dict.
+    """Load intermediate-representation files and deep-merge into one dict.
 
     Files are loaded in path-sorted order so the merged result is
     deterministic regardless of filesystem iteration order.
     """
-    files = sorted(collect_files(*paths))
-    return reduce(deep_merge, (_load_mapping(f) for f in files), {})
+    return _load_merged(FileType.JSON, paths)
+
+
+def load_schema(*paths: Path) -> dict[str, Any]:
+    """Load JSON Schema documents and deep-merge into a single dict.
+
+    Schema documents are hand-written YAML: the built-in resources
+    under ``resources/schemas/`` and the user's schema file.
+    """
+    return _load_merged(FileType.YAML, paths)
 
 
 def collect_files(*paths: Path) -> list[Path]:
@@ -50,21 +64,41 @@ def collect_files(*paths: Path) -> list[Path]:
     return files
 
 
-def _load_mapping(path: Path) -> dict[str, Any]:
-    """Parse path as a YAML 1.2 mapping; return {} for non-YAML files.
+def _load_merged(file_type: FileType, paths: Sequence[Path]) -> dict[str, Any]:
+    files = sorted(collect_files(*paths))
+    return reduce(deep_merge, (_load_mapping(file_type, f) for f in files), {})
 
-    A fresh YAML instance is created per call (see ``save_model`` for
-    the thread-safety rationale).  ``typ='safe'`` returns plain Python
-    types (dict / list / scalar) — round-trip mode is not needed here.
+
+def _load_mapping(file_type: FileType, path: Path) -> dict[str, Any]:
+    """Parse path as a mapping; return {} on a file-type mismatch.
+
+    A directory can hold files of several types (blob bytes beside
+    records, say), so a mismatch is skipped rather than rejected.
     """
-    if FileType.YAML.match(path):
-        loaded: object = YAML(typ="safe").load(path.read_text(encoding="utf-8"))  # type: ignore[no-untyped-call]
+    if file_type.match(path):
+        loaded = _parse(file_type, path.read_text(encoding="utf-8"))
         if not isinstance(loaded, dict):
             raise ValueError(
-                f"Expected a YAML mapping in {path}, got {type(loaded).__name__}"
+                f"Expected a {file_type.name} mapping in {path}, "
+                f"got {type(loaded).__name__}"
             )
         return loaded  # type: ignore[return-value]
     return {}
+
+
+def _parse(file_type: FileType, text: str) -> object:
+    """Parse text per file type into plain Python types.
+
+    A fresh ruamel YAML instance is created per call because ``YAML()``
+    is not thread-safe — its internal state is shared across calls, and
+    concurrent use from different pipeline-stage watcher threads
+    corrupts it.  ``typ='safe'`` returns plain Python types (dict /
+    list / scalar) — round-trip mode is not needed here.
+    """
+    if file_type is FileType.JSON:
+        return json.loads(text)
+    else:
+        return YAML(typ="safe").load(text)  # type: ignore[no-untyped-call]
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -152,46 +186,28 @@ def match_key(record: Mapping[str, object], key_path: str) -> tuple[str, object]
 
 
 def save_model(path: Path, data: object) -> None:
-    """Write `data` as YAML 1.2 to `path`.
+    """Write `data` as JSON to `path`.
 
     Applies the project's serialization conventions:
 
-    * Multiline strings render as literal block scalars (|).
     * None-valued keys are dropped recursively per the
       "nullable は項目自体を省略する" rule (json-data-model.md):
       leaving nulls in the output makes Jinja2 templates render
       the string "None".
+    * ``ensure_ascii=False`` and a 2-space indent keep the file
+      readable when it is inspected post-mortem.
 
-    A fresh ruamel YAML instance is created per call because
-    ``YAML()`` is not thread-safe — its emitter/serializer internal
-    state is shared across calls, and concurrent dumps from different
-    pipeline-stage watcher threads corrupt each other's state (e.g.
-    "ValueError: I/O operation on closed file").
+    Values outside the JSON data model raise ``TypeError`` here; the
+    pipeline is expected to have rejected them upstream.
     """
-    yaml_writer = YAML()
-    yaml_writer.Representer = _LiteralStrRepresenter
     path.parent.mkdir(parents=True, exist_ok=True)
     # Replace, never truncate in place: in a persistent stage dir the old
     # inode may be hardlink-shared with downstream copies (write-once rule).
     path.unlink(missing_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        yaml_writer.dump(_drop_nones(data), f)  # type: ignore[reportUnknownMemberType]
-
-
-class _LiteralStrRepresenter(RoundTripRepresenter):
-    """Represent multiline strings as literal block scalars (|)."""
-
-    def represent_str(self, data: str) -> object:
-        if "\n" in data:
-            return self.represent_scalar("tag:yaml.org,2002:str", data, style="|")  # type: ignore[reportUnknownMemberType]
-        return super().represent_str(data)  # type: ignore[reportUnknownMemberType]
-
-
-# Exact-type registration overrides RoundTripRepresenter's default str
-# representer; multi-registration additionally covers str subclasses
-# (e.g. UserStr from preprocess.validator) via MRO lookup.
-_LiteralStrRepresenter.add_representer(str, _LiteralStrRepresenter.represent_str)  # type: ignore[reportUnknownMemberType]
-_LiteralStrRepresenter.add_multi_representer(str, _LiteralStrRepresenter.represent_str)  # type: ignore[reportUnknownMemberType]
+    path.write_text(
+        json.dumps(_drop_nones(data), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def _drop_nones(d: Any) -> Any:  # noqa: ANN401

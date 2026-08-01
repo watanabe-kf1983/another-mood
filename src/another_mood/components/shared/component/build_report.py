@@ -15,7 +15,7 @@ _REPORT_KEY = "__build_report"
 _STAGES_KEY = "stages"
 _ERRORS_KEY = "errors"
 _DIAGNOSTICS_KEY = "diagnostics"
-_REPORT_FILENAME = f"{_REPORT_KEY}.yaml"
+_REPORT_FILENAME = f"{_REPORT_KEY}.json"
 
 
 # -- Typed entries -----------------------------------------------------------
@@ -97,7 +97,7 @@ class BuildReport:
 
     @classmethod
     def from_data(cls, data: object) -> "BuildReport":
-        """Parse the dict (as read from YAML) into a typed BuildReport."""
+        """Parse the dict (as read from JSON) into a typed BuildReport."""
         if not isinstance(data, Mapping):
             return cls()
         raw = cast(Mapping[str, object], data)
@@ -145,7 +145,7 @@ class BuildReport:
         )
 
     def to_data(self) -> Mapping[str, object]:
-        """Serialize to the dict form used by __build_report.yaml."""
+        """Serialize to the dict form used by __build_report.json."""
         result: dict[str, object] = {}
         if self.stages:
             result[_STAGES_KEY] = [s.to_data() for s in self.stages]
@@ -156,7 +156,7 @@ class BuildReport:
         return result
 
     def write(self, out_dir: Path) -> None:
-        """Write __build_report.yaml to out_dir, unless empty."""
+        """Write __build_report.json to out_dir, unless empty."""
         if self.is_empty():
             return
         out_dir.mkdir(parents=True, exist_ok=True)

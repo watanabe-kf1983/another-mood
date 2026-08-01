@@ -1,5 +1,7 @@
-"""Tests for JSON data model — deep merge and YAML loading."""
+"""Tests for JSON data model — deep merge, JSON and YAML loading."""
 
+import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +12,7 @@ from another_mood.components.shared.json_data_model import (
     collect_files,
     deep_merge,
     load_model,
+    load_schema,
     pluck,
     save_model,
 )
@@ -69,6 +72,11 @@ def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
 
+def _write_json(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
 class TestCollectFiles:
     """collect_files: expand path arguments into a list of files (order unspecified)."""
 
@@ -109,16 +117,16 @@ class TestCollectFiles:
 
 
 class TestLoadModel:
-    """load_model: read each YAML mapping and deep-merge them into a single dict."""
+    """load_model: read each JSON mapping and deep-merge them into a single dict."""
 
     def test_no_paths_returns_empty(self) -> None:
         assert load_model() == {}
 
-    def test_loads_and_merges_yaml_files(self, tmp_path: Path) -> None:
-        f1 = tmp_path / "builtin.yaml"
-        f2 = tmp_path / "user.yaml"
-        _write_yaml(f1, {"properties": {"prose": {"type": "array"}}})
-        _write_yaml(f2, {"properties": {"users": {"type": "object"}}})
+    def test_loads_and_merges_json_files(self, tmp_path: Path) -> None:
+        f1 = tmp_path / "builtin.json"
+        f2 = tmp_path / "user.json"
+        _write_json(f1, {"properties": {"prose": {"type": "array"}}})
+        _write_json(f2, {"properties": {"users": {"type": "object"}}})
 
         assert load_model(f1, f2) == {
             "properties": {
@@ -127,51 +135,83 @@ class TestLoadModel:
             }
         }
 
-    def test_non_yaml_files_ignored(self, tmp_path: Path) -> None:
+    def test_non_json_files_ignored(self, tmp_path: Path) -> None:
+        # A stage dir holds blob bytes beside the records; only the
+        # records are part of the model.
         d = tmp_path / "d"
         d.mkdir()
-        _write_yaml(d / "data.yaml", {"key": "value"})
-        (d / "readme.md").write_text("# md")
+        _write_json(d / "data.json", {"key": "value"})
+        (d / "photo.png").write_bytes(b"\x89PNG")
+        _write_yaml(d / "leftover.yaml", {"key": "stale"})
 
         assert load_model(d) == {"key": "value"}
 
-    def test_non_mapping_yaml_raises(self, tmp_path: Path) -> None:
-        f = tmp_path / "list.yaml"
-        f.write_text("- a\n- b\n")
+    def test_non_mapping_json_raises(self, tmp_path: Path) -> None:
+        f = tmp_path / "list.json"
+        f.write_text('["a", "b"]')
 
-        with pytest.raises(ValueError, match="Expected a YAML mapping"):
+        with pytest.raises(ValueError, match="Expected a JSON mapping"):
             load_model(f)
 
 
+class TestLoadSchema:
+    """load_schema: read each YAML schema document and deep-merge them."""
+
+    def test_no_paths_returns_empty(self) -> None:
+        assert load_schema() == {}
+
+    def test_merges_builtin_and_user_schema(self, tmp_path: Path) -> None:
+        builtin = tmp_path / "content-schema.yaml"
+        user = tmp_path / "schema.yaml"
+        _write_yaml(builtin, {"properties": {"prose": {"type": "array"}}})
+        _write_yaml(user, {"properties": {"users": {"type": "array"}}})
+
+        assert load_schema(builtin, user) == {
+            "properties": {
+                "prose": {"type": "array"},
+                "users": {"type": "array"},
+            }
+        }
+
+    def test_missing_path_skipped(self, tmp_path: Path) -> None:
+        present = tmp_path / "content-schema.yaml"
+        _write_yaml(present, {"properties": {"prose": {"type": "array"}}})
+
+        assert load_schema(present, tmp_path / "absent.yaml") == {
+            "properties": {"prose": {"type": "array"}}
+        }
+
+
 class TestSaveModel:
-    """save_model: write a YAML 1.2 file with project serialization conventions."""
+    """save_model: write a JSON file with project serialization conventions."""
 
-    def test_multiline_string_uses_literal_block(self, tmp_path: Path) -> None:
-        out = tmp_path / "out.yaml"
-        save_model(out, {"body": "line1\nline2\n"})
-        text = out.read_text()
-        assert "|\n" in text
-        assert yaml.safe_load(text)["body"] == "line1\nline2\n"
+    def test_round_trips_through_load_model(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.json"
+        save_model(out, {"body": "line1\nline2\n", "n": 1, "flag": True})
+        assert load_model(out) == {"body": "line1\nline2\n", "n": 1, "flag": True}
 
-    def test_single_line_string_not_block(self, tmp_path: Path) -> None:
-        out = tmp_path / "out.yaml"
-        save_model(out, {"title": "Hello"})
-        assert "|\n" not in out.read_text()
+    def test_non_ascii_kept_readable(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.json"
+        save_model(out, {"title": "日本語"})
+        assert "日本語" in out.read_text(encoding="utf-8")
 
-    def test_no_yaml_directive(self, tmp_path: Path) -> None:
-        # YAML 1.2 is ruamel.yaml's default; emitting a %YAML directive is
-        # unnecessary and would just clutter pipeline-internal files.
-        out = tmp_path / "out.yaml"
-        save_model(out, {"x": 1})
-        assert "%YAML" not in out.read_text()
+    def test_indented_for_post_mortem_reading(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.json"
+        save_model(out, {"outer": {"inner": 1}})
+        assert '\n  "outer": {\n    "inner": 1\n  }' in out.read_text()
 
     def test_drops_none_keys_recursively(self, tmp_path: Path) -> None:
-        out = tmp_path / "out.yaml"
+        out = tmp_path / "out.json"
         save_model(out, {"keep": 1, "drop": None, "nested": {"keep": 2, "drop": None}})
-        assert yaml.safe_load(out.read_text()) == {
+        assert json.loads(out.read_text()) == {
             "keep": 1,
             "nested": {"keep": 2},
         }
+
+    def test_value_outside_the_json_data_model_raises(self, tmp_path: Path) -> None:
+        out = tmp_path / "out.json"
+        with pytest.raises(TypeError):
+            save_model(out, {"when": date(2026, 8, 1)})
 
 
 class TestPluck:

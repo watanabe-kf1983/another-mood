@@ -448,24 +448,10 @@ categories:
       M10:
         title: ステージ間中間表現を YAML から JSON へ差し替え (ビルド時間短縮)
         note: >-
-          dev-docs のビルド 2.15s のうち ruamel.yaml が 0.84s (39%) を占める
-          (load 0.59s/131 回、dump 0.25s/59 回)。同じデータで json は load 0.5ms /
-          dump 0.8ms と 300 倍以上速く、差し替えれば大半が消える見込み。
-          temp dir は外部契約ではないので変更は閉じている。
-          PyYAML の CSafeLoader/Dumper (libyaml) なら YAML のまま 15 倍速くなるが
-          採れない — PyYAML は YAML 1.1 で、yes/no の boolean 化や 8 進リテラルなど
-          利用者データの解釈が変わる (ruamel を選び YAML 1.2 と明記しているのは
-          まさにそのため)。その点 JSON は 1.1/1.2 の曖昧さが構造的に無い。
-          pickle/marshal も測ったが load はほぼ同速で差は 1ms 未満。可読性を失うだけ
-          (marshal は版間互換を保証せず、watch の prev_out_dir 再利用と相性が悪い)。
-          転送層は非対象 — transfer_tree はハードリンクで 874 回 21ms、実質タダ。
-          計測は build report の StageResult.timestamp 差分で取れる (新規の計装不要)。
-          着手時の確認事項は調査済み (回答は proposal を参照): (a) 正規化は temp へ書く前に
-          全ファイル分の検証を済ませている。(b) 自由形式領域に日付は書けるが現状すでに
-          ビルドが落ちるので退行ではない (対処は D11)。
-          前提の M11 (入力形式に JSON を追加) は完了済み。
+          dev-docs のビルドは 2.67s → 1.79s。転送層は非対象のまま —
+          transfer_tree はハードリンクで実質タダ。
         phase: 15
-        proposal: 20-design/40-communication/10-json-data-model#ステージ間中間表現を-json-へ-m10
+        done: true
 
   N:
     title: レンダリング / 出力形式

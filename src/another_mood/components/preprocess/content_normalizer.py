@@ -30,7 +30,11 @@ from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     is_blob_file,
 )
-from another_mood.components.shared.json_data_model import load_model, save_model
+from another_mood.components.shared.json_data_model import (
+    load_model,
+    load_schema,
+    save_model,
+)
 
 _BUILTIN_CONTENTS_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "content-schema.yaml")
@@ -59,10 +63,10 @@ def normalize_contents(
     schema = build_contents_schema(schema_file)
     data_by_entity: dict[str, list[Mapping[str, object]]] = {}
     for src_file, data in iter_normalized(src_dir, schema):
-        # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.json /
+        # Append (not replace) ``.json`` so foo.yaml / foo.yml / foo.json /
         # foo.md never collide on the same destination.
         rel = src_file.relative_to(src_dir)
-        save_model(out_dir / rel.with_name(rel.name + ".yaml"), data)
+        save_model(out_dir / rel.with_name(rel.name + ".json"), data)
         _mirror_blob_bytes(src_file, data, out_dir / rel, prev_out_dir / rel)
         _accumulate(data, data_by_entity)
 
@@ -80,7 +84,7 @@ def build_contents_schema(
     `properties` level so that each top-level key in a content file is
     validated against the matching entry.
     """
-    return load_model(_BUILTIN_CONTENTS_SCHEMA_FILE, schema_file)
+    return load_schema(_BUILTIN_CONTENTS_SCHEMA_FILE, schema_file)
 
 
 def _mirror_blob_bytes(src_file: Path, data: object, dest: Path, prev: Path) -> None:

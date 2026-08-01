@@ -1,9 +1,9 @@
 """Tests for publish — copies component outputs to their public destinations."""
 
+import json
 from pathlib import Path
 from typing import Any
 
-import yaml
 
 from another_mood.components.publish.publish import publish
 
@@ -13,9 +13,9 @@ def _write(path: Path, content: str = "x\n") -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
+def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
 class TestPublish:
@@ -69,8 +69,8 @@ class TestPublish:
 
     def test_skips_on_upstream_error(self, tmp_path: Path) -> None:
         upstream = tmp_path / "upstream"
-        _write_yaml(
-            upstream / "reports" / "__build_report.yaml",
+        _write_json(
+            upstream / "reports" / "__build_report.json",
             {"__build_report": {"errors": [{"message": "boom"}]}},
         )
         src = tmp_path / "src_root" / "data"

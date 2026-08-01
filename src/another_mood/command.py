@@ -117,7 +117,7 @@ class BuildResult:
 
     Slim view of a :class:`BuildReport` for CLI / MCP consumers.  Per-stage
     results and per-diagnostic snippets — both useful only for human debugging
-    of the on-disk ``__build_report.yaml`` — are stripped here.
+    of the on-disk ``__build_report.json`` — are stripped here.
 
     ``out_dir`` is the resolved directory where rendered output landed
     (typically ``.another-mood/<project_dir>/output/``).

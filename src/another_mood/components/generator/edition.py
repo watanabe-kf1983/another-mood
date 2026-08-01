@@ -28,7 +28,7 @@ from typing import cast
 from another_mood.components.generator.data_tree import Node, is_blob, nearest_ancestor
 from another_mood.components.generator.inert import InertValue
 from another_mood.components.generator.url import url_escape
-from another_mood.components.shared.json_data_model import load_model
+from another_mood.components.shared.json_data_model import load_schema
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.user_source.source_loader import parse_mapping
 from another_mood.components.shared.user_source.validator import Validator
@@ -150,7 +150,7 @@ def load_editions(reports_file: Path, templates_dir: Path) -> Sequence[Edition]:
     map) returns one edition per entry, in declaration order.
     """
     data = parse_mapping(reports_file)
-    validator = Validator(load_model(_REPORTS_SCHEMA_FILE))
+    validator = Validator(load_schema(_REPORTS_SCHEMA_FILE))
     if issues := validator.validate(data):
         raise FileValidationError(
             diagnostics=[issue.at_file(reports_file) for issue in issues]
