@@ -32,7 +32,13 @@
 
 **スコープ外: 固定名の定義ファイル** — `definition/schema.yaml` / `reports.yaml` / `sbdb.yaml` は対象外。`SourceLayout` が固定名で解決し `_verify_definition_entries` が未知エントリを弾く構造なので、拡張子の択一は別の変更になる。拡張子でディスパッチするツリー（`contents/`、`definition/views/`）のみを対象とする。
 
-同期が要る箇所: blob の定義（「YAML・Markdown 以外」→ JSON を追加）、`docs/reference/` の入力形式記述、showcase への入出力例。
+**決定: hidden エントリのスキップは全形式に統一する** — 現状 `_is_hidden` は blob 分岐でのみ効いており、dot ディレクトリ配下でも YAML / Markdown はパースされる。`.json` が YAML 側の経路に移ると、`.vscode/settings.json` のような「dot ディレクトリに居がちな JSON」がスキーマ検証に到達してビルドを落とす。dotfile が cruft であることは形式に依らないので、`load_source` の先頭で全形式一律にスキップする（既存挙動の変更を含む）。
+
+**決定: `parse_yaml` は `parse_mapping` に改名する** — JSON を読む関数が `parse_yaml` のままでは呼び出し側を驚かせる。受理形式の列挙（`parse_yaml_or_json`）ではなく返り値の契約（ルート mapping を返す）で命名し、形式の増減に耐える。呼び出し側（schema_inspector / edition / manifest）はいずれも同じ契約で呼んでいる。
+
+**決定: 手書きは YAML 推奨、JSON はワンショット機械出力の受け口** — showcase への `.json` contents 例は追加しない。手書きソースは YAML を推奨する（Git 差分・エラー行指摘との親和性）。JSON 入口の位置づけは、フィードバックループを持たない機械的ワンショット出力 — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実証は [L4 SBOM ドッグフーディング](node:/tasks/L/tasks/L4)）。JSONL・配列ルートは対象外。docs の文言は用途を謳わず、制約（ルートは mapping）と推奨（YAML）のみを書く。
+
+同期が要る箇所: blob の定義（「YAML・Markdown 以外」→ JSON を追加）、`docs/reference/` の入力形式記述（YAML 推奨の一文を含む）。
 
 ### Unique 制約 (D8, D9)
 

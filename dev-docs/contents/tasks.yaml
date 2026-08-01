@@ -386,7 +386,7 @@ categories:
         proposal: 20-design/60-composer/20-export-spec#compose-結果のエクスポート-j3
 
   L:
-    title: dog-fooding リファクタ
+    title: dog-fooding
     impl_paths:
       - dev-docs/contents/
       - dev-docs/definition/
@@ -403,6 +403,23 @@ categories:
         title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
         phase: 13
         done: true
+      L4:
+        title: SBOM ドッグフーディング (dev-docs に自プロジェクトの部品表)
+        note: >-
+          cyclonedx-py environment で自プロジェクトの SBOM (CycloneDX JSON。
+          components がフラットなレコード、dependencies が bom-ref を張る FK
+          グラフ、SPDX ライセンス付き) を生成し、封筒 (bomFormat 等のメタデータ
+          キー) を jq で剥がして dev-docs の contents に置く。再生成を CI 工程に
+          組み込み、依存の追加が次のビルドでライセンス台帳 (license で group する
+          view) とコンポーネント別ページに自動反映される状態にする。
+          M11 (入力形式に JSON を追加) が前提。「機械的ワンショット出力の contents
+          流用」という JSON 入口の位置づけの実証で、well-known 方言向け import
+          blueprint (筆頭候補 CycloneDX) 構想の前身を兼ねる。uv 本体に sbom
+          コマンドは無く、cyclonedx-bom パッケージを uvx で叩く (requirements
+          経由は情報が痩せるので environment モードを使う)。
+          論点: dependsOn (bom-ref の文字列配列) を view の join で辿れるか
+          (x-ref は整合性検査なので配列対応は不要、問題は join の側)。
+        phase: 15
 
   M:
     title: JSON データモデル と データカタログ
@@ -439,6 +456,10 @@ categories:
           固定名の definition/schema.yaml / reports.yaml / sbdb.yaml は対象外
           (SourceLayout が固定名で解決し未知エントリを弾く構造なので、拡張子の択一は
           別の変更になる)。
+          スコープ決定: hidden エントリのスキップは全形式に統一 (現状 blob のみ)、
+          parse_yaml は parse_mapping に改名 (返り値の契約で命名)、showcase への
+          JSON 例は追加しない (手書きは YAML 推奨、JSON はワンショット機械出力の
+          受け口)。用途の位置づけ含め詳細は proposal を参照。
         phase: 14
         proposal: 20-design/50-normalizer/10-normalizer#入力形式に-json-を追加-m11
       M10:
