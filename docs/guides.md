@@ -98,7 +98,7 @@ There are four kinds of sources.
 
 - **Schema** — A single file that declares the types of structured data.
 - **Content** — The actual data. Three kinds:
-  - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...).
+  - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...). JSON is read the same way, for data another program produced; YAML is the recommendation for anything you write by hand.
   - **Prose** — Text written directly in Markdown. No user-defined schema needed (structured by the tool's built-in schema).
   - **Assets** — Any other file (images, PDFs, ...). Opaque to the tool; copied into the output and referenceable by id. No user-defined schema needed.
 - **View** — A definition of a named dataset derived from structured data, reshaped into a more convenient form for reference.
@@ -117,7 +117,7 @@ In the table below, "where to write" paths are relative to the project directory
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
 | 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
-| 2 | Content | `contents/**/*.yaml` (structured data)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
+| 2 | Content | `contents/**/*.yaml` (structured data; `.json` is read the same way)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
 | 3 | View | `definition/views/**/*.yaml` | `/__db/__view_defs/<view>` (definition and shape)<br>`/__db/__data/<view>` (records) |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 

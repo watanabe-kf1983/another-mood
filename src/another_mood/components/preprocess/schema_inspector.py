@@ -16,7 +16,10 @@ from another_mood.components.preprocess.schema_tree import (
     build_schema_tree,
     collect_entities,
 )
-from another_mood.components.shared.user_source.source_loader import UserStr, parse_yaml
+from another_mood.components.shared.user_source.source_loader import (
+    UserStr,
+    parse_mapping,
+)
 from another_mood.components.shared.user_source.validator import Validator
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
@@ -68,7 +71,7 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
 def _extract_from_file(
     schema_file: Path, *, builtin: bool = False
 ) -> Sequence[dc.Entity]:
-    schema = parse_yaml(schema_file)
+    schema = parse_mapping(schema_file)
     return extract_entities(schema, builtin=builtin)
 
 
@@ -105,7 +108,7 @@ def check_schema(schema_file: Path) -> None:
     if not schema_file.is_file():
         raise FileNotFoundError(f"Schema file not found: {schema_file}")
     validator = build_schema_validator()
-    data = parse_yaml(schema_file)
+    data = parse_mapping(schema_file)
     diagnostics = [issue.at_file(schema_file) for issue in validator.validate(data)]
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
@@ -174,7 +177,7 @@ def _xref_diagnostic(value: str, message: str) -> Diagnostic:
     """Build a Diagnostic from a (possibly UserStr-tagged) offender.
 
     When the offender carries a UserStr Location (the expected path,
-    since the catalog is built from parse_yaml output), the diagnostic
+    since the catalog is built from parse_mapping output), the diagnostic
     points at the originating YAML line/column.  Falls back to a
     fileless diagnostic when the tag is missing, preserving the
     message so the user still sees what went wrong instead of crashing

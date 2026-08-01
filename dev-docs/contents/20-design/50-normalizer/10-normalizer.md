@@ -1,6 +1,36 @@
 # Normalizer
 
+## External Design
+
+### 入力形式
+
+拡張子でディスパッチするツリー（`contents/`、`definition/views/`）が受理する形式:
+
+| 拡張子 | 扱い |
+|---|---|
+| `.yaml` / `.yml` / `.json` | レコードファイル（ルートは mapping） |
+| `.md` | [prose](../40-communication/20-prose-spec.md)（`contents/` のみ） |
+| その他 | [blob](../40-communication/30-blob-spec.md)（`contents/` のみ。`views_dir` では検証エラー） |
+
+dotfile・dot ディレクトリ配下は形式によらず読まない。エディタ・VCS の cruft がソースツリーに同居できることを保証する側の要件で、形式ディスパッチに先行する。
+
+**スコープ外: 固定名の定義ファイル** — `definition/schema.yaml` / `reports.yaml` / `sbdb.yaml` は `.json` にできない。`SourceLayout` が固定名で解決し `_verify_definition_entries` が未知エントリを弾く構造なので、拡張子の択一を許すのは別の変更になる。
+
+### 背景: 手書きは YAML 推奨、JSON はワンショット機械出力の受け口
+
+手書きソースは YAML を推奨する（Git 差分・エラー行指摘との親和性）。showcase に `.json` の例を置かないのはこのため。
+
+JSON 入口の位置づけは、**フィードバックループを持たない機械的ワンショット出力** — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側に居ればよい。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実証は [L4 SBOM ドッグフーディング](node:/tasks/L/tasks/L4)）。JSONL・配列ルートは受理しない。
+
+`docs/` の文言はこの用途を謳わず、制約（ルートは mapping）と推奨（YAML）のみを書く。用途は利用者が決めることで、ツールが宣言すると受理範囲の説明とは別の約束に読まれる。
+
 ## Internal Design
+
+### `.json` は YAML 1.2 リーダで読む
+
+`parse_mapping` は `.yaml` と `.json` を同じ ruamel リーダで読む。YAML 1.2 が JSON のスーパーセットで、`.lc` による位置情報もそのまま取れるため。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになる — `query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。
+
+外から見える帰結が 2 つある。`.json` ファイル内に YAML 記法を書いても通る（緩い方向のズレなので放置）。重複キーは JSON より厳しく `DuplicateKeyError` になる。
 
 ### 正規化スコープと catalog 境界
 
@@ -21,18 +51,6 @@
 この normalization contract は user 向け reference には書かない (JSON 由来の自然な前提であり、明文化が逆にノイズになる)。surface したら `docs/reference/schema.md` の dict-pattern 節に注釈を足す。
 
 ## Proposals
-
-### 入力形式に JSON を追加 (M11)
-
-`contents_dir` と `views_dir` で `.json` をデータファイルとして受理する（現状は YAML / Markdown 以外なので [blob](../40-communication/30-blob-spec.md) になる）。受理と同時に **`.json` は blob から外れる**。
-
-**背景: なぜ必要か** — [M10](../40-communication/10-json-data-model.md#ステージ間中間表現を-json-へ-m10) がステージ間中間表現を `.json` にすると、blob-spec の「blob は定義上その拡張子を持ちえないので、レコードファイルと構造的に衝突しない」という論法が単独では崩れる。`.json` を入力データ形式にすれば同じ論法がそのまま成立し、blob のミラー経路に手を入れずに済む。M10 の前提タスク。
-
-**背景: `.json` も ruamel で読む** — YAML 1.2 は JSON のスーパーセットなので、`parse_yaml` がそのまま JSON を解釈でき、`.lc` による位置情報も取れる。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになり、`query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。帰結として `.json` ファイル内に YAML 記法を書いても通ってしまう（緩い方向のズレ）ほか、重複キーは JSON より厳しく `DuplicateKeyError` になる。
-
-**スコープ外: 固定名の定義ファイル** — `definition/schema.yaml` / `reports.yaml` / `sbdb.yaml` は対象外。`SourceLayout` が固定名で解決し `_verify_definition_entries` が未知エントリを弾く構造なので、拡張子の択一は別の変更になる。拡張子でディスパッチするツリー（`contents/`、`definition/views/`）のみを対象とする。
-
-同期が要る箇所: blob の定義（「YAML・Markdown 以外」→ JSON を追加）、`docs/reference/` の入力形式記述、showcase への入出力例。
 
 ### Unique 制約 (D8, D9)
 

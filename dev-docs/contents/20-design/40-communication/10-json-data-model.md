@@ -53,7 +53,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 ### ステージ間中間表現を JSON へ (M10)
 
-前提タスク: [M11](node:/tasks/M/tasks/M11)（入力形式に JSON を追加）が先。理由は「blob バイトとの構造的衝突」節。[D11](node:/tasks/D/tasks/D11)（非 JSON 値の侵入経路を塞ぐ）は前提ではなかったが完了済みなので、中間表現に非 JSON 値が到達しえない状態から着手できる。
+前提の [M11](node:/tasks/M/tasks/M11)（入力形式に JSON を追加）は完了済み。[D11](node:/tasks/D/tasks/D11)（非 JSON 値の侵入経路を塞ぐ）は前提ではなかったが、こちらも完了しているので、中間表現に非 JSON 値が到達しえない状態から着手できる。
 
 #### 対象範囲
 
@@ -61,7 +61,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 | 系統 | 例 | 扱い |
 |---|---|---|
-| (1) ユーザ入力 | `contents/*.yaml`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML のまま（`parse_yaml`。位置情報タグ付けが要る） |
+| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | 現状のまま（`parse_mapping`。位置情報タグ付けが要る） |
 | (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML のまま（手書き・コメント付き。5 ファイル） |
 | (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | **JSON へ** |
 
@@ -73,14 +73,6 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - `load_schema(*paths)` — JSON Schema ドキュメント（YAML）の読み込みと deep-merge。呼び出しは 5 箇所（schema-schema / view-schema / manifest-schema / reports-schema / content-schema + ユーザ schema.yaml のマージ）
 
 シリアライズ設定は `json.dumps(..., ensure_ascii=False, indent=2)`。`_drop_nones`（nullable は項目自体を省略）は維持。literal block scalar の規約は JSON に存在しないので削除する — 複数行文字列は `\n` エスケープの 1 行になり、post-mortem 時の可読性が下がるのが主な代償。
-
-#### 背景: blob バイトとの構造的衝突が M11 を前提にする
-
-[blob](30-blob-spec.md) は「レコードファイルは `<rel>.yaml` と拡張子付与される。blob は定義上 YAML/Markdown 以外なので `.yaml` を持ちえず、構造的に衝突しない」を根拠に blob 専用名前空間を不要としている。中間表現が `.json` になると、この根拠は単独では崩れる: ユーザが `contents/x.json` を置くと、ミラーされたバイト `data/contents/x.json` を `load_model` がモデルファイルとして読み、中身をデータモデルにマージしてしまう（再現確認済み）。
-
-M11 で `.json` を入力データ形式として受理し blob から除外すると、同じ論法がそのまま成立する（`.json` は blob になりえない）。blob のミラー経路には手を入れずに済む。
-
-却下案: ミラーするバイトにも内部拡張子を付け `data/contents/<id>.blob` とする案も成立する（拡張子は置換ではなく付与なので、mirror 名は元の相対パスについて単射で、衝突は起きない）。ただし blob-spec の論法を書き換えて成立させる形になり、M11 を先に入れれば不要になる。
 
 #### 着手時の確認事項への回答
 
@@ -95,7 +87,7 @@ dev-docs の `mood build` 実測 2.52 / 2.64 / 2.66 s。cProfile 下（総 6.07 
 |---|---|---|
 | 中間表現 read（`_load_mapping`） | 2.39 s | 120 |
 | 中間表現 write（`save_model`） | 0.90 s | 60 |
-| ユーザ入力 read（`parse_yaml`） | 0.52 s | 13 |
+| ユーザ入力 read（`parse_mapping`） | 0.52 s | 13 |
 
 差し替え対象は上 2 行の 3.3 s（プロファイラ倍率込みで総時間の 54%）。実測は build report の `StageResult.timestamp` 差分でも取れる。
 

@@ -54,6 +54,7 @@ def test_match_rejects_nonexistent_path(tmp_path: Path) -> None:
     [
         ("data.yaml", FileType.YAML),
         ("data.yml", FileType.YAML),
+        ("data.json", FileType.JSON),
         ("notes.md", FileType.MARKDOWN),
     ],
 )

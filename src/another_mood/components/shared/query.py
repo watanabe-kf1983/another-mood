@@ -35,7 +35,7 @@ class QueryDeriveError(Exception):
 
     The outer layer inspects ``offender`` (the user-input identifier value)
     to build a user-facing diagnostic — when ``offender`` carries source
-    provenance (a ``UserStr`` from ``parse_yaml``), the diagnostic can
+    provenance (a ``UserStr`` from ``parse_mapping``), the diagnostic can
     point back at the originating YAML position.
     """
 

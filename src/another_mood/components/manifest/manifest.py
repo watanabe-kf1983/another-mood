@@ -21,7 +21,7 @@ from another_mood.components.shared.user_source.diagnostic import (
 )
 from another_mood.components.shared.user_source.source_loader import (
     UserStr,
-    parse_yaml,
+    parse_mapping,
 )
 from another_mood.components.shared.user_source.validator import Validator
 
@@ -118,7 +118,7 @@ def read_manifest(project_dir: Path) -> Manifest:
 
 def _parse(manifest_file: Path) -> Mapping[str, object]:
     try:
-        return parse_yaml(manifest_file)
+        return parse_mapping(manifest_file)
     except FileValidationError as exc:
         raise ManifestError(list(exc.diagnostics)) from exc
 
@@ -147,7 +147,7 @@ def _declared_minimum_version(data: Mapping[str, object]) -> str | None:
 
 
 def _invalid_version_diagnostic(declared: str, manifest_file: Path) -> Diagnostic:
-    # parse_yaml wraps string scalars as UserStr, so the offending value
+    # parse_mapping wraps string scalars as UserStr, so the offending value
     # usually knows its own position; a plain str degrades to file-only.
     location = declared.location if isinstance(declared, UserStr) else None
     return Diagnostic(

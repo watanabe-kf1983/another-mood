@@ -137,6 +137,39 @@ class TestNormalizeContents:
             "items": [{"name": "a"}]
         }
 
+    def test_json_source_is_a_record_not_a_blob(self, tmp_path: Path) -> None:
+        src = tmp_path / "contents"
+        src.mkdir()
+        (src / "data.json").write_text('{"items": [{"name": "a"}]}')
+        schema_file = tmp_path / "schema.yaml"
+        schema_file.write_text(
+            "type: object\n"
+            "properties:\n"
+            "  items:\n"
+            "    type: array\n"
+            "    items:\n"
+            "      type: object\n"
+            "additionalProperties: false\n"
+        )
+
+        out = tmp_path / "normalized"
+        catalog_dir = tmp_path / "catalog"
+        catalog_dir.mkdir()
+        normalize_contents(
+            src_dir=src,
+            out_dir=out,
+            prev_out_dir=tmp_path / "prev",
+            schema_file=schema_file,
+            data_catalog_dir=catalog_dir,
+        )
+
+        assert yaml.safe_load((out / "data" / "data.json.yaml").read_text()) == {
+            "items": [{"name": "a"}]
+        }
+        # No byte mirror beside the record: a .json source is not a blob,
+        # so nothing lands where M10's intermediate .json files will go.
+        assert not (out / "data" / "data.json").exists()
+
 
 # x-ref schema reused by the FK integration tests: albums.artist_id → artists.
 _FK_SCHEMA = """
