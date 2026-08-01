@@ -13,6 +13,7 @@ from pathlib import Path
 
 class FileType(Enum):
     YAML = frozenset({".yaml", ".yml"})
+    JSON = frozenset({".json"})
     MARKDOWN = frozenset({".md"})
 
     def match(self, path: Path) -> bool:

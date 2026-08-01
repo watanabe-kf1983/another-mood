@@ -59,8 +59,8 @@ def normalize_contents(
     schema = build_contents_schema(schema_file)
     data_by_entity: dict[str, list[Mapping[str, object]]] = {}
     for src_file, data in iter_normalized(src_dir, schema):
-        # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.md
-        # never collide on the same destination.
+        # Append (not replace) ``.yaml`` so foo.yaml / foo.yml / foo.json /
+        # foo.md never collide on the same destination.
         rel = src_file.relative_to(src_dir)
         save_model(out_dir / rel.with_name(rel.name + ".yaml"), data)
         _mirror_blob_bytes(src_file, data, out_dir / rel, prev_out_dir / rel)

@@ -7,7 +7,7 @@ shape, regardless of whether the user wrote a dict-pattern or an
 explicit array.
 
 Position info comes from the ``UserStr`` tag carried by each scalar
-string value (set up by ``source_loader.parse_yaml``), so diagnostics
+string value (set up by ``source_loader.parse_mapping``), so diagnostics
 point at the originating YAML line/column.  When the value is not
 UserStr-tagged (e.g. data was re-loaded from disk via ``typ='safe'``,
 or constructed in memory), the diagnostic still names the offending

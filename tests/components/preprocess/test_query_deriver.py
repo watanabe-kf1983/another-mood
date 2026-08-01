@@ -175,6 +175,36 @@ class TestDeriveQueries:
             }
         }
 
+    def test_json_view_file_accepted(self, tmp_path: Path) -> None:
+        views = tmp_path / "views"
+        _write(
+            views / "names.json",
+            '{"names": {"from": "items", "select": [{"item": "name"}]}}',
+        )
+
+        _write_catalog(
+            tmp_path / "data-catalog",
+            "__definition:\n"
+            "  entities:\n"
+            "    - id: items\n"
+            "      item_type:\n"
+            "        id: items.item\n"
+            "        attributes:\n"
+            "          - {id: name, type: string, required: true}\n",
+        )
+
+        out = tmp_path / "derived"
+        derive_queries(
+            views_dir=views,
+            data_catalog_dir=tmp_path / "data-catalog",
+            out_dir=out,
+        )
+
+        data = yaml.safe_load((out / "data" / "names.json.yaml").read_text())
+        assert data["__definition"]["views"] == [
+            {"id": "names", "from": "items", "select": [{"item": "name", "as": "name"}]}
+        ]
+
     def test_query_body_passes_through_untouched(self, tmp_path: Path) -> None:
         """Query body passes through the normalizer verbatim — the
         schema-driven normalizer stops at the top level."""

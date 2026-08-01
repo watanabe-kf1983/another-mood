@@ -8,7 +8,7 @@ from typing import cast
 import yaml
 
 from another_mood.components.preprocess.data_fk_validator import check_fk_data
-from another_mood.components.shared.user_source.source_loader import parse_yaml
+from another_mood.components.shared.user_source.source_loader import parse_mapping
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.user_source.diagnostic import Diagnostic
 
@@ -25,7 +25,7 @@ def _data(
     """Parse YAML text (already in normalized array form) with UserStr tagging."""
     src = tmp_path / name
     src.write_text(dedent(yaml_text).lstrip("\n"))
-    return cast(Mapping[str, Sequence[Mapping[str, object]]], parse_yaml(src))
+    return cast(Mapping[str, Sequence[Mapping[str, object]]], parse_mapping(src))
 
 
 def _summary(d: Diagnostic) -> tuple[int | None, str]:

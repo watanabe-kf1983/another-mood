@@ -1,4 +1,4 @@
-"""Tests for source_loader — parse_yaml, UserStr/Location."""
+"""Tests for source_loader — parse_mapping, UserStr/Location."""
 
 import unicodedata
 from collections.abc import Mapping, Sequence
@@ -10,10 +10,11 @@ import pytest
 from another_mood.components.shared.user_source.source_loader import (
     Location,
     UserStr,
+    is_blob_file,
     load_blob,
     load_prose,
     load_source,
-    parse_yaml,
+    parse_mapping,
 )
 from another_mood.components.shared.user_source.position_resolver import (
     Position,
@@ -22,29 +23,29 @@ from another_mood.components.shared.user_source.position_resolver import (
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
-# ── parse_yaml ─────────────────────────────────────────────────────
+# ── parse_mapping ──────────────────────────────────────────────────
 
 
-class TestParseYaml:
-    """parse_yaml: YAML parsing with source position preservation."""
+class TestParseMapping:
+    """parse_mapping: YAML parsing with source position preservation."""
 
     def test_valid_yaml(self, tmp_path: Path) -> None:
         f = tmp_path / "ok.yaml"
         f.write_text("key: value\n")
-        result = parse_yaml(f)
+        result = parse_mapping(f)
         assert result["key"] == "value"
 
     def test_empty_file_returns_empty_mapping(self, tmp_path: Path) -> None:
-        # ruamel returns None for empty input; parse_yaml normalises that
+        # ruamel returns None for empty input; parse_mapping normalises that
         # to {} so callers can keep using the documented Mapping shape.
         f = tmp_path / "empty.yaml"
         f.write_text("")
-        assert parse_yaml(f) == {}
+        assert parse_mapping(f) == {}
 
     def test_whitespace_only_file_returns_empty_mapping(self, tmp_path: Path) -> None:
         f = tmp_path / "ws.yaml"
         f.write_text("\n  \n")
-        assert parse_yaml(f) == {}
+        assert parse_mapping(f) == {}
 
     @pytest.mark.parametrize(
         ("source", "expected_type"),
@@ -61,17 +62,17 @@ class TestParseYaml:
         f = tmp_path / "non_mapping.yaml"
         f.write_text(source)
         with pytest.raises(FileValidationError) as exc_info:
-            parse_yaml(f)
+            parse_mapping(f)
         diag = exc_info.value.diagnostics[0]
         assert diag.file == f
-        assert "Expected a YAML mapping" in diag.message
+        assert "Expected a mapping" in diag.message
         assert expected_type in diag.message
 
     def test_broken_yaml_raises_diagnostic(self, tmp_path: Path) -> None:
         f = tmp_path / "broken.yaml"
         f.write_text("a: [unterminated\n")
         with pytest.raises(FileValidationError) as exc_info:
-            parse_yaml(f)
+            parse_mapping(f)
         diag = exc_info.value.diagnostics[0]
         assert diag.file == f
         assert diag.source == "ruamel.yaml"
@@ -84,7 +85,7 @@ class TestParseYaml:
             "  tags:\n"  # line 3
             "    - red\n"  # line 4, value column 7
         )
-        result = parse_yaml(f)
+        result = parse_mapping(f)
         name = result["top"]["name"]  # type: ignore[index]
         tag = result["top"]["tags"][0]  # type: ignore[index]
         assert isinstance(name, UserStr)
@@ -98,7 +99,7 @@ class TestParseYaml:
             "top:\n"  # line 1, key column 1
             "  name: alice\n"  # line 2, key column 3
         )
-        result = parse_yaml(f)
+        result = parse_mapping(f)
         (top,) = result.keys()
         (name,) = result["top"].keys()  # type: ignore[union-attr]
         assert isinstance(top, UserStr)
@@ -106,10 +107,28 @@ class TestParseYaml:
         assert isinstance(name, UserStr)
         assert name.location == Location(file=f, line=2, column=3)
 
+    def test_json_source_carries_location(self, tmp_path: Path) -> None:
+        # JSON goes through the same reader, so a .json source is tagged
+        # exactly as a .yaml one is — no second provenance mechanism.
+        f = tmp_path / "record.json"
+        f.write_text('{\n  "name": "alice"\n}\n')
+        name = parse_mapping(f)["name"]
+        assert isinstance(name, UserStr)
+        assert name.location == Location(file=f, line=2, column=11)
+
+    def test_json_array_root_rejected(self, tmp_path: Path) -> None:
+        # Only a mapping root is a record file; JSONL and array-rooted
+        # JSON stay out of the input formats.
+        f = tmp_path / "array.json"
+        f.write_text('[{"id": "a"}]\n')
+        with pytest.raises(FileValidationError) as exc_info:
+            parse_mapping(f)
+        assert "Expected a mapping" in exc_info.value.diagnostics[0].message
+
     def test_non_string_scalars_left_untouched(self, tmp_path: Path) -> None:
         f = tmp_path / "untouched.yaml"
         f.write_text("count: 3\nflag: true\n")
-        result = parse_yaml(f)
+        result = parse_mapping(f)
         assert result["count"] == 3
         assert result["flag"] is True
 
@@ -122,7 +141,7 @@ class TestParseYaml:
         scalars, whose positions cannot ride on a ``UserStr``."""
         f = tmp_path / "positions.yaml"
         f.write_text("count: 3\nnested:\n  flag: true\n")
-        result = parse_yaml(f)
+        result = parse_mapping(f)
         assert resolve_position([], result) == Position(line=1, column=1)
         assert resolve_position(["count"], result) == Position(line=1, column=8)
         assert resolve_position(["nested", "flag"], result) == Position(
@@ -143,7 +162,7 @@ class TestNfcNormalization:
         assert nfd != "café"  # sanity: the written value really is decomposed
         f = tmp_path / "value.yaml"
         f.write_text(f"id: {nfd}\n", encoding="utf-8")
-        value = parse_yaml(f)["id"]
+        value = parse_mapping(f)["id"]
         assert value == "café"
         assert unicodedata.is_normalized("NFC", cast(str, value))
 
@@ -151,7 +170,7 @@ class TestNfcNormalization:
         nfd = unicodedata.normalize("NFD", "café")
         f = tmp_path / "key.yaml"
         f.write_text(f"{nfd}: value\n", encoding="utf-8")
-        (key,) = parse_yaml(f).keys()
+        (key,) = parse_mapping(f).keys()
         assert key == "café"
         assert unicodedata.is_normalized("NFC", key)
 
@@ -233,9 +252,10 @@ class TestLoadBlob:
 
 
 class TestLoadSourceBlobDispatch:
-    """load_source: non-YAML/Markdown files become blobs; hidden ones are skipped."""
+    """load_source: files that are no known format become blobs; hidden ones
+    are skipped."""
 
-    def test_non_yaml_markdown_becomes_blob(self, tmp_path: Path) -> None:
+    def test_unrecognized_format_becomes_blob(self, tmp_path: Path) -> None:
         f = tmp_path / "data.csv"
         f.write_text("a,b\n1,2\n")
         data = load_source(f, tmp_path)
@@ -244,6 +264,12 @@ class TestLoadSourceBlobDispatch:
             "id": "data.csv",
             "mime_type": "text/csv",
         }
+
+    @pytest.mark.parametrize("name", ["d.yaml", "d.yml", "d.json", "d.md"])
+    def test_record_formats_are_not_blobs(self, tmp_path: Path, name: str) -> None:
+        f = tmp_path / name
+        f.write_text("{}")
+        assert not is_blob_file(f)
 
     @pytest.mark.parametrize(
         "rel",
@@ -264,12 +290,15 @@ class TestLoadSourceBlobDispatch:
         f.write_text("k: v\n")
         assert load_source(f, tmp_path) is None
 
-    def test_yaml_and_markdown_still_parsed(self, tmp_path: Path) -> None:
+    def test_yaml_json_and_markdown_parsed(self, tmp_path: Path) -> None:
         yaml_file = tmp_path / "d.yaml"
         yaml_file.write_text("k: v\n")
+        json_file = tmp_path / "d.json"
+        json_file.write_text('{"k": "v"}\n')
         md_file = tmp_path / "d.md"
         md_file.write_text("# Title\n")
         assert load_source(yaml_file, tmp_path) == {"k": "v"}
+        assert load_source(json_file, tmp_path) == {"k": "v"}
         assert "prose" in cast(Mapping[str, object], load_source(md_file, tmp_path))
 
 

@@ -1,12 +1,12 @@
-"""Source loader — parse user input files (YAML / Markdown) into data.
+"""Source loader — parse user input files (YAML / JSON / Markdown) into data.
 
 Concentrates the "user file → data" responsibility shared by every
 preprocess pipeline:
 
-* ``parse_yaml`` — parse a YAML file with ruamel.yaml, tagging mapping
-  keys and scalar string values with a ``Location`` so downstream
+* ``parse_mapping`` — parse a YAML 1.2 file with ruamel.yaml, tagging
+  mapping keys and scalar string values with a ``Location`` so downstream
   identifier-integrity checks can point diagnostics back at the
-  originating YAML position.
+  originating source position.
 * ``load_source`` — dispatch by file type and return data ready for
   schema validation.  Markdown files are wrapped raw (path-derived
   ``id`` + ``content``); interpreting the content (e.g. title from the
@@ -71,8 +71,9 @@ class UserStr(str):
 
 
 def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
-    """Parse a source file into data — YAML / Markdown, else a ``blob``
-    record — or None if it is hidden (a dotfile or under a dotdirectory).
+    """Parse a source file into data — YAML / JSON / Markdown, else a
+    ``blob`` record — or None if it is hidden (a dotfile or under a
+    dotdirectory).
 
     A source tree with no ``blob`` collection in its schema (views_dir)
     rejects such a file at validation rather than skipping it silently.
@@ -81,13 +82,19 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
         return None
     if FileType.MARKDOWN.match(src):
         return load_prose(src, src_dir, mime_type="text/markdown")
-    if FileType.YAML.match(src):
-        return parse_yaml(src)
+    if _is_mapping_file(src):
+        return parse_mapping(src)
     return load_blob(src, src_dir)
 
 
 def _is_hidden(src: Path, src_dir: Path) -> bool:
     return any(part.startswith(".") for part in src.relative_to(src_dir).parts)
+
+
+def _is_mapping_file(src: Path) -> bool:
+    # JSON rides the YAML reader: YAML 1.2 is a superset of JSON, so one
+    # parser serves both and neither loses its ``Location`` tags.
+    return FileType.YAML.match(src) or FileType.JSON.match(src)
 
 
 def _read_text_nfc(src: Path) -> str:
@@ -102,18 +109,18 @@ def _read_text_nfc(src: Path) -> str:
     return unicodedata.normalize("NFC", src.read_text(encoding="utf-8"))
 
 
-# ── YAML ───────────────────────────────────────────────────────────
+# ── Mapping (YAML / JSON) ──────────────────────────────────────────
 
 
-def parse_yaml(src: Path) -> Mapping[str, object]:
-    """Parse a YAML file with ruamel.yaml.
+def parse_mapping(src: Path) -> Mapping[str, object]:
+    """Parse a YAML 1.2 file — JSON included — into its root mapping.
 
     Mapping keys and scalar string values are wrapped as ``UserStr``
     carrying their source ``Location`` so downstream diagnostics can
-    point back at the originating YAML position.
+    point back at the originating position.
 
     Empty (or whitespace-only) files load as ``{}``. A non-mapping
-    root (sequence, scalar) or a YAML parse error raises
+    root (sequence, scalar) or a parse error raises
     FileValidationError with line/column.
     """
     try:
@@ -149,8 +156,7 @@ def parse_yaml(src: Path) -> Mapping[str, object]:
                     line=1,
                     column=1,
                     message=(
-                        f"Expected a YAML mapping at the root, "
-                        f"got {type(loaded).__name__}"
+                        f"Expected a mapping at the root, got {type(loaded).__name__}"
                     ),
                     source="ruamel.yaml",
                 )
@@ -240,8 +246,8 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
 
 
 def is_blob_file(src: Path) -> bool:
-    """True when ``load_source`` treats ``src`` as a blob (not YAML/Markdown)."""
-    return not FileType.MARKDOWN.match(src) and not FileType.YAML.match(src)
+    """True when ``load_source`` treats ``src`` as a blob (not YAML/JSON/Markdown)."""
+    return not FileType.MARKDOWN.match(src) and not _is_mapping_file(src)
 
 
 def load_blob(src: Path, src_dir: Path) -> Mapping[str, object]:

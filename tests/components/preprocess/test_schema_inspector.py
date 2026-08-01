@@ -997,7 +997,7 @@ class TestXRefDiagnostic:
         assert diag.source == "x-ref"
 
     def test_non_user_str_produces_fileless_diagnostic(self) -> None:
-        """Plain ``str`` means the catalog skipped ``parse_yaml``.
+        """Plain ``str`` means the catalog skipped ``parse_mapping``.
 
         The diagnostic still surfaces (so the user sees the underlying
         x-ref complaint) but carries no source location to point at.
