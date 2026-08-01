@@ -218,10 +218,14 @@ _VALID_SCHEMA_CASES = [
                   type: object
                   additionalProperties: { type: string }
                   default: { primary: rock, secondary: null }
+                history:
+                  type: array
+                  items: { type: string }
+                  default: [draft, published]
               additionalProperties: false
         additionalProperties: false
         """,
-        id="JSON literals in enum / const / default / examples",
+        id="literals agreeing with the declared type",
     ),
 ]
 
@@ -548,8 +552,9 @@ _REJECTED_SCHEMA_CASES = [
         )
         for bad_type in ("integer", "number", "boolean", "object", "array")
     ],
-    # YAML builds a datetime.date here; JSON has no such value, so the
-    # keywords that accept an unconstrained literal must reject it.
+    # A literal must agree with the declared type. `2024-01-01` is the
+    # case that matters most: YAML builds a datetime.date, which no
+    # declared type accepts.
     *[
         pytest.param(
             f"""
@@ -561,20 +566,42 @@ _REJECTED_SCHEMA_CASES = [
                   type: object
                   properties:
                     released:
-                      type: string
+                      type: {declared}
                       {literal}
                   additionalProperties: false
             additionalProperties: false
             """,
-            id=f"non-JSON value in {keyword} rejected",
+            id=f"{literal} on type={declared} rejected",
         )
-        for keyword, literal in (
-            ("default", "default: 2024-01-01"),
-            ("const", "const: 2024-01-01"),
-            ("enum", "enum: [2024-01-01]"),
-            ("examples", "examples: [2024-01-01]"),
+        for declared, literal in (
+            ("string", "default: 2024-01-01"),
+            ("string", "const: 2024-01-01"),
+            ("string", "enum: [2024-01-01]"),
+            ("string", "examples: [2024-01-01]"),
+            ("string", "default: 5"),
+            ("string", "enum: [draft, 5]"),
+            ("integer", "const: five"),
+            ("boolean", "examples: [yes, maybe]"),
         )
     ],
+    pytest.param(
+        """
+        type: object
+        properties:
+          releases:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                tags:
+                  type: object
+                  additionalProperties: { type: string }
+                  default: plain-string
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="scalar default on an object-typed property rejected",
+    ),
     pytest.param(
         """
         type: object
@@ -591,7 +618,7 @@ _REJECTED_SCHEMA_CASES = [
               additionalProperties: false
         additionalProperties: false
         """,
-        id="non-JSON value nested inside default rejected",
+        id="non-JSON value nested inside an object literal rejected",
     ),
 ]
 
