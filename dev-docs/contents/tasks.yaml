@@ -382,7 +382,7 @@ categories:
           対象外 (還流自体は現状でも可能。ガイド化は還流の実需の形が見えてから)。
           クエリ DSL への集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
         phase: 15
-        proposal: 20-design/60-composer/20-tap-spec#compose-結果の取り出し-j3
+        done: true
 
   L:
     title: dog-fooding
