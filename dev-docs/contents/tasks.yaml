@@ -368,19 +368,6 @@ categories:
     tasks:
       J3:
         title: "compose 結果の取り出し (mood tap + MCP)"
-        note: >-
-          計算機能そのものは提供しない —「mood build はユーザコードを実行しない」不変条件
-          (J1/J2 プラグイン案の却下理由。Office マクロが後付けの既定ブロックに至った
-          歴史の轍を踏まない)。代わりに compose 結果を一塊で取り出す経路を用意し、
-          計算は外部プログラムに委ねる (動機となった実例: 設計ドキュメントの構造化
-          データから Function Point を算出する)。現 __db/__data は人間向け診断
-          Markdown で結果データではないため、機械可読の経路が別に要る。
-          照会の口 (jq 式の引数) は CLI にも MCP にも持たせない — 絞り込みは利用者の
-          道具に委ね、mood は成果物を作るだけにする。出力は jq に直接食わせられる
-          JSON 単独。
-          当初含めていた「tap → 外部計算 → contents 還流」のガイド化は本タスクの
-          対象外 (還流自体は現状でも可能。ガイド化は還流の実需の形が見えてから)。
-          クエリ DSL への集約関数追加 (sum / count 等) は、それでも足りない場合の後続候補。
         phase: 15
         done: true
 
@@ -446,9 +433,6 @@ categories:
         done: true
       M10:
         title: ステージ間中間表現を YAML から JSON へ差し替え (ビルド時間短縮)
-        note: >-
-          dev-docs のビルドは 2.67s → 1.79s。転送層は非対象のまま —
-          transfer_tree はハードリンクで実質タダ。
         phase: 15
         done: true
 
@@ -563,20 +547,8 @@ categories:
     tasks:
       Q1:
         title: PyPI 公開 (0.1.0 手動 publish)
-        note: >-
-          名前確保を兼ねた静かな初回公開 (告知・宣伝は Q3。PyPI に予約制度はなく、
-          動く最小版を早めに上げるのが実質の名前確保)。手順は「PR merge → 即
-          upload」の一続き: R2 が書いた install 行の git+https URL をパッケージ名へ
-          差し替える PR (README 1 + docs/guides.md 2 の計 3 行) を merge し、続けて
-          アカウントスコープ token を発行、使い捨てシェルで
-          `read -rs` → export → uv build && uv publish → シェル破棄 + 即 revoke。
-          token はコマンドライン・history・Claude のセッションのいずれにも通さない。
-          プロジェクトスコープ token は作らない (リリースフローは Q6 で
-          trusted publishing に移り、以後 token 自体が不要になるため)。
-          差し替え PR の merge が upload より前でなければならないのは、docs/ が
-          wheel に同梱されるため (hatch の force-include)。
-          前提: R2 (完了済み。他の前提も全て完了済み)。
         phase: 14
+        done: true
       Q12:
         title: requires-python を 3.12 へ引き下げ
         phase: 14
