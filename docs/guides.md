@@ -17,13 +17,13 @@ Another Mood reads the sources and generates the output documents, along with pa
 Install [uv](https://docs.astral.sh/uv/) first, and it takes care of Python for you — including on a machine that has none:
 
 ```bash
-uv tool install git+https://github.com/watanabe-kf1983/another-mood.git
+uv tool install another-mood
 ```
 
 With Python 3.12 or later already installed, [pipx](https://pipx.pypa.io/) does the same:
 
 ```bash
-pipx install git+https://github.com/watanabe-kf1983/another-mood.git
+pipx install another-mood
 ```
 
 Either way you get the `mood` command on your PATH (along with `mood-mcp` — see [Using with AI agents](mcp.md)).

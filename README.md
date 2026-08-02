@@ -11,7 +11,7 @@ Another Mood keeps that set consistent. You write the data once as **sources** â
 Requires Python 3.12 or later.
 
 ```bash
-pipx install git+https://github.com/watanabe-kf1983/another-mood.git
+pipx install another-mood
 ```
 
 If you use [uv](https://docs.astral.sh/uv/), `uv tool install` takes the same argument and fetches a suitable Python for you. Either way you get the `mood` command on your PATH, along with `mood-mcp` for coding agents.
