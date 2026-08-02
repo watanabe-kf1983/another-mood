@@ -28,6 +28,7 @@ from markupsafe import Markup
 from minijinja import TemplateError
 
 from another_mood.components.generator.data_tree import MappingNode
+from another_mood.components.generator.inert import ensure_inert_array
 from another_mood.components.generator.output_formats.md import MD
 from another_mood.components.generator.template_engine import (
     OutputFormat,
@@ -230,6 +231,29 @@ class TestExposedByDesign:
         env = make_environment(_PLAIN)
         env.add_filter("shout", shout)
         assert env.render_str("{{ shout }}") == ""
+
+
+class TestContainerMutatorsSealed:
+    """The wrap-side exposure (``TestExposedByDesign``) reaches the dict/list
+    mutators too, and the tree is shared across every page's render — so the
+    inert containers define them to raise (see ``inert``).  Pinned live: the
+    reachability is the engine's rule, the refusal is ours, and what must
+    hold is their composition — an explicit error and an intact tree.  The
+    error crosses the render as the raw ``TypeError``: a Python exception
+    from a method is not wrapped in a ``TemplateError`` (the same engine
+    behavior ``TemplateEngine._render`` notes for filter exceptions)."""
+
+    def test_a_mapping_mutator_raises_and_the_tree_is_intact(self) -> None:
+        node = MappingNode({"title": "T"}, parent=None, segment="", type_index={})
+        with pytest.raises(TypeError, match="read-only"):
+            _render("{{ this.pop('title') }}", this=node)
+        assert node == {"title": "T"}
+
+    def test_an_array_mutator_raises_and_the_tree_is_intact(self) -> None:
+        items = ensure_inert_array([1, 2])
+        with pytest.raises(TypeError, match="read-only"):
+            _render("{{ this.append(3) }}", this=items)
+        assert items == [1, 2]
 
 
 class TestMarkupExposure:

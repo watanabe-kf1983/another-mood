@@ -401,22 +401,26 @@ def _wrap_array(
     segment: str,
     type_index: Mapping[str, str],
 ) -> ArrayNode:
+    # Children link back to ``node``, so it cannot be filled at construction;
+    # the unbound ``list`` method bypasses the sealed ``InertArray.append``.
+    append = list[InertValue].append
     node = ArrayNode([], parent=parent, segment=segment, type_index=type_index)
     for value in source:
         if isinstance(value, InertMapping) and "id" in value:
             # Mapping element of an Array — anchor segment is its ``id``.
-            node.append(
+            append(
+                node,
                 _wrap_mapping(
                     value,
                     parent=node,
                     segment=str(value["id"]),
                     type_index=type_index,
-                )
+                ),
             )
         else:
             # No anchor path reaches scalars, lists, or id-less Mappings —
             # keep the already-inert value as-is.
-            node.append(value)
+            append(node, value)
     return node
 
 
