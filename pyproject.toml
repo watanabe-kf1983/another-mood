@@ -30,7 +30,7 @@ mood-mcp = "another_mood.mcp_server:main"
 Homepage = "https://github.com/watanabe-kf1983/another-mood"
 Repository = "https://github.com/watanabe-kf1983/another-mood"
 Issues = "https://github.com/watanabe-kf1983/another-mood/issues"
-Documentation = "https://github.com/watanabe-kf1983/another-mood/tree/main/docs"
+Documentation = "https://github.com/watanabe-kf1983/another-mood/blob/main/docs/index.md"
 
 [build-system]
 requires = ["hatchling"]
