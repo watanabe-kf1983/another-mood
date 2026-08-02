@@ -8,7 +8,7 @@ through; everything downstream takes ``InertValue`` and never sees raw
 """
 
 from collections.abc import Mapping
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 
 
 type InertValue = str | int | float | bool | None | InertMapping | InertArray
@@ -20,15 +20,70 @@ type of marshaling.
 
 
 class InertMapping(dict[str, "InertValue"]):
-    """An ``InertValue``-valued mapping — anchor-less base of ``MappingNode``."""
+    """An ``InertValue``-valued mapping — anchor-less base of ``MappingNode``.
+
+    Read-only after construction: every non-dunder ``dict`` mutator raises.
+    Construction-time filling goes through ``__setitem__``, which stays open.
+    """
 
     __slots__ = ()
+
+    def clear(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "clear")
+
+    def pop(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "pop")
+
+    def popitem(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "popitem")
+
+    def setdefault(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "setdefault")
+
+    def update(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "update")
 
 
 class InertArray(list["InertValue"]):
-    """An ``InertValue``-valued list — anchor-less base of ``ArrayNode``."""
+    """An ``InertValue``-valued list — anchor-less base of ``ArrayNode``.
+
+    Read-only after construction: every non-dunder ``list`` mutator raises.
+    Construction-time filling goes through ``list.append``, which stays open.
+    """
 
     __slots__ = ()
+
+    def append(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "append")
+
+    def clear(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "clear")
+
+    def extend(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "extend")
+
+    def insert(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "insert")
+
+    def pop(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "pop")
+
+    def remove(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "remove")
+
+    def reverse(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "reverse")
+
+    def sort(self, *args: object, **kwargs: object) -> NoReturn:
+        _reject_mutation(self, "sort")
+
+
+def _reject_mutation(container: object, method: str) -> NoReturn:
+    """Raise on a container mutator: the data tree is shared across every
+    page's render, and any non-``_`` method is callable from a template."""
+    raise TypeError(
+        f"{type(container).__name__}.{method}() is disabled: the data tree is read-only"
+    )
 
 
 def ensure_inert(value: object) -> InertValue:

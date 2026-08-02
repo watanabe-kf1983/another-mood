@@ -43,6 +43,51 @@ class TestEnsureInert:
         assert node._meta.anchor_path == "/members/alice"
 
 
+class TestMutatorsSealed:
+    """The containers are read-only after construction: the engine's wrap-side
+    exposure makes every non-``_`` method template-callable, so a working
+    mutator would let one page's template edit the tree shared by all pages.
+    Each raises explicitly — never a silent no-op — and leaves the container
+    intact."""
+
+    @pytest.mark.parametrize(
+        ("method", "args"),
+        [
+            ("clear", ()),
+            ("pop", ("k",)),
+            ("popitem", ()),
+            ("setdefault", ("new", 1)),
+            ("update", ({"k": 2},)),
+        ],
+        ids=lambda p: p if isinstance(p, str) else "",
+    )
+    def test_mapping_mutator_raises(self, method: str, args: tuple[object]) -> None:
+        data = ensure_inert_mapping({"k": "v"})
+        with pytest.raises(TypeError, match="read-only"):
+            getattr(data, method)(*args)
+        assert data == {"k": "v"}
+
+    @pytest.mark.parametrize(
+        ("method", "args"),
+        [
+            ("append", (3,)),
+            ("clear", ()),
+            ("extend", ([3],)),
+            ("insert", (0, 3)),
+            ("pop", ()),
+            ("remove", (1,)),
+            ("reverse", ()),
+            ("sort", ()),
+        ],
+        ids=lambda p: p if isinstance(p, str) else "",
+    )
+    def test_array_mutator_raises(self, method: str, args: tuple[object]) -> None:
+        items = ensure_inert_array([2, 1])
+        with pytest.raises(TypeError, match="read-only"):
+            getattr(items, method)(*args)
+        assert items == [2, 1]
+
+
 class TestEnsureInertMapping:
     """The mapping entry: repack a raw dict, return an already-inert mapping
     unchanged."""

@@ -552,29 +552,8 @@ categories:
         done: true
       P13:
         title: テンプレートからのデータツリー破壊的変更を塞ぐ
-        note: >-
-          minijinja は wrap した Python オブジェクトの非 _ メンバをそのまま
-          呼ぶため、InertMapping / InertArray の dict / list mutator
-          (pop / popitem / clear / update / setdefault / append / extend /
-          insert / remove / sort / reverse) がテンプレートから呼べ、実際に
-          Python 側のツリーを書き換える。ノードはビルド全体で共有されるので、
-          あるページのテンプレートが他ページのデータを壊せる。dict.items 等の
-          Python callable を木に植えることもでき「テンプレに渡る値は inert」の
-          不変条件も破れる。ただし植えられるのはテンプレートから既に届く値に
-          限られ、RCE への昇格経路は無い (信頼モデル C の穴ではなく、ビルド
-          整合性の問題)。
-          塞ぎ方は InertMapping / InertArray に mutator を raise するメソッドと
-          して定義する形。公開名の集合は plain dict / list と同一のまま
-          変わらないので、surface-audit テストの参照形は再設計不要。
-          DoD: 静かな no-op ではなく明示的に落ちること。
-          着手時の確認: 内部コードが構築後の container を mutate していないか。
-          0.1.0 後で構わない理由: docs に無く showcase / dev-docs の使用は
-          ゼロ、かつ現状の可視範囲はレンダリング順序依存で依存できる挙動に
-          なっていないため、後追いで塞いでも互換性を保つ。
-          前提 P6 (露出は minijinja の wrap 経路。P12 の pycompat 無効化では
-          塞がらないことを実測で確認済み)。
         phase: 15
-        proposal: 20-design/70-generator/60-template-trust-model#テンプレートからのデータツリー変更-p13
+        done: true
 
   Q:
     title: 公開

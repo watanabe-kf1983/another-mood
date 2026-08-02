@@ -120,6 +120,7 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 ゆえに契約は runtime 検査ではなく、**型と構造でツール側コードの規律を保つ**問題として解く。露出する二系統を各々閉じる:
 
 - **(a) データ**: inert 値モデル `InertValue = str|int|float|bool|None|InertMapping|InertArray` で閉じる。`load_model`（`Any`）由来の木を `ensure_inert` が検証・詰め替え（parse, don't validate）、`MappingNode`/`ArrayNode` が Inert container を継承してアンカーを足す。
+    - **Inert container は構築後 read-only**: dict / list の mutator は明示的に raise する（静かな no-op にはしない）。露出規則の wrap 側で非 `_` メソッドはテンプレートから呼べ、木はビルド全体で共有されるため、mutator が生きていると別ページのデータ破壊と「テンプレに渡る値は inert」不変条件の破れを許してしまう
 - **(b) filters/globals の戻り値**: エンジン所有の受け入れ列挙 `TemplateSafe = InertValue | Node | Markup | MissingNode` で閉じる。
 
 設計の要点:
@@ -143,18 +144,6 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 ## Proposals
 
 未実装。1.0 の配布 / 共有機能に向けて詰める。
-
-### テンプレートからのデータツリー変更 (P13)
-
-露出規則の wrap 側の帰結として、`InertMapping` / `InertArray` の dict / list mutator（`pop` / `clear` / `update` / `setdefault` / `append` / `sort` 等）はテンプレートから呼べ、**実際に Python 側のツリーを書き換える**(実測)。ノードはビルド全体で共有されるため、あるページのテンプレートが他ページのデータを壊せる。`dict.items` のような Python callable を木に植えることもでき、「テンプレに渡る値は inert」の不変条件も破れる。
-
-**これは信頼モデルの穴ではない**: 植えられるのはテンプレートから既に届く値（inert container のメソッド、global の closure）に限られ、新しい capability は得られない ── RCE ではなく**ビルド整合性**の問題で、0.1.0 のブロッカーではない。なお **[pycompat 無効化](30-template-spec.md#テンプレートの語彙は-filter--test--operator-に限る)（実施済み）では塞がっていない**: pycompat が触るのは convert 側（ネイティブ文字列への後付けメソッド）で、mutator は wrap 側の素の属性 lookup。
-
-塞ぎ方は `InertMapping` / `InertArray` に mutator を raise するメソッドとして定義する形。**公開名の集合は plain dict / list と同一のまま**なので、surface-audit テストの参照形は再設計不要で挙動だけが変わる。
-
-**0.1.0 後に後追いで塞いでも互換性を保つ**と判断する。`docs/` に container のメソッド語彙の案内は無く、showcase / dev-docs / 内蔵メタテンプレートでの使用はゼロ。加えて mutation の可視範囲はレンダリング順序依存で、依存できる挙動になっていない ── 削除するのは仕様ではなく壊れ方。
-
-ただし塞ぐ実装は**静かな no-op ではなく明示的なエラー**でなければならない（気づけない別の壊れ方に置き換えては意味が無い）。
 
 ### DoS はホスティング時に別レイヤで
 
