@@ -581,35 +581,29 @@ categories:
         phase: 17
       Q6:
         title: リリース手順の明文化 (チェックリスト + バージョン運用)
-        note: >-
-          リリース全ステップの洗い出し、手動/自動の境界決定 (PR マージ側
-          ゲート Q11 の実装形の捌き込み)、versioning 方式の選定 (B: hatch-vcs /
-          C: 常時 .devN 仮宣言 / D: release-please — 選定理由の記録込み)、
-          チェックリストの確定。
-          契機・ブランチ運用・破壊的変更フラグ管理の決定済み事項と残論点は
-          30-dev/50-release に集約済み。
-          規模は 1 PR ではない — 着手時にブレイクダウンする。
         phase: 15
-        proposal: 30-dev/50-release
+        done: true
       Q10:
         title: tag 駆動 publish ワークフロー (GH Actions + trusted publishing)
         note: >-
-          チェックリスト (Q6) の自動側のうち publish 実行面: tag push 契機で
-          build → PyPI publish (trusted publishing 登録込み) → GH Release +
-          リリースノート自動生成 (.github/release.yml のラベル別節)。tag と
-          pyproject の version 一致検証を含む (方式 B なら不要)。DoD =
-          チェックリストに従い実リリースを 1 回回し、通った実態でチェック
-          リストを確定する。前提 Q6, Q1。
+          まず方式 B の導入設営 (hatch-vcs 化・tag パターン・uv cache-keys・
+          fetch-depth: 0・showcase / dev-docs の minimum_version 欄削除 —
+          実機検証済みの手順を 30-dev/50-release に列挙済み)。その上で
+          tag push 契機の build → PyPI publish (trusted publishing 登録込み) →
+          GH Release 作成 (リリースノートは自動生成の What's Changed のみ。
+          ラベル別節は不採用)。DoD = リリース手順に従い実リリースを 1 回回し、
+          通った実態でチェックリスト本体を確定する。
         phase: 15
         proposal: 30-dev/50-release
       Q11:
         title: PR マージ側の破壊的変更ゲート
         note: >-
-          破壊的変更がしれっとマージされるのを PR 時点で捕まえる追加プロセス。
-          何かを置くことはほぼ確定、実装形 (ci.yml 検査 job / AI レビュー /
-          pull_request_template.md / DEVELOPMENT.md の規律明文化、併用可) の
-          捌きは Q6 で決める。機械検査の実装先は新規ワークフローではなく
-          既存 ci.yml への追加を想定。前提 Q6。
+          実装形は Q6 で確定: 新設 CI ゼロ — 既存機構 (fixture golden・
+          showcase / dev-docs ビルド・manifest ゲート・全 PR レビュー) +
+          非互換注記の検問で足りる (30-dev/50-release の「PR 側の規律」)。
+          残作業は DEVELOPMENT.md への PR 側規律の書き出しと、残論点 2 件
+          (トレーラーの key・マーク語彙・書式、チェックリスト本体の置き場所)
+          の確定。
         phase: 15
         proposal: 30-dev/50-release
       Q7:
