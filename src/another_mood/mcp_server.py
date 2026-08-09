@@ -17,6 +17,7 @@ from pydantic import AnyUrl
 from another_mood import command
 from another_mood.command import BuildResult
 from another_mood.components.scaffold.blueprints import Blueprint, ScaffoldResult
+from another_mood.components.shared.tool_version import tool_version
 from another_mood.config import ProjectConfig
 
 _INSTRUCTIONS = """\
@@ -52,6 +53,14 @@ user to run `mood watch <project_dir>` in a separate terminal.
 """
 
 mcp = FastMCP("another-mood", instructions=_INSTRUCTIONS)
+
+# FastMCP takes no `version`, and the low-level Server it wraps falls back to
+# the MCP SDK's own version -- so without this line the initialize response
+# announces another-mood as whatever `mcp` is installed. Reaching into
+# `_mcp_server` is the only seam available; swap it for a constructor argument
+# once FastMCP forwards one. A silent regression here would report a plausible
+# wrong version rather than raise, so a test pins the announced value.
+mcp._mcp_server.version = tool_version()  # pyright: ignore[reportPrivateUsage]
 
 # Bundled docs are exposed via Resources (canonical) and via list_docs /
 # read_doc Tools below (mirror, for clients that don't surface Resources).

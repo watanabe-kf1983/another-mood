@@ -18,6 +18,12 @@ data/ の作成・更新・削除（CUD）は AI が直接ファイルを編集�
 - **MCP と CLI の論理的機能は一致すべき**: MCP インタフェースの検討結果が CLI インタフェースの見直しの契機になりうる。差異が出たら「どちらかが間違っている」サインとして扱う
 - **validate を build と分離する必要はない**: このツールは入力を変更せず副作用もない純粋関数であり、全操作が冪等かつ dry-run である。build 自体が validate を兼ねる
 
+### serverInfo が名乗る版
+
+initialize 応答の `serverInfo.version` は another-mood 自身の版を名乗る。値の出所は CLI の `mood --version` と同じで、manifest の `tools.another-mood.minimum_version` ゲートが比べるのも同じ値。エージェントが MCP 経由でしか触れない環境でも、ゲートに弾かれたときの自己診断が成立する。
+
+FastMCP は `version` を受け取らず、内包する低レベル `Server` は未設定時に MCP SDK 自身の版へフォールバックするため、明示しないと「MCP SDK の版を another-mood の版として名乗る」状態になる。
+
 ### ドキュメント提供の一元化
 
 利用者向けドキュメントの canonical は `docs/` の raw Markdown として一元管理し、複数チャネルで提供する:
