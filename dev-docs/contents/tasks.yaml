@@ -638,6 +638,17 @@ categories:
           のが目的。publish イベントとの依存はなく public リポジトリなら
           いつでも可。Q3 の近傍。
         phase: 17
+      R5:
+        title: showcase / dev-docs の実物マニフェストから minimum_version を削除
+        note: >-
+          「真実を宣言できない任意欄は宣言しない」の実施 (判断は
+          design/app/sbdb-manifest に記録済み)。showcase 3 件 + dev-docs の
+          sbdb.yaml から tools: ブロックを外す。当初 T3 (hatch-vcs 化) と同時実施の
+          予定だったが、機械的には独立している — 欄が無ければゲートが発火しないだけで、
+          scaffold の生成物はテンプレートのマニフェストを引き継がず実行中版で新造する
+          ため、showcase 側の削除は生成物に波及しない。ゆえに先行させる。
+        phase: 15
+        proposal: 30-dev/50-release
   S:
     title: システム開発ドキュメント
     impl_paths:
@@ -699,15 +710,14 @@ categories:
           リリース運用 (Q6) と同じ CI プロセス面なので同フェーズ。
         phase: 15
       T3:
-        title: tag 駆動 publish ワークフロー (GH Actions + trusted publishing)
+        title: hatch-vcs 化 (版宣言を git tag に一本化)
         note: >-
-          まず方式 B の導入設営 (hatch-vcs 化・tag パターン・uv cache-keys・
-          fetch-depth: 0・showcase / dev-docs の minimum_version 欄削除 —
-          実機検証済みの手順を 30-dev/50-release に列挙済み)。その上で
-          tag push 契機の build → PyPI publish (trusted publishing 登録込み) →
-          GH Release 作成 (リリースノートは自動生成の What's Changed のみ。
-          ラベル別節は不採用)。DoD = リリース手順に従い実リリースを 1 回回し、
-          通った実態でチェックリスト本体を確定する。
+          方式 B の導入設営 (実機検証済みの手順を 30-dev/50-release に列挙済み)。
+          hatchling に hatch-vcs を足して dynamic version 化し、変則 tag 対策の
+          tag パターン・uv cache-keys の git キー・パッケージをビルドする
+          ワークフローの fetch-depth: 0 (ci.yml のほか fresh-deps.yml も
+          uvx --from . でビルドする)・[project.urls] の Changelog リンクまで。
+          ワークフローは T5 / T6、実リリースは T6。
           Q カテゴリから移管 (旧 Q10)。
         phase: 15
         proposal: 30-dev/50-release
@@ -724,6 +734,33 @@ categories:
         phase: 15
         proposal: 30-dev/50-release
         done: true
+      T5:
+        title: tag 駆動ワークフロー (build → GH Release 作成)
+        note: >-
+          準備として Releases ページを台帳として立ち上げる: v0.1.0 の GH Release を
+          遡及作成し (本文は手書きで最小限。ここで自動生成ノートを出すと基準リリースが
+          無く全履歴が流れ込む)、変則 tag v0-ts-baseline / v0-ts-prototype /
+          v0.1.0-design を削除する (いずれも main から到達可能なコミットを指すため
+          歴史は失われない。2026-08-09 確認)。その上で tag push 契機の
+          build → GH Release 作成。リリースノートは GH 自動生成の What's Changed のみで、
+          ラベル別の節分けは不採用。v0.1.0 の Release が先に立っていることで、
+          初回の自動生成が v0.1.0..HEAD に定まる。T3 の後。
+        phase: 15
+        proposal: 30-dev/50-release
+      T6:
+        title: PyPI publish の追加とリリース手順の確定
+        note: >-
+          T5 のワークフローに PyPI publish ステップを足す。認証は trusted publishing
+          (プロジェクトは 0.1.0 手動 publish で実在するため通常登録。登録は PyPI 側の
+          手作業で、以後 API token は不要)。T5 と分けたのは可逆性の非対称による —
+          GH Release と tag は消して打ち直せるが、PyPI は版番号が永久に焼失する。
+          先に GH 側だけを実 tag で検証しておけば、publish 追加時の失敗原因を PyPI 側の
+          設営に絞れる。中間期は GH Releases のみが更新され PyPI は 0.1.0 に留まるが、
+          ローンチ前の裁量リリース下では許容し、次のリリースが差分を丸ごと含む。
+          DoD = リリース手順に従い実リリースを 1 回回し、通った実態でチェックリスト
+          本体を確定する。T5 の後。
+        phase: 15
+        proposal: 30-dev/50-release
 
   U:
     title: テンプレートエンジン出力フォーマット対応
