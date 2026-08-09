@@ -18,10 +18,13 @@ class TestGenerationRule:
         assert "Release-Highlight: breaking" in body
 
     def test_stays_quiet_when_breaking_is_declared(self) -> None:
-        assert notice(GENERATION_FILE, kinds=frozenset({"breaking"})) == ""
+        """A complete format break: the set moved, the reference moved, breaking."""
+        paths = (GENERATION_FILE, "docs/reference/manifest.md")
+        assert notice(*paths, kinds=frozenset({"breaking"})) == ""
 
     def test_a_weaker_kind_does_not_satisfy_it(self) -> None:
-        assert notice(GENERATION_FILE, kinds=frozenset({"feature"})) != ""
+        paths = (GENERATION_FILE, "docs/reference/manifest.md")
+        assert GENERATION_FILE in notice(*paths, kinds=frozenset({"feature"}))
 
     def test_stays_quiet_when_the_declaration_is_untouched(self) -> None:
         assert notice("src/another_mood/cli.py") == ""
@@ -36,6 +39,41 @@ class TestReferenceDocsRule:
 
     def test_stays_quiet_for_docs_outside_the_reference(self) -> None:
         assert notice("docs/guides.md") == ""
+
+
+class TestUndocumentedKindRule:
+    """The reverse direction: a kind defined by a move the reference never made."""
+
+    def test_speaks_up_for_breaking_with_no_reference_diff(self) -> None:
+        body = notice("src/another_mood/cli.py", kinds=frozenset({"breaking"}))
+        assert "incompatibility note" in body
+
+    def test_speaks_up_for_feature_with_no_reference_diff(self) -> None:
+        body = notice("src/another_mood/cli.py", kinds=frozenset({"feature"}))
+        assert "set of promises" in body
+
+    def test_breaking_outranks_feature_when_both_are_declared(self) -> None:
+        body = notice(
+            "src/another_mood/cli.py", kinds=frozenset({"breaking", "feature"})
+        )
+        assert "incompatibility note" in body
+        assert "set of promises" not in body
+
+    def test_stays_quiet_for_fix(self) -> None:
+        assert notice("src/another_mood/cli.py", kinds=frozenset({"fix"})) == ""
+
+    def test_stays_quiet_when_the_reference_did_move(self) -> None:
+        assert notice("docs/reference/cli.md", kinds=frozenset({"feature"})) == ""
+
+    def test_never_fires_alongside_the_reference_docs_rule(self) -> None:
+        """The two are exclusive: one needs a reference diff, the other its absence."""
+        for kinds in (
+            frozenset[str](),
+            frozenset({"breaking"}),
+            frozenset({"feature"}),
+        ):
+            body = notice("docs/reference/cli.md", kinds=kinds)
+            assert "has no diff" not in body, kinds
 
 
 class TestComment:

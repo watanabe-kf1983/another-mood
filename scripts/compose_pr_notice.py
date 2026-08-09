@@ -7,8 +7,9 @@ pull request touches, and writes the comment body to ``NOTICE_FILE`` — empty
 when there is nothing to say, which the workflow reads as "delete whatever an
 earlier run left behind".
 
-Each rule pairs a signal in the diff with a declaration that fails to match it;
-none of them judges whether a change is *actually* breaking. Nothing here reads
+Each rule pairs the diff against the declared kinds and speaks up where the two
+fail to match, in either direction; none of them judges whether a change is
+*actually* breaking. Nothing here reads
 the PR body, so a malformed trailer stops the job upstream instead of being
 advised on as a missing one.
 """
@@ -40,6 +41,7 @@ def compose_notice(kinds: frozenset[str], changed_paths: Sequence[str]) -> str:
     """The comment body, or the empty string when no rule has anything to say."""
     notices = (
         *_generation_notices(changed_paths, kinds),
+        *_undocumented_kind_notices(changed_paths, kinds),
         *_reference_docs_notices(changed_paths, kinds),
     )
     if not notices:
@@ -82,13 +84,37 @@ def _generation_notices(
         )
 
 
+def _undocumented_kind_notices(
+    changed_paths: Sequence[str], kinds: frozenset[str]
+) -> Sequence[str]:
+    """The other direction: both kinds are defined by a move in the reference.
+
+    `fix` is not, which is why it does not appear here.
+    """
+    if _touches_reference(changed_paths) or not kinds & {"breaking", "feature"}:
+        return ()
+    elif "breaking" in kinds:
+        return (
+            f"**`breaking` is declared, but `{REFERENCE_DOCS_PREFIX}` has no "
+            f"diff.**\n\nA break passes through the reference by definition — "
+            f"behaviour the reference does not describe is outside the contract "
+            f"— and a breaking PR owes the chapter it broke an incompatibility "
+            f"note. Ignore this if that note landed in an earlier PR.",
+        )
+    else:
+        return (
+            f"**`feature` is declared, but `{REFERENCE_DOCS_PREFIX}` has no "
+            f"diff.**\n\n`feature` means the set of promises the reference makes "
+            f"grew or shrank, so the reference should have moved with it. Ignore "
+            f"this if that move landed in an earlier PR of the same feature; "
+            f"otherwise the kind is `fix`.",
+        )
+
+
 def _reference_docs_notices(
     changed_paths: Sequence[str], kinds: frozenset[str]
 ) -> Sequence[str]:
-    touches_reference = any(
-        path.startswith(REFERENCE_DOCS_PREFIX) for path in changed_paths
-    )
-    if not touches_reference or kinds:
+    if not _touches_reference(changed_paths) or kinds:
         return ()
     else:
         return (
@@ -99,6 +125,10 @@ def _reference_docs_notices(
             f"reorganising the same promises is `fix` or nothing at all.\n\n"
             f"```\nRelease-Highlight: feature\n```",
         )
+
+
+def _touches_reference(changed_paths: Sequence[str]) -> bool:
+    return any(path.startswith(REFERENCE_DOCS_PREFIX) for path in changed_paths)
 
 
 if __name__ == "__main__":
