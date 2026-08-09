@@ -111,11 +111,11 @@ another_mood/
 
 PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。
 
-告知したいことのある PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
+リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
 
-    Release-Note: feature: mood tap outputs JSON
+    Release-Highlight: fix
 
-マークは `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。本文は利用者向けの英語一行で、タスク ID は書かない。
+kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明を付けたいとき（主に breaking）は PR 本文に `## Release highlight` セクションを書く（利用者向けの英文。タスク ID は書かない）。
 
 破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、設計背景、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 

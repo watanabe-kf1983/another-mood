@@ -32,25 +32,30 @@
 
 ## PR 側の規律
 
-### Release-Note トレーラー
+### Release-Highlight トレーラー
 
-告知したいことのある PR は、PR 本文の末尾に行頭から一行書く:
+リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭から一行書く:
 
-    Release-Note: feature: mood tap outputs JSON
+    Release-Highlight: fix
 
-- key は `Release-Note`、マークは breaking / feature / fix の三値、本文は英語一行。
-  本文は利用者向けの告知文であり、タスク ID 等の内部語彙は書かない。
-  必ず行頭に置く（リリース手順 1 の収集が行頭 grep のため）
+- key は `Release-Highlight`、kind は breaking / feature / fix の三値。kind 以外は
+  書かない（見出しは PR タイトルが務める）。必ず行頭に置く（リリース手順の収集が
+  行頭 grep のため）
 - breaking のみ義務。feature / fix は裁量
 - feature / fix の規準は「docs/reference の**約束の集合が増減したか**」。増減したら
   feature（既存挙動の新規文書化も、契約外を契約内に入れる拡張なので feature）。
   同じ約束の言い直し・明確化・構成整理は fix 以下。この判定は意味判断であり、
   機械検査せず作者に委ねる
+- PR タイトルを超える説明を載せたいとき（主に breaking——移行の要約と docs への
+  ポインタ）は、PR 本文に `## Release highlight` セクションを書く。自由形式の
+  利用者向け英文で、タスク ID 等の内部語彙は書かない。リリース時に Release 冒頭へ
+  そのままコピペされる
 
 ### 破壊的 PR の義務
 
 破壊的 PR（フォーマット破壊・ツール破壊とも）は、以下をすべて自身に含める。
-breaking トレーラーだけが PR 本文に書かれ、他はレビュー対象のリポジトリ内容:
+トレーラーと `## Release highlight` セクションだけが PR 本文に書かれ、他はレビュー
+対象のリポジトリ内容:
 
 1. **非互換注記** — 非互換に書き換えた docs/reference の章に「この章の契約が最後に
    非互換に動いた版」を記す一行を書く（または更新する）。値は、フォーマット章
@@ -62,21 +67,25 @@ breaking トレーラーだけが PR 本文に書かれ、他はレビュー対�
    （正本はリリースノートではなく docs。置き場所は該当章の注記の近傍を第一候補に、
    最初の破壊的変更時に確定）。および世代番号まわりの追随一式
    （[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) の管轄）
-3. **breaking トレーラー** — 上記書式で PR 本文末尾に
+3. **`Release-Highlight: breaking` トレーラーと `## Release highlight` セクション** —
+   上記書式で PR 本文に。セクションには移行の要約と docs の移行手順へのポインタ
 
 ## リリース手順
 
 役割によらず単一。main へのコミットはない。5 分で回る軽さを目標とする。
 
 ```
-1. 次版番号を導出: 前回 tag 以降のトレーラーを収集
-   （git log <前回タグ>..HEAD --format=%B | grep -E '^Release-Note: '）
-   し、マークの最高位を取って写像表に通す
+1. 次版番号を導出: 前回 tag 以降の kind を収集
+   （git log <前回タグ>..HEAD --format=%B | grep -E '^Release-Highlight: '）
+   し、最高位を取って写像表に通す
    検算: git log <前回タグ>..HEAD の一読で宣言の抜けを検める（破壊の記録漏れは
-   PR 側の規律が塞ぐ。ここで拾うのは feature マークの書き忘れ程度）
+   PR 側の規律が塞ぐ。ここで拾うのは feature kind の書き忘れ程度）
 2. tag push → ワークフロー完走（build → PyPI publish → GH Release 自動作成）の確認
-3. 生成された GH Release の冒頭に、手順 1 の収集結果を整形して足す——オマケも
-   移行手順のポインタも同じ動作（収集が空なら何も無し）
+3. ハイライトを整形して GH Release の冒頭に足す（収集が空なら何も無し）。材料は
+   （git log <前回タグ>..HEAD --grep='^Release-Highlight: ' --format='=== %s%n%n%b'）
+   の出力——各 PR の ## Release highlight セクションをコピペし、無い PR は
+   タイトル行を見出しに使う。長文で折り返しが煩わしければ原文は PR ページ
+   （タイトル末尾の #番号）にある
 ```
 
 ## 未実装（各タスクの実装時に消し込む）
@@ -107,7 +116,7 @@ breaking トレーラーだけが PR 本文に書かれ、他はレビュー対�
 
 保留装置（建てる契機だけ記録して封印）:
 
-- **tag sanity check**（ワークフロー冒頭で tag をトレーラーの最高位と突き合わせ）—
+- **tag sanity check**（ワークフロー冒頭で tag を kind の最高位と突き合わせ）—
   tag の打ち間違いが実際に起きたとき
 - **Release 本文へのトレーラー自動転記** — 手作業の貼り付けが煩わしくなったとき
 - **自動 tag**（トレーラーを読んで機械が tag を打つ）— リリース頻度が裁量判断を
@@ -118,9 +127,14 @@ breaking トレーラーだけが PR 本文に書かれ、他はレビュー対�
 既存シグナル同士の決定的な突き合わせのみ。「内容が破壊的かどうか」の意味判定は
 しない。出口は二種:
 
-- **fail はトレーラー書式検査のみ**: PR 本文に Release-Note 風の行があれば key の
-  綴り・マーク語彙・書式を検証し、ニアミス（`Release-Notes:` 等）も狭いパターンで
-  検知して落とす。PR 本文の編集でも再検査する（opened / edited / synchronize）
+- **fail は決定的な書式・整合検査のみ**:
+    - PR 本文に Release-Highlight 風の行があれば key の綴り・kind 語彙・書式を検証し、
+      ニアミス（`Release-Highlights:` / `Release-Note:` 等）も狭いパターンで検知して
+      落とす
+    - `## Release highlight` セクションあり ∧ トレーラー無し も fail（セクションを
+      書いた時点でハイライト意図は確定しており、旗の不在に正当なケースがない。
+      回復 = 本文へのトレーラー追記は CI の可視範囲内で、edited で再検査が走る）
+    - PR 本文の編集でも再検査する（opened / edited / synchronize）
 - **注意喚起は非ブロックの sticky コメント**（一件に集約、コピペ可能な suggest と
   DEVELOPMENT.md へのポインタ付き）。トリガ二つ、文面の強度は前者 > 後者:
     - 世代宣言ファイル（V8 で切り出す専用モジュール）に diff ∧ breaking
@@ -133,7 +147,7 @@ breaking トレーラーだけが PR 本文に書かれ、他はレビュー対�
 - **世代チェックの集合比較化**（ファイル diff 検知を、両端点から対応集合を抽出して
   脱落を検知する方式に格上げ）— 複数世代並行サポート解禁のとき
 - **世代側注意喚起の fail 格上げ** — 外部コントリビュータを受け入れたとき
-- **docs 側注意喚起の fail 格上げ**（トレーラー宣言の義務化。マーク自体は作者選択の
+- **docs 側注意喚起の fail 格上げ**（トレーラー宣言の義務化。kind 自体は作者選択の
   まま）— 1.0.0 で feature / fix の桁が分かれ、賭け金が生まれたとき
 - **差分ハーネス**（merge-base 時点の showcase + dev-docs ソースに旧新両版の mood を
   かけ、出力 diff を Warn として PR に提示）— 外部コントリビュータを受け入れて
