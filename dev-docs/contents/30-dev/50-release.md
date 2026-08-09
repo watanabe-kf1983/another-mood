@@ -101,12 +101,6 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
 
 ## 未実装（各タスクの実装時に消し込む）
 
-### R5 — マニフェストの minimum_version 欄削除
-
-showcase / dev-docs のマニフェストから `tools:`（minimum_version）ブロックを削除
-（[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) 側で決定済みの
-「置かない」の実施）。
-
 ### T3 — hatch-vcs 化
 
 方式 B の導入設営（実機検証済み）:

@@ -640,15 +640,8 @@ categories:
         phase: 17
       R5:
         title: showcase / dev-docs の実物マニフェストから minimum_version を削除
-        note: >-
-          「真実を宣言できない任意欄は宣言しない」の実施 (判断は
-          design/app/sbdb-manifest に記録済み)。showcase 3 件 + dev-docs の
-          sbdb.yaml から tools: ブロックを外す。当初 T3 (hatch-vcs 化) と同時実施の
-          予定だったが、機械的には独立している — 欄が無ければゲートが発火しないだけで、
-          scaffold の生成物はテンプレートのマニフェストを引き継がず実行中版で新造する
-          ため、showcase 側の削除は生成物に波及しない。ゆえに先行させる。
         phase: 15
-        proposal: 30-dev/50-release
+        done: true
   S:
     title: システム開発ドキュメント
     impl_paths:

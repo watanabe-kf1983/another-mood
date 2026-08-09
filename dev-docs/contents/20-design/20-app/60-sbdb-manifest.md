@@ -249,5 +249,5 @@ bump コミットの再発明であり「版を持つファイルは pyproject �
 （[リリースフロー](node:/prose/30-dev/50-release)）。真実を宣言できない
 任意欄は宣言しないのが正直。フィールドの実例は External Design 冒頭のスニペットと
 scaffold の生成物（実行中版を機械スタンプ）が務め、旧 mood × 新ソースの防衛は
-道具3 が受ける。欄の削除は [R5](node:/tasks/R/tasks/R5)。
+道具3 が受ける。
 
