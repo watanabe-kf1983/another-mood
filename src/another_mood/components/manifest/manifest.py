@@ -12,6 +12,9 @@ from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
+from another_mood.components.manifest.supported_sbdb_versions import (
+    SUPPORTED_SBDB_VERSIONS,
+)
 from another_mood.components.shared.json_data_model import load_schema
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
@@ -26,8 +29,6 @@ from another_mood.components.shared.user_source.source_loader import (
 from another_mood.components.shared.user_source.validator import Validator
 
 MANIFEST_FILENAME = "sbdb.yaml"
-
-SUPPORTED_SBDB_VERSIONS = frozenset({1})
 
 _MANIFEST_SCHEMA_FILE = Path(
     str(resources.files("another_mood.resources") / "schemas" / "manifest-schema.yaml")

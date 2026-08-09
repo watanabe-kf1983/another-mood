@@ -137,8 +137,8 @@
     - PR 本文の編集でも再検査する（opened / edited / synchronize）
 - **注意喚起は非ブロックの sticky コメント**（一件に集約、コピペ可能な suggest と
   DEVELOPMENT.md へのポインタ付き）。トリガ二つ、文面の強度は前者 > 後者:
-    - 世代宣言ファイル（V8 で切り出す専用モジュール）に diff ∧ breaking
-      トレーラー無し →「フォーマット破壊に見える。breaking は義務」
+    - 世代宣言ファイル（`components/manifest/supported_sbdb_versions.py`）に
+      diff ∧ breaking トレーラー無し →「フォーマット破壊に見える。breaking は義務」
     - docs/reference に diff ∧ トレーラーゼロ →「約束の集合が増減したなら
       feature / fix をどうぞ。言い直しだけなら無視してよい」
 
@@ -152,7 +152,3 @@
 - **差分ハーネス**（merge-base 時点の showcase + dev-docs ソースに旧新両版の mood を
   かけ、出力 diff を Warn として PR に提示）— 外部コントリビュータを受け入れて
   全 diff を精読しなくなったとき、または最初の silent 破損事故が起きたとき
-
-### V8 — 世代宣言の切り出し
-
-SUPPORTED_SBDB_VERSIONS を専用モジュールに切り出す（T4 の diff 検知対象）。
