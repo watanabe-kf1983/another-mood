@@ -92,12 +92,16 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
    し、最高位を取って写像表に通す
    検算: git log <前回タグ>..HEAD の一読で宣言の抜けを検める（破壊の記録漏れは
    PR 側の規律が塞ぐ。ここで拾うのは feature kind の書き忘れ程度）
-2. tag push → ワークフロー完走（build → PyPI publish → GH Release 自動作成）の確認
+2. tag は annotated で打つ（git tag -a v0.X.Y -m "Release 0.X.Y"）。
+   push → ワークフロー完走（build → PyPI publish → GH Release 自動作成）の確認
 3. ハイライトを整形して GH Release の冒頭に足す（収集が空なら何も無し）。材料は
    （git log <前回タグ>..HEAD --grep='^Release-Highlight: ' --format='=== %s%n%n%b'）
    の出力——各 PR の ## Release highlight セクションをコピペし、無い PR は
    タイトル行を見出しに使う。長文で折り返しが煩わしければ原文は PR ページ
    （タイトル末尾の #番号）にある
+   CLI で足すならリポジトリ内で（gh release view <tag> --json body --jq .body で
+   生成部を取り、冒頭に連結して gh release edit <tag> --notes-file - へ流す）。
+   本文は丸ごと置換されるため、追記は必ず読んでから書き戻す
 ```
 
 ## 未実装（各タスクの実装時に消し込む）
@@ -108,6 +112,8 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
   （プロジェクトは 0.1.0 手動 publish で実在するため通常登録。以後 API token は不要）
 - DoD = リリース手順に従い実リリースを 1 回回し、通った実態でチェックリスト本体を
   確定する
+- GH 側の手順（2・3）は v0.1.1 で一度通し、Release / tag とも削除して原状復帰済み。
+  残る未検証は publish ステップだけ
 
 #### 背景: publish を GH Release から分けた理由
 
