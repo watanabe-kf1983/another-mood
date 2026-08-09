@@ -85,22 +85,54 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
 ## リリース手順
 
 役割によらず単一。main へのコミットはない。5 分で回る軽さを目標とする。
+手で入れる値は次版番号ただ一つで、前回 tag は導出する（打ち間違いの余地を残さない）。
 
+### 1. 次版番号を導出
+
+前回 tag を導出し（tag を打つ前に取る。後だと自分自身を指す）、以降の kind を収集して
+最高位を写像表に通す。
+
+```bash
+PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude '*-*')
+git log "$PREV"..HEAD --format=%B | grep -E '^Release-Highlight: '
 ```
-1. 次版番号を導出: 前回 tag 以降の kind を収集
-   （git log <前回タグ>..HEAD --format=%B | grep -E '^Release-Highlight: '）
-   し、最高位を取って写像表に通す
-   検算: git log <前回タグ>..HEAD の一読で宣言の抜けを検める（破壊の記録漏れは
-   PR 側の規律が塞ぐ。ここで拾うのは feature kind の書き忘れ程度）
-2. tag は lightweight で打つ（git tag v0.X.Y）。tag オブジェクトを読むものは無く、
-   リリースの記述と日付は GH Release が持つ（署名を入れるなら annotated へ改める）。
-   push → ワークフロー完走（build → PyPI publish → GH Release 自動作成）の確認
-3. ハイライトを整形して GH Release の冒頭に足す（収集が空なら何も無し）。材料は
-   （git log <前回タグ>..HEAD --grep='^Release-Highlight: ' --format='=== %s%n%n%b'）
-   の出力——各 PR の ## Release highlight セクションをコピペし、無い PR は
-   タイトル行を見出しに使う。長文で折り返しが煩わしければ原文は PR ページ
-   （タイトル末尾の #番号）にある
-   CLI で足すならリポジトリ内で（gh release view <tag> --json body --jq .body で
-   生成部を取り、冒頭に連結して gh release edit <tag> --notes-file - へ流す）。
-   本文は丸ごと置換されるため、追記は必ず読んでから書き戻す
+
+検算として一読し、宣言の抜けを検める（破壊の記録漏れは PR 側の規律が塞ぐ。ここで
+拾うのは feature kind の書き忘れ程度）。
+
+```bash
+git log "$PREV"..HEAD --oneline
+```
+
+### 2. tag を打って push
+
+導出した番号を `NEW` に置く。tag は lightweight——tag オブジェクトを読むものは無く、
+リリースの記述と日付は GH Release が持つ（署名を入れるなら annotated へ改める）。
+
+```bash
+NEW=v0.X.Y
+git tag "$NEW" && git push origin "$NEW"
+```
+
+ワークフロー完走（build → PyPI publish → GH Release 自動作成）を確認する。
+
+### 3. ハイライトを GH Release の冒頭に足す
+
+収集が空なら何も無し。材料は次の出力——`## Release highlight` セクションを持つ PR は
+そのセクションを見出し付きでコピペし、無い PR はタイトル行を箇条書き一行にする
+（本文の無い項に見出しを与えると中身の無い節ができる）。長文で折り返しが煩わしければ
+原文は PR ページ（タイトル末尾の #番号）にある。
+
+```bash
+git log "$PREV".."$NEW" --grep='^Release-Highlight: ' --format='=== %s%n%n%b'
+```
+
+CLI で足すなら、自動生成部を取り出し、冒頭にハイライトを書き足してから戻す。本文は
+丸ごと置換されるため、読まずに書き戻さない。`gh` はリポジトリ内で実行する（作業
+ディレクトリを移すと `not a git repository` で落ちる）。
+
+```bash
+gh release view "$NEW" --json body --jq .body > /tmp/notes.md
+# /tmp/notes.md の冒頭にハイライトを書き足す
+gh release edit "$NEW" --notes-file /tmp/notes.md
 ```
