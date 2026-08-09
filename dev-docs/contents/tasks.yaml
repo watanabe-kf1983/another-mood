@@ -677,6 +677,7 @@ categories:
     impl_paths:
       - Makefile
       - .github/workflows/
+      - scripts/
     tasks:
       T1:
         title: Makefile build-projects を全 showcase blueprint 自動列挙化
@@ -722,6 +723,7 @@ categories:
           W1 (PR 本文への搬送切り替え) と V8 (世代宣言の切り出し) の後。
         phase: 15
         proposal: 30-dev/50-release
+        done: true
 
   U:
     title: テンプレートエンジン出力フォーマット対応

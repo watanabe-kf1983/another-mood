@@ -1,0 +1,81 @@
+name: PR lint
+
+# The Release-Highlight trailer lives in the PR body, so an edit to the body has
+# to re-run the checks — that is what `edited` is here for. `synchronize` keeps
+# the changed-path notices in step with the diff.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize]
+
+# `pull_request`, not `pull_request_target`: a job that reads the PR body must
+# not also hold a write token against the base repository.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # Blocking, and first: the kinds read out of a malformed trailer are not
+      # worth advising on, so a defect here stops the job before the advisory
+      # half runs.
+      - name: Check the Release-Highlight trailer
+        id: trailer
+        env:
+          # Author-controlled text, so it reaches the script through the
+          # environment and is never interpolated into a shell command.
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: python3 scripts/check_release_trailer.py
+
+      - name: Collect the changed paths
+        env:
+          CHANGED_PATHS_FILE: ${{ runner.temp }}/changed-paths.txt
+        run: |
+          gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].filename' \
+            > "$CHANGED_PATHS_FILE"
+          # A pull request always changes something, so an empty listing means
+          # the query is wrong rather than the diff empty. Without this the
+          # advisory rules would just go quiet and look content.
+          test -s "$CHANGED_PATHS_FILE"
+
+      # Advisory: pairs the declared kinds with the diff. The PR body is not an
+      # input here — it was already reduced to the kinds above.
+      - name: Compose the notice
+        env:
+          DECLARED_KINDS: ${{ steps.trailer.outputs.kinds }}
+          CHANGED_PATHS_FILE: ${{ runner.temp }}/changed-paths.txt
+          NOTICE_FILE: ${{ runner.temp }}/notice.md
+        run: python3 scripts/compose_pr_notice.py
+
+      - name: Sync the notice comment
+        # An empty notice means "delete the comment an earlier run left behind".
+        env:
+          NOTICE_FILE: ${{ runner.temp }}/notice.md
+        run: |
+          comments="repos/$REPO/issues/$PR_NUMBER/comments"
+          # Collected without a pipe into `head`: an early close would SIGPIPE
+          # gh, and the default shell runs with pipefail.
+          ids=$(gh api --paginate "$comments" \
+            --jq '.[] | select(.body | startswith("<!-- pr-lint -->")) | .id')
+          existing=${ids%%$'\n'*}
+
+          if [ -s "$NOTICE_FILE" ]; then
+            jq -Rs '{body: .}' < "$NOTICE_FILE" > "$RUNNER_TEMP/comment.json"
+            if [ -n "$existing" ]; then
+              gh api --method PATCH "repos/$REPO/issues/comments/$existing" \
+                --input "$RUNNER_TEMP/comment.json" --silent
+            else
+              gh api --method POST "$comments" \
+                --input "$RUNNER_TEMP/comment.json" --silent
+            fi
+          elif [ -n "$existing" ]; then
+            gh api --method DELETE "repos/$REPO/issues/comments/$existing" --silent
+          fi
