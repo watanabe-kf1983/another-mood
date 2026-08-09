@@ -812,6 +812,7 @@ categories:
           実機確認する。
         phase: 15
         proposal: 30-dev/50-release
+        done: true
       W2:
         title: dev-docs の全面英語化
         note: >-
