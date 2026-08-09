@@ -43,7 +43,7 @@ jobs:
       # Not a release asset — the distribution channel is the package index
       # alone. Kept for the run page, where the artifact of a release is worth
       # being able to fetch and inspect.
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -67,7 +67,7 @@ jobs:
     steps:
       # Publishing the artifact the build job checked, rather than building
       # again, keeps the version check upstream binding.
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
