@@ -9,6 +9,8 @@
 
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
   導出する。bump コミットという工程はない
+- `v` で始まる tag はリリース専用。リリースワークフローの発火条件と hatch-vcs の
+  版導出がともにこの前提に立つ。リリースでない目印 tag は `milestone/` 名前空間に置く
 - リリースの役割は三値——破壊 / 互換・機能 / 互換・修正。破壊は二種の総称:
     - **フォーマット破壊** — サポート世代の脱落（old_supported − new_supported ≠ ∅。
       世代の**追加**自体は破壊ではない。世代運用は
@@ -100,23 +102,9 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
 
 ## 未実装（各タスクの実装時に消し込む）
 
-### T5 — tag 駆動ワークフロー（build → GH Release 作成）
-
-Releases ページを台帳として立ち上げる準備:
-
-- v0.1.0 の GH Release を遡及作成（本文は手書きで最小限。基準となる前リリースが
-  無い状態で自動生成を出すと全履歴が流れ込む）
-- 変則 tag `v0-ts-baseline` / `v0-ts-prototype` / `v0.1.0-design` を削除
-
-その上でワークフロー:
-
-- tag push（`v*`）契機: build → GH Release 作成
-- リリースノートは GH 自動生成（PR タイトルの束ね）が台帳層を担う。ラベル別の
-  節分けはしない。外部向けの体裁格上げ判断は [Q7](node:/tasks/Q/tasks/Q7)
-
 ### T6 — PyPI publish の追加
 
-- 上記ワークフローに publish ステップを足す。認証は trusted publishing
+- リリースワークフローに publish ステップを足す。認証は trusted publishing
   （プロジェクトは 0.1.0 手動 publish で実在するため通常登録。以後 API token は不要）
 - DoD = リリース手順に従い実リリースを 1 回回し、通った実態でチェックリスト本体を
   確定する
