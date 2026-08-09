@@ -748,13 +748,15 @@ categories:
           準備として Releases ページを台帳として立ち上げる: v0.1.0 の GH Release を
           遡及作成し (本文は手書きで最小限。ここで自動生成ノートを出すと基準リリースが
           無く全履歴が流れ込む)、変則 tag v0-ts-baseline / v0-ts-prototype /
-          v0.1.0-design を削除する (いずれも main から到達可能なコミットを指すため
-          歴史は失われない。2026-08-09 確認)。その上で tag push 契機の
+          v0.1.0-design を milestone/ 名前空間へ改名する (v 接頭辞をリリース専用に
+          空けるため。指し先のコミットは main から到達可能で歴史は失われない)。
+          その上で tag push 契機の
           build → GH Release 作成。リリースノートは GH 自動生成の What's Changed のみで、
           ラベル別の節分けは不採用。v0.1.0 の Release が先に立っていることで、
           初回の自動生成が v0.1.0..HEAD に定まる。T3 の後。
         phase: 15
         proposal: 30-dev/50-release
+        done: true
       T6:
         title: PyPI publish の追加とリリース手順の確定
         note: >-

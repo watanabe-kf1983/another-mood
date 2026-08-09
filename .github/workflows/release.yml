@@ -1,0 +1,67 @@
+name: Release
+
+# A release is a tag push and nothing else — main carries no release commit,
+# so this workflow has no counterpart triggered by a branch. The tag patterns
+# mirror the describe filter in pyproject.toml, keeping the workflow and the
+# version derivation in agreement on what counts as a release tag.
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+      - "!*-*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The version is derived from the nearest release tag, which the
+          # default shallow clone does not fetch.
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+
+      - run: uv build
+
+      # The version is derived rather than declared, so a regression in the
+      # clone depth or the describe filter yields a development version under
+      # a release tag with nothing downstream to notice. Checking it here, at
+      # the point of derivation, keeps that failure from reaching a package
+      # index where the number cannot be reclaimed.
+      - name: Check the built version against the tag
+        run: |
+          expected="dist/another_mood-${GITHUB_REF_NAME#v}.tar.gz"
+          if [ ! -f "$expected" ]; then
+            echo "::error::expected $expected, built $(ls dist | tr '\n' ' ')"
+            exit 1
+          fi
+
+      # Not a release asset — the distribution channel is the package index
+      # alone. Kept for the run page, where the artifact of a release is worth
+      # being able to fetch and inspect.
+      - uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # No checkout: `gh release create` addresses the repository over the API,
+      # and the notes are generated on GitHub's side from the pull requests
+      # merged since the previous release.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes

@@ -43,7 +43,7 @@ build-backend = "hatchling.build"
 source = "vcs"
 
 # `git describe` picks the nearest reachable tag, so marker tags that are not
-# releases (v0-ts-baseline and the like) would otherwise be read as versions.
+# releases (the milestone/ namespace) would otherwise be read as versions.
 # The filter has to sit here, on the describe command: hatch-vcs's tag-pattern
 # only validates the tag already chosen, which turns a stray tag into a build
 # failure instead of skipping it. The globs keep tags shaped vN.N.N and drop
