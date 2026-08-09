@@ -101,29 +101,55 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
 
 ## 未実装（各タスクの実装時に消し込む）
 
-### T3 — tag 駆動 publish ワークフロー
+### R5 — マニフェストの minimum_version 欄削除
 
-まず方式 B の導入設営（実機検証済み）:
+showcase / dev-docs のマニフェストから `tools:`（minimum_version）ブロックを削除
+（[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) 側で決定済みの
+「置かない」の実施）。
+
+### T3 — hatch-vcs 化
+
+方式 B の導入設営（実機検証済み）:
 
 - hatchling に hatch-vcs を追加し `dynamic = ["version"]` 化
 - 変則 tag（`v0-ts-baseline` 等が既存）対策の tag パターン設定を保険で入れる
+  （tag 自体の掃除は T5。パターンは再発防止として以後も残す）
 - `tool.uv.cache-keys` に git キーを追加（editable 環境の `importlib.metadata` が
   古い版のまま残るのを防ぐ）
-- ci.yml と publish ワークフローの checkout を `fetch-depth: 0` に（shallow clone
-  では版導出できず `uv sync` のビルドが落ちる）
-- showcase / dev-docs のマニフェストから `tools:`（minimum_version）ブロックを削除
-  （[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) 側で決定済みの
-  「置かない」の実施）
+- パッケージをビルドするワークフローの checkout を `fetch-depth: 0` に（shallow
+  clone では版導出できずビルドが落ちる）。ci.yml と後続のワークフローのほか、
+  `uvx --from .` / `uv sync --upgrade` を踏む fresh-deps.yml も対象
 - `[project.urls]` に Changelog リンク（GH Releases へ）を足す（PyPI には
   リリースノートの表示面がないため）
 
-その上で publish ワークフロー:
+### T5 — tag 駆動ワークフロー（build → GH Release 作成）
 
-- tag push（`v*`）契機: build → PyPI publish → GH Release 作成
-- 認証は trusted publishing（プロジェクトは 0.1.0 手動 publish で実在するため
-  通常登録。以後 API token は不要）
+Releases ページを台帳として立ち上げる準備:
+
+- v0.1.0 の GH Release を遡及作成（本文は手書きで最小限。基準となる前リリースが
+  無い状態で自動生成を出すと全履歴が流れ込む）
+- 変則 tag `v0-ts-baseline` / `v0-ts-prototype` / `v0.1.0-design` を削除
+
+その上でワークフロー:
+
+- tag push（`v*`）契機: build → GH Release 作成
 - リリースノートは GH 自動生成（PR タイトルの束ね）が台帳層を担う。ラベル別の
   節分けはしない。外部向けの体裁格上げ判断は [Q7](node:/tasks/Q/tasks/Q7)
+
+### T6 — PyPI publish の追加
+
+- 上記ワークフローに publish ステップを足す。認証は trusted publishing
+  （プロジェクトは 0.1.0 手動 publish で実在するため通常登録。以後 API token は不要）
+- DoD = リリース手順に従い実リリースを 1 回回し、通った実態でチェックリスト本体を
+  確定する
+
+#### 背景: publish を GH Release から分けた理由
+
+可逆性が非対称なため。GH Release と tag は消して同じ版番号で打ち直せるが、PyPI は
+publish した版番号とファイル名が永久に焼失し、やり直しが効かない。GH 側だけを先に
+実 tag で通しておけば、publish を足した回の失敗原因を PyPI 側の設営にほぼ絞れる。
+中間期のリリースは GH Releases にのみ現れ PyPI は 0.1.0 に留まるが、ローンチ前の
+裁量リリース下では許容できる欠損で、次のリリースが差分を丸ごと含む。
 
 保留装置（建てる契機だけ記録して封印）:
 
