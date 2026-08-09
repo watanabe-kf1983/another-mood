@@ -80,7 +80,9 @@ select = [
 
 # CLI is the boundary that turns business-logic return values into terminal
 # output, so it is the only production module allowed to call print().
-# Tests may print for ad-hoc debugging.
+# Tests may print for ad-hoc debugging, and the repo's own CI scripts talk to
+# their runner over stdout.
 [tool.ruff.lint.per-file-ignores]
 "src/another_mood/cli.py" = ["T201"]
 "tests/**/*.py" = ["T201"]
+"scripts/**/*.py" = ["T201"]
