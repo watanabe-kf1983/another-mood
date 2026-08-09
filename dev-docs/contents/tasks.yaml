@@ -771,6 +771,7 @@ categories:
           本体を確定する。T5 の後。
         phase: 15
         proposal: 30-dev/50-release
+        done: true
 
   U:
     title: テンプレートエンジン出力フォーマット対応
