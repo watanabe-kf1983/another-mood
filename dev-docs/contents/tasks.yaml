@@ -793,6 +793,7 @@ categories:
           過剰発火は実質起きない。
         phase: 15
         proposal: 30-dev/50-release
+        done: true
 
   W:
     title: 開発規約・運用
