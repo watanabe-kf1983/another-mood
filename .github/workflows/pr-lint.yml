@@ -39,8 +39,12 @@ jobs:
         env:
           CHANGED_PATHS_FILE: ${{ runner.temp }}/changed-paths.txt
         run: |
-          gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].path' \
+          gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].filename' \
             > "$CHANGED_PATHS_FILE"
+          # A pull request always changes something, so an empty listing means
+          # the query is wrong rather than the diff empty. Without this the
+          # advisory rules would just go quiet and look content.
+          test -s "$CHANGED_PATHS_FILE"
 
       # Advisory: pairs the declared kinds with the diff. The PR body is not an
       # input here — it was already reduced to the kinds above.
