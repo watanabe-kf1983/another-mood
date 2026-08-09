@@ -48,8 +48,34 @@ jobs:
           name: dist
           path: dist/
 
-  github-release:
+  # Ordered before the GitHub Release because the two differ in reversibility:
+  # a release and its tag can be deleted and cut again under the same number,
+  # while a version published to the index is burned for good. Stopping here on
+  # failure leaves the tag re-cuttable.
+  pypi-publish:
     needs: build
+    runs-on: ubuntu-latest
+    # Authentication is trusted publishing, so the token is minted per run from
+    # this job's identity and no secret is stored. The environment is half of
+    # what the index matches that identity against; the other half is the name
+    # of this workflow file. Its deployment rule admits release tags alone,
+    # which is what keeps an edited copy of this workflow on a branch from
+    # reaching the index.
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      # Publishing the artifact the build job checked, rather than building
+      # again, keeps the version check upstream binding.
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@v1.14.2
+
+  github-release:
+    needs: pypi-publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
