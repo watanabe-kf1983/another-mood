@@ -212,6 +212,28 @@ mood docs read <uri>
 
 Prints the contents of the bundled doc identified by `<uri>` to stdout. `<uri>` must be one of the values printed by `mood docs list` (e.g. `docs://reference/cli.md`). Passing an unknown URI prints an error to stderr and exits with code 1.
 
+## Global options
+
+These are accepted before any command, and both exit immediately without running one.
+
+### `--version`
+
+```bash
+mood --version
+```
+
+Prints the running version and exits with code 0:
+
+```
+mood 0.5.2
+```
+
+This is the same value the manifest's [`tools.another-mood.minimum_version`](manifest.md#fields) is checked against, so it tells you directly whether a project that refuses to build wants a newer Another Mood than the one you have.
+
+### `--help`
+
+Prints usage and the command list. Also available per command (`mood build --help`), where it lists that command's options.
+
 ## Configuration overrides
 
 Every configuration key has a default; each can be overridden individually via an environment variable.

@@ -330,17 +330,17 @@ categories:
       G13:
         title: "mood --version"
         note: >-
-          版を名乗る口が CLI に無い。T3 で版宣言を git tag 一本にしたことで
-          「いま動いているツールが何版か」を訊く動機が増えた
-          (開発チェックアウトでは版が commit ごとに動くため、
-          手元の版とリリース版の区別が目視できない)。
-          値の出所は importlib.metadata.version("another-mood") —
-          manifest の minimum_version ゲートが見るのと同じ値なので、
-          ゲートが弾いたときの自己診断にもなる。
-          既存の @app.callback() に eager option として足す。
-          論点: mcp_server 側 (FastMCP の server info に版を載せる口がある) を
-          同じタスクで揃えるか。
+          版を名乗る口を CLI と MCP の両面に開けた。出力は `mood <version>` —
+          前置は製品名ではなくコマンド名で、叩いたバイナリの身分証明に徹する
+          (配布物名で答える仕事は minimum_version エラー側が持つ)。
+          論点だった mcp_server 側も同梱: FastMCP は version を受け取らず
+          低レベル Server が MCP SDK 自身の版へフォールバックするため、
+          放置ではなく他人の版を名乗っている状態だった。
+          値は components/shared/tool_version に一本化し、
+          --version・serverInfo・minimum_version ゲート・init が書く manifest が
+          同じ読みを共有する。
         phase: 15
+        done: true
 
   H:
     title: バイナリファイルの取り扱い

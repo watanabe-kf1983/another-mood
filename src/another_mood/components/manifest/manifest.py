@@ -7,7 +7,7 @@ rules — including pre-releases like ``0.4.0.dev1`` — are authoritative here.
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from importlib import metadata, resources
+from importlib import resources
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
@@ -16,6 +16,7 @@ from another_mood.components.manifest.supported_sbdb_versions import (
     SUPPORTED_SBDB_VERSIONS,
 )
 from another_mood.components.shared.json_data_model import load_schema
+from another_mood.components.shared.tool_version import tool_version
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
@@ -132,7 +133,7 @@ def _gate_minimum_version(data: Mapping[str, object], manifest_file: Path) -> No
         minimum = Version(declared)
     except InvalidVersion:
         raise ManifestError([_invalid_version_diagnostic(declared, manifest_file)])
-    running = Version(metadata.version("another-mood"))
+    running = Version(tool_version())
     if running < minimum:
         raise MinimumVersionError(minimum, running, manifest_file)
 

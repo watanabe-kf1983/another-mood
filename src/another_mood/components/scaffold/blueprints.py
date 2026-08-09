@@ -9,11 +9,13 @@ lives at ``showcase/<name>/``.
 
 import shutil
 from dataclasses import dataclass
-from importlib import metadata, resources
+from importlib import resources
 from pathlib import Path
 from typing import Sequence, cast
 
 import yaml
+
+from another_mood.components.shared.tool_version import tool_version
 
 DEFAULT_BLUEPRINT = "starter"
 INDEX_FILE = "index.yaml"
@@ -107,7 +109,7 @@ def _generate_manifest(project_dir: Path) -> str:
     # derivation as the build's fallback title.
     title = project_dir.resolve().name
     # A verified floor ("known to work"), not an audited true minimum.
-    running = metadata.version("another-mood")
+    running = tool_version()
     return yaml.safe_dump(
         {
             "sbdb_version": SBDB_VERSION,
