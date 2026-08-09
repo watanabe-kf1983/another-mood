@@ -21,6 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The version is derived from the nearest release tag, which the
+          # default shallow clone does not fetch.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v7
       - name: Build via the `uv tool install` resolution path
         run: uvx --from . --refresh-package another-mood mood build showcase/starter
@@ -31,6 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The version is derived from the nearest release tag, which the
+          # default shallow clone does not fetch.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v7
       - name: Resolve to the latest versions our constraints allow
         run: uv sync --upgrade

@@ -18,6 +18,10 @@ jobs:
         python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The version is derived from the nearest release tag, which the
+          # default shallow clone does not fetch.
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v7
         with:

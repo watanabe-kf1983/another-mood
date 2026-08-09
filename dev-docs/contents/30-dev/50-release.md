@@ -8,8 +8,7 @@
 ## バージョニング
 
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
-  導出する（設営は [T3](node:/tasks/T/tasks/T3)——下記未実装）。bump コミットという
-  工程はない
+  導出する。bump コミットという工程はない
 - リリースの役割は三値——破壊 / 互換・機能 / 互換・修正。破壊は二種の総称:
     - **フォーマット破壊** — サポート世代の脱落（old_supported − new_supported ≠ ∅。
       世代の**追加**自体は破壊ではない。世代運用は
@@ -100,21 +99,6 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
 ```
 
 ## 未実装（各タスクの実装時に消し込む）
-
-### T3 — hatch-vcs 化
-
-方式 B の導入設営（実機検証済み）:
-
-- hatchling に hatch-vcs を追加し `dynamic = ["version"]` 化
-- 変則 tag（`v0-ts-baseline` 等が既存）対策の tag パターン設定を保険で入れる
-  （tag 自体の掃除は T5。パターンは再発防止として以後も残す）
-- `tool.uv.cache-keys` に git キーを追加（editable 環境の `importlib.metadata` が
-  古い版のまま残るのを防ぐ）
-- パッケージをビルドするワークフローの checkout を `fetch-depth: 0` に（shallow
-  clone では版導出できずビルドが落ちる）。ci.yml と後続のワークフローのほか、
-  `uvx --from .` / `uv sync --upgrade` を踏む fresh-deps.yml も対象
-- `[project.urls]` に Changelog リンク（GH Releases へ）を足す（PyPI には
-  リリースノートの表示面がないため）
 
 ### T5 — tag 駆動ワークフロー（build → GH Release 作成）
 

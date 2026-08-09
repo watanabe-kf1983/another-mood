@@ -1,6 +1,6 @@
 [project]
 name = "another-mood"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A processor of source-based databases, keeping related documents in sync."
 readme = "README.md"
 license = "MIT"
@@ -31,10 +31,44 @@ Homepage = "https://github.com/watanabe-kf1983/another-mood"
 Repository = "https://github.com/watanabe-kf1983/another-mood"
 Issues = "https://github.com/watanabe-kf1983/another-mood/issues"
 Documentation = "https://github.com/watanabe-kf1983/another-mood/blob/main/docs/index.md"
+# PyPI has no surface of its own for release notes, so the project page links
+# out to the GitHub Releases ledger.
+Changelog = "https://github.com/watanabe-kf1983/another-mood/releases"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+# `git describe` picks the nearest reachable tag, so marker tags that are not
+# releases (v0-ts-baseline and the like) would otherwise be read as versions.
+# The filter has to sit here, on the describe command: hatch-vcs's tag-pattern
+# only validates the tag already chosen, which turns a stray tag into a build
+# failure instead of skipping it. The globs keep tags shaped vN.N.N and drop
+# everything carrying a suffix; the rest mirrors the upstream default command.
+[tool.hatch.version.raw-options.scm.git]
+describe_command = [
+    "git",
+    "describe",
+    "--dirty",
+    "--tags",
+    "--long",
+    "--abbrev=40",
+    "--match",
+    "v[0-9]*.[0-9]*.[0-9]*",
+    "--exclude",
+    "*-*",
+]
+
+# The version now moves with git state, but an editable install's recorded
+# metadata does not — `importlib.metadata.version` would keep reporting the
+# version stamped at install time. Adding the git key makes uv reinstall when
+# the commit or the tags move. Listing pyproject.toml too because naming any
+# cache key replaces uv's default rather than extending it.
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 
 [dependency-groups]
 dev = [

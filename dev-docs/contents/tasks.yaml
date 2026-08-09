@@ -327,6 +327,20 @@ categories:
         title: "queries/ エイリアス廃止"
         phase: 14
         done: true
+      G13:
+        title: "mood --version"
+        note: >-
+          版を名乗る口が CLI に無い。T3 で版宣言を git tag 一本にしたことで
+          「いま動いているツールが何版か」を訊く動機が増えた
+          (開発チェックアウトでは版が commit ごとに動くため、
+          手元の版とリリース版の区別が目視できない)。
+          値の出所は importlib.metadata.version("another-mood") —
+          manifest の minimum_version ゲートが見るのと同じ値なので、
+          ゲートが弾いたときの自己診断にもなる。
+          既存の @app.callback() に eager option として足す。
+          論点: mcp_server 側 (FastMCP の server info に版を載せる口がある) を
+          同じタスクで揃えるか。
+        phase: 15
 
   H:
     title: バイナリファイルの取り扱い
@@ -714,6 +728,7 @@ categories:
           Q カテゴリから移管 (旧 Q10)。
         phase: 15
         proposal: 30-dev/50-release
+        done: true
       T4:
         title: PR lint ワークフロー (トレーラー検査 + 破壊的変更の注意喚起)
         note: >-
