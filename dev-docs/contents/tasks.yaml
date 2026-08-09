@@ -561,51 +561,21 @@ categories:
         title: 告知・宣伝を伴うローンチ
         note: >-
           Q1 は静かな公開に留め、S2-S4 (システム開発ドキュメント) の完成を待って
-          告知する。内容 (告知先・訴求) は接近時に具体化。前提 Q4, Q5, Q7。
-        phase: 17
-      Q4:
-        title: dev-docs の全面英語化
-        note: >-
-          ローンチで外部コントリビュータが設計判断を読める状態にする。
-          background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
-          Phase 16 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
-          その完了後・告知前に実施する。Q3 の前提。
-        phase: 17
-      Q5:
-        title: 残タスクの GitHub Issues 移行 + ロードマップ退役
-        note: >-
-          Phase 18 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
-          一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
-          はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
-          ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
+          告知する。内容 (告知先・訴求) は接近時に具体化。前提 W2, W3, Q7。
         phase: 17
       Q6:
         title: リリース手順の明文化 (チェックリスト + バージョン運用)
         phase: 15
         done: true
-      Q10:
-        title: tag 駆動 publish ワークフロー (GH Actions + trusted publishing)
-        note: >-
-          まず方式 B の導入設営 (hatch-vcs 化・tag パターン・uv cache-keys・
-          fetch-depth: 0・showcase / dev-docs の minimum_version 欄削除 —
-          実機検証済みの手順を 30-dev/50-release に列挙済み)。その上で
-          tag push 契機の build → PyPI publish (trusted publishing 登録込み) →
-          GH Release 作成 (リリースノートは自動生成の What's Changed のみ。
-          ラベル別節は不採用)。DoD = リリース手順に従い実リリースを 1 回回し、
-          通った実態でチェックリスト本体を確定する。
-        phase: 15
-        proposal: 30-dev/50-release
       Q11:
         title: PR マージ側の破壊的変更ゲート
         note: >-
-          実装形は Q6 で確定: 新設 CI ゼロ — 既存機構 (fixture golden・
-          showcase / dev-docs ビルド・manifest ゲート・全 PR レビュー) +
-          非互換注記の検問で足りる (30-dev/50-release の「PR 側の規律」)。
-          残作業は DEVELOPMENT.md への PR 側規律の書き出しと、残論点 2 件
-          (トレーラーの key・マーク語彙・書式、チェックリスト本体の置き場所)
-          の確定。
+          検討で実装形を確定して閉じた。Q6 時点の予測 (新設 CI ゼロ) は覆り、
+          PR lint ワークフローを建てる。成果は 30-dev/50-release に記録し、
+          実装は W1 (運用切り替え)・V8 (世代宣言の切り出し)・T4 (lint) に分割。
+          公開カテゴリの管轄でないため実装タスクは W / V / T 側に置いた。
         phase: 15
-        proposal: 30-dev/50-release
+        done: true
       Q7:
         title: リポジトリの外部公開整備 (GH 設定 / CONTRIBUTING / changelog)
         note: >-
@@ -615,6 +585,9 @@ categories:
           — Issues は有効のまま放置・PR も放置・Dependabot は有効化しない。
           うるさくなったら (AI slop 等) そのとき対策を再考。
           対応 Python 版の下限判断は Q12 へ分離した。
+          PR テンプレート / CONTRIBUTING の要否検討もここ (repo 内部には T4 の
+          lint コメントで足りる。外部コントリビュータという宛先が生まれて
+          初めて意味を持つ装置)。
           受益者が現れるローンチまで不要なので Phase 17。Q3 の前提。
         phase: 17
       Q8:
@@ -724,6 +697,31 @@ categories:
           「Dependabot は有効化しない」方針と衝突するため、採るならその再検討を含む。
           リリース運用 (Q6) と同じ CI プロセス面なので同フェーズ。
         phase: 15
+      T3:
+        title: tag 駆動 publish ワークフロー (GH Actions + trusted publishing)
+        note: >-
+          まず方式 B の導入設営 (hatch-vcs 化・tag パターン・uv cache-keys・
+          fetch-depth: 0・showcase / dev-docs の minimum_version 欄削除 —
+          実機検証済みの手順を 30-dev/50-release に列挙済み)。その上で
+          tag push 契機の build → PyPI publish (trusted publishing 登録込み) →
+          GH Release 作成 (リリースノートは自動生成の What's Changed のみ。
+          ラベル別節は不採用)。DoD = リリース手順に従い実リリースを 1 回回し、
+          通った実態でチェックリスト本体を確定する。
+          Q カテゴリから移管 (旧 Q10)。
+        phase: 15
+        proposal: 30-dev/50-release
+      T4:
+        title: PR lint ワークフロー (トレーラー検査 + 破壊的変更の注意喚起)
+        note: >-
+          fail はトレーラー書式検査 (key 綴り・マーク語彙・ニアミス検知) のみ。
+          「世代宣言ファイルに diff ∧ breaking トレーラー無し」と
+          「docs/reference に diff ∧ トレーラーゼロ」は非ブロックの sticky
+          コメントで注意喚起 (コピペ可能な suggest + DEVELOPMENT.md への
+          ポインタ。文面の強度は前者 > 後者)。意味判定はしない —
+          既存シグナル同士の決定的な突き合わせだけ。
+          W1 (PR 本文への搬送切り替え) と V8 (世代宣言の切り出し) の後。
+        phase: 15
+        proposal: 30-dev/50-release
 
   U:
     title: テンプレートエンジン出力フォーマット対応
@@ -785,3 +783,50 @@ categories:
         title: sbdb.yaml の必須化 (欠落 = エラー)
         phase: 14
         done: true
+      V8:
+        title: SUPPORTED_SBDB_VERSIONS の専用モジュール切り出し
+        note: >-
+          対応世代集合の宣言を定数一行の専用モジュールへ分離し、
+          「このファイルに diff = 世代宣言が動いた」をファイル境界で読める
+          構造フラグにする (T4 のチェックが diff 検知に使う。集合の
+          パースは不要になる)。定数しか置かないので、diff 検知の
+          過剰発火は実質起きない。
+        phase: 15
+        proposal: 30-dev/50-release
+
+  W:
+    title: 開発規約・運用
+    impl_paths:
+      - DEVELOPMENT.md
+      - .github/
+    tasks:
+      W1:
+        title: コミット・PR 運用の見直し (squash PR_BODY 化 + PR 側規律の明文化)
+        note: >-
+          squash マージ設定を COMMIT_MESSAGES から PR_BODY へ切り替え、設計判断の
+          背景の記録先をブランチコミットメッセージから PR 本文 (= main の squash
+          コミット本文) へ移す。DEVELOPMENT.md を改訂: 記録先の転居 + PR 側規律の
+          書き出し (非互換注記・移行手順・Release-Note トレーラーの書式と
+          マーク判断規準)。リリース手順 1 の収集一行コマンドの確定記載もここ。
+          切り替え後の初回マージ PR で PR_BODY 搬送 (末尾自動付加の挙動含む) を
+          実機確認する。
+        phase: 15
+        proposal: 30-dev/50-release
+      W2:
+        title: dev-docs の全面英語化
+        note: >-
+          ローンチで外部コントリビュータが設計判断を読める状態にする。
+          background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
+          Phase 16 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
+          その完了後・告知前に実施する。Q3 の前提。
+          Q カテゴリから移管 (旧 Q4)。
+        phase: 17
+      W3:
+        title: 残タスクの GitHub Issues 移行 + ロードマップ退役
+        note: >-
+          Phase 18 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
+          一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
+          はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
+          ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
+          Q カテゴリから移管 (旧 Q5)。
+        phase: 17
