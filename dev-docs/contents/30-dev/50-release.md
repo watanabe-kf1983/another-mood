@@ -92,7 +92,8 @@ PR の開閉・本文編集・push で `PR lint` ワークフローが走り、�
    し、最高位を取って写像表に通す
    検算: git log <前回タグ>..HEAD の一読で宣言の抜けを検める（破壊の記録漏れは
    PR 側の規律が塞ぐ。ここで拾うのは feature kind の書き忘れ程度）
-2. tag は annotated で打つ（git tag -a v0.X.Y -m "Release 0.X.Y"）。
+2. tag は lightweight で打つ（git tag v0.X.Y）。tag オブジェクトを読むものは無く、
+   リリースの記述と日付は GH Release が持つ（署名を入れるなら annotated へ改める）。
    push → ワークフロー完走（build → PyPI publish → GH Release 自動作成）の確認
 3. ハイライトを整形して GH Release の冒頭に足す（収集が空なら何も無し）。材料は
    （git log <前回タグ>..HEAD --grep='^Release-Highlight: ' --format='=== %s%n%n%b'）
