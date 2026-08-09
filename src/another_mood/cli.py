@@ -12,6 +12,7 @@ import typer
 from another_mood import command
 from another_mood.command import BuildResult, UserError
 from another_mood.components.scaffold.blueprints import ScaffoldResult
+from another_mood.components.shared.tool_version import tool_version
 from another_mood.components.tap.tap import TAP_DOCUMENT_NAME
 from another_mood.config import ConfigValidationError, ProjectConfig
 
@@ -26,8 +27,25 @@ docs_app = typer.Typer(help="Inspect bundled documentation (also exposed via MCP
 app.add_typer(docs_app, name="docs")
 
 
+def _version_callback(requested: bool) -> None:
+    """Print the version and exit, for the eager `--version` option below."""
+    if requested:
+        print(f"mood {tool_version()}")
+        raise typer.Exit()
+
+
 @app.callback()
-def callback() -> None:
+def callback(
+    # Unused in the body: the eager callback fires during parsing and exits,
+    # which is what lets `mood --version` run without a subcommand.
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the version and exit.",
+    ),
+) -> None:
     """Another Mood: a processor of source-based databases, keeping related documents in sync.
 
     Before authoring or editing schema, views, or templates, read the spec:
