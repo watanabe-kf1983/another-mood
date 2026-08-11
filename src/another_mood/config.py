@@ -1,6 +1,7 @@
 """Project configuration — invocation parameters only (source layout is not
 configuration; see :mod:`another_mood.layout`)."""
 
+from collections.abc import Iterator
 from pathlib import Path
 
 from pydantic import Field
@@ -14,11 +15,21 @@ class ConfigValidationError(Exception):
 class ProjectConfig(BaseSettings):
     """Project configuration for Another Mood.
 
-    Default output paths derive from `.another-mood/<project_dir>/`.
+    Default output paths derive from `<namespace_root>/.another-mood/<project_dir>/`.
     Environment variables (RB_ prefix) override defaults.
+
+    Paths are taken as given: nothing here reads the process CWD, so every
+    path must be absolute already (``verify`` enforces it). Absolutizing —
+    and thereby choosing what relative paths mean — belongs to the CLI / MCP
+    boundary that owns the caller's standing position.
     """
 
     model_config = SettingsConfigDict(env_prefix="RB_")
+
+    # The directory the derived `.another-mood/` tree hangs from, and the base
+    # the tree is namespaced by. The CLI binds it to the current directory, the
+    # MCP server to project_dir (which collapses the namespacing tail).
+    namespace_root: Path
 
     project_dir: Path
 
@@ -41,7 +52,7 @@ class ProjectConfig(BaseSettings):
 
     def resolved_for_build(self) -> "ProjectConfig":
         """Fill unset out_dir/site_dir with the ``.another-mood/<project>`` defaults."""
-        rb = _another_mood_root(self.project_dir)
+        rb = _another_mood_root(self.namespace_root, self.project_dir)
         return self.model_copy(
             update={
                 "out_dir": self.out_dir or rb / "output",
@@ -53,11 +64,11 @@ class ProjectConfig(BaseSettings):
         """Fill an unset tap_dir with the ``.another-mood/<project>`` default.
 
         An explicit tap_dir skips even deriving the default, which would
-        require project_dir under CWD.
+        require project_dir under namespace_root.
         """
         if self.tap_dir is not None:
             return self
-        rb = _another_mood_root(self.project_dir)
+        rb = _another_mood_root(self.namespace_root, self.project_dir)
         return self.model_copy(update={"tap_dir": rb / "tap"})
 
     def resolved_for_watch(self) -> "ProjectConfig":
@@ -66,11 +77,18 @@ class ProjectConfig(BaseSettings):
 
     def verify(self) -> None:
         """Run post-construction checks. Raises ConfigValidationError on failure."""
-        cwd = Path.cwd().resolve()
-        if not self.project_dir.resolve().is_relative_to(cwd):
+        relative = {name: path for name, path in _paths(self) if not path.is_absolute()}
+        if relative:
+            listing = ", ".join(f"{name}={path}" for name, path in relative.items())
             raise ConfigValidationError(
-                "Project directory must be under the current directory "
-                f"({cwd}), but points outside it: {self.project_dir}"
+                "Paths must be absolute, but these are relative: "
+                f"{listing}. RB_* environment variables are read as given, so "
+                "they have to be written as absolute paths."
+            )
+        if not self.project_dir.is_relative_to(self.namespace_root):
+            raise ConfigValidationError(
+                "Project directory must be under the namespace root "
+                f"({self.namespace_root}), but points outside it: {self.project_dir}"
             )
         if not self.project_dir.is_dir():
             raise ConfigValidationError(
@@ -78,15 +96,26 @@ class ProjectConfig(BaseSettings):
             )
 
 
-def _another_mood_root(project_dir: Path) -> Path:
-    """Resolve the `.another-mood/<project_dir>/` base directory.
+def _paths(config: ProjectConfig) -> Iterator[tuple[str, Path]]:
+    """Yield the config's set path fields as (field name, value) pairs."""
+    return (
+        (name, value)
+        for name, value in config
+        if isinstance(value, Path)  # skips the unset (None) ones
+    )
 
-    Output is namespaced by the project's CWD-relative path so distinct
-    projects never collide. ``ProjectConfig.verify`` guarantees
-    ``project_dir`` resolves under CWD, so ``relative_to`` always yields a
-    relative tail — which also sidesteps pathlib's ``/`` swallowing the LHS
-    whenever the RHS has an anchor (a naive ``Path(".another-mood") /
+
+def _another_mood_root(namespace_root: Path, project_dir: Path) -> Path:
+    """Resolve the `<namespace_root>/.another-mood/<project_dir>/` base directory.
+
+    Output is namespaced by the project's namespace_root-relative path so
+    distinct projects never collide. ``ProjectConfig.verify`` guarantees
+    ``project_dir`` lies under ``namespace_root``, so ``relative_to`` always
+    yields a relative tail — which also sidesteps pathlib's ``/`` swallowing
+    the LHS whenever the RHS has an anchor (a naive ``root / ".another-mood" /
     project_dir`` would otherwise land output inside a rooted project itself).
+    A project at the root itself collapses the tail, giving
+    ``<namespace_root>/.another-mood/``.
     """
-    tail = project_dir.resolve().relative_to(Path.cwd().resolve())
-    return Path(".another-mood") / tail
+    tail = project_dir.relative_to(namespace_root)
+    return namespace_root / ".another-mood" / tail

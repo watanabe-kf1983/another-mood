@@ -51,6 +51,8 @@
 
 境界層（CLI / MCP）がパスを絶対化してから渡す。これにより「command 層に入るパスは既に絶対」という不変条件が立つ。
 
+MCP 側は、相対パスを解決するのではなく**エラーで弾く**（`build` / `tap` / `init` / `apply_blueprint` の全パス引数）。相対パスの基準になるサーバ CWD はクライアントの都合で決まり、呼び出し元のエージェントからは見えないため — Claude Code CLI はプロジェクトディレクトリで起動するが、同デスクトップ版は `$HOME` で起動し設定の `cwd` も無視する（[anthropics/claude-code#75266](https://github.com/anthropics/claude-code/issues/75266)、未修正）。MCP 公式のデバッグ指針も「クライアント経由で起動されたサーバの作業ディレクトリは未定義でありうる」と明記している。黙って解決すると、エージェントもユーザも選んでいないディレクトリを指しうる。一方でエージェントはワークスペースの絶対パスを持っている（ファイルツールが絶対パスを要求する実装が主流）ので、エラーは 1 往復で直せる。
+
 この不変条件が要るのは、`Path.cwd()` の明示的な呼び出しを潰すだけでは足りないため。`.resolve()` は相対パスに対して暗黙に CWD を基準にするので、CWD 依存は `components` / `pipeline` まで潜り込んでいる — `blueprints` / `stages` の `project_dir.resolve().name`、`diagnostic` の表示用 `file.resolve()`、`hugo` アダプタの subprocess 用絶対化。入ってくるパスが既に絶対なら、これらの `.resolve()` は絶対化の意味を失い symlink 正規化だけが残る。
 
 #### 命名の検討
@@ -68,6 +70,7 @@
 - **MCP の基準を `project_dir.parent` にする**: 深さ 1 のプロジェクトだけ CLI と出力先が一致する（`dev-docs/` → `<repo>/.another-mood/dev-docs/`）が、`showcase/starter` では一致しない。さらに `project_dir` がワークスペース根そのものだと親がサンドボックス外へ出る。`project_dir` を基準にすればこの破綻がない
 - **CLI も入力ディレクトリ内出力へ統一する**: 名前空間付け・包含チェック・CWD 依存がまとめて消える魅力はあるが、[プロジェクト構成](10-project-structure.md)の「`.another-mood/` を CWD 直下に配置する理由」に正面から反する。CWD 配下のディレクトリを `project_dir` にするのが CLI の主要ユースケースであり、この挙動は変えない。破壊的変更に見合わない
 - **生成ディレクトリに自己無視 `.gitignore` を書き込む**（`.pytest_cache` 方式）: 入れ子の `.another-mood/` が `/.another-mood/` の 1 行に捕まらない問題は消せるが、gitignore は利用者に委ねる
+- **MCP roots でワークスペース根を取得する**: `roots/list` はクライアントが絶対 `file://` URI で根を返すプロトコル上の正解で、CWD の推測が要らなくなる。ただし capability は任意で、非対応クライアントは `-32601` を返す仕様であり、Claude Code デスクトップは initialize で roots を渡さない。フォールバック設計とクライアント差の検証が別途要るため今回は採らず、将来の選択肢として残す
 
 #### 帰結
 

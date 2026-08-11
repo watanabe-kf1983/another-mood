@@ -59,15 +59,29 @@ def _load_config(**kwargs: object) -> ProjectConfig:
     ``None`` kwargs are dropped so callers can forward typer Options
     (``--flag`` defaulted to ``None``) directly without a per-flag
     ``if x is not None`` dance.
+
+    Binds the namespace root to the current directory: the CLI is the layer
+    that owns the caller's standing position, so output lands under
+    ``<cwd>/.another-mood/`` as it always has.
     """
     fields = {k: v for k, v in kwargs.items() if v is not None}
-    config = ProjectConfig(**fields)  # type: ignore[arg-type]
+    config = ProjectConfig(namespace_root=Path.cwd(), **fields)  # type: ignore[arg-type]
     try:
         config.verify()
     except ConfigValidationError as exc:
         print(str(exc), file=sys.stderr)
         raise typer.Exit(1) from exc
     return config
+
+
+def _absolute(path: str | None) -> Path | None:
+    """Absolutize a user-supplied path against the current directory.
+
+    ``None`` passes through so typer Options can be forwarded unconditionally.
+    """
+    if path is None:
+        return None
+    return Path(path).resolve()
 
 
 @blueprint_app.command("list")
@@ -195,9 +209,9 @@ def build(
 ) -> None:
     """Build the project to Markdown and rendered HTML."""
     config = _load_config(
-        project_dir=Path(project_dir),
-        out_dir=out_dir,
-        site_dir=site_dir,
+        project_dir=_absolute(project_dir),
+        out_dir=_absolute(out_dir),
+        site_dir=_absolute(site_dir),
     )
     try:
         result = command.build(config, on_report=_build_listener(strict=strict))
@@ -228,7 +242,10 @@ def watch(
 ) -> None:
     """Watch for file changes, rebuild incrementally, and serve a live preview."""
     config = _load_config(
-        project_dir=Path(project_dir), out_dir=out_dir, host=host, port=port
+        project_dir=_absolute(project_dir),
+        out_dir=_absolute(out_dir),
+        host=host,
+        port=port,
     )
     try:
         with command.watch(config, on_report=_build_listener()) as session:
@@ -258,7 +275,7 @@ def tap(project_dir: str = typer.Argument(help="Project directory")) -> None:
     The document is self-describing: `mood tap . | jq 'keys'` lists what is
     inside, and `.__definition.entities` holds the type definitions.
     """
-    config = _load_config(project_dir=Path(project_dir))
+    config = _load_config(project_dir=_absolute(project_dir))
     try:
         result = command.tap(config)
     except UserError as exc:

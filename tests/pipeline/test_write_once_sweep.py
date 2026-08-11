@@ -114,6 +114,7 @@ def _scaffold_project(tmp_path: Path) -> Path:
 def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
     published = tmp_path / "published"
     config = ProjectConfig(
+        namespace_root=tmp_path,
         project_dir=project,
         out_dir=published / "output",
         site_dir=published / "site",

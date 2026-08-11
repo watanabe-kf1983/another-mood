@@ -242,6 +242,8 @@ Every configuration key has a default; each can be overridden individually via a
 
 Each configuration key can be overridden by an environment variable: prefix the key name with `RB_` and uppercase it as snake case. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
 
+Path values must be absolute. Command-line paths are resolved against the current directory for you, but an environment variable is read as given, and a relative value there is rejected rather than guessed at.
+
 ```bash
 RB_OUT_DIR=/abs/path/to/output mood build .
 RB_PORT=8080 mood watch .
