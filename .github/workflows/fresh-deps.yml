@@ -25,7 +25,12 @@ jobs:
           # The version is derived from the nearest release tag, which the
           # default shallow clone does not fetch.
           fetch-depth: 0
+      # Both jobs here execute freshly-resolved, unreviewed upstream releases.
+      # Keep them out of the shared Actions cache so a malicious release
+      # cannot poison entries other workflows might restore.
       - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
       - name: Build via the `uv tool install` resolution path
         run: uvx --from . --refresh-package another-mood mood build showcase/starter
 
@@ -40,6 +45,8 @@ jobs:
           # default shallow clone does not fetch.
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
       - name: Resolve to the latest versions our constraints allow
         run: uv sync --upgrade
       - run: make ci

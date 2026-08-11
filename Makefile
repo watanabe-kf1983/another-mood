@@ -1,4 +1,4 @@
-.PHONY: ci format-check lint typecheck test secrets build-projects format mirror-schemas stats
+.PHONY: ci format-check lint typecheck test secrets build-projects format mirror-schemas stats upgrade-deps
 
 ci: format-check lint typecheck test secrets build-projects
 
@@ -23,6 +23,9 @@ build-projects:
 		echo "uv run mood build showcase/$$name"; \
 		uv run mood build showcase/$$name || exit 1; \
 	done
+
+upgrade-deps:
+	scripts/upgrade_deps.sh
 
 format:
 	uv run ruff format .
