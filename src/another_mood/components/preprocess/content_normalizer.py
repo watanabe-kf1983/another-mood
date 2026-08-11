@@ -5,6 +5,7 @@ schema (built-in prose schema + user schema), and normalized
 (dict-to-array conversion for additionalProperties patterns).  When
 the data catalog is available, FK references declared via ``x-ref``
 are also checked against the actual data (data-level FK integrity).
+Record identity is checked once every file has contributed.
 Blob sources additionally have their bytes mirrored beside their
 records; hand-written ``blob`` records are rejected (blob records
 come from files only).
@@ -18,6 +19,7 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.preprocess.data_fk_validator import check_fk_data
+from another_mood.components.preprocess.data_id_validator import check_duplicate_ids
 from another_mood.components.preprocess.normalize_core import iter_normalized
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.component.component import Component
@@ -72,6 +74,10 @@ def normalize_contents(
 
     for diagnostic in check_fk_data(_load_catalog(data_catalog_dir), data_by_entity):
         reporter.report(diagnostic)
+    # After the FK loop: the stage drains the reporter even on a raise,
+    # so those warnings still surface.
+    if duplicates := check_duplicate_ids(data_by_entity):
+        raise FileValidationError(diagnostics=duplicates)
 
 
 def build_contents_schema(
