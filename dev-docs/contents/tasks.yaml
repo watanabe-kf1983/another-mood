@@ -329,16 +329,6 @@ categories:
         done: true
       G13:
         title: "mood --version"
-        note: >-
-          版を名乗る口を CLI と MCP の両面に開けた。出力は `mood <version>` —
-          前置は製品名ではなくコマンド名で、叩いたバイナリの身分証明に徹する
-          (配布物名で答える仕事は minimum_version エラー側が持つ)。
-          論点だった mcp_server 側も同梱: FastMCP は version を受け取らず
-          低レベル Server が MCP SDK 自身の版へフォールバックするため、
-          放置ではなく他人の版を名乗っている状態だった。
-          値は components/shared/tool_version に一本化し、
-          --version・serverInfo・minimum_version ゲート・init が書く manifest が
-          同じ読みを共有する。
         phase: 15
         done: true
 
@@ -396,7 +386,7 @@ categories:
           引き込む死荷重があり、stdio JSON-RPC の手書き (300-500 行、zeromcp が
           参照実装候補) で依存ゼロ化する選択肢が検討済み。SDK を dev グループに
           残せばテストのクライアント側として使える。
-        phase: 18
+        phase: 16
 
   L:
     title: dog-fooding
@@ -432,7 +422,7 @@ categories:
           経由は情報が痩せるので environment モードを使う)。
           論点: dependsOn (bom-ref の文字列配列) を view の join で辿れるか
           (x-ref は整合性検査なので配列対応は不要、問題は join の側)。
-        phase: 15
+        phase: 16
 
   M:
     title: JSON データモデル と データカタログ
@@ -596,11 +586,6 @@ categories:
         done: true
       Q11:
         title: PR マージ側の破壊的変更ゲート
-        note: >-
-          検討で実装形を確定して閉じた。Q6 時点の予測 (新設 CI ゼロ) は覆り、
-          PR lint ワークフローを建てる。成果は 30-dev/50-release に記録し、
-          実装は W1 (運用切り替え)・V8 (世代宣言の切り出し)・T4 (lint) に分割。
-          公開カテゴリの管轄でないため実装タスクは W / V / T 側に置いた。
         phase: 15
         done: true
       Q7:
@@ -615,7 +600,7 @@ categories:
           PR テンプレート / CONTRIBUTING の要否検討もここ (repo 内部には T4 の
           lint コメントで足りる。外部コントリビュータという宛先が生まれて
           初めて意味を持つ装置)。
-          受益者が現れるローンチまで不要なので Phase 17。Q3 の前提。
+          受益者が現れるローンチまで不要。Q3 の前提。
         phase: 17
       Q8:
         title: PyPI アカウント準備 (登録 + 2FA)
@@ -716,76 +701,23 @@ categories:
         done: true
       T2:
         title: 依存更新の取り込み運用の確立
-        note: >-
-          検討の起点は mcp 2.0.0 が Fresh dependency check を 3 週赤のまま
-          放置していた実態で、受動運用の弱点は検出遅延ではなく
-          「赤→行動の変換が保証されない」ことと特定した。確立した運用は
-          30-dev/35-dependencies に明文化: 制約は下限のみ (cap は除去条件付きの
-          応急処置に限る)、Fresh dependency check = ユーザ解決の週次代理監視
-          (キャッシュ遮断)、Dependabot security = 開発環境の脆弱性監視、
-          make upgrade-deps = タスク開始時の鮮度儀式 (lock 単独 PR、merge は手動)。
-          検討時の選択肢 (b) 定期 bot は死亡テスト
-          (開発休止後も自分の commit で自己延命し赤 PR を積む) で棄却、
-          (c) version updates も同根で不採用。冷却期間 (exclude-newer) は
-          実装まで行ったが、lock への刻印汚染と速達修正の巻き戻しが判明して撤回
-          (経緯は 30-dev/35-dependencies の採らなかった選択肢)。
         phase: 15
         done: true
       T3:
         title: hatch-vcs 化 (版宣言を git tag に一本化)
-        note: >-
-          方式 B の導入設営 (実機検証済みの手順を 30-dev/50-release に列挙済み)。
-          hatchling に hatch-vcs を足して dynamic version 化し、変則 tag 対策の
-          tag パターン・uv cache-keys の git キー・パッケージをビルドする
-          ワークフローの fetch-depth: 0 (ci.yml のほか fresh-deps.yml も
-          uvx --from . でビルドする)・[project.urls] の Changelog リンクまで。
-          ワークフローは T5 / T6、実リリースは T6。
-          Q カテゴリから移管 (旧 Q10)。
         phase: 15
-        proposal: 30-dev/50-release
         done: true
       T4:
         title: PR lint ワークフロー (トレーラー検査 + 破壊的変更の注意喚起)
-        note: >-
-          fail はトレーラー書式検査 (key 綴り・マーク語彙・ニアミス検知) のみ。
-          「世代宣言ファイルに diff ∧ breaking トレーラー無し」と
-          「docs/reference に diff ∧ トレーラーゼロ」は非ブロックの sticky
-          コメントで注意喚起 (コピペ可能な suggest + DEVELOPMENT.md への
-          ポインタ。文面の強度は前者 > 後者)。意味判定はしない —
-          既存シグナル同士の決定的な突き合わせだけ。
-          W1 (PR 本文への搬送切り替え) と V8 (世代宣言の切り出し) の後。
         phase: 15
-        proposal: 30-dev/50-release
         done: true
       T5:
         title: tag 駆動ワークフロー (build → GH Release 作成)
-        note: >-
-          準備として Releases ページを台帳として立ち上げる: v0.1.0 の GH Release を
-          遡及作成し (本文は手書きで最小限。ここで自動生成ノートを出すと基準リリースが
-          無く全履歴が流れ込む)、変則 tag v0-ts-baseline / v0-ts-prototype /
-          v0.1.0-design を milestone/ 名前空間へ改名する (v 接頭辞をリリース専用に
-          空けるため。指し先のコミットは main から到達可能で歴史は失われない)。
-          その上で tag push 契機の
-          build → GH Release 作成。リリースノートは GH 自動生成の What's Changed のみで、
-          ラベル別の節分けは不採用。v0.1.0 の Release が先に立っていることで、
-          初回の自動生成が v0.1.0..HEAD に定まる。T3 の後。
         phase: 15
-        proposal: 30-dev/50-release
         done: true
       T6:
         title: PyPI publish の追加とリリース手順の確定
-        note: >-
-          T5 のワークフローに PyPI publish ステップを足す。認証は trusted publishing
-          (プロジェクトは 0.1.0 手動 publish で実在するため通常登録。登録は PyPI 側の
-          手作業で、以後 API token は不要)。T5 と分けたのは可逆性の非対称による —
-          GH Release と tag は消して打ち直せるが、PyPI は版番号が永久に焼失する。
-          先に GH 側だけを実 tag で検証しておけば、publish 追加時の失敗原因を PyPI 側の
-          設営に絞れる。中間期は GH Releases のみが更新され PyPI は 0.1.0 に留まるが、
-          ローンチ前の裁量リリース下では許容し、次のリリースが差分を丸ごと含む。
-          DoD = リリース手順に従い実リリースを 1 回回し、通った実態でチェックリスト
-          本体を確定する。T5 の後。
         phase: 15
-        proposal: 30-dev/50-release
         done: true
 
   U:
@@ -850,14 +782,7 @@ categories:
         done: true
       V8:
         title: SUPPORTED_SBDB_VERSIONS の専用モジュール切り出し
-        note: >-
-          対応世代集合の宣言を定数一行の専用モジュールへ分離し、
-          「このファイルに diff = 世代宣言が動いた」をファイル境界で読める
-          構造フラグにする (T4 のチェックが diff 検知に使う。集合の
-          パースは不要になる)。定数しか置かないので、diff 検知の
-          過剰発火は実質起きない。
         phase: 15
-        proposal: 30-dev/50-release
         done: true
 
   W:
@@ -868,23 +793,14 @@ categories:
     tasks:
       W1:
         title: コミット・PR 運用の見直し (squash PR_BODY 化 + PR 側規律の明文化)
-        note: >-
-          squash マージ設定を COMMIT_MESSAGES から PR_BODY へ切り替え、設計判断の
-          背景の記録先をブランチコミットメッセージから PR 本文 (= main の squash
-          コミット本文) へ移す。DEVELOPMENT.md を改訂: 記録先の転居 + PR 側規律の
-          書き出し (非互換注記・移行手順・Release-Note トレーラーの書式と
-          マーク判断規準)。リリース手順 1 の収集一行コマンドの確定記載もここ。
-          切り替え後の初回マージ PR で PR_BODY 搬送 (末尾自動付加の挙動含む) を
-          実機確認する。
         phase: 15
-        proposal: 30-dev/50-release
         done: true
       W2:
         title: dev-docs の全面英語化
         note: >-
           ローンチで外部コントリビュータが設計判断を読める状態にする。
           background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
-          Phase 16 (S2-S4) は仕様検討で dev-docs に最も書き込むフェーズなので、
+          S2-S4 は仕様検討で dev-docs に最も書き込むタスク群なので、
           その完了後・告知前に実施する。Q3 の前提。
           Q カテゴリから移管 (旧 Q4)。
         phase: 17
