@@ -217,11 +217,11 @@ members:
 
 The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__data/<entity>` (whether the data is being loaded as expected).
 
-There are two reasons to write as a map. First, even as the number of records grows, the YAML data stays more readable than the array form (each record's `id` comes first and acts like a heading). Second, `id` uniqueness is enforced at YAML parse time — duplicate keys raise a parse error immediately, so you don't discover later that two records had the same `id`.
+The reason to write as a map is readability: even as the number of records grows, the YAML data stays easier to read than the array form, because each record's `id` comes first and acts like a heading.
 
 #### Multiple records — write as an array
 
-Conversely, if you don't need those two advantages (readability and ID uniqueness), you can write the entity as an array (an ordered sequence) using `type: array`. Examples: procedures where only the order matters, a sequence of annotations not referenced individually from elsewhere, or a stream of records too trivial to bother assigning IDs.
+Conversely, if you don't need that readability, you can write the entity as an array (an ordered sequence) using `type: array`. Examples: procedures where only the order matters, a sequence of annotations not referenced individually from elsewhere, or a stream of records too trivial to bother assigning IDs.
 
 ```yaml
 # definition/schema.yaml — entity excerpt
