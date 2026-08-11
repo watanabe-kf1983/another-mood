@@ -384,6 +384,19 @@ categories:
         title: "compose 結果の取り出し (mood tap + MCP)"
         phase: 15
         done: true
+      J4:
+        title: mcp SDK 2.0 移行 (cap <2 の除去)
+        note: >-
+          mcp 2.0.0 は `mcp.server.fastmcp` を含む API 再編で、放置すると
+          `uv tool install` する新規ユーザの MCP サーバが壊れるため、応急処置として
+          `mcp>=1.28.1,<2` の cap を先行リリースした (#397)。このタスクが cap の
+          除去条件: 2.0 API へ移行し、上限なし原則 (30-dev/35-dependencies) に復帰する。
+          着手時に代替も再評価してよい — mcp SDK は stdio-only の mood にも
+          HTTP スタック (starlette / uvicorn / httpx 等、推移閉包 27 パッケージ) を
+          引き込む死荷重があり、stdio JSON-RPC の手書き (300-500 行、zeromcp が
+          参照実装候補) で依存ゼロ化する選択肢が検討済み。SDK を dev グループに
+          残せばテストのクライアント側として使える。
+        phase: 18
 
   L:
     title: dog-fooding
@@ -704,18 +717,20 @@ categories:
       T2:
         title: 依存更新の取り込み運用の確立
         note: >-
-          現状 uv.lock が動く経路は二つだけ: Dependabot のセキュリティ更新
-          (dependabot.yml 無しで稼働する範囲) と、週次 Fresh dependency check が
-          赤くなったときの手動 `uv lock --upgrade`。通常の版上げは赤を待つ受動運用で、
-          実際 ruff 0.16 (md 内 python コードブロックが format 対象化) では
-          赤を契機に一括更新した。受動運用のままだと、新しい dev ツールの規則は
-          pinned 環境に効かず週次ジョブでしか検出されない期間が生じる。
-          選択肢: (a) 現行の受動運用を意図として DEVELOPMENT.md に明文化、
-          (b) 定期的に lock 更新 PR を生成するワークフローを足す、
-          (c) Dependabot の version updates を有効化。(c) は Q7 の
-          「Dependabot は有効化しない」方針と衝突するため、採るならその再検討を含む。
-          リリース運用 (Q6) と同じ CI プロセス面なので同フェーズ。
+          検討の起点は mcp 2.0.0 が Fresh dependency check を 3 週赤のまま
+          放置していた実態で、受動運用の弱点は検出遅延ではなく
+          「赤→行動の変換が保証されない」ことと特定した。確立した運用は
+          30-dev/35-dependencies に明文化: 制約は下限のみ (cap は除去条件付きの
+          応急処置に限る)、Fresh dependency check = ユーザ解決の週次代理監視
+          (キャッシュ遮断)、Dependabot security = 開発環境の脆弱性監視、
+          make upgrade-deps = タスク開始時の鮮度儀式 (lock 単独 PR、merge は手動)。
+          検討時の選択肢 (b) 定期 bot は死亡テスト
+          (開発休止後も自分の commit で自己延命し赤 PR を積む) で棄却、
+          (c) version updates も同根で不採用。冷却期間 (exclude-newer) は
+          実装まで行ったが、lock への刻印汚染と速達修正の巻き戻しが判明して撤回
+          (経緯は 30-dev/35-dependencies の採らなかった選択肢)。
         phase: 15
+        done: true
       T3:
         title: hatch-vcs 化 (版宣言を git tag に一本化)
         note: >-

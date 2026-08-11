@@ -6,6 +6,7 @@
 
 - 各タスクは「1タスク・1 Git ブランチ」で進める
 - タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する。失敗する場合は、環境の問題ならセットアップ節を、コードの問題ならタスク着手前に修正する
+- タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出たら lock 単独 PR を先に merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
 - コミットメッセージ・プルリクエストは **英語**
 
 ### セットアップ
