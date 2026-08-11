@@ -1,11 +1,16 @@
 """Tests for dict-to-array normalization (additionalProperties pattern)."""
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import cast
 
 from ruamel.yaml import YAML
 
 from another_mood.components.preprocess.normalize_core import Schema, normalize_data
+from another_mood.components.shared.user_source.source_loader import (
+    UserStr,
+    parse_mapping,
+)
 
 _yaml = YAML()
 
@@ -77,6 +82,14 @@ class TestFlatDict:
             {"id": "10", "name": "Ten"},
             {"id": "20", "name": "Twenty"},
         ]
+
+    def test_keeps_the_key_position_in_the_id(self, tmp_path: Path) -> None:
+        src = tmp_path / "members.yaml"
+        src.write_text("alice:\n  name: Alice\nbob:\n  name: Bob\n")
+        result = normalize_data(parse_mapping(src), self.SCHEMA)
+        records = cast(list[Mapping[str, object]], result)
+        locations = [cast(UserStr, record["id"]).location for record in records]
+        assert [(loc.file, loc.line) for loc in locations] == [(src, 1), (src, 3)]
 
 
 class TestNestedDict:

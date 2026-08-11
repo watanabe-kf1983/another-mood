@@ -101,13 +101,22 @@ def _flatten_dict(data: DataMap, additional_schema: Schema) -> list[dict[str, ob
     if additional_schema.get("type") == "object" and "properties" in additional_schema:
         props = cast(Schema, additional_schema.get("properties"))
         return [
-            {"id": str(key), **_recurse_properties(cast(DataMap, value), props)}
+            {
+                "id": _string_key(key),
+                **_recurse_properties(cast(DataMap, value), props),
+            }
             for key, value in data.items()
         ]
     return [
-        {"id": str(key), "value": normalize_data(value, additional_schema)}
+        {"id": _string_key(key), "value": normalize_data(value, additional_schema)}
         for key, value in data.items()
     ]
+
+
+def _string_key(key: object) -> str:
+    # Coerce only what is not already a string: rebuilding one would drop
+    # the source-location tag a parsed key carries.
+    return key if isinstance(key, str) else str(key)
 
 
 def _recurse_properties(data: DataMap, properties: Schema) -> dict[str, object]:
