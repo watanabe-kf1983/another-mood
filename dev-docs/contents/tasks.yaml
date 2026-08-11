@@ -376,17 +376,8 @@ categories:
         done: true
       J4:
         title: mcp SDK 2.0 移行 (cap <2 の除去)
-        note: >-
-          mcp 2.0.0 は `mcp.server.fastmcp` を含む API 再編で、放置すると
-          `uv tool install` する新規ユーザの MCP サーバが壊れるため、応急処置として
-          `mcp>=1.28.1,<2` の cap を先行リリースした (#397)。このタスクが cap の
-          除去条件: 2.0 API へ移行し、上限なし原則 (30-dev/35-dependencies) に復帰する。
-          着手時に代替も再評価してよい — mcp SDK は stdio-only の mood にも
-          HTTP スタック (starlette / uvicorn / httpx 等、推移閉包 27 パッケージ) を
-          引き込む死荷重があり、stdio JSON-RPC の手書き (300-500 行、zeromcp が
-          参照実装候補) で依存ゼロ化する選択肢が検討済み。SDK を dev グループに
-          残せばテストのクライアント側として使える。
         phase: 16
+        done: true
 
   L:
     title: dog-fooding

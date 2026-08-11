@@ -9,10 +9,9 @@ from collections.abc import Sequence
 from logging import INFO, basicConfig
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.resources import FileResource
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.resources import FileResource
 from mcp.types import ResourceLink
-from pydantic import AnyUrl
 
 from another_mood import command
 from another_mood.command import BuildResult
@@ -52,22 +51,14 @@ Another Mood also provides live preview, but not as an MCP tool. Ask the
 user to run `mood watch <project_dir>` in a separate terminal.
 """
 
-mcp = FastMCP("another-mood", instructions=_INSTRUCTIONS)
-
-# FastMCP takes no `version`, and the low-level Server it wraps falls back to
-# the MCP SDK's own version -- so without this line the initialize response
-# announces another-mood as whatever `mcp` is installed. Reaching into
-# `_mcp_server` is the only seam available; swap it for a constructor argument
-# once FastMCP forwards one. A silent regression here would report a plausible
-# wrong version rather than raise, so a test pins the announced value.
-mcp._mcp_server.version = tool_version()  # pyright: ignore[reportPrivateUsage]
+mcp = MCPServer("another-mood", instructions=_INSTRUCTIONS, version=tool_version())
 
 # Bundled docs are exposed via Resources (canonical) and via list_docs /
 # read_doc Tools below (mirror, for clients that don't surface Resources).
 for _entry in command.list_docs():
     mcp.add_resource(
         FileResource(
-            uri=AnyUrl(_entry.uri),
+            uri=_entry.uri,
             name=_entry.name,
             description=_entry.description,
             mime_type=_entry.mime_type,
@@ -84,10 +75,10 @@ def list_docs() -> Sequence[ResourceLink]:
     return [
         ResourceLink(
             type="resource_link",
-            uri=AnyUrl(e.uri),
+            uri=e.uri,
             name=e.name,
             description=e.description,
-            mimeType=e.mime_type,
+            mime_type=e.mime_type,
         )
         for e in command.list_docs()
     ]

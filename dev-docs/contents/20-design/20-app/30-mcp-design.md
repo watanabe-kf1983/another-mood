@@ -18,12 +18,6 @@ data/ の作成・更新・削除（CUD）は AI が直接ファイルを編集�
 - **MCP と CLI の論理的機能は一致すべき**: MCP インタフェースの検討結果が CLI インタフェースの見直しの契機になりうる。差異が出たら「どちらかが間違っている」サインとして扱う
 - **validate を build と分離する必要はない**: このツールは入力を変更せず副作用もない純粋関数であり、全操作が冪等かつ dry-run である。build 自体が validate を兼ねる
 
-### serverInfo が名乗る版
-
-initialize 応答の `serverInfo.version` は another-mood 自身の版を名乗る。値の出所は CLI の `mood --version` と同じで、manifest の `tools.another-mood.minimum_version` ゲートが比べるのも同じ値。エージェントが MCP 経由でしか触れない環境でも、ゲートに弾かれたときの自己診断が成立する。
-
-FastMCP は `version` を受け取らず、内包する低レベル `Server` は未設定時に MCP SDK 自身の版へフォールバックするため、明示しないと「MCP SDK の版を another-mood の版として名乗る」状態になる。
-
 ### ドキュメント提供の一元化
 
 利用者向けドキュメントの canonical は `docs/` の raw Markdown として一元管理し、複数チャネルで提供する:
@@ -128,7 +122,7 @@ MCP 接続時にクライアントのシステムプロンプトに注入され�
 
 #### Tool description（各ツール定義に付随）
 
-各ツールの自己完結的な説明。FastMCP では関数の docstring から自動生成される。call site で必要な情報（目的、引数 / 戻り値の契約、CLI の同等コマンド）に絞る。Workflow やツール間の routing は Server Instructions に集約し、docstring とは重複させない。
+各ツールの自己完結的な説明。`MCPServer` では関数の docstring から自動生成される。call site で必要な情報（目的、引数 / 戻り値の契約、CLI の同等コマンド）に絞る。Workflow やツール間の routing は Server Instructions に集約し、docstring とは重複させない。
 
 #### Resources / list_docs・read_doc（オンデマンド読み込み）
 
@@ -162,10 +156,16 @@ build（エージェントのワンショット実行）と watch（バックグ
 
 パフォーマンス上の二重実行コストが問題になった場合は、watch を一時停止する仕組み（pause_watching / resume_watching）の導入を検討する。
 
-### 背景: ライブラリは MCP Python SDK 内 FastMCP を採用
+### 背景: ライブラリは MCP Python SDK 内 MCPServer を採用
 
-公式 [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)（PyPI: `mcp`）にバンドルされた `mcp.server.fastmcp.FastMCP` を採用。本プロジェクトは MCP サーバを stdio 上の JSON-RPC として動かすローカルプロセス用途であり、サードパーティ製の独立 [`prefecthq/fastmcp`](https://github.com/prefecthq/fastmcp) が積み増している機能（OAuth Proxy、Middleware、サーバ間 mount / proxy、Declarative JSON Config 等の Web サービス本番運用向け機能）は使い道がない。よって追加依存を増やしてまで独立 fastmcp を採用する理由がなく、公式 SDK のみを依存に取る。
+公式 [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)（PyPI: `mcp`）にバンドルされた `mcp.server.mcpserver.MCPServer` を採用。本プロジェクトは MCP サーバを stdio 上の JSON-RPC として動かすローカルプロセス用途であり、サードパーティ製の独立 [`prefecthq/fastmcp`](https://github.com/prefecthq/fastmcp) が積み増している機能（OAuth Proxy、Middleware、サーバ間 mount / proxy、Declarative JSON Config 等の Web サービス本番運用向け機能）は使い道がない。よって追加依存を増やしてまで独立 fastmcp を採用する理由がなく、公式 SDK のみを依存に取る。
 
-両者の宣言的 API は共通である（独立 FastMCP の 1.0 が公式 SDK に寄贈されたものが `mcp.server.fastmcp.FastMCP` であり、両者で `@mcp.tool` デコレータ・型ヒントからの JSON Schema 自動生成・docstring からの description 抽出といったコア API は同等）。万一乗り換えが必要になった場合も、import 文の付け替えで済む規模の差。
+両者の宣言的 API は共通である（独立 FastMCP の 1.0 が公式 SDK に寄贈されたものが SDK 1.x の `mcp.server.fastmcp.FastMCP` で、2.0 でこれが `MCPServer` に改名された。`@mcp.tool` デコレータ・型ヒントからの JSON Schema 自動生成・docstring からの description 抽出といったコア API は一貫して同等）。
 
-なお、low-level な `mcp.server.Server` を直接使う選択肢もあるが、Tools / Resources を追加するたびに `list_tools` / `call_tool` ハンドラと JSON Schema 定義の boilerplate が増えるため、本プロジェクトの「関数型・宣言的を好む」スタイル（`DEVELOPMENT.md` コードスタイル節）と整合しない。FastMCP 層を介する。
+なお、low-level な `mcp.server.lowlevel.Server` を直接使う選択肢もあるが、Tools / Resources を追加するたびに `list_tools` / `call_tool` ハンドラと JSON Schema 定義の boilerplate が増えるため、本プロジェクトの「関数型・宣言的を好む」スタイル（`DEVELOPMENT.md` コードスタイル節）と整合しない。`MCPServer` 層を介する。
+
+### 背景: SDK の死荷重を受け入れる
+
+`mcp` は stdio-only の本ツールにも HTTP スタック（starlette / uvicorn / sse-starlette / httpx2 / cryptography 等）を引き込む。実測では、runtime 依存 23 パッケージの土台に対して SDK が **+23 パッケージ**（SDK 1.x でも +22）を足し、インストール規模がほぼ倍になる。
+
+これを承知のうえで SDK に乗り続ける。stdio JSON-RPC を自前実装して依存ゼロ化する案（300-500 行規模）は採らない。理由は、削れるのがディスク上のパッケージ数だけなのに対し、引き受けるのがプロトコル適合の恒久的な責任だから: initialize handshake、capability negotiation、型ヒントからの JSON Schema 生成、structured output、`resource_link`、そして年次で改訂される仕様への追従。MCP の仕様追従を SDK に委ねられることが、この依存を持つ主目的であって、副作用ではない。
