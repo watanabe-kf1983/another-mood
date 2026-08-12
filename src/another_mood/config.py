@@ -29,6 +29,12 @@ class ProjectConfig(BaseSettings):
     # The directory the derived `.another-mood/` tree hangs from, and the base
     # the tree is namespaced by. The CLI binds it to the current directory, the
     # MCP server to project_dir (which collapses the namespacing tail).
+    #
+    # Bound by the boundary layer, not configured by the user: no CLI option
+    # and no MCP argument sets it, and RB_NAMESPACE_ROOT never takes effect,
+    # since both boundaries pass the field explicitly and init arguments
+    # outrank environment sources. Move the output instead — out_dir /
+    # site_dir / tap_dir reach every path this would move, one at a time.
     namespace_root: Path
 
     project_dir: Path
