@@ -236,11 +236,13 @@ Prints usage and the command list. Also available per command (`mood build --hel
 
 ## Configuration overrides
 
-Every configuration key has a default; each can be overridden individually via an environment variable.
+[Keys and defaults](#keys-and-defaults) below lists what is configurable, with the environment variable and the command-line option that override each.
 
 ### Environment variables (`RB_*`)
 
-Each configuration key can be overridden by an environment variable: prefix the key name with `RB_` and uppercase it as snake case. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
+Where the table names an `RB_*` variable, that key can be set from the environment: the name is the key prefixed with `RB_` and uppercased as snake case. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
+
+Path values must be absolute. Command-line paths are resolved against the current directory for you, but an environment variable is read as given, and a relative value there is rejected rather than guessed at.
 
 ```bash
 RB_OUT_DIR=/abs/path/to/output mood build .

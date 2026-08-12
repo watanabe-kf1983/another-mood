@@ -52,6 +52,7 @@ def _wrap(data: Mapping[str, Any]) -> MappingNode:
 class _MockEngine:
     """Captures calls to render / render_to_file for routing assertions."""
 
+    templates_dir: Path = Path("/templates")
     rendered: list[tuple[str, object]] = field(default_factory=lambda: [])
     written: list[tuple[str, object, Path]] = field(default_factory=lambda: [])
     render_return: str = "INLINED"
@@ -64,6 +65,9 @@ class _MockEngine:
         self, template_name: str, subject: object, out_path: Path
     ) -> None:
         self.written.append((template_name, subject, out_path))
+
+    def source_path(self, template_name: str) -> Path:
+        return self.templates_dir / template_name
 
 
 def _make_filter_env(
@@ -169,7 +173,7 @@ class TestRenderFilter:
     def test_guard_error_points_at_template_without_line(self) -> None:
         """The guard fires with the host ``this`` resolved from context; a
         filter has no source line, so the diagnostic carries only the
-        enclosing template's name."""
+        enclosing template's file — the loader key rejoined with its root."""
         tree = _wrap({"albums": [{"id": "a1"}], "prose": [{"id": "p1"}]})
         processor = RenderProcessorImpl(engine=_MockEngine())
         env = _make_filter_env(processor, {"page.md": '{{ subject | render("x.md") }}'})
@@ -178,7 +182,7 @@ class TestRenderFilter:
                 "page.md", this=_at(tree, "albums", 0), subject=_at(tree, "prose", 0)
             )
         (diag,) = exc.value.diagnostics
-        assert diag.file == Path("page.md")
+        assert diag.file == Path("/templates/page.md")
         assert diag.line is None
         assert diag.source == "render"
         assert "/prose/p1" in diag.message

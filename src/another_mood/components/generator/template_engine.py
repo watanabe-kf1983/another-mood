@@ -248,6 +248,10 @@ class TemplateEngine:
     def render(self, template_name: str, subject: object) -> str:
         return self._render(template_name, subject)
 
+    def source_path(self, template_name: str) -> Path:
+        """Where a loader key lives on disk — keys are templates-root relative."""
+        return self._templates_dir / template_name
+
     def render_to_file(
         self,
         template_name: str,
@@ -275,9 +279,7 @@ class TemplateEngine:
             raise FileValidationError(
                 [
                     Diagnostic(
-                        # `exc.name` is the loader key, not a path — rejoin it or
-                        # the diagnostic cannot read the file for its snippet.
-                        file=self._templates_dir / (exc.name or template_name),
+                        file=self.source_path(exc.name or template_name),
                         line=exc.line,
                         column=None,
                         # `message` would re-state the location held above.

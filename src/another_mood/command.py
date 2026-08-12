@@ -153,8 +153,10 @@ def apply_blueprint(name: str, project_dir: Path) -> ScaffoldResult:
 
     Raises :class:`ProjectExistsError` without writing anything if
     ``project_dir`` already holds a project.  The caller is responsible
-    for validating ``name`` against :func:`list_blueprints`.
+    for validating ``name`` against :func:`list_blueprints`, and for
+    handing in an absolute ``project_dir``.
     """
+    _require_absolute("project_dir", project_dir)
     verify_absent(project_dir)
     return _apply_blueprint(name, project_dir)
 
@@ -252,6 +254,16 @@ def tap(config: ProjectConfig) -> BuildResult:
 
 
 # -- Helpers -----------------------------------------------------------------
+
+
+def _require_absolute(name: str, path: Path) -> None:
+    """Raise ValueError unless *path* is absolute."""
+    if not path.is_absolute():
+        raise ValueError(
+            f"{name} must be an absolute path, got {str(path)!r}. Resolving "
+            "one belongs to the CLI / MCP boundary that owns the caller's "
+            "working directory."
+        )
 
 
 def _session_workspace(

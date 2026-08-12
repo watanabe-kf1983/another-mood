@@ -104,14 +104,14 @@ def build(
     """Run a one-shot build of `project_dir`, generating Markdown and HTML
     and returning the result. Equivalent to `mood build <project_dir>`.
 
-    `out_dir` and `site_dir` are optional; leave them unset to use the
-    defaults under `.another-mood/<project_dir>/`.
+    Paths must be absolute. `out_dir` and `site_dir` are optional; leave them
+    unset to use the defaults under `<project_dir>/.another-mood/`.
     """
-    overrides: dict[str, object] = {"project_dir": Path(project_dir)}
+    overrides = _project_overrides(project_dir)
     if out_dir is not None:
-        overrides["out_dir"] = Path(out_dir)
+        overrides["out_dir"] = _absolute_arg("out_dir", out_dir)
     if site_dir is not None:
-        overrides["site_dir"] = Path(site_dir)
+        overrides["site_dir"] = _absolute_arg("site_dir", site_dir)
     config = ProjectConfig(**overrides)  # type: ignore[arg-type]
     config.verify()
     return command.build(config)
@@ -122,12 +122,13 @@ def tap(project_dir: str, out_dir: str | None = None) -> BuildResult:
     """Extract the project's data as one JSON document at
     `<out_dir>/data.json`. Equivalent to `mood tap <project_dir>`.
 
-    `out_dir` is optional; leave it unset to use the default under
-    `.another-mood/<project_dir>/`. On errors the document is not written.
+    Paths must be absolute. `out_dir` is optional; leave it unset to use the
+    default under `<project_dir>/.another-mood/`. On errors the document is
+    not written.
     """
-    overrides: dict[str, object] = {"project_dir": Path(project_dir)}
+    overrides = _project_overrides(project_dir)
     if out_dir is not None:
-        overrides["tap_dir"] = Path(out_dir)
+        overrides["tap_dir"] = _absolute_arg("out_dir", out_dir)
     config = ProjectConfig(**overrides)  # type: ignore[arg-type]
     config.verify()
     return command.tap(config)
@@ -138,10 +139,11 @@ def init(project_dir: str) -> ScaffoldResult:
     """Initialize a project at `project_dir` from the `starter` blueprint.
     Equivalent to `mood init <project_dir>`.
 
-    The directory is created if missing; unrelated files in it are fine.
-    Fails without writing anything if it already holds a project.
+    Paths must be absolute. The directory is created if missing; unrelated
+    files in it are fine. Fails without writing anything if it already holds
+    a project.
     """
-    return command.init(Path(project_dir))
+    return command.init(_absolute_arg("project_dir", project_dir))
 
 
 @mcp.tool()
@@ -157,16 +159,46 @@ def apply_blueprint(name: str, project_dir: str) -> ScaffoldResult:
     """Apply the named blueprint by copying its sources into `project_dir`.
     Equivalent to `mood blueprint apply <name> <project_dir>`.
 
-    `name` must be one of the names returned by `list_blueprints()`.
-    The directory is created if missing; unrelated files in it are fine.
-    Fails without writing anything if it already holds a project.
+    `name` must be one of the names returned by `list_blueprints()`, and
+    paths must be absolute. The directory is created if missing; unrelated
+    files in it are fine. Fails without writing anything if it already holds
+    a project.
     """
     available = [b.name for b in command.list_blueprints()]
     if name not in available:
         raise ValueError(
             f"unknown blueprint: {name!r} (available: {', '.join(available)})"
         )
-    return command.apply_blueprint(name, Path(project_dir))
+    return command.apply_blueprint(name, _absolute_arg("project_dir", project_dir))
+
+
+# -- Helpers -----------------------------------------------------------------
+
+
+def _project_overrides(project_dir: str) -> dict[str, object]:
+    """Bind the config fields that locate the project, as absolute paths.
+
+    The namespace root is the project itself, so output lands at
+    `<project_dir>/.another-mood/` — the one place an agent that named
+    `project_dir` is certain to be able to read back. Anchoring on the
+    server's CWD instead would hand the agent paths it cannot resolve, and
+    reject every project outside a directory it never chose.
+    """
+    project = _absolute_arg("project_dir", project_dir)
+    return {"namespace_root": project, "project_dir": project}
+
+
+def _absolute_arg(name: str, path: str) -> Path:
+    """Require an absolute path argument, and hand it on as given.
+
+    A relative one cannot be resolved here: the base would be this process's
+    working directory, which the MCP client chose and the calling agent
+    cannot see.
+    """
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        raise ValueError(f"{name} must be an absolute path, got {path!r}")
+    return candidate
 
 
 def main() -> None:

@@ -59,15 +59,31 @@ def _load_config(**kwargs: object) -> ProjectConfig:
     ``None`` kwargs are dropped so callers can forward typer Options
     (``--flag`` defaulted to ``None``) directly without a per-flag
     ``if x is not None`` dance.
+
+    Binds the namespace root to the current directory: the CLI is the layer
+    that owns the caller's standing position, so output lands under
+    ``<cwd>/.another-mood/`` as it always has.
     """
     fields = {k: v for k, v in kwargs.items() if v is not None}
-    config = ProjectConfig(**fields)  # type: ignore[arg-type]
+    config = ProjectConfig(namespace_root=Path.cwd(), **fields)  # type: ignore[arg-type]
     try:
         config.verify()
     except ConfigValidationError as exc:
         print(str(exc), file=sys.stderr)
         raise typer.Exit(1) from exc
     return config
+
+
+def _absolute(path: str) -> Path:
+    """Absolutize a user-supplied path against the current directory."""
+    return Path(path).resolve()
+
+
+def _absolute_option(path: str | None) -> Path | None:
+    """Absolutize an optional path; ``None`` passes through."""
+    if path is None:
+        return None
+    return _absolute(path)
 
 
 @blueprint_app.command("list")
@@ -88,7 +104,13 @@ def list_blueprints(
 def _render_scaffold(result: ScaffoldResult) -> None:
     """Print created lines for a scaffold pass."""
     for path in result.created:
-        print(f"  created: {path}", file=sys.stderr)
+        print(f"  created: {_shortened(path)}", file=sys.stderr)
+
+
+def _shortened(path: Path) -> Path:
+    """Restate a path relative to the current directory, where it lies under it."""
+    cwd = Path.cwd()
+    return path.relative_to(cwd) if path.is_relative_to(cwd) else path
 
 
 @blueprint_app.command("apply")
@@ -104,10 +126,9 @@ def apply_blueprint(
             file=sys.stderr,
         )
         raise typer.Exit(1)
-    target = Path(project_dir)
-    print(f"Scaffolding {target}/ from blueprint: {name}", file=sys.stderr)
+    print(f"Scaffolding {project_dir}/ from blueprint: {name}", file=sys.stderr)
     try:
-        result = command.apply_blueprint(name, target)
+        result = command.apply_blueprint(name, _absolute(project_dir))
     except UserError as exc:
         print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1)
@@ -142,10 +163,9 @@ def read_doc(
 @app.command()
 def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Initialize a new project. Shortcut for `mood blueprint apply starter`."""
-    target = Path(project_dir)
-    print(f"Scaffolding {target}/ from default blueprint", file=sys.stderr)
+    print(f"Scaffolding {project_dir}/ from default blueprint", file=sys.stderr)
     try:
-        result = command.init(target)
+        result = command.init(_absolute(project_dir))
     except UserError as exc:
         print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1)
@@ -195,9 +215,9 @@ def build(
 ) -> None:
     """Build the project to Markdown and rendered HTML."""
     config = _load_config(
-        project_dir=Path(project_dir),
-        out_dir=out_dir,
-        site_dir=site_dir,
+        project_dir=_absolute(project_dir),
+        out_dir=_absolute_option(out_dir),
+        site_dir=_absolute_option(site_dir),
     )
     try:
         result = command.build(config, on_report=_build_listener(strict=strict))
@@ -228,7 +248,10 @@ def watch(
 ) -> None:
     """Watch for file changes, rebuild incrementally, and serve a live preview."""
     config = _load_config(
-        project_dir=Path(project_dir), out_dir=out_dir, host=host, port=port
+        project_dir=_absolute(project_dir),
+        out_dir=_absolute_option(out_dir),
+        host=host,
+        port=port,
     )
     try:
         with command.watch(config, on_report=_build_listener()) as session:
@@ -258,7 +281,7 @@ def tap(project_dir: str = typer.Argument(help="Project directory")) -> None:
     The document is self-describing: `mood tap . | jq 'keys'` lists what is
     inside, and `.__definition.entities` holds the type definitions.
     """
-    config = _load_config(project_dir=Path(project_dir))
+    config = _load_config(project_dir=_absolute(project_dir))
     try:
         result = command.tap(config)
     except UserError as exc:

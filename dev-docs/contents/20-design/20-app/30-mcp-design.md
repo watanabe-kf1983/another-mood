@@ -30,6 +30,12 @@ data/ の作成・更新・削除（CUD）は AI が直接ファイルを編集�
 
 AI にとっての「ドキュメント生成パイプライン全体のナビゲーター」。データの読み書きはしないが、やり方を教えてくれる存在。
 
+### 背景: パス引数を絶対パスに限る理由
+
+ツールのパス引数は絶対パスのみ受け付け、相対パスは解決せずエラーで弾く。相対パスの基準になるのはサーバプロセスの作業ディレクトリで、決めるのは MCP クライアント、呼び出し元のエージェントからは見えないため。実際 Claude Code CLI はプロジェクトディレクトリで起動するが、同デスクトップ版は `$HOME` で起動し設定の `cwd` も無視する（[anthropics/claude-code#75266](https://github.com/anthropics/claude-code/issues/75266)、未修正）。MCP 公式のデバッグ指針も、クライアント経由で起動されたサーバの作業ディレクトリは未定義でありうると明記している。
+
+`roots/list` でクライアントにワークスペース根を訊けば、この推測自体が要らなくなる（クライアントが絶対 `file://` URI で返すプロトコル上の正解）。ただし capability は任意で、非対応クライアントは `-32601` を返す仕様であり、Claude Code デスクトップは initialize で roots を渡さない。フォールバック設計とクライアント差の検証が別途要るため今回は採らず、将来の選択肢として残す。
+
 ### 背景: クライアント差の問題
 
 MCP の Resources は仕様上 "application-driven"（[2025-06-18 spec server/resources](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)）であり、ホスト（クライアント）がエージェントに Resources 経路を露出するか否かは実装裁量とされている。Tools の "model-controlled"（仕様 server/tools 節）と対照的。
@@ -140,7 +146,7 @@ Another Mood ツール自身の利用者ドキュメント（`docs/` ツリー�
 公開しないもの:
 
 - **showcase の具体例**: 静的に同梱するより `mood init` 経由で AI に展開・体験させる方が「AI が *動く* ためのインタフェース」という方針と整合する
-- **接続先プロジェクトの output**（`.another-mood/{project}/output/`）: `build` ツール経由でその場で生成・取得する
+- **接続先プロジェクトの output**（`<project_dir>/.another-mood/output/`）: `build` ツール経由でその場で生成・取得する
 
 #### Prompts（ユーザ起動）
 

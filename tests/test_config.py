@@ -7,83 +7,129 @@ import pytest
 from another_mood.config import ConfigValidationError, ProjectConfig
 
 
+ROOT = Path("/ws")
+
+
 class TestAnotherMoodRoot:
-    def test_relative_project_dir(self) -> None:
-        config = ProjectConfig(project_dir=Path("docs")).resolved_for_build()
-        assert config.out_dir == Path(".another-mood/docs/output")
-        assert config.site_dir == Path(".another-mood/docs/site")
-
-    def test_relative_multi_component_project_dir(self) -> None:
+    def test_project_dir_directly_under_the_root(self) -> None:
         config = ProjectConfig(
-            project_dir=Path("showcase/starter")
+            namespace_root=ROOT, project_dir=ROOT / "docs"
         ).resolved_for_build()
-        assert config.out_dir == Path(".another-mood/showcase/starter/output")
+        assert config.out_dir == ROOT / ".another-mood/docs/output"
+        assert config.site_dir == ROOT / ".another-mood/docs/site"
 
-    def test_absolute_project_dir_under_cwd(self, tmp_path: Path) -> None:
-        # An absolute path that lies under CWD should resolve as if relative.
-        config = ProjectConfig(project_dir=Path.cwd() / "docs").resolved_for_build()
-        assert config.out_dir == Path(".another-mood/docs/output")
+    def test_multi_component_tail(self) -> None:
+        config = ProjectConfig(
+            namespace_root=ROOT, project_dir=ROOT / "showcase/starter"
+        ).resolved_for_build()
+        assert config.out_dir == ROOT / ".another-mood/showcase/starter/output"
+
+    def test_project_dir_as_the_root_itself(self) -> None:
+        # The MCP binding: the tail collapses and output lands in the project.
+        project = ROOT / "docs"
+        config = ProjectConfig(
+            namespace_root=project, project_dir=project
+        ).resolved_for_build()
+        assert config.out_dir == project / ".another-mood/output"
 
 
 class TestResolvedForTap:
     def test_fills_unset_tap_dir_with_the_default(self) -> None:
-        config = ProjectConfig(project_dir=Path("docs")).resolved_for_tap()
-        assert config.tap_dir == Path(".another-mood/docs/tap")
+        config = ProjectConfig(
+            namespace_root=ROOT, project_dir=ROOT / "docs"
+        ).resolved_for_tap()
+        assert config.tap_dir == ROOT / ".another-mood/docs/tap"
 
     def test_keeps_an_explicit_tap_dir(self) -> None:
         config = ProjectConfig(
-            project_dir=Path("docs"), tap_dir=Path("custom")
+            namespace_root=ROOT, project_dir=ROOT / "docs", tap_dir=Path("/custom")
         ).resolved_for_tap()
-        assert config.tap_dir == Path("custom")
+        assert config.tap_dir == Path("/custom")
 
 
-class TestVerifyProjectDirUnderCwd:
-    """project_dir must resolve under CWD; external paths are rejected (G8).
+class TestVerifyProjectDirUnderNamespaceRoot:
+    """project_dir must lie under namespace_root; external paths are rejected (G8).
 
-    The CWD-under check runs before the existence check, so an external path
+    The containment check runs before the existence check, so an external path
     is rejected regardless of whether it exists — pinning the check ordering
     via the error message.
     """
 
-    def test_accepts_subdir_under_cwd(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.chdir(tmp_path)
+    def test_accepts_subdir_under_the_root(self, tmp_path: Path) -> None:
         (tmp_path / "docs").mkdir()
-        ProjectConfig(project_dir=Path("docs")).verify()  # no raise
+        ProjectConfig(
+            namespace_root=tmp_path, project_dir=tmp_path / "docs"
+        ).verify()  # no raise
 
-    def test_accepts_cwd_itself(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.chdir(tmp_path)
-        ProjectConfig(project_dir=Path(".")).verify()  # no raise
+    def test_accepts_the_root_itself(self, tmp_path: Path) -> None:
+        ProjectConfig(
+            namespace_root=tmp_path, project_dir=tmp_path
+        ).verify()  # no raise
 
-    def test_rejects_absolute_outside_cwd(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.chdir(tmp_path)
-        config = ProjectConfig(project_dir=tmp_path.parent / "elsewhere")
-        with pytest.raises(ConfigValidationError, match="under the current directory"):
+    def test_rejects_a_path_outside_the_root(self, tmp_path: Path) -> None:
+        config = ProjectConfig(
+            namespace_root=tmp_path, project_dir=tmp_path.parent / "elsewhere"
+        )
+        with pytest.raises(ConfigValidationError, match="under the namespace root"):
             config.verify()
 
-    def test_rejects_relative_parent_escape(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.chdir(tmp_path)
-        config = ProjectConfig(project_dir=Path("../elsewhere/docs"))
-        with pytest.raises(ConfigValidationError, match="under the current directory"):
+    def test_rejects_a_missing_directory(self, tmp_path: Path) -> None:
+        config = ProjectConfig(namespace_root=tmp_path, project_dir=tmp_path / "absent")
+        with pytest.raises(ConfigValidationError, match="not found"):
+            config.verify()
+
+
+class TestVerifyPathsAreAbsolute:
+    """Every path field must be absolute — the config layer never resolves.
+
+    The boundary layers absolutize what they pass, but RB_* environment
+    variables reach the fields untouched, so the invariant is enforced here
+    rather than trusted.
+    """
+
+    def test_rejects_a_relative_project_dir(self, tmp_path: Path) -> None:
+        config = ProjectConfig(namespace_root=tmp_path, project_dir=Path("docs"))
+        with pytest.raises(ConfigValidationError, match="project_dir=docs"):
+            config.verify()
+
+    @pytest.mark.parametrize("field", ["out_dir", "site_dir", "tap_dir", "tmp_dir"])
+    def test_rejects_a_relative_output_dir(self, field: str, tmp_path: Path) -> None:
+        config = ProjectConfig(
+            namespace_root=tmp_path, project_dir=tmp_path
+        ).model_copy(update={field: Path("out")})
+        with pytest.raises(ConfigValidationError, match=f"{field}=out"):
+            config.verify()
+
+    def test_names_every_relative_path_at_once(self, tmp_path: Path) -> None:
+        # One report per run beats a fix-one-rerun loop through the fields.
+        config = ProjectConfig(
+            namespace_root=tmp_path,
+            project_dir=tmp_path,
+            out_dir=Path("out"),
+            site_dir=Path("site"),
+        )
+        with pytest.raises(ConfigValidationError, match="out_dir=out, site_dir=site"):
+            config.verify()
+
+    def test_runs_before_the_containment_check(self, tmp_path: Path) -> None:
+        # A relative project_dir is not "under" an absolute root either, so
+        # the ordering decides which error the user sees. The absolute rule
+        # is the more actionable one.
+        config = ProjectConfig(namespace_root=tmp_path, project_dir=Path("docs"))
+        with pytest.raises(ConfigValidationError, match="must be absolute"):
             config.verify()
 
 
 class TestPublishDestinations:
     def test_unset_by_default(self) -> None:
-        config = ProjectConfig(project_dir=Path("docs"))
+        config = ProjectConfig(namespace_root=ROOT, project_dir=ROOT / "docs")
         assert config.out_dir is None
         assert config.site_dir is None
 
     def test_build_keeps_explicit_dirs(self) -> None:
         config = ProjectConfig(
-            project_dir=Path("docs"),
+            namespace_root=ROOT,
+            project_dir=ROOT / "docs",
             out_dir=Path("/pin/out"),
             site_dir=Path("/pin/site"),
         ).resolved_for_build()
@@ -91,13 +137,15 @@ class TestPublishDestinations:
         assert config.site_dir == Path("/pin/site")
 
     def test_watch_publishes_nothing_by_default(self) -> None:
-        config = ProjectConfig(project_dir=Path("docs")).resolved_for_watch()
+        config = ProjectConfig(
+            namespace_root=ROOT, project_dir=ROOT / "docs"
+        ).resolved_for_watch()
         assert config.out_dir is None
         assert config.site_dir is None
 
     def test_watch_opts_into_md_via_out_dir(self) -> None:
         config = ProjectConfig(
-            project_dir=Path("docs"), out_dir=Path("/pin/out")
+            namespace_root=ROOT, project_dir=ROOT / "docs", out_dir=Path("/pin/out")
         ).resolved_for_watch()
         assert config.out_dir == Path("/pin/out")
 
@@ -105,6 +153,6 @@ class TestPublishDestinations:
         # Even a pinned site_dir (e.g. RB_SITE_DIR) is dropped: the live
         # server is watch's only HTML consumer.
         config = ProjectConfig(
-            project_dir=Path("docs"), site_dir=Path("/pin/site")
+            namespace_root=ROOT, project_dir=ROOT / "docs", site_dir=Path("/pin/site")
         ).resolved_for_watch()
         assert config.site_dir is None
