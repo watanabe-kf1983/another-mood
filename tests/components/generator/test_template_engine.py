@@ -388,7 +388,8 @@ class TestTemplateErrorConversion:
         assert len(diags) == 1
         assert diags[0].source == "minijinja"
         assert diags[0].line is not None
-        assert "bad.md" in str(diags[0].file)
+        # The loader key rejoined with the templates root, not the bare key.
+        assert diags[0].file == tmp_path / "templates" / "bad.md"
 
     def test_runtime_error_raises_file_validation_error(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path, "ok\n{{ value | no_such_filter }}")

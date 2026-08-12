@@ -1,5 +1,10 @@
 """Tests for the command boundary types (BuildResult, ResultDiagnostic)."""
 
+from pathlib import Path
+
+import pytest
+
+from another_mood import command
 from another_mood.command import BuildResult, ResultDiagnostic
 from another_mood.components.shared.component.build_report import ErrorEntry
 
@@ -57,3 +62,15 @@ class TestHasInternalError:
             ),
         )
         assert result.has_internal_error() is True
+
+
+class TestScaffoldPathContract:
+    """A relative path is refused here, not resolved against the process CWD."""
+
+    def test_apply_blueprint_refuses_a_relative_project_dir(self) -> None:
+        with pytest.raises(ValueError, match="must be an absolute path"):
+            command.apply_blueprint("starter", Path("relative/project"))
+
+    def test_init_refuses_a_relative_project_dir(self) -> None:
+        with pytest.raises(ValueError, match="must be an absolute path"):
+            command.init(Path("relative/project"))

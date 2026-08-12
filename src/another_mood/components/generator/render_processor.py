@@ -33,6 +33,8 @@ class Renderer(Protocol):
         self, template_name: str, subject: object, out_path: Path
     ) -> None: ...
 
+    def source_path(self, template_name: str) -> Path: ...
+
 
 @dataclass(frozen=True)
 class RenderProcessorImpl:
@@ -67,7 +69,7 @@ class RenderProcessorImpl:
         (``state.name``) without a line — a filter has no source
         location at runtime.
         """
-        _guard_subtree(subject, state.lookup("this"), state.name)
+        _guard_subtree(subject, state.lookup("this"), self._source_path(state.name))
         # Markup, not str: a filter's return value passes through the
         # environment's finalize, and the already-rendered output must
         # not be escaped a second time.
@@ -82,8 +84,14 @@ class RenderProcessorImpl:
         """Anchor-derived page path of a split node."""
         return ensure_not_windows_reserved(Path(self.paging.page_path(node)))
 
+    def _source_path(self, template_name: str | None) -> Path | None:
+        """Where the enclosing template lives, for a diagnostic to point at."""
+        if template_name is None:
+            return None
+        return self.engine.source_path(template_name)
 
-def _guard_subtree(subject: object, host: object, filename: str | None) -> None:
+
+def _guard_subtree(subject: object, host: object, source_file: Path | None) -> None:
     """Reject a render whose node subject lies outside the host's subtree,
     pointing the error at the enclosing template (a filter carries no line).
 
@@ -118,7 +126,7 @@ def _guard_subtree(subject: object, host: object, filename: str | None) -> None:
     raise FileValidationError(
         [
             Diagnostic(
-                file=Path(filename) if filename else None,
+                file=source_file,
                 line=None,
                 column=None,
                 message=(

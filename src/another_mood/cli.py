@@ -74,14 +74,16 @@ def _load_config(**kwargs: object) -> ProjectConfig:
     return config
 
 
-def _absolute(path: str | None) -> Path | None:
-    """Absolutize a user-supplied path against the current directory.
+def _absolute(path: str) -> Path:
+    """Absolutize a user-supplied path against the current directory."""
+    return Path(path).resolve()
 
-    ``None`` passes through so typer Options can be forwarded unconditionally.
-    """
+
+def _absolute_option(path: str | None) -> Path | None:
+    """Absolutize an optional path; ``None`` passes through."""
     if path is None:
         return None
-    return Path(path).resolve()
+    return _absolute(path)
 
 
 @blueprint_app.command("list")
@@ -102,7 +104,13 @@ def list_blueprints(
 def _render_scaffold(result: ScaffoldResult) -> None:
     """Print created lines for a scaffold pass."""
     for path in result.created:
-        print(f"  created: {path}", file=sys.stderr)
+        print(f"  created: {_shortened(path)}", file=sys.stderr)
+
+
+def _shortened(path: Path) -> Path:
+    """Restate a path relative to the current directory, where it lies under it."""
+    cwd = Path.cwd()
+    return path.relative_to(cwd) if path.is_relative_to(cwd) else path
 
 
 @blueprint_app.command("apply")
@@ -118,10 +126,9 @@ def apply_blueprint(
             file=sys.stderr,
         )
         raise typer.Exit(1)
-    target = Path(project_dir)
-    print(f"Scaffolding {target}/ from blueprint: {name}", file=sys.stderr)
+    print(f"Scaffolding {project_dir}/ from blueprint: {name}", file=sys.stderr)
     try:
-        result = command.apply_blueprint(name, target)
+        result = command.apply_blueprint(name, _absolute(project_dir))
     except UserError as exc:
         print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1)
@@ -156,10 +163,9 @@ def read_doc(
 @app.command()
 def init(project_dir: str = typer.Argument(help="Project directory")) -> None:
     """Initialize a new project. Shortcut for `mood blueprint apply starter`."""
-    target = Path(project_dir)
-    print(f"Scaffolding {target}/ from default blueprint", file=sys.stderr)
+    print(f"Scaffolding {project_dir}/ from default blueprint", file=sys.stderr)
     try:
-        result = command.init(target)
+        result = command.init(_absolute(project_dir))
     except UserError as exc:
         print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1)
@@ -210,8 +216,8 @@ def build(
     """Build the project to Markdown and rendered HTML."""
     config = _load_config(
         project_dir=_absolute(project_dir),
-        out_dir=_absolute(out_dir),
-        site_dir=_absolute(site_dir),
+        out_dir=_absolute_option(out_dir),
+        site_dir=_absolute_option(site_dir),
     )
     try:
         result = command.build(config, on_report=_build_listener(strict=strict))
@@ -243,7 +249,7 @@ def watch(
     """Watch for file changes, rebuild incrementally, and serve a live preview."""
     config = _load_config(
         project_dir=_absolute(project_dir),
-        out_dir=_absolute(out_dir),
+        out_dir=_absolute_option(out_dir),
         host=host,
         port=port,
     )

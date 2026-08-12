@@ -105,8 +105,7 @@ def _collect_template_files(template_root: Path) -> Sequence[Path]:
 
 
 def _generate_manifest(project_dir: Path) -> str:
-    # resolve() so `mood init .` gets the real directory name — the same
-    # derivation as the build's fallback title.
+    # resolve() folds any `..` before the last component is read off it.
     title = project_dir.resolve().name
     # A verified floor ("known to work"), not an audited true minimum.
     running = tool_version()
