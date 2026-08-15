@@ -60,9 +60,11 @@ class TestFrom:
             {"id": "role"},
         ]
 
-    def test_raises_on_unknown_name(self) -> None:
-        with pytest.raises(KeyError):
-            From(name="missing").apply([{"members": []}])
+    def test_absent_key_yields_no_rows(self) -> None:
+        # An entity whose records were all deleted contributes no key to
+        # the merged data model; reading it is zero rows, not an error
+        # (unknown names are rejected earlier, by derive()).
+        assert list(From(name="members").apply([{"prose": []}])) == []
 
 
 _TOP_LEVEL_TASKS_CATALOG_YAML = """
