@@ -74,7 +74,14 @@ class From(QueryNode):
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         (wrapper,) = records
-        value = pluck(wrapper, self.name)
+        try:
+            value = pluck(wrapper, self.name)
+        except KeyError:
+            # A source that passed derive() is catalog-declared, but the
+            # merged data model only carries keys that some content file
+            # contributed to — an entity whose records were all deleted
+            # has no key at all.  Absent means zero rows.
+            return []
         assert isinstance(value, list), (
             f"from '{self.name}' must resolve to a list; got {type(value).__name__}"
         )
