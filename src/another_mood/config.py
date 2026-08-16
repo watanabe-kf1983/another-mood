@@ -2,7 +2,7 @@
 injected (source layout is not configuration; see :mod:`another_mood.layout`)."""
 
 import os
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 
 from pydantic import Field
@@ -72,6 +72,14 @@ class ProjectConfig(BaseSettings):
     # Caller-injected values, for templates to query by key. The CLI / MCP
     # channels add onto what the environment supplied here.
     vars: dict[str, str] = Field(default_factory=_vars_from_env)
+
+    def with_injected_vars(self, injected: Mapping[str, str]) -> "ProjectConfig":
+        """Merge ``injected`` onto the vars already set, ``injected`` winning ties.
+
+        Merged after construction, never by passing ``vars=``: an init argument
+        replaces what ``default_factory`` read from the environment.
+        """
+        return self.model_copy(update={"vars": {**self.vars, **injected}})
 
     def resolved_for_build(self) -> "ProjectConfig":
         """Fill unset out_dir/site_dir with the ``.another-mood/<project>`` defaults."""

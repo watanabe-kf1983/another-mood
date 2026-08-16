@@ -2,7 +2,7 @@
 
 import socket
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from logging import INFO, basicConfig
 from pathlib import Path
@@ -72,6 +72,20 @@ def _load_config(**kwargs: object) -> ProjectConfig:
         print(str(exc), file=sys.stderr)
         raise typer.Exit(1) from exc
     return config
+
+
+def _injected_vars(assignments: Sequence[str]) -> dict[str, str]:
+    """Parse repeated ``--var NAME=VALUE`` options into a vars mapping."""
+    return dict(_assignment(text) for text in assignments)
+
+
+def _assignment(text: str) -> tuple[str, str]:
+    """Split one ``NAME=VALUE`` at its first ``=``, exiting cleanly if malformed."""
+    name, separator, value = text.partition("=")
+    if not separator or not name:
+        print(f"--var must be written as NAME=VALUE, got: {text}", file=sys.stderr)
+        raise typer.Exit(1)
+    return name, value
 
 
 def _absolute(path: str) -> Path:
@@ -212,13 +226,21 @@ def build(
         "--strict",
         help="Fail the build if any warning is reported.",
     ),
+    var: list[str] = typer.Option(
+        [],
+        "--var",
+        metavar="NAME=VALUE",
+        help="Inject a value templates read back as build_info('vars.NAME'). "
+        "Repeatable.",
+    ),
 ) -> None:
     """Build the project to Markdown and rendered HTML."""
+    injected = _injected_vars(var)
     config = _load_config(
         project_dir=_absolute(project_dir),
         out_dir=_absolute_option(out_dir),
         site_dir=_absolute_option(site_dir),
-    )
+    ).with_injected_vars(injected)
     try:
         result = command.build(config, on_report=_build_listener(strict=strict))
     except UserError as exc:
@@ -245,14 +267,22 @@ def watch(
     port: int | None = typer.Option(
         None, "--port", help="Preview server port (default: 5077)."
     ),
+    var: list[str] = typer.Option(
+        [],
+        "--var",
+        metavar="NAME=VALUE",
+        help="Inject a value templates read back as build_info('vars.NAME'). "
+        "Repeatable.",
+    ),
 ) -> None:
     """Watch for file changes, rebuild incrementally, and serve a live preview."""
+    injected = _injected_vars(var)
     config = _load_config(
         project_dir=_absolute(project_dir),
         out_dir=_absolute_option(out_dir),
         host=host,
         port=port,
-    )
+    ).with_injected_vars(injected)
     try:
         with command.watch(config, on_report=_build_listener()) as session:
             base = f"http://{_display_host(session.host)}:{session.port}"
