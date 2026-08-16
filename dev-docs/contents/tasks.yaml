@@ -554,8 +554,10 @@ categories:
         title: build_info — ビルド時情報の照会関数
         note: >-
           CI ビルド (S3 ホスティング等) の git commit id 等をテンプレートから参照可能に
-          する。供給は env / CLI / MCP の三チャネル対等、参照は build_info() 関数。
-          データ層 (views / tap) には流さない。env の綴りは G14 の MOOD_ の上に立つ (下位の綴りは未決)。
+          する。供給は env / CLI / MCP の三チャネル対等、参照は build_info(key) 関数。
+          全量は関数ではなく奥付テンプレートの subject として、表紙とビルド失敗ページの
+          末尾に自動列挙する。データ層 (views / tap) には流さない。
+          env の綴りは G14 の MOOD_ の上に立つ (下位の綴りは未決)。実装は 6 PR に分割。
         phase: 16
         proposal: 20-design/70-generator/30-template-spec#build_info-p14
 

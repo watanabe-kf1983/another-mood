@@ -54,14 +54,13 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）をテンプレートから文字列キーで照会する関数 `build_info` を追加する。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する関数 `build_info` を追加する。
 
 ```jinja
-{{ build_info("vars.git_commit_id") }}
-{% for k, v in build_info() | dictsort %}{{ k }}: {{ v }}{% endfor %}
+{{ build_info("vars.git_commit_id") | default("(dev)") }}
 ```
 
-- **単複同名**: 引数ありで一件（文字列）、引数なしで全量（dict）。Java `System.getenv` / R `Sys.getenv` の形
+- **引数は必須、返り値は文字列**。`build_info(key)` の一形のみ。全量を返す無引数形は持たない（下の「列挙は関数ではない」）
 - **不在は undefined**: 未設定キーは undefined を返し、「欠損値は何も描かない」規則に従い空描画。`| default("(dev)")` で受けられる。ローカルビルドで vars が未設定でもテンプレートは壊れない
 - **ストアはフラットな文字列キー → 文字列値**。ドットは階層構文ではなくただの文字（照会時のパース処理は無い）。値は供給元の型によらず全て文字列に統一
 
@@ -69,29 +68,112 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 | 名前空間 | 出所 | 例 |
 |---|---|---|
-| `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
-| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.config.out_dir` |
+| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at` |
 | `vars.*` | 実行者の注入値 (env / CLI / MCP — 供給機構は [20-config-spec.md](../20-app/20-config-spec.md) の Proposals) | `vars.git_commit_id` |
+| `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
 - `processor` は sbdb スペック自身の語彙（manifest の `tools.<processor>`）。ツールのブランドはキーや関数名には現れず、`processor.name` の**値**として現れる（改名してもテンプレートの綴りは無傷）
 - `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する
 - 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い
 
+#### 列挙は関数ではない — 奥付テンプレートの subject
+
+ストアの全量は、関数ではなく**奥付テンプレートの subject** として渡す。reconcile が奥付を独立したテンプレートとして `render`（文字列を返す）し、その結果をページ末尾に追記する。
+
+```jinja
+{% for k, v in _ | dictsort %}{{ k }}: {{ v }}{% endfor %}
+```
+
+こうする理由:
+
+- 関数が一つで済み、返り値が単相（`str | undefined`）になる。引数の有無で返り値の型が変わる関数を持たない
+- 「列挙するのは奥付、キー照会するのは利用者テンプレート」という役割分担が、供給する語彙の違いとして構造に出る
+- 二つ目の関数名（`build_info_all` 等）を決める必要がない
+
+##### 背景: 単複同名を採らなかった
+
+当初は Java `System.getenv` / R `Sys.getenv` の形（引数ありで一件、引数なしで全量）を想定していた。一つの綴りで一つの概念を語れる利点はあるが、返り値の型が引数の有無で変わる関数を書くことになる。列挙の要求は奥付ただ一箇所で、そこはテンプレートの subject という既存の経路で満たせるので、関数側に多相を持ち込む必要が無かった。
+
+#### 奥付 — 表紙とビルド失敗ページの末尾
+
+ストアの全量列挙を、reconcile が 2 か所の末尾に追記する:
+
+- **表紙** (`index.md`) — 成功ビルドで公開される唯一の奥付
+- **ビルド失敗ページ** — 失敗ページは表紙を置き換えるので、失敗時に読者が見る唯一のページになる
+
+警告ページ (`warnings.md`) は対象外。奥付を持つ表紙の隣にぶら下がるだけなので、重ねる意味がない。
+
+**追記は reconcile が一手に引き受ける。** 生成側（cover テンプレート）は build_info を知らない。理由は末尾の順序が一箇所で決まること — 現状 `_append_warnings_link` が表紙の末尾に警告リンクを足すので、生成側で奥付を描くと奥付の下に警告リンクが来る。順序は **本文 → 警告リンク → 奥付** とし、警告リンクの差し込み位置を奥付の手前に変える。
+
+**奥付は自動で、利用者が外す手段を持たない。** そのぶん何を載せるかの敷居は高い、という性格になる（次節の `processor.config.*` の裁定はこれに基づく）。
+
+#### processor.* の初期セット
+
+| キー | 値 |
+|---|---|
+| `processor.name` | manifest の `tools.` 直下キーと同綴りの id |
+| `processor.version` | 動いている処理系の版 |
+| `processor.started_at` | 処理系の起動時刻 |
+| `processor.config.project_dir` | 入力プロジェクトの絶対パス |
+
+**`started_at` は ISO 8601 + ローカルオフセット、秒精度**（`2026-08-16T14:23:45+09:00`）。オフセットを持たせるのは、瞬間が一意に決まるうえにオフセット自体がビルドした人のゾーンを語るため。表示用の別書式キーは作らない（体裁の方針をツールが発明することになる）。オフセットは OS のタイムゾーン設定に依存し、ロケールには依存しない（`.isoformat()` はロケールを参照しない固定書式）。CI コンテナは通常 UTC なので CI ビルドは `+00:00` になる。
+
+##### 合成する場所 — command 層の操作の入口
+
+`processor.*` は「この起動で何が呼ばれたか」の事実であって、build セッションの持ち物ではない。合成は command 層の各操作（`build` / `watch` / `tap`）の入口で共通のヘルパを一行呼ぶ形で行い、`Workspace` は受け取って運ぶだけにする。ストアを鋳造する場所と、それを使う場所を分ける。
+
+裏づけ: `processor.version` は `tool_version()` が供給する値で、その docstring が既に「`mood --version`、MCP の serverInfo、manifest の `minimum_version` ゲート — どの面も同じ一つの値を報告する」と述べている。`processor.*` はその族に属する。仮にこの起動の事実（`processor.*` + `vars.*`）をそのまま出力する `mood info` のような口を作るなら、それも同じヘルパを呼ぶ位置になる（作る予定は無い）。
+
+`tap` は渡さない。テンプレートを描かないのでストアを使わず、使わないものを渡す理由が無い。`Workspace` のフィールドは空マッピングを既定値にし、`build` / `watch` だけが合成結果を渡す。
+
+型は `Mapping[str, str]` のままにして `| None` にはしない。空でも「未設定キーは undefined を返す」という既定の振る舞いにそのまま落ちるので、下流に None の分岐を作る必要が無いため。なおストアを `Workspace` に置くのは、`STAGE_FACTORIES` が `factory(workspace)` の形をしており、2 つのステージのために全ファクトリのシグネチャを変えるほうが高くつくから。
+
+`started_at` を捕まえるのもこの入口。`build` は呼び出しごとに一つ、`watch` はセッションで一つになる（watch は入口を一度通ってからループする）。watch 中の再ビルドで値が動かないので、プレビューの差分がタイムスタンプで濁らない。watch では「このドキュメントがいつ生成されたか」ではなく「watch をいつ始めたか」を指すが、`started_at` という綴りがその性格を名乗っているので誤読にはならない。ソースのタイムスタンプを保証するものではない。
+
+**`processor.config.*` は `project_dir` だけ。** `out_dir` / `site_dir` / `tmp_dir` は入れない。入力と出力で答えている問いが違うため:
+
+- **入力** — 「いま見ているこれは、どのソースから出たのか」。開いた後にしか湧かない問いで、ビルド時の CLI 出力では答えられない。複数プロジェクトが同居するリポジトリ、`mood watch` のプレビュー、移動・改名した後に残った古い出力で実際に必要になる
+- **出力** — 「これはどこに書かれたのか」。読者はそれを開いている最中なので既に知っている
+
+`namespace_root` / `host` / `port` も入れない。前者は境界層が縛る内部値、後者は watch 専用で出力に意味を持たない。
+
+`project_dir` は絶対パスで入れる。`namespace_root` からの相対 tail にすれば漏洩は減るが、MCP では `namespace_root == project_dir` なので tail が `.` に潰れて何も言わなくなる。チャネルによって情報量が変わる識別子は識別子として使えない。
+
+##### 背景: 「公開物にローカルパスを出さない」を奥付には当てない
+
+現状、絶対パスが出力に現れるのはビルド失敗ページだけで（`Diagnostic.to_entry` が `resolve()` して焼く）、成功して公開されるものには現れない。この線を跨ぐことになるが、跨ぐと判断した。表紙の奥付も失敗ページも、読者はビルドした人であり、公開ページ上でもそこは変わらない。線はフィールドの線ではなく読者の線だった。
+
 #### docs 契約 — vars.* と関数 API のみ約束する
 
-利用者向け docs で約束するのは、関数の仕様と `vars.*` の注入規約（利用者が書く側なので契約が要る）だけ。`manifest.*` / `processor.*` のキー目録は**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。列挙で確認せよ」と docs に明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
+利用者向け docs で約束するのは、関数の仕様と `vars.*` の注入規約（利用者が書く側なので契約が要る）だけ。`processor.*` / `manifest.*` のキー目録は**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。**表紙の奥付で確認せよ**」と docs に明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
+
+自動列挙の帰結として、**`vars.*` に注入した値は全て表紙に出る**。一つのテンプレートで使うつもりで注入した値も載るので、docs に明記する。
+
+奥付のタイムスタンプにより、**毎回のビルドが必ず差分を生む**。ビルド結果をコミットする利用者は表紙の `index.md` が毎回汚れる（奥付が載る成功時のファイルはこれ一つなので、除外するならこの一ファイルで足りる）。動かないタイムスタンプに意味はないので、これは代償ではなく仕様。
 
 #### 背景: 外した案
 
-- **データ層に流す（normalized content 化）** — views / tap / `__data` 診断に載る一体感は魅力だが、views に現れるデータが contents から一意に定まらず実行環境で変わるのは受け入れない。views / tap のデータは Git にコミットされたソースから決まるべきで、ビルド時情報は**ドキュメント（レンダリング結果）にのみ現れる**。この裁定の帰結として、診断は `__data` ではなくメタテンプレートのページ（または `__build_report` への記録）で行う
-- **環境変数の素通し (`env.*`)** — テンプレートが環境の読み取り器になり、CI の環境（AWS クレデンシャル等）を出力に焼き込める。[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開けるため不可。越境するのは実行者が `MOOD__VARS__*` / `--var` で明示的に差し出した値だけ
+- **データ層に流す（`__build_info` としてシステム定義エンティティ化）** — 機構としては成立する。`__definition` に先例があり（`schema_inspector` が preprocess で `__builtin/__definition.json` を吐き、views が `from: __definition.entities` で読み、`__data` にも tap にも乗る）、同じ経路に `__build_info` を足せる。tap から覗ける・`__data` 診断に自動で乗る・views から join できる、という利点も実在する。外した理由は 2 つ。(a) **views の出力が実行環境で変わるようになり、これは一方通行**。views が読めるようにした後で取り上げると利用者の views が壊れる。逆向き（奥付方式から後で data 層へ移す）は余地が残る。(b) **ビルド失敗ページに届かない**。preprocess で吐く以上、上流で失敗すれば reconcile からは見えず、上の 2 か所という要件の片方が原理的に成立しない。なお views から build info を読みたい用途は現時点で無い
+- **tap に provenance を載せる** — 上の代替として検討したが作らない。tap 出力は差分を取る使い方が主なので、毎回動く値が混ざると実質的な差分がノイズに埋もれる。守る線は「ソースだけで決まる」ではなく **「マシンと起動のしかたには依存しない」**（tap 出力には既に `__definition` 等のツール生成目録が乗っており、ツール版には依存している）。将来必要になったら、置き場はドキュメントの中ではなく外（`BuildResult` か隣接ファイル）
+- **環境変数の素通し (`env.*`)** — テンプレートが環境の読み取り器になり、CI の環境（AWS クレデンシャル等）を出力に焼き込める。[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開けるため不可。越境するのは実行者が env / `--var` / MCP で明示的に差し出した値だけ
 - **属性アクセス（`build.vars.commit` 等のコンテキスト注入）** — スキーマが保証するフィールドの顔になる。この情報はツール・実行環境依存で取得無保証の Optional であり、「文字列キーによる照会」という構文自体にその性格を語らせる。データ名前空間への予約名追加も不要になる（予約されるのは関数名一個 — `node` と同じ扱い）
 - **汎用フィルタでの照会（`child` 等）** — 汎用語彙は record を通貨とするため `.value` の一段が常に付き、`child` の未解決は MissingNode として目立つ（「未設定が正常」な Optional には逆向き）。既存の `child` は id 照会フィルタとして今回の検討と独立に有用（実装・文書化済み）
 - **関数名の別候補** — `mood.*`（ツール名を語彙に入れない — P4 `mood_view` → `render` と同じ裁定）、`build_context`（docs 既定義の「Template context」と概念衝突）、`env`（素通し期待を招き、慣習上の二義 — OS env 素通し / 実行モード — のどちらでもない）、`provenance`（裸名詞に錨が無い）。`build_info` は三名前空間すべてを「このビルドという出来事についての事実」として束ねる唯一の錨
 
-#### 実装スコープ
+#### 実装スコープ — PR の並び
 
-1. 供給機構（config 層 — 20-config-spec.md 側）と `build_info` 関数 + `vars.*`
-2. `processor.*` / `manifest.*` の初期セット（`name` / `version` / `config.*`、manifest の dotted 平坦化）
-3. docs: 関数リファレンス + vars 注入規約 + 非契約の明言 + 列挙慣用句（colophon の実例）
-4. 診断用メタページは後続で可（列挙一行で自作できるため必須ではない）
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。当初は供給機構（vars）を先頭に置いていたが、それだと config・env・CLI・MCP・関数・store が揃うまで実機で何も見えない。
+
+| # | 内容 | store に増えるキー |
+|---|---|---|
+| 1 | `build_info(key)` + ストア + command 層での合成（`Workspace` が運ぶ） | `processor.name` / `processor.version` / `processor.started_at` |
+| 2 | 奥付テンプレート + reconcile による追記 + `docs/` 公開 + showcase の実例 | — |
+| 3 | config → ストアの経路 | `processor.config.project_dir` |
+| 4 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
+| 5 | CLI `--var` + MCP `build` の `vars` | — |
+| 6 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
+
+- #1 は config に一切触らない。関数とストアと配置だけ。利用者から見える面は無く、単体テストで確認する
+- #2 で初めて利用者から見える。この時点の奥付は `processor.*` の 3 キーだけ
+- #4 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
+- #6 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う

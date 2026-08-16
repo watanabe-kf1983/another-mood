@@ -42,12 +42,18 @@
 - `ProjectConfig` に `vars: dict[str, str]` フィールドを追加。供給は三チャネル対等:
   - env: 綴りは下の「env チャネルの綴り」で決める
   - CLI: `--var aaa_bbb=x`（繰り返し可）
-  - MCP: `build` / `watch` 引数 `vars`（mapping）
+  - MCP: `build` 引数 `vars`（mapping）
 - 合流は pydantic-settings のソース間 deep-merge をそのまま使う（実測確認済み）: キー単位でマージされ、衝突は init（CLI / MCP）が env に勝つ。既存の「設定の読み込み優先順位」と同順
 - **封筒 `MOOD_` はストアのキーに入らない**。プレフィックスは共有名前空間（プロセス環境）で自分宛ての値を仕分けるチャネル固有の作法であり（Java の `-D` に相当）、ストア内では全キーに共通で情報を持たないため剥がす。キーは小文字化して `vars.aaa_bbb` になる
 - **env で書けるのは vars 直下一段のみ**。深い階層キー（`vars.ci.run_id`）は CLI / MCP からドット入りキーとして渡せば成立する（ストアはフラットな文字列キーでドットはただの文字）。制限は env チャネルの復号器の限界であって、ストアと照会には制限がない
   - 型を `dict[str, object]` に緩めればネストは受かるが、pydantic-settings が env 値を JSON 解釈して `"42"` が int になり、「値は全て文字列」の契約が env 経由でだけ揺れる（実測）ので採らない
 - config はストアそのものではない: `config.vars` からストアキーへの合成（`vars.` 前置）は command / generator 層の明示的な一行で行う。config のフィールド位置（`config.vars`）がキーに漏れる経路は無い
+
+#### 背景: vars を ProjectConfig の持ち物にする
+
+これは上の「設定の管轄範囲」の宣言を広げる。vars は「どう実行し、どこへ出すか」のどちらでもなく、テンプレートに届けたい荷物であり、`verify` も `resolved_for_*` も vars には何もしない。実装時に管轄範囲の節を「起動時に実行者が差し出したもの」へ書き換えること。
+
+別オブジェクト（`RunVars` 等の第二の `BaseSettings`）にすれば宣言は無傷だが、採らない。得るものは宣言の狭さだけで、代わりに境界層の配管が二重になる（`cli._load_config` / `mcp_server._project_overrides` / `command` のシグネチャ / `Workspace` のフィールド）。一つのフィールドのために毎回払い続けるコストになる。同居させれば、設計が求める優先順位（init が env に勝つ）が pydantic-settings のソース優先順位そのままで手に入る利点もある。
 
 #### env チャネルの綴り（未決）
 
@@ -56,3 +62,7 @@
 - pydantic-settings の `env_nested_delimiter` は**分割文字**なので、語区切りと同じ `_` は使えない。`env_nested_delimiter="_"` の下では `MOOD_VARS_GIT_SHA` が `vars.git.sha` と解釈され、`dict[str, str]` の検証に落ちる。通るのは一語のキー（`MOOD_VARS_SHA` → `vars["sha"]`）だけで、`git_sha` / `run_id` / `build_number` といった実際に使いたい名前が全滅する
 - したがって `MOOD_VARS_GIT_SHA` を成立させるにはカスタム settings source が要る。`MOOD_VARS_` という固定リテラルを剥がして残りを小文字化するだけで、**分割しないので曖昧性は無い**。これはトップレベルのプレフィックスが既に使っている機構と同一で、それを一段下に適用するもの。先例は Hugo の `HUGO_PARAMS_*`
 - 二案の比較軸: `__` は `env_nested_delimiter="__"` 一行で済むが、封筒＝階層でないという上の整理と綴りがずれる。リテラル剥がしは綴りが素直になる代わりに実装（20〜30 行）と、`MOOD_VARS_` が予約語になること（`vars_*` という名のトップレベルフィールドを将来作れない）を負う。上で「env は vars 直下一段のみ」と決めている以上、`__` の多段表現力は使われない
+
+現時点の傾きは `MOOD_VARS_GIT_SHA`（リテラル剥がし）。封筒は階層ではないという整理と綴りが一致し、`__` の多段表現力はどのみち使わないため。
+
+**着手前に実測すること**: リテラル剥がしがカスタム settings source 無しで済む可能性がある。`vars` を専用の `BaseSettings` にせずとも、`extra="allow"` の下でプレフィックス付き env が余剰フィールドとして入り `model_extra` が dict になる、という筋が使えるかもしれない。成立すれば実装コスト（20〜30 行）という比較軸が消える。値が文字列のまま入るか（pydantic-settings が JSON 解釈しないか）も併せて確かめる。
