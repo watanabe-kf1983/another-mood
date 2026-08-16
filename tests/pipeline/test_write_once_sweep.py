@@ -124,7 +124,7 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
         config,
         tmp_path / "workspace",
         resolve_layout(project),
-        Manifest(),
+        Manifest(sbdb_version=1),
         make_processor_info("build"),
     )
     return workspace, published

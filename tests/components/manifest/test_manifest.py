@@ -48,12 +48,12 @@ def test_missing_manifest_fails(tmp_path: Path) -> None:
 
 def test_reads_title(tmp_path: Path) -> None:
     _write(tmp_path, "sbdb_version: 1\ntitle: My Project\n")
-    assert read_manifest(tmp_path) == Manifest(title="My Project")
+    assert read_manifest(tmp_path) == Manifest(sbdb_version=1, title="My Project")
 
 
 def test_title_is_optional(tmp_path: Path) -> None:
     _write(tmp_path, "sbdb_version: 1\n")
-    assert read_manifest(tmp_path) == Manifest(title=None)
+    assert read_manifest(tmp_path) == Manifest(sbdb_version=1, title=None)
 
 
 # ── version gate ───────────────────────────────────────────────────
@@ -115,7 +115,14 @@ def test_tools_namespace_is_accepted(tmp_path: Path) -> None:
             """
         ),
     )
-    assert read_manifest(tmp_path) == Manifest()
+    # Kept whole, other processors' namespaces included.
+    assert read_manifest(tmp_path) == Manifest(
+        sbdb_version=1,
+        tools={
+            "another-mood": {"minimum_version": "0.0.1"},
+            "other-processor": {"anything": "goes"},
+        },
+    )
 
 
 # ── minimum_version gate ───────────────────────────────────────────
@@ -125,7 +132,9 @@ def test_exactly_running_version_passes(tmp_path: Path) -> None:
     # ">= minimum", not ">": the version that introduced a feature satisfies
     # a project depending on that feature.
     _write(tmp_path, _with_minimum_version(f'"{_RUNNING_VERSION}"'))
-    assert read_manifest(tmp_path) == Manifest()
+    assert read_manifest(tmp_path) == Manifest(
+        sbdb_version=1, tools={"another-mood": {"minimum_version": _RUNNING_VERSION}}
+    )
 
 
 def test_unsatisfied_minimum_version_fails(tmp_path: Path) -> None:

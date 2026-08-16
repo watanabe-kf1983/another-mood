@@ -6,9 +6,10 @@ rules — including pre-releases like ``0.4.0.dev1`` — are authoritative here.
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
+from typing import cast
 
 from packaging.version import InvalidVersion, Version
 
@@ -38,7 +39,12 @@ _MANIFEST_SCHEMA_FILE = Path(
 
 @dataclass(frozen=True)
 class Manifest:
+    sbdb_version: int
     title: str | None = None
+    # Each processor's own namespace, which the schema leaves unconstrained.
+    # A plain dict, not MappingProxyType: the build info store reads this
+    # class through dataclasses.asdict, which cannot copy a mappingproxy.
+    tools: Mapping[str, object] = field(default_factory=dict[str, object])
 
 
 class ManifestError(UserError):
@@ -114,8 +120,7 @@ def read_manifest(project_dir: Path) -> Manifest:
     _gate_minimum_version(data, manifest_file)
     _gate_version(data, manifest_file)
     _validate(data, manifest_file)
-    title = data.get("title")
-    return Manifest(title=str(title) if title is not None else None)
+    return _build_manifest(data)
 
 
 def _parse(manifest_file: Path) -> Mapping[str, object]:
@@ -178,3 +183,13 @@ def _validate(data: Mapping[str, object], manifest_file: Path) -> None:
     validator = Validator(load_schema(_MANIFEST_SCHEMA_FILE))
     if issues := validator.validate(data):
         raise ManifestError([issue.at_file(manifest_file) for issue in issues])
+
+
+def _build_manifest(data: Mapping[str, object]) -> Manifest:
+    # Runs only after _validate; each cast restates what the schema enforced.
+    title = data.get("title")
+    return Manifest(
+        sbdb_version=cast(int, data["sbdb_version"]),
+        title=str(title) if title is not None else None,
+        tools=cast(Mapping[str, object], data.get("tools", {})),
+    )

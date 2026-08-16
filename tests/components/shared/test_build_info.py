@@ -33,3 +33,17 @@ def test_flatten_build_info_drops_unset_values() -> None:
     # An absent key lets `build_info(key, default)` answer with its default,
     # which a "None" string would shadow.
     assert dict(flatten_build_info("processor.config", {"site_dir": None})) == {}
+
+
+def test_flatten_build_info_descends_into_nested_mappings() -> None:
+    values = {"tools": {"another-mood": {"minimum_version": "0.3.5"}}, "title": "Docs"}
+
+    assert dict(flatten_build_info("manifest", values)) == {
+        "manifest.tools.another-mood.minimum_version": "0.3.5",
+        "manifest.title": "Docs",
+    }
+
+
+def test_flatten_build_info_leaves_no_key_for_an_empty_mapping() -> None:
+    # A namespace with nothing under it answers for nothing, like an unset value.
+    assert dict(flatten_build_info("manifest", {"tools": {}})) == {}

@@ -1,6 +1,6 @@
 """Workspace — the working environment for one pipeline run."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -80,6 +80,8 @@ class Workspace:
                 {"root": self.root, "temporary": self.temporary},
             ),
             **flatten_build_info("vars", self.config.vars),
+            # Whole: sbdb.yaml's schema admits no top-level key this misses.
+            **flatten_build_info("manifest", asdict(self.manifest)),
         }
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:
