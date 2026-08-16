@@ -332,12 +332,9 @@ categories:
         phase: 15
         done: true
       G14:
-        title: 環境変数プレフィックス改名 (RB_ → MOOD__)
-        note: >-
-          RB_ は旧名 reqs-builder の遺物。P14 が env 注入の綴りを利用者の CI 設定に
-          焼き付ける前に改名する (G14 → P14 の順)。ツール破壊 — 次リリースは 0.2.0。
+        title: 環境変数プレフィックス改名 (RB_ → MOOD_)
         phase: 16
-        proposal: 20-design/20-app/20-config-spec#環境変数プレフィックス改名-g14
+        done: true
 
   H:
     title: バイナリファイルの取り扱い
@@ -558,7 +555,7 @@ categories:
         note: >-
           CI ビルド (S3 ホスティング等) の git commit id 等をテンプレートから参照可能に
           する。供給は env / CLI / MCP の三チャネル対等、参照は build_info() 関数。
-          データ層 (views / tap) には流さない。G14 の後に着手。
+          データ層 (views / tap) には流さない。env の綴りは G14 の MOOD_ の上に立つ (下位の綴りは未決)。
         phase: 16
         proposal: 20-design/70-generator/30-template-spec#build_info-p14
 
