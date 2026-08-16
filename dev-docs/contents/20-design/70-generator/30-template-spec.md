@@ -54,15 +54,13 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する関数 `build_info` を追加する。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数とストアと `processor.*` は #1 で実装済みで、以下は残る 5 PR の分。
 
 ```jinja
-{{ build_info("vars.git_commit_id") | default("(dev)") }}
+{{ build_info("vars.git_commit_id", "(dev)") }}
 ```
 
-- **引数は必須、返り値は文字列**。`build_info(key)` の一形のみ。全量を返す無引数形は持たない（下の「列挙は関数ではない」）
-- **不在は undefined**: 未設定キーは undefined を返し、「欠損値は何も描かない」規則に従い空描画。`| default("(dev)")` で受けられる。ローカルビルドで vars が未設定でもテンプレートは壊れない
-- **ストアはフラットな文字列キー → 文字列値**。ドットは階層構文ではなくただの文字（照会時のパース処理は無い）。値は供給元の型によらず全て文字列に統一
+- **`| default()` はこの関数には効かない**（実測）。minijinja の `default` は undefined にしか反応せず、Python 側で登録したグローバルが返せる不在は none 止まりのため。効くのは第二引数と `or "(dev)"`。#2 の docs / showcase の例は第二引数で書く
 
 #### キーの名前空間 — 出所で三分する
 
@@ -72,9 +70,8 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 | `vars.*` | 実行者の注入値 (env / CLI / MCP — 供給機構は [20-config-spec.md](../20-app/20-config-spec.md) の Proposals) | `vars.git_commit_id` |
 | `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
-- `processor` は sbdb スペック自身の語彙（manifest の `tools.<processor>`）。ツールのブランドはキーや関数名には現れず、`processor.name` の**値**として現れる（改名してもテンプレートの綴りは無傷）
-- `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する
-- 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い
+- `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#6 の前提）
+- 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い（#4 / #5 の制約）
 
 #### 列挙は関数ではない — 奥付テンプレートの subject
 
@@ -84,15 +81,7 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 {% for k, v in _ | dictsort %}{{ k }}: {{ v }}{% endfor %}
 ```
 
-こうする理由:
-
-- 関数が一つで済み、返り値が単相（`str | undefined`）になる。引数の有無で返り値の型が変わる関数を持たない
-- 「列挙するのは奥付、キー照会するのは利用者テンプレート」という役割分担が、供給する語彙の違いとして構造に出る
-- 二つ目の関数名（`build_info_all` 等）を決める必要がない
-
-##### 背景: 単複同名を採らなかった
-
-当初は Java `System.getenv` / R `Sys.getenv` の形（引数ありで一件、引数なしで全量）を想定していた。一つの綴りで一つの概念を語れる利点はあるが、返り値の型が引数の有無で変わる関数を書くことになる。列挙の要求は奥付ただ一箇所で、そこはテンプレートの subject という既存の経路で満たせるので、関数側に多相を持ち込む必要が無かった。
+「列挙するのは奥付、キー照会するのは利用者テンプレート」という役割分担を、供給する語彙の違いとして構造に出す。全量を返す関数（`build_info_all` 等）は持たない。
 
 #### 奥付 — 表紙とビルド失敗ページの末尾
 
@@ -116,19 +105,13 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 | `processor.started_at` | 処理系の起動時刻 |
 | `processor.config.project_dir` | 入力プロジェクトの絶対パス |
 
-**`started_at` は ISO 8601 + ローカルオフセット、秒精度**（`2026-08-16T14:23:45+09:00`）。オフセットを持たせるのは、瞬間が一意に決まるうえにオフセット自体がビルドした人のゾーンを語るため。表示用の別書式キーは作らない（体裁の方針をツールが発明することになる）。オフセットは OS のタイムゾーン設定に依存し、ロケールには依存しない（`.isoformat()` はロケールを参照しない固定書式）。CI コンテナは通常 UTC なので CI ビルドは `+00:00` になる。
+`started_at` の**表示用の別書式キーは作らない**（体裁の方針をツールが発明することになる）。値は watch ではセッション開始時刻で、再ビルドしても動かない。
 
-##### 合成する場所 — command 層の操作の入口
+##### キーを足す場所 — `Workspace` の `build_info` property
 
-`processor.*` は「この起動で何が呼ばれたか」の事実であって、build セッションの持ち物ではない。合成は command 層の各操作（`build` / `watch` / `tap`）の入口で共通のヘルパを一行呼ぶ形で行い、`Workspace` は受け取って運ぶだけにする。ストアを鋳造する場所と、それを使う場所を分ける。
+#3 / #6 で足すキーは `Workspace` が既に型付きで持っている値（`config` / `manifest`）の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。追加は property に一行足す形になる。
 
-裏づけ: `processor.version` は `tool_version()` が供給する値で、その docstring が既に「`mood --version`、MCP の serverInfo、manifest の `minimum_version` ゲート — どの面も同じ一つの値を報告する」と述べている。`processor.*` はその族に属する。仮にこの起動の事実（`processor.*` + `vars.*`）をそのまま出力する `mood info` のような口を作るなら、それも同じヘルパを呼ぶ位置になる（作る予定は無い）。
-
-`tap` は渡さない。テンプレートを描かないのでストアを使わず、使わないものを渡す理由が無い。`Workspace` のフィールドは空マッピングを既定値にし、`build` / `watch` だけが合成結果を渡す。
-
-型は `Mapping[str, str]` のままにして `| None` にはしない。空でも「未設定キーは undefined を返す」という既定の振る舞いにそのまま落ちるので、下流に None の分岐を作る必要が無いため。なおストアを `Workspace` に置くのは、`STAGE_FACTORIES` が `factory(workspace)` の形をしており、2 つのステージのために全ファクトリのシグネチャを変えるほうが高くつくから。
-
-`started_at` を捕まえるのもこの入口。`build` は呼び出しごとに一つ、`watch` はセッションで一つになる（watch は入口を一度通ってからループする）。watch 中の再ビルドで値が動かないので、プレビューの差分がタイムスタンプで濁らない。watch では「このドキュメントがいつ生成されたか」ではなく「watch をいつ始めたか」を指すが、`started_at` という綴りがその性格を名乗っているので誤読にはならない。ソースのタイムスタンプを保証するものではない。
+ただし `pipeline/` はカバレッジ計測対象外なので、**アルゴリズムと呼べるもの**（#6 の manifest 平坦化など）は `components/shared/` に汎用ヘルパとして置き、`Workspace` はそれを呼ぶ。property が持つのは「どのキーがどの源から来るか」だけに保つ。
 
 **`processor.config.*` は `project_dir` だけ。** `out_dir` / `site_dir` / `tmp_dir` は入れない。入力と出力で答えている問いが違うため:
 
@@ -155,6 +138,7 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 - **データ層に流す（`__build_info` としてシステム定義エンティティ化）** — 機構としては成立する。`__definition` に先例があり（`schema_inspector` が preprocess で `__builtin/__definition.json` を吐き、views が `from: __definition.entities` で読み、`__data` にも tap にも乗る）、同じ経路に `__build_info` を足せる。tap から覗ける・`__data` 診断に自動で乗る・views から join できる、という利点も実在する。外した理由は 2 つ。(a) **views の出力が実行環境で変わるようになり、これは一方通行**。views が読めるようにした後で取り上げると利用者の views が壊れる。逆向き（奥付方式から後で data 層へ移す）は余地が残る。(b) **ビルド失敗ページに届かない**。preprocess で吐く以上、上流で失敗すれば reconcile からは見えず、上の 2 か所という要件の片方が原理的に成立しない。なお views から build info を読みたい用途は現時点で無い
 - **tap に provenance を載せる** — 上の代替として検討したが作らない。tap 出力は差分を取る使い方が主なので、毎回動く値が混ざると実質的な差分がノイズに埋もれる。守る線は「ソースだけで決まる」ではなく **「マシンと起動のしかたには依存しない」**（tap 出力には既に `__definition` 等のツール生成目録が乗っており、ツール版には依存している）。将来必要になったら、置き場はドキュメントの中ではなく外（`BuildResult` か隣接ファイル）
+- **関数ではなくマッピングをグローバル登録する（`build_info["vars.git_sha"]`）** — 添字アクセスの不在は undefined になるので `| default()` がそのまま効く（実測）。外した理由は 2 つ。Python の dict のメソッドがテンプレートに漏れる（`build_info.items` が `<built-in method items>` を描く。`pycompat=False` で閉じたはずの穴）。任意の利用者テンプレートから全量を列挙でき、上の「列挙は奥付の subject」が崩れる
 - **環境変数の素通し (`env.*`)** — テンプレートが環境の読み取り器になり、CI の環境（AWS クレデンシャル等）を出力に焼き込める。[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開けるため不可。越境するのは実行者が env / `--var` / MCP で明示的に差し出した値だけ
 - **属性アクセス（`build.vars.commit` 等のコンテキスト注入）** — スキーマが保証するフィールドの顔になる。この情報はツール・実行環境依存で取得無保証の Optional であり、「文字列キーによる照会」という構文自体にその性格を語らせる。データ名前空間への予約名追加も不要になる（予約されるのは関数名一個 — `node` と同じ扱い）
 - **汎用フィルタでの照会（`child` 等）** — 汎用語彙は record を通貨とするため `.value` の一段が常に付き、`child` の未解決は MissingNode として目立つ（「未設定が正常」な Optional には逆向き）。既存の `child` は id 照会フィルタとして今回の検討と独立に有用（実装・文書化済み）
@@ -162,18 +146,16 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 #### 実装スコープ — PR の並び
 
-1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。当初は供給機構（vars）を先頭に置いていたが、それだと config・env・CLI・MCP・関数・store が揃うまで実機で何も見えない。
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*`）は実装済み。
 
 | # | 内容 | store に増えるキー |
 |---|---|---|
-| 1 | `build_info(key)` + ストア + command 層での合成（`Workspace` が運ぶ） | `processor.name` / `processor.version` / `processor.started_at` |
 | 2 | 奥付テンプレート + reconcile による追記 + `docs/` 公開 + showcase の実例 | — |
 | 3 | config → ストアの経路 | `processor.config.project_dir` |
 | 4 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
 | 5 | CLI `--var` + MCP `build` の `vars` | — |
 | 6 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
 
-- #1 は config に一切触らない。関数とストアと配置だけ。利用者から見える面は無く、単体テストで確認する
 - #2 で初めて利用者から見える。この時点の奥付は `processor.*` の 3 キーだけ
 - #4 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
 - #6 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う
