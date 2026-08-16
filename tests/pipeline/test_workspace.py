@@ -18,7 +18,7 @@ def test_processor_info_stamps_an_aware_moment() -> None:
     assert make_processor_info("build").started_at.utcoffset() is not None
 
 
-def test_build_info_flattens_the_processor_and_vars_namespaces(tmp_path: Path) -> None:
+def test_build_info_flattens_every_namespace(tmp_path: Path) -> None:
     processor = ProcessorInfo(
         name="another-mood",
         version="1.2.3",
@@ -38,7 +38,11 @@ def test_build_info_flattens_the_processor_and_vars_namespaces(tmp_path: Path) -
         ),
         tmp_path / "work",
         SourceLayout.for_project(tmp_path / "project"),
-        Manifest(),
+        Manifest(
+            sbdb_version=1,
+            title="My Project",
+            tools={"another-mood": {"minimum_version": "0.3.5"}},
+        ),
         processor,
         temporary=True,
     )
@@ -55,4 +59,7 @@ def test_build_info_flattens_the_processor_and_vars_namespaces(tmp_path: Path) -
         "processor.workspace.root": str(tmp_path / "work"),
         "processor.workspace.temporary": "true",
         "vars.git_sha": "abc123",
+        "manifest.sbdb_version": "1",
+        "manifest.title": "My Project",
+        "manifest.tools.another-mood.minimum_version": "0.3.5",
     }

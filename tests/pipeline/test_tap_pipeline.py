@@ -24,7 +24,7 @@ def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
         config,
         tmp_path / "work",
         resolve_layout(project),
-        Manifest(),
+        Manifest(sbdb_version=1),
         make_processor_info("tap"),
     )
 
