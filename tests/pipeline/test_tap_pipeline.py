@@ -25,7 +25,7 @@ def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
         tmp_path / "work",
         resolve_layout(project),
         Manifest(),
-        make_processor_info(),
+        make_processor_info("tap"),
     )
 
     report = tap_pipeline(workspace).run()

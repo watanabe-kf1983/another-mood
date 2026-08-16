@@ -68,7 +68,7 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化は #3 で実装済みで、以下は残る 5 PR の分。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化と `processor.command` は #3 で実装済みで、以下は残る 4 PR の分。
 
 ```jinja
 {{ build_info("vars.git_commit_id", "(dev)") }}
@@ -78,25 +78,20 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 | 名前空間 | 出所 | 例 |
 |---|---|---|
-| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at` |
+| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
 | `vars.*` | 実行者の注入値 (env / CLI / MCP — 供給機構は [20-config-spec.md](../20-app/20-config-spec.md) の Proposals) | `vars.git_commit_id` |
 | `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
 - `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#7 の前提）
 - 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い（#5 / #6 の制約）
 
-#### processor.* — config は全量、`command` で run の種別を語る (#4)
+#### processor.config.* — config は選ばず全量 (#4)
 
-実装済みの 3 キー（`name` / `version` / `started_at`）に、次の 2 種を足す:
-
-| キー | 値 |
-|---|---|
-| `processor.command` | この run の種別 — `build` / `watch` / `tap` |
-| `processor.config.*` | `Workspace.config`（resolve 済み）の平坦化。`project_dir`, `out_dir`, `site_dir`, `namespace_root`, `host`, `port`, … |
+実装済みの 4 キー（`name` / `version` / `started_at` / `command`）に、`processor.config.*` を足す。`Workspace.config`（resolve 済み）の平坦化で、`project_dir`, `out_dir`, `site_dir`, `namespace_root`, `host`, `port`, … が並ぶ。
 
 **config は選ばず全量出す。** unset (`None`) のフィールドは行ごと出さない。奥付が答えるのは「この run はどう起動されたか」であり、config はその問いそのもの。部分集合にすると「どれが有用か」というツール側の趣味判断になり、蒸し返され続ける（`tmp_dir` を「読む時点で消えているから」で外しかけたが、奥付が語るのはビルド時の事実であって読む時点の実在ではない、というのが正しい整理）。
 
-**`processor.command` は全量出しの前提。** `host` / `port` は watch でしか効かないが、config オブジェクトには build でも既定値が座っている。run の種別が同じページに書いてあれば読者はどの行が効いたかを判別できる。逆に種別が無いと、build の奥付に効かなかったパラメータが黙って並ぶ。
+**`processor.command` を先に置いたのはこの全量出しの前提だから**（#3 で実装済み）。`host` / `port` は watch でしか効かないが、config オブジェクトには build でも既定値が座っている。run の種別が同じページに書いてあれば読者はどの行が効いたかを判別できる。逆に種別が無いと、build の奥付に効かなかったパラメータが黙って並ぶ。
 
 `processor.config.tmp_dir` は config の値をそのまま写す（既定の使い捨て作業ディレクトリは config 上 unset なので行が出ない）。実効の作業ディレクトリ (`Workspace.root`) を出すなら `processor.config.*` ではなく別キーにすべきで、使い捨てで消えるものを奥付に置く理由が無い。
 
@@ -106,7 +101,7 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 ##### キーを足す場所 — `Workspace` の `build_info` property
 
-#4 / #6 で足すキーは `Workspace` が既に型付きで持っている値（`config` / `manifest`）の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。
+#4 / #7 で足すキーは `Workspace` が既に型付きで持っている値（`config` / `manifest`）の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。
 
 ただし `pipeline/` はカバレッジ計測対象外なので、**アルゴリズムと呼べるもの**（config / manifest の平坦化）は `components/shared/` に汎用ヘルパとして置き、`Workspace` はそれを呼ぶ。property が持つのは「どのキーがどの源から来るか」だけに保つ。
 
@@ -128,15 +123,15 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 #### 実装スコープ — PR の並び
 
-1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化）は実装済み。
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化・`processor.command`）は実装済み。
 
 | # | 内容 | store に増えるキー |
 |---|---|---|
-| 4 | config → ストアの経路（全量）と run の種別 | `processor.config.*`, `processor.command` |
+| 4 | config → ストアの経路（全量） | `processor.config.*` |
 | 5 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
 | 6 | CLI `--var` + MCP `build` の `vars` | — |
 | 7 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
 
-- #3 を #4 の手前に差し込んだのは、奥付に載る量が増える前にファイル境界を分けるため。表紙にローカルパスが並ぶ期間を作らずに済む
+- #3 を #4 の手前に差し込んだのは、奥付に載る量が増える前にファイル境界を分けるため。表紙にローカルパスが並ぶ期間を作らずに済む。`processor.command` も #3 に同乗させた（run の種別は config とは別の事実で、キー一本で完結する）
 - #5 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
 - #7 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う
