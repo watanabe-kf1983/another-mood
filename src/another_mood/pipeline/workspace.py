@@ -1,13 +1,35 @@
 """Workspace — the working environment for one pipeline run."""
 
 from dataclasses import dataclass
+from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 
 from another_mood.components.manifest import Manifest
+from another_mood.components.shared.build_info import BuildInfo
 from another_mood.components.shared.component.component import ComponentCall
+from another_mood.components.shared.tool_version import PROCESSOR_ID, tool_version
 from another_mood.config import ProjectConfig
 from another_mood.layout import SourceLayout
 from another_mood.pipeline.base import ComponentOutput
+
+
+@dataclass(frozen=True)
+class ProcessorInfo:
+    """What processed a run, as opposed to what it processed."""
+
+    name: str
+    version: str
+    started_at: datetime
+
+
+def make_processor_info() -> ProcessorInfo:
+    """Read the running processor's identity, stamping the current moment."""
+    return ProcessorInfo(
+        name=PROCESSOR_ID,
+        version=tool_version(),
+        started_at=datetime.now().astimezone(),
+    )
 
 
 @dataclass(frozen=True)
@@ -24,9 +46,20 @@ class Workspace:
     layout: SourceLayout
     # Project identity from sbdb.yaml — separate from config (how to build).
     manifest: Manifest
+    processor: ProcessorInfo
     # True when the command layer created root as a throwaway system-temp dir
     # (vs. a user-pinned MOOD_TMP_DIR it must not delete).
     temporary: bool = False
+
+    @cached_property
+    def build_info(self) -> BuildInfo:
+        return {
+            "processor.name": self.processor.name,
+            "processor.version": self.processor.version,
+            "processor.started_at": self.processor.started_at.isoformat(
+                timespec="seconds"
+            ),
+        }
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:
         """Return ComponentOutput for the given component under ``root``."""

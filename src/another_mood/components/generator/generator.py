@@ -26,8 +26,12 @@ from another_mood.components.generator.output_formats.md import (
     MD_GLOBALS,
     make_link_filters,
 )
+from another_mood.components.generator.build_info_globals import (
+    make_build_info_globals,
+)
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.generator.template_safe import TemplateSafe
+from another_mood.components.shared.build_info import BuildInfo
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
@@ -56,6 +60,7 @@ def generate(
     templates_dir: Path,
     reports_file: Path,
     project_name: str,
+    build_info: BuildInfo = {},
     *,
     out_dir: Path,
 ) -> None:
@@ -68,7 +73,7 @@ def generate(
     # A page tree per edition, over the shared data model.
     node_map = build_node_map(ensure_inert_mapping(load_model(data_dir)))
     for edition in editions:
-        render_edition(edition, node_map, data_dir / "contents", out_dir)
+        render_edition(edition, node_map, data_dir / "contents", out_dir, build_info)
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
@@ -149,6 +154,7 @@ def render_edition(
     node_map: Mapping[str, Node],
     blobs_dir: Path,
     out_dir: Path,
+    build_info: BuildInfo = {},
 ) -> None:
     """Render one edition's page tree to its mount ``out_dir/<dir_segment>/``
     and mirror its blob resources (when ``edition.mirror_blobs``) from
@@ -164,7 +170,7 @@ def render_edition(
             **node_filters,
             **make_link_filters(edition.paging, node_map),
         },
-        globals=node_globals,
+        globals={**node_globals, **make_build_info_globals(build_info)},
         paging=edition.paging,
     ).render_to_file(edition.root_template, data, Path("index.md"))
     if edition.mirror_blobs:

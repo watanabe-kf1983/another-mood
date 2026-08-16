@@ -8,7 +8,7 @@ from another_mood.components.manifest import Manifest
 from another_mood.config import ProjectConfig
 from another_mood.layout import resolve_layout
 from another_mood.pipeline.stages import tap_pipeline
-from another_mood.pipeline.workspace import Workspace
+from another_mood.pipeline.workspace import Workspace, make_processor_info
 
 
 def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
@@ -21,7 +21,11 @@ def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
         namespace_root=tmp_path, project_dir=project, tap_dir=tmp_path / "out"
     )
     workspace = Workspace(
-        config, tmp_path / "work", resolve_layout(project), Manifest()
+        config,
+        tmp_path / "work",
+        resolve_layout(project),
+        Manifest(),
+        make_processor_info(),
     )
 
     report = tap_pipeline(workspace).run()

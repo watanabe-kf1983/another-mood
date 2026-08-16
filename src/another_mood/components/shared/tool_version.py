@@ -1,4 +1,5 @@
-"""The running another-mood's own version, read from installed metadata."""
+"""The running another-mood's own identity: the id it answers to, and its
+version read from installed metadata."""
 
 from importlib import metadata
 
@@ -8,6 +9,10 @@ from importlib import metadata
 # the test module pins it to the distribution that actually provides this
 # package.
 DISTRIBUTION_NAME = "another-mood"
+
+# This processor's id in sbdb vocabulary: the `tools.` key a manifest addresses
+# it by.  Matches DISTRIBUTION_NAME by coincidence, not by rule.
+PROCESSOR_ID = "another-mood"
 
 
 def tool_version() -> str:
