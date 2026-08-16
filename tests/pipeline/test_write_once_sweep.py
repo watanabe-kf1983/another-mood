@@ -19,7 +19,7 @@ from another_mood.config import ProjectConfig
 from another_mood.layout import resolve_layout
 from another_mood.pipeline.base import Task
 from another_mood.pipeline.stages import STAGE_FACTORIES, TAP_STAGE_FACTORIES
-from another_mood.pipeline.workspace import Workspace
+from another_mood.pipeline.workspace import Workspace, make_processor_info
 
 _BLOB_V1 = b"\x89PNG-fake-bytes-v1"
 _BLOB_V2 = b"\x89PNG-fake-bytes-v2-different"
@@ -121,7 +121,11 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
         tap_dir=published / "tap",
     )
     workspace = Workspace(
-        config, tmp_path / "workspace", resolve_layout(project), Manifest()
+        config,
+        tmp_path / "workspace",
+        resolve_layout(project),
+        Manifest(),
+        make_processor_info(),
     )
     return workspace, published
 

@@ -129,6 +129,7 @@ def generator_stage(workspace: Workspace) -> Task:
         reports_file=layout.reports_file,
         project_name=workspace.manifest.title
         or workspace.config.project_dir.resolve().name,
+        build_info=workspace.build_info,
         out_dir=out.dir,
     )
     return Stage(

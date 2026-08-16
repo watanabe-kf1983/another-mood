@@ -43,7 +43,7 @@ from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
 from another_mood.pipeline.stages import pipeline, tap_pipeline
-from another_mood.pipeline.workspace import Workspace
+from another_mood.pipeline.workspace import Workspace, make_processor_info
 
 # UserError is re-exported: commands raise its subclasses for pre-pipeline
 # refusals, and the CLI catches that base.
@@ -275,11 +275,13 @@ def _session_workspace(
     manage; otherwise a throwaway system-temp dir is created and marked
     ``temporary`` so the caller can clean it up.
     """
+    # Stamped once per operation: a watch session's rebuilds must not move it.
+    processor = make_processor_info()
     if config.tmp_dir is not None:
-        return Workspace(config, config.tmp_dir, layout, manifest)
+        return Workspace(config, config.tmp_dir, layout, manifest, processor)
     else:
         tmp = Path(tempfile.mkdtemp(prefix="another-mood-"))
-        return Workspace(config, tmp, layout, manifest, temporary=True)
+        return Workspace(config, tmp, layout, manifest, processor, temporary=True)
 
 
 def _discard_workspace(workspace: Workspace, *, keep_for_post_mortem: bool) -> None:
