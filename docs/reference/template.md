@@ -355,7 +355,7 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 Built by {{ build_info("processor.name") }} {{ build_info("processor.version") }}
 ```
 
-The keys are not listed in this reference: the tool decides them, and they change between versions. Each build lists the ones it offered on its own page at `output/__build_info/`, linked from the cover — that page, not this one, tells you what a given build can answer. It also lists the values you inject yourself, which arrive under `vars.<name>` (see [Injected values](cli.md#injected-values-mood_vars_)).
+The keys are not listed in this reference: the tool decides them, and they change between versions. Each build lists the ones it offered on its own page at `output/__build_info/`, linked from the cover — that page, not this one, tells you what a given build can answer. It also lists the values you inject yourself, which arrive under `vars.<name>` (see [Injected values](cli.md#injected-values-vars)).
 
 That page holds every fact about the build, including the absolute path of the project directory it was built from. Exclude `__build_info/` when you publish the output if you would rather not ship those details.
 
