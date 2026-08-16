@@ -15,8 +15,10 @@ A **template** is the presentation layer that turns data and views into Markdown
 | [`code_inline`](#code_inline) | function | wrap a value in a Markdown code span |
 | [`code_fenced`](#code_fenced) | function | wrap a value in a Markdown fenced code block |
 | [`as_url`](#as_url) | filter | percent-encode a hand-written link URL |
+| [`dedent`](#dedent) | filter | strip a block's shared leading indentation from the output |
 | [`under_heading`](#under_heading) | filter | shift an embedded fragment's headings to nest under a heading |
 | [`relink`](#relink) | filter | resolve a prose body's `node:` links to their targets |
+| [`build_info`](#build_info) | function | a fact about the build producing this page |
 
 Where this page departs from the Jinja2 docs is collected under [Differences from Jinja2](#differences-from-jinja2).
 
@@ -344,6 +346,16 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 ```jinja2
 {{ code_fenced(diagram.source, "mermaid") }}
 ```
+
+### `build_info`
+
+`build_info(key, default=None)` returns a fact about the build that is producing this page, as a string — or `default` when nothing is set under `key`.
+
+```jinja2
+Built by {{ build_info("processor.name") }} {{ build_info("processor.version") }}
+```
+
+Each build lists the keys it offers at the end of the cover, `output/index.md`. The set is not part of this reference: the tool supplies it, and it changes between versions.
 
 ## Whitespace
 

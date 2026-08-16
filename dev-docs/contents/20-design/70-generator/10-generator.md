@@ -73,6 +73,8 @@ Reconcile は Generator の直後に位置するステージで、「Generator �
 - エラー無し: Generator の出力をそのまま `reconcile_dir` に通す（pass-through）
 - エラー有り: Generator の出力を破棄し、`__build_failure` テンプレートでエラーページをレンダリングして `reconcile_dir` に書き出す
 
+奥付は両方の分岐に付ける。失敗ページは表紙を置き換えるので、失敗時に読者が見る唯一のページになるため。表紙側で生成側（cover テンプレート）に build info を渡さないのは、末尾に何がどの順で並ぶか（**本文 → 警告リンク → 奥付**）を Reconcile 一箇所で決めるため。
+
 この分離により以下が成立する:
 
 - Generator は「views を Markdown に変換する」純粋な責務に集中できる（エラー時の出力差し替えロジックを持たない）

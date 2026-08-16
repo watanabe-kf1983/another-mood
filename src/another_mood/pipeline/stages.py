@@ -145,6 +145,7 @@ def reconcile_stage(workspace: Workspace) -> Task:
     out = workspace.component_output(reconcile)
     call = reconcile.bind(
         data_dir=generate_out.dir,
+        build_info=workspace.build_info,
         out_dir=out.dir,
     )
     return Stage(

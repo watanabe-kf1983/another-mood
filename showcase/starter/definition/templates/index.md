@@ -15,3 +15,7 @@
 {{- entry | render("by_role.md") -}}
 - {{ entry | link }}
 {% endfor %}
+
+---
+
+Built by {{ build_info("processor.name") }} {{ build_info("processor.version") }}
