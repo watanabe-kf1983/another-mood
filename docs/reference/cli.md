@@ -249,6 +249,26 @@ MOOD_OUT_DIR=/abs/path/to/output mood build .
 MOOD_PORT=8080 mood watch .
 ```
 
+`vars` is the one key that rule does not reach; see below.
+
+### Injected values (`MOOD_VARS_*`)
+
+`MOOD_VARS_<NAME>` carries a value of your own into the build, for templates to read back through [`build_info`](template.md#build_info). The `MOOD_VARS_` prefix is stripped and the rest is lowercased, so the value arrives under `vars.<name>`:
+
+```bash
+MOOD_VARS_GIT_COMMIT_ID=$(git rev-parse --short HEAD) mood build .
+```
+
+A template reads that one back as `vars.git_commit_id`, and can name a fallback for the runs where nothing is injected — a build on your own machine, say:
+
+```jinja2
+Built from {{ build_info("vars.git_commit_id", "(dev)") }}
+```
+
+The name after the prefix is yours to choose, and the underscores in it are part of the name rather than separators — `MOOD_VARS_CI_RUN_URL` arrives as `vars.ci_run_url`. Values are carried as strings, whatever they look like.
+
+Everything injected this way is listed on the build's colophon page at `output/__build_info/` — including values that only one template reads, or none.
+
 ### Keys and defaults
 
 | Key | Default | Env var | CLI |
@@ -260,3 +280,4 @@ MOOD_PORT=8080 mood watch .
 | `host` | `127.0.0.1` | `MOOD_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `MOOD_PORT` | `--port` (only on `watch`) |
 | `tap_dir` | `.another-mood/<project_dir>/tap` | `MOOD_TAP_DIR` | — |
+| `vars` | (nothing injected) | [`MOOD_VARS_<NAME>`](#injected-values-mood_vars_) | — |
