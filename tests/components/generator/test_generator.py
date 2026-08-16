@@ -272,6 +272,57 @@ class TestReconcile:
             in (out_dir / "data" / "index.md").read_text()
         )
 
+    def test_appends_colophon_listing_the_whole_store(self, tmp_path: Path) -> None:
+        upstream = tmp_path / "generate"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "data" / "index.md").write_text("# Root\n")
+        (upstream / "reports").mkdir()
+
+        out_dir = tmp_path / "reconcile"
+        reconcile(
+            data_dir=upstream,
+            build_info={
+                "processor.version": "0.4.0",
+                "processor.name": "another-mood",
+            },
+            out_dir=out_dir,
+        )
+
+        index = (out_dir / "data" / "index.md").read_text()
+        assert index.startswith("# Root\n")
+        assert "## Build info" in index
+        # Keys sort, so the store's own order does not reach the page.
+        assert (
+            f"| `processor.name` | {md_escape('another-mood')} |\n"
+            f"| `processor.version` | {md_escape('0.4.0')} |\n"
+        ) in index
+
+    def test_colophon_lands_below_the_warnings_link(self, tmp_path: Path) -> None:
+        upstream = tmp_path / "generate"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "data" / "index.md").write_text("# Root\n")
+        BuildReport(
+            diagnostics=(
+                DiagnosticEntry(
+                    file="albums.yaml",
+                    line=3,
+                    column=5,
+                    message="dangling reference",
+                    severity="warning",
+                ),
+            ),
+        ).write(upstream / "reports")
+
+        out_dir = tmp_path / "reconcile"
+        reconcile(
+            data_dir=upstream,
+            build_info={"processor.name": "another-mood"},
+            out_dir=out_dir,
+        )
+
+        index = (out_dir / "data" / "index.md").read_text()
+        assert index.index("## Warnings") < index.index("## Build info")
+
     def test_renders_error_page_when_upstream_has_errors(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
@@ -281,9 +332,14 @@ class TestReconcile:
         report.write(upstream / "reports")
 
         out_dir = tmp_path / "reconcile"
-        reconcile(data_dir=upstream, out_dir=out_dir)
+        reconcile(
+            data_dir=upstream,
+            build_info={"processor.name": "another-mood"},
+            out_dir=out_dir,
+        )
 
         # Build report page is rendered, stale upstream data is not propagated.
         error_page = (out_dir / "data" / "index.md").read_text()
         assert error_page.startswith("# Build Failed - Another Mood")
         assert not (out_dir / "data" / "stale.md").exists()
+        assert "## Build info" in error_page

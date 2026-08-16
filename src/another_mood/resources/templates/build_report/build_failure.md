@@ -26,3 +26,4 @@
 {% endif %}
 {% endfor %}
 {% endif %}
+{% include "colophon.md" %}

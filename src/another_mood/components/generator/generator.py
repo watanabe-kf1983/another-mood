@@ -31,12 +31,13 @@ from another_mood.components.generator.build_info_globals import (
 )
 from another_mood.components.generator.template_engine import TemplateEngine
 from another_mood.components.generator.template_safe import TemplateSafe
-from another_mood.components.shared.build_info import BuildInfo
+from another_mood.components.shared.build_info import NO_BUILD_INFO, BuildInfo
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.component.errors import error_propagation
 from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.transfer import link_or_copy, transfer_tree
+from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.components.shared.windows_reserved_name import (
     ensure_not_windows_reserved,
 )
@@ -60,8 +61,8 @@ def generate(
     templates_dir: Path,
     reports_file: Path,
     project_name: str,
-    build_info: BuildInfo = {},
     *,
+    build_info: BuildInfo = NO_BUILD_INFO,
     out_dir: Path,
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
@@ -77,14 +78,12 @@ def generate(
 
 
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"], error_propagation=False)
-def reconcile(data_dir: Path, *, out_dir: Path) -> None:
-    """Reconcile Generator output with the propagated BuildReport.
-
-    No upstream errors: pass Generator's data through.  When the
-    propagated report carries warning diagnostics, render a
-    ``__warnings/`` page and link to it from ``index.md``.
-
-    Upstream errors: render a __build_failure page in its place.
+def reconcile(
+    data_dir: Path, *, build_info: BuildInfo = NO_BUILD_INFO, out_dir: Path
+) -> None:
+    """Settle the output the user sees: Generator's tree as it stands, or a
+    __build_failure page in its place when upstream errors propagated.  Either
+    page ends with the ``build_info`` colophon.
     """
     with error_propagation([data_dir], out_dir, component="reconcile") as ctx:
         if ctx is not None:
@@ -94,36 +93,50 @@ def reconcile(data_dir: Path, *, out_dir: Path) -> None:
                 for d in BuildReport.collect(data_dir / "reports").diagnostics
                 if d.severity == "warning"
             ]
+            tail = [_colophon(build_info, out_dir)]
             if warnings:
-                markdown_engine(
-                    ctx.out / "__warnings", _BUILD_REPORT_TEMPLATES_DIR
-                ).render_to_file(
-                    "warnings.md",
-                    {"diagnostics": [d.to_data() for d in warnings]},
-                    Path("index.md"),
-                )
-                _append_warnings_link(ctx.out / "index.md", len(warnings))
+                tail = [_warnings_section(warnings, ctx.out), *tail]
+            _append_tail(ctx.out / "index.md", tail)
         else:
             report = BuildReport.collect(data_dir / "reports")
             markdown_engine(
                 out_dir / "data", _BUILD_REPORT_TEMPLATES_DIR
             ).render_to_file(
                 "build_failure.md",
-                report.to_data(),
+                {**report.to_data(), "build_info": build_info},
                 Path("index.md"),
             )
 
 
-def _append_warnings_link(index_md: Path, count: int) -> None:
-    """Append a short ``## Warnings`` block linking to the warnings page."""
+def _colophon(build_info: BuildInfo, out_dir: Path) -> str:
+    """The colophon as a trailing section for the cover, which the generation
+    side renders — the failure page includes the same template itself."""
+    engine = markdown_engine(out_dir, _BUILD_REPORT_TEMPLATES_DIR)
+    return engine.render("colophon.md", {"build_info": build_info})
+
+
+def _warnings_section(warnings: Sequence[DiagnosticEntry], out: Path) -> str:
+    """Render the warnings page under ``out``, and return the section that
+    links to it."""
+    markdown_engine(out / "__warnings", _BUILD_REPORT_TEMPLATES_DIR).render_to_file(
+        "warnings.md",
+        {"diagnostics": [d.to_data() for d in warnings]},
+        Path("index.md"),
+    )
+    count = len(warnings)
     label = f"{count} warning{'' if count == 1 else 's'}"
+    return f"## Warnings\n\n{label} — [view](__warnings/)\n"
+
+
+def _append_tail(index_md: Path, sections: Sequence[str]) -> None:
+    present = [section for section in sections if section]
+    if not present:
+        return
     content = index_md.read_text(encoding="utf-8")
     # Replace the file, never append in place: the inode may be shared
     # with the upstream copy via hardlink.
     index_md.unlink()
-    index_md.write_text(
-        f"{content}\n## Warnings\n\n{label} — [view](__warnings/)\n", encoding="utf-8"
-    )
+    index_md.write_text("\n".join([content, *present]), encoding="utf-8")
 
 
 def render_editions_index(
@@ -154,7 +167,7 @@ def render_edition(
     node_map: Mapping[str, Node],
     blobs_dir: Path,
     out_dir: Path,
-    build_info: BuildInfo = {},
+    build_info: BuildInfo = NO_BUILD_INFO,
 ) -> None:
     """Render one edition's page tree to its mount ``out_dir/<dir_segment>/``
     and mirror its blob resources (when ``edition.mirror_blobs``) from
