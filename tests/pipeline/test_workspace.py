@@ -27,12 +27,15 @@ def test_build_info_flattens_the_processor_namespace(tmp_path: Path) -> None:
         ),
         command="watch",
     )
+    # An unpinned tmp_dir: no config row, but the throwaway working dir it
+    # left out still has to reach the store.
     workspace = Workspace(
         ProjectConfig(namespace_root=tmp_path, project_dir=tmp_path / "project"),
         tmp_path / "work",
         SourceLayout.for_project(tmp_path / "project"),
         Manifest(),
         processor,
+        temporary=True,
     )
 
     assert dict(workspace.build_info) == {
@@ -40,4 +43,10 @@ def test_build_info_flattens_the_processor_namespace(tmp_path: Path) -> None:
         "processor.version": "1.2.3",
         "processor.started_at": "2026-08-16T14:23:45+09:00",
         "processor.command": "watch",
+        "processor.config.namespace_root": str(tmp_path),
+        "processor.config.project_dir": str(tmp_path / "project"),
+        "processor.config.host": "127.0.0.1",
+        "processor.config.port": "5077",
+        "processor.workspace.root": str(tmp_path / "work"),
+        "processor.workspace.temporary": "true",
     }
