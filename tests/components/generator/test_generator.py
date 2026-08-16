@@ -272,7 +272,9 @@ class TestReconcile:
             in (out_dir / "data" / "index.md").read_text()
         )
 
-    def test_appends_colophon_listing_the_whole_store(self, tmp_path: Path) -> None:
+    def test_colophon_is_a_page_of_its_own_linked_from_the_cover(
+        self, tmp_path: Path
+    ) -> None:
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         (upstream / "data" / "index.md").write_text("# Root\n")
@@ -290,14 +292,32 @@ class TestReconcile:
 
         index = (out_dir / "data" / "index.md").read_text()
         assert index.startswith("# Root\n")
-        assert "## Build info" in index
+        assert "## Build Information" in index
+        assert "[view](__build_info/)" in index
+        # The store itself lands on the linked page, never on the cover.
+        assert "processor.name" not in index
+
+        colophon = (out_dir / "data" / "__build_info" / "index.md").read_text()
+        assert colophon.startswith("# Build Information\n")
         # Keys sort, so the store's own order does not reach the page.
         assert (
             f"| `processor.name` | {md_escape('another-mood')} |\n"
             f"| `processor.version` | {md_escape('0.4.0')} |\n"
-        ) in index
+        ) in colophon
 
-    def test_colophon_lands_below_the_warnings_link(self, tmp_path: Path) -> None:
+    def test_no_colophon_page_when_the_store_is_empty(self, tmp_path: Path) -> None:
+        upstream = tmp_path / "generate"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "data" / "index.md").write_text("# Root\n")
+        (upstream / "reports").mkdir()
+
+        out_dir = tmp_path / "reconcile"
+        reconcile(data_dir=upstream, out_dir=out_dir)
+
+        assert (out_dir / "data" / "index.md").read_text() == "# Root\n"
+        assert not (out_dir / "data" / "__build_info").exists()
+
+    def test_warnings_link_lands_below_the_colophon_link(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         (upstream / "data" / "index.md").write_text("# Root\n")
@@ -321,7 +341,9 @@ class TestReconcile:
         )
 
         index = (out_dir / "data" / "index.md").read_text()
-        assert index.index("## Warnings") < index.index("## Build info")
+        # The always-present section keeps its place whether or not this
+        # build warned; the conditional one appends.
+        assert index.index("## Build Information") < index.index("## Warnings")
 
     def test_renders_error_page_when_upstream_has_errors(self, tmp_path: Path) -> None:
         upstream = tmp_path / "generate"
@@ -342,4 +364,7 @@ class TestReconcile:
         error_page = (out_dir / "data" / "index.md").read_text()
         assert error_page.startswith("# Build Failed - Another Mood")
         assert not (out_dir / "data" / "stale.md").exists()
-        assert "## Build info" in error_page
+        # Inline here, not a link: the failure page is the only page its
+        # reader gets, and they are always the one who ran the build.
+        assert "## Build Information" in error_page
+        assert f"| `processor.name` | {md_escape('another-mood')} |" in error_page

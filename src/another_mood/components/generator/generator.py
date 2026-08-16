@@ -82,8 +82,9 @@ def reconcile(
     data_dir: Path, *, build_info: BuildInfo = NO_BUILD_INFO, out_dir: Path
 ) -> None:
     """Settle the output the user sees: Generator's tree as it stands, or a
-    __build_failure page in its place when upstream errors propagated.  Either
-    page ends with the ``build_info`` colophon.
+    __build_failure page in its place when upstream errors propagated.  The
+    ``build_info`` colophon reaches either one — as a linked page beside the
+    cover, or inline on the failure page, which no one publishes.
     """
     with error_propagation([data_dir], out_dir, component="reconcile") as ctx:
         if ctx is not None:
@@ -93,9 +94,9 @@ def reconcile(
                 for d in BuildReport.collect(data_dir / "reports").diagnostics
                 if d.severity == "warning"
             ]
-            tail = [_colophon(build_info, out_dir)]
+            tail = [_colophon_section(build_info, ctx.out)] if build_info else []
             if warnings:
-                tail = [_warnings_section(warnings, ctx.out), *tail]
+                tail = [*tail, _warnings_section(warnings, ctx.out)]
             _append_tail(ctx.out / "index.md", tail)
         else:
             report = BuildReport.collect(data_dir / "reports")
@@ -108,11 +109,20 @@ def reconcile(
             )
 
 
-def _colophon(build_info: BuildInfo, out_dir: Path) -> str:
-    """The colophon as a trailing section for the cover, which the generation
-    side renders — the failure page includes the same template itself."""
-    engine = markdown_engine(out_dir, _BUILD_REPORT_TEMPLATES_DIR)
-    return engine.render("colophon.md", {"build_info": build_info})
+def _colophon_section(build_info: BuildInfo, out: Path) -> str:
+    """Render the colophon page under ``out``, and return the section that
+    links to it.
+
+    A page of its own, rather than a section on the cover, so that a user
+    publishing the output can drop the one directory: the colophon describes
+    the machine that built the pages, whose reader is not their audience.
+    """
+    markdown_engine(out / "__build_info", _BUILD_REPORT_TEMPLATES_DIR).render_to_file(
+        "build_info.md",
+        {"build_info": build_info},
+        Path("index.md"),
+    )
+    return "## Build Information\n\nWhat produced these pages — [view](__build_info/)\n"
 
 
 def _warnings_section(warnings: Sequence[DiagnosticEntry], out: Path) -> str:
