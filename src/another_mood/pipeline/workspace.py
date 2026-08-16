@@ -79,6 +79,7 @@ class Workspace:
                 "processor.workspace",
                 {"root": self.root, "temporary": self.temporary},
             ),
+            **flatten_build_info("vars", self.config.vars),
         }
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:
