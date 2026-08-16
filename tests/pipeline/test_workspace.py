@@ -28,9 +28,14 @@ def test_build_info_flattens_the_processor_namespace(tmp_path: Path) -> None:
         command="watch",
     )
     # An unpinned tmp_dir: no config row, but the throwaway working dir it
-    # left out still has to reach the store.
+    # left out still has to reach the store. `vars` is a config field that
+    # yields no row either.
     workspace = Workspace(
-        ProjectConfig(namespace_root=tmp_path, project_dir=tmp_path / "project"),
+        ProjectConfig(
+            namespace_root=tmp_path,
+            project_dir=tmp_path / "project",
+            vars={"git_sha": "abc123"},
+        ),
         tmp_path / "work",
         SourceLayout.for_project(tmp_path / "project"),
         Manifest(),

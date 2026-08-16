@@ -66,9 +66,12 @@ class Workspace:
             "processor.started_at": self.processor.started_at.isoformat(
                 timespec="seconds"
             ),
-            # Every config field, unfiltered: how the run was invoked is the
-            # question the colophon answers.
-            **flatten_build_info("processor.config", dict(self.config)),
+            # Every invocation parameter, unfiltered: how the run was invoked
+            # is the question the colophon answers. `vars` is not one of them
+            # and gets its own namespace.
+            **flatten_build_info(
+                "processor.config", self.config.model_dump(exclude={"vars"})
+            ),
             # What the run actually worked in, which config only asks for:
             # an unpinned tmp_dir leaves no config row, but a working dir
             # still exists — and outlives the run when a failure keeps it.
