@@ -77,8 +77,8 @@ def _generation_notices(
             f"**The supported sbdb generation set moved, and no `breaking` is "
             f"declared.**\n\n`{GENERATION_DECLARATION}` has a diff. A generation "
             f"dropping out of the supported set is a format break, and `breaking` "
-            f"is mandatory for one — together with the incompatibility note and "
-            f"the migration steps under `docs/`. Adding a generation is not a "
+            f"is mandatory for one — together with the migration steps under "
+            f"`docs/`. Adding a generation is not a "
             f"break; ignore this if that is what happened.\n\n"
             f"```\nRelease-Highlight: breaking\n```",
         )
@@ -98,8 +98,8 @@ def _undocumented_kind_notices(
             f"**`breaking` is declared, but `{REFERENCE_DOCS_PREFIX}` has no "
             f"diff.**\n\nA break passes through the reference by definition — "
             f"behaviour the reference does not describe is outside the contract "
-            f"— and a breaking PR owes the chapter it broke an incompatibility "
-            f"note. Ignore this if that note landed in an earlier PR.",
+            f"— so the chapter it broke should have moved with it. Ignore this "
+            f"if that edit landed in an earlier PR of the same change.",
         )
     else:
         return (

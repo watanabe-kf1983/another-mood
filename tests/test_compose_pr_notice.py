@@ -46,7 +46,7 @@ class TestUndocumentedKindRule:
 
     def test_speaks_up_for_breaking_with_no_reference_diff(self) -> None:
         body = notice("src/another_mood/cli.py", kinds=frozenset({"breaking"}))
-        assert "incompatibility note" in body
+        assert "outside the contract" in body
 
     def test_speaks_up_for_feature_with_no_reference_diff(self) -> None:
         body = notice("src/another_mood/cli.py", kinds=frozenset({"feature"}))
@@ -56,7 +56,7 @@ class TestUndocumentedKindRule:
         body = notice(
             "src/another_mood/cli.py", kinds=frozenset({"breaking", "feature"})
         )
-        assert "incompatibility note" in body
+        assert "outside the contract" in body
         assert "set of promises" not in body
 
     def test_stays_quiet_for_fix(self) -> None:

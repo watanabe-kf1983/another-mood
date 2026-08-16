@@ -16,7 +16,7 @@ class ProjectConfig(BaseSettings):
     """Project configuration for Another Mood.
 
     Default output paths derive from `<namespace_root>/.another-mood/<project_dir>/`.
-    Environment variables (RB_ prefix) override defaults.
+    Environment variables (MOOD_ prefix) override defaults.
 
     Paths are taken as given: nothing here reads the process CWD, so every
     path must be absolute already (``verify`` enforces it). Absolutizing —
@@ -24,14 +24,14 @@ class ProjectConfig(BaseSettings):
     boundary that owns the caller's standing position.
     """
 
-    model_config = SettingsConfigDict(env_prefix="RB_")
+    model_config = SettingsConfigDict(env_prefix="MOOD_")
 
     # The directory the derived `.another-mood/` tree hangs from, and the base
     # the tree is namespaced by. The CLI binds it to the current directory, the
     # MCP server to project_dir (which collapses the namespacing tail).
     #
     # Bound by the boundary layer, not configured by the user: no CLI option
-    # and no MCP argument sets it, and RB_NAMESPACE_ROOT never takes effect,
+    # and no MCP argument sets it, and MOOD_NAMESPACE_ROOT never takes effect,
     # since both boundaries pass the field explicitly and init arguments
     # outrank environment sources. Move the output instead — out_dir /
     # site_dir / tap_dir reach every path this would move, one at a time.
@@ -49,7 +49,7 @@ class ProjectConfig(BaseSettings):
     tap_dir: Path | None = Field(default=None)
 
     # Working dir. Unset (None) resolves to a fresh system-temp dir at the
-    # command layer; set RB_TMP_DIR to pin it to a fixed path.
+    # command layer; set MOOD_TMP_DIR to pin it to a fixed path.
     tmp_dir: Path | None = Field(default=None)
 
     # Server
@@ -88,7 +88,7 @@ class ProjectConfig(BaseSettings):
             listing = ", ".join(f"{name}={path}" for name, path in relative.items())
             raise ConfigValidationError(
                 "Paths must be absolute, but these are relative: "
-                f"{listing}. RB_* environment variables are read as given, so "
+                f"{listing}. MOOD_* environment variables are read as given, so "
                 "they have to be written as absolute paths."
             )
         if not self.project_dir.is_relative_to(self.namespace_root):

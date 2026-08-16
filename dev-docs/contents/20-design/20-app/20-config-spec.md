@@ -6,7 +6,7 @@
 
 設定システムが扱うのは**起動パラメータ**（どう実行し、どこへ出すか: `project_dir` / `out_dir` / `site_dir` / `tmp_dir` / `host` / `port`）のみ。
 
-ソースレイアウト（`definition/schema.yaml` 等のパス群）は設定ではなく sbdb フォーマット世代が定めるプロジェクト構造であり、`resolve_layout`（`layout.py`）が導出する。レイアウトの `RB_*` 個別オーバーライドは廃止済み（[G10](node:/tasks/G/tasks/G10) — フォーマット世代を名乗りながらファイル位置を動かせるのは宣言と矛盾するため）。
+ソースレイアウト（`definition/schema.yaml` 等のパス群）は設定ではなく sbdb フォーマット世代が定めるプロジェクト構造であり、`resolve_layout`（`layout.py`）が導出する。個別に位置を上書きする手段は持たない — フォーマット世代を名乗りながらファイル位置を動かせるのは、宣言と矛盾するため。
 
 ### 設定の読み込み優先順位
 
@@ -16,6 +16,10 @@
 2. 設定ファイル（未実装 — [G2](node:/tasks/G/tasks/G2)）
 3. 環境変数
 4. CLI 引数
+
+### 環境変数の綴り
+
+プレフィックスは `MOOD_`。設定キーを大文字化して前置するだけで、`out_dir` → `MOOD_OUT_DIR`。実装は pydantic-settings の `env_prefix="MOOD_"`。
 
 ## 背景: preflight の順序
 
@@ -30,35 +34,25 @@
 - ファイル名: `another-mood.config.json`
 - 配置場所: プロジェクトルート
 - 対応フォーマット: JSON
-- スコープ注意: ソースレイアウトは設定項目にしない（G10 で設定システムの管轄外と決定 — 「設定の管轄範囲」参照）
-
-### 環境変数プレフィックス改名 (G14)
-
-`RB_*` → `MOOD__*`。`RB` は旧名 reqs-builder の遺物で、由来不明の二文字を利用者の CI 設定ファイルに焼き付け続けないため、運用が広がる前に改名する。
-
-**綴りは `MOOD_` でなく `MOOD__`（二連）を採る。** 環境変数名を「階層アドレスの `__` 結合エンコード」として読む一行規則に統一するため:
-
-- `__`（二連）= 階層の区切り。`MOOD__OUT_DIR` = `[MOOD][OUT_DIR]`
-- `_`（単独）= snake_case の語区切り（字義どおりの文字）
-
-この規則は P14 の vars 注入（`MOOD__VARS__AAA_BBB` = `[MOOD][VARS][AAA_BBB]`）と同一で、pydantic-settings の `env_prefix="MOOD__"` + `env_nested_delimiter="__"` がそのまま実装になる。先例は ASP.NET Core の設定規約（`Logging__LogLevel__Default`）。
-
-- **ツール破壊**（cli.md 記載の利用者向け契約）— 次リリースは 0.2.0。sbdb_version は不変（フォーマットに触れない）
-- 旧綴りのエイリアスは残さない（現時点で外部利用者は事実上不在）
-- PR 義務: cli.md への非互換注記一行、`Release-Highlight: breaking` トレーラー、highlight セクション
-- **G14 → P14 の順で着手する**。P14 が確定させる env 綴りはこのプレフィックスの上に立つ
 
 ### ビルド時情報の供給機構 (P14 の config 側)
 
 テンプレート照会関数 `build_info`（[30-template-spec.md](../70-generator/30-template-spec.md) の Proposals 参照）へ渡す利用者注入値 `vars.*` を、config 層で受ける。
 
 - `ProjectConfig` に `vars: dict[str, str]` フィールドを追加。供給は三チャネル対等:
-  - env: `MOOD__VARS__AAA_BBB=x` → `vars["aaa_bbb"]`（`env_nested_delimiter="__"`）
+  - env: 綴りは下の「env チャネルの綴り」で決める
   - CLI: `--var aaa_bbb=x`（繰り返し可）
   - MCP: `build` / `watch` 引数 `vars`（mapping）
 - 合流は pydantic-settings のソース間 deep-merge をそのまま使う（実測確認済み）: キー単位でマージされ、衝突は init（CLI / MCP）が env に勝つ。既存の「設定の読み込み優先順位」と同順
-- **封筒 `MOOD__` はストアのキーに入らない**。プレフィックスは共有名前空間（プロセス環境）で自分宛ての値を仕分けるチャネル固有の作法であり（Java の `-D` に相当）、ストア内では全キーに共通で情報を持たないため剥がす。キーは小文字化して `vars.aaa_bbb` になる
-- **env で書けるのは vars 直下一段のみ**。`dict[str, str]` の型検証が `MOOD__VARS__A__B` のネストを拒む挙動を、そのまま仕様として採る。背景:
-  - 型を `dict[str, object]` に緩めるとネストは受かるが、pydantic-settings が env 値を JSON 解釈して `"42"` が int になり、「値は全て文字列」の契約が env 経由でだけ揺れる（実測）
-  - ストアはフラットな文字列キーでドットはただの文字なので、深い階層キー（`vars.ci.run_id`）は CLI / MCP からドット入りキーとして渡せば成立する。制限は env チャネルの復号器の限界であって、ストアと照会には制限がない
+- **封筒 `MOOD_` はストアのキーに入らない**。プレフィックスは共有名前空間（プロセス環境）で自分宛ての値を仕分けるチャネル固有の作法であり（Java の `-D` に相当）、ストア内では全キーに共通で情報を持たないため剥がす。キーは小文字化して `vars.aaa_bbb` になる
+- **env で書けるのは vars 直下一段のみ**。深い階層キー（`vars.ci.run_id`）は CLI / MCP からドット入りキーとして渡せば成立する（ストアはフラットな文字列キーでドットはただの文字）。制限は env チャネルの復号器の限界であって、ストアと照会には制限がない
+  - 型を `dict[str, object]` に緩めればネストは受かるが、pydantic-settings が env 値を JSON 解釈して `"42"` が int になり、「値は全て文字列」の契約が env 経由でだけ揺れる（実測）ので採らない
 - config はストアそのものではない: `config.vars` からストアキーへの合成（`vars.` 前置）は command / generator 層の明示的な一行で行う。config のフィールド位置（`config.vars`）がキーに漏れる経路は無い
+
+#### env チャネルの綴り（未決）
+
+`MOOD_VARS__GIT_SHA` と `MOOD_VARS_GIT_SHA` のどちらを採るか。G14 で確定したトップレベルの `MOOD_` とは独立に選べる。実測した事実:
+
+- pydantic-settings の `env_nested_delimiter` は**分割文字**なので、語区切りと同じ `_` は使えない。`env_nested_delimiter="_"` の下では `MOOD_VARS_GIT_SHA` が `vars.git.sha` と解釈され、`dict[str, str]` の検証に落ちる。通るのは一語のキー（`MOOD_VARS_SHA` → `vars["sha"]`）だけで、`git_sha` / `run_id` / `build_number` といった実際に使いたい名前が全滅する
+- したがって `MOOD_VARS_GIT_SHA` を成立させるにはカスタム settings source が要る。`MOOD_VARS_` という固定リテラルを剥がして残りを小文字化するだけで、**分割しないので曖昧性は無い**。これはトップレベルのプレフィックスが既に使っている機構と同一で、それを一段下に適用するもの。先例は Hugo の `HUGO_PARAMS_*`
+- 二案の比較軸: `__` は `env_nested_delimiter="__"` 一行で済むが、封筒＝階層でないという上の整理と綴りがずれる。リテラル剥がしは綴りが素直になる代わりに実装（20〜30 行）と、`MOOD_VARS_` が予約語になること（`vars_*` という名のトップレベルフィールドを将来作れない）を負う。上で「env は vars 直下一段のみ」と決めている以上、`__` の多段表現力は使われない

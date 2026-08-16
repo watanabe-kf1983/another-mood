@@ -271,7 +271,7 @@ def _session_workspace(
 ) -> Workspace:
     """Build the run Workspace, defaulting its root to a fresh system-temp dir.
 
-    An explicit ``tmp_dir`` (RB_TMP_DIR) is honored and left for the user to
+    An explicit ``tmp_dir`` (MOOD_TMP_DIR) is honored and left for the user to
     manage; otherwise a throwaway system-temp dir is created and marked
     ``temporary`` so the caller can clean it up.
     """
