@@ -15,7 +15,7 @@ from another_mood.pipeline.workspace import (
 
 def test_processor_info_stamps_an_aware_moment() -> None:
     # A naive stamp would flatten to a timestamp with no offset at all.
-    assert make_processor_info().started_at.utcoffset() is not None
+    assert make_processor_info("build").started_at.utcoffset() is not None
 
 
 def test_build_info_flattens_the_processor_namespace(tmp_path: Path) -> None:
@@ -25,6 +25,7 @@ def test_build_info_flattens_the_processor_namespace(tmp_path: Path) -> None:
         started_at=datetime(
             2026, 8, 16, 14, 23, 45, 678, tzinfo=timezone(timedelta(hours=9))
         ),
+        command="watch",
     )
     workspace = Workspace(
         ProjectConfig(namespace_root=tmp_path, project_dir=tmp_path / "project"),
@@ -38,4 +39,5 @@ def test_build_info_flattens_the_processor_namespace(tmp_path: Path) -> None:
         "processor.name": "another-mood",
         "processor.version": "1.2.3",
         "processor.started_at": "2026-08-16T14:23:45+09:00",
+        "processor.command": "watch",
     }

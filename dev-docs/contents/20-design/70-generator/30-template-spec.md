@@ -30,9 +30,17 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### 奥付
 
-奥付は表紙 (`index.md`) の末尾に自動で付き、**利用者が外す手段を持たない**。そのぶん何を載せるかの敷居は高い（Proposals の `processor.config.*` の裁定はこれに基づく）。
+奥付はストアの全量を列挙する独立ページ (`__build_info/`) で、表紙 (`index.md`) からはリンク節 (`## Build Information`) だけが張られる。`__warnings/` `__db/` と同じ形で、表紙の節見出しは `Database Information` に倣った綴り（パスの綴りは関数名 `build_info` 側に揃える）。
 
-`processor.*` / `manifest.*` のキー目録は `docs/` で**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。表紙の奥付で確認せよ」と明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
+**ファイル境界を分けるのは、利用者が公開対象から外せるようにするため。** 奥付が語るのはビルドした環境の事実（実行者が注入した値、入力プロジェクトの絶対パス等）で、出力を公開する利用者にとっては読者が「ビルドした人」ではなくなる。表紙に混ぜ込むと外す手段が無いが、ディレクトリが分かれていれば `__build_info/` 一つを除外指定するだけで済む。ビルド結果をコミットする利用者にとっても、毎回動くタイムスタンプで表紙が汚れなくなる（動かないタイムスタンプに意味はないので、差分が出ること自体は仕様）。
+
+**除外機構はツールに持たせない。** 何を公開するかはデプロイ手段（rsync / `aws s3 sync` / CI）の仕事で、ツールが公開ポリシーのフラグを持ち始めると同種の要求が積み上がる。ツールが負うのは「一箇所にまとまっていること」だけ。`__warnings/` も同じ立場。
+
+**表紙のリンク節に値は載せない。** 要約を載せると「どのキーが表紙に値するか」という裁定が復活し、下の非契約宣言と衝突する。
+
+**ビルド失敗ページだけは奥付を埋め込む。** 失敗ページを読むのは必ずビルドした人であり、失敗した出力を公開する利用者は居ない。診断が既に絶対パスを焼いているページでもある。
+
+`processor.*` / `manifest.*` のキー目録は `docs/` で**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。奥付ページで確認せよ」と明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
 
 ## Internal Design
 
@@ -60,7 +68,7 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` は #1、奥付と `docs/` 公開は #2 で実装済みで、以下は残る 4 PR の分。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化と `processor.command` は #3 で実装済みで、以下は残る 4 PR の分。
 
 ```jinja
 {{ build_info("vars.git_commit_id", "(dev)") }}
@@ -70,48 +78,38 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 | 名前空間 | 出所 | 例 |
 |---|---|---|
-| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at` |
+| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
 | `vars.*` | 実行者の注入値 (env / CLI / MCP — 供給機構は [20-config-spec.md](../20-app/20-config-spec.md) の Proposals) | `vars.git_commit_id` |
 | `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
-- `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#6 の前提）
-- 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い（#4 / #5 の制約）
+- `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#7 の前提）
+- 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い（#5 / #6 の制約）
 
-#### processor.* の初期セット
+#### processor.config.* — config は選ばず全量 (#4)
 
-| キー | 値 |
-|---|---|
-| `processor.name` | manifest の `tools.` 直下キーと同綴りの id |
-| `processor.version` | 動いている処理系の版 |
-| `processor.started_at` | 処理系の起動時刻 |
-| `processor.config.project_dir` | 入力プロジェクトの絶対パス |
+実装済みの 4 キー（`name` / `version` / `started_at` / `command`）に、`processor.config.*` を足す。`Workspace.config`（resolve 済み）の平坦化で、`project_dir`, `out_dir`, `site_dir`, `namespace_root`, `host`, `port`, … が並ぶ。
+
+**config は選ばず全量出す。** unset (`None`) のフィールドは行ごと出さない。奥付が答えるのは「この run はどう起動されたか」であり、config はその問いそのもの。部分集合にすると「どれが有用か」というツール側の趣味判断になり、蒸し返され続ける（`tmp_dir` を「読む時点で消えているから」で外しかけたが、奥付が語るのはビルド時の事実であって読む時点の実在ではない、というのが正しい整理）。
+
+**`processor.command` を先に置いたのはこの全量出しの前提だから**（#3 で実装済み）。`host` / `port` は watch でしか効かないが、config オブジェクトには build でも既定値が座っている。run の種別が同じページに書いてあれば読者はどの行が効いたかを判別できる。逆に種別が無いと、build の奥付に効かなかったパラメータが黙って並ぶ。
+
+`processor.config.tmp_dir` は config の値をそのまま写す（既定の使い捨て作業ディレクトリは config 上 unset なので行が出ない）。実効の作業ディレクトリ (`Workspace.root`) を出すなら `processor.config.*` ではなく別キーにすべきで、使い捨てで消えるものを奥付に置く理由が無い。
 
 `started_at` の**表示用の別書式キーは作らない**（体裁の方針をツールが発明することになる）。値は watch ではセッション開始時刻で、再ビルドしても動かない。
 
+`project_dir` 以下のパスは絶対パスで入れる。`namespace_root` からの相対 tail にすれば漏洩は減るが、MCP では `namespace_root == project_dir` なので tail が `.` に潰れて何も言わなくなる。チャネルによって情報量が変わる識別子は識別子として使えない。**ローカルパスが公開物に出ることは、奥付を独立ページに分けたこと（External Design の「奥付」節）で受け止める。**
+
 ##### キーを足す場所 — `Workspace` の `build_info` property
 
-#3 / #6 で足すキーは `Workspace` が既に型付きで持っている値（`config` / `manifest`）の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。追加は property に一行足す形になる。
+#4 / #7 で足すキーは `Workspace` が既に型付きで持っている値（`config` / `manifest`）の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。
 
-ただし `pipeline/` はカバレッジ計測対象外なので、**アルゴリズムと呼べるもの**（#6 の manifest 平坦化など）は `components/shared/` に汎用ヘルパとして置き、`Workspace` はそれを呼ぶ。property が持つのは「どのキーがどの源から来るか」だけに保つ。
+ただし `pipeline/` はカバレッジ計測対象外なので、**アルゴリズムと呼べるもの**（config / manifest の平坦化）は `components/shared/` に汎用ヘルパとして置き、`Workspace` はそれを呼ぶ。property が持つのは「どのキーがどの源から来るか」だけに保つ。
 
-**`processor.config.*` は `project_dir` だけ。** `out_dir` / `site_dir` / `tmp_dir` は入れない。入力と出力で答えている問いが違うため:
-
-- **入力** — 「いま見ているこれは、どのソースから出たのか」。開いた後にしか湧かない問いで、ビルド時の CLI 出力では答えられない。複数プロジェクトが同居するリポジトリ、`mood watch` のプレビュー、移動・改名した後に残った古い出力で実際に必要になる
-- **出力** — 「これはどこに書かれたのか」。読者はそれを開いている最中なので既に知っている
-
-`namespace_root` / `host` / `port` も入れない。前者は境界層が縛る内部値、後者は watch 専用で出力に意味を持たない。
-
-`project_dir` は絶対パスで入れる。`namespace_root` からの相対 tail にすれば漏洩は減るが、MCP では `namespace_root == project_dir` なので tail が `.` に潰れて何も言わなくなる。チャネルによって情報量が変わる識別子は識別子として使えない。
-
-##### 背景: 「公開物にローカルパスを出さない」を奥付には当てない
-
-現状、絶対パスが出力に現れるのはビルド失敗ページだけで（`Diagnostic.to_entry` が `resolve()` して焼く）、成功して公開されるものには現れない。この線を跨ぐことになるが、跨ぐと判断した。表紙の奥付も失敗ページも、読者はビルドした人であり、公開ページ上でもそこは変わらない。線はフィールドの線ではなく読者の線だった。
-
-#### docs 契約 — vars.* の注入規約は #4 で約束する
+#### docs 契約 — vars.* の注入規約は #5 で約束する
 
 関数 API とキー目録の非契約宣言は #2 で書いた（External Design の「奥付」節）。残るのは `vars.*` の注入規約で、利用者が書く側なので契約が要る。
 
-自動列挙の帰結として、**`vars.*` に注入した値は全て表紙に出る**。一つのテンプレートで使うつもりで注入した値も載るので、docs に明記する。
+自動列挙の帰結として、**`vars.*` に注入した値は全て奥付ページに出る**。一つのテンプレートで使うつもりで注入した値も載るので、docs に明記する。
 
 #### 背景: 外した案
 
@@ -125,14 +123,15 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 #### 実装スコープ — PR の並び
 
-1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*`）と #2（奥付・`docs/` 公開・showcase 実例）は実装済み。
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化・`processor.command`）は実装済み。
 
 | # | 内容 | store に増えるキー |
 |---|---|---|
-| 3 | config → ストアの経路 | `processor.config.project_dir` |
-| 4 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
-| 5 | CLI `--var` + MCP `build` の `vars` | — |
-| 6 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
+| 4 | config → ストアの経路（全量） | `processor.config.*` |
+| 5 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
+| 6 | CLI `--var` + MCP `build` の `vars` | — |
+| 7 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
 
-- #4 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
-- #6 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う
+- #3 を #4 の手前に差し込んだのは、奥付に載る量が増える前にファイル境界を分けるため。表紙にローカルパスが並ぶ期間を作らずに済む。`processor.command` も #3 に同乗させた（run の種別は config とは別の事実で、キー一本で完結する）
+- #5 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
+- #7 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う

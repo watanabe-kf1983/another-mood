@@ -125,7 +125,7 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
         tmp_path / "workspace",
         resolve_layout(project),
         Manifest(),
-        make_processor_info(),
+        make_processor_info("build"),
     )
     return workspace, published
 

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
+from typing import Literal
 
 from another_mood.components.manifest import Manifest
 from another_mood.components.shared.build_info import BuildInfo
@@ -14,6 +15,9 @@ from another_mood.layout import SourceLayout
 from another_mood.pipeline.base import ComponentOutput
 
 
+type ProcessorCommand = Literal["build", "watch", "tap"]
+
+
 @dataclass(frozen=True)
 class ProcessorInfo:
     """What processed a run, as opposed to what it processed."""
@@ -21,14 +25,16 @@ class ProcessorInfo:
     name: str
     version: str
     started_at: datetime
+    command: ProcessorCommand
 
 
-def make_processor_info() -> ProcessorInfo:
+def make_processor_info(command: ProcessorCommand) -> ProcessorInfo:
     """Read the running processor's identity, stamping the current moment."""
     return ProcessorInfo(
         name=PROCESSOR_ID,
         version=tool_version(),
         started_at=datetime.now().astimezone(),
+        command=command,
     )
 
 
@@ -56,6 +62,7 @@ class Workspace:
         return {
             "processor.name": self.processor.name,
             "processor.version": self.processor.version,
+            "processor.command": self.processor.command,
             "processor.started_at": self.processor.started_at.isoformat(
                 timespec="seconds"
             ),

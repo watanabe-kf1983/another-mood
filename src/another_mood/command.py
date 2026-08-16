@@ -43,7 +43,11 @@ from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
 from another_mood.pipeline.stages import pipeline, tap_pipeline
-from another_mood.pipeline.workspace import Workspace, make_processor_info
+from another_mood.pipeline.workspace import (
+    ProcessorCommand,
+    Workspace,
+    make_processor_info,
+)
 
 # UserError is re-exported: commands raise its subclasses for pre-pipeline
 # refusals, and the CLI catches that base.
@@ -194,7 +198,7 @@ def build(
     out_dir = str(config.out_dir)
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
-    workspace = _session_workspace(config, layout, manifest)
+    workspace = _session_workspace(config, layout, manifest, "build")
     result = _to_result(
         pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
     )
@@ -222,7 +226,7 @@ def watch(
     # do not re-check source existence.
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
-    workspace = _session_workspace(config, layout, manifest)
+    workspace = _session_workspace(config, layout, manifest, "watch")
     with pipeline(
         workspace, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
@@ -247,7 +251,7 @@ def tap(config: ProjectConfig) -> BuildResult:
     out_dir = str(config.tap_dir)
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
-    workspace = _session_workspace(config, layout, manifest)
+    workspace = _session_workspace(config, layout, manifest, "tap")
     result = _to_result(tap_pipeline(workspace).run(), out_dir)
     _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
     return result
@@ -267,7 +271,10 @@ def _require_absolute(name: str, path: Path) -> None:
 
 
 def _session_workspace(
-    config: ProjectConfig, layout: SourceLayout, manifest: Manifest
+    config: ProjectConfig,
+    layout: SourceLayout,
+    manifest: Manifest,
+    command: ProcessorCommand,
 ) -> Workspace:
     """Build the run Workspace, defaulting its root to a fresh system-temp dir.
 
@@ -276,7 +283,7 @@ def _session_workspace(
     ``temporary`` so the caller can clean it up.
     """
     # Stamped once per operation: a watch session's rebuilds must not move it.
-    processor = make_processor_info()
+    processor = make_processor_info(command)
     if config.tmp_dir is not None:
         return Workspace(config, config.tmp_dir, layout, manifest, processor)
     else:

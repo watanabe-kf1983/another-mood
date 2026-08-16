@@ -355,7 +355,9 @@ Use this for code blocks whose body comes from data — including Mermaid diagra
 Built by {{ build_info("processor.name") }} {{ build_info("processor.version") }}
 ```
 
-Each build lists the keys it offers at the end of the cover, `output/index.md`. The set is not part of this reference: the tool supplies it, and it changes between versions.
+Each build lists the keys it offers on its own page at `output/__build_info/`, linked from the cover. The set is not part of this reference: the tool supplies it, and it changes between versions.
+
+That page is where every fact about the build lands — including the absolute path of the project directory it was built from. Exclude `__build_info/` when you publish the output if you would rather not ship those details.
 
 ## Whitespace
 

@@ -26,4 +26,8 @@
 {% endif %}
 {% endfor %}
 {% endif %}
-{% include "colophon.md" %}
+{% if build_info %}
+## Build Information
+
+{% include "build_info_table.md" %}
+{% endif %}
