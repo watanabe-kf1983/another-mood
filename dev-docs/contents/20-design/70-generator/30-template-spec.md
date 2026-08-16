@@ -28,6 +28,12 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 理由は **利用者に案内できる境界が引けること**。pycompat を入れたままだと「どこまでが Python 相当か」を答える主体が居ない — 本ツールの `docs/` には書けず（Python のどの版のどのメソッドか特定できない）、minijinja コアの保証でもない（実体は minijinja-contrib の `unknown_method_callback` で、上流の位置づけも「Jinja2 テンプレートの移行互換シム」。COMPATIBILITY.md も *Filters should generally be used instead of methods* と述べる）。語彙を filter / test / operator に閉じれば、案内できる集合とテンプレートから届く集合が一致する。
 
+### 奥付
+
+奥付は表紙 (`index.md`) の末尾に自動で付き、**利用者が外す手段を持たない**。そのぶん何を載せるかの敷居は高い（Proposals の `processor.config.*` の裁定はこれに基づく）。
+
+`processor.*` / `manifest.*` のキー目録は `docs/` で**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。表紙の奥付で確認せよ」と明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
+
 ## Internal Design
 
 ### 欠損の描画責務と「引数未指定」の区別
@@ -54,13 +60,11 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数とストアと `processor.*` は #1 で実装済みで、以下は残る 5 PR の分。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` は #1、奥付と `docs/` 公開は #2 で実装済みで、以下は残る 4 PR の分。
 
 ```jinja
 {{ build_info("vars.git_commit_id", "(dev)") }}
 ```
-
-- **`| default()` はこの関数には効かない**（実測）。minijinja の `default` は undefined にしか反応せず、Python 側で登録したグローバルが返せる不在は none 止まりのため。効くのは第二引数と `or "(dev)"`。#2 の docs / showcase の例は第二引数で書く
 
 #### キーの名前空間 — 出所で三分する
 
@@ -72,29 +76,6 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 - `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#6 の前提）
 - 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い（#4 / #5 の制約）
-
-#### 列挙は関数ではない — 奥付テンプレートの subject
-
-ストアの全量は、関数ではなく**奥付テンプレートの subject** として渡す。reconcile が奥付を独立したテンプレートとして `render`（文字列を返す）し、その結果をページ末尾に追記する。
-
-```jinja
-{% for k, v in _ | dictsort %}{{ k }}: {{ v }}{% endfor %}
-```
-
-「列挙するのは奥付、キー照会するのは利用者テンプレート」という役割分担を、供給する語彙の違いとして構造に出す。全量を返す関数（`build_info_all` 等）は持たない。
-
-#### 奥付 — 表紙とビルド失敗ページの末尾
-
-ストアの全量列挙を、reconcile が 2 か所の末尾に追記する:
-
-- **表紙** (`index.md`) — 成功ビルドで公開される唯一の奥付
-- **ビルド失敗ページ** — 失敗ページは表紙を置き換えるので、失敗時に読者が見る唯一のページになる
-
-警告ページ (`warnings.md`) は対象外。奥付を持つ表紙の隣にぶら下がるだけなので、重ねる意味がない。
-
-**追記は reconcile が一手に引き受ける。** 生成側（cover テンプレート）は build_info を知らない。理由は末尾の順序が一箇所で決まること — 現状 `_append_warnings_link` が表紙の末尾に警告リンクを足すので、生成側で奥付を描くと奥付の下に警告リンクが来る。順序は **本文 → 警告リンク → 奥付** とし、警告リンクの差し込み位置を奥付の手前に変える。
-
-**奥付は自動で、利用者が外す手段を持たない。** そのぶん何を載せるかの敷居は高い、という性格になる（次節の `processor.config.*` の裁定はこれに基づく）。
 
 #### processor.* の初期セット
 
@@ -126,19 +107,17 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 現状、絶対パスが出力に現れるのはビルド失敗ページだけで（`Diagnostic.to_entry` が `resolve()` して焼く）、成功して公開されるものには現れない。この線を跨ぐことになるが、跨ぐと判断した。表紙の奥付も失敗ページも、読者はビルドした人であり、公開ページ上でもそこは変わらない。線はフィールドの線ではなく読者の線だった。
 
-#### docs 契約 — vars.* と関数 API のみ約束する
+#### docs 契約 — vars.* の注入規約は #4 で約束する
 
-利用者向け docs で約束するのは、関数の仕様と `vars.*` の注入規約（利用者が書く側なので契約が要る）だけ。`processor.*` / `manifest.*` のキー目録は**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。**表紙の奥付で確認せよ**」と docs に明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
+関数 API とキー目録の非契約宣言は #2 で書いた（External Design の「奥付」節）。残るのは `vars.*` の注入規約で、利用者が書く側なので契約が要る。
 
 自動列挙の帰結として、**`vars.*` に注入した値は全て表紙に出る**。一つのテンプレートで使うつもりで注入した値も載るので、docs に明記する。
 
-奥付のタイムスタンプにより、**毎回のビルドが必ず差分を生む**。ビルド結果をコミットする利用者は表紙の `index.md` が毎回汚れる（奥付が載る成功時のファイルはこれ一つなので、除外するならこの一ファイルで足りる）。動かないタイムスタンプに意味はないので、これは代償ではなく仕様。
-
 #### 背景: 外した案
 
-- **データ層に流す（`__build_info` としてシステム定義エンティティ化）** — 機構としては成立する。`__definition` に先例があり（`schema_inspector` が preprocess で `__builtin/__definition.json` を吐き、views が `from: __definition.entities` で読み、`__data` にも tap にも乗る）、同じ経路に `__build_info` を足せる。tap から覗ける・`__data` 診断に自動で乗る・views から join できる、という利点も実在する。外した理由は 2 つ。(a) **views の出力が実行環境で変わるようになり、これは一方通行**。views が読めるようにした後で取り上げると利用者の views が壊れる。逆向き（奥付方式から後で data 層へ移す）は余地が残る。(b) **ビルド失敗ページに届かない**。preprocess で吐く以上、上流で失敗すれば reconcile からは見えず、上の 2 か所という要件の片方が原理的に成立しない。なお views から build info を読みたい用途は現時点で無い
+- **データ層に流す（`__build_info` としてシステム定義エンティティ化）** — 機構としては成立する。`__definition` に先例があり（`schema_inspector` が preprocess で `__builtin/__definition.json` を吐き、views が `from: __definition.entities` で読み、`__data` にも tap にも乗る）、同じ経路に `__build_info` を足せる。tap から覗ける・`__data` 診断に自動で乗る・views から join できる、という利点も実在する。外した理由は 2 つ。(a) **views の出力が実行環境で変わるようになり、これは一方通行**。views が読めるようにした後で取り上げると利用者の views が壊れる。逆向き（奥付方式から後で data 層へ移す）は余地が残る。(b) **ビルド失敗ページに届かない**。preprocess で吐く以上、上流で失敗すれば reconcile からは見えず、奥付を出す 2 か所（表紙・失敗ページ）の片方が原理的に成立しない。なお views から build info を読みたい用途は現時点で無い
 - **tap に provenance を載せる** — 上の代替として検討したが作らない。tap 出力は差分を取る使い方が主なので、毎回動く値が混ざると実質的な差分がノイズに埋もれる。守る線は「ソースだけで決まる」ではなく **「マシンと起動のしかたには依存しない」**（tap 出力には既に `__definition` 等のツール生成目録が乗っており、ツール版には依存している）。将来必要になったら、置き場はドキュメントの中ではなく外（`BuildResult` か隣接ファイル）
-- **関数ではなくマッピングをグローバル登録する（`build_info["vars.git_sha"]`）** — 添字アクセスの不在は undefined になるので `| default()` がそのまま効く（実測）。外した理由は 2 つ。Python の dict のメソッドがテンプレートに漏れる（`build_info.items` が `<built-in method items>` を描く。`pycompat=False` で閉じたはずの穴）。任意の利用者テンプレートから全量を列挙でき、上の「列挙は奥付の subject」が崩れる
+- **関数ではなくマッピングをグローバル登録する（`build_info["vars.git_sha"]`）** — 添字アクセスの不在は undefined になるので `| default()` がそのまま効く（実測）。外した理由は 2 つ。Python の dict のメソッドがテンプレートに漏れる（`build_info.items` が `<built-in method items>` を描く。`pycompat=False` で閉じたはずの穴）。任意の利用者テンプレートから全量を列挙でき、「列挙するのは奥付、キー照会するのは利用者テンプレート」という役割分担が崩れる
 - **環境変数の素通し (`env.*`)** — テンプレートが環境の読み取り器になり、CI の環境（AWS クレデンシャル等）を出力に焼き込める。[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開けるため不可。越境するのは実行者が env / `--var` / MCP で明示的に差し出した値だけ
 - **属性アクセス（`build.vars.commit` 等のコンテキスト注入）** — スキーマが保証するフィールドの顔になる。この情報はツール・実行環境依存で取得無保証の Optional であり、「文字列キーによる照会」という構文自体にその性格を語らせる。データ名前空間への予約名追加も不要になる（予約されるのは関数名一個 — `node` と同じ扱い）
 - **汎用フィルタでの照会（`child` 等）** — 汎用語彙は record を通貨とするため `.value` の一段が常に付き、`child` の未解決は MissingNode として目立つ（「未設定が正常」な Optional には逆向き）。既存の `child` は id 照会フィルタとして今回の検討と独立に有用（実装・文書化済み）
@@ -146,16 +125,14 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 #### 実装スコープ — PR の並び
 
-1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*`）は実装済み。
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*`）と #2（奥付・`docs/` 公開・showcase 実例）は実装済み。
 
 | # | 内容 | store に増えるキー |
 |---|---|---|
-| 2 | 奥付テンプレート + reconcile による追記 + `docs/` 公開 + showcase の実例 | — |
 | 3 | config → ストアの経路 | `processor.config.project_dir` |
 | 4 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
 | 5 | CLI `--var` + MCP `build` の `vars` | — |
 | 6 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
 
-- #2 で初めて利用者から見える。この時点の奥付は `processor.*` の 3 キーだけ
 - #4 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
 - #6 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う
