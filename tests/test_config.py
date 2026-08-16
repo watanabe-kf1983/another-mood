@@ -156,3 +156,28 @@ class TestPublishDestinations:
             namespace_root=ROOT, project_dir=ROOT / "docs", site_dir=Path("/pin/site")
         ).resolved_for_watch()
         assert config.site_dir is None
+
+
+class TestVarsFromTheEnvironment:
+    def _vars(self) -> dict[str, str]:
+        return ProjectConfig(namespace_root=ROOT, project_dir=ROOT / "docs").vars
+
+    def test_strips_the_envelope_and_lowercases_the_rest(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The envelope is one literal prefix, not a path to split on, so the
+        # underscores of a longer name survive it.
+        monkeypatch.setenv("MOOD_VARS_CI_BUILD_NUMBER", "42")
+        assert self._vars() == {"ci_build_number": "42"}
+
+    def test_ignores_the_other_mood_variables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("MOOD_HOST", "0.0.0.0")
+        monkeypatch.setenv("MOOD_VARS_GIT_SHA", "abc123")
+        assert self._vars() == {"git_sha": "abc123"}
+
+    def test_ignores_the_bare_envelope(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # An empty name would take the whole namespace as one key.
+        monkeypatch.setenv("MOOD_VARS_", "orphan")
+        assert self._vars() == {}

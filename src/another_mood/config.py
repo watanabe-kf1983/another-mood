@@ -1,15 +1,28 @@
-"""Project configuration — invocation parameters only (source layout is not
-configuration; see :mod:`another_mood.layout`)."""
+"""Project configuration — the invocation parameters and the values the caller
+injected (source layout is not configuration; see :mod:`another_mood.layout`)."""
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_VARS_ENV_PREFIX = "MOOD_VARS_"
+
 
 class ConfigValidationError(Exception):
     """Raised when ProjectConfig fails post-construction validation."""
+
+
+def _vars_from_env() -> dict[str, str]:
+    """Read the `MOOD_VARS_*` environment variables, envelope stripped:
+    `MOOD_VARS_GIT_SHA` becomes `git_sha`."""
+    return {
+        name.removeprefix(_VARS_ENV_PREFIX).lower(): value
+        for name, value in os.environ.items()
+        if name.startswith(_VARS_ENV_PREFIX) and name != _VARS_ENV_PREFIX
+    }
 
 
 class ProjectConfig(BaseSettings):
@@ -55,6 +68,10 @@ class ProjectConfig(BaseSettings):
     # Server
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=5077)
+
+    # Caller-injected values, for templates to query by key. The CLI / MCP
+    # channels add onto what the environment supplied here.
+    vars: dict[str, str] = Field(default_factory=_vars_from_env)
 
     def resolved_for_build(self) -> "ProjectConfig":
         """Fill unset out_dir/site_dir with the ``.another-mood/<project>`` defaults."""
