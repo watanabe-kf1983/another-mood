@@ -25,7 +25,7 @@ class Workspace:
     # Project identity from sbdb.yaml — separate from config (how to build).
     manifest: Manifest
     # True when the command layer created root as a throwaway system-temp dir
-    # (vs. a user-pinned RB_TMP_DIR it must not delete).
+    # (vs. a user-pinned MOOD_TMP_DIR it must not delete).
     temporary: bool = False
 
     def component_output(self, component: ComponentCall) -> ComponentOutput:

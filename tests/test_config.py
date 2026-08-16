@@ -82,7 +82,7 @@ class TestVerifyProjectDirUnderNamespaceRoot:
 class TestVerifyPathsAreAbsolute:
     """Every path field must be absolute — the config layer never resolves.
 
-    The boundary layers absolutize what they pass, but RB_* environment
+    The boundary layers absolutize what they pass, but MOOD_* environment
     variables reach the fields untouched, so the invariant is enforced here
     rather than trusted.
     """
@@ -150,7 +150,7 @@ class TestPublishDestinations:
         assert config.out_dir == Path("/pin/out")
 
     def test_watch_never_publishes_site(self) -> None:
-        # Even a pinned site_dir (e.g. RB_SITE_DIR) is dropped: the live
+        # Even a pinned site_dir (e.g. MOOD_SITE_DIR) is dropped: the live
         # server is watch's only HTML consumer.
         config = ProjectConfig(
             namespace_root=ROOT, project_dir=ROOT / "docs", site_dir=Path("/pin/site")
