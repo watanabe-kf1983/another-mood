@@ -58,9 +58,9 @@ A YAML or JSON source must have a mapping at its root; a sequence or a bare scal
 
 | Kind | Default | Env var |
 |---|---|---|
-| Markdown output | `.another-mood/<project_dir>/output` | `RB_OUT_DIR` |
-| HTML output | `.another-mood/<project_dir>/site` | `RB_SITE_DIR` |
-| Tap output | `.another-mood/<project_dir>/tap` | `RB_TAP_DIR` |
+| Markdown output | `.another-mood/<project_dir>/output` | `MOOD_OUT_DIR` |
+| HTML output | `.another-mood/<project_dir>/site` | `MOOD_SITE_DIR` |
+| Tap output | `.another-mood/<project_dir>/tap` | `MOOD_TAP_DIR` |
 
 Subdirectories matching the input path are created automatically, so that running different `<project_dir>` values in parallel processes does not cause output collisions.
 
@@ -126,7 +126,7 @@ Pointing `--out-dir` at the project's own `.another-mood/<project_dir>/output` r
 
 ### `--host`
 
-Specifies the bind address of the preview server. Defaults to `127.0.0.1` (loopback only; also overridable via the environment variable `RB_HOST`). Pass `0.0.0.0` to expose the server on the LAN, e.g. so attendees of a design meeting can browse the docs as the author edits them:
+Specifies the bind address of the preview server. Defaults to `127.0.0.1` (loopback only; also overridable via the environment variable `MOOD_HOST`). Pass `0.0.0.0` to expose the server on the LAN, e.g. so attendees of a design meeting can browse the docs as the author edits them:
 
 ```bash
 mood watch . --host 0.0.0.0
@@ -136,7 +136,7 @@ The preview server has no authentication, so use this only on trusted networks. 
 
 ### `--port`
 
-Specifies the port the preview server listens on. Defaults to `5077` (also overridable via the environment variable `RB_PORT`).
+Specifies the port the preview server listens on. Defaults to `5077` (also overridable via the environment variable `MOOD_PORT`).
 
 ```bash
 mood watch . --port 8080
@@ -238,15 +238,15 @@ Prints usage and the command list. Also available per command (`mood build --hel
 
 [Keys and defaults](#keys-and-defaults) below lists what is configurable, with the environment variable and the command-line option that override each.
 
-### Environment variables (`RB_*`)
+### Environment variables (`MOOD_*`)
 
-Where the table names an `RB_*` variable, that key can be set from the environment: the name is the key prefixed with `RB_` and uppercased as snake case. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
+Where the table names a `MOOD_*` variable, that key can be set from the environment: the name is the key uppercased and prefixed with `MOOD_`. Values from environment variables are used as-is as paths; the default logic that derives paths from `<project_dir>` does not apply.
 
 Path values must be absolute. Command-line paths are resolved against the current directory for you, but an environment variable is read as given, and a relative value there is rejected rather than guessed at.
 
 ```bash
-RB_OUT_DIR=/abs/path/to/output mood build .
-RB_PORT=8080 mood watch .
+MOOD_OUT_DIR=/abs/path/to/output mood build .
+MOOD_PORT=8080 mood watch .
 ```
 
 ### Keys and defaults
@@ -254,9 +254,9 @@ RB_PORT=8080 mood watch .
 | Key | Default | Env var | CLI |
 |---|---|---|---|
 | `project_dir` | (required, given as argument) | — | first positional argument |
-| `tmp_dir` | (per-run session dir under the system temp dir) | `RB_TMP_DIR` | — |
-| `out_dir` | `build`: `.another-mood/<project_dir>/output`; `watch`: unset (publishes nothing) | `RB_OUT_DIR` | `--out-dir` |
-| `site_dir` | `build`: `.another-mood/<project_dir>/site`; `watch`: not published | `RB_SITE_DIR` | `--site-dir` (only on `build`) |
-| `host` | `127.0.0.1` | `RB_HOST` | `--host` (only on `watch`) |
-| `port` | `5077` | `RB_PORT` | `--port` (only on `watch`) |
-| `tap_dir` | `.another-mood/<project_dir>/tap` | `RB_TAP_DIR` | — |
+| `tmp_dir` | (per-run session dir under the system temp dir) | `MOOD_TMP_DIR` | — |
+| `out_dir` | `build`: `.another-mood/<project_dir>/output`; `watch`: unset (publishes nothing) | `MOOD_OUT_DIR` | `--out-dir` |
+| `site_dir` | `build`: `.another-mood/<project_dir>/site`; `watch`: not published | `MOOD_SITE_DIR` | `--site-dir` (only on `build`) |
+| `host` | `127.0.0.1` | `MOOD_HOST` | `--host` (only on `watch`) |
+| `port` | `5077` | `MOOD_PORT` | `--port` (only on `watch`) |
+| `tap_dir` | `.another-mood/<project_dir>/tap` | `MOOD_TAP_DIR` | — |
