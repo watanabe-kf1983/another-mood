@@ -100,12 +100,16 @@ def build(
     project_dir: str,
     out_dir: str | None = None,
     site_dir: str | None = None,
+    vars: dict[str, str] | None = None,
 ) -> BuildResult:
     """Run a one-shot build of `project_dir`, generating Markdown and HTML
     and returning the result. Equivalent to `mood build <project_dir>`.
 
     Paths must be absolute. `out_dir` and `site_dir` are optional; leave them
     unset to use the defaults under `<project_dir>/.another-mood/`.
+
+    `vars` carries values of your own for templates to read back through
+    `build_info("vars.<name>")`; every entry is listed on the colophon page.
     """
     overrides = _project_overrides(project_dir)
     if out_dir is not None:
@@ -114,7 +118,7 @@ def build(
         overrides["site_dir"] = _absolute_arg("site_dir", site_dir)
     config = ProjectConfig(**overrides)  # type: ignore[arg-type]
     config.verify()
-    return command.build(config)
+    return command.build(config.with_injected_vars(vars or {}))
 
 
 @mcp.tool()

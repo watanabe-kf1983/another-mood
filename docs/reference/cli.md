@@ -81,7 +81,7 @@ Equivalent to `mood blueprint apply starter <project_dir>`. Use `mood blueprint 
 Run all stages once to generate Markdown and HTML.
 
 ```bash
-mood build <project_dir> [--strict]
+mood build <project_dir> [--strict] [--var NAME=VALUE]
 ```
 
 Steps:
@@ -97,12 +97,22 @@ Exits with code 0 if all stages succeed, or 1 if any stage fails.
 
 Fail the build (exit code 1) when any warning is reported. Without `--strict`, warnings (e.g. a dangling [`x-ref`](schema.md#entity-references-x-ref) value) are listed on a dedicated page at `output/__warnings/`, linked from `output/index.md`, but do not affect the exit code. Useful in CI to gate merges on a clean build.
 
+### `--var`
+
+Inject a value of your own for templates to read back through [`build_info`](template.md#build_info). Repeatable, one `NAME=VALUE` each:
+
+```bash
+mood build . --var git_commit_id=$(git rev-parse --short HEAD) --var channel=nightly
+```
+
+The value arrives as `vars.git_commit_id`, and lands on the build's colophon page whether a template reads it or not. See [Injected values](#injected-values-vars) for the naming rules and the other two channels.
+
 ## watch
 
 Watch files for changes, rebuild automatically, and serve a live preview.
 
 ```bash
-mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>]
+mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>] [--var NAME=VALUE]
 ```
 
 When a change is detected on an input path (the schema file or the contents / views / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
@@ -143,6 +153,10 @@ mood watch . --port 8080
 ```
 
 To watch multiple `<project_dir>` values at the same time, start one process per project. By default nothing is published, so their outputs cannot collide; ports do — any process after the first needs `--port` to pick a different port. (If you pass `--out-dir`, give each project a distinct directory.)
+
+### `--var`
+
+Injects a value the same way [`build --var`](#--var) does, so a template that reads `build_info("vars.…")` can be previewed with a value in place rather than its fallback.
 
 ## tap
 
@@ -234,6 +248,31 @@ This is the same value the manifest's [`tools.another-mood.minimum_version`](man
 
 Prints usage and the command list. Also available per command (`mood build --help`), where it lists that command's options.
 
+## Injected values (`vars`)
+
+`vars` carries values of your own into the build, for templates to read back through [`build_info`](template.md#build_info). Three channels supply them, and a value arrives under `vars.<name>` whichever one you reach for:
+
+```bash
+MOOD_VARS_GIT_COMMIT_ID=$(git rev-parse --short HEAD) mood build .
+mood build . --var git_commit_id=$(git rev-parse --short HEAD)
+```
+
+A template reads that one back as `vars.git_commit_id`, and can name a fallback for the runs where nothing is injected — a build on your own machine, say:
+
+```jinja2
+Built from {{ build_info("vars.git_commit_id", "(dev)") }}
+```
+
+The name is yours to choose, and values are carried as strings, whatever they look like.
+
+- **`MOOD_VARS_<NAME>`** — the prefix is stripped and the rest lowercased. The underscores that remain are part of the name rather than separators, so `MOOD_VARS_CI_RUN_URL` arrives as `vars.ci_run_url`. This channel reaches one level only: a name with a dot in it has no spelling here.
+- **`--var NAME=VALUE`** on `build` and `watch`, repeatable — the name is taken as written, dots and capitals included, so `--var ci.run_id=7` arrives as `vars.ci.run_id`. Only the first `=` splits, leaving any others to the value; `--var channel=` injects an empty string, and a `--var` without a name or without `=` is an error that stops the run.
+- **`vars`** on the MCP [`build`](../mcp.md) tool — a mapping of names to values, taken as written like `--var`.
+
+Where two channels name the same key, `--var` and the MCP argument win over the environment.
+
+Everything injected this way is listed on the build's colophon page at `output/__build_info/` — including values that only one template reads, or none.
+
 ## Configuration overrides
 
 [Keys and defaults](#keys-and-defaults) below lists what is configurable, with the environment variable and the command-line option that override each.
@@ -249,25 +288,7 @@ MOOD_OUT_DIR=/abs/path/to/output mood build .
 MOOD_PORT=8080 mood watch .
 ```
 
-`vars` is the one key that rule does not reach; see below.
-
-### Injected values (`MOOD_VARS_*`)
-
-`MOOD_VARS_<NAME>` carries a value of your own into the build, for templates to read back through [`build_info`](template.md#build_info). The `MOOD_VARS_` prefix is stripped and the rest is lowercased, so the value arrives under `vars.<name>`:
-
-```bash
-MOOD_VARS_GIT_COMMIT_ID=$(git rev-parse --short HEAD) mood build .
-```
-
-A template reads that one back as `vars.git_commit_id`, and can name a fallback for the runs where nothing is injected — a build on your own machine, say:
-
-```jinja2
-Built from {{ build_info("vars.git_commit_id", "(dev)") }}
-```
-
-The name after the prefix is yours to choose, and the underscores in it are part of the name rather than separators — `MOOD_VARS_CI_RUN_URL` arrives as `vars.ci_run_url`. Values are carried as strings, whatever they look like.
-
-Everything injected this way is listed on the build's colophon page at `output/__build_info/` — including values that only one template reads, or none.
+`vars` is the one key that rule does not reach: its own spelling is [`MOOD_VARS_<NAME>`](#injected-values-vars), described above.
 
 ### Keys and defaults
 
@@ -280,4 +301,4 @@ Everything injected this way is listed on the build's colophon page at `output/_
 | `host` | `127.0.0.1` | `MOOD_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `MOOD_PORT` | `--port` (only on `watch`) |
 | `tap_dir` | `.another-mood/<project_dir>/tap` | `MOOD_TAP_DIR` | — |
-| `vars` | (nothing injected) | [`MOOD_VARS_<NAME>`](#injected-values-mood_vars_) | — |
+| `vars` | (nothing injected) | [`MOOD_VARS_<NAME>`](#injected-values-vars) | [`--var NAME=VALUE`](#injected-values-vars) (on `build` / `watch`) |

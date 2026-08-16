@@ -92,7 +92,7 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化と `processor.command` は #3、`processor.config.*` は #4、`vars.*` と env チャネルは #5 で実装済みで、以下は残る 2 PR の分。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化と `processor.command` は #3、`processor.config.*` は #4、`vars.*` と env チャネルは #5、CLI / MCP の vars チャネルは #6 で実装済みで、以下は残る 1 PR の分。
 
 `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#7 の前提）。
 
@@ -108,12 +108,10 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 #### 実装スコープ — PR の並び
 
-1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化・`processor.command`）、#4（config → ストアの経路）、#5（`ProjectConfig.vars` + env チャネル）は実装済み。
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化・`processor.command`）、#4（config → ストアの経路）、#5（`ProjectConfig.vars` + env チャネル）、#6（CLI `--var` + MCP `build` の `vars`）は実装済み。
 
 | # | 内容 | store に増えるキー |
 |---|---|---|
-| 6 | CLI `--var` + MCP `build` の `vars` | — |
 | 7 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
 
-- #6 の合流のしかたは [20-config-spec.md](../20-app/20-config-spec.md) の Proposals
 - #7 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う

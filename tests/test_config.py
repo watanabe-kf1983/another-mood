@@ -181,3 +181,12 @@ class TestVarsFromTheEnvironment:
         # An empty name would take the whole namespace as one key.
         monkeypatch.setenv("MOOD_VARS_", "orphan")
         assert self._vars() == {}
+
+
+def test_injected_vars_merge_onto_the_existing_ones() -> None:
+    config = ProjectConfig(
+        namespace_root=ROOT,
+        project_dir=ROOT / "docs",
+        vars={"git_sha": "existing", "ci_run_url": "https://ci.test/7"},
+    ).with_injected_vars({"git_sha": "injected"})
+    assert config.vars == {"git_sha": "injected", "ci_run_url": "https://ci.test/7"}

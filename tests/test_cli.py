@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from another_mood import command
 from another_mood.cli import app
 from another_mood.components.shared.tool_version import tool_version
 
@@ -61,3 +62,36 @@ class TestScaffoldingPaths:
         assert result.exit_code == 0
         # Nothing shorter is available, so the absolute path stands.
         assert f"created: {elsewhere / 'sbdb.yaml'}" in result.output
+
+
+def test_injected_values_from_both_channels_reach_the_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("MOOD_VARS_CI_RUN_URL", "https://ci.test/7")
+    command.init(tmp_path / "proj")
+
+    result = runner.invoke(
+        app, ["build", "proj", "--var", "CI.Run_ID=7", "--var", "token=abc=def"]
+    )
+
+    assert result.exit_code == 0
+    output = tmp_path / ".another-mood" / "proj" / "output"
+    colophon = (output / "__build_info" / "index.md").read_text(encoding="utf-8")
+    # Names are taken as written, and only the first `=` splits. The page
+    # escapes the one left in the value.
+    assert "| `vars.CI.Run_ID` | 7 |" in colophon
+    assert r"| `vars.token` | abc\=def |" in colophon
+    # Injecting from the command line leaves what the environment injected.
+    assert r"| `vars.ci_run_url` | https\:\/\/ci\.test\/7 |" in colophon
+
+
+@pytest.mark.parametrize("assignment", ["channel", "=orphan"], ids=["no-=", "no-name"])
+def test_a_malformed_var_stops_the_run_before_the_project_is_looked_at(
+    assignment: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # No project at "proj": reaching it would report that instead.
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["build", "proj", "--var", assignment])
+    assert result.exit_code == 1
+    assert "--var must be written as NAME=VALUE" in result.output

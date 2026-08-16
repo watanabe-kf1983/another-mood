@@ -77,3 +77,16 @@ class TestRelativePathsAreRejected:
         # pins the output argument rather than repeating the one above.
         with pytest.raises(ValueError, match=f"{rejected} must be an absolute path"):
             call(str(tmp_path))
+
+
+def test_build_injects_vars_for_templates_and_the_colophon(tmp_path: Path) -> None:
+    project = tmp_path / "proj"
+    command.init(project)
+
+    result = mcp_server.build(
+        project_dir=str(project), vars={"git_commit_id": "1ba84b0"}
+    )
+
+    assert not result.has_errors()
+    colophon = Path(result.out_dir) / "__build_info" / "index.md"
+    assert "| `vars.git_commit_id` | 1ba84b0 |" in colophon.read_text(encoding="utf-8")
