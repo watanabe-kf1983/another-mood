@@ -10,10 +10,10 @@ def make_build_info_globals(
 ) -> Mapping[str, Callable[..., str | None]]:
     """The ``build_info`` global, bound to one run's store."""
 
-    def build_info(key: object) -> str | None:
-        """An unset key yields no value rather than an error."""
+    def build_info(key: object, default: str | None = None) -> str | None:
+        """A key with no value behind it yields ``default``."""
         if key is None:
-            return None
-        return info.get(str(key))
+            return default
+        return info.get(str(key), default)
 
     return {"build_info": build_info}
