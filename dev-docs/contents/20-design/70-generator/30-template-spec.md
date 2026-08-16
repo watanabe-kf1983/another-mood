@@ -46,7 +46,19 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 **ビルド失敗ページだけは奥付を埋め込む。** 失敗ページを読むのは必ずビルドした人であり、失敗した出力を公開する利用者は居ない。診断が既に絶対パスを焼いているページでもある。
 
+### build_info のキーの名前空間 — 出所で三分する
+
+| 名前空間 | 出所 | 例 |
+|---|---|---|
+| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
+| `vars.*` | 実行者の注入値（供給機構は [20-config-spec.md](../20-app/20-config-spec.md)） | `vars.git_commit_id` |
+| `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
+
+注入ルートは `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い。
+
 `processor.*` / `manifest.*` のキー目録は `docs/` で**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。奥付ページで確認せよ」と明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
+
+**`vars.*` はその例外**で、キーを決めるのは利用者。ツールが約束するのは綴りの対応規則（封筒を剥がして小文字化）と、**注入した値は全て奥付ページに出る**こと。一つのテンプレートで使うつもりで注入した値も載るので、docs に明記している。
 
 ## Internal Design
 
@@ -80,28 +92,9 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info (P14)
 
-CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化と `processor.command` は #3、`processor.config.*` は #4 で実装済みで、以下は残る 3 PR の分。
+CI でビルドしたサイトに git commit id やビルド時刻を刻めるようにする。ビルドをとりまく事実（誰が・何を・どんなパラメータで処理したか）を、テンプレートから文字列キーで照会する `build_info(key, default)` を置く。関数・ストア・`processor.*` の 3 キーは #1、奥付と `docs/` 公開は #2、奥付の独立ページ化と `processor.command` は #3、`processor.config.*` は #4、`vars.*` と env チャネルは #5 で実装済みで、以下は残る 2 PR の分。
 
-```jinja
-{{ build_info("vars.git_commit_id", "(dev)") }}
-```
-
-#### キーの名前空間 — 出所で三分する
-
-| 名前空間 | 出所 | 例 |
-|---|---|---|
-| `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
-| `vars.*` | 実行者の注入値 (env / CLI / MCP — 供給機構は [20-config-spec.md](../20-app/20-config-spec.md) の Proposals) | `vars.git_commit_id` |
-| `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
-
-- `processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#7 の前提）
-- 注入ルート（vars）は `vars.*` にしか書けない。`processor.*` / `manifest.*` を外から偽装する経路は無い（#5 / #6 の制約）
-
-#### docs 契約 — vars.* の注入規約は #5 で約束する
-
-関数 API とキー目録の非契約宣言は #2 で書いた（External Design の「奥付」節）。残るのは `vars.*` の注入規約で、利用者が書く側なので契約が要る。
-
-自動列挙の帰結として、**`vars.*` に注入した値は全て奥付ページに出る**。一つのテンプレートで使うつもりで注入した値も載るので、docs に明記する。
+`processor.name` の値は manifest の `tools.` 直下キーと同綴りの **id**。これにより `"manifest.tools." ~ build_info("processor.name") ~ ".minimum_version"` という動的照会が合流する（#7 の前提）。
 
 #### 背景: 外した案
 
@@ -115,13 +108,12 @@ CI でビルドしたサイトに git commit id やビルド時刻を刻める�
 
 #### 実装スコープ — PR の並び
 
-1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化・`processor.command`）、#4（config → ストアの経路）は実装済み。
+1 PR ずつ独立して確認できる形に刻む。並びの原則は、**利用者から見える面を持たない土台を先に置き、供給チャネルを後から足す**こと。#1（関数・ストア・`processor.*` の 3 キー）、#2（奥付・`docs/` 公開・showcase 実例）、#3（奥付の独立ページ化・`processor.command`）、#4（config → ストアの経路）、#5（`ProjectConfig.vars` + env チャネル）は実装済み。
 
 | # | 内容 | store に増えるキー |
 |---|---|---|
-| 5 | vars — `ProjectConfig.vars` + env チャネル | `vars.*` |
 | 6 | CLI `--var` + MCP `build` の `vars` | — |
 | 7 | `manifest.*`（dotted 平坦化・`Manifest` に生 mapping 保持） | `manifest.*` |
 
-- #5 の着手前に env の綴りを決める（[20-config-spec.md](../20-app/20-config-spec.md) の Proposals）
+- #6 の合流のしかたは [20-config-spec.md](../20-app/20-config-spec.md) の Proposals
 - #7 を最後に置いたのは、`manifest.*` が他のどれの前提でもないため。`Manifest` が生 mapping を保持する形に変わるので、レビューの観点も他と違う
