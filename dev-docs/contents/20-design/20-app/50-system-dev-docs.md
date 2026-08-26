@@ -85,17 +85,45 @@ PoC で Mermaid v11 (CDN 経由、Chromium ヘッドレス + Noto CJK) に対し
 
 ## Proposals
 
+### 背景: S2-S4 再編 — 単発テンプレート三点から標準準拠の文書セットへ
+
+S2-S4 は当初、独立したテンプレート三点 (DFD / CRUD / 画面) として起こしたが、「要求仕様書 + 設計書」という文書セットの部品として再定義する。
+
+- **目的**: ソフトウェア開発ドキュメントの手本を示すことではなく、Another Mood のソフトウェア開発への応用例を見せること。ただし我流の成果物構成は示さない — 目次の骨格は ISO/IEC/IEEE 29148 (要求仕様。IEEE 830 は 2011 年に廃止されこれに統合) と IEEE 1016 (設計記述、viewpoint 集合) から借りる
+- **準拠水準**: conformance は主張しない ("informed by" に留める)。29148 には conformance 条項があり、full conformance は information item の必須内容の網羅義務を伴う。応用例という目的には過剰で、docs での謳い方もそう抑える
+- **showcase の形**: 文書別に blueprint を分けず、単一の showcase プロジェクトから「要求仕様書」「設計書」の二文書を導出する。CRUD マトリクス (機能 × エンティティの join) やトレーサビリティ (要求 ↔ 設計) は文書をまたいで同じレコードを参照する成果物で、分割すると「単一ソースから同期した文書群」という製品テーゼの実証が立たない
+- **作業言語**: 日本語で作り切ってから英訳する (W2 の英語化と同じ流れ)
+- **進め方**: S5 (調査・目次設計) で目次と項目 subset を決め、S2-S4 は決まった目次に artifact を埋める増分として実装する。artifact ごとに「メタモデル調査 → schema + showcase 例 → view / テンプレート」で積み、独立に出荷できる
+
+### S5: 調査・目次設計
+
+仕様未着手。無料一次資料を一周し、二文書の目次骨格・各 artifact の配置・項目 subset を決めて External Design に起こす。Candidates の task 化判定もここで行う。S2-S4 の前提。
+
+調査対象 (すべて無料):
+
+- **IPA「機能要件の合意形成ガイド」** — 画面・帳票・DFD・CRUD・データモデルを項目レベルで定義。S2-S4 の項目定義の直接の元ネタ候補
+- **ISO OBP (Online Browsing Platform)** — 29148 の目次と冒頭が無料で読める。規格購入の要否判定はここで
+- **IEEE 1016 の viewpoint 一覧** (context / composition / logical / dependency / information / interface / interaction / state dynamics 等) — 二次文献で骨格は追える
+- **arc42 / Volere / OMG ReqIF** — 目次・項目集・要求メタモデルの参考
+
+検討事項:
+
+- **IPA ガイドのローカル性**: 成果物は最終的に英訳して国際読者に見せるため、IPA を項目定義の実質として使う場合も、国際標準 (29148 / 1016) との対応を明示するか、国際資料主体に振り直すかをここで判断する
+- **29148 の購入判定**: 無料資料で一周して足りない箇所を特定できてから。規格本文は有償で、読んで設計に反映するのは可だが、公開リポジトリへの逐語転載は不可 (導出したスキーマとパラフレーズに留める)
+
+かつて前提としていたカテゴリ A / B (目次 prose を書く能力) は完了済みで、着手可能。
+
 ### S2: DFD (Data Flow Diagram)
 
-仕様未着手。process / data store / external entity / flow をモデル化したスキーマからデータフロー図を描く。Mermaid flowchart で表現できるかは S1 の Mermaid 適合性判断と並べて検討する。flowchart は「手描き向き」 (構造化データから自動レイアウトしにくい) と評価しており、PlantUML 等への舵切りトリガとして第一候補。
+仕様未着手。process / data store / external entity / flow をモデル化したスキーマからデータフロー図を描く。S5 で決まる設計書目次に埋める増分 (IEEE 1016 では interaction 系 viewpoint に対応)。Mermaid flowchart で表現できるかは S1 の Mermaid 適合性判断と並べて検討する。flowchart は「手描き向き」 (構造化データから自動レイアウトしにくい) と評価しており、PlantUML 等への舵切りトリガとして第一候補。
 
 ### S3: CRUD マトリクス
 
-仕様未着手。ユースケース × エンティティの操作 (C/R/U/D) を行列形式で表す。エンティティ集合は catalog (`__definition.entities`) から取れる。ユースケース集合と CRUD 操作はユーザ-authored data を作る必要があり、ユースケース entity の構造化に踏み込む。S? (ユースケース記述) と連携する可能性が高い。
+仕様未着手。ユースケース × エンティティの操作 (C/R/U/D) を行列形式で表す。手で書く表ではなく、ユースケース × エンティティの join から導出される view として実装する。要求仕様書側のユースケースと設計書側のエンティティを文書をまたいで参照するため、二文書同期の実証の要。ユースケース集合と CRUD 操作はユーザ-authored data を作る必要があり、ユースケース entity の構造化に踏み込む。Candidates のユースケース記述と連携する可能性が高い。
 
 ### S4: 画面遷移図 + 画面定義
 
-仕様未着手。画面 entity と遷移 entity で構造化し、Mermaid stateDiagram-v2 で遷移図を描く。
+仕様未着手。画面 entity と遷移 entity で構造化し、Mermaid stateDiagram-v2 で遷移図を描く。S5 で決まる設計書目次に埋める増分 (IEEE 1016 では interface / state dynamics viewpoint、29148 SRS では external interfaces 章に対応)。
 
 検討項目:
 
@@ -108,14 +136,14 @@ S4 は stateDiagram の Mermaid 適合性の実機検証も兼ねる。
 
 ## Candidates (未タスク化)
 
-下記は将来 S5 以降として task 化し得る候補。**設計書全体の目次設計を起点に各 artifact の範囲が決まる** ため、現時点では task 化を保留する。目次自体の検討には [カテゴリ A (Markdown パーサー拡張)](../50-normalizer/30-markdown-parser-spec.md) / [カテゴリ B (アンカー・リンク解決)](../70-generator/10-generator.md) の完了が前提。
+下記は将来 S6 以降として task 化し得る候補。**設計書全体の目次設計を起点に各 artifact の範囲が決まる** ため、task 化の判定は S5 (調査・目次設計) で決まる目次を起点に行う。
 
-- **システム構成図 (C4 系)** — Mermaid `C4Context` / `architecture-beta` で描く。後者は v11 でも beta 扱いで機能成熟度未確認。コンポーネント / コンテナ / 関係を構造化データで持つこと自体は可能
-- **要件トレーサビリティ表** — 要件 ID × {コンポーネント / テスト / 決定} の対応表。要件と他 artifact の参照関係を維持する仕組み (x-ref + 表生成テンプレート) で実現可能
+- **システム構成図 (C4 系)** — Mermaid `C4Context` / `architecture-beta` で描く。後者は v11 でも beta 扱いで機能成熟度未確認。コンポーネント / コンテナ / 関係を構造化データで持つこと自体は可能。アーキテクチャ記述の標準は ISO/IEC/IEEE 42010
+- **要件トレーサビリティ表** — 要件 ID × {コンポーネント / テスト / 決定} の対応表。要件と他 artifact の参照関係を維持する仕組み (x-ref + 表生成テンプレート) で実現可能。29148 が要求の traceability を明示的に求める成果物で、文書横断参照の実証としても価値が高い
 - **ユースケース記述 / ユースケース図** — 構造化された usecase + actor + step。S3 (CRUD) の前段としても機能。図示は Mermaid sequenceDiagram または PlantUML usecase
-- **用語集 / データ定義書** — ドメイン用語の辞書、entity の別名 / 型補足 / 帰属モジュール。entity に metadata を載せて生成可能
-- **API / インタフェース仕様** — エンドポイント / リクエスト / レスポンス / エラーの構造化記述。OpenAPI 風だが本ツール独自スキーマで authoring する形
+- **用語集 / データ定義書** — ドメイン用語の辞書、entity の別名 / 型補足 / 帰属モジュール。entity に metadata を載せて生成可能。29148 SRS の定義章に対応
+- **API / インタフェース仕様** — エンドポイント / リクエスト / レスポンス / エラーの構造化記述。OpenAPI 風だが本ツール独自スキーマで authoring する形。IEEE 1016 の interface viewpoint に対応
 
 ### 順序の見立て
 
-設計書の目次 (= 章立て) を author が prose で書く能力が前提なので、A/B の完了 → 目次 prose のドラフト → 個別 artifact (上記候補) を埋める、の順。先に個別 artifact だけ作ると目次との整合が後出しで surface して書き直しになりやすい。
+設計書の目次 (= 章立て) を author が prose で書く能力の前提だったカテゴリ A / B は完了済み。S5 (目次設計) → 個別 artifact (S2-S4、次いで上記候補) を埋める、の順。先に個別 artifact だけ作ると目次との整合が後出しで surface して書き直しになりやすい — この見立てが S5 起点の再編理由。
