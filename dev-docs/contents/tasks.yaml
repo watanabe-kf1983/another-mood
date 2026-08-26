@@ -593,7 +593,7 @@ categories:
       Q3:
         title: 告知・宣伝を伴うローンチ
         note: >-
-          Q1 は静かな公開に留め、S2-S4 (システム開発ドキュメント) の完成を待って
+          Q1 は静かな公開に留め、S2-S5 (システム開発ドキュメント) の完成を待って
           告知する。内容 (告知先・訴求) は接近時に具体化。前提 W2, W3, Q7。
         phase: 17
       Q6:
@@ -684,25 +684,39 @@ categories:
       S2:
         title: DFD テンプレート
         note: |
-          仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
-          F カテゴリから S への移管 (旧 F5)。
+          S5 で決まる設計書目次に埋める増分。詳細は design/app/system-dev-docs.md の
+          Proposals 参照。Mermaid flowchart 適合性の実機検証を兼ね、PlantUML 等への
+          舵切りトリガ第一候補。F カテゴリから S への移管 (旧 F5)。S5 が前提。
         phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s2-dfd-data-flow-diagram
       S3:
         title: CRUD マトリクステンプレート
         note: |
-          仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
-          F カテゴリから S への移管 (旧 F6)。
+          S5 で決まる目次に埋める増分。ユースケース × エンティティの join から
+          導出される view として実装し、要求仕様書と設計書の二文書同期を実証する。
+          詳細は design/app/system-dev-docs.md の Proposals 参照。
+          F カテゴリから S への移管 (旧 F6)。S5 が前提。
         phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス
       S4:
         title: 画面遷移図 + 画面定義テンプレート
         note: |
-          仕様未着手。詳細は design/app/system-dev-docs.md の Proposals 参照。
-          画面 entity + 遷移 entity を構造化し、Mermaid stateDiagram-v2 で
-          遷移図を描く。stateDiagram の Mermaid 適合性実機検証も兼ねる。
+          S5 で決まる設計書目次に埋める増分。画面 entity + 遷移 entity を構造化し、
+          Mermaid stateDiagram-v2 で遷移図を描く。stateDiagram の Mermaid 適合性
+          実機検証も兼ねる。詳細は design/app/system-dev-docs.md の Proposals 参照。
+          S5 が前提。
         phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
+      S5:
+        title: 標準文書セットの調査・目次設計
+        note: |
+          S2-S4 再編の起点で、S2-S4 の前提。無料一次資料 (IPA 機能要件の合意形成
+          ガイド / ISO OBP の 29148 目次 / IEEE 1016 viewpoint / arc42 / Volere /
+          ReqIF) を一周し、「要求仕様書 + 設計書」二文書の目次骨格・artifact 配置・
+          項目 subset を決めて External Design に起こす。IPA ガイドのローカル性
+          (英訳後の国際読者との整合) の判断と、Candidates の task 化判定もここ。
+        phase: 16
+        proposal: 20-design/20-app/50-system-dev-docs#s5-調査目次設計
 
   T:
     title: ビルドインフラ
@@ -816,7 +830,7 @@ categories:
         note: >-
           ローンチで外部コントリビュータが設計判断を読める状態にする。
           background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
-          S2-S4 は仕様検討で dev-docs に最も書き込むタスク群なので、
+          S2-S5 は仕様検討で dev-docs に最も書き込むタスク群なので、
           その完了後・告知前に実施する。Q3 の前提。
           Q カテゴリから移管 (旧 Q4)。
         phase: 17
