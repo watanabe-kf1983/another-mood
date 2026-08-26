@@ -32,7 +32,7 @@ The root of the schema file must satisfy:
 
 - `type: object` is required.
 - `properties` is required. Each entry represents one **entity** (a collection of records of the same shape).
-- `additionalProperties: false` is required (any undeclared top-level key becomes an error). The same pairing is required at every nested level: any `properties:` without `additionalProperties: false` causes a build error. The recommended style is to write `additionalProperties: false` on the line directly above each `properties:`.
+- `additionalProperties: false` is required (any undeclared top-level key becomes an error). The same pairing is required wherever `properties:` appears — see [Other constraints](#other-constraints).
 
 A [map pattern](#map-pattern) (`additionalProperties: <schema>` without accompanying `properties`) is not allowed at the root level (the meta-schema rejects it).
 
@@ -149,11 +149,7 @@ site_config:
   base_url: https://example.com
 ```
 
-No normalization happens; the value is passed to templates as written.
-
-**Exclusivity**: within the same object, `properties` and `additionalProperties: <schema>` cannot be combined. When `properties` is present, `additionalProperties: false` is required (the meta-schema raises an error otherwise).
-
-**Completeness**: every `type: object` must take one of those two forms, and every `type: array` must declare `items`. A bare `type: object` is rejected — there is no free-form object in this language. Data with no fixed shape belongs in a `string` attribute.
+No normalization happens; the value is passed to templates as written. The result is a plain value rather than an entity: views cannot name it in `from:`, and no pages are generated for it under `output/__db/`.
 
 ## Supported keywords
 
@@ -241,6 +237,10 @@ Keywords that exist in JSON Schema draft 2020-12 but are rejected by the meta-sc
 
 - `type` accepts a single string only. The array form such as `type: [string, "null"]` and the `null` type are not allowed.
 - Property names under `properties` must be identifiers (Unicode letters, digits, underscores; no leading digit).
+
+**Exclusivity**: within the same object, `properties` and `additionalProperties: <schema>` cannot be combined. When `properties` is present, `additionalProperties: false` is required (the meta-schema raises an error otherwise). The recommended style is to write `additionalProperties: false` on the line directly above each `properties:`.
+
+**Completeness**: every `type: object` must either enumerate its keys (`properties` with `additionalProperties: false`) or be a map (`additionalProperties: <schema>`), and every `type: array` must declare `items`. A bare `type: object` is rejected — there is no free-form object in this language. Data with no fixed shape belongs in a `string` attribute.
 
 ## Built-in schema: prose
 
