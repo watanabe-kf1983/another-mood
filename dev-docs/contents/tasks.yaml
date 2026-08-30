@@ -682,41 +682,67 @@ categories:
         phase: 10
         done: true
       S2:
-        title: DFD テンプレート
+        title: 階層 DFD テンプレート
         note: |
-          S5 で決まる設計書目次に埋める増分。詳細は design/app/system-dev-docs.md の
-          Proposals 参照。Mermaid flowchart 適合性の実機検証を兼ね、PlantUML 等への
-          舵切りトリガ第一候補。F カテゴリから S への移管 (旧 F5)。S5 が前提。
+          要求仕様書の付録「背景: 業務モデル」を埋める章別増分。S7 のエンティティを
+          属性レベルまで詰め、process の親子参照からレベル別の DFD を自動生成 +
+          バランシング検査を検討する。Mermaid flowchart 適合性の実機検証を兼ね、
+          PlantUML 等への舵切りトリガ第一候補。F カテゴリから S への移管 (旧 F5)。
+          S7 / S8 が前提。詳細は design/app/system-dev-docs.md の Proposals 参照。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s2-dfd-data-flow-diagram
+        proposal: 20-design/20-app/50-system-dev-docs#s2-階層-dfd
       S3:
-        title: CRUD マトリクステンプレート
+        title: CRUD マトリクス + ユースケース構造化テンプレート
         note: |
-          S5 で決まる目次に埋める増分。ユースケース × エンティティの join から
-          導出される view として実装し、要求仕様書と設計書の二文書同期を実証する。
-          詳細は design/app/system-dev-docs.md の Proposals 参照。
-          F カテゴリから S への移管 (旧 F6)。S5 が前提。
+          設計書のデータ設計章を埋める章別増分。ユースケース × エンティティの
+          join から導出される view として実装し、要求仕様書と設計書の二文書同期を
+          実証する。ユースケース・要求 entity の属性詰め (旧 Candidates の
+          ユースケース記述を吸収) もここ。F カテゴリから S への移管 (旧 F6)。
+          S7 / S8 が前提。詳細は design/app/system-dev-docs.md の Proposals 参照。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス
+        proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス--ユースケース構造化
       S4:
         title: 画面遷移図 + 画面定義テンプレート
         note: |
-          S5 で決まる設計書目次に埋める増分。画面 entity + 遷移 entity を構造化し、
-          Mermaid stateDiagram-v2 で遷移図を描く。stateDiagram の Mermaid 適合性
-          実機検証も兼ねる。詳細は design/app/system-dev-docs.md の Proposals 参照。
-          S5 が前提。
+          設計書の画面設計章を埋める章別増分。S7 の画面・遷移 entity を属性レベル
+          まで詰め、Mermaid stateDiagram-v2 で遷移図を描く。stateDiagram の
+          Mermaid 適合性実機検証も兼ねる。S7 / S8 が前提。詳細は
+          design/app/system-dev-docs.md の Proposals 参照。
         phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
       S5:
         title: 標準文書セットの調査・目次設計
-        note: |
-          S2-S4 再編の起点で、S2-S4 の前提。無料一次資料 (IPA 機能要件の合意形成
-          ガイド / ISO OBP の 29148 目次 / IEEE 1016 viewpoint / arc42 / Volere /
-          ReqIF) を一周し、「要求仕様書 + 設計書」二文書の目次骨格・artifact 配置・
-          項目 subset を決めて External Design に起こす。IPA ガイドのローカル性
-          (英訳後の国際読者との整合) の判断と、Candidates の task 化判定もここ。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s5-調査目次設計
+        done: true
+      S6:
+        title: 要件トレーサビリティ表テンプレート
+        note: |
+          要求仕様書 4 章「検証」(要求別検証方法一覧) と要求 ↔ 設計 artifact の
+          対応表。29148 が traceability を明示的に求める成果物で、文書横断参照
+          (x-ref + 表生成) の実証。要求レコード (S3) が揃ってから。S5 の Candidates
+          判定で task 化。
+        phase: 18
+      S7:
+        title: 二文書 showcase のモデル構築
+        note: |
+          showcase プロジェクトを新設し、schema.yaml の素案をエンティティ単位の
+          解像度 (エンティティ / x-ref / 主要属性) で書く。42010 の概念モデルを
+          上位の骨に、調査メニューをチェックリストとしてテーラリング。description
+          に参照元を補記。器 (sbdb.yaml / 最小テンプレート) の敷設もここ。
+          Done = build が通り __entity_defs / ER メタビューでモデルが読めること。
+          詳細は design/app/system-dev-docs.md の Proposals 参照。
+        phase: 16
+        proposal: 20-design/20-app/50-system-dev-docs#s7-モデル構築
+      S8:
+        title: モデルと目次の突合・確定目次仕様
+        note: |
+          S7 のモデルと章立てのたたき台を突合し、章 ↔ エンティティの対応を張って
+          孤児を潰し、確定目次仕様 (章ごとの目的 / 対応エンティティ / よりどころ)
+          を External Design に書き起こす。Done = 目次だけの二文書 (章見出し +
+          用語集) がビルドされること。S7 が前提、S2-S4/S6 の前提。詳細は
+          design/app/system-dev-docs.md の Proposals 参照。
+        phase: 16
+        proposal: 20-design/20-app/50-system-dev-docs#s8-モデルと目次の突合
 
   T:
     title: ビルドインフラ
