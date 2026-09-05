@@ -3,7 +3,7 @@
     "language-server": {
       "command": "mcp-language-server",
       "args": [
-        "--workspace", "/workspaces/another-mood",
+        "--workspace", "${CLAUDE_PROJECT_DIR:-.}",
         "-lsp", "pyright-langserver", "--", "--stdio"
       ]
     },
