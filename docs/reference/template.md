@@ -373,7 +373,7 @@ To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x 
 
 The engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the Jinja2 docs are a close guide rather than an exact one — in corners they don't settle, behavior can differ.
 
-The four rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
+The three rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
 
 ### Handling undefined access
 
@@ -464,15 +464,3 @@ A few Markdown positions need handling that the default escape alone cannot prov
 | Hand-written link URL | the URL isn't percent-encoded | [`as_url`](#as_url) |
 
 For inline code spans and fenced code blocks, `code_inline` / `code_fenced` are an alternative to the `| safe` recipe above. Reach for the helpers when the value comes from data and may contain stray backticks; `| safe` only works if you can trust the value verbatim.
-
-### Non-ASCII names
-
-Non-ASCII names are welcome in the data — entity and view names, record keys, string values, template filenames. What cannot spell them is an identifier in template syntax (variable, attribute, and loop-variable names): the engine build this tool ships does not accept non-ASCII identifiers, so `{{ row.列 }}` is a syntax error. Reach the same value by subscript instead:
-
-```jinja2
-{% for t in this["テーブル"] %}
-| {{ code_inline(t.id) }} | {{ t["名前"] }} | {{ t["説明"] }} |
-{% endfor %}
-```
-
-Subscript form reaches everything. A top-level entity or view is reached through `this` — every template binds its subject as `this`, and the root template's subject is the data root — and any deeper key by subscripting on: `t["列"]["名前"]`. Give loop variables ASCII names and the rest follows.
