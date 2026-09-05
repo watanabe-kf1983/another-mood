@@ -33,6 +33,19 @@ class TestRender:
         result = engine.render("hello.md", {"title": "World"})
         assert result == "# World\n"
 
+    def test_renders_non_ascii_identifiers(self, tmp_path: Path) -> None:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "t.md").write_text(
+            "{% for 行 in テーブル %}{{ 行.名前 }}/{% endfor %}"
+        )
+
+        engine = TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
+        subject = {"テーブル": [{"名前": "書籍"}, {"名前": "著者"}]}
+        assert engine.render("t.md", subject) == "書籍/著者/"
+
 
 class TestThisBinding:
     """The render boundary binds the subject as ``this`` uniformly — the

@@ -62,7 +62,7 @@ requires-dist = [
     { name = "markdown-it-py", specifier = ">=4.0.0" },
     { name = "markupsafe", specifier = ">=3.0.3" },
     { name = "mcp", specifier = ">=2.0.0" },
-    { name = "minijinja", specifier = ">=2.21.0" },
+    { name = "minijinja", specifier = ">=2.23.0" },
     { name = "packaging", specifier = ">=26.0" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
     { name = "pyyaml", specifier = ">=6.0" },
