@@ -74,11 +74,11 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - **トップレベルスキーマが `type: array`（additionalProperties でない）の場合**: id を持たない配列のマージ・重複検出をどうするか未定
 - **スキーマ名重複**: 複数スキーマファイルに同じトップレベルキーがあった場合の扱い（エラーとする想定だが未確定）
 
-### データキーにドットを含めない (M12)
+### データキーにドットを含めない (E14)
 
 view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped.by` 等）は現在、ドットを含む文字列をそのままレコードのキーにする。データにドット入りキーを生む経路はこれだけで、`contents/` 由来のキーは schema.yaml の識別子パターンで縛られている。このため `pluck` は longest-first 照合（キー全体を試してから末尾セグメントを削って降りる）を持ち、カタログの `Attribute.id` のドットは singleton 平坦化（入れ子）かリテラルキーか区別できない。
 
-**案**: DSL の名前を読みも書きもパスとして統一し、データキーにドットを含めない不変条件を立てる。`pluck` は素朴な `split(".")` に戻し、カタログのドットは必ず入れ子を意味する（旧案の `parent_attribute` 追加は不要になる）。設計の本体は [query-dsl-spec.md](../60-composer/10-query-dsl-spec.md#ドット名の意味論統一-m12)。実装後、不変条件はこのファイルの Internal Design に移す。
+**案**: DSL の名前を読みも書きもパスとして統一し、データキーにドットを含めない不変条件を立てる。`pluck` は素朴な `split(".")` に戻し、カタログのドットは必ず入れ子を意味する（旧案の `parent_attribute` 追加は不要になる）。設計の本体は [query-dsl-spec.md](../60-composer/10-query-dsl-spec.md#ドット名の意味論統一-e13-e14-e15)。実装後、不変条件はこのファイルの Internal Design に移す。
 
 ### ルート Entity の導入 (M13)
 
@@ -97,7 +97,7 @@ view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped
 - `from:` が singleton を指した場合のエラーを「unknown source」から「collection ではない」に改善できる
 - `check_xref_coherence` の `parent_entity is None` フィルタから `__root` を除外
 
-依存: M12 とは独立に着手できる（ルート singleton の吸収は既に「ドット = 入れ子」の規約に乗っている）。J5 は両方を前提とする。
+依存: E14 とは独立に着手できる（ルート singleton の吸収は既に「ドット = 入れ子」の規約に乗っている）。J5 は両方を前提とする。
 
 ### tap ドキュメントの JSON Schema 提供 (J5)
 
@@ -108,10 +108,10 @@ view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped
 - `document_schema(entities) -> Mapping` — data.json 全体のスキーマ
 - `entity_schema(entity_id, entities) -> Mapping` — 単一エンティティの断片（子孫を入れ子展開）
 
-変換の要点: ドット名の入れ子復元（M12 で「カタログのドットは必ず入れ子」が保証される前提）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
+変換の要点: ドット名の入れ子復元（E14 で「カタログのドットは必ず入れ子」が保証される前提）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
 
 提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`、MCP ツール。導線（docs / MCP ツール記述）とセットで初めて使われる点に注意。
 
 その他の論点: レコード 0 件エンティティのキー欠落と required 方針、`additionalProperties: false` の採否。
 
-**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: M12, M13。
+**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: E14, M13。
