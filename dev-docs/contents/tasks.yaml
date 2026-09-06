@@ -684,11 +684,12 @@ categories:
       S2:
         title: 階層 DFD テンプレート
         note: |
-          要求仕様書の付録「背景: 業務モデル」を埋める章別増分。S7 のエンティティを
-          属性レベルまで詰め、process の親子参照からレベル別の DFD を自動生成 +
-          バランシング検査を検討する。Mermaid flowchart 適合性の実機検証を兼ね、
-          PlantUML 等への舵切りトリガ第一候補。F カテゴリから S への移管 (旧 F5)。
-          S7 / S8 が前提。詳細は design/app/system-dev-docs.md の Proposals 参照。
+          業務モデル (階層 DFD) を独立の showcase として作る。process の親子参照から
+          レベル別の DFD を自動生成 + バランシング検査を検討する。Mermaid flowchart
+          適合性の実機検証を兼ね、PlantUML 等への舵切りトリガ第一候補。F カテゴリから
+          S への移管 (旧 F5)。当初は system-dev-docs-ja の付録として S7 のモデルに
+          含めていたが S7 のレビューで外した。S7 / S8 は前提ではない。詳細は
+          design/app/system-dev-docs.md の Proposals 参照。
         phase: 16
         proposal: 20-design/20-app/50-system-dev-docs#s2-階層-dfd
       S3:
