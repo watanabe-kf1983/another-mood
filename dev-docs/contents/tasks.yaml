@@ -455,9 +455,11 @@ categories:
         phase: 15
         done: true
       M12:
-        title: カタログのドット名構造化 (parent_attribute 追加)
-        note: singleton 平坦化とリテラルキーの判別を可能にする
-        proposal: 20-design/40-communication/10-json-data-model#カタログのドット名構造化-m12
+        title: DSL のドット名意味論の統一 (読みも書きもパス、pluck の longest-first 廃止)
+        note: >-
+          view 出力からドット入りキーを排し、カタログのドットを必ず入れ子にする。
+          カタログだけから JSON の形が復元可能になる (J5 の前提)。breaking。
+        proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-m12
         phase: 18
       M13:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)

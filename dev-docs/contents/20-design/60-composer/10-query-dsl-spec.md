@@ -143,3 +143,93 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 現スコープでは 2-input op は `join:` 1 つで、union 等の追加予定もない (D 群 / F 系の隣接タスクで言及無し)。「機械的重複 ~20 行を消すために 80+ 行の抽象階層を投資する」のは現状ではコスト過大と判断。
 
 将来、2-input op が増える / 多 join のパターンが想定外に複雑化する等の signal が出たら、その時点で tree/pull への refactor を検討する。Join がすでに特別扱いされているので、その特別扱いを抽象化する方向への escalation は incremental に行える。
+
+## Proposals
+
+### ドット名の意味論統一 (M12)
+
+#### 問題
+
+DSL の名前に現れるドットは、読み側と書き側で意味が違う。読み側（`from:` / `flatten.of:` / `join.on:` / `where` のキー / `sort.by:` / `select.item:` / `grouped.by:`）ではパスで、`hobby.level` は `hobby` の中の `level` を指す。一方、書き側（出力レコードのキー名を決める別名スロット）ではリテラル文字列で、`"hobby.level"` というドット入りのキーをそのまま作る。
+
+データにドット入りキーを生む経路は view の別名スロットだけである。schema.yaml の `properties` 名は識別子パターンで縛られ、map パターンのキーは `id` の値になるので、`contents/` からは生まれない。内蔵の `__definition` もデータ上は入れ子である。
+
+| スロット | 省略時 | ドット入りキーが生まれる例 |
+|---|---|---|
+| `select[].as` | `item` をそのまま | `item: hobby.level` → `{"hobby.level": "pro"}` |
+| `flatten.as` | `of` をそのまま | `flatten: hobby.pets` → `{"hobby.pets": {...}}` |
+| `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
+| `join.flatten.as` | join の `as` をそのまま | 同上 |
+| `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
+| `grouped.as` | `from` の最終セグメント | 明示で `as: a.b` と書ける |
+
+この非対称が生む実害:
+
+- **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` か `pluck` フィルタでしか届かない（Jinja2 の `row.hobby` は undefined になる）
+- **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
+- **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
+- **`flatten.of` がドット入りだと derive と apply がずれる**: apply は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` では元の配列が `hobby` 内に残ったまま新キーが足される。derive は配列エッジを置き換えたことにする
+
+#### 方針: DSL の名前は読みも書きもパス
+
+書き側のドットも入れ子として解釈する。`select: - item: hobby.level` の出力は `{"hobby": {"level": "pro"}}`。MongoDB の projection（`{"hobby.level": 1}` が入れ子を保つ）、TOML の dotted key（`hobby.level = "pro"` はテーブル `hobby` の定義）と同じ意味論。
+
+これにより次の不変条件が立つ:
+
+- **データのキーはドットを含まない**。`contents/` 由来はもとより、view 出力も含めて
+- **カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートを除く。ルートは M13）
+
+スロットごとの意味:
+
+- `select[].as`（省略時 `item`）: 書き込み先パス。省略時は元と同じ位置に入れ子を保って書く。`item: hobby` はオブジェクト丸ごと、`item: hobby.level` は `hobby` の中の `level` だけを持つ部分オブジェクト。同じ親に書く複数 item（`hobby.level` と `hobby.pets`）は一つの `hobby` に合流する
+- `flatten.as`（省略時 `of`）: 書き込み先パス。`of` の位置の配列は除去し、要素を `as` の位置に書く。`of` と `as` が同じなら「その場で要素に置き換え」で、ドット入り `of` でも元の配列が残らない
+- `join.as` / `join.flatten.as`: 書き込み先パス
+- `grouped.by`: グループ行のキー値を `by` のパスの位置に書く（`{"hobby": {"level": "pro"}, "members": [...]}`）。別名の口は足さない
+- `grouped.as`: 書き込み先パス
+
+**欠損時**: 書き込む値が無い（`select` の `item` がレコードに無い）ときは wrapper ごと省く。`hobby: {}` は作らない（「nullable はキー省略」の原則）。
+
+**重なりの禁止**: 一つの節の出力に現れる書き込み先パスは、同一でも、セグメント単位の接頭辞関係でも駄目で、derive 段階でエラーにする。三つの形がある:
+
+```yaml
+select:
+  - item: hobby            # 1. 冗長: hobby を丸ごと書いた上に
+  - item: hobby.level      #    その中の level をもう一度書く（値は同じ）
+  - item: hobby, as: a     # 2. 上書き: a に hobby を置いた後に
+  - item: name,  as: a.level   #  a.level を別の値で潰す（並び順依存）
+  - item: name, as: b      # 3. 不成立: b は文字列なので
+  - item: id,   as: b.c    #    b.c は存在できない
+```
+
+この規則は、現状 `flatten` / `join` にしかない alias 衝突チェックを `select`（重複 `as`）と `grouped`（`as` と `by` の同名）にも広げるものでもある。この二つは現在チェックが無く、derive は同名エッジを二つ並べ、apply は後勝ちで一つしか出さない。TOML が同じテーブルの二重定義を禁じるのと同じ規則。
+
+**`pluck` の longest-first 廃止**: データキーにドットが無くなるので `json_data_model.pluck` / `split_path` / `match_key` は素朴な `split(".")` に戻す。`data_catalog` 側の照合は既に完全一致なので変更なし。
+
+**カタログの構造化は不要**: 旧案（`Attribute` / `Edge` に `parent_attribute` を追加）は曖昧さを記録する方法だったが、曖昧さ自体が消えるので名前から機械的に導ける。`SelectItem.derive` が名前の接頭辞で dotted siblings を連れて行く現行の挙動は、この意味論の下では正確になる。
+
+#### 背景: なぜ入れ子であってリテラルではないか
+
+`item: hobby.level` → `"hobby.level"` は YAML を書く瞬間には自然に見えるが、自然さが切れるのは使う側で、テンプレートの式が元エンティティと view で変わる。このツールの価値は source を直せば全ページが揃うことにあり、その手前で「同じデータが view を通ると別の書き方になる」のは価値に逆行する。入れ子なら `row.hobby.level` のまま。
+
+#### 背景: なぜ別名を識別子に縛らないか
+
+ドット入り `as:` が便利な場面はほぼ無い（テンプレートマクロが期待する形に寄せる程度）。それでも禁止しないのは、禁止の見返りが無いため:
+
+- 重なりチェックは省略時デフォルト（`item` / `of` / `by` のパス）が入れ子に書く以上どのみち必要で、識別子に縛っても判定コードは減らない
+- 正規化形が書き戻せなくなる。`flatten: hobby.pets` は正規化で `{ of: hobby.pets, as: hobby.pets }` になり view_def.md はそれを表示する。ツールが見せる形を source に書き写すとエラーになるのは不整合
+- 語彙が「読みはパス、書きは識別子、ただし省略時はパス」と三段になる。許せば「名前はすべてパス」の一文で済む
+
+docs の説明は「出力先のパス。通常は単一の名前」程度に留める。
+
+#### 却下した代替案
+
+- **`parent_attribute` の追加**（旧 M12 案）: リテラルキーと入れ子の判別情報をカタログに持たせる。曖昧さを温存したまま判別する方法で、テンプレート式の不一致と longest-first は残る
+- **別名に識別子パターンを課す**: 上記のとおり
+
+#### 波及
+
+- **breaking**: ドット入りの `as:` / `by:` を書いた既存 view は出力の形が変わる。dev-docs / showcase に該当は無い。PR に `Release-Highlight: breaking`
+- `docs/reference/view.md`: 名前はパスであること、別名の意味、重なりエラーを記述
+- `docs/reference/cli.md` の tap: jq でクォートの要るキーが無くなる（記述の追加は不要）
+- [json-data-model.md](../40-communication/10-json-data-model.md): データキーの不変条件を Internal Design に移す
+- M13 との依存は解消（ルート singleton の吸収は既にドット = 入れ子の規約に乗っている）。J5 の前提は M12 + M13 のまま

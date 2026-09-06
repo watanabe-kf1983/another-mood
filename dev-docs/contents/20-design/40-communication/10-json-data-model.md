@@ -74,27 +74,11 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - **トップレベルスキーマが `type: array`（additionalProperties でない）の場合**: id を持たない配列のマージ・重複検出をどうするか未定
 - **スキーマ名重複**: 複数スキーマファイルに同じトップレベルキーがあった場合の扱い（エラーとする想定だが未確定）
 
-### カタログのドット名構造化 (M12)
+### データキーにドットを含めない (M12)
 
-データカタログの `Attribute.id` に現れるドットには二つの意味がある:
+view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped.by` 等）は現在、ドットを含む文字列をそのままレコードのキーにする。データにドット入りキーを生む経路はこれだけで、`contents/` 由来のキーは schema.yaml の識別子パターンで縛られている。このため `pluck` は longest-first 照合（キー全体を試してから末尾セグメントを削って降りる）を持ち、カタログの `Attribute.id` のドットは singleton 平坦化（入れ子）かリテラルキーか区別できない。
 
-1. **singleton 平坦化**: エンティティ内の単一オブジェクト属性は、wrapper エッジ（`item_type`, type=object, 子なし）+ ドット名エッジ（`item_type.id` 等）に展開される。データ上は入れ子
-2. **リテラルキー**: view の alias（`select` の `as:`、`grouped` の `by:` の持ち出し等）がドットを含むと、そのままレコードのキー名になる。データ上は平坦
-
-この二つはカタログ上区別できない（実証済み: `select` で `item: item_type.metadata, as: a` + `item: id, as: a.b` とすると、schema 由来の singleton 平坦化と同じ姿のカタログになるが、データは `{"a.b": ...}` という平坦キー）。原因は入口の非対称: schema.yaml は propertyNames が識別子パターンを課すためドット名は必ず平坦化由来だが、view-schema の alias 群は無制約。
-
-実害: (1) tap 出力に jq でクォートの要るキーが生まれ得る、(2) entity_def.md が「入れ子」と「リテラル」を同じ見た目で表示、(3) カタログから JSON Schema を生成できない（J5 の前提）。
-
-**案**: `Attribute` / `Edge` に `parent_attribute: str | None` を追加する（`Entity.parent_entity` と対称）。singleton 平坦化で生まれたエッジは吸収元 wrapper の名前を持ち、リテラルキーは None。`id` のドット表記は残す（`pluck` / `item:` / `by:` のアドレス表記であり、追加であって改名ではない）。
-
-生成点は三箇所 + 自己記述:
-
-- `schema_tree._collect_edges` — singleton 吸収時に親名を設定
-- `query.SelectItem.derive` / `Flatten.derive` — ドット名の f-string 組み立てを構造的な設定に置き換え
-- `query.Grouped.derive` — `by:` のエッジ持ち出し時は wrapper が消えるので None に落とす（リテラル化。データの実際の形と一致）
-- `Entity.catalog` / `Attribute.catalog` の自己記述にもエッジ宣言を追加
-
-却下した代替案: view alias に識別子パターンを課す。`grouped` の `by:` はドットパスを受けるのが仕様で、その出力キーのリテラルドットは塞げない。名前の文字列解析で構造を復元する危うさも残る。
+**案**: DSL の名前を読みも書きもパスとして統一し、データキーにドットを含めない不変条件を立てる。`pluck` は素朴な `split(".")` に戻し、カタログのドットは必ず入れ子を意味する（旧案の `parent_attribute` 追加は不要になる）。設計の本体は [query-dsl-spec.md](../60-composer/10-query-dsl-spec.md#ドット名の意味論統一-m12)。実装後、不変条件はこのファイルの Internal Design に移す。
 
 ### ルート Entity の導入 (M13)
 
@@ -103,7 +87,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 **案**: 予約 id（`__root` 等。`__` 接頭辞はユーザ名から保護済み）でルートの Entity を一件 emit し、`item_type.attributes` にトップレベルの全キーを載せる:
 
 - collection → `object[]` + `child_entity`（従来どおり）
-- singleton object → wrapper + ドット名エッジ（エンティティ内と同じ吸収規約。M12 の `parent_attribute` に乗る）
+- singleton object → wrapper + ドット名エッジ（エンティティ内と同じ吸収規約）
 - scalar / scalar array → 通常の属性（`child_entity` なし）
 - `__definition` も `__root` の属性として正規化される
 
@@ -113,7 +97,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - `from:` が singleton を指した場合のエラーを「unknown source」から「collection ではない」に改善できる
 - `check_xref_coherence` の `parent_entity is None` フィルタから `__root` を除外
 
-依存: M12 → M13 の順（singleton 吸収の表現が M12 の構造化に乗るため）。
+依存: M12 とは独立に着手できる（ルート singleton の吸収は既に「ドット = 入れ子」の規約に乗っている）。J5 は両方を前提とする。
 
 ### tap ドキュメントの JSON Schema 提供 (J5)
 
@@ -124,7 +108,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - `document_schema(entities) -> Mapping` — data.json 全体のスキーマ
 - `entity_schema(entity_id, entities) -> Mapping` — 単一エンティティの断片（子孫を入れ子展開）
 
-変換の要点: ドット名の入れ子復元（M12 の `parent_attribute` 前提）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
+変換の要点: ドット名の入れ子復元（M12 で「カタログのドットは必ず入れ子」が保証される前提）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
 
 提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`、MCP ツール。導線（docs / MCP ツール記述）とセットで初めて使われる点に注意。
 
