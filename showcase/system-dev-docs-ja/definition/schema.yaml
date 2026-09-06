@@ -23,6 +23,9 @@ properties:
       description: "1 つの要求を表すレコード。英名: requirement"
       additionalProperties: false
       properties:
+        題名:
+          type: string
+          description: "要求を一覧や参照で一行で指すための見出し (例: 入荷時の在庫加算)。英名: title"
         種別:
           type: string
           description: "要求の区分。29148 の SRS 例示アウトライン 3 章の節構成 (機能 / インタフェース / 品質・性能・ユーザビリティ / 設計制約) を 4 区分に畳んだもの。要求仕様書の 3 章と 4 章 (検証) はこの区分で節を分ける。英名: kind (functional / external_interface / quality / design_constraint)"
