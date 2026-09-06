@@ -257,6 +257,30 @@ categories:
         title: "ビュー間参照 (`from:` / `join.to:` にビュー名)"
         phase: 13
         done: true
+      E13:
+        title: 出力パスの重なり検出 (select / grouped の別名衝突)
+        note: >-
+          flatten / join にしかない別名衝突チェックを全句に広げる。
+          select の重複 as、grouped の as と by の同名は現在チェックが無く、
+          derive は同名エッジを二つ並べ apply は後勝ちで一つしか出さない。
+        proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e13-e14-e15
+        phase: 18
+      E14:
+        title: DSL のドット名意味論の統一 (読みも書きもパス)
+        note: >-
+          別名スロットのドットを入れ子として解釈し、view 出力からドット入りキーを
+          排する。カタログのドットが必ず入れ子を意味するようになり、カタログだけから
+          JSON の形が復元可能になる (J5 の前提)。E13 が前提。
+        proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e13-e14-e15
+        phase: 18
+      E15:
+        title: "`pluck` の longest-first 照合の廃止"
+        note: >-
+          E14 でデータキーからドットが消えるので、split_path / match_key を
+          素朴な分割に戻す。内部整理のみ (pluck は内蔵メタエディション専用フィルタで
+          利用者向け契約の外)。E14 が前提。
+        proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e13-e14-e15
+        phase: 18
 
   F:
     title: メタドキュメンテーション拡張
@@ -385,7 +409,7 @@ categories:
       J5:
         title: tap ドキュメントの JSON Schema 提供
         note: >-
-          M12 / M13 が前提。着手トリガー (エージェントの実つまずき /
+          E14 / M13 が前提。着手トリガー (エージェントの実つまずき /
           型突き合わせの実需 / 利用者要望) が出るまで保留。
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
@@ -454,14 +478,9 @@ categories:
         title: ステージ間中間表現を YAML から JSON へ差し替え (ビルド時間短縮)
         phase: 15
         done: true
-      M12:
-        title: カタログのドット名構造化 (parent_attribute 追加)
-        note: singleton 平坦化とリテラルキーの判別を可能にする
-        proposal: 20-design/40-communication/10-json-data-model#カタログのドット名構造化-m12
-        phase: 18
       M13:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
-        note: M12 が前提
+        note: E14 とは独立に着手できる
         proposal: 20-design/40-communication/10-json-data-model#ルート-entity-の導入-m13
         phase: 18
 
