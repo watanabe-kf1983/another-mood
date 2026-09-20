@@ -217,7 +217,9 @@ categories:
   E:
     title: YAML DSL クエリ評価拡充
     impl_paths:
-      - src/another_mood/components/composer/query.py
+      - src/another_mood/components/shared/query.py
+      - src/another_mood/components/preprocess/query_deriver.py
+      - src/another_mood/components/preprocess/query_normalizer.py
       - src/another_mood/resources/schemas/
     spec: 20-design/60-composer/10-query-dsl-spec
     tasks:
@@ -263,6 +265,7 @@ categories:
           flatten / join にしかない別名衝突チェックを全句に広げる。
           select の重複 as、grouped の as と by の同名は現在チェックが無く、
           derive は同名エッジを二つ並べ apply は後勝ちで一つしか出さない。
+          弾くのは出力キーの完全一致のみ (接頭辞関係は E14)。E16 が前提。
         proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e13-e14-e15
         phase: 18
       E14:
@@ -280,6 +283,16 @@ categories:
           素朴な分割に戻す。内部整理のみ (pluck は内蔵メタエディション専用フィルタで
           利用者向け契約の外)。E14 が前提。
         proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e13-e14-e15
+        phase: 18
+      E16:
+        title: grouped の as 必須化 (合成デフォルトの廃止)
+        note: >-
+          as 省略時に from の最終セグメントから合成するデフォルトを廃し、明示を
+          必須にする。flatten / join のデフォルトと違い、flatten / join を挟むと
+          束ねる行が from の行でなくなるため、このデフォルトだけが黙って外れた
+          名前を採る。合成値は YAML の位置情報も落とすので、廃止すると E13 の
+          衝突診断が offender を一意に選べる。E13 の前段。
+        proposal: 20-design/60-composer/10-query-dsl-spec#grouped-の-as-必須化-e16
         phase: 18
 
   F:
