@@ -283,6 +283,16 @@ categories:
         title: grouped の as 必須化 (合成デフォルトの廃止)
         phase: 18
         done: true
+      E17:
+        title: 合成ビュー (compose) — source を束ねる第二の view 文法
+        note: >-
+          複数の entity / view を束ねた単一レコードのビュー。文書 (と章節項) を
+          データ木のノードとして立て、root 以外のページから複数 source を描ける
+          ようにする。views ディレクトリに書き、名前空間・評価順は query と共有。
+          動機は S8 の二文書。トップレベル・シングルトンのカタログ表現が要るので
+          M13 が前提。
+        proposal: 20-design/60-composer/10-query-dsl-spec#合成ビュー-e17
+        phase: 18
 
   F:
     title: メタドキュメンテーション拡張
@@ -482,7 +492,7 @@ categories:
         done: true
       M13:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
-        note: E14 とは独立に着手できる
+        note: E14 とは独立に着手できる。E17 (合成ビュー) の前提
         proposal: 20-design/40-communication/10-json-data-model#ルート-entity-の導入-m13
         phase: 18
 
