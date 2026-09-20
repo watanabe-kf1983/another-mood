@@ -701,7 +701,7 @@ categories:
     impl_paths:
       - showcase/
       - src/another_mood/resources/
-    spec: 20-design/20-app/50-system-dev-docs
+    spec: 20-design/80-showcase/10-system-dev-docs
     tasks:
       S1:
         title: "showcase/japanese-table-design — テーブル定義から 2 種類のスキーマ図を描く PoC"
@@ -710,13 +710,14 @@ categories:
       S2:
         title: 階層 DFD テンプレート
         note: |
-          要求仕様書の付録「背景: 業務モデル」を埋める章別増分。S7 のエンティティを
-          属性レベルまで詰め、process の親子参照からレベル別の DFD を自動生成 +
-          バランシング検査を検討する。Mermaid flowchart 適合性の実機検証を兼ね、
-          PlantUML 等への舵切りトリガ第一候補。F カテゴリから S への移管 (旧 F5)。
-          S7 / S8 が前提。詳細は design/app/system-dev-docs.md の Proposals 参照。
+          業務モデル (階層 DFD) を独立の showcase として作る。process の親子参照から
+          レベル別の DFD を自動生成 + バランシング検査を検討する。Mermaid flowchart
+          適合性の実機検証を兼ね、PlantUML 等への舵切りトリガ第一候補。F カテゴリから
+          S への移管 (旧 F5)。当初は system-dev-docs-ja の付録として S7 のモデルに
+          含めていたが S7 のレビューで外した。S7 / S8 は前提ではない。詳細は
+          design/showcase/system-dev-docs.md の Proposals 参照。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s2-階層-dfd
+        proposal: 20-design/80-showcase/10-system-dev-docs#s2-階層-dfd
       S3:
         title: CRUD マトリクス + ユースケース構造化テンプレート
         note: |
@@ -724,18 +725,18 @@ categories:
           join から導出される view として実装し、要求仕様書と設計書の二文書同期を
           実証する。ユースケース・要求 entity の属性詰め (旧 Candidates の
           ユースケース記述を吸収) もここ。F カテゴリから S への移管 (旧 F6)。
-          S7 / S8 が前提。詳細は design/app/system-dev-docs.md の Proposals 参照。
+          S7 / S8 が前提。詳細は design/showcase/system-dev-docs.md の Proposals 参照。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s3-crud-マトリクス--ユースケース構造化
+        proposal: 20-design/80-showcase/10-system-dev-docs#s3-crud-マトリクス--ユースケース構造化
       S4:
         title: 画面遷移図 + 画面定義テンプレート
         note: |
           設計書の画面設計章を埋める章別増分。S7 の画面・遷移 entity を属性レベル
           まで詰め、Mermaid stateDiagram-v2 で遷移図を描く。stateDiagram の
           Mermaid 適合性実機検証も兼ねる。S7 / S8 が前提。詳細は
-          design/app/system-dev-docs.md の Proposals 参照。
+          design/showcase/system-dev-docs.md の Proposals 参照。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s4-画面遷移図--画面定義
+        proposal: 20-design/80-showcase/10-system-dev-docs#s4-画面遷移図--画面定義
       S5:
         title: 標準文書セットの調査・目次設計
         phase: 16
@@ -749,16 +750,9 @@ categories:
           判定で task 化。
         phase: 18
       S7:
-        title: 二文書 showcase のモデル構築
-        note: |
-          showcase プロジェクトを新設し、schema.yaml の素案をエンティティ単位の
-          解像度 (エンティティ / x-ref / 主要属性) で書く。42010 の概念モデルを
-          上位の骨に、調査メニューをチェックリストとしてテーラリング。description
-          に参照元を補記。器 (sbdb.yaml / 最小テンプレート) の敷設もここ。
-          Done = build が通り __entity_defs / ER メタビューでモデルが読めること。
-          詳細は design/app/system-dev-docs.md の Proposals 参照。
+        title: 二文書 showcase のモデル構築 (showcase/system-dev-docs-ja)
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s7-モデル構築
+        done: true
       S8:
         title: モデルと目次の突合・確定目次仕様
         note: |
@@ -766,9 +760,9 @@ categories:
           孤児を潰し、確定目次仕様 (章ごとの目的 / 対応エンティティ / よりどころ)
           を External Design に書き起こす。Done = 目次だけの二文書 (章見出し +
           用語集) がビルドされること。S7 が前提、S2-S4/S6 の前提。詳細は
-          design/app/system-dev-docs.md の Proposals 参照。
+          design/showcase/system-dev-docs.md の Proposals 参照。
         phase: 16
-        proposal: 20-design/20-app/50-system-dev-docs#s8-モデルと目次の突合
+        proposal: 20-design/80-showcase/10-system-dev-docs#s8-モデルと目次の突合
 
   T:
     title: ビルドインフラ
