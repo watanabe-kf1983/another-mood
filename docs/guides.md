@@ -396,6 +396,7 @@ by_role:                  # ← the file's top-level key becomes the view name
   from: members           # source data
   grouped:
     by: role              # grouping key
+    as: members           # name of the inner array of grouped records
   select:
     - item: role
       as: id              # output role as the id field
