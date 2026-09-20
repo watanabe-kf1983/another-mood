@@ -2,7 +2,7 @@
 
 ユーザがシステム設計書を authoring する際に、本ツールが first-class でサポートする artifact 群。各タスクは「artifact 用のスキーマ」「サンプルデータ」「表現テンプレート」の三点セットを blueprint として提供する。
 
-[F (メタドキュメンテーション)](40-meta-documentation.md) との違い: F は catalog から auto-derive する meta-view (ツールが自分自身を説明する用途)、本カテゴリはユーザが authoring した data 上で動く first-party blueprint (ユーザに設計書 authoring の力を授ける用途)。両者は同じ「構造化データ → 自動描画」のメカニズムを共有するが、データの出所 (catalog vs ユーザデータ) と動機が異なる。
+[F (メタドキュメンテーション)](../20-app/40-meta-documentation.md) との違い: F は catalog から auto-derive する meta-view (ツールが自分自身を説明する用途)、本カテゴリはユーザが authoring した data 上で動く first-party blueprint (ユーザに設計書 authoring の力を授ける用途)。両者は同じ「構造化データ → 自動描画」のメカニズムを共有するが、データの出所 (catalog vs ユーザデータ) と動機が異なる。
 
 ## External Design
 
