@@ -88,11 +88,9 @@ additionalProperties:
           type: string
         as:
           title: Members array name
-          description: >-
-            Name given to the inner array of group members. Defaults to
-            the value of `from:` when omitted.
+          description: Name given to the inner array of group members.
           type: string
-      required: [by]
+      required: [by, as]
       additionalProperties: false
     select:
       title: Output projection

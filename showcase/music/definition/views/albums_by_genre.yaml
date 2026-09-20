@@ -5,6 +5,7 @@ albums_by_genre:
   from: albums
   grouped:
     by: genre_id
+    as: albums
   select:
     - item: genre_id
       as: id

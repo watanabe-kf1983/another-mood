@@ -16,6 +16,7 @@ by_role:                     # ← top-level key of the file becomes the view na
     active: true
   grouped:                   # optional
     by: role
+    as: members
   select:                    # optional
     - item: role
       as: id
@@ -322,19 +323,19 @@ Groups an array of objects by a specified field. The result is an array; each el
 ```yaml
 grouped:
   by: role               # field used to group
-  as: members            # name of the inner array (defaults to the last segment of from)
+  as: members            # name of the inner array
 ```
 
 | Key | Required | Role |
 |---|---|---|
 | `by` | Required | Name of the field used as the grouping key. |
-| `as` | Optional | Name given to the inner array of group members. Defaults to the last segment of `from:`. |
+| `as` | Required | Name given to the inner array of group members. |
 
 Group order follows the source data's order (the order in which each key first appears). Records within a group keep the source's shape, including the grouping field.
 
 ### Output shape
 
-For `from: members` + `grouped: { by: role }`, given input:
+For `from: members` + `grouped: { by: role, as: members }`, given input:
 
 ```yaml
 members:
@@ -347,7 +348,7 @@ the intermediate result after `grouped` (before `select`):
 
 ```yaml
 - role: engineer
-  members:                # `as` omitted - default = last segment of `from:` ("members")
+  members:                # the array named by `as`
     - { id: alice, name: Alice, role: engineer }
     - { id: bob,   name: Bob,   role: engineer }
 - role: designer

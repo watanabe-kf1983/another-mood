@@ -19,8 +19,7 @@ def normalize_query(raw: Mapping[str, object]) -> Mapping[str, object]:
     ``raw`` plus all defaults required by the canonical form;
     clauses absent from ``raw`` stay absent in the output.
     """
-    from_ = cast(str, raw["from"])
-    out: dict[str, object] = {"id": raw["id"], "from": from_}
+    out: dict[str, object] = {"id": raw["id"], "from": cast(str, raw["from"])}
     if "flatten" in raw:
         out["flatten"] = normalize_flatten(raw["flatten"])
     if "join" in raw:
@@ -28,9 +27,7 @@ def normalize_query(raw: Mapping[str, object]) -> Mapping[str, object]:
     if "where" in raw:
         out["where"] = raw["where"]
     if "grouped" in raw:
-        out["grouped"] = normalize_grouped(
-            cast(Mapping[str, object], raw["grouped"]), from_=from_
-        )
+        out["grouped"] = normalize_grouped(cast(Mapping[str, object], raw["grouped"]))
     if "select" in raw:
         out["select"] = normalize_select(
             cast(Sequence[Mapping[str, object]], raw["select"])
@@ -110,15 +107,9 @@ def normalize_inline_flatten(raw: object, join_as: str) -> Mapping[str, object]:
     }
 
 
-def normalize_grouped(raw: Mapping[str, object], *, from_: str) -> Mapping[str, object]:
-    """Normalize the ``grouped`` clause, filling the ``as`` default from ``from_``."""
-    # ``from_.rsplit`` drops UserStr provenance (``str`` methods return
-    # plain str), which is acceptable: the synthesized ``as`` is not a
-    # catalog-validated identifier, so diagnostics never reference it.
-    return {
-        "by": cast(str, raw["by"]),
-        "as": cast(str, raw.get("as", from_.rsplit(".", 1)[-1])),
-    }
+def normalize_grouped(raw: Mapping[str, object]) -> Mapping[str, object]:
+    """Normalize the ``grouped`` clause.  Both keys are schema-required."""
+    return {"by": cast(str, raw["by"]), "as": cast(str, raw["as"])}
 
 
 def normalize_select(

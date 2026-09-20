@@ -2,6 +2,7 @@ by_role:
   from: members
   grouped:
     by: role
+    as: members
   select:
     - item: role
       as: id

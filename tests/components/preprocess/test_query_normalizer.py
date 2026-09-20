@@ -171,19 +171,9 @@ class TestNormalizeInlineFlatten:
 
 
 class TestNormalizeGrouped:
-    def test_explicit_as_kept(self) -> None:
-        assert normalize_grouped(
-            {"by": "category", "as": "items"}, from_="entities"
-        ) == {"by": "category", "as": "items"}
-
-    def test_as_defaults_to_last_segment_of_from(self) -> None:
-        assert normalize_grouped({"by": "category"}, from_="__definition.entities") == {
-            "by": "category",
-            "as": "entities",
-        }
-
-    def test_as_defaults_to_from_when_from_has_no_dot(self) -> None:
-        assert normalize_grouped({"by": "category"}, from_="items") == {
+    def test_both_keys_pass_through(self) -> None:
+        """``as`` is schema-required, so there is no default to fill."""
+        assert normalize_grouped({"by": "category", "as": "items"}) == {
             "by": "category",
             "as": "items",
         }
@@ -245,7 +235,7 @@ class TestNormalizeQuery:
             "flatten": "tags",
             "join": {"to": "tasks", "on": {"left": "id", "right": "cat"}},
             "where": {"open": True},
-            "grouped": {"by": "category"},
+            "grouped": {"by": "category", "as": "items"},
             "select": [{"item": "name"}],
             "sort": {"by": "name"},
         }
@@ -261,7 +251,7 @@ class TestNormalizeQuery:
                 }
             ],
             "where": {"open": True},
-            "grouped": {"by": "category", "as": "entities"},
+            "grouped": {"by": "category", "as": "items"},
             "select": [{"item": "name", "as": "name"}],
             "sort": {"by": "name", "direction": "asc", "missing": "last"},
         }

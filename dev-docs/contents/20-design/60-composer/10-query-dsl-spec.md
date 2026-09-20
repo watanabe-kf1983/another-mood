@@ -113,6 +113,14 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 旧案の `kind: nested | flat_inner | flat_left` enum も検討したが、(a) 動詞 (`flatten:`) を per-join 配置することで kind 名の暗記負担を減らし、(b) `preserve_empty` 等のオプションを naturally に乗せられる、(c) MongoDB の `$lookup` + `$unwind` のように nest と flat をファーストクラスで扱うエンジンの構造に近い、という利点がある。
 
+### 背景: `grouped.as` を必須にした
+
+別名スロット `as:` の省略可否は一本の規則で引く:
+
+> `as:` は、ソースを同じマッピングに書く句（`flatten.of` / `join.to`）では省略可。書かない句（`grouped`）では必須。
+
+`flatten` / `join` の `as` が省略できるのは、命名対象が同じマッピングの `of:` / `to:` の要素そのものだからで、その名前を既定値にしても意味が外れない。`grouped` が束ねるのはパイプラインを通過した行であって `from:` の行ではない。
+
 ### 背景: `select` は欠落キーを出力から省く
 
 `select` の各 `item:` は、その attribute がレコードに存在しないとき (= schema 上 optional な属性で値が省略されているとき) は **出力レコードから当該キーを省く**。エラーにはしない。
@@ -228,7 +236,7 @@ docs の説明は「出力先のパス。通常は単一の名前」程度に留
 
 #### 実装の段階
 
-三つのタスクに分ける。各段の中間状態は安全で、`pluck` の longest-first は上位互換（キー全体を試してから降りる）なので、E14 の後は常に降りる側に落ちて挙動が変わらない。前段として [E16](#grouped-の-as-必須化-e16) を先に入れる。
+三つのタスクに分ける。各段の中間状態は安全で、`pluck` の longest-first は上位互換（キー全体を試してから降りる）なので、E14 の後は常に降りる側に落ちて挙動が変わらない。
 
 - **E13** — 出力パスの重なり検出。この時点ではドットはまだリテラル扱いなので、既存の穴（`select` の重複 `as`、`grouped` の `as` と `by` の同名）だけが塞がる。showcase は不要（エラーになる例は置けない）
 - **E14** — 書き側をパス解釈に変更。showcase に singleton オブジェクトを足して入れ子出力を実機で確認する（現在どの showcase にも singleton が無い）
@@ -249,7 +257,7 @@ offender をヘルパ側に持たせないのは、`grouped` の `by` 側エッ�
 
 副産物として、完全一致の検査だけで「方針」節の例 1（`item: hobby` の上に `item: hobby.level`）と例 2（`as: a` の上に `as: a.level`）は塞がる。`SelectItem.derive` がドット付き兄弟を連れて行くので、どちらも同名のエッジを二つ出すため。素通りするのは例 3（`as: b` がスカラの上に `as: b.c`）だけで、これは E14。
 
-**offender は衝突した `as` を指す。** これが E16 を前段に置く理由で、E16 が無いと `grouped` の合成 `as` だけが YAML の位置情報を持たず、衝突時に診断層へ渡って内部エラーになる。その場合は offender を `by` 側に倒すか合成時に `from` の位置を引き継ぐかの選択を迫られるが、前者は「直す先は `as` の明示なのに `by` を指す」、後者は「直せない `from:` の行を指す」で、どちらも据わりが悪い。E16 は選択そのものを消す。
+**offender は衝突した `as` を指す。**
 
 #### 波及
 
@@ -258,52 +266,3 @@ offender をヘルパ側に持たせないのは、`grouped` の `by` 側エッ�
 - `docs/reference/cli.md` の tap: jq でクォートの要るキーが無くなる（記述の追加は不要）
 - [json-data-model.md](../40-communication/10-json-data-model.md): データキーの不変条件を Internal Design に移す
 - M13 との依存は解消（ルート singleton の吸収は既にドット = 入れ子の規約に乗っている）。J5 の前提は E14 + M13
-
-### grouped の as 必須化 (E16)
-
-#### 問題
-
-`grouped.as` はグループの内側の配列（束ねられたメンバー行）に付ける名前で、省略すると `from:` の最終セグメントから合成される。三つの別名スロットのうち、このデフォルトだけが意味的に外れうる。
-
-| 句 | 名前空間のソース | `as` の省略時 | 外れる条件 |
-|---|---|---|---|
-| `flatten` | `of:`（同じマッピング） | `of` | 無い。要素は `of` の要素そのもの |
-| `join` | `to:`（同じマッピング） | `to` | 無い。行は `to` の行そのもの |
-| `grouped` | パイプラインを通過した行 | `from:` の最終セグメント | `flatten` / `join` が挟まると、束ねる行は `from` の行ではない |
-
-dev-docs の `roadmap` ビューが実例:
-
-```yaml
-roadmap:
-  from: categories
-  flatten: { of: tasks, as: task }
-  grouped:
-    by: task.phase
-    as: tasks      # 省略すると "categories" になる
-```
-
-束ねられているのは flatten 後の (category × task) 行で、これを `categories` と呼ぶと、同じ category が複数回現れる配列に category の名が付く。省略してもビルドは通り、テンプレートは `row.categories` で読めてしまう。**黙って意味の外れた名前が採られる**のが問題で、ソースを直せば全ページの名前が揃うという価値に逆行する。
-
-合成値であることの副作用として、この `as` だけが YAML の位置情報を持たない（`str.rsplit` が素の `str` を返す）。現在は「合成された `as` はカタログ検証の対象ではないので診断が参照しない」という前提で許容しているが、E13 が出力キーの衝突を検査対象にするとこの前提が崩れる。
-
-#### 方針
-
-`as:` を必須にし、合成デフォルトを廃止する。省略可・必須の線は一本の規則で引ける:
-
-> `as:` は、ソースを同じマッピングに書く句（`flatten.of` / `join.to`）では省略可。書かない句（`grouped`）では必須。
-
-`grouped` だけ必須なのは不整合ではなく、この規則の帰結。読み手が離れた `from:` を見上げて最終セグメントを暗算する必要も消える（`from: __definition.views` → `views` のようなドット入りを含めて）。
-
-#### 背景: なぜ別名の口を grouped に残し、`from:` に移さないのか
-
-「配列の中身は `from` の行なのだから、名前も `from:` 側に書かせるべき」という案がありうる。採らない。`from:` の時点では束ねられる行の形がまだ決まっていないからで、`flatten` / `join` が後から変える。roadmap の行を名付けられるのは flatten を通った後であって、`from: categories` の位置ではない。
-
-`from.as` は `grouped` が無い限り観測できない値にもなる。ある句の唯一の効果が別の句の有無に依存するのは DSL として筋が悪い。名前空間を作った句がそれを命名する（`flatten` / `join` と同じ形）ほうが一貫する。
-
-#### 波及
-
-- **breaking**: `grouped.as` を省略した既存 view はエラーになる。移行は一行の追加。リポジトリ内の該当は showcase の `by_role` / `albums_by_genre` の 2 件（`roadmap` は既に明示している）。内蔵ビューに `grouped` の利用は無い。PR に `Release-Highlight: breaking`
-- `view-schema.yaml`: `grouped` の `required` に `as` を足し、`as` の description から省略時の記述を削る
-- クエリ正規化: `grouped` の合成を削除する。あわせて正規化が `from` を受け取る必要も無くなる
-- `docs/reference/view.md` の grouped 節: 必須に変更し、省略時デフォルトの記述と出力例のコメントを直す
-- E13 の前段。これが入ると derive に届く書き側の識別子はすべて利用者が書いたものになり、衝突診断の offender が一意に決まる
