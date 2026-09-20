@@ -724,16 +724,9 @@ categories:
           判定で task 化。
         phase: 18
       S7:
-        title: 二文書 showcase のモデル構築
-        note: |
-          showcase プロジェクトを新設し、schema.yaml の素案をエンティティ単位の
-          解像度 (エンティティ / x-ref / 主要属性) で書く。42010 の概念モデルを
-          上位の骨に、調査メニューをチェックリストとしてテーラリング。description
-          に参照元を補記。器 (sbdb.yaml / 最小テンプレート) の敷設もここ。
-          Done = build が通り __entity_defs / ER メタビューでモデルが読めること。
-          詳細は design/showcase/system-dev-docs.md の Proposals 参照。
+        title: 二文書 showcase のモデル構築 (showcase/system-dev-docs-ja)
         phase: 16
-        proposal: 20-design/80-showcase/10-system-dev-docs#s7-モデル構築
+        done: true
       S8:
         title: モデルと目次の突合・確定目次仕様
         note: |
