@@ -137,7 +137,7 @@ properties:
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # 画面 – エンティティ
+  # 画面 – エンティティ – データアクセス
   # ---------------------------------------------------------------------------
 
   画面:
@@ -237,7 +237,7 @@ properties:
 
   エンティティ:
     type: object
-    description: "データモデル (論理設計) 上のエンティティの集合。項目は IPA ガイドデータモデル編のエンティティ一覧 / エンティティ定義 / CRUD 図を元に絞り込んだもの。設計書のデータ設計章 (ER 図 / エンティティ定義 / CRUD マトリクス) のソース。物理設計 (テーブル定義) は別レイヤであり、ここでは論理型のみを持つ。マップのキーがエンティティ ID。英名: entities"
+    description: "データモデル (論理設計) 上のエンティティの集合。項目は IPA ガイドデータモデル編のエンティティ一覧 / エンティティ定義 / CRUD 図を元に絞り込んだもの。設計書のデータ設計章 (ER 図 / エンティティ定義) のソースで、CRUD マトリクスは データアクセス と組み合わせて導出する。物理設計 (テーブル定義) は別レイヤであり、ここでは論理型のみを持つ。マップのキーがエンティティ ID。英名: entities"
     additionalProperties:
       type: object
       description: "1 つのエンティティを表すレコード。英名: entity"
@@ -293,22 +293,28 @@ properties:
                     description: "参照先エンティティ内の属性名。英名: attribute"
                 required: [エンティティ, 属性]
             required: [名前, 型]
-        操作:
-          type: array
-          description: "このエンティティに対してユースケースが行う操作の一覧。IPA の CRUD 図 (行 = 業務、列 = エンティティ、セル = C/R/U/D) の元データで、CRUD マトリクスはここから導出する。英名: operations"
-          items:
-            type: object
-            description: "ユースケースからこのエンティティへの操作 1 件。英名: operation"
-            additionalProperties: false
-            properties:
-              ユースケース:
-                type: string
-                description: "操作を行うユースケースの ID。英名: use_case_id"
-                x-ref:
-                  entity: ユースケース
-              操作:
-                type: string
-                description: "操作種別を C / R / U / D の文字の並びで表す (例: CR)。英名: operation"
-                pattern: "^[CRUD]+$"
-            required: [ユースケース, 操作]
       required: [名前, 説明, 種別, 属性]
+
+  データアクセス:
+    type: array
+    description: "ユースケースがエンティティに対して行うデータアクセスの集合。ArchiMate の access relationship (振る舞い要素 → 受動構造要素、属性 accessType) に対応し、IPA の CRUD 図ではセルに当たる。ユースケース × エンティティ の関連レコードで、どちらの部分でもないため独立のエンティティとして持つ。自然な単一キーが無いのでマップではなく配列で持つ (music showcase の playlist_tracks と同じ理由)。CRUD マトリクス (行 = ユースケース、列 = エンティティ) はここから導出する。英名: data_access"
+    items:
+      type: object
+      description: "ユースケースからエンティティへのデータアクセス 1 件。同じ (ユースケース, エンティティ) の組は 1 件にまとめる。英名: data_access"
+      additionalProperties: false
+      properties:
+        ユースケース:
+          type: string
+          description: "操作を行うユースケースの ID。英名: use_case_id"
+          x-ref:
+            entity: ユースケース
+        エンティティ:
+          type: string
+          description: "操作対象のエンティティの ID。英名: entity_id"
+          x-ref:
+            entity: エンティティ
+        操作:
+          type: string
+          description: "アクセスの種別を C / R / U / D の文字の並びで表す (例: CR)。粒度 (C/R/U/D か、ArchiMate 同様の read / write か) は章別タスクで決める。英名: operation"
+          pattern: "^[CRUD]+$"
+      required: [ユースケース, エンティティ, 操作]
