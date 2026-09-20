@@ -96,6 +96,10 @@ class TestBuildViewSchema:
         data = {"q": {"from": "items", "select": [{"as": "alias"}]}}
         assert len(self._validate(data)) >= 1
 
+    def test_grouped_missing_as_rejected(self) -> None:
+        data = {"q": {"from": "items", "grouped": {"by": "category"}}}
+        assert len(self._validate(data)) >= 1
+
     def test_unicode_query_name_accepted(self) -> None:
         data = {"クエリ": {"from": "items"}}
         assert self._validate(data) == []
@@ -323,6 +327,7 @@ class TestIdentifierDiagnostics:
             "  from: items\n"  # line 2
             "  grouped:\n"  # line 3
             "    by: nope\n"  # line 4, value column 9
+            "    as: members\n"
             "  select:\n"
             "    - item: phase\n"
         )
