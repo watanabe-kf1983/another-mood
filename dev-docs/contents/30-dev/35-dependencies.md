@@ -22,7 +22,7 @@
 
 ## タスク開始の儀式
 
-`make upgrade-deps` は uv.lock を制約が許す最新へ振り直す。
+`make upgrade-deps` は uv.lock を制約が許す最新へ振り直す。作業ツリーがクリーンならどのブランチからでも実行でき、解決は `origin/main` を土台に行って元いたブランチへ戻す。
 
 - diff なし → そのままタスクに着手する
 - diff あり → スクリプトが `deps/lock-refresh-<date>` ブランチで lock 単独 PR を作る。CI 緑を確認して `gh pr merge <branch> --squash --delete-branch` で merge してから着手する。赤なら修正 or 除去条件付き cap で対応する

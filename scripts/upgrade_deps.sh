@@ -3,21 +3,27 @@
 # Merging is manual: check CI, then `gh pr merge <branch> --squash --delete-branch`.
 set -euo pipefail
 
-branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$branch" != "main" ]; then
-    echo "error: run from main (current branch: $branch)" >&2
-    exit 1
-fi
 if [ -n "$(git status --porcelain)" ]; then
     echo "error: working tree is not clean" >&2
     exit 1
 fi
+
+original=$(git rev-parse --abbrev-ref HEAD)
+pr_branch="deps/lock-refresh-$(date -u +%Y-%m-%d)"
+if git show-ref --verify --quiet "refs/heads/$pr_branch"; then
+    echo "error: branch $pr_branch already exists" >&2
+    exit 1
+fi
+
+git fetch origin
+git switch --detach origin/main
 
 uv lock --upgrade
 uv sync
 
 if git diff --quiet -- uv.lock; then
     echo "uv.lock is already fresh."
+    git switch "$original"
     exit 0
 fi
 
@@ -26,17 +32,17 @@ fi
 if [ "$(git status --porcelain)" != " M uv.lock" ]; then
     echo "error: unexpected changes besides uv.lock:" >&2
     git status --porcelain >&2
+    echo "left on detached origin/main for inspection (was on $original)" >&2
     exit 1
 fi
 
-pr_branch="deps/lock-refresh-$(date -u +%Y-%m-%d)"
-git checkout -b "$pr_branch"
+git switch -c "$pr_branch"
 git commit -m "Refresh uv.lock (routine dependency upgrade)" -- uv.lock
 git push -u origin "$pr_branch"
 gh pr create \
     --title "Refresh uv.lock to the latest dependency versions" \
     --body "Routine lock refresh: re-resolve all dependencies to the latest versions our constraints allow. No constraint changes."
-git checkout main
+git switch "$original"
 
 echo
 echo "PR created. After CI passes, merge with:"
