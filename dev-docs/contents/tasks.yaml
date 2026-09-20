@@ -286,14 +286,8 @@ categories:
         phase: 18
       E16:
         title: grouped の as 必須化 (合成デフォルトの廃止)
-        note: >-
-          as 省略時に from の最終セグメントから合成するデフォルトを廃し、明示を
-          必須にする。flatten / join のデフォルトと違い、flatten / join を挟むと
-          束ねる行が from の行でなくなるため、このデフォルトだけが黙って外れた
-          名前を採る。合成値は YAML の位置情報も落とすので、廃止すると E13 の
-          衝突診断が offender を一意に選べる。E13 の前段。
-        proposal: 20-design/60-composer/10-query-dsl-spec#grouped-の-as-必須化-e16
         phase: 18
+        done: true
 
   F:
     title: メタドキュメンテーション拡張
