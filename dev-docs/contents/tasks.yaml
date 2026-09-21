@@ -268,7 +268,8 @@ categories:
         note: >-
           別名スロットのドットを入れ子として解釈し、view 出力からドット入りキーを
           排する。カタログのドットが必ず入れ子を意味するようになり、カタログだけから
-          JSON の形が復元可能になる (J5 の前提)。E13 が前提。
+          JSON の形が復元可能になる (J5 の前提)。E13 と M14 が前提 (M14 が無いと
+          読み側が深さ 2 で切れたままで、不変条件が書き側でしか立たない)。
         proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e14-e15
         phase: 18
       E15:
@@ -494,6 +495,15 @@ categories:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
         note: E14 とは独立に着手できる。E17 (合成ビュー) の前提
         proposal: 20-design/40-communication/10-json-data-model#ルート-entity-の導入-m13
+        phase: 18
+      M14:
+        title: singleton 平坦化の 1 段制限の撤廃
+        note: >-
+          singleton 配下の singleton が catalog に現れず、読み側の DSL が
+          深さ 2 で届かない (`item: メタ.責任者.名前` が unknown attribute、
+          `from:` で深い collection に到達できない)。_collect_edges の
+          singleton 分岐を再帰化する。E14 の前提で、M13 とは独立。
+        proposal: 20-design/40-communication/10-json-data-model#singleton-平坦化の-1-段制限の撤廃-m14
         phase: 18
 
   N:
