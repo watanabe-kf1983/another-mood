@@ -587,6 +587,12 @@ class TestGroupedDerive:
             """
         )
 
+    def test_raises_when_alias_collides_with_grouping_key(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
+        with pytest.raises(QueryDeriveError, match="collides with the grouping key"):
+            Grouped(by="phase", as_="phase").derive(leaf)
+
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
@@ -664,6 +670,31 @@ class TestSelectDerive:
                   - { id: title, type: string, required: true }
             """
         )
+
+    def test_raises_on_duplicate_alias(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
+        select = Select(
+            items=[
+                SelectItem(item="title", as_="label"),
+                SelectItem(item="phase", as_="label"),
+            ]
+        )
+        with pytest.raises(QueryDeriveError, match="collides with an earlier item"):
+            select.derive(leaf)
+
+    def test_allows_an_alias_that_is_only_a_prefix_of_another(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
+        # Dotted aliases are literal keys, so ``a`` and ``a.b`` are two
+        # distinct output keys and neither overwrites the other.
+        select = Select(
+            items=[
+                SelectItem(item="title", as_="a"),
+                SelectItem(item="phase", as_="a.b"),
+            ]
+        )
+        assert [e.name for e, _ in select.derive(leaf).children] == ["a", "a.b"]
 
 
 class TestSelectFromDict:
