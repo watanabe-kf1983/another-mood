@@ -474,6 +474,65 @@ class TestToCatalogNode:
             ])),
         ]
 
+    def test_nested_singleton_flattens_at_any_depth(self) -> None:
+        """Singleton under a singleton inlines too — one dotted attribute per level.
+
+        The flattening budget is not spent after one level: every
+        singleton on the way down contributes its own ``object``
+        attribute plus dotted attributes for its sub-properties.
+        """
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("meta", True, ObjectNode(properties=[
+                SchemaProperty("owner", True, ObjectNode(properties=[
+                    SchemaProperty("name", True, ValueNode(type="string")),
+                    SchemaProperty("team", False, ObjectNode(properties=[
+                        SchemaProperty("code", True, ValueNode(type="string")),
+                    ])),
+                ])),
+            ])),
+        ]))
+        assert dc.flatten_tree(to_catalog_node(tree), "screens") == [
+            dc.Entity("screens", item_type=dc.ObjectType("screens.item", origin_item_type="screens.item", attributes=[
+                dc.Attribute("meta",                 "object", True),
+                dc.Attribute("meta.owner",           "object", True),
+                dc.Attribute("meta.owner.name",      "string", True),
+                dc.Attribute("meta.owner.team",      "object", False),
+                dc.Attribute("meta.owner.team.code", "string", True),
+            ])),
+        ]
+
+    def test_collection_under_nested_singleton_creates_child_entity(self) -> None:
+        """An object[] two singletons down is walkable, like one singleton down.
+
+        Guards the one entity the recursion actually adds: the child
+        entity hangs off the fully-dotted edge name.
+        """
+        tree = ArrayNode(child=ObjectNode(properties=[
+            SchemaProperty("meta", True, ObjectNode(properties=[
+                SchemaProperty("owner", True, ObjectNode(properties=[
+                    SchemaProperty("history", False, ArrayNode(child=ObjectNode(properties=[
+                        SchemaProperty("date", True, ValueNode(type="string")),
+                    ]))),
+                ])),
+            ])),
+        ]))
+        assert dc.flatten_tree(to_catalog_node(tree), "screens") == [
+            dc.Entity("screens", item_type=dc.ObjectType("screens.item", origin_item_type="screens.item", attributes=[
+                dc.Attribute("meta",       "object", True),
+                dc.Attribute("meta.owner", "object", True),
+                dc.Attribute("meta.owner.history", "object[]", False,
+                             child_entity="screens.meta.owner.history",
+                             child_item_type="screens.item.meta.owner.history.item"),
+            ])),
+            dc.Entity(
+                "screens.meta.owner.history",
+                item_type=dc.ObjectType("screens.item.meta.owner.history.item", origin_item_type="screens.item.meta.owner.history.item", attributes=[
+                    dc.Attribute("date", "string", True),
+                ]),
+                parent_entity="screens",
+            ),
+        ]
+
     def test_x_ref_propagates_to_attribute(self) -> None:
         """SchemaProperty.x_ref (raw mapping) becomes dc.XRef at the catalog boundary;
         omitted 'attribute' is filled with the implicit-id default."""
