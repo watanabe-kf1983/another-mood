@@ -4,6 +4,10 @@
 # 参照 (x-ref) の向きは「下流 (設計書のソース) → 上流 (要求仕様書のソース)」のみ。
 # 上流の定義は下流を知らずに閉じる。設計側だけを別の担当者や AI が書く運用でも、
 # 要求側のデータが設計の変更に引きずられないようにするため。
+#
+# 説明系の属性 (概要 / 記述 / 理由 / 条件 / 操作 / 応答 等) はすべて plain text。
+# テンプレートは値の Markdown 記号をエスケープして出すので、値の中の Markdown は
+# 効かない。段落や箇条書きを要する説明は prose レコード (contents/*.md) に置く。
 type: object
 additionalProperties: false
 properties:
@@ -56,7 +60,7 @@ properties:
 
   ユースケース:
     type: object
-    description: "システムが提供する業務単位の機能の集合。項目は IPA 機能要件の合意形成ガイドの「システム化業務説明」(入出力データ / 基本・例外シナリオ / 事前・事後条件) を元に、ユースケース記述として再構成したもの。要求仕様書の機能要求の単位であり、設計書の機能一覧と CRUD 図の行にもなる。マップのキーがユースケース ID。英名: use_cases"
+    description: "システムが提供する業務単位の機能の集合。項目は IPA 機能要件の合意形成ガイドの「システム化業務説明」(入出力データ / 基本・例外シナリオ / 事前・事後条件) を元に、ユースケース記述として再構成したもの。要求仕様書の機能要求の単位であり、設計書の CRUD マトリクスの行にもなる。マップのキーがユースケース ID。英名: use_cases"
     additionalProperties:
       type: object
       description: "1 つのユースケースを表すレコード。英名: use_case"
@@ -70,7 +74,7 @@ properties:
           description: "ユースケースの目的と結果を 1〜2 文で説明する。英名: summary"
         アクター:
           type: array
-          description: "このユースケースを起動・参加するアクターの一覧。英名: actors"
+          description: "このユースケースの主アクター (目標を持ってユースケースを開始する役割) の一覧。同じ目標を複数の役割が持つときは複数になる。シナリオの操作はすべて主アクターのもの。副アクター (システムがユースケースの途中でサービスを借りる相手。決済代行など) は本 showcase には登場せず、要る場合は別の属性として足し、そのやり取りはシナリオの応答の文中に書く。英名: actors"
           items:
             type: object
             description: "ユースケースとアクターの対応 1 件。英名: actor"
@@ -89,12 +93,36 @@ properties:
           type: string
           description: "ユースケース正常終了時に成り立つ条件。英名: postcondition"
         基本シナリオ:
-          type: string
-          description: "正常系の手順。構造化 (ステップ配列化) は章別タスクで検討する。英名: main_scenario"
-        例外シナリオ:
-          type: string
-          description: "例外系の手順と分岐条件。構造化は章別タスクで検討する。英名: exception_scenario"
-      required: [名前, 概要, アクター]
+          type: array
+          description: "正常系の手順。主アクターの操作とシステムの応答の対を時系列に並べたもので、番号は文書化時に付く。英名: main_scenario"
+          items:
+            type: object
+            description: "1 つのステップ。英名: step"
+            additionalProperties: false
+            properties:
+              操作:
+                type: string
+                description: "主アクターの操作。主語 (主アクター) は書かない (例: 仕入先を選ぶ)。英名: action"
+              応答:
+                type: string
+                description: "操作に対するシステムの応答。副アクターとのやり取りもここに書く (例: 決済代行に承認を依頼し、結果を受け取る)。英名: response"
+              例外:
+                type: array
+                description: "このステップで起こりうる例外の一覧。ステップの子として持つので、ステップ番号での参照は要らない。英名: exceptions"
+                items:
+                  type: object
+                  description: "1 つの例外。英名: exception"
+                  additionalProperties: false
+                  properties:
+                    条件:
+                      type: string
+                      description: "例外が起きる条件 (例: ISBN が未登録である)。英名: condition"
+                    応答:
+                      type: string
+                      description: "その条件でのシステムの応答 (例: 登録を拒否し、先に書籍登録を促す)。英名: response"
+                  required: [条件, 応答]
+            required: [操作, 応答]
+      required: [名前, 概要, アクター, 基本シナリオ]
 
   アクター:
     type: object
