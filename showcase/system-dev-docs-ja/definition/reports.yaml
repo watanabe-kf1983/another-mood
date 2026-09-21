@@ -4,9 +4,10 @@
 # under output/{edition}/ and renders the same data, differing only in
 # `file_per` (which ObjectType IDs are split into their own pages).
 #
-#   web  — browse online: the glossary (the 用語 collection) is split into
-#          its own page; both documents stay on index.md until composite
-#          views let a document be a node of its own.
+#   web  — browse online: the glossary (the 用語 collection) and each
+#          use-case description (a 用語 record) are split into their own
+#          pages; both documents stay on index.md until composite views
+#          let a document be a node of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
@@ -16,5 +17,6 @@ editions:
   web:
     file_per:
       - 用語.item[]
+      - ユースケース.item
   book:
     file_per: []
