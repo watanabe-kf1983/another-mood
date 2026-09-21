@@ -378,6 +378,63 @@ _CASES = [
         """,
         id="object[] inside singleton — child entity at dotted path",
     ),
+    pytest.param(
+        """
+        type: object
+        properties:
+          screens:
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                meta:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    owner:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        name: { type: string }
+                        history:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              date: { type: string }
+        """,
+        """
+        entities:
+          - id: screens
+            builtin: false
+            view: false
+            item_type:
+              id: screens.item
+              origin_item_type: screens.item
+              attributes:
+                - { id: id, type: string, required: true }
+                - { id: meta, type: object, required: false }
+                - { id: meta.owner, type: object, required: false }
+                - { id: meta.owner.name, type: string, required: false }
+                - id: meta.owner.history
+                  type: "object[]"
+                  required: false
+                  child_entity: screens.meta.owner.history
+                  child_item_type: screens.item.meta.owner.history.item
+          - id: screens.meta.owner.history
+            builtin: false
+            view: false
+            parent_entity: screens
+            item_type:
+              id: screens.item.meta.owner.history.item
+              origin_item_type: screens.item.meta.owner.history.item
+              attributes:
+                - { id: date, type: string, required: false }
+        """,
+        id="singleton under singleton — dotted attributes at depth 2",
+    ),
 ]
 
 

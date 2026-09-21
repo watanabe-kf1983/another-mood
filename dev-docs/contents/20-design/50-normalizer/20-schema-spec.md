@@ -125,6 +125,6 @@ properties:
           additionalProperties: { type: object, properties: { ... } }
 ```
 
-シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は現状 entity 化されない (親の attribute としてインライン化される)。entity 化されるのは collection (`additionalProperties` / `items`) のみ。なお、シングルトン配下にさらに singleton がネストする場合、2 段以上深い構造は catalog に現れない (1 段平坦化のみ)。これは E10 (#196) が「今回は変えない」と線を引いた既存挙動で、当時の説明にある「entity の濫造」は隣接する文 (singleton を entity 化するか否か) の語彙を借りたものであり、孫エッジを出すか否かという論点にはかかっていない。この制限は [M14](../40-communication/10-json-data-model.md#singleton-平坦化の-1-段制限の撤廃-m14) で撤廃する。
+シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は entity 化されない。シングルトン自身が `object` 型の attribute になり、配下のプロパティが `meta.owner` のようなドット名の attribute として親エンティティに載る。entity 化されるのは collection (`additionalProperties` / `items`) のみで、シングルトン配下の collection はドット名のパスで entity になる (`categories.meta.tasks`)。
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
