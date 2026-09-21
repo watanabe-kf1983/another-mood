@@ -127,6 +127,9 @@ properties:
         用語:
           type: string
           description: "用語の表記。英名: term"
+        読み:
+          type: string
+          description: "表記のひらがな読み (例: しょせき)。用語集を五十音順に並べるためのソートキーで、漢字表記からは並べられないため持つ。英名: reading"
         定義:
           type: string
           description: "用語の定義文。英名: definition"
@@ -137,7 +140,7 @@ properties:
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # 画面 – エンティティ – データアクセス
+  # 画面 – エンティティ – データアクセス – 設計判断
   # ---------------------------------------------------------------------------
 
   画面:
@@ -318,3 +321,36 @@ properties:
           description: "アクセスの種別を C / R / U / D の文字の並びで表す (例: CR)。粒度 (C/R/U/D か、ArchiMate 同様の read / write か) は章別タスクで決める。英名: operation"
           pattern: "^[CRUD]+$"
       required: [ユースケース, エンティティ, 操作]
+
+  設計判断:
+    type: object
+    description: "設計書の設計方針節に列挙する設計判断とその理由の集合。ISO/IEC/IEEE 42010 が Architecture Description の内容要素として持つ architecture decision / rationale に対応する。根拠になった要求への参照 (下流 → 上流) を持ち、要求と設計方針の文書横断のトレースの元になる。マップのキーが設計判断 ID。英名: design_decisions"
+    additionalProperties:
+      type: object
+      description: "1 つの設計判断を表すレコード。英名: design_decision"
+      additionalProperties: false
+      properties:
+        題名:
+          type: string
+          description: "設計判断を一覧で一行で指すための見出し (例: 在庫数は入荷・販売の履歴から導出せず実数で持つ)。英名: title"
+        判断:
+          type: string
+          description: "何をどう決めたか (42010 の architecture decision)。英名: decision"
+        理由:
+          type: string
+          description: "その判断を選んだ理由と退けた代替案 (42010 の rationale)。英名: rationale"
+        根拠要求:
+          type: array
+          description: "この判断の根拠になった要求の一覧。要求に由来しない判断 (技術上の慣行など) では省略する。英名: basis_requirements"
+          items:
+            type: object
+            description: "設計判断と要求の対応 1 件。英名: requirement"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "要求の ID。英名: id"
+                x-ref:
+                  entity: 要求
+            required: [ID]
+      required: [題名, 判断, 理由]

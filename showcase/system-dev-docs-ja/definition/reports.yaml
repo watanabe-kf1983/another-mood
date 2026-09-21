@@ -1,5 +1,20 @@
 # Report output configuration. See the Another Mood docs on paging.
 #
-# `file_per:` lists ObjectType IDs whose nodes are split into separate
-# files. An empty list keeps everything in a single index.md.
-file_per: []
+# This report ships two editions (form B): each is published side by side
+# under output/{edition}/ and renders the same data, differing only in
+# `file_per` (which ObjectType IDs are split into their own pages).
+#
+#   web  — browse online: the glossary (the 用語 collection) is split into
+#          its own page; both documents stay on index.md until composite
+#          views let a document be a node of its own.
+#   book — read as one bound document: empty file_per keeps everything
+#          inlined into a single index.md.
+#
+# Prose chapters are not split in either edition: they are inlined where
+# the document shell embeds them (`| render("prose.md")`).
+editions:
+  web:
+    file_per:
+      - 用語.item[]
+  book:
+    file_per: []
