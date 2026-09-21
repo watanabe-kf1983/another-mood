@@ -101,54 +101,6 @@ view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped
 
 [E17 (合成ビュー)](../60-composer/10-query-dsl-spec.md#合成ビュー-e17) はトップレベル・シングルトンのカタログ表現を前提にするので、M13 は E17 の前段でもある。合成ビューを `__root` の属性として吸収するか、view 同様に独立の項目として emit するかは E17 側で決める。
 
-### singleton 平坦化の 1 段制限の撤廃 (M14)
-
-`schema_tree._collect_edges` は singleton（record 形）を親エンティティの属性としてインライン化するが、**1 段だけ**である。singleton の下にさらに singleton があると、孫はカタログに現れない。配列が挟まると `to_catalog_node` で再帰が入り直すため平坦化の予算がリセットされる、という非対称もある（`テーブル.列[].参照.テーブル` は出るが `画面.メタ.責任者.名前` は出ない）。
-
-実測（`画面` 直下に `メタ.責任者.{名前, 履歴[]}` を置いたスキーマ）:
-
-```
-現行:   画面 の attributes = [id, メタ(object), メタ.責任者(object)]        ← ここで打ち切り
-        entities = [画面]
-
-再帰化: 画面 の attributes = [id, メタ, メタ.責任者, メタ.責任者.名前,
-                             メタ.責任者.履歴(object[])]
-        entities = [画面, 画面.メタ.責任者.履歴]
-```
-
-実害は三つ:
-
-- **読み側の DSL が届かない**: `select: - item: メタ.責任者.名前` は、データに値があってもエッジが無いので `unknown attribute` で落ちる。`where` / `sort` / `join.on` も同じ
-- **深い collection が walk できない**: `from: 画面.メタ.責任者.履歴` に到達できない。E10 が深さ 1 で達成した walkability が深さ 2 で切れている
-- **カタログから JSON の形が復元できない**: `メタ.責任者` は「type=object・子エッジ無し」としか言えず、*空オブジェクト* なのか *中身をカタログが知らない* のか区別できない。E14 がドットの**解釈**の曖昧さを消しても、この**情報の欠落**は別口で残り、J5 が塞がったままになる
-
-**案**: `_collect_edges` の singleton 分岐を再帰化し、任意の深さの singleton をドット名エッジとしてインライン化する。
-
-#### 背景: 「entity の濫造」は何を指していたか
-
-制限は E10 (#196) が導入したものではなく、E10 が「今回は変えない」と線を引いた既存挙動である。E10 のコミット本文は *"Scalar and nested-singleton sub-properties **continue to** flatten as opaque attributes — deep nested-object structure is intentionally not extended into the catalog, to keep entity proliferation under control"* と書く。[schema-spec.md](../50-normalizer/20-schema-spec.md) の対応する一文も同じ PR で、隣接する「シングルトンは entity 化されない」という文の末尾に追記されたものである。つまり「entity の濫造」という語彙は隣の文（singleton を entity にするか否か）から借りたもので、孫エッジを出すか否かという論点には元々かかっていない。
-
-再帰化して実際に増えるものを計測すると:
-
-- スカラの孫 → ドット名の属性が増えるだけ。`Node.is_entity` は「子を持つか」なので entity は増えない
-- **singleton の 2 段以上下にある配列 → entity が 1 件増える**。これが「濫造」の実体
-- showcase 4 本と dev-docs では増減ゼロ（singleton 配下に singleton を置いた例が無い）
-
-そして増える唯一の entity は、E10 がまさに「`from: <singleton>.<collection>` で walk できる first-class entity として見せる」と意図的に可視化したのと同種のものである。深さ 1 で見せる価値があると判断したものを深さ 2 で隠す理由は残っていない。
-
-再帰の停止は問題にならない。property 名は schema-schema が `^[\p{L}_][\p{L}\p{N}_]*$` で縛っていてドットを含めないので、どれだけ深くてもドット名の分解は一意である。
-
-#### 波及
-
-- entity と属性が**増える方向**の変化なので breaking ではないが、深い singleton を持つプロジェクトでは entity 一覧・ER 図・`entity_def.md` の出力が変わる
-- `docs/reference/schema.md` の Single-record pattern の記述
-- [schema-spec.md](../50-normalizer/20-schema-spec.md) の 1 段制限の記述を書き換える
-- 確認事項: アンカーパス（[anchor-spec.md](../70-generator/20-anchor-spec.md) の「dict キー（singleton 配下のキー）」）と `data_tree` が、深くなったドット名で破綻しないか
-
-**未決: フィクスチャをどうするか。** showcase 4 本のどれも singleton 配下に singleton を持たないため、再帰化しても差分ゼロで、実機確認の対象が存在しない。showcase に入れ子 singleton を足すか（見本として自然な構造になるかは要検討。構造のためだけに項目を足すのは避けたい）、単体テストのみで済ませるかは着手時に決める。
-
-依存: E14 の前提。M13 とは独立に着手できる（M13 のルート吸収規約は「エンティティ内と同じ吸収規約」を参照しているので、M14 が先に入れば再帰版を自動的に継承する）。
-
 ### tap ドキュメントの JSON Schema 提供 (J5)
 
 `mood tap` の data.json はテンプレートに流し込まれるルートオブジェクトそのものであり、その JSON Schema は tap 消費者（typegen・検証）とテンプレートを書く LLM の両方に効く。データからの探索と違い、レコード 0 件のエンティティ（キーごと消える）や absent な任意項目も語れる。
