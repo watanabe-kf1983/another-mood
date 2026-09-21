@@ -354,6 +354,26 @@ class TestIdentifierDiagnostics:
         assert diags[0].column == 13
         assert "ghost" in diags[0].message
 
+    def test_duplicate_select_alias_points_at_the_later_as_value(
+        self, tmp_path: Path
+    ) -> None:
+        query_yaml = (
+            "labels:\n"  # line 1
+            "  from: items\n"  # line 2
+            "  select:\n"  # line 3
+            "    - item: name\n"  # line 4
+            "      as: label\n"  # line 5
+            "    - item: phase\n"  # line 6
+            "      as: label\n"  # line 7, value column 11
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run(tmp_path, query_yaml)
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].line == 7
+        assert diags[0].column == 11
+        assert "collides with an earlier item" in diags[0].message
+
     def test_multiple_errors_across_queries_are_collected(self, tmp_path: Path) -> None:
         query_yaml = (
             "first:\n"

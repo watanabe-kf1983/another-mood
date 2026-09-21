@@ -113,11 +113,6 @@ class Flatten(QueryNode):
                 f"(type '{edge.type}')",
                 offender=self.of,
             )
-        if self.as_ != self.of and catalog.has_child(self.as_):
-            raise QueryDeriveError(
-                f"flatten alias '{self.as_}' collides with an existing attribute",
-                offender=self.as_,
-            )
         wrapper = replace(
             edge,
             name=self.as_,
@@ -130,7 +125,7 @@ class Flatten(QueryNode):
             (replace(sub_edge, name=f"{self.as_}.{sub_edge.name}"), sub_node)
             for sub_edge, sub_node in child.children
         ]
-        return dc.Node(
+        out = dc.Node(
             metadata=catalog.metadata,
             children=list(
                 chain.from_iterable(
@@ -139,6 +134,12 @@ class Flatten(QueryNode):
                 )
             ),
         )
+        if _duplicate_child_name(out) is not None:
+            raise QueryDeriveError(
+                f"flatten alias '{self.as_}' collides with an existing attribute",
+                offender=self.as_,
+            )
+        return out
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
         other = {k: v for k, v in parent.items() if k != self.of}
@@ -199,18 +200,19 @@ class Merge:
     def derive(self, left: dc.Node, right: dc.Node) -> dc.Node:
         left.require_child(self.on_left)
         right.require_child(self.on_right)
-        if left.has_child(self.right_as):
-            raise QueryDeriveError(
-                f"join alias '{self.right_as}' collides with an existing attribute",
-                offender=self.right_as,
-            )
-        return dc.Node(
+        out = dc.Node(
             metadata=left.metadata,
             children=[
                 *left.children,
                 (dc.Edge(name=self.right_as, type="object[]", required=True), right),
             ],
         )
+        if _duplicate_child_name(out) is not None:
+            raise QueryDeriveError(
+                f"join alias '{self.right_as}' collides with an existing attribute",
+                offender=self.right_as,
+            )
+        return out
 
 
 @dataclass(frozen=True)
@@ -292,7 +294,7 @@ class Grouped(QueryNode):
         return [{self.by: key, self.as_: items} for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        return dc.Node(
+        out = dc.Node(
             children=[
                 catalog.child_entry(self.by),
                 (
@@ -301,6 +303,12 @@ class Grouped(QueryNode):
                 ),
             ],
         )
+        if _duplicate_child_name(out) is not None:
+            raise QueryDeriveError(
+                f"grouped alias '{self.as_}' collides with the grouping key",
+                offender=self.as_,
+            )
+        return out
 
 
 @dataclass(frozen=True)
@@ -348,11 +356,24 @@ class Select(QueryNode):
         ]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        return dc.Node(
+        out = dc.Node(
             children=list(
                 chain.from_iterable(item.derive(catalog) for item in self.items)
             )
         )
+        duplicate = _duplicate_child_name(out)
+        if duplicate is not None:
+            # Read the alias back off the items: the edge name is built by
+            # concatenation, which drops the source position the diagnostic
+            # needs.  The later of the two is the write that overwrites.
+            alias = next(
+                item.as_ for item in reversed(self.items) if item.as_ == duplicate
+            )
+            raise QueryDeriveError(
+                f"select alias '{alias}' collides with an earlier item",
+                offender=alias,
+            )
+        return out
 
     @classmethod
     def from_dict(cls, raw: Sequence[Mapping[str, str]]) -> "Select":
@@ -559,3 +580,13 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
         raise QueryDeriveError(
             "query reference cycle: " + " → ".join(cycle), offender=offender
         ) from exc
+
+
+def _duplicate_child_name(node: dc.Node) -> str | None:
+    """Return the first child edge name that appears twice, or None."""
+    seen: set[str] = set()
+    for edge, _ in node.children:
+        if edge.name in seen:
+            return edge.name
+        seen.add(edge.name)
+    return None
