@@ -563,21 +563,6 @@ categories:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
         phase: 11
         done: true
-      O5:
-        title: "mood watch が SIGTERM で終了すると hugo server が孤児になる"
-        note: |
-          watch は hugo server を子プロセスとして起動し、pipeline/site.py の
-          start_watching が context manager の finally で terminate() する。
-          Ctrl+C (SIGINT) は KeyboardInterrupt として finally を通るが、SIGTERM
-          (kill / pkill、端末やプロセススーパーバイザからの終了) は Python の既定
-          動作で例外を上げずに即終了し finally が走らないため、hugo がポートを
-          掴んだまま残る。次に同じポートで watch を上げると address already in use
-          で起動に失敗し、残った hugo は古い内容を配信し続ける。対処は SIGTERM
-          ハンドラを登録して SIGINT と同じ終了経路 (KeyboardInterrupt 相当の例外か
-          shutdown Event のセット) に流すこと。確認事項: Windows では SIGTERM の
-          ハンドラが呼ばれない (O3 の動作確認の範囲) こと、hugo 自身が SIGTERM を
-          受けた場合を _wait_for_exit が正常終了として扱う既存の規約との整合。
-        phase: 18
 
   P:
     title: テンプレートエンジン拡張
