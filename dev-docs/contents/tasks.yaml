@@ -467,6 +467,7 @@ categories:
     impl_paths:
       - src/another_mood/components/shared/json_data_model.py
       - src/another_mood/components/preprocess/schema_inspector.py
+      - src/another_mood/components/preprocess/schema_catalog.py
       - src/another_mood/components/shared/data_catalog.py
     spec: 20-design/40-communication/10-json-data-model
     tasks:
@@ -505,11 +506,15 @@ categories:
         done: true
       M16:
         title: スキーマ中間木を dc.Node / dc.Edge へ寄せる
+        phase: 18
+        done: true
+      M17:
+        title: カタログが取りこぼすスキーマ注釈を塞ぐ
         note: >-
-          schema_tree の ObjectNode / ArrayNode / ValueNode + SchemaProperty は
-          dc.Node / dc.Edge とほぼ同型で、to_catalog_node はほぼ恒等写像。
-          中間木を畳めるかを見極める。
-        proposal: 20-design/40-communication/10-json-data-model#スキーマ中間木の統合-m16
+          コレクションの外側 (集合) と内側 (レコード) の metadata が 1 スロットに
+          畳まれ、レコード側が落ちる。スカラ map の value に書いた x-ref も
+          載らない。M16 の見極めで洗い出したもので、いずれも M16 以前からの挙動。
+        proposal: 20-design/40-communication/10-json-data-model#カタログが取りこぼすスキーマ注釈-m17
         phase: 18
 
   N:
