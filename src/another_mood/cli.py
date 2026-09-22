@@ -1,11 +1,15 @@
 """CLI entry point."""
 
+import signal
 import socket
 import sys
-from collections.abc import Callable, Sequence
+import threading
+from collections.abc import Callable, Generator, Sequence
+from contextlib import contextmanager
 from datetime import datetime
 from logging import INFO, basicConfig
 from pathlib import Path
+from types import FrameType
 
 import typer
 
@@ -284,7 +288,13 @@ def watch(
         port=port,
     ).with_injected_vars(injected)
     try:
-        with command.watch(config, on_report=_build_listener()) as session:
+        # The handler is installed around the session, not inside it, so a
+        # signal arriving while the preview server is still coming up is
+        # recorded rather than killing the process mid-startup.
+        with (
+            _termination_requested() as terminated,
+            command.watch(config, on_report=_build_listener()) as session,
+        ):
             base = f"http://{_display_host(session.host)}:{session.port}"
             print(f"Server running at {base}/", file=sys.stderr, flush=True)
             print("Press Ctrl+C to stop.", file=sys.stderr, flush=True)
@@ -293,7 +303,7 @@ def watch(
             # thread would block indefinitely. The timeout returns control
             # to the interpreter periodically so pending KeyboardInterrupt
             # can be raised.
-            while not session.shutdown.wait(timeout=0.1):
+            while not terminated.is_set() and not session.shutdown.wait(timeout=0.1):
                 pass
     except UserError as exc:
         print(exc.user_error_message, file=sys.stderr)
@@ -322,6 +332,46 @@ def tap(project_dir: str = typer.Argument(help="Project directory")) -> None:
         raise SystemExit(1)
     document = Path(result.out_dir) / TAP_DOCUMENT_NAME
     print(document.read_text(encoding="utf-8"))
+
+
+# Signals that would otherwise kill the process outright, skipping the cleanup
+# that stops the preview server and leaving it holding the port. SIGINT is not
+# here: Python already turns it into KeyboardInterrupt, which unwinds normally.
+# SIGHUP is Unix-only, and on Windows a SIGTERM handler is never invoked — an
+# external kill there stays unconditional, as it is for every process.
+_TERMINATION_SIGNALS: tuple[signal.Signals, ...] = tuple(
+    getattr(signal, name) for name in ("SIGTERM", "SIGHUP") if hasattr(signal, name)
+)
+
+
+@contextmanager
+def _termination_requested() -> Generator[threading.Event]:
+    """Yield an Event that fires when the process is asked to terminate.
+
+    The handlers only set the flag, leaving the caller to unwind at its own
+    pace: a second signal arriving mid-shutdown cannot then interrupt the
+    cleanup that stops the preview server.
+    """
+    requested = threading.Event()
+
+    def _request(_signum: int, _frame: FrameType | None) -> None:
+        requested.set()
+
+    installed = tuple(
+        (number, signal.signal(number, _request))
+        for number in _TERMINATION_SIGNALS
+        # Leave alone what the process inherited as ignored: `nohup` ignores
+        # SIGHUP so its child outlives the terminal, and handling it here
+        # would quietly undo that promise. Restoring below is for symmetry —
+        # the process is on its way out either way, but a context manager
+        # that leaves handlers behind is a trap for its next caller.
+        if signal.getsignal(number) is not signal.SIG_IGN
+    )
+    try:
+        yield requested
+    finally:
+        for number, previous in installed:
+            signal.signal(number, previous)
 
 
 _WILDCARD_BIND_HOSTS = frozenset({"0.0.0.0", "::", "[::]"})

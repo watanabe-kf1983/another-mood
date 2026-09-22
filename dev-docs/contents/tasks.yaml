@@ -744,23 +744,22 @@ categories:
         note: |
           設計書のデータ設計章を埋める章別増分。ユースケース × エンティティの
           join から導出される view として実装し、要求仕様書と設計書の二文書同期を
-          実証する。ユースケース・要求 entity の属性詰め (旧 Candidates の
-          ユースケース記述を吸収) もここ。S8 の目次仕様で割り当てた生成部:
-          要求仕様書「はじめに」章の製品概観 (主要機能 = ユースケース、利用者と
-          外部システム = アクター) と、設計書「機能構成」章の機能一覧。
-          F カテゴリから S への移管 (旧 F6)。S7 / S8 が前提。詳細は
-          design/showcase/system-dev-docs.md の Proposals 参照。
+          実証した。ユースケース・要求 entity の属性詰め (旧 Candidates の
+          ユースケース記述を吸収) もここ。章別 PR 1 / 3a / 3b / 6a / 6b で完了
+          (決定事項は design の External Design「S8」の各節)。CRUD で見つかった
+          上流の穴 (保留販売の確認) は design の Candidates。F カテゴリから S への
+          移管 (旧 F6)。
         phase: 16
-        proposal: 20-design/80-showcase/10-system-dev-docs#s3-crud-マトリクス--ユースケース構造化
+        done: true
       S4:
         title: 画面遷移図 + 画面定義テンプレート
         note: |
           設計書の画面設計章を埋める章別増分。S7 の画面・遷移 entity を属性レベル
           まで詰め、Mermaid stateDiagram-v2 で遷移図を描く。stateDiagram の
-          Mermaid 適合性実機検証も兼ねる。S8 の目次仕様で割り当てた生成部:
-          設計書「コンテキスト」章の外部システム関連図 (アクター (種別 外部システム)
-          × ユースケース から導出)。S7 / S8 が前提。詳細は
-          design/showcase/system-dev-docs.md の Proposals 参照。
+          Mermaid 適合性実機検証も兼ねる。S8 の目次仕様で割り当てた生成部のうち、
+          設計書「コンテキスト」章の図は章別 PR 2 で完了 (決定事項は design の
+          External Design「S8」の「コンテキスト」)。残るは画面設計章。S7 / S8 が
+          前提。詳細は design/showcase/system-dev-docs.md の Proposals 参照。
         phase: 16
         proposal: 20-design/80-showcase/10-system-dev-docs#s4-画面遷移図--画面定義
       S5:
@@ -775,9 +774,11 @@ categories:
           (x-ref + 表生成) の実証。要求レコード (S3) が揃ってから。S5 の Candidates
           判定で task 化。S8 の目次仕様で割り当てた生成部: 設計書「はじめに」章の
           設計方針節 (設計判断 entity のサンプルデータと、根拠要求への参照を含む
-          一覧の生成)。要求仕様書 4 章 (検証) は章別 PR 4 で完了 (決定事項は
-          design の External Design「S8」の「検証」)。残りは設計方針節。
+          一覧の生成)。要求仕様書 4 章 (検証) は章別 PR 4 で、設計書の設計方針節は
+          章別 PR 5 で完了 (決定事項は design の External Design「S8」の「検証」
+          「設計方針」)。
         phase: 18
+        done: true
       S7:
         title: 二文書 showcase のモデル構築 (showcase/system-dev-docs-ja)
         phase: 16
