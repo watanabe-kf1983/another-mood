@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 291"
+     width="776" height="291"
+     role="img" aria-label="棚卸画面 の画面レイアウト">
+<rect width="776" height="291" fill="#fff"/>
+<g font-family="sans-serif">
+<rect x="8.5" y="8.5" width="760" height="275" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="9.5" y="9.5" width="758" height="38" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="75.5" y="61.5" width="125" height="26" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="210.5" y="61.5" width="114" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="22" y="100" width="150" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="172" y="100" width="240" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="412" y="100" width="90" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="502" y="100" width="80" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="582" y="100" width="70" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="22" y="125" width="150" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="172" y="125" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="412" y="125" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="502" y="125" width="80" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="510.5" y="128.5" width="63" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="582" y="125" width="70" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="150" width="150" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="172" y="150" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="412" y="150" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="502" y="150" width="80" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="510.5" y="153.5" width="63" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="582" y="150" width="70" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="175" width="150" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="172" y="175" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="412" y="175" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="502" y="175" width="80" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="510.5" y="178.5" width="63" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="582" y="175" width="70" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="553.5" y="212.5" width="78" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="641.5" y="212.5" width="114" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="254.5" width="18" height="12" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="73.5" y="254.5" width="18" height="12" fill="#eee" stroke="#333" stroke-width="1"/>
+<text x="21" y="27.5" font-size="15" fill="#111" dominant-baseline="central" font-weight="700">棚卸画面</text>
+<text x="21" y="74" font-size="12" fill="#111" dominant-baseline="central">開始日時</text>
+<text x="225" y="74" font-size="12" fill="#111" dominant-baseline="central">棚卸を開始する</text>
+<text x="30" y="112" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">ISBN</text>
+<text x="180" y="112" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">書名</text>
+<text x="420" y="112" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">基準在庫数</text>
+<text x="510" y="112" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">実数</text>
+<text x="590" y="112" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">差異</text>
+<text x="568" y="225" font-size="12" fill="#111" dominant-baseline="central">確定する</text>
+<text x="656" y="225" font-size="12" fill="#111" dominant-baseline="central">メニューへ戻る</text>
+<text x="45" y="260" font-size="11" fill="#111" dominant-baseline="central">入力</text>
+<text x="97" y="260" font-size="11" fill="#111" dominant-baseline="central">出力</text>
+</g>
+</svg>

@@ -190,7 +190,7 @@ properties:
 
   画面:
     type: object
-    description: "システムが利用者に提示する画面の集合。項目は IPA ガイド画面編の画面一覧 / 画面入出力項目一覧 / 画面アクション明細 / 画面遷移を元に絞り込んだもの (画面レイアウトは対象外)。設計書の画面設計章 (画面一覧 / 画面遷移図 / 画面定義) のソース。マップのキーが画面 ID。英名: screens"
+    description: "システムが利用者に提示する画面の集合。項目は IPA ガイド画面編の画面一覧 / 画面入出力項目一覧 / 画面アクション明細 / 画面遷移 / 画面レイアウトを元に絞り込んだもの。設計書の画面設計章 (画面一覧 / 画面遷移図 / 画面定義) のソース。マップのキーが画面 ID。英名: screens"
     additionalProperties:
       type: object
       description: "1 つの画面を表すレコード。英名: screen"
@@ -206,6 +206,22 @@ properties:
         説明:
           type: string
           description: "画面の役割を 1〜2 文で説明する。英名: description"
+        画面レイアウト:
+          type: object
+          description: "画面レイアウト図 (IPA 画面編の画面レイアウトに対応)。他の項目と違い図そのものを外から持ち込む項目で、記述は契約ではなく挿絵 — 何が画面にあるかを定めるのは 入出力項目 と アクション で、図とのずれはビルドでは検出できない。任意。英名: layout"
+          additionalProperties: false
+          properties:
+            図:
+              type: string
+              description: "文書に埋め込む図の blob ID (contents からの相対パス、拡張子を含む)。英名: figure"
+              x-ref:
+                entity: blob
+            原本:
+              type: string
+              description: "図を描いた編集可能ファイルの blob ID。読者が自分の画面に描き直すための元で、文書からリンクする。原本を持たない図もあるので任意。英名: source"
+              x-ref:
+                entity: blob
+          required: [図]
         ユースケース:
           type: array
           description: "この画面が実現するユースケースの一覧 (IPA 画面一覧の関連業務に対応)。英名: use_cases"
