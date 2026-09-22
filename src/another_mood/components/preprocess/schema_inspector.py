@@ -88,7 +88,7 @@ def _emit_definition_catalog(dst: Path) -> None:
     """Emit the self-description catalog for the ``__definition`` namespace.
 
     The entries are constructed in Python from the dataclasses' own
-    ``catalog()`` methods (rather than read from a JSON Schema source
+    ``catalog`` class attributes (rather than read from a JSON Schema source
     like ``content-schema.yaml``), because no authoritative external
     schema exists for the catalog dataclasses themselves.
     """

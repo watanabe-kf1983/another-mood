@@ -6,13 +6,20 @@ re-wire it under a fresh Edge with new parent-side fields — heavily
 relied on in query derivation.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
+from itertools import takewhile
 from typing import Any, ClassVar, cast
 
 # ── In-memory tree form (canonical) ───────────────────────────────────
 
 type Branch = tuple[Edge, Node]
+
+#: A node together with the chain of edges reaching it from an entity's
+#: body.  A ``Branch`` is one step; this is the several steps a dotted
+#: ``Attribute.id`` stands for, since singletons are folded into the
+#: entity holding them.
+type AttributeReach = tuple[Sequence[Edge], Node]
 
 
 @dataclass(frozen=True)
@@ -28,6 +35,10 @@ class XRef:
 
     entity: str
     attribute: str
+
+    #: Node-form self-description of the persisted record.  Assigned
+    #: below, not here: ``Edge.x_ref`` puts ``XRef`` ahead of ``Node``.
+    catalog: ClassVar["Node"]
 
 
 @dataclass(frozen=True)
@@ -114,6 +125,14 @@ class Node:
         return candidate
 
 
+XRef.catalog = Node(
+    children=[
+        (Edge(name="entity", type="string", required=True), Node()),
+        (Edge(name="attribute", type="string", required=True), Node()),
+    ],
+)
+
+
 def is_entity(edge: Edge, node: Node) -> bool:
     """Whether the ``edge`` → ``node`` link materializes as its own Entity.
 
@@ -150,16 +169,7 @@ class Attribute:
     child_item_type: str | None = None  # child ObjectType.id
     x_ref: XRef | None = None  # FK declaration from ``x-ref:``
 
-    #: Node-form self-description of the persisted Attribute record.
-    #: Composed into ``Entity.catalog`` as the child of the
-    #: ``item_type.attributes`` edge.  The caller assigns the catalog id
-    #: via ``flatten_tree(root_name=...)``; ``Attribute`` itself doesn't
-    #: know where in the namespace it lives.
-    #:
-    #: ``XRef`` (the type of ``x_ref``) is singleton-flattened inline:
-    #: the wrapper edge ``x_ref`` (type=object) plus dotted-name edges
-    #: for each XRef field — mirroring the ``item_type.*`` flattening
-    #: in ``Entity.catalog``.
+    #: Node-form self-description of the persisted record.
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
@@ -169,11 +179,25 @@ class Attribute:
             (Edge(name="validation", type="object", required=False), Node()),
             (Edge(name="child_entity", type="string", required=False), Node()),
             (Edge(name="child_item_type", type="string", required=False), Node()),
-            (Edge(name="x_ref", type="object", required=False), Node()),
-            (Edge(name="x_ref.entity", type="string", required=True), Node()),
-            (Edge(name="x_ref.attribute", type="string", required=True), Node()),
+            (Edge(name="x_ref", type="object", required=False), XRef.catalog),
         ],
     )
+
+    # ── Reading and writing the dotted id ─────────────────────────────
+    #
+    # ``id`` is one segment per edge, joined with dots: a singleton
+    # object folds into the entity holding it rather than opening one of
+    # its own.  These three are the only place spelling the separator.
+
+    @staticmethod
+    def join_id(names: Iterable[str]) -> str:
+        return ".".join(names)
+
+    def inlined_into(self, holder: "Attribute") -> bool:
+        return self.id.startswith(f"{holder.id}.")
+
+    def segment_under(self, holder: "Attribute | None") -> str:
+        return self.id if holder is None else self.id[len(holder.id) + 1 :]
 
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
@@ -194,6 +218,19 @@ class ObjectType:
     origin_item_type: str
     metadata: Mapping[str, object] | None = None
 
+    #: Node-form self-description of the persisted record.
+    catalog: ClassVar[Node] = Node(
+        children=[
+            (Edge(name="id", type="string", required=True), Node()),
+            (Edge(name="origin_item_type", type="string", required=True), Node()),
+            (Edge(name="metadata", type="object", required=False), Node()),
+            (
+                Edge(name="attributes", type="object[]", required=True),
+                Attribute.catalog,
+            ),
+        ],
+    )
+
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
 
@@ -208,35 +245,27 @@ class ObjectType:
 
 @dataclass(frozen=True)
 class Entity:
+    """One collection in the flat catalog, identified by its access path.
+
+    A singleton object opens no entity of its own: it folds into the
+    entity holding it, under dotted ``Attribute.id``.
+    """
+
     id: str
     item_type: ObjectType
     parent_entity: str | None = None
     builtin: bool = False
     view: bool = False  # synthesized from a query (composer-set)
 
-    #: Node-form self-description of the persisted Entity record.
-    #: ``ObjectType`` (the type of ``item_type``) is singleton-flattened
-    #: inline: the wrapper edge ``item_type`` (type=object) plus
-    #: dotted-name edges ``item_type.id`` / ``item_type.origin_item_type``
-    #: / ``item_type.metadata`` for scalars, and ``item_type.attributes``
-    #: carrying ``Attribute.catalog`` as the child-entity link.
-    #:
-    #: The caller assigns the catalog id via
-    #: ``flatten_tree(catalog, root_name=...)`` and is expected to set
-    #: ``builtin=True`` before persisting.
+    #: Node-form self-description of the persisted record.  The caller
+    #: assigns the catalog id via ``flatten_tree(catalog, root_name=...)``
+    #: and is expected to set ``builtin=True`` before persisting.
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
-            (Edge(name="item_type", type="object", required=True), Node()),
-            (Edge(name="item_type.id", type="string", required=True), Node()),
             (
-                Edge(name="item_type.origin_item_type", type="string", required=True),
-                Node(),
-            ),
-            (Edge(name="item_type.metadata", type="object", required=False), Node()),
-            (
-                Edge(name="item_type.attributes", type="object[]", required=True),
-                Attribute.catalog,
+                Edge(name="item_type", type="object", required=True),
+                ObjectType.catalog,
             ),
             (Edge(name="parent_entity", type="string", required=False), Node()),
             (Edge(name="builtin", type="boolean", required=False), Node()),
@@ -259,7 +288,8 @@ class Entity:
 
 
 def build_tree(catalog: Sequence[Entity]) -> Node:
-    """Build a virtual-root tree from a flat catalog list.
+    """Build a virtual-root tree from a flat catalog list — the inverse
+    of :func:`flatten_tree`.
 
     The virtual root mirrors the records-side ``Sequence[Record]``
     wrapping that ``From.apply`` receives: every top-level entity hangs
@@ -278,12 +308,7 @@ def build_tree(catalog: Sequence[Entity]) -> Node:
 
 
 def flatten_tree(node: Node, root_name: str) -> Sequence[Entity]:
-    """Flatten ``node`` into a list of Entity records.
-
-    The top entity gets ``root_name`` as its id; descendant ids are
-    built by joining the chain of child edge names with dots — the
-    access_path convention shared by every catalog producer.
-    """
+    """Flatten ``node`` into Entity records, the top one named ``root_name``."""
     return _flatten_entity(node, edge_path=(root_name,), parent_entity_id=None)
 
 
@@ -305,28 +330,90 @@ def _build_entity_node(
     built-in by definition.  Composer marks query outputs as views after
     flattening; the built-in flag stays a flat-catalog concept.
     """
-    sub_by_name = {
+    sub_by_id = {
         e.id[len(entity.id) + 1 :]: e for e in _children_of(entity.id, catalog)
     }
     return Node(
         metadata=entity.item_type.metadata,
-        children=[
-            (
-                _edge_from_attribute(attr),
-                _build_entity_node(sub_by_name[attr.id], catalog)
-                if attr.child_entity
-                else Node(),
-            )
-            for attr in entity.item_type.attributes
-        ],
+        children=_build_branches(
+            entity.item_type.attributes,
+            holder=None,
+            sub_by_id=sub_by_id,
+            catalog=catalog,
+        ),
         origin_item_type=entity.item_type.id,
     )
 
 
-def _edge_from_attribute(attr: Attribute) -> Edge:
+def _build_branches(
+    attributes: Sequence[Attribute],
+    *,
+    holder: Attribute | None,
+    sub_by_id: Mapping[str, Entity],
+    catalog: Sequence[Entity],
+) -> Sequence[Branch]:
+    """Restore one node's children from the attributes folded into it.
+
+    ``holder`` is the singleton being restored, None at an entity's own body.
+    """
+    return [
+        (
+            _edge_from_attribute(attr, name=attr.segment_under(holder)),
+            _build_attribute_node(attr, inlined, sub_by_id=sub_by_id, catalog=catalog),
+        )
+        for attr, inlined in _inlined_attributes(attributes)
+    ]
+
+
+def _inlined_attributes(
+    attributes: Sequence[Attribute],
+) -> Sequence[tuple[Attribute, Sequence[Attribute]]]:
+    """Pair each attribute of one node with the attributes inlined into it.
+
+    The inverse of ``_flatten_attributes``, whose emission order leaves
+    the inlined attributes right after the ``object`` attribute whose id
+    they extend.  A dotted id with no ``object`` attribute in front of it
+    stays one edge name: a view alias becomes a record key verbatim.
+    """
+    if not attributes:
+        return []
+    head, rest = attributes[0], attributes[1:]
+    inlined = (
+        list(takewhile(lambda a: a.inlined_into(head), rest))
+        if head.type == "object"
+        else []
+    )
+    return [(head, inlined), *_inlined_attributes(rest[len(inlined) :])]
+
+
+def _build_attribute_node(
+    attr: Attribute,
+    inlined: Sequence[Attribute],
+    *,
+    sub_by_id: Mapping[str, Entity],
+    catalog: Sequence[Entity],
+) -> Node:
+    if attr.child_entity:
+        return _build_entity_node(sub_by_id[attr.id], catalog)
+    elif inlined:
+        return Node(
+            children=_build_branches(
+                inlined,
+                holder=attr,
+                sub_by_id=sub_by_id,
+                catalog=catalog,
+            )
+        )
+    else:
+        # ``Node()``, not an empty ``_build_branches``: ``children``
+        # defaults to a tuple, and a list would not compare equal.
+        return Node()
+
+
+def _edge_from_attribute(attr: Attribute, *, name: str) -> Edge:
     """Build a Edge from a parent's Attribute pointing at this child."""
     return Edge(
-        name=attr.id,
+        name=name,
         type=attr.type,
         required=attr.required,
         metadata=attr.metadata,
@@ -352,38 +439,68 @@ def _flatten_entity(
     not open an entity of their own are filtered out before recursion,
     so this function is only ever invoked on composite nodes.
 
-    ``edge_path`` carries the chain of edge names traversed from the
-    root.  Keeping it as a tuple (rather than a dot-joined string)
-    preserves edge boundaries when an edge name itself contains dots
-    (e.g. ``hobby.pets`` from a singleton-object flattening).
+    ``edge_path`` stays a tuple rather than a dot-joined string because
+    an attribute id can itself contain dots (``hobby.pets``).
     """
     self_id = ".".join(edge_path)
+    attributes = _flatten_attributes(((), node))
     self_entity = Entity(
         id=self_id,
-        item_type=_to_object_type(node, edge_path=edge_path),
+        item_type=_to_object_type(node, edge_path=edge_path, attributes=attributes),
         parent_entity=parent_entity_id,
     )
     descendants = [
         descendant
-        for edge, child in node.children
-        if is_entity(edge, child)
+        for path, child in attributes
+        if is_entity(path[-1], child)
         for descendant in _flatten_entity(
             child,
-            edge_path=(*edge_path, edge.name),
+            edge_path=(*edge_path, _attribute_id(path)),
             parent_entity_id=self_id,
         )
     ]
     return [self_entity, *descendants]
 
 
-def _to_object_type(node: Node, *, edge_path: Sequence[str]) -> ObjectType:
+def _flatten_attributes(reach: AttributeReach) -> Sequence[AttributeReach]:
+    return [
+        expanded
+        for child in _inlined_children(reach)
+        for expanded in [child, *_flatten_attributes(child)]
+    ]
+
+
+def _inlined_children(reach: AttributeReach) -> Sequence[AttributeReach]:
+    path, node = reach
+    # An entity's own body is reached by an empty chain: no edge to test,
+    # and it always folds in.
+    if not path or not path[-1].is_collection:
+        return [((*path, edge), child) for edge, child in node.children]
+    else:
+        return []
+
+
+def _attribute_id(path: Sequence[Edge]) -> str:
+    return Attribute.join_id(edge.name for edge in path)
+
+
+def _to_object_type(
+    node: Node,
+    *,
+    edge_path: Sequence[str],
+    attributes: Sequence[AttributeReach],
+) -> ObjectType:
     """Build an ObjectType for ``node`` reached at ``edge_path``."""
     item_type_id = _item_type_id(edge_path)
     return ObjectType(
         id=item_type_id,
         attributes=[
-            _to_attribute(child, edge=edge, edge_path=(*edge_path, edge.name))
-            for edge, child in node.children
+            _to_attribute(
+                child,
+                edge=path[-1],
+                edge_path=(*edge_path, _attribute_id(path)),
+            )
+            for path, child in attributes
         ],
         origin_item_type=node.origin_item_type or item_type_id,
         metadata=node.metadata,
@@ -394,7 +511,7 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
     """Build an Attribute for the (edge → node) connection at ``edge_path``."""
     opens_entity = is_entity(edge, node)
     return Attribute(
-        id=edge.name,
+        id=edge_path[-1],
         type=edge.type,
         required=edge.required,
         metadata=edge.metadata,
@@ -408,8 +525,8 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
 def _item_type_id(edge_path: Sequence[str]) -> str:
     """Compute the ObjectType id for an entity reached via ``edge_path``.
 
-    Joins edge names with ``.item.`` and appends a trailing ``.item``
+    Joins path segments with ``.item.`` and appends a trailing ``.item``
     to match the recursive ``{...}.{name}.item`` ObjectType-id
-    convention.  Dots inside a single edge name are preserved.
+    convention.  Dots inside a single segment are preserved.
     """
     return ".item.".join(edge_path) + ".item"

@@ -104,7 +104,7 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 データカタログ自体を `__definition.entities` / `__definition.views` という built-in entity として登録し、クエリ DSL から `from: __definition.*` で walk 可能にしている。built-in メタドキュメンテーションテンプレートが自分のメタデータを自分の DSL から読めるようにするための足場。
 
-各 catalog dataclass (`Entity` / `Attribute` / `Query` / `SelectItem`) が自身の `catalog()` classmethod で構造を Node 形式で返し、呼び出し側 (`inspect_schema._emit_definition_catalog`) が `to_flat(root_name)` で id を割り当てて `builtin=True` を付与し、`out_dir/__builtin/__definition.yaml` に書き出す。データクラス自身は namespace 内の自分の位置を知らない。
+各 catalog dataclass (`Entity` / `ObjectType` / `Attribute` / `XRef` と、ビュー側の `Query`) が自身の `catalog` ClassVar で構造を Node 形式で持ち、親は子の `catalog` をそのまま子 Node として指す。呼び出し側 (`schema_inspector._emit_definition_catalog`) が `flatten_tree(catalog, root_name)` で id を割り当てて `builtin=True` を付与し、`out_dir/__builtin/__definition.json` に書き出す。データクラス自身は namespace 内の自分の位置を知らない。
 
 `__definition` 自身はカタログに entity として含まれない。ユーザ領域のスキーマルートと同じ扱いで、トップレベル singleton は entity として現れず、その直下の `__definition.entities` / `__definition.views` が dotted id を持つ top-level entity (`parent_entity=null`) として並ぶ。
 

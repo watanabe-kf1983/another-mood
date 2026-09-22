@@ -18,6 +18,10 @@ def _edge(name: str, type_: str = "string") -> dc.Edge:
     return dc.Edge(name=name, type=type_, required=True)
 
 
+def _edge_names(node: dc.Node) -> set[str]:
+    return {edge.name for edge, _ in node.children}
+
+
 class TestDictRoundTrip:
     def test_minimal_entity(self) -> None:
         entity = dc.Entity(
@@ -161,6 +165,7 @@ class TestBuildAndFlatten:
                     id: users.item
                     attributes:
                       - { id: id, type: string, required: true }
+                      - { id: address, type: object, required: false }
                       - { id: address.street, type: string, required: false }
                       - { id: address.city, type: string, required: false }
                 """,
@@ -173,6 +178,7 @@ class TestBuildAndFlatten:
                   item_type:
                     id: members.item
                     attributes:
+                      - { id: hobby, type: object, required: false }
                       - id: hobby.pets
                         type: object[]
                         required: false
@@ -187,6 +193,30 @@ class TestBuildAndFlatten:
                 """,
                 id="dotted_attribute_pointing_to_entity",
             ),
+            pytest.param(
+                "roadmap",
+                # No ``object`` attribute ahead of it, so the dotted id
+                # is one edge name rather than a singleton to reclaim.
+                """
+                - id: roadmap
+                  item_type:
+                    id: roadmap.item
+                    attributes:
+                      - { id: task.phase, type: integer, required: true }
+                      - id: tasks
+                        type: object[]
+                        required: true
+                        child_entity: roadmap.tasks
+                        child_item_type: roadmap.item.tasks.item
+                - id: roadmap.tasks
+                  item_type:
+                    id: roadmap.item.tasks.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                  parent_entity: roadmap
+                """,
+                id="dotted_alias_without_wrapper",
+            ),
         ],
     )
     def test_build_then_flatten_is_identity(
@@ -200,9 +230,9 @@ class TestBuildAndFlatten:
 class TestCatalogDriftSuppression:
     """Assert each catalog dataclass and its ``catalog`` Node stay in sync.
 
-    Failing here means a field was added/removed from ``Attribute``,
-    ``Entity``, or ``ObjectType`` without a matching update to the
-    corresponding ``catalog`` class attribute — fix the catalog Node
+    Failing here means a field was added/removed from ``XRef``,
+    ``Attribute``, ``ObjectType`` or ``Entity`` without a matching update
+    to that class's own ``catalog`` attribute — fix the catalog Node
     (and any consumer) before silencing the test.
 
     Coverage beyond field-set drift (edge types, entity-link wiring, the
@@ -212,35 +242,25 @@ class TestCatalogDriftSuppression:
     identity tests above.
     """
 
-    def test_attribute_top_level_edges_match_dataclass_fields(self) -> None:
-        non_dotted = {
-            edge.name
-            for edge, _ in dc.Attribute.catalog.children
-            if "." not in edge.name
+    def test_attribute_edges_match_dataclass_fields(self) -> None:
+        assert _edge_names(dc.Attribute.catalog) == {
+            f.name for f in dataclasses.fields(dc.Attribute)
         }
-        assert non_dotted == {f.name for f in dataclasses.fields(dc.Attribute)}
 
-    def test_xref_dotted_edges_match_dataclass_fields(self) -> None:
-        dotted = {
-            edge.name.removeprefix("x_ref.")
-            for edge, _ in dc.Attribute.catalog.children
-            if edge.name.startswith("x_ref.")
+    def test_xref_edges_match_dataclass_fields(self) -> None:
+        assert _edge_names(dc.XRef.catalog) == {
+            f.name for f in dataclasses.fields(dc.XRef)
         }
-        assert dotted == {f.name for f in dataclasses.fields(dc.XRef)}
 
-    def test_entity_top_level_edges_match_dataclass_fields(self) -> None:
-        non_dotted = {
-            edge.name for edge, _ in dc.Entity.catalog.children if "." not in edge.name
+    def test_entity_edges_match_dataclass_fields(self) -> None:
+        assert _edge_names(dc.Entity.catalog) == {
+            f.name for f in dataclasses.fields(dc.Entity)
         }
-        assert non_dotted == {f.name for f in dataclasses.fields(dc.Entity)}
 
-    def test_object_type_dotted_edges_match_dataclass_fields(self) -> None:
-        dotted = {
-            edge.name.removeprefix("item_type.")
-            for edge, _ in dc.Entity.catalog.children
-            if edge.name.startswith("item_type.")
+    def test_object_type_edges_match_dataclass_fields(self) -> None:
+        assert _edge_names(dc.ObjectType.catalog) == {
+            f.name for f in dataclasses.fields(dc.ObjectType)
         }
-        assert dotted == {f.name for f in dataclasses.fields(dc.ObjectType)}
 
 
 class TestRenameOnFlatten:

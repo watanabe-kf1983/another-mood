@@ -69,7 +69,7 @@ E3 で `join.on:` がこの表に加わるが、 同じ原則 (array に潜ら�
 - 「ここだけ特例で潜れる」asymmetry が発生せず、句の責任が明確
 - 将来の DSL 拡張も「array 走査は別句で」が原則として残る
 
-実装上は catalog の encoding (singleton sub-object は親 entity の dotted-name sibling attribute として平坦化、 array は child entity として独立) に乗っているため、 `where` / `sort.by` 側で `has_child` による direct edge lookup を行うだけで自然に array 跨ぎが弾かれる。 `select` は wrapper edge 選択時に dotted siblings も連れて行く挙動 (apply 側 `pluck` の挙動と整合) で、 singleton の sub-attribute をひとまとめに扱う。
+実装上はこの規則を catalog の木の探索が持つ。`Node.descend` は singleton の子 Node を降りるが `[]` エッジに当たるとそこで止まる — パスは配列属性で終われるが、その先へは続けない。`where` / `sort.by` / `join.on` はこの `descend` (`require_path`) を通すだけで array 跨ぎが弾かれる。`select` は wrapper edge を選んだときその子 Node ごと連れて行く挙動 (apply 側 `pluck` の挙動と整合) で、 singleton の sub-attribute をひとまとめに扱う。
 
 ### パイプライン順序
 
@@ -176,7 +176,7 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 - **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` か `pluck` フィルタでしか届かない（Jinja2 の `row.hobby` は undefined になる）
 - **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
 - **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
-- **`flatten.of` がドット入りだと derive と apply がずれる**: apply は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` では元の配列が `hobby` 内に残ったまま新キーが足される。derive は配列エッジを置き換えたことにする
+- **読み側のうち `flatten.of` だけがパスを受けない**: apply (`_unwind`) は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` を通すと元の配列が `hobby` 内に残ったまま新キーが足され、「配列エッジを置き換えた」と言うカタログとずれる。derive がドット入りの `of` を `unknown attribute` として弾くことでずれは塞いであるが、読み側の一句だけがパスを受けない状態になっている
 
 #### 方針: DSL の名前は読みも書きもパス
 
@@ -185,7 +185,7 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 これにより次の不変条件が立つ:
 
 - **データのキーはドットを含まない**。`contents/` 由来はもとより、view 出力も含めて
-- **直列化カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）。[M15](../40-communication/10-json-data-model.md#カタログの木を-json-データモデルと同形にする-m15) でメモリ内の `dc.Node` / `dc.Edge` からはドットが消えるが、ワイヤ形式である `Attribute.id` には残るので、この不変条件は M15 とは別に必要
+- **直列化カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）。メモリ内の `dc.Node` / `dc.Edge` にドットは無いが、ワイヤ形式である `Attribute.id` には残るので、この不変条件は木の形とは別に必要
 
 スロットごとの意味:
 
@@ -195,9 +195,9 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 - `grouped.by`: グループ行のキー値を `by` のパスの位置に書く（`{"hobby": {"level": "pro"}, "members": [...]}`）。別名の口は足さない
 - `grouped.as`: 書き込み先パス
 
-**カタログ上の表現**: [M15](../40-communication/10-json-data-model.md#カタログの木を-json-データモデルと同形にする-m15) が前提で、書き込み先パスはカタログの木をそのまま降りる。`as: a.b` は `a`（type=object）の子 Node に `b` を置き、`as: a.b` と `as: a.c` は一つの `a` に合流する。途中のノードが無ければ作る。作らないと下流の view（ビュー間参照）が `item: a` でオブジェクトごと読めず、「データには `a` があるのにカタログには無い」という、この提案がまさに潰しに行っている非対称を再生産することになる。
+**カタログ上の表現**: 書き込み先パスはカタログの木をそのまま降りる。`as: a.b` は `a`（type=object）の子 Node に `b` を置き、`as: a.b` と `as: a.c` は一つの `a` に合流する。途中のノードが無ければ作る。作らないと下流の view（ビュー間参照）が `item: a` でオブジェクトごと読めず、「データには `a` があるのにカタログには無い」という、この提案がまさに潰しに行っている非対称を再生産することになる。
 
-M15 前の平坦形（親エッジ + ドット名の子エッジ）に正規化する案は採らない。ドット名の親の組み立てと「同一の書き込みから出た親子」の持ち回りのために、カタログにもデータにも対応しない第三の表現が要るためで、E14 の着手時に実際に書いて読めないことを確認した。判断の記録は M15 側にある。
+平坦形（親エッジ + ドット名の子エッジ）に正規化する案は採らない。ドット名の親の組み立てと「同一の書き込みから出た親子」の持ち回りのために、カタログにもデータにも対応しない第三の表現が要るためで、E14 の着手時に実際に書いて読めないことを確認した。
 
 **合成した中間ノードの `required`**: 途中のノードを作るとき、その `required` は**直下の子のうち一つでも「行に必ず存在する」なら yes** とする。子の `required` の OR ではない。`required` は「親が在るなら在る」という条件付きの意味であり、「行に必ず在る」という無条件の存在性とは別の問いだからである。
 
@@ -241,7 +241,7 @@ select:
 
 **`pluck` の longest-first 廃止**: データキーにドットが無くなるので `json_data_model.pluck` / `split_path` / `match_key` は素朴な `split(".")` に戻す。`data_catalog` 側の照合は既に完全一致なので変更なし。
 
-**カタログの構造化は不要**: 旧案（`Attribute` / `Edge` に `parent_attribute` を追加）は曖昧さを記録する方法だったが、曖昧さ自体が消えるので名前から機械的に導ける。`SelectItem.derive` が名前の接頭辞で dotted siblings を連れて行く現行の挙動は、M15 後は「子 Node をそのまま連れて行く」に置き換わる。
+**カタログの構造化は不要**: 旧案（`Attribute` / `Edge` に `parent_attribute` を追加）は曖昧さを記録する方法だったが、曖昧さ自体が消えるので名前から機械的に導ける。`SelectItem.derive` は wrapper エッジを選んだときその子 Node をそのまま連れて行くので、別名がパスになってもこの句に足すものは無い。
 
 #### 背景: なぜ入れ子であってリテラルではないか
 
@@ -264,9 +264,8 @@ docs の説明は「出力先のパス。通常は単一の名前」程度に留
 
 #### 実装の段階
 
-出力キーの重なり検出（完全一致）は E13 で済んでいる。残りは三段で、中間状態は安全: `pluck` の longest-first は上位互換（キー全体を試してから降りる）なので、E14 の後は常に降りる側に落ちて挙動が変わらない。
+出力キーの重なり検出（完全一致）は E13 で済んでいる。残りは二段で、中間状態は安全: `pluck` の longest-first は上位互換（キー全体を試してから降りる）なので、E14 の後は常に降りる側に落ちて挙動が変わらない。
 
-- **[M15](../40-communication/10-json-data-model.md#カタログの木を-json-データモデルと同形にする-m15)** — カタログの木を JSON データモデルと同形にする。振る舞いの変わらない純リファクタリングで、利用者向けの breaking change である E14 とは別 PR にする。E14 を平坦形の上に乗せると第三の表現形態が要るので、順序を入れ替えた
 - **E14** — 書き側をパス解釈に変更。中間ノードの合成と重なり検出を含む。この二つを分割しないのは、衝突の検出が書き込み先パスの挿入そのものだからで、切り離すと同じ挿入を二度書くことになる。showcase は `japanese-table-design` の `テーブル.列[].参照`（singleton）を使い、ドット入りの書き込み先を持つ view で入れ子出力を実機確認する
 - **E15** — longest-first 照合の廃止。データ側の `pluck` と、カタログ側の `data_catalog.Node._longest_child_name` の両方。docs 変更なし
 
@@ -285,13 +284,18 @@ E13（完全一致の重なり検出）を実装した時点で見えていた�
 - **offender に derive が組み立てた文字列を渡さない**。位置を持たない `str` を渡すと `query_deriver._diagnostic_from` は利用者エラーではなく内部バグとみなして例外を再送出する。`UserStr` は `+` で位置を落とし、空文字列との連結でも `str` に落ちる（実測）。offender は利用者が書いた値そのものを持ち回る
 - **E13 のスコープ境界テストは反転で消化する**。`test_allows_an_alias_that_is_only_a_prefix_of_another`（`as: a` と `as: a.b` が通ることを固定）は E14 でエラー側に回る。削除ではなく期待の反転で潰す
 
-#### M15 からの申し送り
+#### 過渡的処置の畳み方
 
-M15（カタログの木を入れ子にする）で、データ側の longest-first と同じ過渡的処置がカタログ側にも生えた。E14 で書き側の別名がパスに揃えば、どちらも前提ごと消える:
+カタログ側にも、データ側の longest-first と同じ過渡的処置がある。別名がパスに揃えば、どちらも前提ごと消える:
 
 - **`Node._longest_child_name` を廃止し、`_descend` を素朴な `split(".")` の下降に畳む**。カタログのエッジ名にドットが入る経路が別名だけになるため
 - **`build_tree` の「親のエッジを持たないドット id はリテラルな 1 エッジ名」フォールバックも同時に落とす**。orphan なドット id を書く経路が無くなる
 - **`test_prefers_a_literal_dotted_edge_over_descent` は前提ごと消える**。E13 の `test_allows_an_alias_that_is_only_a_prefix_of_another` と同じく、削除ではなく期待の反転で潰す
+- **`Grouped.derive` が `by` の全文をエッジ名に写している点も畳む**。`catalog.descend("task.phase")` が返すのは内側の `phase` エッジだが、`Grouped.apply` はレコードのキーに `task.phase` をそのまま書くので、カタログはパスの末端ではなくレコードに合わせてある（`dev-docs` 自身の roadmap ビューが実例）。`by` が書き込み先パスになれば、この写し替えは要らない
+
+逆に、**開け直す**必要があるものが一つある:
+
+- **`Flatten.derive` は `of` を完全一致で解決し、ドット入りの `of` を `unknown attribute` として弾く**。`_unwind` が `of` と同名のトップレベルキーしか行から落とさないのに対し `pluck` はパスとして解決するので、パスを通すと「カタログからは配列が消えたのに行には `hobby.pets` が残る」という不整合になるためである。ビュースキーマも `of` を「intrinsic 配列属性の**名前**」と書いており、テストにも五プロジェクトにもパスを渡す例は無い。`of` をパスとして受け直すなら、`_unwind` の除去側を同じパス解決に揃えるのが条件になる
 
 一方で**畳んではいけない**ものがある:
 
@@ -303,7 +307,7 @@ M15（カタログの木を入れ子にする）で、データ側の longest-fi
 - `docs/reference/view.md`: 名前はパスであること、別名の意味、重なりエラーを記述
 - `docs/reference/cli.md` の tap: jq でクォートの要るキーが無くなる（記述の追加は不要）
 - [json-data-model.md](../40-communication/10-json-data-model.md): データキーの不変条件を Internal Design に移す
-- 前提は E13 / M14 / [M15](../40-communication/10-json-data-model.md#カタログの木を-json-データモデルと同形にする-m15)。M13 との依存は解消（ルート singleton の吸収は既にドット = 入れ子の規約に乗っている）。J5 の前提は E14 + M13
+- 前提は E13 / M14 / M15。M13 との依存は解消（ルート singleton の吸収は既にドット = 入れ子の規約に乗っている）。J5 の前提は E14 + M13
 
 ### 合成ビュー (E17)
 
