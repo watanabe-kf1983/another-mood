@@ -512,6 +512,20 @@ categories:
         title: カタログが取りこぼすスキーマ注釈を塞ぐ
         phase: 18
         done: true
+      M18:
+        title: レコードの値型を再帰的な JsonModel に置き換える
+        note: >-
+          レコードの値型を object と宣言しているため、レコードの中へ降りる関数は
+          もれなく cast(Mapping[str, object], ...) を書いている (現在 34 箇所。
+          Mapping[str, object] 自体は 24 ファイル 136 箇所)。isinstance は裸の
+          object を Mapping[Unknown, Unknown] までしか絞れず、宣言していない
+          型引数は復元できないため。再帰的な JsonModel (dict[str, JsonModel] |
+          list[JsonModel] | str | int | float | bool | None) を立てて値型に据えると
+          cast は要らなくなる (pyright strict で実測: cast なし・Any なし・0 errors)。
+          既存の非再帰 JsonValue (dict[str, Any] を含む) はこれに吸収する。挙動は
+          変わらない型宣言だけの変更だが、レコードに JSON 外の値が混ざっている箇所が
+          無いかは着手して初めて分かる。
+        phase: 18
 
   N:
     title: レンダリング / 出力形式
