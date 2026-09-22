@@ -29,7 +29,7 @@ class XRef:
     ``entity`` is the target top-level entity id; ``attribute`` is the
     target attribute name.  The source-level shorthand of omitting
     ``attribute:`` (meaning "the synthetic ``.id`` of a dict-pattern
-    target") is resolved at the SchemaTree → DataCatalog boundary, so
+    target") is resolved at the schema → DataCatalog boundary, so
     on the catalog side ``attribute`` is always a real string.
     """
 
