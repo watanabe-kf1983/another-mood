@@ -267,8 +267,8 @@ categories:
         title: DSL のドット名意味論の統一 (読みも書きもパス)
         note: >-
           別名スロットのドットを入れ子として解釈し、view 出力からドット入りキーを
-          排する。カタログのドットが必ず入れ子を意味するようになり、カタログだけから
-          JSON の形が復元可能になる (J5 の前提)。E13 と M14 が前提。
+          排する。直列化カタログのドットが必ず入れ子を意味するようになり、カタログ
+          だけから JSON の形が復元可能になる (J5 の前提)。E13 / M14 / M15 が前提。
         proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e14-e15
         phase: 18
       E15:
@@ -499,6 +499,23 @@ categories:
         title: singleton 平坦化の 1 段制限の撤廃
         phase: 18
         done: true
+      M15:
+        title: カタログの木を JSON データモデルと同形にする
+        note: >-
+          singleton を平坦なドット名エッジではなく本物の子 Node として持ち、
+          平坦化を flatten_tree / build_tree のシリアライズ境界に閉じ込める。
+          利用者から見た振る舞いは変わらず、ビルド出力はバイト一致のまま。
+          E14 と M16 の前段。
+        proposal: 20-design/40-communication/10-json-data-model#カタログの木を-json-データモデルと同形にする-m15
+        phase: 18
+      M16:
+        title: スキーマ中間木を dc.Node / dc.Edge へ寄せる
+        note: >-
+          M15 後は schema_tree の ObjectNode / ArrayNode / ValueNode +
+          SchemaProperty が dc.Node / dc.Edge とほぼ同型になり、to_catalog_node は
+          ほぼ恒等写像になる。中間木を畳めるかを見極める。M15 が前提。
+        proposal: 20-design/40-communication/10-json-data-model#スキーマ中間木の統合-m16
+        phase: 18
 
   N:
     title: レンダリング / 出力形式

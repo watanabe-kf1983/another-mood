@@ -74,6 +74,93 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - **トップレベルスキーマが `type: array`（additionalProperties でない）の場合**: id を持たない配列のマージ・重複検出をどうするか未定
 - **スキーマ名重複**: 複数スキーマファイルに同じトップレベルキーがあった場合の扱い（エラーとする想定だが未確定）
 
+### カタログの木を JSON データモデルと同形にする (M15)
+
+#### 問題
+
+カタログの `dc.Node` / `dc.Edge` は、singleton オブジェクトを**本物の子 Node ではなくドット名の兄弟エッジ**として持つ。`参照` (type=object、子 Node は空) と `参照.テーブル` / `参照.列` が同じ親の children に並ぶ形で、`schema_tree._collect_edges` が生成する。
+
+この形はフラットカタログ (`Entity` / `ObjectType` / `Attribute`) の都合から来ている。`Attribute.id` は 1 本の文字列で、`Node.is_entity` は `bool(children)` で定義され、singleton は entity 化してはいけない。つまり平坦形は**直列化形の都合**だが、メモリ内表現である `Node` / `Edge` までそれに合わせてある。
+
+結果、プロジェクト内に木の表現が四つ並び、平坦なのが二つある:
+
+| 表現 | 形 |
+|---|---|
+| `schema_tree` の `ObjectNode` / `ArrayNode` / `ValueNode` + `SchemaProperty` | 入れ子 (スキーマの形) |
+| `dc.Node` / `dc.Edge` | **平坦 + ドット** |
+| `dc.Entity` / `ObjectType` / `Attribute` | 平坦 (直列化形) |
+| `generator.data_tree` の `Node` | 入れ子 (JSON データの上) |
+
+そして「ドット名 = singleton の入れ子」という規約を、次の八箇所が知っていなければならない:
+
+- `schema_tree._collect_edges` — 平坦化を行う (生産側)
+- `data_catalog._flatten_entity` — 「エッジ名自体にドットが入るので `edge_path` はタプルで保つ」
+- `data_catalog._item_type_id` — 「単一エッジ名の中のドットは保存する」
+- `query.Flatten.derive` — 要素をドット兄弟としてインライン化する
+- `query.SelectItem.derive` — 接頭辞一致でドット兄弟を連れて行く
+- `json_data_model.pluck` / `split_path` / `match_key` — longest-first 照合 (E15 で消える)
+- `Attribute.catalog` / `Entity.catalog` — 平坦形を手書きし、コメントで規約を説明している
+- `generator.data_tree._type_path` — ドット id を組み立ててカタログ表記に合わせる
+
+#### 方針: singleton を子 Node にし、平坦化を境界に閉じ込める
+
+`dc.Node` / `dc.Edge` を JSON データモデルと同形にする。singleton オブジェクトは `object` 型のエッジで到達する**本物の子 Node** になり、エッジ名からドットが消える。平坦化はシリアライズ境界の一対に閉じる:
+
+| 関数 | 現在 | M15 後 |
+|---|---|---|
+| `schema_tree.to_catalog_node` / `_collect_edges` (schema → Node) | 平坦化する | **しない** (`ObjectNode` を子 Node として再帰) |
+| `data_catalog.flatten_tree` (Node → Entity) | 何もしない | **入れ子 → ドット `Attribute.id` に平坦化** |
+| `data_catalog.build_tree` (Entity → Node) | ドット id を `Edge.name` に写すだけ | **ドット `Attribute.id` → 入れ子 Node に復元** |
+
+上の八箇所の規約は、この二関数だけが知っていればよくなる。
+
+#### 背景: 一方向の変換を往復のペアにする理由
+
+「平坦化が 1 箇所から 2 箇所に増える」ように見えるが、数えるべきはコード経路ではなく**規約を守らなければならない箇所**である。一方向だと曖昧な平坦形が唯一のメモリ内表現になるので、全生産者・全消費者が規約を守る必要がある (上の八箇所)。往復にすると曖昧さはワイヤ形式との境界に閉じ込められ、しかも `build_tree ∘ flatten_tree` の恒等性として機械的に検証できる。
+
+この判断は E14 の実装着手時に露見した。書き込み先パスを平坦形に正規化する部品を作ると、ドット合成親と「同一の書き込みから出た親子」を運ぶフィールドが要る — **五つ目の表現形態**になり、レビューが成立しなかった。入れ子であればその部品は素朴なカタログの木の探索・挿入に収まる。
+
+#### 着手前に決める点
+
+- **`is_entity` の置き換え**: `bool(children)` では singleton が entity 化してしまう。`Edge.type` の `[]` 接尾で判定するか、エンティティ性を `Edge` 側の情報として持たせるか
+- **配列跨ぎガードの置き場所**: 平坦形では `has_child` の完全一致だけで「ドットパスは singleton を通れるが配列は跨げない」が無料で成立していた ([走査の非対称性](../60-composer/10-query-dsl-spec.md#背景-走査の非対称性を設計原則として確立した))。入れ子では `Node` のパス探索に「`[]` エッジでは降りない」を明示する
+- **`Attribute.catalog` / `Entity.catalog` の手書き ClassVar**: 入れ子で書き直す形
+
+#### 検証
+
+利用者から見た振る舞いは変わらない。直列化形が不変なので:
+
+- `dev-docs` と `showcase/` 4 件のビルド出力がバイト一致 (`__entity_defs` / `__view_defs` / `__data` と全レンダリングページ)
+- `build_tree(flatten_tree(node)) == node` の往復性 (平坦形が唯一の形である現在は自明に成立するので、テストを書く意味が初めて生まれる)
+- 既存テストがそのままハーネスになる。`test_query.py` / `test_query_deriver.py` のフィクスチャは YAML の `Entity` 辞書から `dc.Entity.from_dict` → `dc.build_tree` で作られているため、直列化形を入口にしており影響を受けない。ドット名を直接アサートしている箇所は全テストで九箇所
+
+#### 波及
+
+- [E14](../60-composer/10-query-dsl-spec.md#ドット名の意味論統一-e14-e15) の前段。書き込み先パスの部品からドット合成親と兄弟の持ち回りが消える
+- [M16](#スキーマ中間木の統合-m16) の前段
+- `Attribute.id` のドットは直列化形にそのまま残る。J5 が読むのはこの平坦な `Attribute` の列なので、「ドットは必ず入れ子」という E14 の不変条件は M15 とは別に依然必要
+
+### スキーマ中間木の統合 (M16)
+
+#### 問題
+
+`schema_tree` は JSON Schema から自前の三ノード木 (`ObjectNode` / `ArrayNode` / `ValueNode` と、辺に相当する `SchemaProperty`) を組み、`to_catalog_node` で `dc.Node` に変換する。この木は入れ子であり、[M15](#カタログの木を-json-データモデルと同形にする-m15) 後の `dc.Node` / `dc.Edge` とほぼ同型になる — `SchemaProperty` は `name` / `required` / 子 / `x_ref` を持ち、`dc.Edge` とほぼ同じ役割を担う。
+
+`to_catalog_node` / `_collect_edges` は現在、この同型な木を平坦形に潰すために存在している。M15 後はほぼ恒等写像になり、中間木が要るのかという問いが立つ。
+
+#### 案
+
+`schema_tree` の三ノード木を落とし、JSON Schema から直接 `dc.Node` / `dc.Edge` を組む。判断が要るのは、両者で情報の置き場所が違う点:
+
+- `ValueNode` は `type` / `validation` をノード側に持つが、`dc` では `Edge` 側にある
+- `ArrayNode` の入れ子は `dc` では `Edge.type` の `[]` 接尾で表される (`string[][]` のような多段も文字列で表現される)
+- `metadata` の優先規則 (「ArrayNode の metadata が勝つ — 外側の dict-pattern スキーマが型レベルの metadata を持つ」) をどこで表すか
+- `UserStr` による位置情報の持ち回りが崩れないか
+
+畳めないと判断した場合でも、`_collect_edges` の平坦化が消えた分の整理は残る。M16 は「畳めるかの見極めと、その結論に沿った整理」を範囲とする。
+
+依存: M15 が前提。
+
 ### データキーにドットを含めない (E14)
 
 view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped.by` 等）は現在、ドットを含む文字列をそのままレコードのキーにする。データにドット入りキーを生む経路はこれだけで、`contents/` 由来のキーは schema.yaml の識別子パターンで縛られている。このため `pluck` は longest-first 照合（キー全体を試してから末尾セグメントを削って降りる）を持ち、カタログの `Attribute.id` のドットは singleton 平坦化（入れ子）かリテラルキーか区別できない。
