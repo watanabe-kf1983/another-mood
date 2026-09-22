@@ -298,7 +298,7 @@ E13（完全一致の重なり検出）を実装した時点で見えていた�
 
 #### 波及
 
-- ドット入りの `as:` / `by:` を書いた既存 view は出力の形が変わる。dev-docs / showcase に該当は無い。`Release-Highlight: breaking` は**付けない**。振る舞いが変わることは breaking の要件ではない — それを要件にすると bugfix もすべて breaking になる。breaking は利用者への約束を破ることであり、ドット入りの `as:` は `docs/reference/view.md` のどこにも書かれていない（`as:` は一貫して "name" / "field name" として説明されている）。読み側については「ドットはパス」と明記されているので、E14 はむしろ既存の記述に実装を合わせる側である
+- ドット入りの `as:` / `by:` を書いた既存 view は出力の形が変わる。dev-docs / showcase に該当は無い
 - `docs/reference/view.md`: 名前はパスであること、別名の意味、重なりエラーを記述
 - `docs/reference/cli.md` の tap: jq でクォートの要るキーが無くなる（記述の追加は不要）
 - [json-data-model.md](../40-communication/10-json-data-model.md): データキーの不変条件を Internal Design に移す
