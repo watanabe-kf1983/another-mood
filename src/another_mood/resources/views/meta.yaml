@@ -32,6 +32,7 @@ __entity_tree:
     - item: id
     - item: parent_entity
     - item: builtin
+    - item: metadata
     - item: item_type
 
 # Per-entity Entity Definition pages, and the index's Entity list.  The
@@ -48,6 +49,7 @@ __entity_defs:
   select:
     - item: id
     - item: builtin
+    - item: metadata
     - item: item_type
   sort: { by: builtin }
 

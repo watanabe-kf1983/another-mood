@@ -333,6 +333,61 @@ class TestExplicitTargetAttribute:
         ]
 
 
+class TestScalarMapValue:
+    """FK declared on a scalar map's value schema.
+
+    The map normalizes to ``{id, value}`` records, so the reference sits
+    on the synthesized ``value`` attribute.
+    """
+
+    CATALOG = """
+        - id: artists
+          item_type:
+            id: artists.item
+            attributes:
+              - { id: id, type: string, required: true }
+        - id: stage_owners
+          item_type:
+            id: stage_owners.item
+            attributes:
+              - { id: id, type: string, required: true }
+              - id: value
+                type: string
+                required: true
+                x_ref: { entity: artists, attribute: id }
+    """
+
+    def test_value_reference_resolves(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG)
+        data = _data(
+            """
+            artists:
+              - id: miyavi
+            stage_owners:
+              - id: main
+                value: miyavi
+            """,
+            tmp_path,
+        )
+        assert list(check_fk_data(catalog, data)) == []
+
+    def test_value_reference_dangling(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG)
+        data = _data(
+            """
+            artists:
+              - id: miyavi
+            stage_owners:
+              - id: main
+                value: ghost
+            """,
+            tmp_path,
+        )
+        assert [_summary(d) for d in check_fk_data(catalog, data)] == [
+            (5, "x-ref stage_owners.value = 'ghost' has no match in artists.id"),
+        ]
+
+
 class TestUntaggedValue:
     """A FROM-side value without UserStr tagging still produces a diagnostic."""
 

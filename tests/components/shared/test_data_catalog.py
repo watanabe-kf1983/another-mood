@@ -133,6 +133,7 @@ class TestBuildAndFlatten:
                 "entities",
                 """
                 - id: entities
+                  metadata: { title: Entity collection }
                   item_type:
                     id: entities.item
                     attributes:
@@ -148,6 +149,7 @@ class TestBuildAndFlatten:
                         child_item_type: entities.item.fields.item
                     metadata: { title: Entity }
                 - id: entities.fields
+                  metadata: { title: Fields list }
                   item_type:
                     id: entities.item.fields.item
                     attributes:
@@ -223,8 +225,11 @@ class TestBuildAndFlatten:
         self, root_name: str, yaml_text: str
     ) -> None:
         flat = _catalog(yaml_text)
-        root = dc.build_tree(flat)
-        assert dc.flatten_tree(root.child(root_name), root_name) == flat
+        # ``child_entry``, not ``child``: a root entity's collection-layer
+        # metadata rides on the virtual root's edge, which is outside the
+        # node ``flatten_tree`` walks.
+        edge, node = dc.build_tree(flat).child_entry(root_name)
+        assert dc.flatten_tree(node, root_name, metadata=edge.metadata) == flat
 
 
 class TestCatalogDriftSuppression:

@@ -44,15 +44,23 @@
 {% endfilter %}
 
 {% for entity in entities if entity.id == id or entity.id is startingwith(id ~ ".") %}
-## Type: {{ entity.item_type.id }}
+## Entity: {{ entity.id }}
+
+{% if entity.metadata %}
+### metadata
+
+{{ code_fenced(entity.metadata | to_yaml, "yaml") }}
+
+{% endif %}
+### Type: {{ entity.item_type.id }}
 
 {% if entity.item_type.metadata %}
-### metadata
+#### metadata
 
 {{ code_fenced(entity.item_type.metadata | to_yaml, "yaml") }}
 
 {% endif %}
-### attributes
+#### attributes
 
 {% if entity.item_type.attributes %}
 | id | type | required | references | validation | metadata |
