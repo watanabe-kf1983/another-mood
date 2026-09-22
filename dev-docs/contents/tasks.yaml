@@ -749,15 +749,13 @@ categories:
         note: |
           設計書のデータ設計章を埋める章別増分。ユースケース × エンティティの
           join から導出される view として実装し、要求仕様書と設計書の二文書同期を
-          実証する。ユースケース・要求 entity の属性詰め (旧 Candidates の
-          ユースケース記述を吸収) もここ。S8 の目次仕様で割り当てた生成部のうち、
-          要求仕様書「はじめに」章の製品概観と 3 章の要求、設計書「データ設計」章
-          前半の論理データモデルは章別 PR 1 / 3a / 3b / 6a で完了 (決定事項は
-          design の External Design「S8」の各節)。残るは CRUD マトリクス (PR 6b)。
-          F カテゴリから S への移管 (旧 F6)。S7 / S8 が前提。詳細は
-          design/showcase/system-dev-docs.md の Proposals 参照。
+          実証した。ユースケース・要求 entity の属性詰め (旧 Candidates の
+          ユースケース記述を吸収) もここ。章別 PR 1 / 3a / 3b / 6a / 6b で完了
+          (決定事項は design の External Design「S8」の各節)。CRUD で見つかった
+          上流の穴 (保留販売の確認) は design の Candidates。F カテゴリから S への
+          移管 (旧 F6)。
         phase: 16
-        proposal: 20-design/80-showcase/10-system-dev-docs#s3-crud-マトリクス--ユースケース構造化
+        done: true
       S4:
         title: 画面遷移図 + 画面定義テンプレート
         note: |
