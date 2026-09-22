@@ -29,7 +29,7 @@ properties:
       properties:
         題名:
           type: string
-          description: "要求を一覧や参照で一行で指すための見出し (例: 入荷時の在庫加算)。英名: title"
+          description: "要求を一覧や参照で一行で指すための見出し (例: 入荷時の在庫加算)。検証の章や設計判断の根拠要求では ID と題名で要求を指す。英名: title"
         種別:
           type: string
           description: "要求の区分。29148 の SRS 例示アウトライン 3 章の節構成 (機能 / インタフェース / 品質・性能・ユーザビリティ / 設計制約) を 4 区分に畳んだもの。要求仕様書の 3 章と 4 章 (検証) はこの区分で節を分ける。英名: kind (functional / external_interface / quality / design_constraint)"
@@ -42,7 +42,7 @@ properties:
           description: "この要求が必要な理由 (29148 5.2.8 の rationale、Volere の rationale)。英名: rationale"
         適合基準:
           type: string
-          description: "要求が満たされたと判定できる測定可能な条件 (Volere の fit criterion)。4 章 (検証) の検証内容の元になる。英名: fit_criterion"
+          description: "要求が満たされたと判定できる測定可能な条件 (Volere の fit criterion)。要求は検証可能でなければならないので必須とし、4 章 (検証) の検証内容の元になる。英名: fit_criterion"
         優先度:
           type: string
           description: "要求の優先度 (29148 5.2.8 の priority)。英名: priority (mandatory / important / optional)"
@@ -53,10 +53,10 @@ properties:
           enum: [検査, 分析, デモンストレーション, 試験]
         ユースケース:
           type: string
-          description: "機能要求が属するユースケースの ID。機能要求以外では省略可。英名: use_case_id"
+          description: "機能要求が属するユースケースの ID。機能要求は必ず 1 つのユースケースに属し、その記述の直後に掲載される。機能要求以外では省略する。英名: use_case_id"
           x-ref:
             entity: ユースケース
-      required: [種別, 記述, 優先度]
+      required: [題名, 種別, 記述, 適合基準, 優先度, 検証方法]
 
   ユースケース:
     type: object
