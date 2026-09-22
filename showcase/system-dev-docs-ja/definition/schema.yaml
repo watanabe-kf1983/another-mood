@@ -309,6 +309,9 @@ properties:
               主キー:
                 type: boolean
                 description: "この属性が主キー (識別子) を構成するかどうか。省略時は false 扱い。英名: primary_key"
+              説明:
+                type: string
+                description: "属性が持つ値の意味と、値が入る・空になる条件を 1 文で説明する。属性名から自明でも、エンティティ定義の表を 1 行ずつ読めるようにするため書く。英名: description"
               参照:
                 type: object
                 description: "他エンティティへのリレーション (外部キー相当)。ER 図のリレーション線はここから導出する。英名: ref"
