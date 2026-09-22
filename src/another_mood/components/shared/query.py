@@ -106,7 +106,9 @@ class Flatten(QueryNode):
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        edge, child = catalog.descend(self.of)
+        # ``of`` names an attribute, not a path: ``_unwind`` drops it from
+        # the row by exact key, so a nested target could not be consumed.
+        edge, child = catalog.child_entry(self.of)
         if not edge.is_collection:
             raise QueryDeriveError(
                 f"flatten target '{self.of}' is not an array attribute "
@@ -119,20 +121,12 @@ class Flatten(QueryNode):
             type=edge.type[:-2],
             required=not self.preserve_empty,
         )
-        # Inline as ``<as_>.X`` siblings — catalog convention for
-        # singleton sub-objects (see data_catalog._build_entity_node).
-        inlined = [
-            (replace(sub_edge, name=f"{self.as_}.{sub_edge.name}"), sub_node)
-            for sub_edge, sub_node in child.children
-        ]
         out = dc.Node(
             metadata=catalog.metadata,
-            children=list(
-                chain.from_iterable(
-                    [(wrapper, dc.Node()), *inlined] if e.name == self.of else [(e, c)]
-                    for e, c in catalog.children
-                )
-            ),
+            children=[
+                (wrapper, child) if e.name == self.of else (e, c)
+                for e, c in catalog.children
+            ],
         )
         if _duplicate_child_name(out) is not None:
             raise QueryDeriveError(
@@ -294,9 +288,12 @@ class Grouped(QueryNode):
         return [{self.by: key, self.as_: items} for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
+        edge, child = catalog.descend(self.by)
         out = dc.Node(
             children=[
-                catalog.descend(self.by),
+                # ``apply`` writes the whole ``by`` string as the group
+                # key, so the edge mirrors the record, not the path's end.
+                (replace(edge, name=self.by), child),
                 (
                     dc.Edge(name=self.as_, type="object[]", required=True),
                     catalog,
@@ -331,16 +328,10 @@ class SelectItem:
         except KeyError:
             return {}
 
-    def derive(self, catalog: dc.Node) -> Sequence[dc.Branch]:
-        # Pull dotted siblings too so derive mirrors apply's ``pluck``,
-        # which returns the whole singleton object.
-        catalog.require_path(self.item)
-        prefix = self.item + "."
-        return [
-            (replace(edge, name=self.as_ + edge.name.removeprefix(self.item)), node)
-            for edge, node in catalog.children
-            if edge.name == self.item or edge.name.startswith(prefix)
-        ]
+    def derive(self, catalog: dc.Node) -> dc.Branch:
+        # The whole subtree comes along, mirroring apply's ``pluck``.
+        edge, node = catalog.descend(self.item)
+        return replace(edge, name=self.as_), node
 
 
 @dataclass(frozen=True)
@@ -356,22 +347,14 @@ class Select(QueryNode):
         ]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        out = dc.Node(
-            children=list(
-                chain.from_iterable(item.derive(catalog) for item in self.items)
-            )
-        )
+        out = dc.Node(children=[item.derive(catalog) for item in self.items])
         duplicate = _duplicate_child_name(out)
         if duplicate is not None:
-            # Read the alias back off the items: the edge name is built by
-            # concatenation, which drops the source position the diagnostic
-            # needs.  The later of the two is the write that overwrites.
-            alias = next(
-                item.as_ for item in reversed(self.items) if item.as_ == duplicate
-            )
+            # The name reported is the later of the two — the overwriting
+            # write — and is the alias itself, source position and all.
             raise QueryDeriveError(
-                f"select alias '{alias}' collides with an earlier item",
-                offender=alias,
+                f"select alias '{duplicate}' collides with an earlier item",
+                offender=duplicate,
             )
         return out
 

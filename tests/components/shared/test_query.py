@@ -417,12 +417,13 @@ class TestJoin:
             merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
             flatten=Flatten(of="tasks", as_="task"),
         )
-        attrs = {e.name: e for e, _ in join.derive(root.child("cats"), root).children}
+        out = join.derive(root.child("cats"), root)
+        attrs = {e.name: e for e, _ in out.children}
         # Merge's ``tasks`` edge has been unwound by Flatten — only the
-        # singleton ``task`` namespace remains, with inlined siblings.
+        # singleton ``task`` remains, carrying the element's own body.
         assert "tasks" not in attrs
         assert attrs["task"].type == "object"
-        assert "task.id" in attrs
+        assert [e.name for e, _ in out.child("task").children] == ["id", "title", "cat"]
 
 
 class TestJoinFromDict:
