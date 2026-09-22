@@ -780,7 +780,8 @@ categories:
           (x-ref + 表生成) の実証。要求レコード (S3) が揃ってから。S5 の Candidates
           判定で task 化。S8 の目次仕様で割り当てた生成部: 設計書「はじめに」章の
           設計方針節 (設計判断 entity のサンプルデータと、根拠要求への参照を含む
-          一覧の生成)。
+          一覧の生成)。要求仕様書 4 章 (検証) は章別 PR 4 で完了 (決定事項は
+          design の External Design「S8」の「検証」)。残りは設計方針節。
         phase: 18
       S7:
         title: 二文書 showcase のモデル構築 (showcase/system-dev-docs-ja)
