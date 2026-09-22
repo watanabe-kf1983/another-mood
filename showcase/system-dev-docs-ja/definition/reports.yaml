@@ -14,7 +14,10 @@
 #          inlined into a single index.md.
 #
 # Prose chapters are not split in either edition: they are inlined where
-# the document shell embeds them (`| render("prose.md")`).
+# the document shell embeds them (`| render("prose.md")`). Neither is the
+# verification chapter: it re-lists the chapter 3 requirements by looping over
+# the same view rows, so its tables have no subject of their own and its ID
+# links land on the chapter 3 copies.
 editions:
   web:
     file_per:
