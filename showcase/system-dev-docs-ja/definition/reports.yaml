@@ -14,8 +14,11 @@
 #          エンティティ collection: the ER diagram and entity list on one page,
 #          each entity definition on a page of its own) and the CRUD matrix
 #          section (the CRUDマトリクス view: use cases with their data
-#          accesses joined) are split into their own pages; both documents stay on index.md until composite views
-#          let a document be a node of its own.
+#          accesses joined) and the screen design chapter (the 画面 collection:
+#          the screen list and the transition diagram on one page, each
+#          screen definition on a page of its own) are split into their own
+#          pages; both documents stay on index.md until
+#          composite views let a document be a node of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
@@ -36,5 +39,7 @@ editions:
       - エンティティ.item[]
       - エンティティ.item
       - CRUDマトリクス.item[]
+      - 画面.item[]
+      - 画面.item
   book:
     file_per: []

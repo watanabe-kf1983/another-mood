@@ -201,7 +201,8 @@ properties:
           description: "文書に掲載する表示名 (例: 入荷登録画面)。英名: name"
         分類:
           type: string
-          description: "画面の分類 (例: 一覧、登録、照会)。IPA 画面一覧の分類項目に対応。英名: category"
+          description: "画面の分類。IPA 画面一覧の分類項目に対応。メニュー は他の画面へ進むための入口で、画面遷移図の開始点 ([*]) はこの分類の画面に引く。登録 は入力を受けてデータを作る画面、一覧 は検索して複数件を並べる画面、照会 は 1 件の詳細を表示する画面。英名: category (menu / entry / list / detail)"
+          enum: [メニュー, 登録, 一覧, 照会]
         説明:
           type: string
           description: "画面の役割を 1〜2 文で説明する。英名: description"
@@ -234,9 +235,12 @@ properties:
                 type: string
                 description: "項目の方向。英名: direction (input / output / both)"
                 enum: [入力, 出力, 入出力]
+              説明:
+                type: string
+                description: "項目の意味や書式の補足 (IPA 画面入出力項目一覧の項目説明に対応)。参照先を持たない項目はここで意味を示す。英名: description"
               参照先:
                 type: object
-                description: "項目が対応するデータモデル上の属性 (IPA 画面入出力項目一覧の参照先エンティティ・属性に対応)。英名: ref"
+                description: "項目が対応するデータモデル上の属性 (IPA 画面入出力項目一覧の参照先エンティティ・属性に対応)。画面にしか無い項目や複数のエンティティを畳んだ項目は省略する。英名: ref"
                 additionalProperties: false
                 properties:
                   エンティティ:
@@ -281,7 +285,7 @@ properties:
                         entity: 画面
                   required: [遷移先]
             required: [名前]
-      required: [名前, 説明]
+      required: [名前, 分類, 説明]
 
   エンティティ:
     type: object
