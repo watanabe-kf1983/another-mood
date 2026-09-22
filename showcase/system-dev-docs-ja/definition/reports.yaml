@@ -6,10 +6,11 @@
 #
 #   web  — browse online: the glossary (the 用語 collection) and each
 #          use-case description (a ユースケース記述 view row: the use case
-#          with its requirements joined) and each non-functional section
+#          with its requirements joined), each non-functional section
 #          (a 要求種別 view row: one requirement kind with its requirements)
-#          are split into their own pages; both documents stay on index.md until composite views
-#          let a document be a node of its own.
+#          and the design policy section (the 設計判断 collection) are split
+#          into their own pages; both documents stay on index.md until
+#          composite views let a document be a node of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
@@ -24,5 +25,6 @@ editions:
       - 用語.item[]
       - ユースケース記述.item
       - 要求種別.item
+      - 設計判断.item[]
   book:
     file_per: []
