@@ -36,6 +36,10 @@ class XRef:
     entity: str
     attribute: str
 
+    #: Node-form self-description of the persisted record.  Assigned
+    #: below, not here: ``Edge.x_ref`` puts ``XRef`` ahead of ``Node``.
+    catalog: ClassVar["Node"]
+
 
 @dataclass(frozen=True)
 class Edge:
@@ -121,6 +125,14 @@ class Node:
         return candidate
 
 
+XRef.catalog = Node(
+    children=[
+        (Edge(name="entity", type="string", required=True), Node()),
+        (Edge(name="attribute", type="string", required=True), Node()),
+    ],
+)
+
+
 def is_entity(edge: Edge, node: Node) -> bool:
     """Whether the ``edge`` → ``node`` link materializes as its own Entity.
 
@@ -157,16 +169,7 @@ class Attribute:
     child_item_type: str | None = None  # child ObjectType.id
     x_ref: XRef | None = None  # FK declaration from ``x-ref:``
 
-    #: Node-form self-description of the persisted Attribute record.
-    #: Composed into ``Entity.catalog`` as the child of the
-    #: ``item_type.attributes`` edge.  The caller assigns the catalog id
-    #: via ``flatten_tree(root_name=...)``; ``Attribute`` itself doesn't
-    #: know where in the namespace it lives.
-    #:
-    #: ``XRef`` (the type of ``x_ref``) is singleton-flattened inline:
-    #: the wrapper edge ``x_ref`` (type=object) plus dotted-name edges
-    #: for each XRef field — mirroring the ``item_type.*`` flattening
-    #: in ``Entity.catalog``.
+    #: Node-form self-description of the persisted record.
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
@@ -176,9 +179,7 @@ class Attribute:
             (Edge(name="validation", type="object", required=False), Node()),
             (Edge(name="child_entity", type="string", required=False), Node()),
             (Edge(name="child_item_type", type="string", required=False), Node()),
-            (Edge(name="x_ref", type="object", required=False), Node()),
-            (Edge(name="x_ref.entity", type="string", required=True), Node()),
-            (Edge(name="x_ref.attribute", type="string", required=True), Node()),
+            (Edge(name="x_ref", type="object", required=False), XRef.catalog),
         ],
     )
 
@@ -217,6 +218,19 @@ class ObjectType:
     origin_item_type: str
     metadata: Mapping[str, object] | None = None
 
+    #: Node-form self-description of the persisted record.
+    catalog: ClassVar[Node] = Node(
+        children=[
+            (Edge(name="id", type="string", required=True), Node()),
+            (Edge(name="origin_item_type", type="string", required=True), Node()),
+            (Edge(name="metadata", type="object", required=False), Node()),
+            (
+                Edge(name="attributes", type="object[]", required=True),
+                Attribute.catalog,
+            ),
+        ],
+    )
+
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
 
@@ -243,29 +257,15 @@ class Entity:
     builtin: bool = False
     view: bool = False  # synthesized from a query (composer-set)
 
-    #: Node-form self-description of the persisted Entity record.
-    #: ``ObjectType`` (the type of ``item_type``) is singleton-flattened
-    #: inline: the wrapper edge ``item_type`` (type=object) plus
-    #: dotted-name edges ``item_type.id`` / ``item_type.origin_item_type``
-    #: / ``item_type.metadata`` for scalars, and ``item_type.attributes``
-    #: carrying ``Attribute.catalog`` as the child-entity link.
-    #:
-    #: The caller assigns the catalog id via
-    #: ``flatten_tree(catalog, root_name=...)`` and is expected to set
-    #: ``builtin=True`` before persisting.
+    #: Node-form self-description of the persisted record.  The caller
+    #: assigns the catalog id via ``flatten_tree(catalog, root_name=...)``
+    #: and is expected to set ``builtin=True`` before persisting.
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
-            (Edge(name="item_type", type="object", required=True), Node()),
-            (Edge(name="item_type.id", type="string", required=True), Node()),
             (
-                Edge(name="item_type.origin_item_type", type="string", required=True),
-                Node(),
-            ),
-            (Edge(name="item_type.metadata", type="object", required=False), Node()),
-            (
-                Edge(name="item_type.attributes", type="object[]", required=True),
-                Attribute.catalog,
+                Edge(name="item_type", type="object", required=True),
+                ObjectType.catalog,
             ),
             (Edge(name="parent_entity", type="string", required=False), Node()),
             (Edge(name="builtin", type="boolean", required=False), Node()),
