@@ -501,19 +501,14 @@ categories:
         done: true
       M15:
         title: カタログの木を JSON データモデルと同形にする
-        note: >-
-          singleton を平坦なドット名エッジではなく本物の子 Node として持ち、
-          平坦化を flatten_tree / build_tree のシリアライズ境界に閉じ込める。
-          利用者から見た振る舞いは変わらず、ビルド出力はバイト一致のまま。
-          E14 と M16 の前段。
-        proposal: 20-design/40-communication/10-json-data-model#カタログの木を-json-データモデルと同形にする-m15
         phase: 18
+        done: true
       M16:
         title: スキーマ中間木を dc.Node / dc.Edge へ寄せる
         note: >-
-          M15 後は schema_tree の ObjectNode / ArrayNode / ValueNode +
-          SchemaProperty が dc.Node / dc.Edge とほぼ同型になり、to_catalog_node は
-          ほぼ恒等写像になる。中間木を畳めるかを見極める。M15 が前提。
+          schema_tree の ObjectNode / ArrayNode / ValueNode + SchemaProperty は
+          dc.Node / dc.Edge とほぼ同型で、to_catalog_node はほぼ恒等写像。
+          中間木を畳めるかを見極める。
         proposal: 20-design/40-communication/10-json-data-model#スキーマ中間木の統合-m16
         phase: 18
 
