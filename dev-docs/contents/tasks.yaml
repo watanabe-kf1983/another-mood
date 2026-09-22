@@ -747,7 +747,7 @@ categories:
           join から導出される view として実装し、要求仕様書と設計書の二文書同期を
           実証した。ユースケース・要求 entity の属性詰め (旧 Candidates の
           ユースケース記述を吸収) もここ。章別 PR 1 / 3a / 3b / 6a / 6b で完了
-          (決定事項は design の External Design「S8」の各節)。CRUD で見つかった
+          (決定事項は各 PR の本文)。CRUD で見つかった
           上流の穴 (保留販売の確認) は design の Candidates。F カテゴリから S への
           移管 (旧 F6)。
         phase: 16
@@ -759,8 +759,7 @@ categories:
           まで詰め、Mermaid stateDiagram-v2 で遷移図を描いた (stateDiagram の
           Mermaid 適合性実機検証を兼ねる)。S8 の目次仕様で割り当てた生成部は、
           設計書「コンテキスト」章の図が章別 PR 2、画面設計章の画面一覧 /
-          画面遷移図が 7a、画面定義が 7b で完了 (決定事項は design の External
-          Design「S8」の「コンテキスト」「画面一覧と画面遷移図」「画面定義」)。
+          画面遷移図が 7a、画面定義が 7b で完了 (決定事項は各 PR の本文)。
           二文書の章別 PR はこれで全て揃った。blueprint 登録は E17 待ち。
         phase: 16
         done: true
@@ -777,8 +776,7 @@ categories:
           判定で task 化。S8 の目次仕様で割り当てた生成部: 設計書「はじめに」章の
           設計方針節 (設計判断 entity のサンプルデータと、根拠要求への参照を含む
           一覧の生成)。要求仕様書 4 章 (検証) は章別 PR 4 で、設計書の設計方針節は
-          章別 PR 5 で完了 (決定事項は design の External Design「S8」の「検証」
-          「設計方針」)。
+          章別 PR 5 で完了 (決定事項は各 PR の本文)。
         phase: 18
         done: true
       S7:
