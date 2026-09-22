@@ -12,6 +12,8 @@ from typing import Any, ClassVar, cast
 
 # ── In-memory tree form (canonical) ───────────────────────────────────
 
+type Branch = tuple[Edge, Node]
+
 
 @dataclass(frozen=True)
 class XRef:
@@ -39,57 +41,91 @@ class Edge:
     validation: Mapping[str, object] | None = None
     x_ref: XRef | None = None
 
+    @property
+    def is_collection(self) -> bool:
+        return self.type.endswith("[]")
+
 
 @dataclass(frozen=True)
 class Node:
     metadata: Mapping[str, object] | None = None
-    children: Sequence[tuple[Edge, "Node"]] = ()
+    children: Sequence[Branch] = ()
     origin_item_type: str | None = None
 
-    @property
-    def is_entity(self) -> bool:
-        """Whether this node materializes as an Entity in the flat catalog.
-
-        Equivalent to having children: scalar nodes surface only as
-        attributes on their parent and never become entities.
-        """
-        return bool(self.children)
+    # ── Child access by one edge name ─────────────────────────────────
+    #
+    # ``name`` is one edge name, never a path: a dot in it belongs to the
+    # name, as in the top-level entity id ``__definition.entities``.
 
     def has_child(self, name: str) -> bool:
-        """Whether an edge named ``name`` exists among this node's children."""
         return any(e.name == name for e, _ in self.children)
 
-    def require_child(self, name: str) -> None:
-        """Raise :class:`UnknownChildError` if no child edge is named ``name``.
-
-        For validate-only callers (e.g. clauses that re-emit the catalog
-        unchanged) that want the same error vocabulary as ``child`` /
-        ``child_entry`` without performing an access.
-        """
-        if not self.has_child(name):
-            raise UnknownChildError(name)
-
-    def child_entry(self, name: str) -> tuple[Edge, "Node"]:
-        """Return the (edge, child) entry reached by the edge named ``name``.
-
-        Raises :class:`UnknownChildError` if no such edge exists.
-        """
+    def child_entry(self, name: str) -> Branch:
+        """Raises :class:`UnknownChildError` if no child edge is named ``name``."""
         for e, c in self.children:
             if e.name == name:
                 return e, c
         raise UnknownChildError(name)
 
     def child(self, name: str) -> "Node":
-        """Return the child node reached by the edge named ``name``.
-
-        Raises :class:`UnknownChildError` if no such edge exists.
-        """
+        """Raises :class:`UnknownChildError` if no child edge is named ``name``."""
         return self.child_entry(name)[1]
+
+    # ── Child access by dotted path ───────────────────────────────────
+
+    def descend(self, path: str) -> Branch:
+        """Walk the dotted ``path``, traversing singleton objects only: a
+        path may end on a collection attribute but never continue past one.
+
+        Raises :class:`UnknownChildError` carrying the whole ``path``.
+        """
+        entry = self._descend(path)
+        if entry is None:
+            raise UnknownChildError(path)
+        return entry
+
+    def require_path(self, path: str) -> None:
+        """Raises :class:`UnknownChildError` if ``path`` does not resolve."""
+        self.descend(path)
+
+    def _descend(self, path: str) -> Branch | None:
+        name = self._longest_child_name(path)
+        if name is None:
+            return None
+        edge, child = self.child_entry(name)
+        if name == path:
+            return edge, child
+        if edge.is_collection:
+            return None
+        return child._descend(path[len(name) + 1 :])
+
+    def _longest_child_name(self, path: str) -> str | None:
+        # Longest-first, and the match commits — no backtracking — mirroring
+        # how the data side resolves the same string against a record.
+        # Transitional: view aliases (``select[].as``, ``flatten.as``,
+        # ``join.as``, ``grouped.by``) become record keys verbatim, so an edge
+        # name can still be a literal dotted key.  Once aliases are constrained
+        # to paths, every dot means nesting and this is a plain split.
+        candidate = path
+        while not self.has_child(candidate):
+            if "." not in candidate:
+                return None
+            candidate = candidate.rsplit(".", 1)[0]
+        return candidate
+
+
+def is_entity(edge: Edge, node: Node) -> bool:
+    """Whether the ``edge`` → ``node`` link materializes as its own Entity.
+
+    A singleton object has children too, but is inlined into the entity
+    that holds it rather than becoming one.
+    """
+    return edge.is_collection and bool(node.children)
 
 
 class UnknownChildError(LookupError):
-    """Raised by :meth:`Node.child` / :meth:`Node.child_entry` /
-    :meth:`Node.require_child` when no child edge has the requested name.
+    """Raised by the :class:`Node` accessors when a name or path does not
+    resolve to a child edge.
 
     Carries ``name`` so callers (e.g. query derive) can re-raise their
     own typed error referencing the offending identifier.
@@ -312,9 +348,9 @@ def _flatten_entity(
 ) -> Sequence[Entity]:
     """Flatten ``node`` into a list of Entity (parent first, descendants after).
 
-    Caller's precondition: ``node.is_entity`` is True.  Scalar children
-    of ``node`` are filtered out before recursion, so this function is
-    only ever invoked on composite nodes.
+    Caller's precondition: ``node`` is an entity node.  Children that do
+    not open an entity of their own are filtered out before recursion,
+    so this function is only ever invoked on composite nodes.
 
     ``edge_path`` carries the chain of edge names traversed from the
     root.  Keeping it as a tuple (rather than a dot-joined string)
@@ -330,7 +366,7 @@ def _flatten_entity(
     descendants = [
         descendant
         for edge, child in node.children
-        if child.is_entity
+        if is_entity(edge, child)
         for descendant in _flatten_entity(
             child,
             edge_path=(*edge_path, edge.name),
@@ -356,14 +392,15 @@ def _to_object_type(node: Node, *, edge_path: Sequence[str]) -> ObjectType:
 
 def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attribute:
     """Build an Attribute for the (edge → node) connection at ``edge_path``."""
+    opens_entity = is_entity(edge, node)
     return Attribute(
         id=edge.name,
         type=edge.type,
         required=edge.required,
         metadata=edge.metadata,
         validation=edge.validation,
-        child_entity=".".join(edge_path) if node.is_entity else None,
-        child_item_type=_item_type_id(edge_path) if node.is_entity else None,
+        child_entity=".".join(edge_path) if opens_entity else None,
+        child_item_type=_item_type_id(edge_path) if opens_entity else None,
         x_ref=edge.x_ref,
     )
 
