@@ -214,7 +214,7 @@ def collect_entities(root: ObjectNode) -> Sequence[dc.Entity]:
     return [
         entity
         for edge, child in catalog_node.children
-        if child.is_entity
+        if dc.is_entity(edge, child)
         for entity in dc.flatten_tree(child, edge.name)
     ]
 
@@ -236,7 +236,7 @@ def _collect_edges(
     obj: ObjectNode,
     *,
     prefix: str = "",
-) -> Iterable[tuple[dc.Edge, dc.Node]]:
+) -> Iterable[dc.Branch]:
     # A singleton property (ObjectNode child of obj) is inlined into the
     # parent entity rather than becoming its own entity.  Each singleton
     # contributes two kinds of edges:

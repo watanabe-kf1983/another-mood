@@ -106,8 +106,8 @@ class Flatten(QueryNode):
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        edge, child = catalog.child_entry(self.of)
-        if not edge.type.endswith("[]"):
+        edge, child = catalog.descend(self.of)
+        if not edge.is_collection:
             raise QueryDeriveError(
                 f"flatten target '{self.of}' is not an array attribute "
                 f"(type '{edge.type}')",
@@ -198,8 +198,8 @@ class Merge:
         return [{**row, self.right_as: _matched(row)} for row in left]
 
     def derive(self, left: dc.Node, right: dc.Node) -> dc.Node:
-        left.require_child(self.on_left)
-        right.require_child(self.on_right)
+        left.require_path(self.on_left)
+        right.require_path(self.on_right)
         out = dc.Node(
             metadata=left.metadata,
             children=[
@@ -296,7 +296,7 @@ class Grouped(QueryNode):
     def derive(self, catalog: dc.Node) -> dc.Node:
         out = dc.Node(
             children=[
-                catalog.child_entry(self.by),
+                catalog.descend(self.by),
                 (
                     dc.Edge(name=self.as_, type="object[]", required=True),
                     catalog,
@@ -331,10 +331,10 @@ class SelectItem:
         except KeyError:
             return {}
 
-    def derive(self, catalog: dc.Node) -> Sequence[tuple[dc.Edge, dc.Node]]:
+    def derive(self, catalog: dc.Node) -> Sequence[dc.Branch]:
         # Pull dotted siblings too so derive mirrors apply's ``pluck``,
         # which returns the whole singleton object.
-        catalog.require_child(self.item)
+        catalog.require_path(self.item)
         prefix = self.item + "."
         return [
             (replace(edge, name=self.as_ + edge.name.removeprefix(self.item)), node)
@@ -421,7 +421,7 @@ class Sort(QueryNode):
         return absent + ordered if self.missing is Missing.FIRST else ordered + absent
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        catalog.require_child(self.by)
+        catalog.require_path(self.by)
         return catalog
 
 

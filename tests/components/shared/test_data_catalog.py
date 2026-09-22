@@ -14,6 +14,10 @@ def _catalog(yaml_text: str) -> list[dc.Entity]:
     return [dc.Entity.from_dict(e) for e in loaded]
 
 
+def _edge(name: str, type_: str = "string") -> dc.Edge:
+    return dc.Edge(name=name, type=type_, required=True)
+
+
 class TestDictRoundTrip:
     def test_minimal_entity(self) -> None:
         entity = dc.Entity(
@@ -290,3 +294,82 @@ class TestRenameOnFlatten:
         )
         root = dc.build_tree(flat)
         assert dc.flatten_tree(root.child("categories"), "tasks_by_phase") == expected
+
+
+class TestIsEntity:
+    """``is_entity`` reads the link, not the node."""
+
+    def test_object_collection_opens_an_entity(self) -> None:
+        child = dc.Node(children=[(_edge("id"), dc.Node())])
+        assert dc.is_entity(_edge("tasks", "object[]"), child)
+
+    def test_singleton_object_does_not(self) -> None:
+        """A singleton has children too, but is inlined into its holder."""
+        child = dc.Node(children=[(_edge("city"), dc.Node())])
+        assert not dc.is_entity(_edge("address", "object"), child)
+
+    def test_scalar_collection_does_not(self) -> None:
+        assert not dc.is_entity(_edge("tags", "string[]"), dc.Node())
+
+
+class TestDescend:
+    """``descend`` walks a dotted path; ``child`` reads one edge name."""
+
+    #: ``members`` holds a singleton ``hobby``, itself holding a scalar
+    #: ``level`` and a collection ``pets``.
+    TREE = dc.Node(
+        children=[
+            (_edge("id"), dc.Node()),
+            (
+                _edge("hobby", "object"),
+                dc.Node(
+                    children=[
+                        (_edge("level", "integer"), dc.Node()),
+                        (
+                            _edge("pets", "object[]"),
+                            dc.Node(children=[(_edge("name"), dc.Node())]),
+                        ),
+                    ]
+                ),
+            ),
+        ]
+    )
+
+    def test_traverses_a_singleton(self) -> None:
+        edge, _ = self.TREE.descend("hobby.level")
+        assert edge.name == "level"
+
+    def test_ends_on_a_collection(self) -> None:
+        edge, node = self.TREE.descend("hobby.pets")
+        assert edge.type == "object[]"
+        assert node.has_child("name")
+
+    def test_does_not_cross_a_collection(self) -> None:
+        """The asymmetry rule: reaching a field must mean reaching it on
+        the row at hand."""
+        with pytest.raises(dc.UnknownChildError):
+            self.TREE.descend("hobby.pets.name")
+
+    def test_unknown_path_carries_the_whole_path(self) -> None:
+        with pytest.raises(dc.UnknownChildError) as excinfo:
+            self.TREE.descend("hobby.nope")
+        assert excinfo.value.name == "hobby.nope"
+
+    def test_prefers_a_literal_dotted_edge_over_descent(self) -> None:
+        """Longest-first: a view alias can still write a literal dotted key."""
+        node = dc.Node(
+            children=[
+                (_edge("a", "object"), dc.Node(children=[(_edge("b"), dc.Node())])),
+                (_edge("a.b", "integer"), dc.Node()),
+            ]
+        )
+        edge, _ = node.descend("a.b")
+        assert edge.type == "integer"
+
+    def test_child_does_not_walk_a_path(self) -> None:
+        """A dot in a name belongs to the name — top-level entity ids carry
+        dots (``__definition.entities``).  Same string, different accessor:
+        ``descend`` resolves ``hobby.level``, ``child`` does not."""
+        assert not self.TREE.has_child("hobby.level")
+        with pytest.raises(dc.UnknownChildError):
+            self.TREE.child("hobby.level")

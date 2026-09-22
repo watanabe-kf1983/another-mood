@@ -108,7 +108,7 @@ class FieldPredicate(RecordPredicate):
         return self.operator.evaluate(value, self.target)
 
     def validate_by_catalog(self, catalog: dc.Node) -> None:
-        catalog.require_child(self.key_path)
+        catalog.require_path(self.key_path)
 
 
 @dataclass(frozen=True)
