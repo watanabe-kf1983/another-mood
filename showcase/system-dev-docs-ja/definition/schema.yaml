@@ -235,9 +235,12 @@ properties:
                 type: string
                 description: "項目の方向。英名: direction (input / output / both)"
                 enum: [入力, 出力, 入出力]
+              説明:
+                type: string
+                description: "項目の意味や書式の補足 (IPA 画面入出力項目一覧の項目説明に対応)。参照先を持たない項目はここで意味を示す。英名: description"
               参照先:
                 type: object
-                description: "項目が対応するデータモデル上の属性 (IPA 画面入出力項目一覧の参照先エンティティ・属性に対応)。英名: ref"
+                description: "項目が対応するデータモデル上の属性 (IPA 画面入出力項目一覧の参照先エンティティ・属性に対応)。画面にしか無い項目や複数のエンティティを畳んだ項目は省略する。英名: ref"
                 additionalProperties: false
                 properties:
                   エンティティ:
