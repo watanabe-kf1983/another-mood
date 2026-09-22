@@ -14,6 +14,12 @@ from typing import Any, ClassVar, cast
 
 type Branch = tuple[Edge, Node]
 
+#: A node together with the chain of edges reaching it from an entity's
+#: body.  A ``Branch`` is one step; this is the several steps a dotted
+#: ``Attribute.id`` stands for, since singletons are folded into the
+#: entity holding them.
+type AttributeReach = tuple[Sequence[Edge], Node]
+
 
 @dataclass(frozen=True)
 class XRef:
@@ -208,6 +214,12 @@ class ObjectType:
 
 @dataclass(frozen=True)
 class Entity:
+    """One collection in the flat catalog, identified by its access path.
+
+    A singleton object opens no entity of its own: it folds into the
+    entity holding it, under dotted ``Attribute.id``.
+    """
+
     id: str
     item_type: ObjectType
     parent_entity: str | None = None
@@ -278,12 +290,7 @@ def build_tree(catalog: Sequence[Entity]) -> Node:
 
 
 def flatten_tree(node: Node, root_name: str) -> Sequence[Entity]:
-    """Flatten ``node`` into a list of Entity records.
-
-    The top entity gets ``root_name`` as its id; descendant ids are
-    built by joining the chain of child edge names with dots — the
-    access_path convention shared by every catalog producer.
-    """
+    """Flatten ``node`` into Entity records, the top one named ``root_name``."""
     return _flatten_entity(node, edge_path=(root_name,), parent_entity_id=None)
 
 
@@ -352,38 +359,68 @@ def _flatten_entity(
     not open an entity of their own are filtered out before recursion,
     so this function is only ever invoked on composite nodes.
 
-    ``edge_path`` carries the chain of edge names traversed from the
-    root.  Keeping it as a tuple (rather than a dot-joined string)
-    preserves edge boundaries when an edge name itself contains dots
-    (e.g. ``hobby.pets`` from a singleton-object flattening).
+    ``edge_path`` stays a tuple rather than a dot-joined string because
+    an attribute id can itself contain dots (``hobby.pets``).
     """
     self_id = ".".join(edge_path)
+    attributes = _flatten_attributes(((), node))
     self_entity = Entity(
         id=self_id,
-        item_type=_to_object_type(node, edge_path=edge_path),
+        item_type=_to_object_type(node, edge_path=edge_path, attributes=attributes),
         parent_entity=parent_entity_id,
     )
     descendants = [
         descendant
-        for edge, child in node.children
-        if is_entity(edge, child)
+        for path, child in attributes
+        if is_entity(path[-1], child)
         for descendant in _flatten_entity(
             child,
-            edge_path=(*edge_path, edge.name),
+            edge_path=(*edge_path, _attribute_id(path)),
             parent_entity_id=self_id,
         )
     ]
     return [self_entity, *descendants]
 
 
-def _to_object_type(node: Node, *, edge_path: Sequence[str]) -> ObjectType:
+def _flatten_attributes(reach: AttributeReach) -> Sequence[AttributeReach]:
+    return [
+        expanded
+        for child in _inlined_children(reach)
+        for expanded in [child, *_flatten_attributes(child)]
+    ]
+
+
+def _inlined_children(reach: AttributeReach) -> Sequence[AttributeReach]:
+    path, node = reach
+    # An entity's own body is reached by an empty chain: no edge to test,
+    # and it always folds in.
+    if not path or not path[-1].is_collection:
+        return [((*path, edge), child) for edge, child in node.children]
+    else:
+        return []
+
+
+def _attribute_id(path: Sequence[Edge]) -> str:
+    return ".".join(edge.name for edge in path)
+
+
+def _to_object_type(
+    node: Node,
+    *,
+    edge_path: Sequence[str],
+    attributes: Sequence[AttributeReach],
+) -> ObjectType:
     """Build an ObjectType for ``node`` reached at ``edge_path``."""
     item_type_id = _item_type_id(edge_path)
     return ObjectType(
         id=item_type_id,
         attributes=[
-            _to_attribute(child, edge=edge, edge_path=(*edge_path, edge.name))
-            for edge, child in node.children
+            _to_attribute(
+                child,
+                edge=path[-1],
+                edge_path=(*edge_path, _attribute_id(path)),
+            )
+            for path, child in attributes
         ],
         origin_item_type=node.origin_item_type or item_type_id,
         metadata=node.metadata,
@@ -394,7 +431,7 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
     """Build an Attribute for the (edge → node) connection at ``edge_path``."""
     opens_entity = is_entity(edge, node)
     return Attribute(
-        id=edge.name,
+        id=edge_path[-1],
         type=edge.type,
         required=edge.required,
         metadata=edge.metadata,
@@ -408,8 +445,8 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
 def _item_type_id(edge_path: Sequence[str]) -> str:
     """Compute the ObjectType id for an entity reached via ``edge_path``.
 
-    Joins edge names with ``.item.`` and appends a trailing ``.item``
+    Joins path segments with ``.item.`` and appends a trailing ``.item``
     to match the recursive ``{...}.{name}.item`` ObjectType-id
-    convention.  Dots inside a single edge name are preserved.
+    convention.  Dots inside a single segment are preserved.
     """
     return ".item.".join(edge_path) + ".item"
