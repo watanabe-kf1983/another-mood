@@ -74,24 +74,24 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - **トップレベルスキーマが `type: array`（additionalProperties でない）の場合**: id を持たない配列のマージ・重複検出をどうするか未定
 - **スキーマ名重複**: 複数スキーマファイルに同じトップレベルキーがあった場合の扱い（エラーとする想定だが未確定）
 
-### スキーマ中間木の統合 (M16)
+### カタログが取りこぼすスキーマ注釈 (M17)
 
-#### 問題
+スキーマに書けるのにデータカタログへ届かない注釈が 2 種類ある。M16 (中間木の統合) の見極めで洗い出したもので、いずれも M16 以前からの挙動。
 
-`schema_tree` は JSON Schema から自前の三ノード木 (`ObjectNode` / `ArrayNode` / `ValueNode` と、辺に相当する `SchemaProperty`) を組み、`to_catalog_node` で `dc.Node` に変換する。この木は入れ子で、`dc.Node` / `dc.Edge` とほぼ同型である — `SchemaProperty` は `name` / `required` / 子 / `x_ref` を持ち、`dc.Edge` とほぼ同じ役割を担う。
+**(1) レコード層の metadata** — コレクションは外側 (map / 配列) と内側 (レコード) の二層が metadata を書けるが、`Node.metadata` は 1 つしかなく、[畳み込み規則](../50-normalizer/20-schema-spec.md#metadata-の畳み込み) で外側が丸ごと勝つ。showcase を走査すると両層に `description` を書いている箇所が 21 個あり、うち 17 個が [system-dev-docs-ja](../80-showcase/10-system-dev-docs.md) で、二層は明確に別の意味を持たされている:
 
-`to_catalog_node` はこの同型な木を `dc.Node` に写し替えるだけのほぼ恒等写像で、中間木が要るのかという問いが立つ。
+```yaml
+要求:
+  description: システムに対する要求レコードの集合。… 英名: requirements   # 集合の説明
+  additionalProperties:
+    description: 1 つの要求を表すレコード。英名: requirement              # レコードの説明
+```
 
-#### 案
+現状、この単数形のほう (レコードの説明) は 17 箇所すべて落ちている。しかも入れ子コレクションでは、勝った集合側の description が `Attribute.metadata` と子 `ObjectType.metadata` の両方に同じ文字列で入るので、スロットを 1 つ余らせたままレコード側を失っている。`item_type` という名前が指すのは「1 件の型」なので、意味の対応としても逆向き。
 
-`schema_tree` の三ノード木を落とし、JSON Schema から直接 `dc.Node` / `dc.Edge` を組む。判断が要るのは、両者で情報の置き場所が違う点:
+**案**: 集合側の注釈を `Entity` / `Attribute` 側に、レコード側を `item_type` 側に振り分ける。トップレベルのエンティティには集合側の行き場が無いので、`dc.Entity` にスロットを足すか、`__root` の属性として持つ (M13) かを決める必要がある。波及先はメタテンプレート (`entity_def.md` / `index.md`) と `__db` 出力。
 
-- `ValueNode` は `type` / `validation` をノード側に持つが、`dc` では `Edge` 側にある
-- `ArrayNode` の入れ子は `dc` では `Edge.type` の `[]` 接尾で表される (`string[][]` のような多段も文字列で表現される)
-- `metadata` の優先規則 (「ArrayNode の metadata が勝つ — 外側の dict-pattern スキーマが型レベルの metadata を持つ」) をどこで表すか
-- `UserStr` による位置情報の持ち回りが崩れないか
-
-M16 は「畳めるかの見極めと、その結論に沿った整理」を範囲とする。畳めないと判断すれば、見極めの記録だけで閉じる。
+**(2) map の value スキーマの `x-ref`** — スカラ map (`additionalProperties: { type: string, x-ref: ... }`) は `{id, value}` のレコードへ正規化されるが、合成される `value` 属性に `x-ref` は載らない。メタスキーマは `x-ref` を string 型の任意の位置に許すので書けてしまい、書いても黙って無視される。塞ぐ (載せる) か、メタスキーマ側で書けなくするかを決める。
 
 ### データキーにドットを含めない (E14)
 

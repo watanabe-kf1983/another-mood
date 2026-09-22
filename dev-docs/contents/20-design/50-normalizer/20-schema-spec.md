@@ -23,7 +23,7 @@ OpenAPI は API 通信プロトコルを記述するため、エンドポイン�
 
 **object 属性は構造化データのためのもの** — 形の定まらないデータは string 属性で持つべきで、object で受けるものではない。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。
 
-**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` は SchemaTree がデータカタログへ値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../20-app/40-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
+**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はデータカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../20-app/40-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
 
 ### 参照整合性制約: x-ref
 
@@ -128,3 +128,15 @@ properties:
 シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は entity 化されない。シングルトン自身が `object` 型の attribute になり、配下のプロパティが `meta.owner` のようなドット名の attribute として親エンティティに載る。entity 化されるのは collection (`additionalProperties` / `items`) のみで、シングルトン配下の collection はドット名のパスで entity になる (`categories.meta.tasks`)。
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
+
+### metadata の畳み込み
+
+コレクション (map / 配列) はスキーマ上の複数の階層が metadata を書けるのに対し、カタログの受け皿は 1 つしかない。次の規則で 1 つに畳む:
+
+```
+Node.metadata = 最外のコレクション層の metadata  or  最内のレコードの metadata
+```
+
+キー単位のマージではなくマッピング丸ごとの二者択一で、外側が 1 キーでも持てば内側は全部落ちる。中間の配列層 (`array → array → object` の真ん中) は参照しない。
+
+外側を勝たせるのは、トップレベルのエンティティではそこしか行き場が無いため。`collect_entities` はトップレベルの Edge を名前にしか使わないので、コレクション側の `title` を `Node.metadata` に入れないとメタドキュメントの見出しに出せない。入れ子のコレクションでは外側の metadata が `Attribute` 側にも残るため、この規則は純粋にレコード側の注釈を落とすだけになる ([M17](../40-communication/10-json-data-model.md#カタログが取りこぼすスキーマ注釈-m17))。

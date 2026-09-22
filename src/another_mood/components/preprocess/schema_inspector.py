@@ -11,11 +11,7 @@ from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 
-from another_mood.components.preprocess.schema_tree import (
-    ObjectNode,
-    build_schema_tree,
-    collect_entities,
-)
+from another_mood.components.preprocess.schema_catalog import collect_entities
 from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     parse_mapping,
@@ -121,12 +117,11 @@ def extract_entities(
     schema: Mapping[str, object], *, builtin: bool = False
 ) -> Sequence[dc.Entity]:
     """Convert a root schema into a flat list of Entity."""
-    root = build_schema_tree(schema)
-    if not isinstance(root, ObjectNode):
+    if schema.get("type") != "object" or "properties" not in schema:
         raise ValueError(
-            f"Root schema must be an object with properties; got {type(root).__name__}"
+            f"Root schema must be an object with properties; got {schema.get('type')!r}"
         )
-    entities = collect_entities(root)
+    entities = collect_entities(schema)
     return [replace(e, builtin=True) for e in entities] if builtin else entities
 
 

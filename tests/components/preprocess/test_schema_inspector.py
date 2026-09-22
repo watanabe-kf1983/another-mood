@@ -838,7 +838,7 @@ class TestInspectSchema:
         )
         attrs_by_id = {a["id"]: a for a in albums["item_type"]["attributes"]}
         # Source 'x-ref:' that omits 'attribute:' is resolved to the
-        # implicit-id default at the SchemaTree -> DataCatalog boundary,
+        # implicit-id default at the schema -> DataCatalog boundary,
         # so the persisted record always carries an 'attribute' string.
         assert attrs_by_id["artist_id"]["x_ref"] == {
             "entity": "artists",
