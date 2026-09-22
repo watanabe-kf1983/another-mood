@@ -7,7 +7,7 @@ a ``dc.Node`` and flattened into a DataCatalog (entities + attributes)
 for downstream consumption.
 """
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, assert_never, cast
 
@@ -228,39 +228,16 @@ def to_catalog_node(node: Node) -> dc.Node:
     metadata = node.metadata if isinstance(node, ArrayNode) else None
     return dc.Node(
         metadata=metadata or obj.metadata,
-        children=list(_collect_edges(obj)),
+        children=[
+            (_property_to_edge(prop), to_catalog_node(prop.node))
+            for prop in obj.properties
+        ],
     )
 
 
-def _collect_edges(
-    obj: ObjectNode,
-    *,
-    prefix: str = "",
-) -> Iterable[dc.Branch]:
-    # A singleton property (ObjectNode child of obj) is inlined into the
-    # parent entity rather than becoming its own entity.  Each singleton
-    # contributes two kinds of edges:
-    #   - the singleton itself, as a scalar `object` edge with no child;
-    #   - one `<singleton>.<sub>` dotted-name edge per sub-property,
-    #     recursively — a singleton nested under a singleton inlines at
-    #     any depth, under a name carrying every segment.
-    # If a sub-property is a collection (ArrayNode), its child Node is
-    # carried along so a nested entity hangs off the dotted edge.
-    # The dotted names stay unambiguous at any depth because the
-    # meta-schema forbids dots in property names, so a dotted edge name
-    # decomposes back into its segments in exactly one way.
-    for prop in obj.properties:
-        name = f"{prefix}{prop.name}"
-        if isinstance(prop.node, ObjectNode):
-            yield (_property_to_edge(prop, name=name), dc.Node())
-            yield from _collect_edges(prop.node, prefix=f"{name}.")
-        else:
-            yield (_property_to_edge(prop, name=name), to_catalog_node(prop.node))
-
-
-def _property_to_edge(prop: SchemaProperty, *, name: str) -> dc.Edge:
+def _property_to_edge(prop: SchemaProperty) -> dc.Edge:
     return dc.Edge(
-        name=name,
+        name=prop.name,
         type=_resolve_type(prop.node),
         required=prop.required,
         metadata=prop.node.metadata,
