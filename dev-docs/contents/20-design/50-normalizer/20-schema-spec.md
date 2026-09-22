@@ -128,15 +128,3 @@ properties:
 シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は entity 化されない。シングルトン自身が `object` 型の attribute になり、配下のプロパティが `meta.owner` のようなドット名の attribute として親エンティティに載る。entity 化されるのは collection (`additionalProperties` / `items`) のみで、シングルトン配下の collection はドット名のパスで entity になる (`categories.meta.tasks`)。
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
-
-### metadata の畳み込み
-
-コレクション (map / 配列) はスキーマ上の複数の階層が metadata を書けるのに対し、カタログの受け皿は 1 つしかない。次の規則で 1 つに畳む:
-
-```
-Node.metadata = 最外のコレクション層の metadata  or  最内のレコードの metadata
-```
-
-キー単位のマージではなくマッピング丸ごとの二者択一で、外側が 1 キーでも持てば内側は全部落ちる。中間の配列層 (`array → array → object` の真ん中) は参照しない。
-
-外側を勝たせるのは、トップレベルのエンティティではそこしか行き場が無いため。`collect_entities` はトップレベルの Edge を名前にしか使わないので、コレクション側の `title` を `Node.metadata` に入れないとメタドキュメントの見出しに出せない。入れ子のコレクションでは外側の metadata が `Attribute` 側にも残るため、この規則は純粋にレコード側の注釈を落とすだけになる ([M17](../40-communication/10-json-data-model.md#カタログが取りこぼすスキーマ注釈-m17))。

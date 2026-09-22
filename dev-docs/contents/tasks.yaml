@@ -510,12 +510,8 @@ categories:
         done: true
       M17:
         title: カタログが取りこぼすスキーマ注釈を塞ぐ
-        note: >-
-          コレクションの外側 (集合) と内側 (レコード) の metadata が 1 スロットに
-          畳まれ、レコード側が落ちる。スカラ map の value に書いた x-ref も
-          載らない。M16 の見極めで洗い出したもので、いずれも M16 以前からの挙動。
-        proposal: 20-design/40-communication/10-json-data-model#カタログが取りこぼすスキーマ注釈-m17
         phase: 18
+        done: true
 
   N:
     title: レンダリング / 出力形式

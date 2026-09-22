@@ -5,7 +5,10 @@ from collections.abc import Sequence
 import yaml
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.preprocess.schema_catalog import build_catalog_node
+from another_mood.components.preprocess.schema_catalog import (
+    build_catalog_node,
+    collect_entities,
+)
 
 # fmt: off
 
@@ -16,6 +19,19 @@ def _node(src: str) -> dc.Node:
 
 def _entities(src: str, root_name: str) -> Sequence[dc.Entity]:
     return dc.flatten_tree(build_catalog_node(yaml.safe_load(src)), root_name)
+
+
+def _root_entities(name: str, src: str) -> Sequence[dc.Entity]:
+    """Entities for one top-level property, reached through the root schema.
+
+    Unlike ``_entities``, the walk starts above the property, so the edge
+    carrying the collection layer's metadata is part of it.
+    """
+    return collect_entities({
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {name: yaml.safe_load(src)},
+    })
 
 
 # ── Schema → catalog node tree ──────────────────────────────────────
@@ -61,6 +77,23 @@ class TestBuildCatalogNode:
         """) == dc.Node(children=[
             (dc.Edge("id",    "string", True), dc.Node()),
             (dc.Edge("value", "number", True), dc.Node()),
+        ])
+
+    def test_map_of_scalars_keeps_value_x_ref(self) -> None:
+        """An x-ref on the value schema lands on the synthesized ``value``."""
+        assert _node("""
+            type: object
+            additionalProperties:
+              type: string
+              x-ref:
+                entity: artists
+        """) == dc.Node(children=[
+            (dc.Edge("id", "string", True), dc.Node()),
+            (
+                dc.Edge("value", "string", True,
+                        x_ref=dc.XRef(entity="artists", attribute="id")),
+                dc.Node(),
+            ),
         ])
 
     def test_array_of_records(self) -> None:
@@ -489,23 +522,9 @@ class TestCatalogNodeToEntities:
             ),
         ]
 
-    def test_entity_metadata_from_collection_layer(self) -> None:
-        """The collection layer's metadata lands on ObjectType.metadata."""
-        assert _entities("""
-            type: array
-            title: My Collection
-            items:
-              type: object
-              properties:
-                x: { type: string }
-              additionalProperties: false
-              required: [x]
-        """, "things")[0].item_type.metadata == {"title": "My Collection"}
-
-    def test_entity_metadata_collection_layer_wins_whole_mapping(self) -> None:
-        """The collection layer wins as a mapping: a non-colliding key on the
-        record layer is dropped with the rest, not merged in."""
-        assert _entities("""
+    def test_entity_metadata_splits_collection_and_record_layers(self) -> None:
+        """The map layer annotates the Entity, the record layer its item type."""
+        entity = _root_entities("recipes", """
             type: object
             title: Recipe collection
             additionalProperties:
@@ -514,11 +533,30 @@ class TestCatalogNodeToEntities:
               properties:
                 title: { type: string }
               additionalProperties: false
-        """, "recipes")[0].item_type.metadata == {"title": "Recipe collection"}
+        """)[0]
+        assert entity.metadata == {"title": "Recipe collection"}
+        assert entity.item_type.metadata == {"description": "One recipe"}
 
-    def test_entity_metadata_falls_back_to_record_layer(self) -> None:
-        """With no metadata on the collection layer, the record layer's is used."""
-        assert _entities("""
+    def test_entity_metadata_splits_array_collection_layer(self) -> None:
+        """An array layer is a collection layer too — same split."""
+        entity = _root_entities("things", """
+            type: array
+            title: My Collection
+            items:
+              type: object
+              title: Thing
+              properties:
+                x: { type: string }
+              additionalProperties: false
+              required: [x]
+        """)[0]
+        assert entity.metadata == {"title": "My Collection"}
+        assert entity.item_type.metadata == {"title": "Thing"}
+
+    def test_entity_metadata_absent_layer_leaves_its_slot_empty(self) -> None:
+        """Neither layer stands in for the other: with only the record layer
+        annotated, the Entity's own slot stays empty."""
+        entity = _root_entities("recipes", """
             type: object
             additionalProperties:
               type: object
@@ -527,15 +565,18 @@ class TestCatalogNodeToEntities:
               properties:
                 title: { type: string }
               additionalProperties: false
-        """, "recipes")[0].item_type.metadata == {
+        """)[0]
+        assert entity.metadata is None
+        assert entity.item_type.metadata == {
             "title": "Recipe", "description": "One recipe",
         }
 
     def test_entity_metadata_skips_intermediate_array_layer(self) -> None:
-        """Only the outermost and innermost layers are consulted: metadata on
-        an array layer in between is dropped even when nothing outranks it."""
-        assert _entities("""
+        """Only the outermost and innermost layers have a slot: metadata on an
+        array layer in between is dropped."""
+        entity = _root_entities("grid", """
             type: array
+            title: Grid
             items:
               type: array
               title: Row
@@ -545,7 +586,34 @@ class TestCatalogNodeToEntities:
                 properties:
                   v: { type: number }
                 additionalProperties: false
-        """, "grid")[0].item_type.metadata == {"title": "Cell"}
+        """)[0]
+        assert entity.metadata == {"title": "Grid"}
+        assert entity.item_type.metadata == {"title": "Cell"}
+
+    def test_child_entity_metadata_mirrors_holding_attribute(self) -> None:
+        """A nested collection splits the same way: the holding Attribute and
+        the child Entity both take the collection layer, the item type the
+        record layer."""
+        parent, child = _root_entities("categories", """
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                tasks:
+                  type: object
+                  description: The tasks of one category
+                  additionalProperties:
+                    type: object
+                    description: One task
+                    additionalProperties: false
+                    properties:
+                      title: { type: string }
+        """)
+        holder = parent.item_type.attributes[1]
+        assert holder.metadata == {"description": "The tasks of one category"}
+        assert child.metadata == {"description": "The tasks of one category"}
+        assert child.item_type.metadata == {"description": "One task"}
 
     def test_attribute_metadata_scalar_array_keeps_array_layer(self) -> None:
         """On a scalar array the array layer's metadata reaches the Attribute;

@@ -249,10 +249,16 @@ class Entity:
 
     A singleton object opens no entity of its own: it folds into the
     entity holding it, under dotted ``Attribute.id``.
+
+    ``metadata`` annotates the collection — the set of records — while
+    ``item_type.metadata`` annotates one record.  A nested entity's
+    ``metadata`` repeats that of the attribute holding it, so the split
+    reads the same at every depth.
     """
 
     id: str
     item_type: ObjectType
+    metadata: Mapping[str, object] | None = None
     parent_entity: str | None = None
     builtin: bool = False
     view: bool = False  # synthesized from a query (composer-set)
@@ -263,6 +269,7 @@ class Entity:
     catalog: ClassVar[Node] = Node(
         children=[
             (Edge(name="id", type="string", required=True), Node()),
+            (Edge(name="metadata", type="object", required=False), Node()),
             (
                 Edge(name="item_type", type="object", required=True),
                 ObjectType.catalog,
@@ -299,7 +306,12 @@ def build_tree(catalog: Sequence[Entity]) -> Node:
     return Node(
         children=[
             (
-                Edge(name=entity.id, type="object[]", required=True),
+                Edge(
+                    name=entity.id,
+                    type="object[]",
+                    required=True,
+                    metadata=entity.metadata,
+                ),
                 _build_entity_node(entity, catalog),
             )
             for entity in _children_of(None, catalog)
@@ -307,9 +319,24 @@ def build_tree(catalog: Sequence[Entity]) -> Node:
     )
 
 
-def flatten_tree(node: Node, root_name: str) -> Sequence[Entity]:
-    """Flatten ``node`` into Entity records, the top one named ``root_name``."""
-    return _flatten_entity(node, edge_path=(root_name,), parent_entity_id=None)
+def flatten_tree(
+    node: Node,
+    root_name: str,
+    *,
+    metadata: Mapping[str, object] | None = None,
+) -> Sequence[Entity]:
+    """Flatten ``node`` into Entity records, the top one named ``root_name``.
+
+    ``metadata`` is the collection-layer annotation of the edge reaching
+    ``node``; the root has no edge inside ``node``, so the caller passes
+    it in.  Descendants read theirs from the edge that reaches them.
+    """
+    return _flatten_entity(
+        node,
+        edge_path=(root_name,),
+        parent_entity_id=None,
+        metadata=metadata,
+    )
 
 
 # ── Internal helpers ──────────────────────────────────────────────────
@@ -432,6 +459,7 @@ def _flatten_entity(
     *,
     edge_path: Sequence[str],
     parent_entity_id: str | None,
+    metadata: Mapping[str, object] | None,
 ) -> Sequence[Entity]:
     """Flatten ``node`` into a list of Entity (parent first, descendants after).
 
@@ -447,6 +475,7 @@ def _flatten_entity(
     self_entity = Entity(
         id=self_id,
         item_type=_to_object_type(node, edge_path=edge_path, attributes=attributes),
+        metadata=metadata,
         parent_entity=parent_entity_id,
     )
     descendants = [
@@ -457,6 +486,7 @@ def _flatten_entity(
             child,
             edge_path=(*edge_path, _attribute_id(path)),
             parent_entity_id=self_id,
+            metadata=path[-1].metadata,
         )
     ]
     return [self_entity, *descendants]

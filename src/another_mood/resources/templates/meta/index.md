@@ -32,7 +32,7 @@
 {# never empty: `prose` is always a built-in root entity (see ## Entity Relationships). #}
 {% filter dedent %}
     {% for entity in __entity_defs %}
-        - {{ entity | link }}{% if entity.builtin %} (built-in){% endif %}{% if entity.item_type.metadata.title %} — {{ entity.item_type.metadata.title }}{% endif +%}
+        - {{ entity | link }}{% if entity.builtin %} (built-in){% endif %}{% if entity.metadata.title %} — {{ entity.metadata.title }}{% endif +%}
     {% endfor %}
     {% for entity in __entity_defs %}
         {{- entity | render("entity_def.md") -}}
