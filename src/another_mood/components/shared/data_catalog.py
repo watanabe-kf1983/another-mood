@@ -6,8 +6,9 @@ re-wire it under a fresh Edge with new parent-side fields — heavily
 relied on in query derivation.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
+from itertools import takewhile
 from typing import Any, ClassVar, cast
 
 # ── In-memory tree form (canonical) ───────────────────────────────────
@@ -181,6 +182,22 @@ class Attribute:
         ],
     )
 
+    # ── Reading and writing the dotted id ─────────────────────────────
+    #
+    # ``id`` is one segment per edge, joined with dots: a singleton
+    # object folds into the entity holding it rather than opening one of
+    # its own.  These three are the only place spelling the separator.
+
+    @staticmethod
+    def join_id(names: Iterable[str]) -> str:
+        return ".".join(names)
+
+    def inlined_into(self, holder: "Attribute") -> bool:
+        return self.id.startswith(f"{holder.id}.")
+
+    def segment_under(self, holder: "Attribute | None") -> str:
+        return self.id if holder is None else self.id[len(holder.id) + 1 :]
+
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
 
@@ -271,7 +288,8 @@ class Entity:
 
 
 def build_tree(catalog: Sequence[Entity]) -> Node:
-    """Build a virtual-root tree from a flat catalog list.
+    """Build a virtual-root tree from a flat catalog list — the inverse
+    of :func:`flatten_tree`.
 
     The virtual root mirrors the records-side ``Sequence[Record]``
     wrapping that ``From.apply`` receives: every top-level entity hangs
@@ -312,28 +330,90 @@ def _build_entity_node(
     built-in by definition.  Composer marks query outputs as views after
     flattening; the built-in flag stays a flat-catalog concept.
     """
-    sub_by_name = {
+    sub_by_id = {
         e.id[len(entity.id) + 1 :]: e for e in _children_of(entity.id, catalog)
     }
     return Node(
         metadata=entity.item_type.metadata,
-        children=[
-            (
-                _edge_from_attribute(attr),
-                _build_entity_node(sub_by_name[attr.id], catalog)
-                if attr.child_entity
-                else Node(),
-            )
-            for attr in entity.item_type.attributes
-        ],
+        children=_build_branches(
+            entity.item_type.attributes,
+            holder=None,
+            sub_by_id=sub_by_id,
+            catalog=catalog,
+        ),
         origin_item_type=entity.item_type.id,
     )
 
 
-def _edge_from_attribute(attr: Attribute) -> Edge:
+def _build_branches(
+    attributes: Sequence[Attribute],
+    *,
+    holder: Attribute | None,
+    sub_by_id: Mapping[str, Entity],
+    catalog: Sequence[Entity],
+) -> Sequence[Branch]:
+    """Restore one node's children from the attributes folded into it.
+
+    ``holder`` is the singleton being restored, None at an entity's own body.
+    """
+    return [
+        (
+            _edge_from_attribute(attr, name=attr.segment_under(holder)),
+            _build_attribute_node(attr, inlined, sub_by_id=sub_by_id, catalog=catalog),
+        )
+        for attr, inlined in _inlined_attributes(attributes)
+    ]
+
+
+def _inlined_attributes(
+    attributes: Sequence[Attribute],
+) -> Sequence[tuple[Attribute, Sequence[Attribute]]]:
+    """Pair each attribute of one node with the attributes inlined into it.
+
+    The inverse of ``_flatten_attributes``, whose emission order leaves
+    the inlined attributes right after the ``object`` attribute whose id
+    they extend.  A dotted id with no ``object`` attribute in front of it
+    stays one edge name: a view alias becomes a record key verbatim.
+    """
+    if not attributes:
+        return []
+    head, rest = attributes[0], attributes[1:]
+    inlined = (
+        list(takewhile(lambda a: a.inlined_into(head), rest))
+        if head.type == "object"
+        else []
+    )
+    return [(head, inlined), *_inlined_attributes(rest[len(inlined) :])]
+
+
+def _build_attribute_node(
+    attr: Attribute,
+    inlined: Sequence[Attribute],
+    *,
+    sub_by_id: Mapping[str, Entity],
+    catalog: Sequence[Entity],
+) -> Node:
+    if attr.child_entity:
+        return _build_entity_node(sub_by_id[attr.id], catalog)
+    elif inlined:
+        return Node(
+            children=_build_branches(
+                inlined,
+                holder=attr,
+                sub_by_id=sub_by_id,
+                catalog=catalog,
+            )
+        )
+    else:
+        # ``Node()``, not an empty ``_build_branches``: ``children``
+        # defaults to a tuple, and a list would not compare equal.
+        return Node()
+
+
+def _edge_from_attribute(attr: Attribute, *, name: str) -> Edge:
     """Build a Edge from a parent's Attribute pointing at this child."""
     return Edge(
-        name=attr.id,
+        name=name,
         type=attr.type,
         required=attr.required,
         metadata=attr.metadata,
@@ -401,7 +481,7 @@ def _inlined_children(reach: AttributeReach) -> Sequence[AttributeReach]:
 
 
 def _attribute_id(path: Sequence[Edge]) -> str:
-    return ".".join(edge.name for edge in path)
+    return Attribute.join_id(edge.name for edge in path)
 
 
 def _to_object_type(

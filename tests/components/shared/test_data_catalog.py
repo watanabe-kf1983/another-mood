@@ -161,6 +161,7 @@ class TestBuildAndFlatten:
                     id: users.item
                     attributes:
                       - { id: id, type: string, required: true }
+                      - { id: address, type: object, required: false }
                       - { id: address.street, type: string, required: false }
                       - { id: address.city, type: string, required: false }
                 """,
@@ -173,6 +174,7 @@ class TestBuildAndFlatten:
                   item_type:
                     id: members.item
                     attributes:
+                      - { id: hobby, type: object, required: false }
                       - id: hobby.pets
                         type: object[]
                         required: false
@@ -186,6 +188,30 @@ class TestBuildAndFlatten:
                   parent_entity: members
                 """,
                 id="dotted_attribute_pointing_to_entity",
+            ),
+            pytest.param(
+                "roadmap",
+                # No ``object`` attribute ahead of it, so the dotted id
+                # is one edge name rather than a singleton to reclaim.
+                """
+                - id: roadmap
+                  item_type:
+                    id: roadmap.item
+                    attributes:
+                      - { id: task.phase, type: integer, required: true }
+                      - id: tasks
+                        type: object[]
+                        required: true
+                        child_entity: roadmap.tasks
+                        child_item_type: roadmap.item.tasks.item
+                - id: roadmap.tasks
+                  item_type:
+                    id: roadmap.item.tasks.item
+                    attributes:
+                      - { id: id, type: string, required: true }
+                  parent_entity: roadmap
+                """,
+                id="dotted_alias_without_wrapper",
             ),
         ],
     )
