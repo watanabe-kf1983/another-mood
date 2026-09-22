@@ -25,7 +25,12 @@ from another_mood.components.shared.file_type import FileType
 type JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 
 type KeyPath = tuple[str, ...]
-"""A sequence of dict keys for direct path access (each element is a literal key)."""
+"""A sequence of dict keys for direct path access (each element is a literal key).
+
+A tuple rather than ``Sequence[str]``, which ``str`` itself satisfies:
+the type is here to keep a dotted string out of a path parameter, where
+it would be walked one character at a time.
+"""
 
 
 # ── Read ─────────────────────────────────────────────────────────────
@@ -180,6 +185,57 @@ def match_key(record: Mapping[str, object], key_path: str) -> tuple[str, object]
             return "", record
         candidate = candidate.rsplit(".", 1)[0]
     return candidate, record[candidate]
+
+
+def put(
+    record: Mapping[str, object], key_path: KeyPath, value: object
+) -> Mapping[str, object]:
+    """Return ``record`` with ``value`` written at ``key_path``.
+
+    Objects along the path are created as needed and merged with what is
+    already there, so writes to ``("a", "b")`` and ``("a", "c")``
+    converge on a single ``a``.  Writing over a non-object is a caller
+    bug: overlapping write paths are rejected when the query is derived,
+    before any row is built.
+    """
+    # Not ``head, *rest``: starred unpacking makes ``rest`` a list.
+    head, rest = key_path[0], key_path[1:]
+    if rest:
+        holder = record.get(head, {})
+        assert isinstance(holder, Mapping), (
+            f"a write path descends into a non-object at '{head}'"
+        )
+        nested = put(cast(Mapping[str, object], holder), rest, value)
+        return {**record, head: nested}
+    else:
+        return {**record, head: value}
+
+
+def drop(record: Mapping[str, object], key_path: KeyPath) -> Mapping[str, object]:
+    """Return ``record`` without the value at ``key_path``.
+
+    An object left empty by the removal goes with it, up the ancestor
+    chain: the data model represents an absent value by omitting its
+    key, so an object with nothing in it has no meaning to carry.  A
+    path that is not there is a no-op.
+    """
+    head, rest = key_path[0], key_path[1:]
+    if head not in record:
+        return record
+    if not rest:
+        return _without_key(record, head)
+    holder = record[head]
+    if not isinstance(holder, Mapping):
+        return record
+    pruned = drop(cast(Mapping[str, object], holder), rest)
+    if pruned:
+        return {**record, head: pruned}
+    else:
+        return _without_key(record, head)
+
+
+def _without_key(record: Mapping[str, object], key: str) -> Mapping[str, object]:
+    return {k: v for k, v in record.items() if k != key}
 
 
 # ── Write ────────────────────────────────────────────────────────────
