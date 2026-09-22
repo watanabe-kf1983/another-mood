@@ -8,11 +8,13 @@
 #          use-case description (a ユースケース記述 view row: the use case
 #          with its requirements joined), each non-functional section
 #          (a 要求種別 view row: one requirement kind with its requirements),
-#          the design policy section (the 設計判断 collection) and the design
+#          the design policy section (the 設計判断 collection), the design
 #          document's context chapter (the コンテキスト view, a chapter-sized
-#          collection of its own) are split into their own pages; both
-#          documents stay on index.md until composite views let a document
-#          be a node of its own.
+#          collection of its own) and the logical data model section (the
+#          エンティティ collection: the ER diagram and entity list on one page,
+#          each entity definition on a page of its own) are split into their
+#          own pages; both documents stay on index.md until composite views
+#          let a document be a node of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
@@ -29,5 +31,7 @@ editions:
       - 要求種別.item
       - 設計判断.item[]
       - コンテキスト.item[]
+      - エンティティ.item[]
+      - エンティティ.item
   book:
     file_per: []
