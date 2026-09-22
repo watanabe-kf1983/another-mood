@@ -11,9 +11,11 @@ import yaml
 from another_mood.components.shared.json_data_model import (
     collect_files,
     deep_merge,
+    drop,
     load_model,
     load_schema,
     pluck,
+    put,
     save_model,
 )
 
@@ -246,3 +248,56 @@ class TestPluck:
         assert pluck({"a": False}, "a") is False
         assert pluck({"a": None}, "a") is None
         assert pluck({"a": 0}, "a") == 0
+
+
+class TestPut:
+    def test_flat_key(self) -> None:
+        assert put({}, ("a",), 1) == {"a": 1}
+
+    def test_dotted_path_nests(self) -> None:
+        assert put({}, ("a", "b"), 1) == {"a": {"b": 1}}
+
+    def test_siblings_converge_on_one_holder(self) -> None:
+        assert put(put({}, ("a", "b"), 1), ("a", "c"), 2) == {"a": {"b": 1, "c": 2}}
+
+    def test_merges_into_an_existing_holder(self) -> None:
+        assert put({"a": {"b": 1}}, ("a", "c"), 2) == {"a": {"b": 1, "c": 2}}
+
+    def test_leaves_the_input_untouched(self) -> None:
+        record: dict[str, Any] = {"a": {"b": 1}}
+        put(record, ("a", "c"), 2)
+        assert record == {"a": {"b": 1}}
+
+    def test_writes_a_falsy_value_verbatim(self) -> None:
+        assert put({}, ("a", "b"), False) == {"a": {"b": False}}
+
+    def test_asserts_when_the_path_descends_into_a_scalar(self) -> None:
+        # Derive rejects overlapping write paths, so reaching here is a bug.
+        with pytest.raises(AssertionError):
+            put({"a": 1}, ("a", "b"), 2)
+
+
+class TestDrop:
+    def test_flat_key(self) -> None:
+        assert drop({"a": 1, "b": 2}, ("a",)) == {"b": 2}
+
+    def test_dotted_path_keeps_the_holder_when_siblings_remain(self) -> None:
+        assert drop({"a": {"b": 1, "c": 2}}, ("a", "b")) == {"a": {"c": 2}}
+
+    def test_drops_the_holder_left_empty(self) -> None:
+        assert drop({"a": {"b": 1}, "x": 0}, ("a", "b")) == {"x": 0}
+
+    def test_collapses_the_whole_emptied_ancestor_chain(self) -> None:
+        assert drop({"a": {"b": {"c": 1}}}, ("a", "b", "c")) == {}
+
+    def test_absent_path_is_a_no_op(self) -> None:
+        assert drop({"a": {"b": 1}}, ("a", "x")) == {"a": {"b": 1}}
+        assert drop({"a": {"b": 1}}, ("x", "y")) == {"a": {"b": 1}}
+
+    def test_path_through_a_scalar_is_a_no_op(self) -> None:
+        assert drop({"a": 1}, ("a", "b")) == {"a": 1}
+
+    def test_leaves_the_input_untouched(self) -> None:
+        record: dict[str, Any] = {"a": {"b": 1, "c": 2}}
+        drop(record, ("a", "b"))
+        assert record == {"a": {"b": 1, "c": 2}}
