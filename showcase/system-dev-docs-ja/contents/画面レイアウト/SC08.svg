@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 362"
+     width="776" height="362"
+     role="img" aria-label="保留販売確認画面 の画面レイアウト">
+<rect width="776" height="362" fill="#fff"/>
+<g font-family="sans-serif">
+<rect x="8.5" y="8.5" width="760" height="346" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="9.5" y="9.5" width="758" height="38" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="22" y="85" width="200" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="22" y="110" width="200" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="135" width="200" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="196" width="170" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="192" y="196" width="70" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="262" y="196" width="170" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="432" y="196" width="240" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="22" y="221" width="170" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="192" y="221" width="70" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="262" y="221" width="170" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="270.5" y="224.5" width="153" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="432" y="221" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="246" width="170" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="192" y="246" width="70" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="262" y="246" width="170" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="270.5" y="249.5" width="153" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="432" y="246" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="517.5" y="283.5" width="114" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="641.5" y="283.5" width="114" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="325.5" width="18" height="12" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="73.5" y="325.5" width="18" height="12" fill="#eee" stroke="#333" stroke-width="1"/>
+<text x="21" y="27.5" font-size="15" fill="#111" dominant-baseline="central" font-weight="700">保留販売確認画面</text>
+<text x="21" y="69.5" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">確認待ちの販売</text>
+<text x="30" y="97" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">通知日時</text>
+<text x="21" y="180.5" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">明細</text>
+<text x="30" y="208" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">通知ISBN</text>
+<text x="200" y="208" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">数量</text>
+<text x="270" y="208" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">ISBN</text>
+<text x="440" y="208" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">書名</text>
+<text x="532" y="296" font-size="12" fill="#111" dominant-baseline="central">確認を確定する</text>
+<text x="656" y="296" font-size="12" fill="#111" dominant-baseline="central">メニューへ戻る</text>
+<text x="45" y="331" font-size="11" fill="#111" dominant-baseline="central">入力</text>
+<text x="97" y="331" font-size="11" fill="#111" dominant-baseline="central">出力</text>
+</g>
+</svg>
