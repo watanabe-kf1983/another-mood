@@ -54,7 +54,7 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 各クラスのラベル (および sanitize した alias) は **entity.id ではなく `entity.item_type.id` (= ObjectType id)** から組む。例: entity `artists` → class `artists.item`、descendant entity `artists.members` → class `artists.item.members.item`。
 
-理由は UML / ER 用語との整合。UML の class 名は型 (= 1 件分のもの) を指すので単数形が原則であり、本ツールの 2 階層 (Entity = collection identity 複数形 / ObjectType = item identity `.item` 付き) のうち ObjectType 側がそれにあたる。`__entity_defs/<id>.md` ページが既に `## Type: artists.item` を見出しに出しているのと表記が揃う。
+理由は UML / ER 用語との整合。UML の class 名は型 (= 1 件分のもの) を指すので単数形が原則であり、本ツールの 2 階層 (Entity = collection identity 複数形 / ObjectType = item identity `.item` 付き) のうち ObjectType 側がそれにあたる。`__entity_defs/<id>.md` ページが既に `### Type: artists.item` を見出しに出しているのと表記が揃う。
 
 ### `__root` の Entity Relationship 図
 

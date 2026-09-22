@@ -6,7 +6,6 @@ list the rest of the pipeline consumes.
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
 from typing import cast
 
 from another_mood.components.shared.user_source.source_loader import UserStr
@@ -68,7 +67,7 @@ def collect_entities(schema: SchemaNode) -> Sequence[dc.Entity]:
         entity
         for edge, child in root.children
         if dc.is_entity(edge, child)
-        for entity in dc.flatten_tree(child, edge.name)
+        for entity in dc.flatten_tree(child, edge.name, metadata=edge.metadata)
     ]
 
 
@@ -83,14 +82,12 @@ def build_catalog_node(schema: SchemaNode) -> dc.Node:
         return dc.Node()
     else:
         branches, record_metadata = body
-        # The outermost collection layer wins over the record underneath:
-        # on the map pattern the collection schema owns the type-level
-        # metadata, and the record schema describes structure only.  An
-        # intermediate array layer is not consulted at all.
-        return dc.Node(
-            metadata=_extract_metadata(schema) or record_metadata,
-            children=branches,
-        )
+        # A Node describes one record, so it takes the record layer's
+        # metadata.  The collection layers above it annotate the set, and
+        # reach the catalog through the Edge (``Attribute.metadata``) and
+        # ``Entity.metadata``.  An intermediate array layer, having
+        # neither slot, is not consulted at all.
+        return dc.Node(metadata=record_metadata, children=branches)
 
 
 def _record_body(schema: SchemaNode) -> RecordBody | None:
@@ -118,11 +115,10 @@ def _map_body(schema: SchemaNode) -> RecordBody:
             _extract_metadata(additional),
         )
     else:
-        # A map of non-records becomes id/value pairs.  The synthesized
-        # ``value`` branch carries no ``x-ref``: declaring one on a map's
-        # value schema is not supported.
-        value_edge, value_node = _to_branch("value", additional, required=True)
-        return [_ID_BRANCH, (replace(value_edge, x_ref=None), value_node)], None
+        # A map of non-records becomes id/value pairs; the value schema's
+        # own annotations (``x-ref`` included) ride on the synthesized
+        # ``value`` branch.
+        return [_ID_BRANCH, _to_branch("value", additional, required=True)], None
 
 
 def _record_branches(schema: SchemaNode) -> Sequence[dc.Branch]:
