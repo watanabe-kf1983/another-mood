@@ -12,15 +12,17 @@
 #          document's context chapter (the コンテキスト view, a chapter-sized
 #          collection of its own) and the logical data model section (the
 #          エンティティ collection: the ER diagram and entity list on one page,
-#          each entity definition on a page of its own) are split into their
-#          own pages; both documents stay on index.md until composite views
+#          each entity definition on a page of its own) and the CRUD matrix
+#          section (the CRUDマトリクス view: use cases with their data
+#          accesses joined) are split into their own pages; both documents stay on index.md until composite views
 #          let a document be a node of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
 # Prose chapters are not split in either edition: they are inlined where
-# the document shell embeds them (`| render("prose.md")`). Neither is the
-# verification chapter: it re-lists the chapter 3 requirements by looping over
+# the document shell embeds them (`| render("prose.md")`), and the section
+# notes (設計書/論理データモデル.md, 設計書/CRUDマトリクス.md) are embedded as
+# content by their section templates. Neither is the verification chapter: it re-lists the chapter 3 requirements by looping over
 # the same view rows, so its tables have no subject of their own and its ID
 # links land on the chapter 3 copies.
 editions:
@@ -33,5 +35,6 @@ editions:
       - コンテキスト.item[]
       - エンティティ.item[]
       - エンティティ.item
+      - CRUDマトリクス.item[]
   book:
     file_per: []
