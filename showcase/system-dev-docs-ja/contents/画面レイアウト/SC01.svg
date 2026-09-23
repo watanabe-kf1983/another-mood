@@ -1,20 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 246"
-     width="776" height="246"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 280"
+     width="776" height="280"
      role="img" aria-label="メニュー画面 の画面レイアウト">
-<rect width="776" height="246" fill="#fff"/>
+<rect width="776" height="280" fill="#fff"/>
 <g font-family="sans-serif">
-<rect x="8.5" y="8.5" width="760" height="230" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="8.5" y="8.5" width="760" height="264" fill="none" stroke="#333" stroke-width="1"/>
 <rect x="9.5" y="9.5" width="758" height="38" fill="#eee" stroke="#333" stroke-width="1"/>
 <rect x="21.5" y="61.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
 <rect x="21.5" y="95.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
 <rect x="21.5" y="129.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
 <rect x="21.5" y="163.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
 <rect x="21.5" y="197.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="231.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
 <text x="21" y="27.5" font-size="15" fill="#111" dominant-baseline="central" font-weight="700">メニュー画面</text>
 <text x="107" y="74" font-size="12" fill="#111" dominant-baseline="central">書籍登録</text>
 <text x="101" y="108" font-size="12" fill="#111" dominant-baseline="central">仕入先登録</text>
 <text x="107" y="142" font-size="12" fill="#111" dominant-baseline="central">入荷登録</text>
-<text x="119" y="176" font-size="12" fill="#111" dominant-baseline="central">棚卸</text>
-<text x="107" y="210" font-size="12" fill="#111" dominant-baseline="central">在庫照会</text>
+<text x="89" y="176" font-size="12" fill="#111" dominant-baseline="central">保留販売の確認</text>
+<text x="119" y="210" font-size="12" fill="#111" dominant-baseline="central">棚卸</text>
+<text x="107" y="244" font-size="12" fill="#111" dominant-baseline="central">在庫照会</text>
 </g>
 </svg>
