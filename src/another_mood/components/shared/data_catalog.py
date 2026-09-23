@@ -84,31 +84,42 @@ class Node:
 
     # ── Child access by dotted path ───────────────────────────────────
 
-    def descend(self, path: str) -> Branch:
+    def reach(self, path: str) -> AttributeReach:
         """Walk the dotted ``path``, traversing singleton objects only: a
         path may end on a collection attribute but never continue past one.
 
+        Returns every edge walked, outermost first.
+
         Raises :class:`UnknownChildError` carrying the whole ``path``.
         """
-        entry = self._descend(path)
+        entry = self._reach(path)
         if entry is None:
             raise UnknownChildError(path)
         return entry
 
+    def descend(self, path: str) -> Branch:
+        """The last edge :meth:`reach` walks, and the node it reaches."""
+        edges, node = self.reach(path)
+        return edges[-1], node
+
     def require_path(self, path: str) -> None:
         """Raises :class:`UnknownChildError` if ``path`` does not resolve."""
-        self.descend(path)
+        self.reach(path)
 
-    def _descend(self, path: str) -> Branch | None:
+    def _reach(self, path: str) -> AttributeReach | None:
         name = self._longest_child_name(path)
         if name is None:
             return None
         edge, child = self.child_entry(name)
         if name == path:
-            return edge, child
+            return (edge,), child
         if edge.is_collection:
             return None
-        return child._descend(path[len(name) + 1 :])
+        rest = child._reach(path[len(name) + 1 :])
+        if rest is None:
+            return None
+        edges, node = rest
+        return (edge, *edges), node
 
     def _longest_child_name(self, path: str) -> str | None:
         # Longest-first, and the match commits — no backtracking — mirroring

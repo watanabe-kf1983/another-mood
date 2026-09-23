@@ -338,7 +338,8 @@ class TestIsEntity:
 
 
 class TestDescend:
-    """``descend`` walks a dotted path; ``child`` reads one edge name."""
+    """``reach`` walks a dotted path and ``descend`` takes its end;
+    ``child`` reads one edge name."""
 
     #: ``members`` holds a singleton ``hobby``, itself holding a scalar
     #: ``level`` and a collection ``pets``.
@@ -390,6 +391,21 @@ class TestDescend:
         )
         edge, _ = node.descend("a.b")
         assert edge.type == "integer"
+
+    def test_reach_lists_every_edge_walked(self) -> None:
+        edges, _ = self.TREE.reach("hobby.level")
+        assert [edge.name for edge in edges] == ["hobby", "level"]
+
+    def test_reach_lists_one_edge_for_a_literal_dotted_name(self) -> None:
+        """What a caller ANDs is what the walk passed through, which for
+        a literal dotted key is the one edge — not two segments."""
+        node = dc.Node(
+            children=[
+                (dc.Edge(name="a.b", type="integer", required=False), dc.Node()),
+            ]
+        )
+        edges, _ = node.reach("a.b")
+        assert [(edge.name, edge.required) for edge in edges] == [("a.b", False)]
 
     def test_child_does_not_walk_a_path(self) -> None:
         """A dot in a name belongs to the name — top-level entity ids carry

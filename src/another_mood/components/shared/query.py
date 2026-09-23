@@ -14,12 +14,13 @@ wrapper.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from functools import reduce
 from graphlib import CycleError, TopologicalSorter
 from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import pluck
+from another_mood.components.shared.json_data_model import KeyPath, pluck, put
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
     parse_record_predicate,
@@ -310,28 +311,43 @@ class Grouped(QueryNode):
 
 @dataclass(frozen=True)
 class SelectItem:
-    """A single field projection (rename ``item`` to ``as_``)."""
+    """A single field projection: read ``item``, write it at ``as_``.
+
+    Both are paths.
+    """
 
     item: str
     as_: str
 
-    def apply(self, record: Record) -> Mapping[str, object]:
-        """Return ``{as_: value}`` when the source field is present, or
-        an empty mapping when it is absent.  Absent-key output matches
-        the JSON data model convention that nullable fields are
-        represented by key omission rather than a null value, so
-        projecting an optional schema attribute yields rows whose key
-        set varies with each record's presence of the field.
+    @property
+    def target(self) -> KeyPath:
+        """Where the value lands, outermost segment first."""
+        return tuple(self.as_.split("."))
+
+    def apply(self, record: Record, out: Record) -> Record:
+        """Return ``out`` with the source value written at :attr:`target`,
+        or ``out`` untouched when the source field is absent — no null and
+        no empty object to hang the path from, so rows vary in key set.
         """
         try:
-            return {self.as_: pluck(record, self.item)}
+            value = pluck(record, self.item)
         except KeyError:
-            return {}
+            return out
+        return put(out, self.target, value)
 
     def derive(self, catalog: dc.Node) -> dc.Branch:
+        """The branch this item lands as; :attr:`target` says where."""
         # The whole subtree comes along, mirroring apply's ``pluck``.
-        edge, node = catalog.descend(self.item)
-        return replace(edge, name=self.as_), node
+        edges, node = catalog.reach(self.item)
+        return (
+            replace(
+                edges[-1],
+                name=self.target[-1],
+                # On every row only if every object on the way is there.
+                required=all(edge.required for edge in edges),
+            ),
+            node,
+        )
 
 
 @dataclass(frozen=True)
@@ -341,22 +357,16 @@ class Select(QueryNode):
     items: Sequence[SelectItem]
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        return [
-            {k: v for item in self.items for k, v in item.apply(record).items()}
-            for record in records
-        ]
+        return [self._project(record) for record in records]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        out = dc.Node(children=[item.derive(catalog) for item in self.items])
-        duplicate = _duplicate_child_name(out)
-        if duplicate is not None:
-            # The name reported is the later of the two — the overwriting
-            # write — and is the alias itself, source position and all.
-            raise QueryDeriveError(
-                f"select alias '{duplicate}' collides with an earlier item",
-                offender=duplicate,
-            )
-        return out
+        return reduce(
+            lambda out, item: _select_into(out, item, catalog), self.items, dc.Node()
+        )
+
+    def _project(self, record: Record) -> Record:
+        empty: Record = {}
+        return reduce(lambda out, item: item.apply(record, out), self.items, empty)
 
     @classmethod
     def from_dict(cls, raw: Sequence[Mapping[str, str]]) -> "Select":
@@ -562,6 +572,21 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
         offender = next(s for s in queries[cycle[0]].source_names() if s == cycle[1])
         raise QueryDeriveError(
             "query reference cycle: " + " → ".join(cycle), offender=offender
+        ) from exc
+
+
+def _select_into(out: dc.Node, item: SelectItem, catalog: dc.Node) -> dc.Node:
+    """Land one ``select`` item, naming it as the offender on a clash.
+
+    The ``as_`` goes out as the user wrote it: a rebuilt string loses the
+    source position the diagnostic needs.
+    """
+    try:
+        return out.graft(item.derive(catalog), under=item.target[:-1])
+    except dc.WriteConflictError as exc:
+        raise QueryDeriveError(
+            f"select alias '{item.as_}' overlaps an earlier item",
+            offender=item.as_,
         ) from exc
 
 

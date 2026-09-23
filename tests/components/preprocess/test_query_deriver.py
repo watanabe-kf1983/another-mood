@@ -372,7 +372,7 @@ class TestIdentifierDiagnostics:
         assert len(diags) == 1
         assert diags[0].line == 7
         assert diags[0].column == 11
-        assert "collides with an earlier item" in diags[0].message
+        assert "overlaps an earlier item" in diags[0].message
 
     def test_multiple_errors_across_queries_are_collected(self, tmp_path: Path) -> None:
         query_yaml = (

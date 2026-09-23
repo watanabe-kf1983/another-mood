@@ -597,20 +597,42 @@ class TestGroupedDerive:
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}) == {
+        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}, {}) == {
             "name": "Alice",
         }
 
     def test_renames_field(self) -> None:
         assert SelectItem(item="category", as_="id").apply(
-            {"category": "user-management"}
+            {"category": "user-management"}, {}
         ) == {"id": "user-management"}
 
-    def test_returns_empty_for_missing_field(self) -> None:
+    def test_leaves_out_untouched_for_missing_field(self) -> None:
         # The JSON data model treats a nullable field as an absent key,
         # so projecting an optional schema attribute on a record that
-        # happens to omit it yields no output entry rather than raising.
-        assert SelectItem(item="missing", as_="x").apply({"name": "Alice"}) == {}
+        # happens to omit it writes nothing rather than raising.
+        assert SelectItem(item="missing", as_="x").apply(
+            {"name": "Alice"}, {"kept": 1}
+        ) == {"kept": 1}
+
+    def test_dotted_alias_nests(self) -> None:
+        assert SelectItem(item="level", as_="hobby.level").apply(
+            {"level": "pro"}, {}
+        ) == {"hobby": {"level": "pro"}}
+
+    def test_siblings_converge_on_one_parent(self) -> None:
+        record = {"level": "pro", "pets": 2}
+        out = SelectItem(item="level", as_="hobby.level").apply(record, {})
+        assert SelectItem(item="pets", as_="hobby.pets").apply(record, out) == {
+            "hobby": {"level": "pro", "pets": 2}
+        }
+
+    def test_missing_field_leaves_no_empty_wrapper(self) -> None:
+        # ``hobby: {}`` would be an object the catalog claims a shape for
+        # but no row actually carries a value in.
+        assert (
+            SelectItem(item="missing", as_="hobby.level").apply({"name": "Alice"}, {})
+            == {}
+        )
 
 
 class TestSelect:
@@ -630,6 +652,20 @@ class TestSelect:
     def test_empty_records(self) -> None:
         select = Select(items=[SelectItem(item="x", as_="x")])
         assert list(select.apply([])) == []
+
+    def test_dotted_aliases_converge_across_items(self) -> None:
+        # Items are folded one write at a time, so two writing under the
+        # same parent meet in one object rather than the later one
+        # replacing what the earlier put there.
+        select = Select(
+            items=[
+                SelectItem(item="level", as_="hobby.level"),
+                SelectItem(item="pets", as_="hobby.pets"),
+            ]
+        )
+        assert list(select.apply([{"level": "pro", "pets": 2, "extra": 1}])) == [
+            {"hobby": {"level": "pro", "pets": 2}}
+        ]
 
     def test_optional_field_absent_in_some_records(self) -> None:
         # A schema-optional attribute (here ``parent_entity``) is absent
@@ -681,21 +717,71 @@ class TestSelectDerive:
                 SelectItem(item="phase", as_="label"),
             ]
         )
-        with pytest.raises(QueryDeriveError, match="collides with an earlier item"):
+        with pytest.raises(QueryDeriveError, match="overlaps an earlier item"):
             select.derive(leaf)
 
-    def test_allows_an_alias_that_is_only_a_prefix_of_another(self) -> None:
+    def test_raises_when_a_later_alias_descends_into_an_earlier_leaf(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
-        # Dotted aliases are literal keys, so ``a`` and ``a.b`` are two
-        # distinct output keys and neither overwrites the other.
+        # A dotted alias is a write path, so ``a`` and ``a.b`` overlap:
+        # ``a`` holds a string, which ``a.b`` cannot nest a value in.
         select = Select(
             items=[
                 SelectItem(item="title", as_="a"),
                 SelectItem(item="phase", as_="a.b"),
             ]
         )
-        assert [e.name for e, _ in select.derive(leaf).children] == ["a", "a.b"]
+        with pytest.raises(QueryDeriveError, match="'a.b' overlaps an earlier item"):
+            select.derive(leaf)
+
+    def test_raises_when_a_later_alias_overwrites_an_earlier_branch(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
+        # The mirror ordering: the diagnostic names the later row either
+        # way, since the earlier ones are already in the tree.
+        select = Select(
+            items=[
+                SelectItem(item="phase", as_="a.b"),
+                SelectItem(item="title", as_="a"),
+            ]
+        )
+        with pytest.raises(QueryDeriveError, match="'a' overlaps an earlier item"):
+            select.derive(leaf)
+
+    def test_aliases_sharing_a_parent_converge(self) -> None:
+        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
+        leaf = From(name="tasks").derive(root)
+        projected = Select(
+            items=[
+                SelectItem(item="title", as_="a.b"),
+                SelectItem(item="phase", as_="a.c"),
+            ]
+        ).derive(leaf)
+        assert [e.name for e, _ in projected.children] == ["a"]
+        assert [e.name for e, _ in projected.child("a").children] == ["b", "c"]
+
+    def test_optional_ancestor_makes_the_projection_optional(self) -> None:
+        # An edge's ``required`` is present-if-the-parent-is, while a
+        # write's is present-on-every-row.  Reading through an optional
+        # ``hobby`` is not on every row, even though ``level`` is there
+        # whenever ``hobby`` is.
+        leaf = dc.Node(
+            children=[
+                (
+                    dc.Edge(name="hobby", type="object", required=False),
+                    dc.Node(
+                        children=[
+                            (
+                                dc.Edge(name="level", type="string", required=True),
+                                dc.Node(),
+                            )
+                        ]
+                    ),
+                )
+            ]
+        )
+        edge, _ = SelectItem(item="hobby.level", as_="level").derive(leaf)
+        assert edge == dc.Edge(name="level", type="string", required=False)
 
 
 class TestSelectFromDict:
