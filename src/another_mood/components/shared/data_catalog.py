@@ -7,7 +7,7 @@ relied on in query derivation.
 """
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from itertools import takewhile
 from typing import Any, ClassVar, cast
 
@@ -124,6 +124,68 @@ class Node:
             candidate = candidate.rsplit(".", 1)[0]
         return candidate
 
+    # ── Writing ───────────────────────────────────────────────────────
+
+    def graft(self, branch: Branch, *, under: Sequence[str] = ()) -> "Node":
+        """Return this node with ``branch`` placed under the objects
+        ``under`` names, outermost first.
+
+        ``branch``'s edge names where it lands, and its ``required``
+        says the value is on every row.  Objects of ``under`` are
+        synthesized where missing and descended into where already
+        there, so grafting twice under ``("a",)`` converges on one
+        ``a``; they come out required when the value is on every row,
+        and what an optional one already held comes out optional.
+
+        Raises :class:`WriteConflictError` when the branch would land
+        where this tree already holds something, or pass through
+        something a row cannot nest a value in.
+        """
+        edge, _ = branch
+        if not under:
+            if self.has_child(edge.name):
+                raise WriteConflictError(edge.name)
+            return self._with_child(branch)
+        else:
+            holder, child = self._holder(under[0], required=edge.required)
+            return self._with_child((holder, child.graft(branch, under=under[1:])))
+
+    def _holder(self, name: str, *, required: bool) -> Branch:
+        """The object at ``name`` to descend into, and what writing into
+        it does to what it already holds."""
+        if not self.has_child(name):
+            return Edge(name=name, type="object", required=required), Node()
+        else:
+            edge, child = self.child_entry(name)
+            if edge.is_collection or not child.children:
+                raise WriteConflictError(name)
+            if edge.required:
+                # Every row already had it, so nothing it holds changes.
+                return edge, child
+            else:
+                # The rows that lacked it now have it, holding just the
+                # new value, so what it held on the others can be absent.
+                return replace(edge, required=required), child._all_optional()
+
+    def _all_optional(self) -> "Node":
+        return replace(
+            self,
+            children=[(replace(e, required=False), c) for e, c in self.children],
+        )
+
+    def _with_child(self, branch: Branch) -> "Node":
+        """In place of the child of the same name, or after the last."""
+        name = branch[0].name
+        if self.has_child(name):
+            return replace(
+                self,
+                children=[
+                    branch if e.name == name else (e, c) for e, c in self.children
+                ],
+            )
+        else:
+            return replace(self, children=[*self.children, branch])
+
 
 XRef.catalog = Node(
     children=[
@@ -153,6 +215,14 @@ class UnknownChildError(LookupError):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.name = name
+
+
+class WriteConflictError(ValueError):
+    """Raised by :meth:`Node.graft` when a write's path runs into what
+    the tree already holds.  Callers name the alias the user wrote."""
+
+
+# ── Grafting writes into the tree ─────────────────────────────────────
 
 
 # ── Persistence form (serialization view) ─────────────────────────────

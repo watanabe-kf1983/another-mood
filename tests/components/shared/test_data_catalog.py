@@ -398,3 +398,117 @@ class TestDescend:
         assert not self.TREE.has_child("hobby.level")
         with pytest.raises(dc.UnknownChildError):
             self.TREE.child("hobby.level")
+
+
+def _tree(text: str) -> dc.Node:
+    return _branches([path.split(".") for path in text.split()])
+
+
+def _branches(paths: list[list[str]]) -> dc.Node:
+    return dc.Node(
+        children=[
+            _branch(head, [p[1:] for p in paths if p[0] == head and p[1:]])
+            for head in dict.fromkeys(p[0] for p in paths)
+        ]
+    )
+
+
+def _branch(segment: str, tails: list[list[str]]) -> dc.Branch:
+    node = _branches(tails) if tails else dc.Node()
+    name = segment.removesuffix("!").removesuffix("[]")
+    item = "object" if node.children else "string"
+    return (
+        dc.Edge(
+            name=name,
+            type=item + "[]" if "[]" in segment else item,
+            required=segment.endswith("!"),
+        ),
+        node,
+    )
+
+
+def _paths(node: dc.Node) -> str:
+    return " ".join(_leaf_paths(node))
+
+
+def _leaf_paths(node: dc.Node) -> list[str]:
+    return [
+        path
+        for edge, child in node.children
+        for segment in [
+            edge.name + ("[]" if edge.is_collection else "") + ("!" * edge.required)
+        ]
+        for path in (
+            [f"{segment}.{below}" for below in _leaf_paths(child)]
+            if child.children
+            else [segment]
+        )
+    ]
+
+
+def _grafted(base: str, write: str) -> dc.Node:
+    *under, leaf = write.split(".")
+    edge = dc.Edge(
+        name=leaf.removesuffix("!"), type="string", required=leaf.endswith("!")
+    )
+    return _tree(base).graft((edge, dc.Node()), under=under)
+
+
+class TestGraft:
+    """A tree is written as its leaf paths: ``a!.b`` is an object ``a``
+    on every row holding a ``b`` that some rows lack, and ``a[]`` is a
+    collection.  A write is one such path, its own ``!`` saying whether
+    the value is on every row."""
+
+    @pytest.mark.parametrize(
+        ("base", "write", "expected"),
+        [
+            # Placing: the objects of a path are synthesized, and writes
+            # sharing them converge.
+            ("", "a", "a"),
+            ("", "a.b", "a.b"),
+            ("a.b", "a.c", "a.b a.c"),
+            # Existing children are kept, in place for the path's own.
+            ("kept!", "added", "kept! added"),
+            ("a!.b! z!", "a.c", "a!.b! a!.c z!"),
+            # A value on every row makes every object holding it required.
+            ("", "a.b.c!", "a!.b!.c!"),
+            ("", "a.b.c", "a.b.c"),
+            # Writing into an object only some rows had puts it on the
+            # rows that lacked it, holding just the new value.
+            ("a.b!", "a.c!", "a!.b a!.c!"),
+            ("a.b! a.d!", "a.c!", "a!.b a!.d a!.c!"),
+            # Absent on some rows says nothing about *which* rows, so a
+            # row holding the value but not ``a`` is not ruled out.
+            ("a.b!", "a.c", "a.b a.c"),
+            # No row gains an ``a``, so what every ``a`` had, it still has.
+            ("a!.b!", "a.c!", "a!.b! a!.c!"),
+            # The row itself is not an object that can be absent.
+            ("a!", "b!", "a! b!"),
+        ],
+    )
+    def test_graft(self, base: str, write: str, expected: str) -> None:
+        assert _paths(_grafted(base, write)) == expected
+
+    @pytest.mark.parametrize(
+        ("base", "write"),
+        [
+            ("a", "a"),  # onto a value
+            ("a.b", "a"),  # onto an object
+            ("a", "a.b"),  # through a value
+            ("a.b", "a.b.d"),  # through a value further down
+            # The asymmetry rule on the write side: a row has one
+            # position to write to, an array has many.
+            ("a[].b", "a.c"),
+        ],
+    )
+    def test_graft_conflict(self, base: str, write: str) -> None:
+        with pytest.raises(dc.WriteConflictError):
+            _grafted(base, write)
+
+    def test_the_branch_lands_carrying_its_own_edge(self) -> None:
+        """Only the objects of ``under`` are synthesized; the edge the
+        caller built is placed as it is."""
+        edge = dc.Edge(name="b", type="integer", required=False)
+        out = dc.Node().graft((edge, dc.Node()), under=("a",))
+        assert out.descend("a.b")[0] is edge
