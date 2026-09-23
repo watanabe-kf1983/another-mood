@@ -29,6 +29,129 @@ properties:
     required: [名前, 説明]
 
   # ===========================================================================
+  # 業務: 要求仕様書の付録 (業務モデル = 階層 DFD) のソース。上流のさらに上に
+  # あり、他のどの層も知らない (参照はすべて上流 / 下流からこの層へ向く)
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # プロセス – データストア – 外部エンティティ – フロー
+  # ---------------------------------------------------------------------------
+
+  プロセス:
+    type: object
+    description: "業務モデル (階層 DFD) のプロセスの集合。構造化分析 (DeMarco / Yourdon) のレベル分割に従い、親 を持たないプロセスが業務全体 (コンテキスト図の唯一のプロセス)、子を持たないプロセスが葉 (それ以上分解しない業務の単位)。番号 (1、1.2 など) は持たず、親子関係と記述順から文書化時に付く。マップのキーがプロセス ID。英名: processes"
+    additionalProperties:
+      type: object
+      description: "1 つのプロセスを表すレコード。英名: process"
+      additionalProperties: false
+      properties:
+        名前:
+          type: string
+          description: "文書に掲載する表示名。葉は動詞で終える (例: 入荷を登録する)、分解されるプロセスは業務の名前 (例: 仕入)。英名: name"
+        説明:
+          type: string
+          description: "そのプロセスが業務として何をするかを 1〜2 文で説明する。英名: description"
+        親:
+          type: string
+          description: "このプロセスを分解して得た上位プロセスの ID。業務全体を表す唯一のプロセスだけが省略する。英名: parent_id"
+          x-ref:
+            entity: プロセス
+      required: [名前, 説明]
+
+  データストア:
+    type: object
+    description: "業務モデルのデータストア (業務が読み書きする台帳・記録) の集合。構造化分析の data store に対応し、設計書の論理データモデルのエンティティはこれを実装する。マップのキーがデータストア ID。英名: data_stores"
+    additionalProperties:
+      type: object
+      description: "1 つのデータストアを表すレコード。英名: data_store"
+      additionalProperties: false
+      properties:
+        名前:
+          type: string
+          description: "文書に掲載する表示名 (例: 書籍台帳)。英名: name"
+        説明:
+          type: string
+          description: "何を記録する台帳かを 1〜2 文で説明する。英名: description"
+      required: [名前, 説明]
+
+  外部エンティティ:
+    type: object
+    description: "業務の境界の外側で業務とデータをやり取りする相手 (顧客、仕入先など) の集合。構造化分析の terminator、IPA 外部システム関連図の外部システムに対応する。本システムのアクターとは境界が違う (アクターは本システムの境界の外側、外部エンティティは業務の境界の外側) ので、対応は持たない。マップのキーが外部エンティティ ID。英名: external_entities"
+    additionalProperties:
+      type: object
+      description: "1 つの外部エンティティを表すレコード。英名: external_entity"
+      additionalProperties: false
+      properties:
+        名前:
+          type: string
+          description: "文書に掲載する表示名 (例: 顧客)。英名: name"
+        説明:
+          type: string
+          description: "業務とどうデータをやり取りする相手かを 1〜2 文で説明する。英名: description"
+      required: [名前, 説明]
+
+  フロー:
+    type: object
+    description: "業務モデルのデータフローの集合。フローは各レベルで記録する (葉レベルだけを記録して上位を集約導出する形にはしない): 上位レベルのフローは「納品」のように束ねた名前を持ち、下位レベルのフローは 親 で自分を束ねる上位フローを指す。親プロセスの入出力と子の図の入出力の一致 (バランシング) はこの対応で検査する。マップのキーがフロー ID。英名: flows"
+    additionalProperties:
+      type: object
+      description: "1 つのデータフローを表すレコード。英名: flow"
+      additionalProperties: false
+      properties:
+        名前:
+          type: string
+          description: "流れるデータの名前 (例: 納品、在庫数)。図の線のラベルになる。英名: name"
+        説明:
+          type: string
+          description: "流れるデータの内容を補足する。名前で足りれば省略する。英名: description"
+        元:
+          type: object
+          description: "フローの出所。プロセス / データストア / 外部エンティティ のいずれか 1 つの ID を、そのエンティティ名のキーで持つ。「ちょうど 1 つ」の制約はスキーマで表現できないので、可視化側 (分解図のフロー表) で確かめる。英名: source"
+          additionalProperties: false
+          properties:
+            プロセス:
+              type: string
+              description: "端がプロセスのとき、そのプロセスの ID。英名: process_id"
+              x-ref:
+                entity: プロセス
+            データストア:
+              type: string
+              description: "端がデータストアのとき、そのデータストアの ID。英名: data_store_id"
+              x-ref:
+                entity: データストア
+            外部エンティティ:
+              type: string
+              description: "端が外部エンティティのとき、その外部エンティティの ID。英名: external_entity_id"
+              x-ref:
+                entity: 外部エンティティ
+        先:
+          type: object
+          description: "フローの行き先。プロセス / データストア / 外部エンティティ のいずれか 1 つの ID を、そのエンティティ名のキーで持つ。「ちょうど 1 つ」の制約はスキーマで表現できないので、可視化側 (分解図のフロー表) で確かめる。英名: target"
+          additionalProperties: false
+          properties:
+            プロセス:
+              type: string
+              description: "端がプロセスのとき、そのプロセスの ID。英名: process_id"
+              x-ref:
+                entity: プロセス
+            データストア:
+              type: string
+              description: "端がデータストアのとき、そのデータストアの ID。英名: data_store_id"
+              x-ref:
+                entity: データストア
+            外部エンティティ:
+              type: string
+              description: "端が外部エンティティのとき、その外部エンティティの ID。英名: external_entity_id"
+              x-ref:
+                entity: 外部エンティティ
+        親:
+          type: string
+          description: "このフローを束ねる上位レベルのフローの ID。分解図の境界を跨ぐフロー (元と先の一方だけが図の中にあるフロー) が、親プロセスの入出力として上位の図に描かれているフローを指す。図の中で閉じるフローと、コンテキスト図のフローは省略する。英名: parent_id"
+          x-ref:
+            entity: フロー
+      required: [名前, 元, 先]
+
+  # ===========================================================================
   # 上流: 要求仕様書のソース
   # ===========================================================================
 

@@ -16,7 +16,10 @@
 #          section (the CRUDマトリクス view: use cases with their data
 #          accesses joined) and the screen design chapter (the 画面 collection:
 #          the screen list and the transition diagram on one page, each
-#          screen definition on a page of its own) are split into their own
+#          screen definition on a page of its own) and the requirements
+#          spec's business model appendix (the 分解図 view: the context
+#          diagram and process hierarchy on one page, each decomposition
+#          diagram on a page of its own) are split into their own
 #          pages; both documents stay on index.md until
 #          composite views let a document be a node of its own.
 #   book — read as one bound document: empty file_per keeps everything
@@ -41,5 +44,7 @@ editions:
       - CRUDマトリクス.item[]
       - 画面.item[]
       - 画面.item
+      - 分解図.item[]
+      - 分解図.item
   book:
     file_per: []
