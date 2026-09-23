@@ -262,6 +262,20 @@ properties:
                       description: "その条件でのシステムの応答 (例: 登録を拒否し、先に書籍登録を促す)。英名: response"
                   required: [条件, 応答]
             required: [操作, 応答]
+        業務プロセス:
+          type: array
+          description: "このユースケースが支える業務プロセス (業務モデルの葉プロセス) の一覧。要求仕様書 1 章のシステム化範囲はここから導く: 葉プロセスのうち、いずれかのユースケースに支えられるものが本システムの範囲で、どのユースケースにも支えられないものは手作業のまま残る。1 つのユースケースが複数の葉を支えることも、1 つの葉を複数のユースケースが支えることもあるので配列で持つ。英名: business_processes"
+          items:
+            type: object
+            description: "ユースケースと業務プロセスの対応 1 件。英名: business_process"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "プロセスの ID。分解されていない (葉の) プロセスを指す。英名: id"
+                x-ref:
+                  entity: プロセス
+            required: [ID]
       required: [名前, 概要, アクター, 基本シナリオ]
 
   アクター:
@@ -449,6 +463,20 @@ properties:
           description: "このエンティティに対応する用語集の項目の ID。対応する用語が無ければ省略する。英名: term_id"
           x-ref:
             entity: 用語
+        データストア:
+          type: array
+          description: "このエンティティが実装する業務モデルのデータストア (台帳・記録) の一覧。業務の 1 つの台帳を複数のエンティティで実装する (入荷記録 = 入荷 + 入荷明細) ことも、1 つのエンティティが複数の台帳を兼ねる (書籍 = 書籍台帳 + 在庫台帳) こともあるので配列で持つ。台帳に対応しない設計上のエンティティでは省略する。英名: data_stores"
+          items:
+            type: object
+            description: "エンティティとデータストアの対応 1 件。英名: data_store"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "データストアの ID。英名: id"
+                x-ref:
+                  entity: データストア
+            required: [ID]
         属性:
           type: array
           description: "エンティティが持つ属性の一覧 (IPA エンティティ定義の属性項目に対応)。並び順は文書での掲載順。英名: attributes"

@@ -19,6 +19,7 @@
     - item: 名前
     - item: 概要
     - item: アクター
+    - item: 業務プロセス
     - item: 事前条件
     - item: 事後条件
     - item: 基本シナリオ
