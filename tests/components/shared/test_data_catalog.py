@@ -7,6 +7,8 @@ from ruamel.yaml import YAML
 
 from another_mood.components.shared import data_catalog as dc
 
+from .leaf_paths import paths, tree
+
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
     """Parse a YAML list of entity dicts into a flat Entity catalog."""
@@ -34,7 +36,7 @@ class TestDictRoundTrip:
         )
         assert dc.Entity.from_dict(entity.to_dict()) == entity
 
-    def test_full_tree(self) -> None:
+    def test_fulltree(self) -> None:
         entity = dc.Entity(
             id="orders",
             item_type=dc.ObjectType(
@@ -440,65 +442,17 @@ class TestDescend:
             self.TREE.child("hobby.level")
 
 
-def _tree(text: str) -> dc.Node:
-    return _branches([path.split(".") for path in text.split()])
-
-
-def _branches(paths: list[list[str]]) -> dc.Node:
-    return dc.Node(
-        children=[
-            _branch(head, [p[1:] for p in paths if p[0] == head and p[1:]])
-            for head in dict.fromkeys(p[0] for p in paths)
-        ]
-    )
-
-
-def _branch(segment: str, tails: list[list[str]]) -> dc.Branch:
-    node = _branches(tails) if tails else dc.Node()
-    name = segment.removesuffix("!").removesuffix("[]")
-    item = "object" if node.children else "string"
-    return (
-        dc.Edge(
-            name=name,
-            type=item + "[]" if "[]" in segment else item,
-            required=segment.endswith("!"),
-        ),
-        node,
-    )
-
-
-def _paths(node: dc.Node) -> str:
-    return " ".join(_leaf_paths(node))
-
-
-def _leaf_paths(node: dc.Node) -> list[str]:
-    return [
-        path
-        for edge, child in node.children
-        for segment in [
-            edge.name + ("[]" if edge.is_collection else "") + ("!" * edge.required)
-        ]
-        for path in (
-            [f"{segment}.{below}" for below in _leaf_paths(child)]
-            if child.children
-            else [segment]
-        )
-    ]
-
-
 def _grafted(base: str, write: str) -> dc.Node:
     *under, leaf = write.split(".")
     edge = dc.Edge(
         name=leaf.removesuffix("!"), type="string", required=leaf.endswith("!")
     )
-    return _tree(base).graft((edge, dc.Node()), under=under)
+    return tree(base).graft((edge, dc.Node()), under=under)
 
 
 class TestGraft:
-    """A tree is written as its leaf paths: ``a!.b`` is an object ``a``
-    on every row holding a ``b`` that some rows lack, and ``a[]`` is a
-    collection.  A write is one such path, its own ``!`` saying whether
-    the value is on every row."""
+    """A write is one leaf path, its own ``!`` saying whether the value
+    is on every row."""
 
     @pytest.mark.parametrize(
         ("base", "write", "expected"),
@@ -528,7 +482,7 @@ class TestGraft:
         ],
     )
     def test_graft(self, base: str, write: str, expected: str) -> None:
-        assert _paths(_grafted(base, write)) == expected
+        assert paths(_grafted(base, write)) == expected
 
     @pytest.mark.parametrize(
         ("base", "write"),
@@ -555,8 +509,7 @@ class TestGraft:
 
 
 class TestPrune:
-    """The catalog counterpart of the data model's ``drop``, written in
-    the same leaf-path notation as :class:`TestGraft`."""
+    """The catalog counterpart of the data model's ``drop``."""
 
     @pytest.mark.parametrize(
         ("base", "path", "expected"),
@@ -573,13 +526,13 @@ class TestPrune:
         ],
     )
     def test_prune(self, base: str, path: str, expected: str) -> None:
-        pruned = _tree(base).prune(path.split("."))
+        pruned = tree(base).prune(path.split("."))
         assert pruned is not None
-        assert _paths(pruned) == expected
+        assert paths(pruned) == expected
 
     def test_a_node_the_removal_empties_is_not_returned(self) -> None:
-        assert _tree("only[]!").prune(("only",)) is None
-        assert _tree("a!.b!").prune(("a", "b")) is None
+        assert tree("only[]!").prune(("only",)) is None
+        assert tree("a!.b!").prune(("a", "b")) is None
 
     @pytest.mark.parametrize("path", ["gone", "a.gone", "arr.b"])
     def test_raises_on_a_path_that_does_not_resolve(self, path: str) -> None:
@@ -588,4 +541,4 @@ class TestPrune:
         side.  The last case continues past an array, which ``reach``
         refuses and which would otherwise descend into the element."""
         with pytest.raises(dc.UnknownChildError):
-            _tree("a!.b! arr[]!.b! z").prune(path.split("."))
+            tree("a!.b! arr[]!.b! z").prune(path.split("."))

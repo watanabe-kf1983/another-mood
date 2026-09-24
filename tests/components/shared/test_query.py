@@ -29,6 +29,8 @@ from another_mood.components.shared.record_predicate import (
 )
 from another_mood.components.shared import data_catalog as dc
 
+from .leaf_paths import paths, tree
+
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
     """Parse a YAML list of entity dicts into a flat Entity catalog."""
@@ -291,43 +293,44 @@ class TestFlattenDerive:
             Flatten(of=("tasks",), as_=("title",)).derive(categories)
 
 
+@pytest.fixture
+def nested() -> dc.Node:
+    return dc.Node(
+        children=[
+            (dc.Edge(name="id", type="string", required=True), dc.Node()),
+            (
+                dc.Edge(name="hobby", type="object", required=True),
+                dc.Node(
+                    children=[
+                        (
+                            dc.Edge(name="level", type="string", required=True),
+                            dc.Node(),
+                        ),
+                        (
+                            dc.Edge(name="pets", type="object[]", required=True),
+                            dc.Node(
+                                children=[
+                                    (
+                                        dc.Edge(
+                                            name="name",
+                                            type="string",
+                                            required=True,
+                                        ),
+                                        dc.Node(),
+                                    ),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+        ]
+    )
+
+
 class TestFlattenDeriveNested:
     """``of`` and ``as`` are paths: the array is taken from where ``of``
     reaches, and the element lands where ``as`` writes."""
-
-    @pytest.fixture
-    def nested(self) -> dc.Node:
-        return dc.Node(
-            children=[
-                (dc.Edge(name="id", type="string", required=True), dc.Node()),
-                (
-                    dc.Edge(name="hobby", type="object", required=True),
-                    dc.Node(
-                        children=[
-                            (
-                                dc.Edge(name="level", type="string", required=True),
-                                dc.Node(),
-                            ),
-                            (
-                                dc.Edge(name="pets", type="object[]", required=True),
-                                dc.Node(
-                                    children=[
-                                        (
-                                            dc.Edge(
-                                                name="name",
-                                                type="string",
-                                                required=True,
-                                            ),
-                                            dc.Node(),
-                                        ),
-                                    ]
-                                ),
-                            ),
-                        ]
-                    ),
-                ),
-            ]
-        )
 
     def test_takes_the_array_from_a_dotted_of(self, nested: dc.Node) -> None:
         out = Flatten(of=("hobby", "pets"), as_=("pet",)).derive(nested)
@@ -361,6 +364,105 @@ class TestFlattenDeriveNested:
     ) -> None:
         with pytest.raises(QueryDeriveError, match="collides"):
             Flatten(of=("hobby", "pets"), as_=("hobby",)).derive(nested)
+
+
+# The target of the cp / mv rewrite (dev-docs, "ドット名の意味論統一"):
+# required is derived from where each output edge came from, not by
+# rules inside the tree operations.  Strict, so a fix that lands is
+# noticed by the mark it makes obsolete.
+_PROVENANCE = pytest.mark.xfail(
+    strict=True, reason="required is not yet derived from provenance"
+)
+
+
+class TestFlattenDeriveRequired:
+    """Flatten adds nothing to a row.  With ``preserve_empty: false`` it
+    drops the rows that have no element; with ``true`` it keeps every
+    row as it is.  Either way, an object on the way to the array holds
+    what it held before, so ``level`` stays required under ``hobby``.
+
+    The input has ``hobby`` on some rows only, and each row's ``hobby``
+    holds ``level`` and the array ``pets``."""
+
+    BASE = "hobby.level! hobby.pets[]!"
+
+    @pytest.mark.parametrize(
+        ("flatten", "expected"),
+        [
+            # A row without ``hobby`` has no element, so it is dropped:
+            # ``hobby`` is on every row that remains.
+            pytest.param(
+                Flatten(of=("hobby", "pets"), as_=("hobby", "pet")),
+                "hobby!.level! hobby!.pet!",
+                marks=_PROVENANCE,
+            ),
+            pytest.param(
+                Flatten(of=("hobby", "pets"), as_=("pet",)),
+                "hobby!.level! pet!",
+                marks=_PROVENANCE,
+            ),
+            # Every row is kept, so ``hobby`` is still on some rows only,
+            # and the element is absent where there was none.
+            pytest.param(
+                Flatten(
+                    of=("hobby", "pets"), as_=("hobby", "pet"), preserve_empty=True
+                ),
+                "hobby.level! hobby.pet",
+                marks=_PROVENANCE,
+            ),
+            (
+                Flatten(of=("hobby", "pets"), as_=("pet",), preserve_empty=True),
+                "hobby.level! pet",
+            ),
+        ],
+    )
+    def test_required(self, flatten: Flatten, expected: str) -> None:
+        assert paths(flatten.derive(tree(self.BASE))) == expected
+
+
+@_PROVENANCE
+class TestFlattenDeriveInPlace:
+    """An in-place flatten (``as`` under the same parent as ``of``)
+    replaces the array where it was: the row's other fields are
+    untouched, including the array's slot among them and what the
+    objects on the way to it carry."""
+
+    def test_keeps_the_array_slot(self) -> None:
+        """Child order shows in the generated entity pages, so the
+        column must not move to the end."""
+        row = dc.Node(
+            children=[
+                (dc.Edge(name="a", type="string", required=True), dc.Node()),
+                (dc.Edge(name="tasks", type="string[]", required=True), dc.Node()),
+                (dc.Edge(name="z", type="string", required=True), dc.Node()),
+            ]
+        )
+        out = Flatten(of=("tasks",), as_=("task",)).derive(row)
+        assert [e.name for e, _ in out.children] == ["a", "task", "z"]
+
+    def test_keeps_what_the_holder_carries(self) -> None:
+        """The array being the holder's only child does not make the
+        holder disposable: it is still there on every surviving row,
+        as it was declared."""
+        hobby_edge = dc.Edge(
+            name="hobby",
+            type="object",
+            required=True,
+            metadata={"title": "Hobby"},
+            validation={"minProperties": 1},
+        )
+        hobby = dc.Node(
+            metadata={"title": "Hobby object"},
+            children=[
+                (dc.Edge(name="pets", type="string[]", required=True), dc.Node())
+            ],
+        )
+        out = Flatten(of=("hobby", "pets"), as_=("hobby", "pet")).derive(
+            dc.Node(children=[(hobby_edge, hobby)])
+        )
+        kept, node = out.child_entry("hobby")
+        assert kept == hobby_edge
+        assert node.metadata == hobby.metadata
 
 
 class TestFlattenFromDict:
@@ -907,6 +1009,59 @@ class TestSelectDerive:
         )
         edge, _ = SelectItem(item="hobby.level", as_=("level",)).derive(leaf)
         assert edge == dc.Edge(name="level", type="string", required=False)
+
+
+class TestSelectDeriveRequired:
+    """An edge's ``required`` says the value is there whenever its parent
+    is.  A projected value is there whenever its source is, so under a
+    parent that only some rows have, what decides it is the path from
+    that parent down to the source -- not whether the source is on every
+    row."""
+
+    @pytest.mark.parametrize(
+        ("base", "items", "expected"),
+        [
+            # ``a`` is on some rows only; ``p`` keeps it on the same rows
+            # in the output.  ``d`` is there whenever ``a`` is, because
+            # ``b`` and ``c`` are.
+            pytest.param(
+                "a.p! a.b!.c!",
+                [("a.p", ("a", "p")), ("a.b.c", ("a", "d"))],
+                "a.p! a.d!",
+                marks=_PROVENANCE,
+            ),
+            # With ``b`` on some of ``a``'s rows only, ``d`` is too.
+            pytest.param(
+                "a.p! a.b.c!",
+                [("a.p", ("a", "p")), ("a.b.c", ("a", "d"))],
+                "a.p! a.d",
+                marks=_PROVENANCE,
+            ),
+            # A write from outside ``a`` lands an ``a`` on rows that had
+            # none, holding only ``d``: ``p`` is no longer on every ``a``.
+            (
+                "a.p! x",
+                [("a.p", ("a", "p")), ("x", ("a", "d"))],
+                "a.p a.d",
+            ),
+            # Two writes from the same source object co-occur, so both
+            # are there whenever the object they land in is.
+            pytest.param(
+                "ref.table! ref.column!",
+                [
+                    ("ref.table", ("target", "table")),
+                    ("ref.column", ("target", "column")),
+                ],
+                "target.table! target.column!",
+                marks=_PROVENANCE,
+            ),
+        ],
+    )
+    def test_required(
+        self, base: str, items: list[tuple[str, tuple[str, ...]]], expected: str
+    ) -> None:
+        select = Select(items=[SelectItem(item=item, as_=as_) for item, as_ in items])
+        assert paths(select.derive(tree(base))) == expected
 
 
 class TestSelectFromDict:
