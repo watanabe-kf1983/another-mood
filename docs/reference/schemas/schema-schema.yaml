@@ -110,9 +110,9 @@ $defs:
         propertyNames:
           description: >-
             Identifier pattern for property names: starts with a Unicode
-            letter or underscore, followed by Unicode letters, digits, or
-            underscores.
-          pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
+            letter or underscore, followed by Unicode letters, combining
+            marks, digits, or underscores.
+          pattern: "^[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*$"
         additionalProperties:
           $ref: "#/$defs/jsonSchemaSubset"
       additionalProperties:
