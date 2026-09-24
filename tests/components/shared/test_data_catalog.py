@@ -552,3 +552,40 @@ class TestGraft:
         edge = dc.Edge(name="b", type="integer", required=False)
         out = dc.Node().graft((edge, dc.Node()), under=("a",))
         assert out.descend("a.b")[0] is edge
+
+
+class TestPrune:
+    """The catalog counterpart of the data model's ``drop``, written in
+    the same leaf-path notation as :class:`TestGraft`."""
+
+    @pytest.mark.parametrize(
+        ("base", "path", "expected"),
+        [
+            ("a b c", "b", "a c"),
+            ("a!.b! a!.c!", "a.b", "a!.c!"),
+            # An object left holding nothing goes with it, and the
+            # emptying carries up the ancestor chain.
+            ("a!.b! z", "a.b", "z"),
+            ("a!.b!.c! z", "a.b.c", "z"),
+            ("a!.b!.c! a!.d z", "a.b.c", "a!.d z"),
+            # A path may end on an array — that is what ``flatten`` does.
+            ("arr[]!.b! z", "arr", "z"),
+        ],
+    )
+    def test_prune(self, base: str, path: str, expected: str) -> None:
+        pruned = _tree(base).prune(path.split("."))
+        assert pruned is not None
+        assert _paths(pruned) == expected
+
+    def test_a_node_the_removal_empties_is_not_returned(self) -> None:
+        assert _tree("only[]!").prune(("only",)) is None
+        assert _tree("a!.b!").prune(("a", "b")) is None
+
+    @pytest.mark.parametrize("path", ["gone", "a.gone", "arr.b"])
+    def test_raises_on_a_path_that_does_not_resolve(self, path: str) -> None:
+        """Callers resolve the path with ``reach`` first, so a miss here
+        is a bug rather than an absent optional as it is on the data
+        side.  The last case continues past an array, which ``reach``
+        refuses and which would otherwise descend into the element."""
+        with pytest.raises(dc.UnknownChildError):
+            _tree("a!.b! arr[]!.b! z").prune(path.split("."))

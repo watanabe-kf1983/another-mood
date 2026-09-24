@@ -20,7 +20,7 @@ from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import KeyPath, pluck, put
+from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
     parse_record_predicate,
@@ -99,62 +99,63 @@ class Flatten(QueryNode):
     """Unwind one array attribute: each element becomes a separate row
     carrying the parent's other fields plus the element under ``as_``."""
 
-    of: str
-    as_: str
+    of: KeyPath
+    as_: KeyPath
     preserve_empty: bool = False
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # ``of`` names an attribute, not a path: ``_unwind`` drops it from
-        # the row by exact key, so a nested target could not be consumed.
-        edge, child = catalog.child_entry(self.of)
+        edges, child = catalog.reach(self.of)
+        edge = edges[-1]
         if not edge.is_collection:
             raise QueryDeriveError(
-                f"flatten target '{self.of}' is not an array attribute "
+                f"flatten target '{self.of[-1]}' is not an array attribute "
                 f"(type '{edge.type}')",
-                offender=self.of,
+                offender=self.of[-1],
             )
         wrapper = replace(
             edge,
-            name=self.as_,
+            name=self.as_[-1],
             type=edge.type[:-2],
+            # Dropping the empty parents leaves an element on every row.
             required=not self.preserve_empty,
         )
-        out = dc.Node(
-            metadata=catalog.metadata,
-            children=[
-                (wrapper, child) if e.name == self.of else (e, c)
-                for e, c in catalog.children
-            ],
-        )
-        if _duplicate_child_name(out) is not None:
+        # Removal first, so ``of`` and ``as_`` naming the same position
+        # is a replacement rather than a collision with itself.  A row
+        # is no one's child, so emptying it takes nothing with it.
+        rest = catalog.prune(self.of) or replace(catalog, children=())
+        try:
+            out = rest.graft((wrapper, child), under=self.as_[:-1])
+        except dc.WriteConflictError as exc:
             raise QueryDeriveError(
-                f"flatten alias '{self.as_}' collides with an existing attribute",
-                offender=self.as_,
-            )
-        return out
+                f"flatten alias '{exc.name}' collides with an existing attribute",
+                offender=self.as_[0],
+            ) from exc
+        # A row is now the parent's other fields plus one element, so it
+        # is no longer an instance of the item type it came from.
+        return replace(out, origin_item_type=None)
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
-        other = {k: v for k, v in parent.items() if k != self.of}
+        other = drop(parent, self.of)
         try:
             raw = pluck(parent, self.of)
         except KeyError:
             raw = []
         assert isinstance(raw, list), (
-            f"flatten target '{self.of}' must be an array; got {type(raw).__name__}"
+            f"flatten target '{self.of[-1]}' must be an array; got {type(raw).__name__}"
         )
         children = cast(list[object], raw)
         if self.preserve_empty and not children:
             return [other]
-        return [{**other, self.as_: child} for child in children]
+        return [put(other, self.as_, child) for child in children]
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Flatten":
         return cls(
-            of=cast(str, raw["of"]),
-            as_=cast(str, raw["as"]),
+            of=tuple(cast(Sequence[str], raw["of"])),
+            as_=tuple(cast(Sequence[str], raw["as"])),
             preserve_empty=cast(bool, raw["preserve_empty"]),
         )
 

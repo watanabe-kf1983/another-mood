@@ -10,8 +10,8 @@ A dot in a write path is sugar too — it lets a nested target be
 written on one YAML line — so it is resolved here, into the segments
 the canonical form carries.  The ``__view_defs`` template spells the
 dot back for display, which is why the form it shows stays one a
-reader can copy into a source file.  ``select`` is the clause that
-writes a path so far; the others follow as they switch.
+reader can copy into a source file.  ``select`` and ``flatten``
+write paths so far; the other clauses follow as they switch.
 """
 
 from collections.abc import Mapping, Sequence
@@ -79,14 +79,18 @@ def normalize_flatten(raw: object) -> list[Mapping[str, object]]:
 
 
 def _flatten_entry_from_shorthand(name: str) -> Mapping[str, object]:
-    return {"of": name, "as": name, "preserve_empty": False}
+    return {
+        "of": split_path(name),
+        "as": split_path(name),
+        "preserve_empty": False,
+    }
 
 
 def _flatten_entry_from_mapping(raw: Mapping[str, object]) -> Mapping[str, object]:
     of = cast(str, raw["of"])
     return {
-        "of": of,
-        "as": cast(str, raw.get("as", of)),
+        "of": split_path(of),
+        "as": split_path(cast(str, raw.get("as", of))),
         "preserve_empty": cast(bool, raw.get("preserve_empty", False)),
     }
 
@@ -118,14 +122,17 @@ def normalize_inline_flatten(raw: object, join_as: str) -> Mapping[str, object]:
     """Expand ``join[].flatten`` shorthand (``true`` or partial mapping) to object form.
 
     ``of:`` is fixed to ``join_as`` since the unwind target is always
-    the just-attached array.
+    the just-attached array.  It is one segment, not a split: the join
+    lands its right side under an edge named ``join_as`` verbatim.
     """
+    target = (join_as,)
     if raw is True:
-        return {"of": join_as, "as": join_as, "preserve_empty": False}
+        return {"of": target, "as": target, "preserve_empty": False}
     mapping = cast(Mapping[str, object], raw)
+    as_ = mapping.get("as")
     return {
-        "of": join_as,
-        "as": cast(str, mapping.get("as", join_as)),
+        "of": target,
+        "as": target if as_ is None else split_path(cast(str, as_)),
         "preserve_empty": cast(bool, mapping.get("preserve_empty", False)),
     }
 

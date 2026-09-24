@@ -181,6 +181,30 @@ class Node:
             holder, child = self._holder(under[0], required=edge.required)
             return self._with_child((holder, child.graft(branch, under=under[1:])))
 
+    def prune(self, path: Sequence[str]) -> "Node | None":
+        """Return this node without the child ``path`` names, outermost
+        first; None when the removal empties it, which carries on up the
+        ancestor chain.
+
+        Raises :class:`UnknownChildError` if ``path`` does not resolve —
+        unlike the data side, where a row legitimately lacks an optional
+        key, a path reaching here has been resolved by :meth:`reach`.
+        """
+        head, rest = path[0], path[1:]
+        edge, child = self.child_entry(head)
+        if rest:
+            if edge.is_collection:
+                # The asymmetry rule, as on the reading side: a path may
+                # end on an array but never continue past one.
+                raise UnknownChildError(head)
+            remaining = child.prune(rest)
+            if remaining is None:
+                return self._without_child(head)
+            else:
+                return self._with_child((edge, remaining))
+        else:
+            return self._without_child(head)
+
     def _holder(self, name: str, *, required: bool) -> Branch:
         """The object at ``name`` to descend into, and what writing into
         it does to what it already holds."""
