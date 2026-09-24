@@ -128,3 +128,60 @@ properties:
 シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は entity 化されない。シングルトン自身が `object` 型の attribute になり、配下のプロパティが `meta.owner` のようなドット名の attribute として親エンティティに載る。entity 化されるのは collection (`additionalProperties` / `items`) のみで、シングルトン配下の collection はドット名のパスで entity になる (`categories.meta.tasks`)。
 
 データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
+
+## Proposals
+
+### 名前規則の緩和 (D12)
+
+タスク [D12](node:/tasks/D/tasks/D12)。schema.yaml の `properties` 名 (ルート直下の entity 名を含む) と view 名は現在、識別子パターン `^[\p{L}_][\p{L}\p{N}_]*$` で縛られている。[L4 (SBOM)](node:/tasks/L/tasks/L4) で CycloneDX の `bom-ref` (ハイフン) と `$schema` を宣言できず、「機械出力をそのまま受ける」JSON 入口の位置づけと矛盾したため、制約の根拠を洗い直した。
+
+**規則 (案)**: 名前はパスのセグメントである。**非空で `.` を含まない**文字列であればよく、トップレベルのソース名 (entity / view) はさらに `__` で始まらない。identifier という概念は言語から消える。
+
+- `.` を禁止する理由: クエリ DSL とカタログのパス `a.b.c` の区切り文字なので、セグメントに含められない (ファイル名に `/` を含められないのと同じ)。[E14](../60-composer/10-query-dsl-spec.md#ドット名の意味論統一-e14-e15) が立てる不変条件「データのキーはドットを含まない」とも一致する。カタログ id の側で `.` をエスケープして許す案は、パス表記としてのカタログ id の意味を崩すので採らない
+- `__` を維持する理由: 内蔵ソース (`__definition.*`、内蔵 view) と同じ名前空間を共有する
+- 識別子であることに依存していた箇所 (実測): テンプレートのドットアクセスのみで、添字アクセス `this["bom-ref"]` で代替できる (ルートテンプレートも `this` を束縛している)。view DSL の `from:` / `to:` / `x-ref.entity` にパターン制約は無い。出力ファイル名はアンカーパス経由で `url_escape` を通るので追加対応なし
+- view 名も同じ規則にする (推奨)。手書きなので識別子で困らないが、同じ名前空間の二者に別規則を置く説明の手間より、一文で済む方をとる
+
+**実装箇所**: schema-schema のルート `propertyNames` と入れ子 `propertyNames`、view-schema の `propertyNames`、reports-schema の型 ID パターン (`X.item[]` の各セグメントを「`.` を含まない」に緩める)、docs (schema.md の Root / Other constraints、template.md に添字アクセスの注記)、`__data` / `__entity_defs` の表示確認。
+
+**論点**: 名前に `[` `]` を許すか (型 ID の `[]` 接尾と紛れる)。診断メッセージ (`does not match '^[^.]+$'` は正確だが不親切)。空白を含む名前のアンカー (id 値と同じ未決事項)。
+
+### 読み捨てキーの宣言 x-ignored (D13)
+
+タスク [D13](node:/tasks/D/tasks/D13)。キーワード名 `x-ignored` は仮 (候補: `x-discard` / `x-drop` / `x-unread`。`x-ref` と同じ `x-` 接頭辞は維持)。
+
+機械出力の JSON には封筒 (受理はするが読まないキー) がほぼ必ず付く。現状は schema.yaml に全て書き下すか、前段の jq で剥がすしかない ([normalizer.md](10-normalizer.md#背景-手書きは-yaml-推奨json-はワンショット機械出力の受け口))。CycloneDX の `metadata` (生成ツールの版・timestamp・ルートコンポーネント) を書き下すのはうるさく、jq は「そのまま受ける」主張を弱める。
+
+**形 (案)**:
+
+```yaml
+metadata:
+  x-ignored: true        # このキーの存在を許し、値は正規化で読み捨てる (type は任意)
+```
+
+規則は 3 つ:
+
+- `x-ignored: true` は任意の property スキーマに書ける (object に限らず array / string でも)。値は検証せず読み捨てる
+- `x-ignored` があるとき、完全性規則を免除する (`type: object` と書いても `properties` / `additionalProperties` が無くてよい)。逆に `properties` / `items` / `additionalProperties` の併記は禁止 (中身を宣言しても読まれない死んだ宣言を作らない)
+- `type` は任意になる。meta-schema の `required: [type]` を「`x-ignored` が無いときだけ」の条件付きにする (`properties` と `additionalProperties: false` の組み合わせを `if` / `then` で縛っているのと同じ手法)。書けば通常どおり検証される (schema.yaml は jsonschema にそのまま渡すので「書いてあるが検証しない」は作れない)。省略すれば任意の値が通る。`x-ignored` が効くのは正規化とカタログの段階だけで、検証には手を入れない
+
+読み捨てたキーはカタログに載らず、テンプレート・DSL・tap のどこにも現れない。`__entity_defs` に「読み捨て」として名前だけ出し、`__data` で消えていることに戸惑わないようにする。
+
+一部だけ欲しいときは、欲しい部分を record として宣言し、要らない兄弟キーを名指しで捨てる:
+
+```yaml
+metadata:
+  type: object
+  additionalProperties: false
+  properties:
+    component: { type: object, additionalProperties: false, properties: { ... } }
+    timestamp:  { x-ignored: true }
+    tools:      { x-ignored: true }
+    properties: { x-ignored: true }
+```
+
+**「型の付かない領域を残さない」原則との両立**: 読み捨ては正規化で起きるので、データモデルに到達する時点で型の付かない領域は存在しない。原則が守る 2 点 (スキーマ検査の穴、スキーマ値のデータ化) のどちらも崩れない。
+
+**採らない案: `properties` と `additionalProperties: true` の併用で宣言外キーを読み捨てる。** 書く量は減るが、手書き YAML の typo を黙って飲む。`x-ignored` は捨てるキーを名指しするので、宣言外キーは今までどおりエラーのまま残る。
+
+**実装箇所**: schema-schema (`x-ignored` の受理、完全性規則の免除、構造キーワードとの併記禁止)、normalize_core (読み捨て)、schema_catalog (非掲載 + entity_def への表示)、docs (schema.md の Supported keywords / Completeness)、normalizer.md External Design の「jq で剥がして受ける」の文の書き換え。
