@@ -393,10 +393,34 @@ class TestDescend:
         assert edge.type == "integer"
 
     def test_reach_lists_every_edge_walked(self) -> None:
-        edges, _ = self.TREE.reach("hobby.level")
+        edges, _ = self.TREE.reach(("hobby", "level"))
         assert [edge.name for edge in edges] == ["hobby", "level"]
 
-    def test_reach_lists_one_edge_for_a_literal_dotted_name(self) -> None:
+    def test_reach_may_end_on_a_collection(self) -> None:
+        edges, _ = self.TREE.reach(("hobby", "pets"))
+        assert [edge.name for edge in edges] == ["hobby", "pets"]
+
+    @pytest.mark.parametrize("path", [("hobby", "nope"), ("hobby", "pets", "name")])
+    def test_reach_raises_on_a_path_that_does_not_resolve(
+        self, path: tuple[str, ...]
+    ) -> None:
+        """The second continues past a collection, which the asymmetry
+        rule forbids."""
+        with pytest.raises(dc.UnknownChildError):
+            self.TREE.reach(path)
+
+    def test_reach_does_not_split_a_segment(self) -> None:
+        """A dot inside a segment belongs to the name: the segment walk
+        is what keeps ``__definition.entities`` reachable as one edge."""
+        node = dc.Node(
+            children=[
+                (dc.Edge(name="a.b", type="integer", required=False), dc.Node()),
+            ]
+        )
+        edges, _ = node.reach(("a.b",))
+        assert [edge.name for edge in edges] == ["a.b"]
+
+    def test_reach_dotted_lists_one_edge_for_a_literal_dotted_name(self) -> None:
         """What a caller ANDs is what the walk passed through, which for
         a literal dotted key is the one edge — not two segments."""
         node = dc.Node(
@@ -404,7 +428,7 @@ class TestDescend:
                 (dc.Edge(name="a.b", type="integer", required=False), dc.Node()),
             ]
         )
-        edges, _ = node.reach("a.b")
+        edges, _ = node.reach_dotted("a.b")
         assert [(edge.name, edge.required) for edge in edges] == [("a.b", False)]
 
     def test_child_does_not_walk_a_path(self) -> None:

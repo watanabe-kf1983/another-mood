@@ -82,29 +82,49 @@ class Node:
         """Raises :class:`UnknownChildError` if no child edge is named ``name``."""
         return self.child_entry(name)[1]
 
-    # ── Child access by dotted path ───────────────────────────────────
+    # ── Child access by path ──────────────────────────────────────────
 
-    def reach(self, path: str) -> AttributeReach:
-        """Walk the dotted ``path``, traversing singleton objects only: a
-        path may end on a collection attribute but never continue past one.
+    def reach(self, path: Sequence[str]) -> AttributeReach:
+        """Walk ``path``, outermost edge name first, traversing singleton
+        objects only: a path may end on a collection attribute but never
+        continue past one.
 
         Returns every edge walked, outermost first.
 
-        Raises :class:`UnknownChildError` carrying the whole ``path``.
+        Raises :class:`UnknownChildError` if ``path`` does not resolve.
         """
+        head, rest = path[0], path[1:]
+        edge, child = self.child_entry(head)
+        if rest:
+            if edge.is_collection:
+                raise UnknownChildError(head)
+            edges, node = child.reach(rest)
+            return (edge, *edges), node
+        else:
+            return (edge,), child
+
+    # ── Child access by dotted path (transitional) ────────────────────
+    #
+    # A dotted name still resolves longest-first, because a view alias
+    # can still become an edge name verbatim.  Once every alias is a
+    # path, these fold into :meth:`reach` on a plain split.
+
+    def reach_dotted(self, path: str) -> AttributeReach:
+        """:meth:`reach`, resolving ``path`` longest-first rather than by
+        segment.  Raises :class:`UnknownChildError` carrying ``path``."""
         entry = self._reach(path)
         if entry is None:
             raise UnknownChildError(path)
         return entry
 
     def descend(self, path: str) -> Branch:
-        """The last edge :meth:`reach` walks, and the node it reaches."""
-        edges, node = self.reach(path)
+        """The last edge :meth:`reach_dotted` walks, and the node it reaches."""
+        edges, node = self.reach_dotted(path)
         return edges[-1], node
 
     def require_path(self, path: str) -> None:
         """Raises :class:`UnknownChildError` if ``path`` does not resolve."""
-        self.reach(path)
+        self.reach_dotted(path)
 
     def _reach(self, path: str) -> AttributeReach | None:
         name = self._longest_child_name(path)
@@ -184,6 +204,15 @@ class Node:
             children=[(replace(e, required=False), c) for e, c in self.children],
         )
 
+    def _without_child(self, name: str) -> "Node | None":
+        """This node without its child ``name``, or None when that was
+        its last child."""
+        # None rather than a childless node: that is how an object with
+        # undeclared contents is carried, and neither the tree nor the
+        # serialized form tells the two apart afterwards.
+        kept = [(e, c) for e, c in self.children if e.name != name]
+        return replace(self, children=kept) if kept else None
+
     def _with_child(self, branch: Branch) -> "Node":
         """In place of the child of the same name, or after the last."""
         name = branch[0].name
@@ -230,7 +259,16 @@ class UnknownChildError(LookupError):
 
 class WriteConflictError(ValueError):
     """Raised by :meth:`Node.graft` when a write's path runs into what
-    the tree already holds.  Callers name the alias the user wrote."""
+    the tree already holds.
+
+    Carries ``name``, the segment the write ran into — which is the
+    segment a diagnostic should name, not the whole path: what the two
+    writes share is where they collide.
+    """
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.name = name
 
 
 # ── Grafting writes into the tree ─────────────────────────────────────

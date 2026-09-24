@@ -162,7 +162,7 @@ class TestDeriveQueries:
                     {
                         "id": "names",
                         "from": "items",
-                        "select": [{"item": "name", "as": "name"}],
+                        "select": [{"item": "name", "as": ["name"]}],
                     }
                 ],
                 "entities": [
@@ -209,7 +209,11 @@ class TestDeriveQueries:
 
         data = json.loads((out / "data" / "names.json.json").read_text())
         assert data["__definition"]["views"] == [
-            {"id": "names", "from": "items", "select": [{"item": "name", "as": "name"}]}
+            {
+                "id": "names",
+                "from": "items",
+                "select": [{"item": "name", "as": ["name"]}],
+            }
         ]
 
     def test_query_body_passes_through_untouched(self, tmp_path: Path) -> None:
@@ -251,7 +255,7 @@ class TestDeriveQueries:
                 "id": "phase10",
                 "from": "items",
                 "where": {"phase": {"eq": "10"}},
-                "select": [{"item": "name", "as": "name"}],
+                "select": [{"item": "name", "as": ["name"]}],
             }
         ]
 

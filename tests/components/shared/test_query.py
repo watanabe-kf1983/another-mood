@@ -597,12 +597,12 @@ class TestGroupedDerive:
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}, {}) == {
+        assert SelectItem(item="name", as_=("name",)).apply({"name": "Alice"}, {}) == {
             "name": "Alice",
         }
 
     def test_renames_field(self) -> None:
-        assert SelectItem(item="category", as_="id").apply(
+        assert SelectItem(item="category", as_=("id",)).apply(
             {"category": "user-management"}, {}
         ) == {"id": "user-management"}
 
@@ -610,19 +610,19 @@ class TestSelectItem:
         # The JSON data model treats a nullable field as an absent key,
         # so projecting an optional schema attribute on a record that
         # happens to omit it writes nothing rather than raising.
-        assert SelectItem(item="missing", as_="x").apply(
+        assert SelectItem(item="missing", as_=("x",)).apply(
             {"name": "Alice"}, {"kept": 1}
         ) == {"kept": 1}
 
     def test_dotted_alias_nests(self) -> None:
-        assert SelectItem(item="level", as_="hobby.level").apply(
+        assert SelectItem(item="level", as_=("hobby", "level")).apply(
             {"level": "pro"}, {}
         ) == {"hobby": {"level": "pro"}}
 
     def test_siblings_converge_on_one_parent(self) -> None:
         record = {"level": "pro", "pets": 2}
-        out = SelectItem(item="level", as_="hobby.level").apply(record, {})
-        assert SelectItem(item="pets", as_="hobby.pets").apply(record, out) == {
+        out = SelectItem(item="level", as_=("hobby", "level")).apply(record, {})
+        assert SelectItem(item="pets", as_=("hobby", "pets")).apply(record, out) == {
             "hobby": {"level": "pro", "pets": 2}
         }
 
@@ -630,7 +630,9 @@ class TestSelectItem:
         # ``hobby: {}`` would be an object the catalog claims a shape for
         # but no row actually carries a value in.
         assert (
-            SelectItem(item="missing", as_="hobby.level").apply({"name": "Alice"}, {})
+            SelectItem(item="missing", as_=("hobby", "level")).apply(
+                {"name": "Alice"}, {}
+            )
             == {}
         )
 
@@ -639,8 +641,8 @@ class TestSelect:
     def test_projects_fields(self) -> None:
         select = Select(
             items=[
-                SelectItem(item="category", as_="id"),
-                SelectItem(item="category", as_="category"),
+                SelectItem(item="category", as_=("id",)),
+                SelectItem(item="category", as_=("category",)),
             ]
         )
         records = [{"category": "a", "extra": 1}, {"category": "b", "extra": 2}]
@@ -650,7 +652,7 @@ class TestSelect:
         ]
 
     def test_empty_records(self) -> None:
-        select = Select(items=[SelectItem(item="x", as_="x")])
+        select = Select(items=[SelectItem(item="x", as_=("x",))])
         assert list(select.apply([])) == []
 
     def test_dotted_aliases_converge_across_items(self) -> None:
@@ -659,8 +661,8 @@ class TestSelect:
         # replacing what the earlier put there.
         select = Select(
             items=[
-                SelectItem(item="level", as_="hobby.level"),
-                SelectItem(item="pets", as_="hobby.pets"),
+                SelectItem(item="level", as_=("hobby", "level")),
+                SelectItem(item="pets", as_=("hobby", "pets")),
             ]
         )
         assert list(select.apply([{"level": "pro", "pets": 2, "extra": 1}])) == [
@@ -673,8 +675,8 @@ class TestSelect:
         # produce variable-shape rows that omit the key when missing.
         select = Select(
             items=[
-                SelectItem(item="id", as_="id"),
-                SelectItem(item="parent_entity", as_="parent_entity"),
+                SelectItem(item="id", as_=("id",)),
+                SelectItem(item="parent_entity", as_=("parent_entity",)),
             ]
         )
         records = [
@@ -693,8 +695,8 @@ class TestSelectDerive:
         leaf = From(name="tasks").derive(root)
         projected = Select(
             items=[
-                SelectItem(item="phase", as_="id"),
-                SelectItem(item="title", as_="title"),
+                SelectItem(item="phase", as_=("id",)),
+                SelectItem(item="title", as_=("title",)),
             ]
         ).derive(leaf)
         assert dc.flatten_tree(projected, "projection") == _catalog(
@@ -713,8 +715,8 @@ class TestSelectDerive:
         leaf = From(name="tasks").derive(root)
         select = Select(
             items=[
-                SelectItem(item="title", as_="label"),
-                SelectItem(item="phase", as_="label"),
+                SelectItem(item="title", as_=("label",)),
+                SelectItem(item="phase", as_=("label",)),
             ]
         )
         with pytest.raises(QueryDeriveError, match="overlaps an earlier item"):
@@ -727,11 +729,11 @@ class TestSelectDerive:
         # ``a`` holds a string, which ``a.b`` cannot nest a value in.
         select = Select(
             items=[
-                SelectItem(item="title", as_="a"),
-                SelectItem(item="phase", as_="a.b"),
+                SelectItem(item="title", as_=("a",)),
+                SelectItem(item="phase", as_=("a", "b")),
             ]
         )
-        with pytest.raises(QueryDeriveError, match="'a.b' overlaps an earlier item"):
+        with pytest.raises(QueryDeriveError, match="'a' overlaps an earlier item"):
             select.derive(leaf)
 
     def test_raises_when_a_later_alias_overwrites_an_earlier_branch(self) -> None:
@@ -741,8 +743,8 @@ class TestSelectDerive:
         # way, since the earlier ones are already in the tree.
         select = Select(
             items=[
-                SelectItem(item="phase", as_="a.b"),
-                SelectItem(item="title", as_="a"),
+                SelectItem(item="phase", as_=("a", "b")),
+                SelectItem(item="title", as_=("a",)),
             ]
         )
         with pytest.raises(QueryDeriveError, match="'a' overlaps an earlier item"):
@@ -753,8 +755,8 @@ class TestSelectDerive:
         leaf = From(name="tasks").derive(root)
         projected = Select(
             items=[
-                SelectItem(item="title", as_="a.b"),
-                SelectItem(item="phase", as_="a.c"),
+                SelectItem(item="title", as_=("a", "b")),
+                SelectItem(item="phase", as_=("a", "c")),
             ]
         ).derive(leaf)
         assert [e.name for e, _ in projected.children] == ["a"]
@@ -780,18 +782,21 @@ class TestSelectDerive:
                 )
             ]
         )
-        edge, _ = SelectItem(item="hobby.level", as_="level").derive(leaf)
+        edge, _ = SelectItem(item="hobby.level", as_=("level",)).derive(leaf)
         assert edge == dc.Edge(name="level", type="string", required=False)
 
 
 class TestSelectFromDict:
     def test_lifts_items(self) -> None:
         assert Select.from_dict(
-            [{"item": "category", "as": "id"}, {"item": "category", "as": "category"}]
+            [
+                {"item": "category", "as": ("id",)},
+                {"item": "category", "as": ("category",)},
+            ]
         ) == Select(
             items=[
-                SelectItem(item="category", as_="id"),
-                SelectItem(item="category", as_="category"),
+                SelectItem(item="category", as_=("id",)),
+                SelectItem(item="category", as_=("category",)),
             ]
         )
 
@@ -1007,8 +1012,8 @@ class TestQueryPipeline:
             from_=From(name="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="phase", as_="rank"),
-                    SelectItem(item="title", as_="title"),
+                    SelectItem(item="phase", as_=("rank",)),
+                    SelectItem(item="title", as_=("title",)),
                 ]
             ),
             sort=Sort(by="rank"),
@@ -1287,7 +1292,7 @@ class TestQueryOptionalClauses:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             from_=From(name="items"),
-            select=Select(items=[SelectItem(item="name", as_="name")]),
+            select=Select(items=[SelectItem(item="name", as_=("name",))]),
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
 
@@ -1296,8 +1301,8 @@ class TestQueryOptionalClauses:
             from_=From(name="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="id", as_="id"),
-                    SelectItem(item="title", as_="title"),
+                    SelectItem(item="id", as_=("id",)),
+                    SelectItem(item="title", as_=("title",)),
                 ]
             ),
         )
@@ -1326,7 +1331,7 @@ class TestQueryDeriveErrorTranslation:
         # ``Query.derive`` translates into ``QueryDeriveError``.
         query = Query(
             from_=From(name="tasks"),
-            select=Select(items=[SelectItem(item="title", as_="title")]),
+            select=Select(items=[SelectItem(item="title", as_=("title",))]),
             sort=Sort(by="phase"),
         )
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
@@ -1353,7 +1358,7 @@ class TestQueryFromDict:
             ],
             "where": {"open": True},
             "grouped": {"by": "category", "as": "members"},
-            "select": [{"item": "category", "as": "category"}],
+            "select": [{"item": "category", "as": ("category",)}],
             "sort": {"by": "category", "direction": "desc", "missing": "first"},
         }
         assert Query.from_dict(raw) == Query(
@@ -1371,7 +1376,7 @@ class TestQueryFromDict:
                 ),
             ),
             grouped=Grouped(by="category", as_="members"),
-            select=Select(items=[SelectItem(item="category", as_="category")]),
+            select=Select(items=[SelectItem(item="category", as_=("category",))]),
             sort=Sort(by="category", direction=Direction.DESC, missing=Missing.FIRST),
         )
 

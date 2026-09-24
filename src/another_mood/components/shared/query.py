@@ -311,21 +311,15 @@ class Grouped(QueryNode):
 
 @dataclass(frozen=True)
 class SelectItem:
-    """A single field projection: read ``item``, write it at ``as_``.
+    """A single field projection: read ``item``, write it at ``as_``."""
 
-    Both are paths.
-    """
-
+    #: A read path, still dotted: an edge name can be a literal dotted
+    #: key until ``grouped`` writes a path too.
     item: str
-    as_: str
-
-    @property
-    def target(self) -> KeyPath:
-        """Where the value lands, outermost segment first."""
-        return tuple(self.as_.split("."))
+    as_: KeyPath
 
     def apply(self, record: Record, out: Record) -> Record:
-        """Return ``out`` with the source value written at :attr:`target`,
+        """Return ``out`` with the source value written at :attr:`as_`,
         or ``out`` untouched when the source field is absent — no null and
         no empty object to hang the path from, so rows vary in key set.
         """
@@ -333,16 +327,16 @@ class SelectItem:
             value = pluck(record, self.item)
         except KeyError:
             return out
-        return put(out, self.target, value)
+        return put(out, self.as_, value)
 
     def derive(self, catalog: dc.Node) -> dc.Branch:
-        """The branch this item lands as; :attr:`target` says where."""
+        """The branch this item lands as; :attr:`as_` says where."""
         # The whole subtree comes along, mirroring apply's ``pluck``.
-        edges, node = catalog.reach(self.item)
+        edges, node = catalog.reach_dotted(self.item)
         return (
             replace(
                 edges[-1],
-                name=self.target[-1],
+                name=self.as_[-1],
                 # On every row only if every object on the way is there.
                 required=all(edge.required for edge in edges),
             ),
@@ -369,9 +363,15 @@ class Select(QueryNode):
         return reduce(lambda out, item: item.apply(record, out), self.items, empty)
 
     @classmethod
-    def from_dict(cls, raw: Sequence[Mapping[str, str]]) -> "Select":
+    def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
         return cls(
-            items=[SelectItem(item=entry["item"], as_=entry["as"]) for entry in raw]
+            items=[
+                SelectItem(
+                    item=cast(str, entry["item"]),
+                    as_=tuple(cast(Sequence[str], entry["as"])),
+                )
+                for entry in raw
+            ]
         )
 
 
@@ -522,7 +522,7 @@ class Query(QueryNode):
             grouped_raw = cast(Mapping[str, str], raw["grouped"])
             grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
 
-        select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
+        select_raw = cast(Sequence[Mapping[str, object]], raw.get("select", []))
         select: Select | PassThrough = (
             Select.from_dict(select_raw) if select_raw else PassThrough()
         )
@@ -576,17 +576,13 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
 
 
 def _select_into(out: dc.Node, item: SelectItem, catalog: dc.Node) -> dc.Node:
-    """Land one ``select`` item, naming it as the offender on a clash.
-
-    The ``as_`` goes out as the user wrote it: a rebuilt string loses the
-    source position the diagnostic needs.
-    """
+    """Land one ``select`` item, naming it as the offender on a clash."""
     try:
-        return out.graft(item.derive(catalog), under=item.target[:-1])
+        return out.graft(item.derive(catalog), under=item.as_[:-1])
     except dc.WriteConflictError as exc:
         raise QueryDeriveError(
-            f"select alias '{item.as_}' overlaps an earlier item",
-            offender=item.as_,
+            f"select alias '{exc.name}' overlaps an earlier item",
+            offender=item.as_[0],
         ) from exc
 
 
