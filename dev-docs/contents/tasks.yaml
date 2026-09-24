@@ -213,21 +213,6 @@ categories:
         title: 非 JSON 値の侵入経路を塞ぐ (スキーマ言語の穴を閉じる)
         phase: 14
         done: true
-      D12:
-        title: 名前規則の緩和 — 識別子から「非空・`.` を含まない」へ (entity / property / view 名)
-        note: >-
-          L4 で CycloneDX の `bom-ref` / `$schema` を宣言できなかったことへの
-          フィードバック。`.` はパス区切りなので恒久に禁止、`__` 予約は維持、
-          他は無制約。
-        phase: 16
-        proposal: 20-design/50-normalizer/20-schema-spec#名前規則の緩和-d12
-      D13:
-        title: 読み捨てキーの宣言 (x-ignored。名前は仮)
-        note: >-
-          機械出力の封筒 (受理はするが読まないキー) を schema.yaml で名指しして
-          正規化で読み捨てる。L4 の metadata が契機。
-        phase: 16
-        proposal: 20-design/50-normalizer/20-schema-spec#読み捨てキーの宣言-x-ignored-d13
 
   E:
     title: YAML DSL クエリ評価拡充
@@ -464,8 +449,8 @@ categories:
         note: >-
           cyclonedx-py environment で自プロジェクトの SBOM (CycloneDX JSON。
           components がフラットなレコード、dependencies が bom-ref を張る FK
-          グラフ、SPDX ライセンス付き) を生成し、dev-docs の contents にそのまま
-          置く (封筒 (bomFormat 等のメタデータキー) は D13 で読み捨てる)。再生成を CI 工程に
+          グラフ、SPDX ライセンス付き) を生成し、jq で最小限整形 (封筒剥がし・
+          bom-ref の改名) して dev-docs の contents に置く。再生成を CI 工程に
           組み込み、依存の追加が次のビルドでライセンス台帳 (license で group する
           view) とコンポーネント別ページに自動反映される状態にする。
           M11 (入力形式に JSON を追加) が前提。「機械的ワンショット出力の contents
@@ -475,7 +460,6 @@ categories:
           経由は情報が痩せるので environment モードを使う)。
           論点: dependsOn (bom-ref の文字列配列) を view の join で辿れるか
           (x-ref は整合性検査なので配列対応は不要、問題は join の側)。
-          前提: D12 (bom-ref / $schema の宣言)、D13 (封筒の読み捨て)。
         phase: 16
         proposal: 20-design/80-showcase/20-dev-docs#sbom-ドッグフーディング-l4
 
