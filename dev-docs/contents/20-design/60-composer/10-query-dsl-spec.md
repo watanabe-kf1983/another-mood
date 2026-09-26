@@ -195,13 +195,21 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 中身の無い object は、レコードにもカタログにも残さない。書き込む値が無ければ途中のオブジェクトごと省き、除去で空になったオブジェクトは祖先まで遡って畳む。「nullable はキー省略」の原則の適用。
 
-##### 重なりの判定（今後検討）
+##### 重なりの判定
 
-書き込み先がパスになると、二つの書き込みが同じ場所を取り合うかどうかは名前の一致では決まらない。どの組を重なりとして derive 段階でエラーにするかは未定で、別途検討する。
+二つの書き込みが同じ場所を取り合うかどうかは、次の一つの規則で決める。
 
-- `as: a` と `as: a.c` を、`a` がオブジェクトのとき衝突とみなすか（`jackson as j` と `brown.james as j.james`）
-- 書き込みを葉に還元して判定するなら、オブジェクトの書き込みは常に合流になり、レコード側の書き込みも「置く」ではなく「合流させる」になる
-- 中身が宣言されていないオブジェクトの扱い
+**二つの名前は、片方がもう片方の先頭部分になっていたら重なる。** 同じ名前（`a` と `a`）も、一方が他方の中を指す名前（`a` と `a.c`）も重なりで、derive 段階でエラーにする。兄弟（`a.b` と `a.c`）は重なりではなく、同じ親の中に書いた順で並ぶ（[同じ親に書く複数の書き込みは合流する](#同じ親に書く複数の書き込みは合流する)）。
+
+この判定は、句が新しく書く名前どうしの間だけでなく、句が書く名前と、その句を通った後も行に残っている元の名前との間にも掛ける。句ごとの当てはめは代表例の[重なる書き込みは derive でエラーになる](#重なる書き込みは-derive-でエラーになる)で示す。
+
+###### 背景: 重なりを名前の先頭部分の一致で決める理由
+
+`a` に書くことは「`a` の中身を、何であれ丸ごと引き受ける」宣言で、`a.b` に書くことは「`a` の中の `b` だけを引き受ける」宣言と読む。`a` と `a.c` が重なるのは、丸ごと引き受けた所に別の書き込みが枝を足そうとしたからで、`a.b` と `a.c` が合流できるのは別々の枝をそれぞれ引き受けたからである。`a` の中身が `b` だけでも、`a` の宣言は将来増える子を含めて引き受けているので、`a.b` の宣言とは意味が違う。
+
+MongoDB の projection（`{"a": 1, "a.c": 1}` を Path collision として拒否する）と TOML（inline table として閉じた `a` に `a.c = ...` で枝を足すのはエラー）も同じ規則を採る。どちらもスキーマ無しで逐次評価するために葉に還元できないという事情によるが、名前だけで順序独立を保証できるという利点はここでも同じ。
+
+この規則の代償は「オブジェクトを丸ごと置いてから中に一枝を足す」（`curie as curie` + `sklodowska.marie as curie.marie`）が表現不能になること。何段に分けても、足す段で `curie` が `curie.marie` の先頭部分になるので抜け道は無い。書けるのは `curie` の中身が宣言されているときに葉ごとにほどいた形（`curie.pierre as curie.pierre` + `sklodowska.marie as curie.marie`）だけである。
 
 #### 期待される振る舞い（代表例）
 
@@ -325,6 +333,60 @@ grouped: { by: hobby.level, as: members }
 #           {"id": 2, "hobby": {"level": "pro"}}
 #             →  {"hobby": {"level": "pro"}, "members": [{"id": 1, "hobby": {"level": "pro"}}, {"id": 2, "hobby": {"level": "pro"}}]}
 # カタログ: id hobby.level  →  hobby.level members[].id members[].hobby.level
+```
+
+##### 重なる書き込みは derive でエラーになる
+
+判定は名前をドットで区切ったセグメントの列で行う。文字列としての前方一致ではないので、`hobby` と `hobbyist` は重ならない。
+
+`select` は `as` どうしを見る。行を作り直すので、元の名前は残らない。兄弟の合流は[同じ親に書く複数の書き込みは合流する](#同じ親に書く複数の書き込みは合流する):
+
+```yaml
+select:
+  - { item: hobby, as: hobby }
+  - { item: kind,  as: hobbyist }
+# 通る: hobby と hobbyist は別の名前
+```
+
+```yaml
+select:
+  - { item: hobby, as: hobby }
+  - { item: kind,  as: hobby.level }
+# エラー: hobby は hobby.level の先頭部分
+```
+
+`flatten` は `as` と、元の名前から `of` を除いた残りを見る。`as` が `of` と同じ名前のときは[その場の置き換え](#of-と-as-の親が同じならその場で置き換わる)。兄弟に書く例は[`as` もパス](#flatten-の-as-もパスで要素はその位置に入れ子で書かれる):
+
+```yaml
+flatten: { of: hobby.pets, as: hobby }
+# 元: id hobby.level hobby.pets[]
+# エラー: hobby は残る hobby.level の先頭部分
+```
+
+`join` は `as` と、左の行の名前を見る:
+
+```yaml
+join: { to: clubs, on: { left: hobby.club_id, right: id }, as: hobby.clubs }
+# 左: id hobby.level hobby.club_id
+# 通る: hobby.clubs は hobby.level, hobby.club_id と兄弟
+```
+
+```yaml
+join: { to: clubs, on: { left: hobby.club_id, right: id }, as: hobby }
+# 左: id hobby.level hobby.club_id
+# エラー: hobby は左の hobby.level の先頭部分
+```
+
+`grouped` は `as` と `by` を見る:
+
+```yaml
+grouped: { by: hobby.level, as: hobby.members }
+# 通る: hobby.members は hobby.level と兄弟
+```
+
+```yaml
+grouped: { by: hobby.level, as: hobby }
+# エラー: hobby は hobby.level の先頭部分
 ```
 
 ### 合成ビュー (E17)
