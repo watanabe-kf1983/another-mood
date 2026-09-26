@@ -10,6 +10,7 @@ travels through normalization, which the downstream
 from pathlib import Path
 
 import pytest
+from typing import cast
 
 from another_mood.components.preprocess.query_normalizer import (
     normalize_flatten,
@@ -181,11 +182,18 @@ class TestNormalizeGrouped:
 
 class TestNormalizeSelect:
     def test_as_defaults_to_item(self) -> None:
-        assert normalize_select([{"item": "name"}]) == [{"item": "name", "as": "name"}]
+        assert normalize_select([{"item": "name"}]) == [
+            {"item": "name", "as": ("name",)}
+        ]
 
     def test_explicit_as_kept(self) -> None:
         assert normalize_select([{"item": "category", "as": "id"}]) == [
-            {"item": "category", "as": "id"}
+            {"item": "category", "as": ("id",)}
+        ]
+
+    def test_dotted_as_becomes_segments(self) -> None:
+        assert normalize_select([{"item": "level", "as": "hobby.level"}]) == [
+            {"item": "level", "as": ("hobby", "level")}
         ]
 
     def test_preserves_order(self) -> None:
@@ -252,7 +260,7 @@ class TestNormalizeQuery:
             ],
             "where": {"open": True},
             "grouped": {"by": "category", "as": "items"},
-            "select": [{"item": "name", "as": "name"}],
+            "select": [{"item": "name", "as": ("name",)}],
             "sort": {"by": "name", "direction": "asc", "missing": "last"},
         }
 
@@ -278,6 +286,10 @@ class TestPreservesUserStr:
     def _u(value: str, line: int = 1, column: int = 1) -> UserStr:
         return UserStr(value, Location(file=Path("x.yaml"), line=line, column=column))
 
+    @staticmethod
+    def _lines(path: object) -> list[int]:
+        return [s.location.line for s in cast(tuple[UserStr, ...], path)]
+
     def test_flatten_shorthand_preserves_userstr(self) -> None:
         of = self._u("tasks", line=3)
         [entry] = normalize_flatten(of)
@@ -302,4 +314,12 @@ class TestPreservesUserStr:
     def test_select_default_as_reuses_item_userstr(self) -> None:
         item = self._u("name", line=9)
         [entry] = normalize_select([{"item": item}])
-        assert entry["as"] is item
+        assert entry["item"] is item
+        assert self._lines(entry["as"]) == [9]
+
+    def test_every_segment_of_a_dotted_alias_carries_the_location(self) -> None:
+        """``str`` methods drop the location, so a plain split would
+        leave a diagnostic on a nested target with nothing to point at."""
+        [entry] = normalize_select([{"item": "level", "as": self._u("a.b", line=11)}])
+        assert entry["as"] == ("a", "b")
+        assert self._lines(entry["as"]) == [11, 11]

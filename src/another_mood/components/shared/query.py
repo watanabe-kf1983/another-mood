@@ -19,7 +19,7 @@ from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import pluck
+from another_mood.components.shared.json_data_model import KeyPath, pluck
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
     parse_record_predicate,
@@ -312,8 +312,10 @@ class Grouped(QueryNode):
 class SelectItem:
     """A single field projection (rename ``item`` to ``as_``)."""
 
+    #: A read path, still dotted: an edge name can be a literal dotted
+    #: key until ``grouped`` writes a path too.
     item: str
-    as_: str
+    as_: KeyPath
 
     def apply(self, record: Record) -> Mapping[str, object]:
         """Return ``{as_: value}`` when the source field is present, or
@@ -324,14 +326,19 @@ class SelectItem:
         set varies with each record's presence of the field.
         """
         try:
-            return {self.as_: pluck(record, self.item)}
+            return {self.as_key(): pluck(record, self.item)}
         except KeyError:
             return {}
 
     def derive(self, catalog: dc.Node) -> dc.Branch:
         # The whole subtree comes along, mirroring apply's ``pluck``.
         edge, node = catalog.descend(self.item)
-        return replace(edge, name=self.as_), node
+        return replace(edge, name=self.as_key()), node
+
+    def as_key(self) -> str:
+        # Transitional: the alias is carried as segments, but apply and
+        # derive still write it as one literal key until they take a path.
+        return ".".join(self.as_)
 
 
 @dataclass(frozen=True)
@@ -350,18 +357,26 @@ class Select(QueryNode):
         out = dc.Node(children=[item.derive(catalog) for item in self.items])
         duplicate = _duplicate_child_name(out)
         if duplicate is not None:
-            # The name reported is the later of the two — the overwriting
-            # write — and is the alias itself, source position and all.
+            # The item reported is the later of the two — the overwriting
+            # write.  Its first segment carries the alias's source
+            # position, which the joined key does not.
+            offender = [item for item in self.items if item.as_key() == duplicate][-1]
             raise QueryDeriveError(
                 f"select alias '{duplicate}' collides with an earlier item",
-                offender=duplicate,
+                offender=offender.as_[0],
             )
         return out
 
     @classmethod
-    def from_dict(cls, raw: Sequence[Mapping[str, str]]) -> "Select":
+    def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
         return cls(
-            items=[SelectItem(item=entry["item"], as_=entry["as"]) for entry in raw]
+            items=[
+                SelectItem(
+                    item=cast(str, entry["item"]),
+                    as_=tuple(cast(Sequence[str], entry["as"])),
+                )
+                for entry in raw
+            ]
         )
 
 
@@ -512,7 +527,7 @@ class Query(QueryNode):
             grouped_raw = cast(Mapping[str, str], raw["grouped"])
             grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
 
-        select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
+        select_raw = cast(Sequence[Mapping[str, object]], raw.get("select", []))
         select: Select | PassThrough = (
             Select.from_dict(select_raw) if select_raw else PassThrough()
         )

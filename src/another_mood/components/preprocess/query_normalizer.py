@@ -5,10 +5,33 @@ mapping join, ``flatten: true`` shorthand) and omitted defaults; the
 persisted ``__definition.views`` carries the canonical mapping that
 downstream consumers (``parse_query``, ``__view_defs`` template)
 read.  Per-clause shape and defaults are documented on each helper.
+
+A dot in a write path is sugar too — it lets a nested target be
+written on one YAML line — so it is resolved here, into the segments
+the canonical form carries.  The ``__view_defs`` template spells the
+dot back for display, which is why the form it shows stays one a
+reader can copy into a source file.  ``select`` is the clause that
+writes a path so far; the others follow as they switch.
 """
 
 from collections.abc import Mapping, Sequence
 from typing import cast
+
+from another_mood.components.shared.user_source.source_loader import UserStr
+
+
+def split_path(name: str) -> tuple[str, ...]:
+    """Resolve a dotted write path into its segments.
+
+    ``str`` methods drop a :class:`UserStr`'s location, so each segment
+    is retagged with it — a diagnostic names the segment it failed on
+    and still points at the line the whole path was written on.
+    """
+    segments = name.split(".")
+    if isinstance(name, UserStr):
+        return tuple(UserStr(segment, name.location) for segment in segments)
+    else:
+        return tuple(segments)
 
 
 def normalize_query(raw: Mapping[str, object]) -> Mapping[str, object]:
@@ -117,7 +140,10 @@ def normalize_select(
 ) -> list[Mapping[str, object]]:
     """Normalize the ``select`` clause, filling each entry's ``as`` default from ``item``."""
     return [
-        {"item": cast(str, e["item"]), "as": cast(str, e.get("as", e["item"]))}
+        {
+            "item": cast(str, e["item"]),
+            "as": split_path(cast(str, e.get("as", e["item"]))),
+        }
         for e in raw
     ]
 
