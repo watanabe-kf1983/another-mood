@@ -1,0 +1,60 @@
+# One row per edge of the dependency graph. `dependsOn` is a string
+# array, so the top-level flatten unwinds it before the joins can match
+# on it. Both ends are joined back to `components` for their names —
+# the ids of `component` below. The inner joins drop the root
+# component's edges (the root is not among `components`) and any edge
+# whose end is missing from the SBOM.
+dependency_edge:
+  from: dependencies
+  flatten: { of: dependsOn, as: dep }
+  join:
+    - to: components
+      on: { left: ref, right: ref }
+      flatten: { as: source }
+    - to: components
+      on: { left: dep, right: ref }
+      flatten: { as: target }
+  select:
+    - item: ref
+    - item: dep
+    - item: source
+    - item: target
+
+# The root component's own row of `dependencies` lists what the project
+# requires directly; everything else in the SBOM comes in transitively.
+direct_dependency:
+  from: dependencies
+  flatten: { of: dependsOn, as: dep }
+  where:
+    ref: root-component
+  select:
+    - item: dep
+
+# Array-pattern records carry no id, so `select` derives one from the
+# package name — unique within one environment, and readable in a URL,
+# unlike `ref` (`name==version`). `ref` stays for the joins.
+component:
+  from: components
+  join:
+    - to: direct_dependency
+      on: { left: ref, right: dep }
+      as: required_by_root
+    - to: dependency_edge
+      on: { left: ref, right: ref }
+      as: depends_on
+    - to: dependency_edge
+      on: { left: ref, right: dep }
+      as: used_by
+  select:
+    - item: name
+      as: id
+    - item: ref
+    - item: name
+    - item: version
+    - item: description
+    - item: purl
+    - item: licenses
+    - item: externalReferences
+    - item: required_by_root
+    - item: depends_on
+    - item: used_by

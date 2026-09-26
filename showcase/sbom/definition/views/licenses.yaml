@@ -1,0 +1,29 @@
+# A CycloneDX license entry takes one of three shapes: a single license
+# by SPDX id (`license.id`), a single license by free-form name
+# (`license.name`), or an SPDX expression (`expression`). Only the first
+# is a key worth grouping by, so the ledger splits on it.
+
+# Components grouped by SPDX license id.
+spdx_ledger:
+  from: component
+  flatten: { of: licenses, as: lic }
+  where:
+    lic.license.id: { exists: true }
+  grouped:
+    by: lic.license.id
+    as: components
+  select:
+    - item: lic.license.id
+      as: id
+    - item: components
+
+# The entries with no SPDX id — free-form names and expressions — one row
+# per (component, license) pair.
+other_licenses:
+  from: component
+  flatten: { of: licenses, as: lic }
+  where:
+    lic.license.id: { exists: false }
+  select:
+    - item: id
+    - item: lic
