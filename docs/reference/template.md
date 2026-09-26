@@ -42,7 +42,7 @@ Templates are placed under `{project}/definition/templates/` with the `.md` exte
 
 ## Template context
 
-From templates, you can reference both entity data declared in [Schema](schema.md) and views defined by [View](view.md) in the **same namespace**.
+From the root template, you can reference both entity data declared in [Schema](schema.md) and views defined by [View](view.md) in the **same namespace**.
 
 - Entities: keys under `properties` in schema.yaml
 - Views: top-level keys within files under `definition/views/`
@@ -59,7 +59,7 @@ From templates, you can reference both entity data declared in [Schema](schema.m
 {% endfor %}
 ```
 
-A subtemplate additionally sees its subject — the data passed to the `render` call that rendered it — as `this` and as spread top-level variables ([Subtemplate side](#subtemplate-side)).
+Of the project's data, a subtemplate sees only its subject — the data passed to the `render` call that rendered it — as `this` and as spread top-level variables ([Subtemplate side](#subtemplate-side)). Entity and view names are not in scope there; reach other data with [`node`](#node).
 
 ## Linking
 

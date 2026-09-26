@@ -98,7 +98,7 @@ There are four kinds of sources.
 
 - **Schema** — A single file that declares the types of structured data.
 - **Content** — The actual data. Three kinds:
-  - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...). JSON is read the same way, for data another program produced; YAML is the recommendation for anything you write by hand.
+  - **Structured data** — YAML written according to the schema. A collection of records of the same shape (member lists, product lists, screen definitions, ...). JSON is read the same way, for data another program produced; YAML is the recommendation for anything you write by hand (the [SBOM sample](../showcase/sbom/) takes a generator's output this way).
   - **Prose** — Text written directly in Markdown. No user-defined schema needed (structured by the tool's built-in schema).
   - **Assets** — Any other file (images, PDFs, ...). Opaque to the tool; copied into the output and referenceable by id. No user-defined schema needed.
 - **View** — A definition of a named dataset derived from structured data, reshaped into a more convenient form for reference.
@@ -552,3 +552,4 @@ Be aware that misspellings silently produce empty strings — no error is raised
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
 - [showcase/music/](../showcase/music/) — a more complex working sample than the member list, modeling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises groupings, joins, multi-join chains, intrinsic flatten, self-referencing entities, prose alongside structured data, and blob assets (album cover art).
+- [showcase/sbom/](../showcase/sbom/) — a sample that takes another program's JSON output as its data: Another Mood's own CycloneDX SBOM, with the component pages, dependency graph and license ledger all derived by views.

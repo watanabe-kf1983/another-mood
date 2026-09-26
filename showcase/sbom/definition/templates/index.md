@@ -1,6 +1,6 @@
 # Another Mood SBOM
 
-The software bill of materials of {{ root_component.name }} — every package it installs at runtime, with licenses and the dependency graph between them. The data is a CycloneDX SBOM from a generator, reshaped just enough to fit the schema language; every page here is derived from it by views. {{ node("prose", "generating") | link("How the data was made") }} walks through the steps.
+The software bill of materials of {{ root_component.name }} — every package it installs at runtime, with licenses and the dependency graph between them. The data is a CycloneDX SBOM from a generator, lightly reshaped with jq; every page here is derived from it by views. {{ node("prose", "generating") | link("How the data was made") }} walks through the steps.
 
 {{ node("prose", "generating") | render("prose.md") }}
 

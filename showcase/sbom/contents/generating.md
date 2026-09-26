@@ -32,7 +32,7 @@ jq '{root_component: .metadata.component, components, dependencies}
   /tmp/sbom.json > contents/sbom.json
 ```
 
-The generator's output does not fit the schema language as-is, for two reasons, and this step fixes only those:
+The generator's output cannot be declared in `definition/schema.yaml` as-is, for two reasons, and this step fixes only those:
 
 - **The envelope.** Top-level keys such as `$schema`, `bomFormat` and `specVersion`, and the generator's own entry under `metadata.tools`, describe the file rather than the software. The step keeps `components` and `dependencies`, and lifts the root component out of `metadata`.
 - **A key that is not an identifier.** Property names in `definition/schema.yaml` must be identifiers, so `bom-ref` becomes `ref`.
