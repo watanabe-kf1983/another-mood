@@ -10,6 +10,7 @@ travels through normalization, which the downstream
 from pathlib import Path
 
 import pytest
+from typing import cast
 
 from another_mood.components.preprocess.query_normalizer import (
     normalize_flatten,
@@ -26,28 +27,28 @@ from another_mood.components.shared.user_source.source_loader import Location, U
 class TestNormalizeFlatten:
     def test_shorthand_string(self) -> None:
         assert normalize_flatten("tasks") == [
-            {"of": "tasks", "as": "tasks", "preserve_empty": False}
+            {"of": ("tasks",), "as": ("tasks",), "preserve_empty": False}
         ]
 
     def test_object_form_full(self) -> None:
         assert normalize_flatten(
             {"of": "tasks", "as": "task", "preserve_empty": True}
-        ) == [{"of": "tasks", "as": "task", "preserve_empty": True}]
+        ) == [{"of": ("tasks",), "as": ("task",), "preserve_empty": True}]
 
     def test_object_form_as_defaults_to_of(self) -> None:
         assert normalize_flatten({"of": "tasks"}) == [
-            {"of": "tasks", "as": "tasks", "preserve_empty": False}
+            {"of": ("tasks",), "as": ("tasks",), "preserve_empty": False}
         ]
 
     def test_object_form_preserve_empty_defaults_to_false(self) -> None:
         assert normalize_flatten({"of": "tasks", "as": "task"}) == [
-            {"of": "tasks", "as": "task", "preserve_empty": False}
+            {"of": ("tasks",), "as": ("task",), "preserve_empty": False}
         ]
 
     def test_list_form_mixes_shorthand_and_object(self) -> None:
         assert normalize_flatten(["hobbies", {"of": "pets", "as": "pet"}]) == [
-            {"of": "hobbies", "as": "hobbies", "preserve_empty": False},
-            {"of": "pets", "as": "pet", "preserve_empty": False},
+            {"of": ("hobbies",), "as": ("hobbies",), "preserve_empty": False},
+            {"of": ("pets",), "as": ("pet",), "preserve_empty": False},
         ]
 
     def test_rejects_unsupported_shape(self) -> None:
@@ -115,8 +116,8 @@ class TestNormalizeJoin:
             }
         )
         assert entry["flatten"] == {
-            "of": "tasks",
-            "as": "tasks",
+            "of": ("tasks",),
+            "as": ("tasks",),
             "preserve_empty": False,
         }
 
@@ -132,8 +133,8 @@ class TestNormalizeJoin:
         # ``of`` is forced to the join's ``as`` (unwind target is the
         # just-attached array), not the user-supplied right-side ``to``.
         assert entry["flatten"] == {
-            "of": "owned_tasks",
-            "as": "task",
+            "of": ("owned_tasks",),
+            "as": ("task",),
             "preserve_empty": True,
         }
 
@@ -147,8 +148,8 @@ class TestNormalizeJoin:
             }
         )
         assert entry["flatten"] == {
-            "of": "owned_tasks",
-            "as": "owned_tasks",
+            "of": ("owned_tasks",),
+            "as": ("owned_tasks",),
             "preserve_empty": False,
         }
 
@@ -164,8 +165,8 @@ class TestNormalizeJoin:
 class TestNormalizeInlineFlatten:
     def test_true_uses_join_as_for_of_and_as(self) -> None:
         assert normalize_inline_flatten(True, "owned_tasks") == {
-            "of": "owned_tasks",
-            "as": "owned_tasks",
+            "of": ("owned_tasks",),
+            "as": ("owned_tasks",),
             "preserve_empty": False,
         }
 
@@ -181,11 +182,18 @@ class TestNormalizeGrouped:
 
 class TestNormalizeSelect:
     def test_as_defaults_to_item(self) -> None:
-        assert normalize_select([{"item": "name"}]) == [{"item": "name", "as": "name"}]
+        assert normalize_select([{"item": "name"}]) == [
+            {"item": "name", "as": ("name",)}
+        ]
 
     def test_explicit_as_kept(self) -> None:
         assert normalize_select([{"item": "category", "as": "id"}]) == [
-            {"item": "category", "as": "id"}
+            {"item": "category", "as": ("id",)}
+        ]
+
+    def test_dotted_as_becomes_segments(self) -> None:
+        assert normalize_select([{"item": "level", "as": "hobby.level"}]) == [
+            {"item": "level", "as": ("hobby", "level")}
         ]
 
     def test_preserves_order(self) -> None:
@@ -242,7 +250,7 @@ class TestNormalizeQuery:
         assert normalize_query(raw) == {
             "id": "q",
             "from": "entities",
-            "flatten": [{"of": "tags", "as": "tags", "preserve_empty": False}],
+            "flatten": [{"of": ("tags",), "as": ("tags",), "preserve_empty": False}],
             "join": [
                 {
                     "to": "tasks",
@@ -252,7 +260,7 @@ class TestNormalizeQuery:
             ],
             "where": {"open": True},
             "grouped": {"by": "category", "as": "items"},
-            "select": [{"item": "name", "as": "name"}],
+            "select": [{"item": "name", "as": ("name",)}],
             "sort": {"by": "name", "direction": "asc", "missing": "last"},
         }
 
@@ -278,21 +286,30 @@ class TestPreservesUserStr:
     def _u(value: str, line: int = 1, column: int = 1) -> UserStr:
         return UserStr(value, Location(file=Path("x.yaml"), line=line, column=column))
 
+    @staticmethod
+    def _lines(path: object) -> list[int]:
+        return [s.location.line for s in cast(tuple[UserStr, ...], path)]
+
     def test_flatten_shorthand_preserves_userstr(self) -> None:
         of = self._u("tasks", line=3)
         [entry] = normalize_flatten(of)
-        # Both ``of`` and the defaulted ``as`` reuse the original
-        # UserStr — the only string in the input — so a downstream
-        # diagnostic can point back at line 3.
-        assert isinstance(entry["of"], UserStr)
-        assert isinstance(entry["as"], UserStr)
-        assert entry["of"].location.line == 3  # type: ignore[union-attr]
-        assert entry["as"].location.line == 3  # type: ignore[union-attr]
+        # Both ``of`` and the defaulted ``as`` carry the original
+        # UserStr's location — the only string in the input — so a
+        # downstream diagnostic can point back at line 3.
+        assert self._lines(entry["of"]) == [3]
+        assert self._lines(entry["as"]) == [3]
 
     def test_flatten_object_form_default_as_reuses_of_userstr(self) -> None:
         of = self._u("tasks", line=5)
         [entry] = normalize_flatten({"of": of})
-        assert entry["as"] is of
+        assert self._lines(entry["as"]) == [5]
+
+    def test_every_segment_of_a_dotted_path_carries_the_location(self) -> None:
+        """``str`` methods drop the location, so a plain split would
+        leave a diagnostic on a nested target with nothing to point at."""
+        [entry] = normalize_flatten({"of": self._u("hobby.pets", line=11)})
+        assert entry["of"] == ("hobby", "pets")
+        assert self._lines(entry["of"]) == [11, 11]
 
     def test_join_default_as_reuses_to_userstr(self) -> None:
         to = self._u("tasks", line=7)
@@ -302,4 +319,12 @@ class TestPreservesUserStr:
     def test_select_default_as_reuses_item_userstr(self) -> None:
         item = self._u("name", line=9)
         [entry] = normalize_select([{"item": item}])
-        assert entry["as"] is item
+        assert entry["item"] is item
+        assert self._lines(entry["as"]) == [9]
+
+    def test_every_segment_of_a_dotted_alias_carries_the_location(self) -> None:
+        """``str`` methods drop the location, so a plain split would
+        leave a diagnostic on a nested target with nothing to point at."""
+        [entry] = normalize_select([{"item": "level", "as": self._u("a.b", line=11)}])
+        assert entry["as"] == ("a", "b")
+        assert self._lines(entry["as"]) == [11, 11]
