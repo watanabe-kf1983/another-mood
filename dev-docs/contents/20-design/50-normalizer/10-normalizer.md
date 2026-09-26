@@ -18,11 +18,11 @@ dotfile・dot ディレクトリ配下は形式によらず読まない。エデ
 
 ### 背景: 手書きは YAML 推奨、JSON はワンショット機械出力の受け口
 
-手書きソースは YAML を推奨する（Git 差分・エラー行指摘との親和性）。showcase に `.json` の例を置かないのはこのため。
+手書きソースは YAML を推奨する（Git 差分・エラー行指摘との親和性）。手書きの例として showcase に `.json` を置かないのはこのため（機械出力の取り込み例である SBOM showcase は別）。
 
-JSON 入口の位置づけは、**フィードバックループを持たない機械的ワンショット出力** — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側に居ればよい。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実証は [L4 SBOM ドッグフーディング](node:/tasks/L/tasks/L4)）。JSONL・配列ルートは受理しない。
+JSON 入口の位置づけは、**フィードバックループを持たない機械的ワンショット出力** — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側に居ればよい。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実例は [R6 SBOM showcase](node:/tasks/R/tasks/R6)）。JSONL・配列ルートは受理しない。
 
-`docs/` の文言はこの用途を謳わず、制約（ルートは mapping）と推奨（YAML）のみを書く。用途は利用者が決めることで、ツールが宣言すると受理範囲の説明とは別の約束に読まれる。
+`docs/` の文言はこの用途を謳わず、制約（ルートは mapping）と推奨（YAML）のみを書く。用途は利用者が決めることで、ツールが宣言すると受理範囲の説明とは別の約束に読まれる。謳わないのは説明を受理範囲に絞って読みやすくするためで、この用途を非推奨とする意図ではない。showcase で取り込みの例を見せるのは妨げない。
 
 ## Internal Design
 

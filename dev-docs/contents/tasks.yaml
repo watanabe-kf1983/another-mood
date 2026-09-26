@@ -444,24 +444,6 @@ categories:
         title: 実施過程で見つかったツールの不足を他カテゴリにフィードバック
         phase: 13
         done: true
-      L4:
-        title: SBOM ドッグフーディング (dev-docs に自プロジェクトの部品表)
-        note: >-
-          cyclonedx-py environment で自プロジェクトの SBOM (CycloneDX JSON。
-          components がフラットなレコード、dependencies が bom-ref を張る FK
-          グラフ、SPDX ライセンス付き) を生成し、jq で最小限整形 (封筒剥がし・
-          bom-ref の改名) して dev-docs の contents に置く。再生成を CI 工程に
-          組み込み、依存の追加が次のビルドでライセンス台帳 (license で group する
-          view) とコンポーネント別ページに自動反映される状態にする。
-          M11 (入力形式に JSON を追加) が前提。「機械的ワンショット出力の contents
-          流用」という JSON 入口の位置づけの実証で、well-known 方言向け import
-          blueprint (筆頭候補 CycloneDX) 構想の前身を兼ねる。uv 本体に sbom
-          コマンドは無く、cyclonedx-bom パッケージを uvx で叩く (requirements
-          経由は情報が痩せるので environment モードを使う)。
-          論点: dependsOn (bom-ref の文字列配列) を view の join で辿れるか
-          (x-ref は整合性検査なので配列対応は不要、問題は join の側)。
-        phase: 16
-        proposal: 20-design/80-showcase/20-dev-docs#sbom-ドッグフーディング-l4
 
   M:
     title: JSON データモデル と データカタログ
@@ -719,6 +701,18 @@ categories:
         title: showcase / dev-docs の実物マニフェストから minimum_version を削除
         phase: 15
         done: true
+      R6:
+        title: SBOM showcase (CycloneDX JSON の取り込み例)
+        note: >-
+          another-mood 自身の SBOM (CycloneDX JSON) をサンプルデータとする
+          showcase を新設し、ライセンス台帳とコンポーネント別ページを view で
+          導出する。生成器の出力は jq で最小限整形 (封筒剥がし・bom-ref の改名)
+          して contents に置き、生成手順も contents に同梱する。M11 (入力形式に
+          JSON を追加) が前提。「機械的ワンショット出力の contents 流用」という
+          JSON 入口の位置づけを利用者に見せる手本で、well-known 方言向け import
+          blueprint (筆頭候補 CycloneDX) 構想の前身を兼ねる。
+        phase: 16
+        proposal: 20-design/80-showcase/20-sbom#sbom-showcase-r6
   S:
     title: システム開発ドキュメント
     impl_paths:
