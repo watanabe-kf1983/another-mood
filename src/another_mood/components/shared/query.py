@@ -20,7 +20,7 @@ from itertools import chain
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import KeyPath, pluck, put
+from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
     parse_record_predicate,
@@ -99,62 +99,63 @@ class Flatten(QueryNode):
     """Unwind one array attribute: each element becomes a separate row
     carrying the parent's other fields plus the element under ``as_``."""
 
-    of: str
-    as_: str
+    of: KeyPath
+    as_: KeyPath
     preserve_empty: bool = False
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # ``of`` names an attribute, not a path: ``_unwind`` drops it from
-        # the row by exact key, so a nested target could not be consumed.
-        edge, child = catalog.child_entry(self.of)
+        # Transitional: the catalog side still takes ``of`` as one edge
+        # name and lands ``as_`` as one literal key.  A dotted path is
+        # spelled back with a dot until the catalog side takes a path.
+        of, as_ = ".".join(self.of), ".".join(self.as_)
+        edge, child = catalog.child_entry(of)
         if not edge.is_collection:
             raise QueryDeriveError(
-                f"flatten target '{self.of}' is not an array attribute "
-                f"(type '{edge.type}')",
-                offender=self.of,
+                f"flatten target '{of}' is not an array attribute (type '{edge.type}')",
+                offender=self.of[0],
             )
         wrapper = replace(
             edge,
-            name=self.as_,
+            name=as_,
             type=edge.type[:-2],
             required=not self.preserve_empty,
         )
         out = dc.Node(
             metadata=catalog.metadata,
             children=[
-                (wrapper, child) if e.name == self.of else (e, c)
+                (wrapper, child) if e.name == of else (e, c)
                 for e, c in catalog.children
             ],
         )
         if _duplicate_child_name(out) is not None:
             raise QueryDeriveError(
-                f"flatten alias '{self.as_}' collides with an existing attribute",
-                offender=self.as_,
+                f"flatten alias '{as_}' collides with an existing attribute",
+                offender=self.as_[0],
             )
         return out
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
-        other = {k: v for k, v in parent.items() if k != self.of}
+        other = drop(parent, self.of)
         try:
             raw = pluck(parent, self.of)
         except KeyError:
             raw = []
         assert isinstance(raw, list), (
-            f"flatten target '{self.of}' must be an array; got {type(raw).__name__}"
+            f"flatten target '{self.of[-1]}' must be an array; got {type(raw).__name__}"
         )
         children = cast(list[object], raw)
         if self.preserve_empty and not children:
             return [other]
-        return [{**other, self.as_: child} for child in children]
+        return [put(other, self.as_, child) for child in children]
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Flatten":
         return cls(
-            of=cast(str, raw["of"]),
-            as_=cast(str, raw["as"]),
+            of=tuple(cast(Sequence[str], raw["of"])),
+            as_=tuple(cast(Sequence[str], raw["as"])),
             preserve_empty=cast(bool, raw["preserve_empty"]),
         )
 

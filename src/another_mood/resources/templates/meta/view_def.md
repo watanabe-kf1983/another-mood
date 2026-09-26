@@ -53,7 +53,7 @@
 | Of | As | Preserve Empty |
 |----|----|----------------|
 {% for entry in flatten %}
-| {{ entry.of }} | {{ entry.as }} | {% if entry.preserve_empty %}yes{% endif %} |
+| {{ entry.of | join(".") }} | {{ entry.as | join(".") }} | {% if entry.preserve_empty %}yes{% endif %} |
 {% endfor %}
 
 {% endif %}
@@ -63,11 +63,13 @@
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
 {% for entry in join %}
+    {%- set f = entry.flatten %}
+    {%- set inline_flatten = f and "{of: " ~ (f.of | join(".")) ~ ", as: " ~ (f.as | join(".")) ~ ", preserve_empty: " ~ (f.preserve_empty | lower) ~ "}" %}
     {{- "" }}| {{ source_link(entry.to) | safe }}
     {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
     {{- "" }} | {{ entry.as }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
-    {{- "" }} | {% if entry.flatten %}{{ code_inline(entry.flatten | to_yaml(true)) }}{% endif %}
+    {{- "" }} | {% if f %}{{ code_inline(inline_flatten) }}{% endif %}
     {{- "" }} |
 {% endfor %}
 
