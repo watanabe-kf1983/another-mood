@@ -9,8 +9,9 @@ type: object
 propertyNames:
   description: >-
     View name pattern: starts with a Unicode letter or underscore,
-    followed by Unicode letters, digits, or underscores.
-  pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*$"
+    followed by Unicode letters, combining marks, digits, or
+    underscores.
+  pattern: "^[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*$"
 additionalProperties:
   title: View definition
   description: >-

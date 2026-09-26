@@ -148,6 +148,21 @@ _VALID_SCHEMA_CASES = [
         """
         type: object
         properties:
+          नाम:
+            type: object
+            additionalProperties:
+              type: object
+              properties:
+                हिन्दी: { type: string }
+              additionalProperties: false
+        additionalProperties: false
+        """,
+        id="combining marks in names",
+    ),
+    pytest.param(
+        """
+        type: object
+        properties:
           albums:
             type: object
             additionalProperties:

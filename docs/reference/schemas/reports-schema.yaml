@@ -20,7 +20,7 @@ $defs:
       `erds.item.entities.item`); the array *of* those records takes a
       trailing `[]` (e.g. `erds.item.entities.item[]`).
     type: string
-    pattern: "^[\\p{L}_][\\p{L}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{N}_]*)*(\\[\\])?$"
+    pattern: "^[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*)*(\\[\\])?$"
 
   filePerList:
     title: file_per list
