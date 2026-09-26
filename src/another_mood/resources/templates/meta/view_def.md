@@ -90,7 +90,7 @@
 | Item | As |
 |------|----|
 {% for entry in select %}
-| {{ entry.item }} | {{ entry.as }} |
+| {{ entry.item }} | {{ entry.as | join(".") }} |
 {% endfor %}
 {% else %}
 (no select items defined)

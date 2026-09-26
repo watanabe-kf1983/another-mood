@@ -82,7 +82,7 @@ class Node:
         """Raises :class:`UnknownChildError` if no child edge is named ``name``."""
         return self.child_entry(name)[1]
 
-    # ── Child access by dotted path ───────────────────────────────────
+    # ── Child access by path ──────────────────────────────────────────
 
     def descend(self, path: str) -> Branch:
         """Walk the dotted ``path``, traversing singleton objects only: a
