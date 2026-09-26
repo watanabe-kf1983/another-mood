@@ -542,6 +542,14 @@ categories:
         title: インラインコードのフェンス長を動的に決める code_fence フィルタ
         phase: 11
         done: true
+      O5:
+        title: grouped.by が存在しないキーを指すと KeyError で落ちる
+        note: >-
+          grouped.by に一部のレコードで欠けるキー (例: flatten した
+          lic.license.id) を指定すると、診断ではなく素の KeyError traceback で
+          ビルドが落ちる。where / select の欠損キー扱いと揃えた診断にする。
+          R6 (SBOM showcase) で遭遇。
+        phase: 17
 
   P:
     title: テンプレートエンジン拡張
@@ -709,10 +717,9 @@ categories:
           導出する。生成器の出力は jq で最小限整形 (封筒剥がし・bom-ref の改名)
           して contents に置き、生成手順も contents に同梱する。M11 (入力形式に
           JSON を追加) が前提。「機械的ワンショット出力の contents 流用」という
-          JSON 入口の位置づけを利用者に見せる手本で、well-known 方言向け import
-          blueprint (筆頭候補 CycloneDX) 構想の前身を兼ねる。
+          JSON 入口の位置づけを利用者に見せる手本。
         phase: 16
-        proposal: 20-design/80-showcase/20-sbom#sbom-showcase-r6
+        done: true
   S:
     title: システム開発ドキュメント
     impl_paths:
