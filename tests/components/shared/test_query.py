@@ -597,20 +597,44 @@ class TestGroupedDerive:
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_=("name",)).apply({"name": "Alice"}) == {
+        assert SelectItem(item="name", as_=("name",)).apply({"name": "Alice"}, {}) == {
             "name": "Alice",
         }
 
     def test_renames_field(self) -> None:
         assert SelectItem(item="category", as_=("id",)).apply(
-            {"category": "user-management"}
+            {"category": "user-management"}, {}
         ) == {"id": "user-management"}
 
-    def test_returns_empty_for_missing_field(self) -> None:
+    def test_leaves_out_untouched_for_missing_field(self) -> None:
         # The JSON data model treats a nullable field as an absent key,
         # so projecting an optional schema attribute on a record that
-        # happens to omit it yields no output entry rather than raising.
-        assert SelectItem(item="missing", as_=("x",)).apply({"name": "Alice"}) == {}
+        # happens to omit it writes nothing rather than raising.
+        assert SelectItem(item="missing", as_=("x",)).apply(
+            {"name": "Alice"}, {"kept": 1}
+        ) == {"kept": 1}
+
+    def test_dotted_alias_nests(self) -> None:
+        assert SelectItem(item="level", as_=("hobby", "level")).apply(
+            {"level": "pro"}, {}
+        ) == {"hobby": {"level": "pro"}}
+
+    def test_siblings_converge_on_one_parent(self) -> None:
+        record = {"level": "pro", "pets": 2}
+        out = SelectItem(item="level", as_=("hobby", "level")).apply(record, {})
+        assert SelectItem(item="pets", as_=("hobby", "pets")).apply(record, out) == {
+            "hobby": {"level": "pro", "pets": 2}
+        }
+
+    def test_missing_field_leaves_no_empty_wrapper(self) -> None:
+        # ``hobby: {}`` would be an object the catalog claims a shape for
+        # but no row actually carries a value in.
+        assert (
+            SelectItem(item="missing", as_=("hobby", "level")).apply(
+                {"name": "Alice"}, {}
+            )
+            == {}
+        )
 
 
 class TestSelect:
@@ -630,6 +654,20 @@ class TestSelect:
     def test_empty_records(self) -> None:
         select = Select(items=[SelectItem(item="x", as_=("x",))])
         assert list(select.apply([])) == []
+
+    def test_dotted_aliases_converge_across_items(self) -> None:
+        # Items are folded one write at a time, so two writing under the
+        # same parent meet in one object rather than the later one
+        # replacing what the earlier put there.
+        select = Select(
+            items=[
+                SelectItem(item="level", as_=("hobby", "level")),
+                SelectItem(item="pets", as_=("hobby", "pets")),
+            ]
+        )
+        assert list(select.apply([{"level": "pro", "pets": 2, "extra": 1}])) == [
+            {"hobby": {"level": "pro", "pets": 2}}
+        ]
 
     def test_optional_field_absent_in_some_records(self) -> None:
         # A schema-optional attribute (here ``parent_entity``) is absent
