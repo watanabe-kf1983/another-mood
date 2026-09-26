@@ -32,6 +32,13 @@ Pulled in by other components.
 
 ### By SPDX identifier
 
+```mermaid
+pie showData
+{% for entry in spdx_ledger %}
+  "{{ entry.id | safe }}" : {{ entry.components | length }}
+{% endfor %}
+```
+
 | License | Components |
 |---------|------------|
 {% for entry in spdx_ledger %}
