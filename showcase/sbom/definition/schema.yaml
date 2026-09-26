@@ -1,0 +1,77 @@
+# Receives the CycloneDX SBOM after the jq step in contents/generating.md:
+# the envelope (bomFormat, specVersion, metadata.tools, ...) is stripped and
+# `bom-ref` is renamed to `ref`. Everything else is the generator's output
+# as-is, so every property is optional.
+type: object
+additionalProperties: false
+properties:
+  root_component:
+    description: The project the SBOM describes (CycloneDX metadata.component).
+    type: object
+    additionalProperties: false
+    properties:
+      ref: { type: string }
+      name: { type: string }
+      type: { type: string }
+      description: { type: string }
+      licenses: &licenses
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            license:
+              description: A single license, by SPDX id or by free-form name.
+              type: object
+              additionalProperties: false
+              properties:
+                id: { type: string }
+                name: { type: string }
+                acknowledgement: { type: string }
+            expression:
+              description: An SPDX license expression.
+              type: string
+            acknowledgement: { type: string }
+      externalReferences: &externalReferences
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            type: { type: string }
+            url: { type: string }
+            comment: { type: string }
+  components:
+    description: Every package installed alongside the root component.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        ref: { type: string }
+        name: { type: string }
+        version: { type: string }
+        type: { type: string }
+        description: { type: string }
+        purl: { type: string }
+        licenses: *licenses
+        externalReferences: *externalReferences
+        properties:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              name: { type: string }
+              value: { type: string }
+  dependencies:
+    description: The dependency graph, one row per component that depends on others.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        ref: { type: string }
+        dependsOn:
+          type: array
+          items: { type: string }
