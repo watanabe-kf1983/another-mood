@@ -136,7 +136,7 @@ class TestFromDerive:
 
 class TestFlatten:
     def test_unwinds_array_attribute(self) -> None:
-        flat = Flatten(of="tasks", as_="tasks")
+        flat = Flatten(of=("tasks",), as_=("tasks",))
         records = [
             {"id": 1, "name": "A", "tasks": [{"t": 1}, {"t": 2}]},
             {"id": 2, "name": "B", "tasks": [{"t": 3}]},
@@ -148,12 +148,12 @@ class TestFlatten:
         ]
 
     def test_renames_to_as(self) -> None:
-        flat = Flatten(of="tasks", as_="task")
+        flat = Flatten(of=("tasks",), as_=("task",))
         records = [{"id": 1, "tasks": [{"t": 1}]}]
         assert list(flat.apply(records)) == [{"id": 1, "task": {"t": 1}}]
 
     def test_drops_empty_parents_by_default(self) -> None:
-        flat = Flatten(of="tasks", as_="task")
+        flat = Flatten(of=("tasks",), as_=("task",))
         records: list[dict[str, object]] = [
             {"id": 1, "tasks": [{"t": 1}]},
             {"id": 2, "tasks": []},
@@ -161,7 +161,7 @@ class TestFlatten:
         assert list(flat.apply(records)) == [{"id": 1, "task": {"t": 1}}]
 
     def test_preserve_empty_keeps_parent_without_as_field(self) -> None:
-        flat = Flatten(of="tasks", as_="task", preserve_empty=True)
+        flat = Flatten(of=("tasks",), as_=("task",), preserve_empty=True)
         records: list[dict[str, object]] = [
             {"id": 1, "tasks": [{"t": 1}]},
             {"id": 2, "tasks": []},
@@ -172,19 +172,50 @@ class TestFlatten:
         ]
 
     def test_missing_key_treated_as_empty(self) -> None:
-        flat = Flatten(of="tasks", as_="task", preserve_empty=True)
+        flat = Flatten(of=("tasks",), as_=("task",), preserve_empty=True)
         # Optional array attribute omitted from a record behaves the same
         # as an explicit empty list.
         records = [{"id": 1}]
         assert list(flat.apply(records)) == [{"id": 1}]
 
     def test_unwinds_scalar_array(self) -> None:
-        flat = Flatten(of="hobbies", as_="hobby")
+        flat = Flatten(of=("hobbies",), as_=("hobby",))
         records = [{"id": 1, "hobbies": ["a", "b"]}]
         assert list(flat.apply(records)) == [
             {"id": 1, "hobby": "a"},
             {"id": 1, "hobby": "b"},
         ]
+
+    def test_unwinds_a_nested_array(self) -> None:
+        flat = Flatten(of=("hobby", "pets"), as_=("pet",))
+        records = [{"id": 1, "hobby": {"level": "pro", "pets": ["a", "b"]}}]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "hobby": {"level": "pro"}, "pet": "a"},
+            {"id": 1, "hobby": {"level": "pro"}, "pet": "b"},
+        ]
+
+    def test_drops_the_parent_the_removal_empties(self) -> None:
+        # ``hobby: {}`` would be an object no row carries a value in.
+        flat = Flatten(of=("hobby", "pets"), as_=("pet",))
+        records = [{"id": 1, "hobby": {"pets": ["a"]}}]
+        assert list(flat.apply(records)) == [{"id": 1, "pet": "a"}]
+
+    def test_nests_the_element_at_a_dotted_as(self) -> None:
+        flat = Flatten(of=("pets",), as_=("hobby", "pet"))
+        records = [{"id": 1, "pets": ["a"]}]
+        assert list(flat.apply(records)) == [{"id": 1, "hobby": {"pet": "a"}}]
+
+    def test_replaces_a_nested_array_in_place(self) -> None:
+        flat = Flatten(of=("hobby", "pets"), as_=("hobby", "pets"))
+        records = [{"id": 1, "hobby": {"pets": ["a", "b"]}}]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "hobby": {"pets": "a"}},
+            {"id": 1, "hobby": {"pets": "b"}},
+        ]
+
+    def test_missing_nested_key_treated_as_empty(self) -> None:
+        flat = Flatten(of=("hobby", "pets"), as_=("pet",), preserve_empty=True)
+        assert list(flat.apply([{"id": 1}])) == [{"id": 1}]
 
 
 _FLATTEN_CATALOG_YAML = """
@@ -215,7 +246,7 @@ class TestFlattenDerive:
         return dc.build_tree(_catalog(_FLATTEN_CATALOG_YAML)).child("categories")
 
     def test_replaces_array_edge_with_singleton(self, categories: dc.Node) -> None:
-        leaf = Flatten(of="tasks", as_="task").derive(categories)
+        leaf = Flatten(of=("tasks",), as_=("task",)).derive(categories)
         edge_by_name = {e.name: e for e, _ in leaf.children}
         assert "tasks" not in edge_by_name
         assert edge_by_name["task"].type == "object"
@@ -223,12 +254,14 @@ class TestFlattenDerive:
         assert edge_by_name["task"].required is True
 
     def test_preserve_empty_makes_as_field_optional(self, categories: dc.Node) -> None:
-        leaf = Flatten(of="tasks", as_="task", preserve_empty=True).derive(categories)
+        leaf = Flatten(of=("tasks",), as_=("task",), preserve_empty=True).derive(
+            categories
+        )
         edge_by_name = {e.name: e for e, _ in leaf.children}
         assert edge_by_name["task"].required is False
 
     def test_keeps_as_same_as_of_when_omitted(self, categories: dc.Node) -> None:
-        leaf = Flatten(of="tasks", as_="tasks").derive(categories)
+        leaf = Flatten(of=("tasks",), as_=("tasks",)).derive(categories)
         edge_by_name = {e.name: e for e, _ in leaf.children}
         assert "tasks" in edge_by_name
         # Type still drops the [] — same name, different cardinality.
@@ -238,22 +271,29 @@ class TestFlattenDerive:
         # Catalog-layer error here; Query.derive translates it into
         # QueryDeriveError at the pipeline boundary.
         with pytest.raises(dc.UnknownChildError, match="missing"):
-            Flatten(of="missing", as_="x").derive(categories)
+            Flatten(of=("missing",), as_=("x",)).derive(categories)
 
     def test_raises_when_target_not_array(self, categories: dc.Node) -> None:
         with pytest.raises(QueryDeriveError, match="not an array"):
-            Flatten(of="title", as_="x").derive(categories)
+            Flatten(of=("title",), as_=("x",)).derive(categories)
 
     def test_raises_on_as_collision(self, categories: dc.Node) -> None:
         with pytest.raises(QueryDeriveError, match="collides"):
-            Flatten(of="tasks", as_="title").derive(categories)
+            Flatten(of=("tasks",), as_=("title",)).derive(categories)
 
 
 class TestFlattenFromDict:
     def test_lifts_canonical_mapping(self) -> None:
         assert Flatten.from_dict(
-            {"of": "tasks", "as": "task", "preserve_empty": True}
-        ) == Flatten(of="tasks", as_="task", preserve_empty=True)
+            {"of": ("tasks",), "as": ("task",), "preserve_empty": True}
+        ) == Flatten(of=("tasks",), as_=("task",), preserve_empty=True)
+
+    def test_takes_a_nested_path_as_the_segments_it_is_given(self) -> None:
+        # Read back from the persisted canonical form, paths are lists.
+        flat = Flatten.from_dict(
+            {"of": ["hobby", "pets"], "as": ["hobby", "pet"], "preserve_empty": False}
+        )
+        assert (flat.of, flat.as_) == (("hobby", "pets"), ("hobby", "pet"))
 
 
 _CATS_TASKS_CATALOG_YAML = """
@@ -401,7 +441,7 @@ class TestJoin:
         join = Join(
             right=Query(from_=From(name="tasks")),
             merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
-            flatten=Flatten(of="tasks", as_="task"),
+            flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         left = [{"id": "A"}, {"id": "B"}]
         assert list(join.apply(left, [sources])) == [
@@ -415,7 +455,7 @@ class TestJoin:
         join = Join(
             right=Query(from_=From(name="tasks")),
             merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
-            flatten=Flatten(of="tasks", as_="task"),
+            flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         out = join.derive(root.child("cats"), root)
         attrs = {e.name: e for e, _ in out.children}
@@ -453,10 +493,12 @@ class TestJoinFromDict:
                 "to": "tasks",
                 "on": {"left": "id", "right": "cat"},
                 "as": "tasks",
-                "flatten": {"of": "tasks", "as": "task", "preserve_empty": True},
+                "flatten": {"of": ("tasks",), "as": ("task",), "preserve_empty": True},
             }
         )
-        assert join.flatten == Flatten(of="tasks", as_="task", preserve_empty=True)
+        assert join.flatten == Flatten(
+            of=("tasks",), as_=("task",), preserve_empty=True
+        )
 
     def test_wires_pre_join_where(self) -> None:
         """``join[].where:`` becomes the right sub-Query's ``where``;
@@ -1298,7 +1340,7 @@ class TestQueryFromDict:
         that Query.from_dict does inline (Sort has no own from_dict)."""
         raw = {
             "from": "items",
-            "flatten": [{"of": "tags", "as": "tag", "preserve_empty": False}],
+            "flatten": [{"of": ("tags",), "as": ("tag",), "preserve_empty": False}],
             "join": [
                 {
                     "to": "owners",
@@ -1313,7 +1355,7 @@ class TestQueryFromDict:
         }
         assert Query.from_dict(raw) == Query(
             from_=From(name="items"),
-            flatten=(Flatten(of="tags", as_="tag", preserve_empty=False),),
+            flatten=(Flatten(of=("tags",), as_=("tag",), preserve_empty=False),),
             join=(
                 Join(
                     right=Query(from_=From(name="owners")),

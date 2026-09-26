@@ -32,16 +32,16 @@ additionalProperties:
       title: Flatten clause
       description: >-
         Unwind one or more intrinsic array attributes of each row.
-        Accepts three shapes: a bare attribute name (scalar shorthand),
+        Accepts three shapes: a bare attribute path (scalar shorthand),
         a single object describing one unwind, or an ordered list of
-        either. After flattening, the parent fields stay at the row's
-        top level and the array's element fields are nested under the
-        `as:` namespace (defaults to `of:` when omitted).
+        either. After flattening, the parent fields stay where they
+        were and the array's element fields are nested under the `as:`
+        namespace (defaults to `of:` when omitted).
       oneOf:
         - title: Scalar shorthand
           description: >-
-            Bare attribute name. Equivalent to `{ of: <name> }` with
-            `as:` defaulting to the same name and `preserve_empty: false`.
+            Bare attribute path. Equivalent to `{ of: <path> }` with
+            `as:` defaulting to the same path and `preserve_empty: false`.
           type: string
         - $ref: "#/$defs/flattenItem"
         - title: List form
@@ -158,9 +158,10 @@ $defs:
   flattenItem:
     title: Flatten item
     description: >-
-      One unwind operation. `of:` names the intrinsic array attribute
-      to expand. `as:` renames its element namespace in the output row
-      (defaults to `of:`). `preserve_empty: true` keeps parent rows
+      One unwind operation. `of:` is the path of the intrinsic array
+      attribute to expand. `as:` is the path its element namespace
+      lands at in the output row (defaults to `of:`, which replaces
+      the array in place). `preserve_empty: true` keeps parent rows
       whose array is empty or missing (the `as:` field is absent on
       those rows); the default `false` drops them.
     type: object
@@ -168,16 +169,19 @@ $defs:
       of:
         title: Source array attribute
         description: >-
-          Name of the intrinsic array attribute on the current row to
-          unwind.
+          Path of the intrinsic array attribute on the current row to
+          unwind. A dot descends into a nested object (`hobby.pets`);
+          the path may end on an array but never continue past one.
         type: string
       as:
         title: Output namespace
         description: >-
-          Name given to the element namespace on each produced row.
-          Defaults to the value of `of:`. Typically set to rename a
-          plural array attribute (`tasks`) to its singular form
-          (`task`) once each row carries just one element.
+          Path the element namespace lands at on each produced row. A
+          dot nests (`hobby.pet` writes into an object `hobby`).
+          Defaults to the value of `of:`, which replaces the array
+          where it was. Typically set to rename a plural array
+          attribute (`tasks`) to its singular form (`task`) once each
+          row carries just one element.
         type: string
       preserve_empty:
         title: Keep empty parents
