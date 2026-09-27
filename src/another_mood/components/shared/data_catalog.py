@@ -15,10 +15,10 @@ from typing import Any, ClassVar, cast
 
 type Branch = tuple[Edge, Node]
 
-#: A node together with the chain of edges reaching it from an entity's
-#: body.  A ``Branch`` is one step; this is the several steps a dotted
-#: ``Attribute.id`` stands for, since singletons are folded into the
-#: entity holding them.
+#: A node together with the chain of edges reaching it from the node a
+#: path is walked from.  A ``Branch`` is one step; this is the several
+#: steps a dotted path stands for, as in an ``Attribute.id``, where the
+#: singletons on the way fold into the entity holding them.
 type AttributeReach = tuple[Sequence[Edge], Node]
 
 
@@ -84,31 +84,41 @@ class Node:
 
     # ── Child access by dotted path ───────────────────────────────────
 
-    def descend(self, path: str) -> Branch:
+    def reach(self, path: str) -> AttributeReach:
         """Walk the dotted ``path``, traversing singleton objects only: a
         path may end on a collection attribute but never continue past one.
 
+        Returns every edge passed on the way, outermost first, with the
+        node the last one leads to.
+
         Raises :class:`UnknownChildError` carrying the whole ``path``.
         """
-        entry = self._descend(path)
-        if entry is None:
+        reach = self._reach(path, above=())
+        if reach is None:
             raise UnknownChildError(path)
-        return entry
+        return reach
+
+    def descend(self, path: str) -> Branch:
+        """The last edge of :meth:`reach` with its node."""
+        edges, node = self.reach(path)
+        return edges[-1], node
 
     def require_path(self, path: str) -> None:
         """Raises :class:`UnknownChildError` if ``path`` does not resolve."""
-        self.descend(path)
+        self.reach(path)
 
-    def _descend(self, path: str) -> Branch | None:
+    def _reach(self, path: str, *, above: Sequence[Edge]) -> AttributeReach | None:
+        """``above`` is the chain walked so far, which the result extends."""
         name = self._longest_child_name(path)
         if name is None:
             return None
         edge, child = self.child_entry(name)
         if name == path:
-            return edge, child
-        if edge.is_collection:
-            return None
-        return child._descend(path[len(name) + 1 :])
+            return (*above, edge), child
+        else:
+            if edge.is_collection:
+                return None
+            return child._reach(path[len(name) + 1 :], above=(*above, edge))
 
     def _longest_child_name(self, path: str) -> str | None:
         # Longest-first, and the match commits — no backtracking — mirroring
