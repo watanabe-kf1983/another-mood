@@ -916,37 +916,54 @@ class TestSelectDerive:
 
 class TestSelectDeriveRequired:
     """An edge's ``required`` says the value is there whenever its parent
-    is.  A projected value is there whenever its source is, so under a
-    parent that only some rows have, what decides it is the path from
-    that parent down to the source -- not whether the source is on every
-    row."""
+    is.  ``select`` builds each row from nothing, so an object on the way
+    to an alias is a new one, there on the rows some write landed in and
+    unrelated to anything the input holds under the same name.  A
+    projected value is there whenever its source is, so what decides
+    ``required`` under such an object is where the sources of the writes
+    that made it are -- not whether a source is on every row."""
 
     @pytest.mark.parametrize(
         ("base", "items", "expected"),
         [
-            # ``a`` is on some rows only; ``p`` keeps it on the same rows
-            # in the output.  ``d`` is there whenever ``a`` is, because
-            # ``b`` and ``c`` are.
+            # One write makes ``target`` on exactly the rows it lands in:
+            # ``target`` is on the rows ``level`` was, and ``level`` is on
+            # every ``target``.
             pytest.param(
-                "a?.p a?.b.c",
-                [("a.p", ("a", "p")), ("a.b.c", ("a", "d"))],
-                "a?.p a?.d",
+                "name level?",
+                [("level", ("target", "level"))],
+                "target?.level",
                 marks=_TARGET,
+                id="one write",
             ),
-            # With ``b`` on some of ``a``'s rows only, ``d`` is too.
+            # ``ref`` is on some rows only; ``p`` keeps it on the same rows
+            # in the output.  ``d`` is there whenever ``ref`` is, because
+            # ``b`` and ``c`` are: both writes come from the same rows.
             pytest.param(
-                "a?.p a?.b?.c",
-                [("a.p", ("a", "p")), ("a.b.c", ("a", "d"))],
-                "a?.p a?.d?",
+                "ref?.p ref?.b.c",
+                [("ref.p", ("target", "p")), ("ref.b.c", ("target", "d"))],
+                "target?.p target?.d",
                 marks=_TARGET,
+                id="same rows",
             ),
-            # A write from outside ``a`` lands an ``a`` on rows that had
-            # none, holding only ``d``: ``p`` is no longer on every ``a``.
+            # With ``b`` on some of ``ref``'s rows only, ``d`` is on some
+            # of ``target``'s rows only.
             pytest.param(
-                "a?.p x?",
-                [("a.p", ("a", "p")), ("x", ("a", "d"))],
-                "a?.p? a?.d?",
+                "ref?.p ref?.b?.c",
+                [("ref.p", ("target", "p")), ("ref.b.c", ("target", "d"))],
+                "target?.p target?.d?",
                 marks=_TARGET,
+                id="one within the other",
+            ),
+            # A write from outside ``ref`` lands a ``target`` on rows that
+            # had no ``ref``, holding only ``d``: ``p`` is no longer on
+            # every ``target``.
+            pytest.param(
+                "ref?.p x?",
+                [("ref.p", ("target", "p")), ("x", ("target", "d"))],
+                "target?.p? target?.d?",
+                marks=_TARGET,
+                id="unrelated",
             ),
             # Two writes from the same source object co-occur, so both
             # are there whenever the object they land in is.
@@ -958,6 +975,7 @@ class TestSelectDeriveRequired:
                 ],
                 "target?.table target?.column",
                 marks=_TARGET,
+                id="same object",
             ),
         ],
     )

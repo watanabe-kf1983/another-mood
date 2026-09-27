@@ -307,12 +307,16 @@ select:
 # カタログ: hobby?.level  →  level?
 ```
 
-| 元 | `select` | 結果 | 読み |
-|---|---|---|---|
-| `a?.p a?.b.c` | `a.p as a.p`, `a.b.c as a.d` | `a?.p a?.d` | `a` があれば `b`, `c` があるので、`d` も `a` があれば必ずある |
-| `a?.p a?.b?.c` | 同上 | `a?.p a?.d?` | `b` が任意なので、`d` は `a` があっても無いことがある |
-| `a?.p x?` | `a.p as a.p`, `x as a.d` | `a?.p? a?.d?` | `x` はあるが `a` は無い行に `a: {d}` ができるので、`p` は `a` があっても無いことがある |
-| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
+`as` の名前は読み側と無関係である。`select` は空の行から作り直すので、書き込み先の途中に現れるオブジェクトは書き込みが合成した新しいもので、読み側に同じ名前があっても何も引き継がない。
+
+書き込みが一本なら、合成されたオブジェクトはその値を書いた行にしか無い（[書く値が無ければ途中のオブジェクトも作らない](#書く値が無ければ途中のオブジェクトも作らない)）ので、値は合成されたオブジェクトがあれば必ずある。葉が任意になりうるのは、複数の書き込みが同じオブジェクトに合流するときで、それぞれの値がどの行にあるか、つまり出どころ（読み側のパス上の任意エッジ）の関係で決まる:
+
+| 元 | `select` | 出どころの関係 | 結果 | 読み |
+|---|---|---|---|---|
+| `ref?.p ref?.b.c` | `ref.p as target.p`, `ref.b.c as target.d` | 同じ: `{ref}` と `{ref}` | `target?.p target?.d` | `ref` があれば `b`, `c` があるので、`d` も `target` があれば必ずある |
+| `ref?.p ref?.b?.c` | 同上 | `d` の方が狭い: `{ref}` と `{ref, ref.b}` | `target?.p target?.d?` | `b` が任意なので、`d` は `target` があっても無いことがある |
+| `ref?.p x?` | `ref.p as target.p`, `x as target.d` | 無関係: `{ref}` と `{x}` | `target?.p? target?.d?` | `x` はあるが `ref` は無い行に `target: {d}` ができるので、`p` は `target` があっても無いことがある |
+| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | 同じ: `{ref}` と `{ref}` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
 
 `flatten` は行に何も足さない。`preserve_empty: false` なら要素の無い行が落ちるので `of` の経路は残った行の全部にあり、`true` なら元のまま:
 
