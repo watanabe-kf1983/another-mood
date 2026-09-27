@@ -22,6 +22,7 @@ from another_mood.components.shared.query import (
     Sort,
     Where,
     evaluation_order,
+    overlaps,
 )
 from another_mood.components.shared.record_predicate import (
     FieldPredicate,
@@ -832,6 +833,38 @@ class TestSelect:
         ]
 
 
+class TestOverlaps:
+    """Two write paths overlap when one is the other or leads into it:
+    writing a name claims everything under it."""
+
+    @pytest.mark.parametrize(
+        ("a", "b"),
+        [
+            (("a",), ("a",)),
+            (("a",), ("a", "b")),
+            (("a", "b"), ("a", "b", "c")),
+        ],
+        ids=["the same", "one leads into the other", "deeper down"],
+    )
+    def test_overlapping(self, a: tuple[str, ...], b: tuple[str, ...]) -> None:
+        assert overlaps(a, b)
+        assert overlaps(b, a)
+
+    @pytest.mark.parametrize(
+        ("a", "b"),
+        [
+            (("a",), ("b",)),
+            (("a", "b"), ("a", "c")),
+            (("a", "b", "c"), ("a", "x", "c")),
+            (("hobby",), ("hobbyist",)),
+        ],
+        ids=["different names", "siblings", "parted above", "string prefix"],
+    )
+    def test_clear_of_each_other(self, a: tuple[str, ...], b: tuple[str, ...]) -> None:
+        assert not overlaps(a, b)
+        assert not overlaps(b, a)
+
+
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
@@ -853,30 +886,32 @@ class TestSelectDerive:
             """
         )
 
-    def test_raises_on_duplicate_alias(self) -> None:
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+    @pytest.mark.parametrize(
+        ("second", "fourth", "message"),
+        [
+            (("a",), ("a", "b"), "alias 'a.b' collides with an earlier item 'a'"),
+            (("a", "b"), ("a",), "alias 'a' collides with an earlier item 'a.b'"),
+        ],
+        ids=["whole then part", "part then whole"],
+    )
+    def test_raises_when_any_two_aliases_overlap(
+        self, second: tuple[str, ...], fourth: tuple[str, ...], message: str
+    ) -> None:
+        """What overlaps is ``overlaps``' business; here, that every pair
+        of aliases is checked, not just neighbours, and that the later
+        one is reported by its first segment, which carries the source
+        position."""
         select = Select(
             items=[
-                SelectItem(item="title", as_=("label",)),
-                SelectItem(item="phase", as_=("label",)),
+                SelectItem(item="title", as_=("x",)),
+                SelectItem(item="title", as_=second),
+                SelectItem(item="phase", as_=("y",)),
+                SelectItem(item="phase", as_=fourth),
             ]
         )
-        with pytest.raises(QueryDeriveError, match="collides with an earlier item"):
-            select.derive(leaf)
-
-    def test_allows_an_alias_that_is_only_a_prefix_of_another(self) -> None:
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
-        # Dotted aliases are literal keys, so ``a`` and ``a.b`` are two
-        # distinct output keys and neither overwrites the other.
-        select = Select(
-            items=[
-                SelectItem(item="title", as_=("a",)),
-                SelectItem(item="phase", as_=("a", "b")),
-            ]
-        )
-        assert [e.name for e, _ in select.derive(leaf).children] == ["a", "a.b"]
+        with pytest.raises(QueryDeriveError, match=message) as excinfo:
+            select.derive(tree("title phase"))
+        assert excinfo.value.offender == fourth[0]
 
 
 class TestSelectDeriveRequired:

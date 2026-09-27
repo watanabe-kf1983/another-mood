@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from functools import reduce
 from graphlib import CycleError, TopologicalSorter
-from itertools import chain
+from itertools import chain, combinations
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
@@ -355,18 +355,18 @@ class Select(QueryNode):
         return [self._project(record) for record in records]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        out = dc.Node(children=[item.derive(catalog) for item in self.items])
-        duplicate = _duplicate_child_name(out)
-        if duplicate is not None:
-            # The item reported is the later of the two — the overwriting
-            # write.  Its first segment carries the alias's source
-            # position, which the joined key does not.
-            offender = [item for item in self.items if item.as_key() == duplicate][-1]
-            raise QueryDeriveError(
-                f"select alias '{duplicate}' collides with an earlier item",
-                offender=offender.as_[0],
-            )
-        return out
+        # Every two aliases must be clear of each other.  The item
+        # reported is the later of the pair -- the write that would land
+        # on or inside the earlier one.  Its first segment carries the
+        # alias's source position.
+        for earlier, later in combinations([item.as_ for item in self.items], 2):
+            if overlaps(earlier, later):
+                raise QueryDeriveError(
+                    f"select alias '{'.'.join(later)}' collides with an earlier "
+                    f"item '{'.'.join(earlier)}'",
+                    offender=later[0],
+                )
+        return dc.Node(children=[item.derive(catalog) for item in self.items])
 
     def _project(self, record: Record) -> Record:
         empty: Record = {}
@@ -593,3 +593,12 @@ def _duplicate_child_name(node: dc.Node) -> str | None:
             return edge.name
         seen.add(edge.name)
     return None
+
+
+def overlaps(a: KeyPath, b: KeyPath) -> bool:
+    """Whether two write paths take the same place: one is the other, or
+    leads into it.  Segment-wise, so ``hobby`` and ``hobbyist`` do not
+    overlap; ``hobby`` and ``hobby.level`` do, since writing ``hobby``
+    claims everything under it.  Siblings (``a.b``, ``a.c``) do not."""
+    shorter = min(len(a), len(b))
+    return a[:shorter] == b[:shorter]
