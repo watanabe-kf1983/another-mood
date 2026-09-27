@@ -711,15 +711,14 @@ categories:
         done: true
       R6:
         title: SBOM showcase (CycloneDX JSON の取り込み例)
-        note: >-
-          another-mood 自身の SBOM (CycloneDX JSON) をサンプルデータとする
-          showcase を新設し、ライセンス台帳とコンポーネント別ページを view で
-          導出する。生成器の出力は jq で最小限整形 (封筒剥がし・bom-ref の改名)
-          して contents に置き、生成手順も contents に同梱する。M11 (入力形式に
-          JSON を追加) が前提。「機械的ワンショット出力の contents 流用」という
-          JSON 入口の位置づけを利用者に見せる手本。
         phase: 16
         done: true
+      R7:
+        title: showcase プロジェクトのビルド結果のホスティング
+        note: >-
+          showcase 各プロジェクトのビルド結果 (静的 HTML) を公開ホスティングし、
+          インストール前に Another Mood の成果物を閲覧できるようにする。
+        phase: 17
   S:
     title: システム開発ドキュメント
     impl_paths:
@@ -737,25 +736,10 @@ categories:
         done: true
       S3:
         title: CRUD マトリクス + ユースケース構造化テンプレート
-        note: |
-          設計書のデータ設計章を埋める章別増分。ユースケース × エンティティの
-          join から導出される view として実装し、要求仕様書と設計書の二文書同期を
-          実証した。ユースケース・要求 entity の属性詰め (旧 Candidates の
-          ユースケース記述を吸収) もここ。章別 PR 1 / 3a / 3b / 6a / 6b で完了
-          (決定事項は各 PR の本文)。CRUD で見つかった
-          上流の穴 (保留販売の確認) は design の Candidates。F カテゴリから S への
-          移管 (旧 F6)。
         phase: 16
         done: true
       S4:
         title: 画面遷移図 + 画面定義テンプレート
-        note: |
-          設計書の画面設計章を埋める章別増分。S7 の画面・遷移 entity を属性レベル
-          まで詰め、Mermaid stateDiagram-v2 で遷移図を描いた (stateDiagram の
-          Mermaid 適合性実機検証を兼ねる)。S8 の目次仕様で割り当てた生成部は、
-          設計書「コンテキスト」章の図が章別 PR 2、画面設計章の画面一覧 /
-          画面遷移図が 7a、画面定義が 7b で完了 (決定事項は各 PR の本文)。
-          二文書の章別 PR はこれで全て揃った。blueprint 登録は E17 待ち。
         phase: 16
         done: true
       S5:
