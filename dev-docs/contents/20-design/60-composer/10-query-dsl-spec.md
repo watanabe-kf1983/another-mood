@@ -142,15 +142,9 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### 背景: `Join` を `QueryNode` に乗せず特別扱いした理由
 
-`join:` は 2 入力 1 出力で、他の op (`from` / `flatten` / `where` / `grouped` / `select` / `sort` はすべて 1-in 1-out) と arity が異なる。既存の `QueryNode` Protocol (1-in 1-out 想定) には乗らないので、`Join` を `QueryNode` 非該当のクラスとし、`Query.apply` / `Query.derive` 内で pipeline 順序を直書きする形で扱う。apply 側と derive 側で同じ順序を 2 度書き下すため ~10 行ずつ重複が生じるが、現スコープではこの局所的な特別扱いの方が抽象階層導入より軽い、と判断した。
+`join:` は 2 入力 1 出力で、他の句 (`from` / `flatten` / `where` / `grouped` / `select` / `sort`) はすべて 1 入力 1 出力。1-in 1-out 想定の `QueryNode` Protocol には乗らないので、`Join` は `QueryNode` 非該当のクラスとし、`Query.apply` / `Query.derive` がパイプライン順序を直書きして呼び分ける。apply 側と derive 側で同じ順序を二度書くため 10 行程度ずつ重複するが、2 入力の句が `join:` 一つしかない現状では、この局所的な特別扱いのほうが抽象階層より軽い。
 
-検討した代替案として、評価器を 3 層 (Query が pipeline 順序を独占し、Stage 層が汎用 wiring を担い、Op 層が純粋関数として arity ごとに分かれる) に分解する tree/pull 評価器が挙がる。Join は `BinaryOp` + `BinaryStage` の組として一貫性ある形で扱える。利点は (a) 1-input / 2-input が型レベルで対等に並ぶ、(b) apply / derive の重複コードが再帰呼び出しで自然に消える、(c) 将来 union や sub-query reference 等の追加 op に拡張しやすい、こと。
-
-欠点として、新規プロトコル / クラスが計 6 個 (`Stage`, `UnaryOp`, `BinaryOp`, `Origin`, `UnaryStage`, `BinaryStage`)、公開 API (`Query.apply` / `derive` シグネチャ) の変更、既存テスト / 呼び出し側への波及が発生する。
-
-現スコープでは 2-input op は `join:` 1 つで、union 等の追加予定もない (D 群 / F 系の隣接タスクで言及無し)。「機械的重複 ~20 行を消すために 80+ 行の抽象階層を投資する」のは現状ではコスト過大と判断。
-
-将来、2-input op が増える / 多 join のパターンが想定外に複雑化する等の signal が出たら、その時点で tree/pull への refactor を検討する。Join がすでに特別扱いされているので、その特別扱いを抽象化する方向への escalation は incremental に行える。
+代替案は、評価器を Query（順序）/ Stage（配線）/ Op（arity ごとの純粋関数）の 3 層に分解する tree/pull 評価器。1 入力と 2 入力が型レベルで対等に並び apply / derive の重複も消えるが、新規プロトコルとクラスが 6 個増え、`Query.apply` / `derive` のシグネチャも変わる。2 入力の句が増える、多段 join が想定外に複雑化する、といった兆候が出た時点で検討する。既に特別扱いになっている `Join` を抽象化する方向なので、段階的に移せる。
 
 ## Proposals
 
