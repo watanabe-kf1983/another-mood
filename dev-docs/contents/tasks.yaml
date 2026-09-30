@@ -648,7 +648,7 @@ categories:
           外部に見られる前提のリポジトリ整備。branch protection 等の GH 設定、
           外部が読む changelog / リリースノートの体裁、メンテナンス期待値の明文化
           (as-is / no-SLA / fork 歓迎)。コントリビューションは積極受け入れしない方針
-          — Issues は有効のまま放置・PR も放置・Dependabot は有効化しない。
+          — Issues は有効のまま放置・PR も放置・Dependabot version updates は有効化しない。
           うるさくなったら (AI slop 等) そのとき対策を再考。
           対応 Python 版の下限判断は Q12 へ分離した。
           PR テンプレート / CONTRIBUTING の要否検討もここ (repo 内部には T4 の

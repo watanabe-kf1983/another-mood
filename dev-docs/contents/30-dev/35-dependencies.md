@@ -14,11 +14,11 @@
 | 装置 | 見るもの | 契機 | 守るもの | 応答 |
 |---|---|---|---|---|
 | Fresh dependency check | pyproject を最新版で解釈した環境 | 週次 | ユーザ（新規インストールが受け取る解決の代理） | cap（除去条件付き）or 修正 |
-| Dependabot security updates | uv.lock + pyproject | CVE 公表時 | 開発環境・CI（lock で動く唯一の場所） | bump PR を即 merge |
+| Dependabot security updates（version updates は使わない——後述） | uv.lock + pyproject | CVE 公表時 | 開発環境・CI（lock で動く唯一の場所） | bump PR を即 merge |
 | `make upgrade-deps` | uv.lock の鮮度 | タスク開始時 | 開発環境の陳腐化・lock 差分の小口化 | lock 単独 PR |
 
-- Fresh dependency check は悪意あるリリースを踏む役（カナリア）を意図的に引き受ける。実行環境は使い捨て VM + read-only トークンで、Actions キャッシュへの書き込みも遮断済み（fresh-deps.yml の `enable-cache: false`）——被害面は限定されている
-- `make upgrade-deps` は義務ではなく原則。正しさは Fresh dependency check が週次で担保しており、儀式の価値は警報の pull 化（通知が届くのを待たず、開発を始めるたびに自分で測り直す）と差分の小口化にある
+- Fresh dependency check は悪意あるリリースを踏む役（カナリア）を意図的に引き受ける。実行環境は使い捨て VM で、Actions キャッシュへの書き込みも遮断済み（fresh-deps.yml の `enable-cache: false`）——被害面は限定されている
+- `make upgrade-deps` を省いても正しさは損なわれない（正しさは Fresh dependency check が週次で担保する）。儀式の価値は警報の pull 化（通知が届くのを待たず、開発を始めるたびに自分で測り直す）と差分の小口化にある
 
 ## タスク開始の儀式
 
