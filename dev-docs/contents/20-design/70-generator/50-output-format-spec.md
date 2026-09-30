@@ -90,7 +90,7 @@ OutputFormat 記述子の `globals` / `filters` は **「出力フォーマッ�
 
 ### render サブテンプレートの output_format 解決
 
-`subject | render("template.md")` でサブテンプレートを呼ぶ場合、`template_name` の拡張子から output_format を引き、対応する Environment で render する想定。テンプレート参照に拡張子が含まれていること（[P2](node:/tasks/P/tasks/P2) で確立、利用者向け仕様は `docs/reference/template.md` の render）に依存する。
+`subject | render("template.md")` でサブテンプレートを呼ぶ場合、`template_name` の拡張子から output_format を引き、対応する Environment で render する想定。テンプレート参照に拡張子が含まれていること（利用者向け仕様は `docs/reference/template.md` の render）に依存する。
 
 現状は MD output_format に決め打ち。複数 output_format を扱うテンプレートが登場した時に実装する制約として記録しておく。
 
@@ -99,7 +99,7 @@ OutputFormat 記述子の `globals` / `filters` は **「出力フォーマッ�
 以下は本仕様では扱わない。実際にニーズが顕在化した時点で別仕様として詰める:
 
 - **CommonMark の他の位置依存正規化** — indented code block、link title、autolink 等。実需が顕在化したら 4 ヘルパと同じ枠組みで追加する
-- **Prose 型に的を絞った mime_type 多態** — text/markdown 以外の prose (text/html をページとして解釈する等) を、レコード直下の `mime_type` を分岐キーに扱う機構。かつて「Typed Value 機構」(値が `mime_type` と `content` を持ち、テンプレートがスキーマに頼らず値自体を見て振る舞いを変える汎用の発想) として検討したが、一般機構としては採らない — ユーザデータに厳密な型を宣言させることがこのツールのアイデンティティであり、スキーマ非依存の値検査はそれと矛盾する。多態を要求しうるのは組み込みコレクション (prose / blob) に限られ、型はレコード直下の `mime_type` (envelope のヘッダ相当、[normalizer.md M9](../50-normalizer/10-normalizer.md) 参照) が持つ。機構はその布石の上に、実需が顕在化した時点で Prose 型特化として詰める
+- **Prose 型に的を絞った mime_type 多態** — text/markdown 以外の prose (text/html をページとして解釈する等) を、レコード直下の `mime_type` を分岐キーに扱う機構。かつて「Typed Value 機構」(値が `mime_type` と `content` を持ち、テンプレートがスキーマに頼らず値自体を見て振る舞いを変える汎用の発想) として検討したが、一般機構としては採らない — ユーザデータに厳密な型を宣言させることがこのツールのアイデンティティであり、スキーマ非依存の値検査はそれと矛盾する。多態を要求しうるのは組み込みコレクション (prose / blob) に限られ、型はレコード直下の `mime_type` (envelope のヘッダ相当、[blob-spec.md](../40-communication/30-blob-spec.md#レコード形状の判断) 参照) が持つ。機構はその布石の上に、実需が顕在化した時点で Prose 型特化として詰める
 - **`md` 以外の output_format の具体仕様** — `html` / `adoc` / `sql` / `mermaid` の escape 関数とラッパーフィルタ。各 output_format を扱うテンプレートを実際に導入する段階で詰める
 - **入れ子 output_format** — FreeMarker の `XML{HTML}` のような「外側 XML / 内側 HTML で二重 escape」の表現。Markdown 内の Mermaid fence のような実需はあるが、単一フォーマットで動く基盤を確立した後に検討する
 - **ブロック単位の output_format 切替構文** — Twig の `{% autoescape 'js' %}` 相当。テンプレート内で部分的にフォーマットを切り替える独自タグ。入れ子 output_format と同じ理由で後送り
