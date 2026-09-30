@@ -1,0 +1,52 @@
+name: Pages
+
+# Publishes the gallery (pages/) and every showcase, built from main. The site
+# follows main rather than releases: README links here and the gallery links
+# back to main's sources, so one ref covers the whole round trip. The copy
+# matched to an installed version is the one the package ships.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Runs queue rather than cancel, so a deployment in flight is never cut off.
+# Any run rebuilds everything, so the one left queued covers the rest.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The version is derived from the nearest release tag, which the
+          # default shallow clone does not fetch.
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+
+      - run: uv sync --locked
+
+      - run: make pages
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

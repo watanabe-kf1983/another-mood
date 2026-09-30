@@ -3,3 +3,4 @@
 - **[Guides](guides.md)** — Walks through concepts, Quick Start, workflow, schema and content, views, and templates in a single file.
 - **[Reference](reference/index.md)** — Per-feature reference for CLI commands, schemas, views, templates, and more.
 - **[Using with AI agents (MCP)](mcp.md)** — Install and configure the Another Mood MCP server in coding agents.
+- **[Showcases](https://watanabe-kf1983.github.io/another-mood/)** — The sample projects under `showcase/`, built and hosted, each linked to its sources.

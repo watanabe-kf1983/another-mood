@@ -1,0 +1,17 @@
+type: object
+additionalProperties: false
+properties:
+  blueprints:
+    type: array
+    description: The bundled sample projects, in the order `mood blueprint list` shows them. The file is the blueprint manifest itself, linked in from `showcase/index.yaml`.
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Directory name under `showcase/`, and the name `mood blueprint apply` takes.
+        description:
+          type: string
+          description: One-paragraph summary of what the sample demonstrates.
+      required: [name, description]

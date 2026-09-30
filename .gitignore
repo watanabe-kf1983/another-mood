@@ -34,3 +34,6 @@ reports/
 
 # OS files
 .DS_Store
+
+# GitHub Pages site (make pages)
+/_site/
