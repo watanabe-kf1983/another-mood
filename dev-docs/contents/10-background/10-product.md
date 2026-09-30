@@ -10,8 +10,7 @@
 
 ### 背景と経緯
 
-元々は「要件定義を省力化するツール」として構想。
-ERD、DFD、CRUDマトリクス等の要件定義成果物を生成しようとしていた。
+元々は「要件定義を省力化するツール」として構想した。要件定義の最終成果物（FP 法で計測できる粒度の機能一覧）と、その根拠になる ERD・DFD・CRUD マトリクス・ユースケース記述は相互に関連しており、手作業では整合性の維持に見落としが出る。整合性チェックは人間も LLM も見落とすので機械的に行うべきだと考え、Claude Code に Markdown を直接編集させる案ではなく、メタデータを YAML で記述してビルドツールで検証・生成する案を採った。
 
 議論の過程で、本質的に必要なのは以下だと気づいた：
 
@@ -19,11 +18,11 @@ ERD、DFD、CRUDマトリクス等の要件定義成果物を生成しようと�
 - 整合性チェックは FK 制約として汎用的に表現できる
 - 作るべきは**汎用ドキュメントジェネレータ**である
 
-詳細な経緯: [another-mood-original.md](20-another-mood-original.md)
+要件定義の成果物群そのものは、ツールの機能ではなく [showcase](../20-design/80-showcase/10-system-dev-docs.md) として提供する。
 
 ## Key Concepts
 
-- **Schema**: データ構造を定義（`definition/schema.yaml` 1 ファイル、素の JSON Schema サブセット）。参照整合性 (references) は将来仕様
+- **Schema**: データ構造を定義（`definition/schema.yaml` 1 ファイル、素の JSON Schema サブセット）。参照整合性は `x-ref` 拡張キーワードで宣言する
 - **Data**: 実際の値（YAML ファイル群、Git管理）
 - **Views**: データの結合・集約を定義（YAML DSL）
 - **Templates**: 見た目の定義（Jinja2）

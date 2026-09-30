@@ -153,7 +153,7 @@ class はアンカーパスの構築には登場しない。
 
 #### Blob の例外（ファイルとして解決）
 
-blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[normalizer.md](../50-normalizer/10-normalizer.md#バイナリファイルの取り扱い-h1-h4-h7) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
+blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[blob-spec.md](../40-communication/30-blob-spec.md#出力配置-アンカーパス--出力アドレス) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
 
 - **path 部**: source ページから `blob/<id>`（＝ anchor_path の先頭 `/` を落としたファイルパス）への相対パス。`node_map` のキー一致でノードを引く点は他ノードと共通だが、URL 化の起点が `page_path`（分割 `.md` ページ）でなくファイルパスになる
 - **fragment 部**: 付けない。blob は着地点 `<a id>` を持たず（[アンカーの発行](#アンカーの発行)は主題ノードのみ・見出しは native）、fragment に anchor_path を乗せる一般則は blob には適用しない
@@ -247,7 +247,7 @@ path 部がページ（prose ノード）を、`#エラー処理` がページ�
 
 `[text](node:…)` のインライン形だけを解決する。参照形（`[text][label]` + 別行 `[label]: node:…`）と autolink（`<node:…>`）は **恒久的に非対応**（後回しの deferral でなく非ゴール）。理由:
 
-- A5 が生成するのはインライン形のみ。参照・autolink が出るのは手書きの場合だけで、実利用上の頻度はきわめて小さい（インライン ≫ 参照 > autolink）
+- Normalizer のリンク正規化が生成するのはインライン形のみ。参照・autolink が出るのは手書きの場合だけで、実利用上の頻度はきわめて小さい（インライン ≫ 参照 > autolink）
 - autolink は素だと表示テキストが URL になり、参照形は未解決時の plain 化が「リンク位置」と「定義行」に跨って綺麗に畳めない — どちらも対応コストに対し需要が薄い
 - 利用者には「手書きの `node:` 参照はインライン形で書く」と案内すれば足りる
 
@@ -265,7 +265,7 @@ prose body 中の `node:` リンク先を、表示先ページからの相対 UR
 
 relink は author の明示適用（`{{ prose.content | relink }}`）を設計とし、システムによる暗黙適用は採らない（`under_heading` 等との合成時に silent に壊れるため。理由は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) が正本）。
 
-未解決の `node:` 参照は MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）どおり `[text]` に畳む。ビルドレポートへの警告は `link` 側と揃えて [B10](node:/tasks/B/tasks/B10) で後日扱う。実装機構は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) を正本とする。
+未解決の `node:` 参照は MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）どおり `[text]` に畳む。ビルドレポートへの警告は未実装で、`link` 側と揃えて後日扱う。実装機構は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) を正本とする。
 
 ## Internal Design
 
@@ -287,5 +287,5 @@ relink は author の明示適用（`{{ prose.content | relink }}`）を設計�
 
 ### 未決事項
 
-- **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（[F4 / D 群と連携、未タスク化](node:/tasks/F/tasks/F4a)）
+- **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（未タスク化）
 - **一意でないアンカーパスの扱い**: NodeMap はアンカーパスをキーとする dict で、一意でないノードは後勝ちに畳まれる（view では[一意性](#一意性)のとおり正当に起こる）。構築時に検出してそこへのリンクを抑止する、あるいは警告する余地はあるが、`PageCollisionError` の手前でどこまでやるかは未検討

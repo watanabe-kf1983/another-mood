@@ -17,7 +17,7 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 ### レコード形状の判断
 
 - **id は拡張子込み** の contents 相対パス。落とすと `fig.png` / `fig.jpg` が衝突する。prose の拡張子なし id は「.md が唯一の拡張子だから成立した省略」であり、blob には適用しない
-- **body を持たせない** — blob は payload (content) を持たないので、mime_type を包む階層に指すものがない。将来 text/html 等で inline content を持つ余地はレコード直下への `content` 追加で足りる (body 不要)。prose も M9 でフラット化し `{id, ..., mime_type, content}` に揃えた
+- **body を持たせない** — blob は payload (content) を持たないので、mime_type を包む階層に指すものがない。将来 text/html 等で inline content を持つ余地はレコード直下への `content` 追加で足りる (body 不要)。prose も同じくフラットな `{id, ..., mime_type, content}` に揃えてある
 - mime_type を凍結表からのみ導出する理由・絶対パスを載せない理由 (いずれも診断ビュー・中間 YAML の可搬性) は `source_loader.py` の docstring にある。バイト列自体をデータモデルに載せないのは、base64 が肥大・メモリ・diff 破壊を招くため (id が実パスを復元でき、コピー役はそこからバイトを読む)
 - **blob レコードはファイル由来のみ** — YAML への blob レコードの手書きは normalize が FileValidationError で弾く (レコードはファイル自身が定義する。手書きはバイトの裏付けがないか、ファイル由来レコードとの重複にしかならない)。手書き id をパスとして解釈する経路は作らない (トラバーサル・YAML 再読み込みの穴を防ぐ)
 
