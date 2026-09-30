@@ -22,7 +22,7 @@ data/ の作成・更新・削除（CUD）は AI が直接ファイルを編集�
 
 利用者向けドキュメントの canonical は `docs/` の raw Markdown として一元管理し、複数チャネルで提供する:
 
-- **GitHub**（現状） / **GitHub Pages**（将来）: 人間がブラウザで読む
+- **GitHub** のリポジトリ閲覧（将来はドキュメントサイト）: 人間がブラウザで読む
 - **MCP Resources / `list_docs`・`read_doc` Tools**: AI エージェントがオンデマンドで読む。同じ素材をクライアント差吸収のため両経路で公開
 - **CLI --help**: 短い要約のみ。詳細はドキュメントサイト参照
 
@@ -84,35 +84,14 @@ AI エージェントのツール実行モデルは同期的なリクエスト�
 
 ### 背景: watch をバックグラウンド化しない理由
 
-当初は `mood watch --detach` + MCP の start_watch / stop_watch ツールを提供し、エージェントから watch server をバックグラウンド起動・停止できるようにする想定だった。設計議論の結果 punt し、人間が visible terminal で `mood watch <dir>` を foreground 起動する運用に倒した。
+当初は `mood watch --detach` と MCP の start_watch / stop_watch ツールで、エージェントから watch server を起動・停止できるようにする想定だった。採らず、人間が visible terminal で `mood watch <dir>` を foreground 起動する運用に倒した。エージェントは利用者に「別ターミナルで `mood watch <dir>` を実行してください」と案内し、この案内は Server Instructions に含める。
 
-**判断根拠**
+- **価値核が小さい**: エージェントが watch を制御できることの実利は「session 開始時の 1 コマンド省略」止まり。watch は session を跨いで長時間使うもので、session ごとに start / stop するわけではない
+- **保守負債が割に合わない**: subprocess / signal / cross-platform 分岐で 200 行規模。CI が `ubuntu-latest` 限定なので Windows での回帰検出も難しい
+- **UX が劣化する**: hidden daemon にすると build / validation エラーをその場で観察する経路が断たれる
+- **MCP の射程外**: MCP は同期 RPC が基本で、session を outlive する resource のライフサイクル管理は仕様の射程外。主要な MCP サーバ（Playwright / GitHub / Docker）も session 跨ぎの daemon 管理を避けている
 
-- **価値核が小さい**: エージェントが watch を制御できることの実利は「session 開始時の 1 コマンド省略」止まり。watch は session を跨いで長時間使う性質のもので、session ごとに start/stop するわけではない
-- **保守負債が割に合わない**: 推定 +200 LOC（codebase ~5% 増）、subprocess / signal / cross-platform 分岐が必要。subprocess 系は歴史的に bug の温床で、特に Windows を含む cross-platform では動作確認コストが高い（CI が `ubuntu-latest` 限定なので Windows での回帰検出は困難）
-- **UX が逆に劣化する**: watch を hidden daemon にすると build / validation エラーをユーザがその場で観察する経路が断たれる。live フィードバック性は visible terminal での foreground 起動に勝てない
-- **本質的に人間用機能**: 「背景: watch モードが AI エージェント向けに不要な理由」の通り、watch はエージェントが消費するものではない。それを「人間に代わってエージェントが起動する」薄いラッパに過ぎない start/stop は、設計上の必須度が低い
-
-**MCP プロトコルの射程との関係**
-
-MCP プロトコル自体が「同期 RPC + 進捗通知 + キャンセル」を基本とし、session を outlive する resource のライフサイクル管理は仕様の射程外（async 概念がない、background task supervision の primitive もない）。実際、主要な MCP サーバは session 跨ぎの background daemon 管理を **避ける** 設計を採っている:
-
-- **Playwright MCP**: browser を MCP server の子プロセスとして connection 中だけ alive。session 終了で browser も終了
-- **GitHub MCP**: API wrapper に徹する（resource lifecycle は GitHub 側で持続）
-- **Docker MCP**: container の lifecycle は OS の Docker daemon に委譲し、MCP は client 役
-
-「session 跨ぎで persist する watch を MCP 経由で制御する」は、本ツール固有の難所というより **MCP エコシステム全体が踏み込んでいない領域**。punt したのは、避けるべき難所として認識した上での選択であり、エコシステムの傾向とも整合的。「正攻法」が HTTP + 自前 daemon を要求するのは、MCP の射程を超えるからこそ別プロトコルが要る、という関係。
-
-> **メンタルモデル**: MCP は「**エージェントの知覚と作用域を拡張する**」プロトコル。同期 RPC で扱える範囲のみを射程とし、background プロセスの supervision や session 跨ぎ state は射程外。
-
-**採用する運用**
-
-エージェントは user に「`mood watch <dir>` を別ターミナル（Windows コマンドプロンプト等）で実行してください」と案内する。Server Instructions にツール横断のガイダンスとして含める。
-
-**将来再検討の入口**
-
-- **正攻法路線**: mood をサービス常駐化、watch をその子、MCP は HTTP で常駐サーバと話す（Bazel daemon / Docker Desktop 流）。小ツール域を超える規模感になったら再検討
-- **軽量実装路線**: 既存依存の filelock + `subprocess.creationflags` の platform 分岐で cross-platform PID file daemon は ~125 LOC で実現可能。Arch A（CLI の `mood watch` 自身が PID file lock を握る、`mood start` は `mood watch` を subprocess として spawn する）採用なら process 枚数も増えない。詳細は punt 決定時の議論履歴を参照
+再検討の入口は二つ。mood をサービス常駐化し MCP は HTTP で常駐サーバと話す正攻法（Bazel daemon / Docker Desktop 流。小ツール域を超えたら）と、既存依存の filelock と `subprocess.creationflags` の platform 分岐で PID file daemon を組む軽量路線（`mood watch` 自身が lock を握り `mood start` がそれを spawn する形なら 125 行程度）。
 
 ## Internal Design
 
