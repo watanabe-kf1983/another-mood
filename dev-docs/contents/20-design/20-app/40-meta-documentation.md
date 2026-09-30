@@ -124,13 +124,13 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ページ生成ビュー (`__entity_defs` / `__view_defs` / `__data`) は、id が `__` で始まる catalog-internal なエンティティ・ビューを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.views`) や built-in メタビュー自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
 
-`__entity_defs` / `__view_defs` は index の一覧 (Entities / Views) と各 per-item ページの両方を 1 本で駆動する (`__data` が駆動するのはページ生成のみ)。以前は一覧用 (`__user_entity_roots` / `__user_queries`、user 限定) とページ生成用 (内部オブジェクト込みの全件) を別ビューに分け、内部オブジェクトのページも生成していた。
+`__entity_defs` / `__view_defs` は index の一覧 (Entities / Views) と各 per-item ページの両方を 1 本で駆動する (`__data` が駆動するのはページ生成のみ)。
 
 #### 背景: なぜ内部オブジェクトのページを出さないか
 
 `__definition.*` やメタビュー自身のページは meta-meta な診断で、日常の編集では参照されない。出力ツリーに常時並ぶと、利用者が見たい自分のエンティティ・ビューのページが埋もれる。カタログの「データ」自体は composer の上流出力として常に存在し ([自己記述カタログ](#自己記述カタログ-__definition)) テンプレートを駆動し続けるので、抑止するのは診断「ページ」だけで、機能は失われない。
 
-一覧用ビューとページ生成用ビューは user フィルタを足すと `from` / `where` がほぼ一致するため、1 本に統合した (`__entity_defs` が `__user_entity_roots` を、`__view_defs` が `__user_queries` を吸収)。ER 図用の `__entity_tree` は descendant を含む別形なので残す。
+一覧とページ生成を 1 本のビューで駆動するのは、user フィルタを足すと両者の `from` / `where` がほぼ一致するため。ER 図用の `__entity_tree` は descendant を含む別形なので別ビューのまま。
 
 ## Proposals
 
