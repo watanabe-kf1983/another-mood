@@ -6,7 +6,7 @@
 
 ### ベースイメージ
 
-Python + uv が使えるイメージを選定する。
+`mcr.microsoft.com/devcontainers/base:ubuntu`。Python 本体は入れず、uv feature が `.python-version` の interpreter を調達する。
 
 ### Features
 
@@ -88,16 +88,18 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | language-server | LSP 経由のコード解析（定義ジャンプ、参照検索等） |
 | ast-grep | 構文パターンによるコード検索 |
 | context7 | ライブラリドキュメントの取得 |
-| playwright | ヘッドレスブラウザ駆動。Mermaid 等の生成図を実機レンダリングして見た目を検証する用途。`--headless` 固定。 |
+| playwright | ヘッドレスブラウザ駆動。Mermaid 等の生成図を実機レンダリングして見た目を検証する用途。`--headless` 固定 |
+| another-mood | このリポジトリ自身の MCP サーバ（`uv run mood-mcp`）。dev-docs / showcase を編集する際の dog-fooding |
 
-language-server は言語に応じた LSP サーバを指定する（Python なら pyright 等）。テストランナーの MCP サーバは、採用するテストフレームワークに応じて選定する。
+language-server は pyright-langserver を `--stdio` で起動する。
 
 ## .gitignore
 
-言語非依存で維持するパターン:
+Python の生成物（`__pycache__/`、`.venv/`、各ツールのキャッシュ）のほかに無視するもの:
 
 - `reports/` — テスト・カバレッジレポート
-- `.claude/settings.local.json` — Claude Code ローカル設定（個人の API キー等）
+- `/.another-mood/` — `mood build` の出力
+- `/_site/` — `make pages` が組む GitHub Pages サイト
+- `/.playwright-mcp/` — Playwright MCP の作業ファイル
+- `.claude/settings.local.json` — Claude Code の個人設定
 - `.DS_Store` — macOS メタデータ
-
-Python 固有のパターン（`__pycache__/`, `.venv`, `.pytest_cache/` 等）は `.gitignore` に追加済み。

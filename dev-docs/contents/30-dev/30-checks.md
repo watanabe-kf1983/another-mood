@@ -15,12 +15,7 @@
 
 ## IDE（保存時）
 
-VSCode の `editor.formatOnSave` でファイル保存時にフォーマッタを実行する。
-
-設定すべき項目:
-
-- `editor.formatOnSave: true`
-- デフォルトフォーマッタをプロジェクトのフォーマッタに設定
+VSCode の `editor.formatOnSave` でファイル保存時に Ruff を実行する（設定は [environment.md](20-environment.md) の VSCode 節）。
 
 ## Git commit（pre-commit hook）
 
@@ -35,13 +30,15 @@ Claude Code の Edit/Write ツール使用後にフォーマッタを自動実�
 
 ## CI（GitHub Actions）
 
-プルリクエストと main ブランチへの push で全チェックを実行する:
+プルリクエストと main ブランチへの push で `make ci` を実行する。ローカルで同じ一式を回すのもこのターゲット:
 
 1. フォーマットチェック（修正ではなく差分検出のみ）
 2. Lint
 3. 型検査
 4. テスト + カバレッジ（90% 以上）
 5. シークレット検知
-6. テストレポートをアーティファクトとしてアップロード（retention: 30日）
+6. dev-docs / pages / 各 showcase のビルド
+
+テストレポートはアーティファクトとしてアップロードする（retention: 30日）。
 
 上記一式を、対応 Python 版の両端（3.12 / 3.13）でマトリクス実行する。宣言した下限が実際に動くことを保証するのがマトリクスの主目的で、範囲と理由は [setup.md](10-setup.md) を参照。`fail-fast: false` にしてあるので、片方が落ちても他方の結果は取れる。
