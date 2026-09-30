@@ -311,6 +311,20 @@ class Grouped(QueryNode):
 
 
 @dataclass(frozen=True)
+class BranchPlacement:
+    """A branch, where it goes in the output catalog, and when it is there.
+
+    ``source`` is the read-side path whose presence on a row decides the
+    branch's: the row holds the branch exactly when it holds ``source``.
+    The root ``()``, on every row, says the branch is on every row.
+    """
+
+    branch: dc.Branch
+    path: KeyPath
+    source: KeyPath
+
+
+@dataclass(frozen=True)
 class SelectItem:
     """A single field projection: read ``item``, write it at ``as_``.
 
@@ -333,16 +347,21 @@ class SelectItem:
             return out
         return put(out, self.as_, value)
 
-    def derive(self, catalog: dc.Node) -> dc.Branch:
-        """The branch this item lands as; :attr:`as_` says where."""
+    def derive(self, catalog: dc.Node) -> BranchPlacement:
+        """The branch read at :attr:`item`, bound for :attr:`as_`."""
         # The whole subtree comes along, mirroring apply's ``pluck``.
-        edge, node = catalog.descend(self.item)
-        return replace(edge, name=self.as_key()), node
-
-    def as_key(self) -> str:
-        # Transitional: the alias is carried as segments, but derive still
-        # writes it as one literal key until the catalog side takes a path.
-        return ".".join(self.as_)
+        edges, node = catalog.reach(self.item)
+        # The deepest optional edge on the way: a row holds it exactly when
+        # it holds the value, since every edge below is required and every
+        # edge above is there whenever it is.
+        optional_depths = [
+            depth for depth, edge in enumerate(edges, 1) if not edge.required
+        ]
+        return BranchPlacement(
+            branch=(edges[-1], node),
+            path=self.as_,
+            source=tuple(e.name for e in edges[: max(optional_depths, default=0)]),
+        )
 
 
 @dataclass(frozen=True)
@@ -366,11 +385,23 @@ class Select(QueryNode):
                     f"item '{'.'.join(earlier)}'",
                     offender=later[0],
                 )
-        return dc.Node(children=[item.derive(catalog) for item in self.items])
+        return self._land([item.derive(catalog) for item in self.items])
 
     def _project(self, record: Record) -> Record:
         empty: Record = {}
         return reduce(lambda out, item: item.apply(record, out), self.items, empty)
+
+    @staticmethod
+    def _land(placements: Sequence[BranchPlacement]) -> dc.Node:
+        """The catalog node the ``placements`` build up, in the order given."""
+        return dc.Node(children=[Select._at_root(p) for p in placements])
+
+    @staticmethod
+    def _at_root(placement: BranchPlacement) -> dc.Branch:
+        # Transitional: each placement takes one edge at the root, its path
+        # as one literal key, until landing nests.
+        edge, node = placement.branch
+        return replace(edge, name=".".join(placement.path)), node
 
     @classmethod
     def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
