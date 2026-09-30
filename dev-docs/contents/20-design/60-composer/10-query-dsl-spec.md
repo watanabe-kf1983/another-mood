@@ -154,7 +154,7 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ## Proposals
 
-### ドット名の意味論統一 (E14, E15)
+### ドット名の意味論統一 (E14)
 
 #### 問題
 
@@ -182,132 +182,212 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 書き側のドットも入れ子として解釈する。`select: - item: hobby.level` の出力は `{"hobby": {"level": "pro"}}`。MongoDB の projection（`{"hobby.level": 1}` が入れ子を保つ）、TOML の dotted key（`hobby.level = "pro"` はテーブル `hobby` の定義）と同じ意味論。
 
-これにより次の不変条件が立つ:
+##### 不変条件
 
 - **データのキーはドットを含まない**。`contents/` 由来はもとより、view 出力も含めて
-- **直列化カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）。メモリ内の `dc.Node` / `dc.Edge` にドットは無いが、ワイヤ形式である `Attribute.id` には残るので、この不変条件は木の形とは別に必要
+- **直列化カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）
 
-スロットごとの意味:
+##### カタログ出力の `required`
 
-- `select[].as`（省略時 `item`）: 書き込み先パス。省略時は元と同じ位置に入れ子を保って書く。`item: hobby` はオブジェクト丸ごと、`item: hobby.level` は `hobby` の中の `level` だけを持つ部分オブジェクト。同じ親に書く複数 item（`hobby.level` と `hobby.pets`）は一つの `hobby` に合流する
-- `flatten.as`（省略時 `of`）: 書き込み先パス。`of` の位置の配列は除去し、要素を `as` の位置に書く。`of` と `as` が同じなら「その場で要素に置き換え」で、ドット入り `of` でも元の配列が残らない
-- `join.as` / `join.flatten.as`: 書き込み先パス
-- `grouped.by`: グループ行のキー値を `by` のパスの位置に書く（`{"hobby": {"level": "pro"}, "members": [...]}`）。別名の口は足さない
-- `grouped.as`: 書き込み先パス
+`required` の意味は変えない。JSON Schema と同じく、親のオブジェクトがあれば必ずあるという親に対する相対的な性質であり、「全行にある」という無条件の存在性ではない。書き込み先パスで合成されたオブジェクトとその子についても、derive はこの意味で正しい値を出す。
 
-**カタログ上の表現**: 書き込み先パスはカタログの木をそのまま降りる。`as: a.b` は `a`（type=object）の子 Node に `b` を置き、`as: a.b` と `as: a.c` は一つの `a` に合流する。途中のノードが無ければ作る。作らないと下流の view（ビュー間参照）が `item: a` でオブジェクトごと読めず、「データには `a` があるのにカタログには無い」という、この提案がまさに潰しに行っている非対称を再生産することになる。
+##### 空の object
 
-平坦形（親エッジ + ドット名の子エッジ）に正規化する案は採らない。ドット名の親の組み立てと「同一の書き込みから出た親子」の持ち回りのために、カタログにもデータにも対応しない第三の表現が要るためで、E14 の着手時に実際に書いて読めないことを確認した。
+中身の無い object は、レコードにもカタログにも残さない。書き込む値が無ければ途中のオブジェクトごと省き、除去で空になったオブジェクトは祖先まで遡って畳む。「nullable はキー省略」の原則の適用。
 
-**合成した中間ノードの `required`**: 途中のノードを作るとき、その `required` は**直下の子のうち一つでも「行に必ず存在する」なら yes** とする。子の `required` の OR ではない。`required` は「親が在るなら在る」という条件付きの意味であり、「行に必ず在る」という無条件の存在性とは別の問いだからである。
+##### 重なりの判定
 
-実例として、`showcase/japanese-table-design` は `列.参照` が任意で `列.参照.テーブル` / `列.参照.列` が必須:
+二つの書き込みが同じ場所を取り合うかどうかは、次の一つの規則で決める。
 
-```yaml
-select:
-  - item: 参照.テーブル
-    as: 参照先.テーブル
-  - item: 参照.列
-    as: 参照先.列
-```
+**二つの名前は、片方がもう片方の先頭部分になっていたら重なる。** 同じ名前（`a` と `a`）も、一方が他方の中を指す名前（`a` と `a.c`）も重なりで、derive 段階でエラーにする。兄弟（`a.b` と `a.c`）は重なりではなく、同じ親の中に書いた順で並ぶ（[同じ親に書く複数の書き込みは合流する](#同じ親に書く複数の書き込みは合流する)）。
 
-子はどちらも `required=yes` だが、`参照` を持たない列の行には `参照先` が丸ごと無いので、合成した `参照先` は `no` でなければならない。子の OR を取ると嘘になる。
+この判定は、句が新しく書く名前どうしの間だけでなく、句が書く名前と、その句を通った後も行に残っている元の名前との間にも掛ける。句ごとの当てはめは代表例の[重なる書き込みは derive でエラーになる](#重なる書き込みは-derive-でエラーになる)で示す。
 
-各書き込みの「行に必ず存在するか」は節が計算して渡す:
+###### 背景: 重なりを名前の先頭部分の一致で決める理由
 
-| 節 | 値 |
-|---|---|
-| `select` の item | 元パスの各セグメントの `required` の AND（入れ子の木ではパス探索がそのまま与える） |
-| `flatten.as` | `not preserve_empty` |
-| `grouped.by` / `grouped.as` / `join.as` | 常に yes |
+`a` に書くことは「`a` の中身を、何であれ丸ごと引き受ける」宣言で、`a.b` に書くことは「`a` の中の `b` だけを引き受ける」宣言と読む。`a` と `a.c` が重なるのは、丸ごと引き受けた所に別の書き込みが枝を足そうとしたからで、`a.b` と `a.c` が合流できるのは別々の枝をそれぞれ引き受けたからである。`a` の中身が `b` だけでも、`a` の宣言は将来増える子を含めて引き受けているので、`a.b` の宣言とは意味が違う。
 
-一律 `no` に倒す案（嘘はつかないが情報を落とす）は採らない。ドット入り `as:` の主な用途はテンプレートマクロの期待する形に寄せることで、`as: meta.id` / `as: meta.name` のように必須項目だけを畳む形が典型である。そこで `meta` を nullable と書くと、J5 が吐く JSON Schema から型を起こした消費側に不要な null チェックが伝播する。
+MongoDB の projection（`{"a": 1, "a.c": 1}` を Path collision として拒否する）と TOML（inline table として閉じた `a` に `a.c = ...` で枝を足すのはエラー）も同じ規則を採る。どちらもスキーマ無しで逐次評価するために葉に還元できないという事情によるが、名前だけで順序独立を保証できるという利点はここでも同じ。
 
-**欠損時**: 書き込む値が無い（`select` の `item` がレコードに無い）ときは wrapper ごと省く。`hobby: {}` は作らない（「nullable はキー省略」の原則）。
+この規則の代償は「オブジェクトを丸ごと置いてから中に一枝を足す」（`curie as curie` + `sklodowska.marie as curie.marie`）が表現不能になること。何段に分けても、足す段で `curie` が `curie.marie` の先頭部分になるので抜け道は無い。書けるのは `curie` の中身が宣言されているときに葉ごとにほどいた形（`curie.pierre as curie.pierre` + `sklodowska.marie as curie.marie`）だけである。
 
-**重なりの禁止**: 一つの節の出力に現れる書き込み先パスは、同一でも、セグメント単位の接頭辞関係でも駄目で、derive 段階でエラーにする。三つの形がある:
+#### 期待される振る舞い（代表例）
+
+観点ごとに view の書き方と、レコード出力・カタログ出力の両方を示す。レコードは JSON、カタログは葉パス表記で書く。
+
+葉パス表記の凡例: 葉ごとに、外側から `.` で繋いだパスを空白区切りで並べる。子を持つセグメントは object、持たないセグメントは string。エッジの性質は名前の後ろに付ける。`[]` は配列、`?` は任意（親があっても無いことがある）で、印の無いエッジは required。任意の配列は `pets[]?`。
+
+##### 別名は入れ子に書く
 
 ```yaml
 select:
-  - item: hobby            # 1. 冗長: hobby を丸ごと書いた上に
-  - item: hobby.level      #    その中の level をもう一度書く（値は同じ）
-  - item: hobby, as: a     # 2. 上書き: a に hobby を置いた後に
-  - item: name,  as: a.level   #  a.level を別の値で潰す（並び順依存）
-  - item: name, as: b      # 3. 不成立: b は文字列なので
-  - item: id,   as: b.c    #    b.c は存在できない
+  - { item: level, as: hobby.level }
+# レコード: {"level": "pro"}  →  {"hobby": {"level": "pro"}}
+# カタログ: level  →  hobby.level
 ```
 
-完全一致の重なりは E13 で塞いだ。E14 は検査の**形**を変える: 書き込み先パスを一本ずつカタログの木に挿し、**葉と枝がぶつかった時点で衝突**とする。接頭辞を総当たりで比較する形は採らない。`as: a.b` と `as: a.c` は衝突ではなく**合流**（一つの `a` に子が二つ入る）であり、接頭辞比較ではこれを区別できないためである。上の三例はいずれも挿入中に「既に葉のある位置に枝を生やす」「既に枝のある位置を葉で潰す」として落ちる。TOML が同じテーブルの二重定義を禁じるのと同じ規則。
+##### 同じ親に書く複数の書き込みは合流する
 
-**`pluck` の longest-first 廃止**: データキーにドットが無くなるので `json_data_model.pluck` / `split_path` / `match_key` は素朴な `split(".")` に戻す。`data_catalog` 側の照合は既に完全一致なので変更なし。
+子はレコードでもカタログでも書いた順に並ぶ:
 
-**カタログの構造化は不要**: 旧案（`Attribute` / `Edge` に `parent_attribute` を追加）は曖昧さを記録する方法だったが、曖昧さ自体が消えるので名前から機械的に導ける。`SelectItem.derive` は wrapper エッジを選んだときその子 Node をそのまま連れて行くので、別名がパスになってもこの句に足すものは無い。
+```yaml
+select:
+  - { item: level, as: hobby.level }
+  - { item: pets,  as: hobby.pets }
+# レコード: {"level": "pro", "pets": 2, "extra": 1}  →  {"hobby": {"level": "pro", "pets": 2}}
+# カタログ: level pets extra  →  hobby.level hobby.pets
+```
 
-#### 背景: なぜ入れ子であってリテラルではないか
+##### 書く値が無ければ途中のオブジェクトも作らない
 
-`item: hobby.level` → `"hobby.level"` は YAML を書く瞬間には自然に見えるが、自然さが切れるのは使う側で、テンプレートの式が元エンティティと view で変わる。このツールの価値は source を直せば全ページが揃うことにあり、その手前で「同じデータが view を通ると別の書き方になる」のは価値に逆行する。入れ子なら `row.hobby.level` のまま。
+元の `level` が任意なら、`level` の無い行には `hobby` も無い。あれば必ず `level` を持つ:
 
-#### 背景: なぜ別名を識別子に縛らないか
+```yaml
+select:
+  - { item: level, as: hobby.level }
+# レコード: {"name": "Alice"}  →  {}
+# カタログ: name level?  →  hobby?.level
+```
 
-ドット入り `as:` が便利な場面はほぼ無い（テンプレートマクロが期待する形に寄せる程度）。それでも禁止しないのは、禁止の見返りが無いため:
+##### `flatten` の `of` はパスで、配列は元の位置から除かれる
 
-- 重なりチェックは省略時デフォルト（`item` / `of` / `by` のパス）が入れ子に書く以上どのみち必要で、識別子に縛っても判定コードは減らない
-- 正規化形が書き戻せなくなる。`flatten: hobby.pets` は正規化で `{ of: hobby.pets, as: hobby.pets }` になり view_def.md はそれを表示する。ツールが見せる形を source に書き写すとエラーになるのは不整合
-- 語彙が「読みはパス、書きは識別子、ただし省略時はパス」と三段になる。許せば「名前はすべてパス」の一文で済む
+経路の途中のオブジェクトが無い行（`hobby` の無い行）は、配列が空の行と同じ扱い:
 
-docs の説明は「出力先のパス。通常は単一の名前」程度に留める。
+```yaml
+flatten: { of: hobby.pets, as: pet }
+# レコード: {"id": 1, "hobby": {"level": "pro", "pets": ["a", "b"]}}
+#             →  {"id": 1, "hobby": {"level": "pro"}, "pet": "a"}
+#                {"id": 1, "hobby": {"level": "pro"}, "pet": "b"}
+# カタログ: id hobby.level hobby.pets[].name  →  id hobby.level pet.name
+```
 
-#### 却下した代替案
+##### `flatten` の `as` もパスで、要素はその位置に入れ子で書かれる
 
-- **`parent_attribute` の追加**（当初案）: リテラルキーと入れ子の判別情報をカタログに持たせる。曖昧さを温存したまま判別する方法で、テンプレート式の不一致と longest-first は残る
-- **別名に識別子パターンを課す**: 上記のとおり
+```yaml
+flatten: { of: hobby.pets, as: hobby.pet }
+# レコード: {"id": 1, "hobby": {"level": "pro", "pets": ["a"]}}  →  {"id": 1, "hobby": {"level": "pro", "pet": "a"}}
+# カタログ: id hobby.level hobby.pets[].name  →  id hobby.level hobby.pet.name
+```
 
-#### 実装の段階
+##### `of` と `as` の親が同じなら、その場で置き換わる
 
-出力キーの重なり検出（完全一致）は E13 で済んでいる。残りは二段で、中間状態は安全: `pluck` の longest-first は上位互換（キー全体を試してから降りる）なので、E14 の後は常に降りる側に落ちて挙動が変わらない。
+配列のあった位置に要素が入り、兄弟の並びは変わらない。親の object が持つもの（メタデータ・validation）もそのまま残る:
 
-- **E14** — 書き側をパス解釈に変更。中間ノードの合成と重なり検出を含む。この二つを分割しないのは、衝突の検出が書き込み先パスの挿入そのものだからで、切り離すと同じ挿入を二度書くことになる。showcase は `japanese-table-design` の `テーブル.列[].参照`（singleton）を使い、ドット入りの書き込み先を持つ view で入れ子出力を実機確認する
-- **E15** — longest-first 照合の廃止。データ側の `pluck` と、カタログ側の `data_catalog.Node._longest_child_name` の両方。docs 変更なし
+```yaml
+flatten: hobby.pets
+# レコード: {"id": 1, "hobby": {"pets": ["a", "b"]}}
+#             →  {"id": 1, "hobby": {"pets": "a"}}
+#                {"id": 1, "hobby": {"pets": "b"}}
+# カタログ: id hobby.pets[]  →  id hobby.pets
+```
 
-#### 着手時に決める点
+```yaml
+flatten: { of: tasks, as: task }
+# レコード: {"a": 1, "tasks": ["x", "y"], "z": 2}
+#             →  {"a": 1, "task": "x", "z": 2}
+#                {"a": 1, "task": "y", "z": 2}
+# カタログ: a tasks[] z  →  a task z
+```
 
-E14 の着手時に露見し、まだ決めていない点:
+##### 除去で空になったオブジェクトは落ちる
 
-- **`flatten.of` がドットで `as` が別位置のとき、空になった親を畳むか**。`of: hobby.pets, as: x` で配列を除去した結果 `hobby` が空になったとき、`hobby: {}` を残すか落とすか。「nullable はキー省略」の原則からは落とす側だが、明示していない
-- **`flatten` / `join` の「既存属性との衝突」も同じ挿入に載せるか**。現状この二つは完全一致でしか衝突を見ていない（`flatten alias '...' collides with an existing attribute`）。既存の `hobby` に対する `flatten.as: hobby.x` のような接頭辞関係も弾くなら、既存の children ごと木に挿す形になる。「一つの節の出力に現れる書き込み先パス」の読みとしてはそうなるが、明示していない
+```yaml
+flatten: { of: hobby.pets, as: pet }
+# レコード: {"id": 1, "hobby": {"pets": ["a"]}}  →  {"id": 1, "pet": "a"}
+# カタログ: hobby.pets[].name  →  pet.name
+```
 
-#### E13 からの申し送り
+##### `required` は親に対する相対的な性質として導く
 
-E13（完全一致の重なり検出）を実装した時点で見えていた、E14 で必ず踏むべきケース:
+任意の親を通して読んだ値は、外に書けば任意になる:
 
-- **offender の決め方も置き換える**。E13 の `select` は「合流後の children から重複名を探し、それと等しい `as` を後ろから引く」形で、完全一致しか弾かない間は等値で必ず引ける（3 段ネストの singleton カタログで衝突 20,600 通りを総当たりして確認）。接頭辞関係を弾くようになると `as: a` と `as: a.b` のように「衝突キーと等しい `as` が無い」組が入り、この引き戻しは `StopIteration` になる。木への挿入方式ではこの引き戻し自体が不要になる — 衝突は挿入の最中に検出され、その時点で「どの item を入れようとして落ちたか」が手元にあるので、その item の `as` をそのまま offender にできる。`as: a.b` が先／`as: a` が先の両方の並び順で、診断がどちらの行を指すかをテストする
-- **offender に derive が組み立てた文字列を渡さない**。位置を持たない `str` を渡すと `query_deriver._diagnostic_from` は利用者エラーではなく内部バグとみなして例外を再送出する。`UserStr` は `+` で位置を落とし、空文字列との連結でも `str` に落ちる（実測）。offender は利用者が書いた値そのものを持ち回る
-- **E13 のスコープ境界テストは反転で消化する**。`test_allows_an_alias_that_is_only_a_prefix_of_another`（`as: a` と `as: a.b` が通ることを固定）は E14 でエラー側に回る。削除ではなく期待の反転で潰す
+```yaml
+select:
+  - { item: hobby.level, as: level }
+# カタログ: hobby?.level  →  level?
+```
 
-#### 過渡的処置の畳み方
+| 元 | `select` | 結果 | 読み |
+|---|---|---|---|
+| `a?.p a?.b.c` | `a.p as a.p`, `a.b.c as a.d` | `a?.p a?.d` | `a` があれば `b`, `c` があるので、`d` も `a` があれば必ずある |
+| `a?.p a?.b?.c` | 同上 | `a?.p a?.d?` | `b` が任意なので、`d` は `a` があっても無いことがある |
+| `a?.p x?` | `a.p as a.p`, `x as a.d` | `a?.p? a?.d?` | `x` はあるが `a` は無い行に `a: {d}` ができるので、`p` は `a` があっても無いことがある |
+| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
 
-カタログ側にも、データ側の longest-first と同じ過渡的処置がある。別名がパスに揃えば、どちらも前提ごと消える:
+`flatten` は行に何も足さない。`preserve_empty: false` なら要素の無い行が落ちるので `of` の経路は残った行の全部にあり、`true` なら元のまま:
 
-- **`Node._longest_child_name` を廃止し、`_descend` を素朴な `split(".")` の下降に畳む**。カタログのエッジ名にドットが入る経路が別名だけになるため
-- **`build_tree` の「親のエッジを持たないドット id はリテラルな 1 エッジ名」フォールバックも同時に落とす**。orphan なドット id を書く経路が無くなる
-- **`test_prefers_a_literal_dotted_edge_over_descent` は前提ごと消える**。E13 の `test_allows_an_alias_that_is_only_a_prefix_of_another` と同じく、削除ではなく期待の反転で潰す
-- **`Grouped.derive` が `by` の全文をエッジ名に写している点も畳む**。`catalog.descend("task.phase")` が返すのは内側の `phase` エッジだが、`Grouped.apply` はレコードのキーに `task.phase` をそのまま書くので、カタログはパスの末端ではなくレコードに合わせてある（`dev-docs` 自身の roadmap ビューが実例）。`by` が書き込み先パスになれば、この写し替えは要らない
+| 元 | `flatten` | 結果 |
+|---|---|---|
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet }` | `hobby.level hobby.pet` |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet }` | `hobby.level pet` |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet, preserve_empty: true }` | `hobby?.level hobby?.pet?` |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet, preserve_empty: true }` | `hobby?.level pet?` |
 
-逆に、**開け直す**必要があるものが一つある:
+##### `grouped.by` はキー値を `by` のパスの位置に書く
 
-- **`Flatten.derive` は `of` を完全一致で解決し、ドット入りの `of` を `unknown attribute` として弾く**。`_unwind` が `of` と同名のトップレベルキーしか行から落とさないのに対し `pluck` はパスとして解決するので、パスを通すと「カタログからは配列が消えたのに行には `hobby.pets` が残る」という不整合になるためである。ビュースキーマも `of` を「intrinsic 配列属性の**名前**」と書いており、テストにも五プロジェクトにもパスを渡す例は無い。`of` をパスとして受け直すなら、`_unwind` の除去側を同じパス解決に揃えるのが条件になる
+別名の口は無い:
 
-一方で**畳んではいけない**ものがある:
+```yaml
+grouped: { by: hobby.level, as: members }
+# レコード: {"id": 1, "hobby": {"level": "pro"}}
+#           {"id": 2, "hobby": {"level": "pro"}}
+#             →  {"hobby": {"level": "pro"}, "members": [{"id": 1, "hobby": {"level": "pro"}}, {"id": 2, "hobby": {"level": "pro"}}]}
+# カタログ: id hobby.level  →  hobby.level members[].id members[].hobby.level
+```
 
-- **`Node.child` / `has_child`（1 エッジ名の完全一致）は E14 後も残す**。仮想ルートのエッジ名は `__definition.entities` のように合成された最上位エンティティ id で、スキーマ由来ではないので E14 では消えない。`descend` が仮想ルート上で呼ばれる経路は無い（`From` と `query_deriver` は完全一致を使う）ので、この二系統の分離は E14 を跨いで残る
+##### 重なる書き込みは derive でエラーになる
 
-#### 波及
+判定は名前をドットで区切ったセグメントの列で行う。文字列としての前方一致ではないので、`hobby` と `hobbyist` は重ならない。
 
-- **breaking**: ドット入りの `as:` / `by:` を書いた既存 view は出力の形が変わる。dev-docs / showcase に該当は無い。PR に `Release-Highlight: breaking`
-- `docs/reference/view.md`: 名前はパスであること、別名の意味、重なりエラーを記述
-- `docs/reference/cli.md` の tap: jq でクォートの要るキーが無くなる（記述の追加は不要）
-- [json-data-model.md](../40-communication/10-json-data-model.md): データキーの不変条件を Internal Design に移す
-- 前提は E13 / M14 / M15。M13 との依存は解消（ルート singleton の吸収は既にドット = 入れ子の規約に乗っている）。J5 の前提は E14 + M13
+`select` は `as` どうしを見る。行を作り直すので、元の名前は残らない。兄弟の合流は[同じ親に書く複数の書き込みは合流する](#同じ親に書く複数の書き込みは合流する):
+
+```yaml
+select:
+  - { item: hobby, as: hobby }
+  - { item: kind,  as: hobbyist }
+# 通る: hobby と hobbyist は別の名前
+```
+
+```yaml
+select:
+  - { item: hobby, as: hobby }
+  - { item: kind,  as: hobby.level }
+# エラー: hobby は hobby.level の先頭部分
+```
+
+`flatten` は `as` と、元の名前から `of` を除いた残りを見る。`as` が `of` と同じ名前のときは[その場の置き換え](#of-と-as-の親が同じならその場で置き換わる)。兄弟に書く例は[`as` もパス](#flatten-の-as-もパスで要素はその位置に入れ子で書かれる):
+
+```yaml
+flatten: { of: hobby.pets, as: hobby }
+# 元: id hobby.level hobby.pets[]
+# エラー: hobby は残る hobby.level の先頭部分
+```
+
+`join` は `as` と、左の行の名前を見る:
+
+```yaml
+join: { to: clubs, on: { left: hobby.club_id, right: id }, as: hobby.clubs }
+# 左: id hobby.level hobby.club_id
+# 通る: hobby.clubs は hobby.level, hobby.club_id と兄弟
+```
+
+```yaml
+join: { to: clubs, on: { left: hobby.club_id, right: id }, as: hobby }
+# 左: id hobby.level hobby.club_id
+# エラー: hobby は左の hobby.level の先頭部分
+```
+
+`grouped` は `as` と `by` を見る:
+
+```yaml
+grouped: { by: hobby.level, as: hobby.members }
+# 通る: hobby.members は hobby.level と兄弟
+```
+
+```yaml
+grouped: { by: hobby.level, as: hobby }
+# エラー: hobby は hobby.level の先頭部分
+```
 
 ### 合成ビュー (E17)
 

@@ -398,3 +398,34 @@ class TestDescend:
         assert not self.TREE.has_child("hobby.level")
         with pytest.raises(dc.UnknownChildError):
             self.TREE.child("hobby.level")
+
+
+class TestReach:
+    """``reach`` is ``descend`` keeping every edge it passed, so a caller
+    can tell how the path's end relates to the row: which of the edges
+    above it are optional, say."""
+
+    TREE = TestDescend.TREE
+
+    def test_returns_the_edges_passed_outermost_first(self) -> None:
+        edges, node = self.TREE.reach("hobby.level")
+        assert [e.name for e in edges] == ["hobby", "level"]
+        assert node == dc.Node()
+
+    def test_ends_on_a_collection_keeping_the_edges_above(self) -> None:
+        edges, node = self.TREE.reach("hobby.pets")
+        assert [e.name for e in edges] == ["hobby", "pets"]
+        assert node.has_child("name")
+
+    def test_a_top_level_name_is_one_edge(self) -> None:
+        (edge,), _ = self.TREE.reach("id")
+        assert edge.name == "id"
+
+    def test_descend_is_the_last_edge_of_reach(self) -> None:
+        edges, node = self.TREE.reach("hobby.level")
+        assert self.TREE.descend("hobby.level") == (edges[-1], node)
+
+    def test_unknown_path_carries_the_whole_path(self) -> None:
+        with pytest.raises(dc.UnknownChildError) as excinfo:
+            self.TREE.reach("hobby.pets.name")
+        assert excinfo.value.name == "hobby.pets.name"
