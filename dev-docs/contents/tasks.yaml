@@ -715,10 +715,8 @@ categories:
         done: true
       R7:
         title: showcase プロジェクトのビルド結果のホスティング
-        note: >-
-          showcase 各プロジェクトのビルド結果 (静的 HTML) を公開ホスティングし、
-          インストール前に Another Mood の成果物を閲覧できるようにする。
         phase: 17
+        done: true
   S:
     title: システム開発ドキュメント
     impl_paths:
