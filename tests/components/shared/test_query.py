@@ -926,6 +926,14 @@ class TestSelectDeriveRequired:
     @pytest.mark.parametrize(
         ("base", "items", "expected"),
         [
+            # A value read through an optional parent is on some rows only,
+            # however required it is under that parent.
+            pytest.param(
+                "hobby?.level",
+                [("hobby.level", ("level",))],
+                "level?",
+                id="through an optional parent",
+            ),
             # One write makes ``target`` on exactly the rows it lands in:
             # ``target`` is on the rows ``level`` was, and ``level`` is on
             # every ``target``.

@@ -399,9 +399,17 @@ class Select(QueryNode):
     @staticmethod
     def _at_root(placement: BranchPlacement) -> dc.Branch:
         # Transitional: each placement takes one edge at the root, its path
-        # as one literal key, until landing nests.
+        # as one literal key, until landing nests.  The edge is required
+        # exactly when its source is on every row: the row is built from
+        # nothing, so nothing the input held under the same name carries
+        # over.
         edge, node = placement.branch
-        return replace(edge, name=".".join(placement.path)), node
+        return (
+            replace(
+                edge, name=".".join(placement.path), required=placement.source == ()
+            ),
+            node,
+        )
 
     @classmethod
     def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
