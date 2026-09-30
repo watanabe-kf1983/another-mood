@@ -97,18 +97,11 @@ erds:                              # 配列 → リスト
       - id: user                   # 別の erd 配下なので user-management.entities.user とは別物
         title: ユーザー（注文視点）
 
-screens:
-  - id: user-list
-    title: ユーザー一覧画面
-
 prose:                             # flat list、id はファイル相対パス
   - id: design/architecture
     title: Architecture
     headings:                      # 本文見出し（markdown-parser-spec.md の見出し抽出）
       - { id: エラー処理, title: エラー処理, level: 2 }
-  - id: design/normalizer/schema-spec
-    title: Schema Specification
-
 blob:                              # flat list、id は拡張子込みファイル相対パス
   - id: covers/cover.png
     mime_type: image/png
@@ -121,10 +114,8 @@ blob:                              # flat list、id は拡張子込みファイ�
 | `/erds/user-management` | user-management の ER図 |
 | `/erds/user-management/entities/user` | user-management 配下の user エンティティ |
 | `/erds/order-flow/entities/user` | order-flow 配下の user エンティティ（衝突しない） |
-| `/screens/user-list` | user-list 画面 |
 | `/prose/design/architecture` | Architecture 散文（id 内 `/` を素通し） |
 | `/prose/design/architecture#エラー処理` | Architecture 本文中の見出し（`headings` セグメントは畳む） |
-| `/prose/design/normalizer/schema-spec` | Schema Specification 散文 |
 | `/blob/covers/cover.png` | cover.png への blob 参照（id 内 `/` を素通し、拡張子込み） |
 
 アンカーパスは **データツリー上の到達経路そのもの** で構成されるため、ネストしたリスト要素間で id が重複してもアンカーパスは衝突しない。
@@ -173,39 +164,13 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 
 ### リンク記法
 
-テンプレート内では **ノード** を `node()` で得て、整形フィルタで仕上げる:
+テンプレートは **ノード** を `node()` で得て、`link` / `label` / `href` / `anchor` で整形する。呼び出しの記法と各フィルタの振る舞いは `docs/reference/template.md` の Linking / Filters / Functions を正本とし、ここには設計判断だけを置く。
 
-```jinja2
-{{ node("erds", erd.id, "entities", entity.id) | link }}
-{# 位置引数 = 生セグメント（各 escape）→ ノード解決 → [<display>](<URL>) #}
-
-{{ node(path="/erds/user-management/entities/user") | link }}
-{# path= = 出来合いのアンカーパスを verbatim 解決（prose / 定数）#}
-
-{{ member | link }}
-{# すでに手にあるノードはそのまま整形できる #}
-
-{{ node("erds", erd.id) | label }}   {# 表示文字列のみ #}
-{{ node("erds", erd.id) | href }}    {# URL のみ #}
-{{ member | link("ER 図") }}         {# display text を明示 override #}
-{{ member | anchor }}                {# <a id="…"> 着地点を発行 #}
-
-{{ node(path="/prose/design/architecture", fragment="エラー処理") | link }}
-{# fragment= = ページ内見出しの slug（見出しノード）#}
-```
-
-- `node(*segs, path=None, fragment=None)` — **ノード**を得る global 関数。引くアンカーパスを位置引数・`path=`・`fragment=` の三部品から組み、**どれが escape されるかが呼び出し側から見える**:
-    - **位置引数 `segs`**: 生の値を各 **escape** し、`/seg` の形で後置する（最多の既定）。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
-    - **`path=`**: 出来合いのパス（prose id・定数・root `/`）を **verbatim** に前置する。
-    - **`fragment=`**: 見出し slug を `#{fragment}` として **raw** で末尾に付ける（escape しない — slug は github 互換で `#` を含まず、`#` は構造的セパレータ。[Prose の例外](#prose-の例外)）。
-    - **併用**: `path=` を base に `segs` でその子を掘れ（`node("y", path="/prose/x")` → `/prose/x/y`）、`fragment=` は最後に乗る。片方だけでもよい。
-    - **誤用は例外にしない**: 解決できないアンカーパスは MissingNode として可視化する（例: `/` 始まりの値を位置引数に渡すと `/%2F…` に escape され一致しない。`fragment` 単独も同様。[未解決参照の扱い](#未解決参照の扱い)）。
-- `link` / `label` / `href` — ノード → Markdown リンク / 表示文字列 / URL。
-- `anchor` — ノード → そのノードの着地点 `<a id="{anchor_path}">`。通常は自動刻印が主題に刻むため、本フィルタは主題以外のノードに着地点を手置きするための原始機能（発行の規則と例外は[アンカーの発行](#アンカーの発行)）。
-
-アンカーパス**文字列**だけを返す公開フィルタは置かない。当初セグメントから組む `anchor_path(seg, *segs)` として公開していたが実需が一度も現れず、組み立て自体は `node()` が既に担っているため公開名から外した（構築関数は内部に保持）。`anchor_path` の名は現在、ノードからその文字列を取り出すメタテンプレート専用フィルタが使う（[generator.md のノードメタデータ](10-generator.md#ノードメタデータ)）。
-
-display text は対象ノードから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`link(arg)` のように引数で渡せば override。
+- **escape の所在を呼び出し側から見せる**。`node(*segs, path=None, fragment=None)` はアンカーパスを三部品から組む: 位置引数は生の値を各 escape して後置（1 引数 = 1 セグメント）、`path=` は出来合いのパス（prose id・定数・root）を verbatim に前置、`fragment=` は見出し slug を raw で末尾に付ける（slug は github 互換で `#` を含まず、`#` は構造的セパレータ。[Prose の例外](#prose-の例外)）。三部品は併用でき、`path=` を base に `segs` で子を掘れる。
+- **誤用は例外にしない**。解決できないアンカーパスは MissingNode として可視化する（`/` 始まりの値を位置引数に渡せば `/%2F…` に escape され一致しない。[未解決参照の扱い](#未解決参照の扱い)）。
+- **`anchor` は主題以外のノードに着地点を手置きする原始機能**。主題には自動刻印が刻む（[アンカーの発行](#アンカーの発行)）。
+- **アンカーパス文字列だけを返す公開フィルタは置かない**。当初 `anchor_path(seg, *segs)` として公開していたが実需が一度も現れず、組み立ては `node()` が担っているため公開名から外した。`anchor_path` の名は現在、ノードから文字列を取り出すメタテンプレート専用フィルタが使う（[generator.md のノードメタデータ](10-generator.md#ノードメタデータ)）。
+- **表示テキストは `title` → `name` → `id` → anchor_path 全体のチェイン**。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できないため。
 
 ### Markdown 本文中のアンカー参照
 
