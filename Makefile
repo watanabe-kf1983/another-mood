@@ -1,4 +1,4 @@
-.PHONY: ci format-check lint typecheck test secrets build-projects format mirror-schemas stats upgrade-deps
+.PHONY: ci format-check lint typecheck test secrets build-projects pages format mirror-schemas stats upgrade-deps
 
 ci: format-check lint typecheck test secrets build-projects
 
@@ -19,9 +19,23 @@ secrets:
 
 build-projects:
 	uv run mood build dev-docs
+	uv run mood build pages
 	@for name in $$(uv run mood blueprint list --names-only); do \
 		echo "uv run mood build showcase/$$name"; \
 		uv run mood build showcase/$$name || exit 1; \
+	done
+
+# The GitHub Pages site under _site/: the gallery page at the root and every
+# showcase under showcase/<name>/. The gallery is one page, lifted out of its
+# build's edition directory so that visitors land on it rather than on the
+# cover that a build puts at its root.
+pages:
+	rm -rf _site && mkdir _site
+	uv run mood build pages --var git_commit_id=$$(git rev-parse --short HEAD)
+	cp .another-mood/pages/site/default/index.html _site/index.html
+	@for name in $$(uv run mood blueprint list --names-only); do \
+		echo "uv run mood build showcase/$$name --site-dir _site/showcase/$$name"; \
+		uv run mood build showcase/$$name --site-dir _site/showcase/$$name || exit 1; \
 	done
 
 upgrade-deps:
