@@ -50,7 +50,7 @@ class TestCompose:
                     - id: names
                       from: items
                       select:
-                        - {item: name, as: name}
+                        - {item: name, as: [name]}
                   entities:
                     - id: names
                       item_type:
@@ -124,7 +124,7 @@ class TestCompose:
                     - id: con
                       from: items
                       select:
-                        - {item: name, as: name}
+                        - {item: name, as: [name]}
             """),
         )
         data_catalog = tmp_path / "data-catalog"
@@ -193,8 +193,8 @@ class TestCompose:
                     - id: projected
                       from: items
                       select:
-                        - {item: name, as: name}
-                        - {item: value, as: value}
+                        - {item: name, as: [name]}
+                        - {item: value, as: [value]}
             """),
         )
 
@@ -253,7 +253,7 @@ class TestCompose:
                     - id: entity_ids
                       from: __definition.entities
                       select:
-                        - {item: id, as: id}
+                        - {item: id, as: [id]}
                   entities: []
             """),
         )
