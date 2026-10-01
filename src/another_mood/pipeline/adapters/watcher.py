@@ -1,8 +1,7 @@
 """Watcher — observe paths and invoke callback on changes.
 
 Thin wrapper over watchdog. Events within a burst are coalesced into a
-single callback fire after `debounce` milliseconds of silence. See
-internal/pipeline/pipeline.md for library-selection rationale.
+single callback fire after `debounce` milliseconds of silence.
 """
 
 import threading

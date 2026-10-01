@@ -34,7 +34,7 @@ CLI では、出力ディレクトリ `.another-mood/` を `<projectDir>`（入�
 
 CLI も次節の MCP と同じく入力ディレクトリ内出力に統一すれば、以下の帰結もろとも消える。それでも採らないのは、上の理由——とりわけ gitignore と視界——に正面から反するうえ、CWD 配下のディレクトリを `<projectDir>` にするのが CLI の主要ユースケースだからである。
 
-帰結として、出力は `.another-mood/<CWD から見た projectDir>/` のようにサブディレクトリで分かれる（異なる `<projectDir>` を同時に処理しても衝突しない）。このキーは `<projectDir>` が CWD 配下にあって初めて定義できるので、CWD 外を指す場合（絶対パス・相対 `../` 脱出の両方）は `ProjectConfig.verify()` がエラーで拒否する — basename へフォールバックさせると `/a/proj` と `/b/proj` が同じ `.another-mood/proj/` に着地するため。`out_dir` / `site_dir` / `tmp_dir` は「どこに書き出すか」という別の関心で、CWD 外への出力に正当な用途があるため縛らない。
+帰結として、出力は `.another-mood/<CWD から見た projectDir>/` のようにサブディレクトリで分かれる（異なる `<projectDir>` を同時に処理しても衝突しない）。このキーは `<projectDir>` が CWD 配下にあって初めて定義できるので、CWD 外を指す場合（絶対パス・相対 `../` 脱出の両方）は `ProjectConfig.verify()` がエラーで拒否する — basename へフォールバックさせると `/a/proj` と `/b/proj` が同じ `.another-mood/proj/` に着地するため。`out_dir` / `site_dir` / `tap_dir` / `tmp_dir` は「どこに書き出すか」という別の関心で、CWD 外への出力に正当な用途があるため縛らない。
 
 ### 背景: MCP が .another-mood/ を入力ディレクトリの中に配置する理由
 

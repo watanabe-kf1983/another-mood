@@ -112,8 +112,7 @@ def _iter_top_level(
     lists, with each view's body canonicalized via ``normalize_query``.
 
     The catalog boundary stops at the top level — query body structure
-    (e.g. the ``where:`` AST) is not normalized as catalog data. See
-    design/normalizer/normalizer.md.
+    (e.g. the ``where:`` AST) is not normalized as catalog data.
     """
     check(src_dir, schema)
     for src_file in sorted(src_dir.rglob("*")):
