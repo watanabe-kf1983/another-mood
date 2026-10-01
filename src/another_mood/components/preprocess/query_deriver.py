@@ -3,7 +3,7 @@
 Validates view files against the built-in view schema, parses each
 view's body into a typed Query, and derives the synthesized catalog
 entities (``view: true``) by composing the query's catalog transform
-against the data catalog.  Output YAML carries both the views and the
+against the data catalog.  The output carries both the views and the
 derived entities under ``__definition``.
 """
 

@@ -268,7 +268,7 @@ def load_blob(src: Path, src_dir: Path) -> Mapping[str, object]:
 # table.  The module-level ``mimetypes.guess_type`` instead reads OS mime
 # sources (``/etc/mime.types``, the Windows registry), so it resolves the
 # same extension differently across machines — and a blob's mime_type is
-# baked into the diagnostic views and intermediate YAML, where per-machine
+# baked into the diagnostic views and intermediate JSON, where per-machine
 # variance breaks portability (the same reason blob ids carry no absolute
 # path).  Builtin-only is deterministic per Python version; extensions the
 # frozen table doesn't know (fonts, office formats) fall back to the opaque

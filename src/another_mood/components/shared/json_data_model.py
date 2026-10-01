@@ -246,10 +246,9 @@ def save_model(path: Path, data: object) -> None:
 
     Applies the project's serialization conventions:
 
-    * None-valued keys are dropped recursively per the
-      "nullable は項目自体を省略する" rule (json-data-model.md):
-      leaving nulls in the output makes Jinja2 templates render
-      the string "None".
+    * None-valued keys are dropped recursively: a nullable field is
+      omitted rather than written as null, since a null in the output
+      makes templates render the string "None".
     * ``ensure_ascii=False`` and a 2-space indent keep the file
       readable when it is inspected post-mortem.
 
