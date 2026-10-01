@@ -913,6 +913,22 @@ class TestSelectDerive:
             select.derive(tree("title phase"))
         assert excinfo.value.offender == fourth[0]
 
+    def test_nests_dotted_aliases_in_the_order_first_written(self) -> None:
+        """Siblings converge on one object, kept where its first child
+        put it, as ``put`` builds the record."""
+        select = Select(
+            items=[
+                SelectItem(item="title", as_=("a", "p")),
+                SelectItem(item="title", as_=("b",)),
+                SelectItem(item="phase", as_=("a", "d")),
+            ]
+        )
+        out = select.derive(tree("title phase"))
+        assert [e.name for e, _ in out.children] == ["a", "b"]
+        a_edge, a = out.child_entry("a")
+        assert a_edge == dc.Edge(name="a", type="object", required=True)
+        assert [e.name for e, _ in a.children] == ["p", "d"]
+
 
 class TestSelectDeriveRequired:
     """An edge's ``required`` says the value is there whenever its parent
@@ -941,7 +957,6 @@ class TestSelectDeriveRequired:
                 "name level?",
                 [("level", ("target", "level"))],
                 "target?.level",
-                marks=_TARGET,
                 id="one write",
             ),
             # ``ref`` is on some rows only; ``p`` keeps it on the same rows
@@ -951,7 +966,6 @@ class TestSelectDeriveRequired:
                 "ref?.p ref?.b.c",
                 [("ref.p", ("target", "p")), ("ref.b.c", ("target", "d"))],
                 "target?.p target?.d",
-                marks=_TARGET,
                 id="same rows",
             ),
             # With ``b`` on some of ``ref``'s rows only, ``d`` is on some
@@ -960,7 +974,6 @@ class TestSelectDeriveRequired:
                 "ref?.p ref?.b?.c",
                 [("ref.p", ("target", "p")), ("ref.b.c", ("target", "d"))],
                 "target?.p target?.d?",
-                marks=_TARGET,
                 id="one within the other",
             ),
             # A write from outside ``ref`` lands a ``target`` on rows that
@@ -970,7 +983,6 @@ class TestSelectDeriveRequired:
                 "ref?.p x?",
                 [("ref.p", ("target", "p")), ("x", ("target", "d"))],
                 "target?.p? target?.d?",
-                marks=_TARGET,
                 id="unrelated",
             ),
             # Two writes from the same source object co-occur, so both
@@ -982,8 +994,40 @@ class TestSelectDeriveRequired:
                     ("ref.column", ("target", "column")),
                 ],
                 "target?.table target?.column",
-                marks=_TARGET,
                 id="same object",
+            ),
+            # A write from every row makes ``target`` on every row, and
+            # ``name`` on every ``target``; ``level`` is still on some only.
+            pytest.param(
+                "name level?",
+                [("name", ("target", "name")), ("level", ("target", "level"))],
+                "target.name target.level?",
+                id="one from every row",
+            ),
+            # Each object on the way is on the rows of the write below it,
+            # however deep the way is.
+            pytest.param(
+                "name level?",
+                [("level", ("a", "b", "level"))],
+                "a?.b.level",
+                id="deeper",
+            ),
+            # Two writes from unrelated rows meet under ``t.u``: ``u`` is on
+            # every ``t``, since both are on exactly the rows either write
+            # landed in, while each leaf is on some ``u`` only.
+            pytest.param(
+                "ref?.p x?",
+                [("ref.p", ("t", "u", "p")), ("x", ("t", "u", "d"))],
+                "t?.u.p? t?.u.d?",
+                id="shared way",
+            ),
+            # An object read whole brings its subtree as it is: ``required``
+            # is decided for the edge that lands, not for what hangs below.
+            pytest.param(
+                "ref?.b.c? ref?.b.e",
+                [("ref.b", ("target", "b"))],
+                "target?.b.c? target?.b.e",
+                id="carried subtree",
             ),
         ],
     )

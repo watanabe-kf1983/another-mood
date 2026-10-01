@@ -317,6 +317,9 @@ class BranchPlacement:
     ``source`` is the read-side path whose presence on a row decides the
     branch's: the row holds the branch exactly when it holds ``source``.
     The root ``()``, on every row, says the branch is on every row.
+    Sources compare by prefix: a row holding a path holds every prefix
+    of it, so the rows of a deeper source are among those of a shallower
+    one, and nothing else about two sources' rows is known.
     """
 
     branch: dc.Branch
@@ -393,23 +396,62 @@ class Select(QueryNode):
 
     @staticmethod
     def _land(placements: Sequence[BranchPlacement]) -> dc.Node:
-        """The catalog node the ``placements`` build up, in the order given."""
-        return dc.Node(children=[Select._at_root(p) for p in placements])
+        """The catalog node the ``placements`` build up: each branch at
+        its path, with the objects on the way made up, children in the
+        order first written to.  The row is built from nothing, so
+        nothing the input held under the same name carries over."""
+        # The row itself is on every row.
+        return Select._nest(placements, holder_sources=[()])
 
     @staticmethod
-    def _at_root(placement: BranchPlacement) -> dc.Branch:
-        # Transitional: each placement takes one edge at the root, its path
-        # as one literal key, until landing nests.  The edge is required
-        # exactly when its source is on every row: the row is built from
-        # nothing, so nothing the input held under the same name carries
-        # over.
-        edge, node = placement.branch
-        return (
-            replace(
-                edge, name=".".join(placement.path), required=placement.source == ()
-            ),
-            node,
+    def _nest(
+        placements: Sequence[BranchPlacement], *, holder_sources: Sequence[KeyPath]
+    ) -> dc.Node:
+        """The node the ``placements`` fill, each path relative to it.
+
+        ``holder_sources`` are the sources of every placement under the
+        node: the rows that hold it."""
+        return dc.Node(
+            children=[
+                Select._child(
+                    head,
+                    [p for p in placements if p.path[0] == head],
+                    holder_sources=holder_sources,
+                )
+                for head in dict.fromkeys(p.path[0] for p in placements)
+            ]
         )
+
+    @staticmethod
+    def _child(
+        name: str,
+        placements: Sequence[BranchPlacement],
+        *,
+        holder_sources: Sequence[KeyPath],
+    ) -> dc.Branch:
+        """One child of a node, from the placements whose path starts at it."""
+        sources = [p.source for p in placements]
+        # The child is on the rows its placements are; it is required when
+        # that covers every row the holder is on.  The catalog says no more
+        # about rows than which paths they hold, so two unrelated sources
+        # never cover a third between them.
+        required = all(
+            any(_rows_within(holder, source) for source in sources)
+            for holder in holder_sources
+        )
+        if len(placements) == 1 and len(placements[0].path) == 1:
+            edge, node = placements[0].branch
+            return replace(edge, name=name, required=required), node
+        else:
+            # The path goes on under this name for every placement: one
+            # that ended here would have overlapped the others.
+            return (
+                dc.Edge(name=name, type="object", required=required),
+                Select._nest(
+                    [replace(p, path=p.path[1:]) for p in placements],
+                    holder_sources=sources,
+                ),
+            )
 
     @classmethod
     def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
@@ -632,6 +674,12 @@ def _duplicate_child_name(node: dc.Node) -> str | None:
             return edge.name
         seen.add(edge.name)
     return None
+
+
+def _rows_within(a: KeyPath, b: KeyPath) -> bool:
+    """Whether every row holding source path ``a`` holds ``b``: ``b`` is
+    a prefix of ``a``, the root ``()`` being a prefix of everything."""
+    return a[: len(b)] == b
 
 
 def overlaps(a: KeyPath, b: KeyPath) -> bool:
