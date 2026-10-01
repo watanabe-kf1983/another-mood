@@ -6,8 +6,7 @@
 
 ### 実装方針
 
-- Markdown AST: markdown-it-py（CommonMark 準拠、AST 走査で見出し抽出・リンク検出）
-- YAML 出力: ruamel.yaml（YAML 1.2、literal block scalar で Markdown 本文を可読に保持）
+Markdown AST は markdown-it-py（CommonMark 準拠、AST 走査で見出し抽出・リンク検出）。
 
 ### リンク正規化
 
@@ -75,7 +74,7 @@ prose:
 
 `{#id}` 記法は使わない。見出しの id は **見出しテキストから導出する github 互換 slug**（`## API の設計` → `api-の設計`）。`{#id}` で固定すると id と見出しテキストが乖離するが、テキスト由来なら原理的にズレない。安定性は「id が不変であること」ではなく **「壊れた参照は必ずビルドで報告される」** で担保する（[未解決参照の扱い](../70-generator/20-anchor-spec.md#未解決参照の扱い)）。
 
-**合わせる対象は GitHub の見出しアンカー規則であって、レンダラ（Hugo）ではない** — 見出しリンクが我々の Hugo 出力・GitHub・VS Code preview のいずれでも同じ id に着地するため。正本（GitHub 公式 Docs）・実装参照（html-pipeline）・`\p{Word}` を自前判定する理由は `github_slug` の docstring に集約。現実の見出し（ASCII＋CJK 文字）では三者が一致し、テストが Hugo 出力とクロスチェックする。割れるのは exotic 文字だけで、そこは GitHub 準拠を採り、Hugo とのズレは Hugo 側の非互換（レンダラは差し替え可能な依存）として扱う。
+**合わせる対象は GitHub の見出しアンカー規則であって、レンダラ（Hugo）ではない** — 見出しリンクが我々の Hugo 出力・GitHub・VS Code preview のいずれでも同じ id に着地するため。正本（GitHub 公式 Docs）・実装参照（html-pipeline）・`\p{Word}` を自前判定する理由は `github_slug` の docstring に集約。現実の見出し（ASCII＋CJK 文字）では三者が一致する。割れるのは exotic 文字だけで、そこは GitHub 準拠を採り、Hugo とのズレは Hugo 側の非互換（レンダラは差し替え可能な依存）として扱う。
 
 #### 見出しリンクの妥当性は Generate で検証する
 
@@ -85,4 +84,4 @@ prose:
 
 #### スコープ
 
-当面 **prose 限定**。任意の `text/markdown` body からの見出し抽出への一般化は、散文サブシステムの媒体非依存化と地続きだったが、その担い手だった旧 H3 は「prose と [blob](../40-communication/30-blob-spec.md) を別コレクションにする」判断で棄却された。後継アイデア（text/html blob のページ解釈）が実タスク化するとき、そこで再検討する。
+当面 **prose 限定**。任意の `text/markdown` body からの見出し抽出への一般化は、必要が surface したときに再検討する。

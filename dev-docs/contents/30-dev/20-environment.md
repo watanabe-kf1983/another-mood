@@ -49,7 +49,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 コンテナ作成後に以下をインストールする:
 
 - Claude Code CLI
-- 言語の LSP サーバ（MCP Language Server 経由で Claude Code が使用）
+- MCP Language Server（Claude Code が LSP を叩くためのブリッジ。LSP 本体の pyright-langserver は `uv sync` で入る）
 - ast-grep CLI（MCP サーバが使用）
 - Google Chrome（Playwright MCP サーバが使用、`npx playwright install chrome`）
 - Noto CJK フォント（Playwright で CJK 文字を含む描画の検証に必要、`apt-get install fonts-noto-cjk`）
@@ -67,7 +67,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | Python Environment Manager | 仮想環境の管理 |
 | Ruff | Python フォーマッタ・リンタ |
 | Makefile Tools | Makefile の編集支援 |
-| EditorConfig | 非 Python ファイルのエディタ設定統一 |
+| EditorConfig | `.editorconfig` の適用（非 Python ファイルのインデント・改行・文末改行の統一） |
 | YAML | スキーマ・データファイルの編集支援 |
 | Markdown Mermaid | Mermaid 図のプレビュー |
 | GitHub Actions | CI ワークフローの編集支援 |
@@ -77,7 +77,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 ### 設定
 
 - `editor.formatOnSave: true` — 保存時にフォーマッタを自動実行
-- デフォルトフォーマッタをプロジェクトのフォーマッタ（Ruff）に設定
+- Python のデフォルトフォーマッタを Ruff に設定
 
 ## MCP サーバ
 
@@ -92,6 +92,8 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | another-mood | このリポジトリ自身の MCP サーバ（`uv run mood-mcp`）。dev-docs / showcase を編集する際の dog-fooding |
 
 language-server は pyright-langserver を `--stdio` で起動する。
+
+`.vscode/mcp.json` は VS Code 内蔵の MCP クライアント向けで、another-mood だけを定義する。
 
 ## .gitignore
 

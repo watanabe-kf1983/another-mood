@@ -16,11 +16,11 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 このプロジェクトが読み書きするファイルは 3 系統あり、系統ごとにシリアライズ形式が決まる。
 
-| 系統 | 例 | 形式 | 読み書き |
-|---|---|---|---|
-| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON | `parse_mapping` |
-| (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML 1.2 | `load_schema` |
-| (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | JSON | `load_model` / `save_model` |
+| 系統 | 例 | 形式 |
+|---|---|---|
+| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON |
+| (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML 1.2 |
+| (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | JSON |
 
 **YAML を 1.2 とする理由** ((1) (2) に適用):
 
@@ -52,14 +52,14 @@ Normalizer およびコンポーネントが出力する配列内のオブジェ
 
 ### 予約プレフィックス
 
-JSON データモデル上のオブジェクトキーに、以下のプレフィックスを予約する。ユーザ定義のフィールド名にこれらのプレフィックスは使用できない。
+JSON データモデル上のオブジェクトキーに、以下のプレフィックスを予約する。
 
 | プレフィックス | 用途 | 例 |
 |---|---|---|
-| `_`（単一） | 将来の拡張用に予約。現時点では使用箇所なし | — |
-| `__`（二重） | システム内部フィールド（ユーザは直接扱わない） | `__build_report` |
+| `_`（単一） | Generator がノードへ注入するメタデータ（[generator.md](../70-generator/10-generator.md#ノードメタデータ)） | `_parent`, `_meta` |
+| `__`（二重） | システム内部フィールド（ユーザは直接扱わない） | `__build_report`, `__definition` |
 
-`__` プレフィックスのフィールドはパイプライン基盤が使用し、ユーザのテンプレートやクエリからは参照しない。`_` プレフィックスは将来ユーザ空間とシステム空間が混在する場面に備えて予約する（Generator が注入する `_parent` / `_parent_record` / `_meta` 等、[generator.md](../70-generator/10-generator.md#ノードメタデータ) 参照）。
+`__` はトップレベルの entity 名・view 名で拒否する（内蔵ソースと同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。
 
 内蔵 prose スキーマのキー名 `prose` はプレフィックスなしで維持する。ユーザ定義との衝突が問題になった場合は、設定によるキー名変更で対応する。
 
@@ -68,17 +68,6 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 実装は `json_data_model.py` の `deep_merge` を参照。
 
 ## Proposals
-
-### 未決事項
-
-- **トップレベルスキーマが `type: array`（additionalProperties でない）の場合**: id を持たない配列のマージ・重複検出をどうするか未定
-- **スキーマ名重複**: 複数スキーマファイルに同じトップレベルキーがあった場合の扱い（エラーとする想定だが未確定）
-
-### データキーにドットを含めない (E14)
-
-view の別名スロット（`select[].as` / `flatten.as` / `join.as` / `grouped.by` 等）は現在、ドットを含む文字列をそのままレコードのキーにする。データにドット入りキーを生む経路はこれだけで、`contents/` 由来のキーは schema.yaml の識別子パターンで縛られている。このため `pluck` は longest-first 照合（キー全体を試してから末尾セグメントを削って降りる）を持ち、カタログの `Attribute.id` のドットは singleton 平坦化（入れ子）かリテラルキーか区別できない。
-
-**案**: DSL の名前を読みも書きもパスとして統一し、データキーにドットを含めない不変条件を立てる。`pluck` は素朴な `split(".")` に戻し、カタログのドットは必ず入れ子を意味する（旧案の `parent_attribute` 追加は不要になる）。設計の本体は [query-dsl-spec.md](../60-composer/10-query-dsl-spec.md#ドット名の意味論統一-e14)。実装後、不変条件はこのファイルの Internal Design に移す。
 
 ### ルート Entity の導入 (M13)
 

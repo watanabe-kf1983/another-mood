@@ -36,8 +36,8 @@ JSON 入口の位置づけは、**フィードバックループを持たない�
 
 正規化スコープは catalog 化スコープと一致させる。境界外で walker が走ると、新規変換の追加で silent に壊れる latent risk が生じる。
 
-- `content_normalizer`: user schema 全体が catalog 範囲 (`iter_normalized` で深く正規化)
-- `query_deriver`: top-level dict のみが catalog 範囲 (`_iter_top_level` で dict→list 変換 + `normalize_query` による DSL の sugar→canonical 変換。catalog 化はしない)
+- contents: user schema 全体が catalog 範囲（`iter_normalized` で深く正規化）
+- views: catalog 境界は top-level で止まる（`_iter_top_level` の dict→list 変換と `normalize_query` の sugar→canonical 変換まで）。クエリ本体（`where:` の AST 等）は catalog データではないので正規化しない
 
 ### dict-pattern の synthetic id は常に string
 

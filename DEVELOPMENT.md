@@ -66,7 +66,7 @@ another_mood/
 │   ├── scaffold/           #   プロジェクト初期化・ブループリント
 │   └── docs_catalog/       #   バンドル済みドキュメントの目録
 ├── pipeline/               # オーケストレーション: ステージ実行
-│   └── adapters/           #   外部ツール連携（Hugo, watchfiles）
+│   └── adapters/           #   外部ツール連携（Hugo, watchdog）
 └── resources/              # 静的リソース
 ```
 

@@ -1,6 +1,6 @@
 # Component Communication
 
-コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する（[architecture](../10-architecture.md#設計判断) 設計判断 #6 の精緻化）。ファイル経由ゆえに各段を YAML として目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [prose](20-prose-spec.md) / [blob](30-blob-spec.md)。
+コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する（[architecture](../10-architecture.md#設計判断) 設計判断 #6 の精緻化）。ファイル経由ゆえに各段を目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [prose](20-prose-spec.md) / [blob](30-blob-spec.md)。
 
 ## Internal Design
 

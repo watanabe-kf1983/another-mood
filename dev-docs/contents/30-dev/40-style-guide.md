@@ -7,8 +7,7 @@
 | レイヤー | 表記 |
 |---|---|
 | 散文（README / docs / dev-docs / docstring / --help / コミットメッセージ等） | `Another Mood` |
-| パス・ディレクトリ・URL 言及 | `another-mood` |
-| PyPI / GitHub リポジトリ / プロジェクトルート | `another-mood` |
+| 技術的識別子（パス・URL・PyPI / GitHub リポジトリ名・プロジェクトルート） | `another-mood` |
 | Python パッケージ・モジュール | `another_mood` |
 | CLI コマンド | `mood` |
 
