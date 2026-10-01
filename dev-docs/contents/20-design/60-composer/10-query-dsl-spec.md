@@ -14,7 +14,7 @@ DB DSL によくある `neq` を入れなかったのは、対象キーが欠落
 - SQL の 3 値論理として読めば **UNKNOWN** (NULL の neq は UNKNOWN なので False 寄り)
 - 「`eq` の論理否定」と読めば **True** (`eq` が False なので flip して True)
 
-`neq` を closed set に入れると、どの解釈を採っても残り 2 つを期待した利用者から不自然に見える。代わりに「atomic 述語は欠落キーで常に False」+「`not` は内側の結果を flip」の 2 規則で semantics を一意化し、「等しくない」が必要なら `not: { field: x }` と書く設計にした。否定の挙動が `not` 1 箇所に集約され、述語ごとに考えなくてよくなる。
+`neq` を closed set に入れると、どの解釈を採っても残り 2 つを期待した利用者から不自然に見える。代わりに「atomic 述語は欠落キーで常に False (`exists` を除く)」+「`not` は内側の結果を flip」の 2 規則で semantics を一意化し、「等しくない」が必要なら `not: { field: x }` と書く設計にした。否定の挙動が `not` 1 箇所に集約され、述語ごとに考えなくてよくなる。
 
 ### 背景: sort の keyword に `null` ではなく `missing` を採用した
 
@@ -89,7 +89,7 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 
 ### 背景: ビュー間参照に名前付き参照を採り、インラインサブクエリを採らない
 
-`from:` / `join.to:` のソース名には、データエンティティだけでなく他のビューも書ける（RDBMS の view を FROM 句に書く、Access の保存クエリを別クエリのソースにするのに相当）。builtin ビュー (`__builtin`) も同一名前空間で参照対象。動機は三つ:
+`from:` / `join.to:` のソース名には、データエンティティだけでなく他のビューも書ける（RDBMS の view を FROM 句に書く、Access の保存クエリを別クエリのソースにするのに相当）。`__` 接頭辞の内蔵ビューも同一名前空間で参照対象。動機は三つ:
 
 - **パイプライン固定順序の逃し弁の実体化**: 本 DSL は句の順序を固定し、順序に収まらない形（途中段 flatten 等）への公式の答えは「別ビューに分割する」（「パイプライン順序」節）。だが分割した後段が前段を参照できないと、実際の回避策は共通前段の複製かテンプレート側での再結合になってしまう。名前付き参照はこの逃し弁を実体化する
 - **共通前段の重複排除**: 複数ビューが同じ整形（flatten + join 等）を前段に持つとき、名前付きの中間ビューとして一度だけ書ける
@@ -98,12 +98,12 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 **インラインサブクエリ**（`from:` にクエリオブジェクトをネストさせる、SQL のサブクエリ相当）は採らない:
 
 - RDBMS 現場の「ビュー禁止」文化の根拠（オプティマイザの実行計画不透明性、ビュー重ね掛けの性能崖）は、ビルド時に全ビューを一度だけ決定的な順序で評価し結果を実体化する本ツールには存在しない。ここでのビュー参照は RDBMS の view より「スクリプト内の中間変数」に近い
-- 入れ子の内側は本ツールで唯一「中間結果が実体化されない」場所になり、`view-results/` を読んで段ごとに確かめられる実体化デバッグの強みに穴を開ける
+- 入れ子の内側は本ツールで唯一「中間結果が実体化されない」場所になり、作業ディレクトリ (`MOOD_TMP_DIR` で固定したとき) の `view-results/` を読んで段ごとに確かめられる実体化デバッグの強みに穴を開ける
 - YAML で再帰構造を書く人間工学は SQL の括弧より悪い
 - 局所性が本当に効く場所には既に制限付きインライン（`join.to:` + `join.where:`）があり、全面開放の圧力はない
 - 名前付き参照からインライン併用への拡張は純粋な追加（`from:` が名前 or クエリオブジェクトを取る schema 再帰化）なので、命名疲れの実例が積み上がってから再検討できる
 
-**提示順は不変**: ビュー間参照は評価順（依存 → 依存元の topo 順）にのみ影響し、`__definition.views` の並びはファイル順のまま。評価の実装（依存グラフ・サイクル診断・derive 失敗のカスケード抑制）は [query.py](../../../../src/another_mood/components/shared/query.py) の `evaluation_order` と query_deriver の `_derive_all` の docstring を参照。
+**提示順は不変**: ビュー間参照は評価順（依存 → 依存元の topo 順）にのみ影響し、`__definition.views` の並びはファイル順のまま。評価の実装（依存グラフ・サイクル診断・derive 失敗のカスケード抑制）は [query.py](../../../../src/another_mood/components/shared/query.py) の `evaluation_order` と query_deriver の `_derive_all` を参照。
 
 **受容済みの制約 — 名前空間汚染**: 中間段のためだけの補助ビューも、テンプレートから見え、メタドキュメンテーション（ER 図・ビューカタログ）に載る。当面は命名規約で凌ぎ、痛くなったら `internal: true` 等の可視性フラグを検討する。
 
@@ -129,7 +129,7 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 具体例: `from: __definition.entities` に `select - item: parent_entity` を入れると、top-level entity (= `parent_entity` キーが無い) は `parent_entity` キーを持たない行を吐き、child entity (= `parent_entity` に親 id) は値付きの行を吐く。出力レコードの shape が記録ごとに揺れることになるが、これは下流での `if row.parent_entity` 判定で自然に消える。
 
-この semantic は `from` / `flatten` / `where` / `grouped` といった他の DSL 句の missing-key 扱い (where 述語は欠落キーで常に False、sort は `missing: first/last` で位置を指定) と合わせて、「DSL は欠落を一級扱いする」運用に揃える。
+この semantic は `from` / `flatten` / `where` / `grouped` といった他の DSL 句の missing-key 扱い (where 述語は `exists` を除き欠落キーで常に False、sort は `missing: first/last` で位置を指定) と合わせて、「DSL は欠落を一級扱いする」運用に揃える。
 
 ### スコープ外: nested-list 操作
 
@@ -159,7 +159,7 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 | スロット | 省略時 | ドット入りキーが生まれる例 |
 |---|---|---|
 | `select[].as` | `item` をそのまま | `item: hobby.level` → `{"hobby.level": "pro"}` |
-| `flatten.as` | `of` をそのまま | `flatten: hobby.pets` → `{"hobby.pets": {...}}` |
+| `flatten.as` | `of` をそのまま | `{ of: pets, as: hobby.pets }` → `{"hobby.pets": {...}}` |
 | `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
 | `join.flatten.as` | join の `as` をそのまま | 同上 |
 | `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
@@ -167,7 +167,7 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 この非対称が生む実害:
 
-- **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` か `pluck` フィルタでしか届かない（Jinja2 の `row.hobby` は undefined になる）
+- **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` でしか届かない（Jinja2 の `row.hobby` は undefined になる）
 - **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
 - **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
 - **読み側のうち `flatten.of` だけがパスを受けない**: apply (`_unwind`) は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` を通すと元の配列が `hobby` 内に残ったまま新キーが足され、「配列エッジを置き換えた」と言うカタログとずれる。derive がドット入りの `of` を `unknown attribute` として弾くことでずれは塞いであるが、読み側の一句だけがパスを受けない状態になっている
@@ -387,7 +387,7 @@ grouped: { by: hobby.level, as: hobby }
 
 #### 問題
 
-「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の「束縛の単一規則」) で、`render` の主題は `this` の子孫に限られるため、一つのプロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
+「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の `this` 束縛) で、`render` の主題は `this` の子孫に限られるため、一つのプロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
 
 代替案を検討して退けた:
 
