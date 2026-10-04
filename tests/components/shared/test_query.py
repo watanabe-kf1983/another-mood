@@ -285,6 +285,40 @@ class TestFlattenDerive:
             Flatten(of=("tasks",), as_=("title",)).derive(categories)
 
 
+class TestFlattenDeriveOverlap:
+    """The alias is checked against the names left on the row once the
+    array is gone, segment-wise: it collides when it is one of them or
+    leads into one, or when one leads into it.  Siblings are clear."""
+
+    @pytest.mark.parametrize(
+        ("base", "as_", "taken"),
+        [
+            ("title tasks[]", ("title", "x"), "title"),
+            ("id hobby.level tasks[]", ("hobby",), "hobby.level"),
+            # Nothing is written into an array, so the array is one name.
+            ("tags[].name tasks[]", ("tags", "x"), "tags"),
+        ],
+        ids=["leads into a name", "a name leads into it", "inside an array"],
+    )
+    def test_rejects(self, base: str, as_: tuple[str, ...], taken: str) -> None:
+        with pytest.raises(
+            QueryDeriveError, match=f"collides with the attribute '{taken}'"
+        ) as info:
+            Flatten(of=("tasks",), as_=as_).derive(tree(base))
+        assert info.value.offender == as_[0]
+
+    @pytest.mark.parametrize(
+        ("base", "as_"),
+        [
+            ("id hobby.level tasks[]", ("hobby", "pet")),
+            ("hobby.level tasks[]", ("hobbyist",)),
+        ],
+        ids=["a sibling", "only starts the same"],
+    )
+    def test_accepts(self, base: str, as_: tuple[str, ...]) -> None:
+        Flatten(of=("tasks",), as_=as_).derive(tree(base))
+
+
 # What the catalog side of a write path has to produce.  Strict, so
 # the change that lands each case is noticed by the mark it makes
 # obsolete.

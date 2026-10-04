@@ -11,7 +11,7 @@ The ``where`` clause's per-record predicate AST lives in
 wrapper.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 from functools import reduce
@@ -117,25 +117,28 @@ class Flatten(QueryNode):
                 f"flatten target '{of}' is not an array attribute (type '{edge.type}')",
                 offender=self.of[0],
             )
+        # The alias must be clear of every name the row still holds once
+        # the array is gone: landing on one or inside one is a collision.
+        rest = dc.Node(children=[(e, c) for e, c in catalog.children if e.name != of])
+        taken = next((name for name in _names(rest) if overlaps(self.as_, name)), None)
+        if taken is not None:
+            raise QueryDeriveError(
+                f"flatten alias '{as_}' collides with the attribute '{'.'.join(taken)}'",
+                offender=self.as_[0],
+            )
         wrapper = replace(
             edge,
             name=as_,
             type=edge.type[:-2],
             required=not self.preserve_empty,
         )
-        out = dc.Node(
+        return dc.Node(
             metadata=catalog.metadata,
             children=[
                 (wrapper, child) if e.name == of else (e, c)
                 for e, c in catalog.children
             ],
         )
-        if _duplicate_child_name(out) is not None:
-            raise QueryDeriveError(
-                f"flatten alias '{as_}' collides with an existing attribute",
-                offender=self.as_[0],
-            )
-        return out
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
         other = drop(parent, self.of)
@@ -674,6 +677,21 @@ def _duplicate_child_name(node: dc.Node) -> str | None:
             return edge.name
         seen.add(edge.name)
     return None
+
+
+def _names(node: dc.Node) -> Iterator[KeyPath]:
+    """The names a row of ``node`` holds: the path to each value, an
+    array taken whole since nothing is written into one.  An object on
+    the way is not a name of its own; a write beside its children is
+    clear of them."""
+    for edge, child in node.children:
+        # Transitional: an edge name can still be a literal dotted key
+        # from an upstream alias.  Read as the path it will be.
+        head = tuple(edge.name.split("."))
+        if edge.is_collection or not child.children:
+            yield head
+        else:
+            yield from ((*head, *rest) for rest in _names(child))
 
 
 def _rows_within(a: KeyPath, b: KeyPath) -> bool:
