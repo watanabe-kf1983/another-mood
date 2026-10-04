@@ -439,6 +439,13 @@ categories:
           型突き合わせの実需 / 利用者要望) が出るまで保留。
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
+      J6:
+        title: エージェント導線の instructions 経路への移行 (MCP の降格・削除候補化)
+        note: >-
+          --help の作業ループ指し + init の README.md 生成 + docs/mcp.md 改題を先行。
+          mood-mcp の削除は別 PR (breaking)。
+        phase: 17
+        proposal: 20-design/20-app/30-mcp-design#エージェント導線の-instructions-経路への移行-j6
 
   L:
     title: dog-fooding
