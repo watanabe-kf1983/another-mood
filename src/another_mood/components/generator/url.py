@@ -1,7 +1,4 @@
-"""URL / link-target escaping shared by anchor_path construction and `as_url`.
-
-See design/generator/anchor-spec.md#escape-規則 for the policy of record.
-"""
+"""URL / link-target escaping shared by anchor_path construction and `as_url`."""
 
 from urllib.parse import quote
 

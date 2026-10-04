@@ -3,7 +3,7 @@
 Validates view files against the built-in view schema, parses each
 view's body into a typed Query, and derives the synthesized catalog
 entities (``view: true``) by composing the query's catalog transform
-against the data catalog.  Output YAML carries both the views and the
+against the data catalog.  The output carries both the views and the
 derived entities under ``__definition``.
 """
 
@@ -112,8 +112,7 @@ def _iter_top_level(
     lists, with each view's body canonicalized via ``normalize_query``.
 
     The catalog boundary stops at the top level — query body structure
-    (e.g. the ``where:`` AST) is not normalized as catalog data. See
-    design/normalizer/normalizer.md.
+    (e.g. the ``where:`` AST) is not normalized as catalog data.
     """
     check(src_dir, schema)
     for src_file in sorted(src_dir.rglob("*")):

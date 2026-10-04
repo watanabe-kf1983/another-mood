@@ -15,22 +15,22 @@ Shape セクションで各出力フィールドの型 + entity ref を明示す
 programmatic に伝わる。SQL クライアントが (全カラムスカラ前提で) 型表示を
 省略できるのと対照的。
 
-Shape は Query Object の `apply_to_catalog` が生成する。定義から deterministic
+Shape は Query Object の `derive` が生成する。定義から deterministic
 に導出される型情報なので、置き場所は `__data` ではなく `__view_defs`:
 entity def ページが「schema 定義 + 正規化後の型表」を見せるのと同じ、
 「定義 + そこから決まる型」の構図になる。
 
 ### ER 図シリーズ
 
-メタドキュメンテーションには 3 つの Mermaid classDiagram が登場する:
+メタドキュメンテーションは `__db/` に mount され、3 つの Mermaid classDiagram が登場する:
 
-- `__root` 全体図 — カタログ全体の関係を俯瞰
-- `__entity_defs/<id>.md` 近傍図 — focus entity の周辺
-- `__view_defs/<id>.md` Source Diagram — ビューのソース entity 群
+- `__db/index.md` 全体図 — カタログ全体の関係を俯瞰
+- `__db/__entity_defs/<id>.md` 近傍図 — focus entity の周辺
+- `__db/__view_defs/<id>.md` Source Diagram — ビューのソース entity 群
 
 3 図の variation:
 
-| 観点 | `__root` 全体図 | `__entity_defs` 近傍図 | `__view_defs` Source Diagram |
+| 観点 | `index.md` 全体図 | `__entity_defs` 近傍図 | `__view_defs` Source Diagram |
 |---|---|---|---|
 | node 集合 | user 領域 + `prose` 全体 | focus + descendants + focus subtree からの FK out 先 | `query.from` ∪ `query.join[].to` (top-level entity に閉じる) |
 | 属性表示 | 全 node ヘッダのみ | focus + descendants は全属性、FK out 先はヘッダのみ | 全 node ヘッダのみ |
@@ -56,9 +56,9 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 理由は UML / ER 用語との整合。UML の class 名は型 (= 1 件分のもの) を指すので単数形が原則であり、本ツールの 2 階層 (Entity = collection identity 複数形 / ObjectType = item identity `.item` 付き) のうち ObjectType 側がそれにあたる。`__entity_defs/<id>.md` ページが既に `### Type: artists.item` を見出しに出しているのと表記が揃う。
 
-### `__root` の Entity Relationship 図
+### `__db/index.md` の Entity Relationship 図
 
-トップページ (`__root`) に「全 entity の関係を俯瞰する」図を出す。ノード集合は user 領域 + `prose` (descendant 含む)、composition は親子、association は両端がノード集合に入る FK のみ。各クラスはヘッダのみ (属性内訳は `__entity_defs` 側の表が担う)。
+`__db/` のトップページに「全 entity の関係を俯瞰する」図を出す。ノード集合は user 領域 + `prose` (descendant 含む)、composition は親子、association は両端がノード集合に入る FK のみ。各クラスはヘッダのみ (属性内訳は `__entity_defs` 側の表が担う)。
 
 ### `__entity_defs/<id>.md` の近傍 ER 図
 
@@ -85,7 +85,7 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 #### 背景: 属性表示はヘッダのみ
 
-per-view 図の目的は「このビューがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= apply_to_catalog による出力形状) や `__entity_defs/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
+per-view 図の目的は「このビューがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= `derive` による出力形状) や `__entity_defs/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
 
 ## Internal Design
 

@@ -42,13 +42,13 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     check_schema(schema_file)
 
     user_entities = _extract_from_file(schema_file)
-    prose_entities = _extract_from_file(_BUILTIN_CONTENTS_SCHEMA_FILE, builtin=True)
+    builtin_entities = _extract_from_file(_BUILTIN_CONTENTS_SCHEMA_FILE, builtin=True)
 
     # __definition.* (emitted below) is intentionally not in valid_targets:
     # references to catalog metadata are not a meaningful FK relation.
     diagnostics = check_xref_coherence(
         user_entities,
-        valid_targets=[*user_entities, *prose_entities],
+        valid_targets=[*user_entities, *builtin_entities],
     )
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
@@ -57,7 +57,7 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     # source schema file, as the other stages do for their sources.
     _write_catalog(user_entities, out_dir / f"{schema_file.name}.json")
     _write_catalog(
-        prose_entities,
+        builtin_entities,
         out_dir / "__builtin" / f"{_BUILTIN_CONTENTS_SCHEMA_FILE.name}.json",
     )
 

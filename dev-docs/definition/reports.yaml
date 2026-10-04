@@ -1,5 +1,4 @@
-# Report output configuration. See:
-# dev-docs/contents/20-design/70-generator/40-paging-spec.md
+# Report output configuration. See the Another Mood docs on paging.
 #
 # This report ships two editions (form B): each is published side by side
 # under output/{edition}/ and renders the same data, differing only in

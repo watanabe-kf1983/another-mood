@@ -39,7 +39,7 @@ JSON Schema 本体の property 宣言に `x-ref` キーワードを置き、参�
 - `items:` 直下 (スカラー配列要素の FK) は meta-schema エラーで拒否
 - 辞書キー自体に FK を付けるパターン (`propertyNames` に x-ref) はサポートしない
 
-`type: string` 限定の理由: dict-pattern の synthetic id は normalizer が string に揃え ([normalizer.md](10-normalizer.md)「dict-pattern の synthetic id は常に string」)、target attribute 値も string として比較する。integer / number に開放すると「dict キーは str 化されているのに FROM 側は int」など型ミスマッチが事故化する。FK 値の表現として string を強制することで、normalization contract と整合する。実需が薄いという観察 (showcase/music の 7 FK は全て string) も後押し。integer FK が surface したら、synthetic id の型推論機構と合わせて別タスクで開放する。
+`type: string` 限定の理由: dict-pattern の synthetic id は normalizer が string に揃え ([normalizer.md](10-normalizer.md)「dict-pattern の synthetic id は常に string」)、target attribute 値も string として比較する。integer / number に開放すると「dict キーは str 化されているのに FROM 側は int」など型ミスマッチが事故化する。FK 値の表現として string を強制することで、normalization contract と整合する。実需が薄いという観察 (showcase/music の FK は全て string) も後押し。integer FK が surface したら、synthetic id の型推論機構と合わせて別タスクで開放する。
 
 `items:` 直下の `x-ref` を明示エラーにする理由は、現状のデータカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、catalog 構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo は catalog 上で attribute として現れるため)。
 
@@ -68,15 +68,7 @@ schema-level の不整合は data の読み込み以前に build を止める。
 
 「TBD だらけの要件定義フェーズに data-level 警告が大量に出てうるさい」懸念は、`x-ref` 自体が property 単位の opt-in であることで自然に解消される。整備が進んだプロパティに `x-ref` を足していけば、足した分だけ検査が始まる。
 
-x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (現状は `prose`) のみ。catalog メタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
-
-#### この宣言が果たす役割
-
-1. **ER 図の自動生成** — references からリレーションを読み取り、Mermaid ER 図を描画
-2. **AI へのヒント** — AI がデータ編集時に「このフィールドには users の id が入るべき」と理解できる
-3. **影響分析** — 被参照キーを変更しようとした際に「どこから参照されているか」を逆引きで特定できる
-4. **リネーム支援** — references に基づいて参照箇所を列挙し、一括置換の漏れを検証できる
-5. **参照整合性検証** — data-level の dangling 参照を `--strict` 連動で警告（実装済み）
+x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (`prose` / `blob`) のみ。catalog メタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
 
 #### 背景: なぜ参照先を top-level entity のみに限定したか
 
