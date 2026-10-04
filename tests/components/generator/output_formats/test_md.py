@@ -397,7 +397,7 @@ class TestMakeLinkFilters:
 
 class TestLinkFilterWiring:
     """End-to-end through TemplateEngine, covering only what the unit tests
-    can't: filter registration, ``@pass_context`` feeding ``this``, and the
+    can't: filter registration, ``@pass_state`` feeding ``this``, and the
     ``href`` / ``link`` closure branches (override, broken reference).
 
     Each rendered output opens with the subject node's own anchor — the
@@ -422,7 +422,7 @@ class TestLinkFilterWiring:
 
     def test_link_resolves_source_from_context(self, tmp_path: Path) -> None:
         # Exercises the whole chain: node() global, link filter, and
-        # @pass_context reading the source page from the `this` subject.
+        # @pass_state reading the source page from the `this` subject.
         engine = self._engine(tmp_path, "{{ node('members', 'alice') | link }}")
         result = engine.render("t.md", _anchors()["/by_role/dev"])
         assert result == (
@@ -509,7 +509,7 @@ class TestUnderHeadingFilter:
 
 
 class TestRelinkFilterWiring:
-    """End-to-end through TemplateEngine: registration, ``@pass_context``
+    """End-to-end through TemplateEngine: registration, ``@pass_state``
     feeding the source page (``this``), node-map resolution, and the Markup wrap.
 
     Each output opens with the subject's anchor (the engine's post_process

@@ -44,7 +44,7 @@ views 入力を検証・正規化し、各ビュー定義をパースして派�
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
 
 **Reconcile**
-Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありなら `__build_failure` ページに差し替える。詳細は [generator.md](70-generator/10-generator.md) 参照。
+Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありならビルド失敗ページに差し替える。詳細は [generator.md](70-generator/10-generator.md) 参照。
 
 **Site Builder**
 生成された Markdown を HTML にレンダリングする。

@@ -29,11 +29,12 @@
 
 ### 背景: 実行ベクタはテンプレートのみ
 
-ソース4種のうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他3種はそもそも経路を持たない:
+プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
 
 - **`contents/` (data)** — data 値は md output format の finalize で escape される（[anchor-spec.md](20-anchor-spec.md) の unsafe トラストモデル参照）
 - **`definition/schema.yaml`** — 宣言的な型定義
-- **`definition/views/`** — 境界付きの宣言 DSL（`from`/`flatten`/`join`/`where`/`grouped`/`select`/`sort`）。`where` 述語は演算子の閉じた enum（`EQ`/`GT`/`STARTSWITH`/`CONTAINS` 等）を `and`/`or`/`not` で結合するだけで、フィールド参照は dotted-key lookup（Python の `getattr` ではない）。`eval`/`exec`/式言語は無い（[record_predicate.py](../../../../src/another_mood/components/shared/record_predicate.py)）
+- **`definition/views/`** — 境界付きの宣言 DSL（`from`/`flatten`/`join`/`where`/`grouped`/`select`/`sort`）。`where` 述語は演算子の閉じた enum（`EQ`/`GT`/`STARTSWITH`/`CONTAINS` 等）を `and`/`or`/`not` で結合するだけで、フィールド参照は dotted-key lookup（Python の `getattr` ではない）。`eval`/`exec`/式言語は無い（`shared/record_predicate.py`）
+- **`definition/reports.yaml` / `sbdb.yaml`** — 宣言的な設定
 
 ゆえに防御は**テンプレート評価の一点**（engine の閉じた値モデル ＋ marshal 契約）に集約してよい。
 
@@ -61,7 +62,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 正しい対処は値モデルを叩くことではなく、**値モデルが構造的に安全なエンジンへ移す**か、**プロセス / OS 隔離**でビルドごと囲うか。External Design の二択に中間形態（実行時サンドボックス）が無いのはこのため — 言語を縛るが漏れる／隔離もしない、の両世界で中途半端になる。
 
-採ったのは前者で、`Environment` は minijinja（[template_engine.py](../../../../src/another_mood/components/generator/template_engine.py) の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
+採ったのは前者で、`Environment` は minijinja（`template_engine.py` の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
 
 ### 背景: エンジン選定 — minijinja（spike 実測）
 
@@ -84,9 +85,9 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 残る二択の軸は「**liquid ＝ 言語で構造保証**（未信頼テンプレを既定安全で build する世界）」対「**minijinja ＝ ほぼ drop-in ＋ marshal 契約**（自作・半信頼の世界）」。
 
-**決定: minijinja 採用。** 決め手:
+**決定: minijinja 採用。** 決め手（spike 時点）:
 
-- **移行コスト最小** — macro 使用 0・Jinja 互換（演算子 `~`/`//`/三項もそのまま通る）・`env.finalizer` フックあり
+- **移行コスト最小** — 当時 macro 使用 0・Jinja 互換（演算子 `~`/`//`/三項もそのまま通る）・`env.finalizer` フックあり
 - **LLM 執筆性** — Jinja 系の訓練データを相続（Stack Overflow 質問数で Jinja 系 ≈ 40k、Liquid ≈ 4k の約 10 倍）
 - **エラー品質** — minijinja / liquid とも jinja2 を上回る（キャレット＋前後行＋列、構造化フィールドで Diagnostic 化可）が、minijinja が最厚
 - **移植性** — ブラウザ / WASM プレビューを作る場合、minijinja は Rust→WASM で**同一 engine**（最高忠実度）。liquid は python-liquid ＋ LiquidJS の別実装になる
@@ -98,7 +99,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 minijinja がテンプレートに露出するのは、渡した値の **非 `_`・非 dunder のメンバ**（属性・メソッド）と container の items。実測で確定した規則:
 
 - **dunder（`__class__` 等）**: 構造封鎖（undefined）。dot 記法・subscript とも。`attr` / `map(attribute=)` / `selectattr` / `groupby` の string 属性名経由でも同じ
-- **`_` 接頭辞の属性・メソッド**: 既定で拒否（"insecure method call"）。**dict/list 派生かは無関係、純粋に `_` の有無**。データツリーの内部リンク（`_parent` / `_meta` / `_children()`）をテンプレートから遮断し、marshal されていない素の Python オブジェクト（`_NodeMeta`）へ歩き出せないのはこれによる
+- **`_` 接頭辞の属性・メソッド**: 既定で遮断 — 属性は undefined、メソッド呼び出しはエラー（"insecure method call"）。**dict/list 派生かは無関係、純粋に `_` の有無**。データツリーの内部リンク（`_parent` / `_meta` / `_children()`）をテンプレートから遮断し、marshal されていない素の Python オブジェクト（`_NodeMeta`）へ歩き出せないのはこれによる
 - **非 `_` の属性・メソッド**: 露出し、**呼べる**。戻り値もさらに辿れる
 - **container items**（dict 値 / list 要素）: map/seq として露出
 - **globals**: `_` ブロックは**属性は守るが global 名は守らない** — `_` 名で登録した global も丸見えで、メンバを辿って呼べる。ゆえに engine が global に登録するのはテンプレートヘルパーのみ（filter は独立の名前空間にあり、値として拾えない）
@@ -106,12 +107,12 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 
 さらに marshaling には **convert / wrap の非対称**がある:
 
-- **スカラー（str/int/float/bool/None）は minijinja ネイティブ型へ*変換*（convert）**され、Python のメンバは越境しない。minijinja 独自の string メソッドの `format` は属性 traversal を持たず、`format_map` は存在しない ＝ `str.format` 反射経由の format-string SSTI は不成立
+- **スカラー（str/int/float/bool/None）は minijinja ネイティブ型へ*変換*（convert）**され、Python のメンバは越境しない。`pycompat=False` なので string に `format` / `format_map` メソッド自体が無い ＝ `str.format` 反射経由の format-string SSTI は不成立
 - **オブジェクト（dict/list 派生を含む）は*wrap***され、Python メソッドが漏れる
 - ゆえに危険は「wrap される非スカラー（オブジェクト）経由で非 `_` capability に届く」経路に限られる
 - `Markup` は convert 側: `__html__` / `unescape` / `striptags` 等の Python メンバは越境しない。一方 `env.finalizer` は Python 値を見るため、エスケープ免除の役目は保たれる
 
-この規則は engine の側にあり、将来版で変わりうる。ゆえに **[test_ssti.py](../../../../tests/components/generator/test_ssti.py) が古典 SSTI payload を実 render に撃って pin する**。固定するのは両方向 — 封鎖側（上記の sealed 各項）と、設計上の露出側（非 `_` メンバ呼び出し・global 非保護 ＝ marshal 契約が前提とする 2 つのハザード）。露出側が赤になったら侵害ではなく engine の厳格化の合図で、契約を緩められる可能性を意味する。
+この規則は engine の側にあり、将来版で変わりうる。ゆえに **`test_ssti.py` が古典 SSTI payload を実 render に撃って pin する**。固定するのは両方向 — 封鎖側（上記の sealed 各項）と、設計上の露出側（非 `_` メンバ呼び出し・global 非保護 ＝ marshal 契約が前提とする 2 つのハザード）。露出側が赤になったら侵害ではなく engine の厳格化の合図で、契約を緩められる可能性を意味する。
 
 ### marshal 契約 ── テンプレに渡る値を型・構造で inert に閉じる
 
@@ -120,25 +121,25 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 ゆえに契約は runtime 検査ではなく、**型と構造でツール側コードの規律を保つ**問題として解く。露出する二系統を各々閉じる:
 
 - **(a) データ**: inert 値モデル `InertValue = str|int|float|bool|None|InertMapping|InertArray` で閉じる。`load_model`（`Any`）由来の木を `ensure_inert` が検証・詰め替え（parse, don't validate）、`MappingNode`/`ArrayNode` が Inert container を継承してアンカーを足す。
-    - **Inert container は構築後 read-only**: dict / list の mutator は明示的に raise する（静かな no-op にはしない）。露出規則の wrap 側で非 `_` メソッドはテンプレートから呼べ、木はビルド全体で共有されるため、mutator が生きていると別ページのデータ破壊と「テンプレに渡る値は inert」不変条件の破れを許してしまう
+    - **Inert container は構築後 read-only**: dict / list の非 dunder mutator は明示的に raise する（静かな no-op にはしない。dunder は engine が封鎖するので構築用に開けたまま）。露出規則の wrap 側で非 `_` メソッドはテンプレートから呼べ、木はビルド全体で共有されるため、mutator が生きていると別ページのデータ破壊と「テンプレに渡る値は inert」不変条件の破れを許してしまう
 - **(b) filters/globals の戻り値**: エンジン所有の受け入れ列挙 `TemplateSafe = InertValue | Node | Markup | MissingNode` で閉じる。
 
 設計の要点:
 
-- **container は exact-type／スカラーは正規化、の非対称**:
-    - container は **wrap** され Python メソッドが漏れるので、`type(v) in {InertMapping, InertArray, MappingNode, ArrayNode}` の exact-type 判定で敵対的サブクラスを弾く（`isinstance` 不可。`@final` は無料の静的表明）
+- **container は派生禁止／スカラーは正規化、の非対称**:
+    - container は **wrap** され Python メソッドが漏れるので、派生で capability を足せてはならない。runtime の `ensure_inert` は既に inert な container を `isinstance` でそのまま通す（派生を runtime で弾く検査は無い）ので、派生の封じ込めは静的側 — `MappingNode` / `ArrayNode` の `@final` と、`InertMapping` / `InertArray` を他で継承しないツール側の規律 — が担う
     - スカラーは **convert** されメンバが届かないので、`isinstance` で受理し exact 型へ正規化する（安全な `str` サブクラスを誤って弾かないため）
 - **`TemplateSafe` は基底でなく列挙**: 受け入れ要件は継承で表せない（派生すれば capability を足せる）ので、各具体型を列挙する:
-    - **受け入れ側 `template_safe` が所有しエンジンだけが参照**。生産者は自分の具体戻り型（`Node | MissingNode` 等）を正直に宣言するだけ ── 消費者→生産者の一方向 import ∴ cast も循環も生じない
-    - minijinja の undefined は `None` として届き、`pluck` / `to_yaml` は `None` を返す（`Undefined` 型は列挙に無い）
-    - 副作用 callable は原則禁止。`render` filter のみ例外（戻り値 `Markup`、書込 capability は closure captured）
+    - **受け入れ側 `template_safe` が所有し、エンジン境界（`template_engine` と、ヘルパを渡す generator）だけが参照**。生産者は自分の具体戻り型（`Node | MissingNode` 等）を正直に宣言するだけ ── 消費者→生産者の一方向 import ∴ cast も循環も生じない
+    - minijinja の undefined は `None` として届き、`pluck` は `None`、`to_yaml` は空文字を返す（`Undefined` 型は列挙に無い）
+    - 副作用 callable は原則禁止。`render` filter のみ例外（戻り値 `Markup`。書込 capability は `RenderProcessorImpl` のフィールドで、登録されるのは bound method）
 
 強制のレイヤ（① データ inert / ② foreign 属性不可 / ③④ 非 `_` メソッド・危険 dunder 不可 を担保）:
 
 - **pyright（静的）**: inert container の `[InertValue]` parametrize と、filters/globals 戻り型のエンジン境界照合
-- **render 境界ガード（runtime）**: `_bind` が各 binding を `ensure_template_safe` に通し、「テンプレに渡るのは `TemplateSafe` だけ」を入口一点で強制する（engine 所有の非 inert メンバは素通し、data は `ensure_inert` へ、それ以外は raise）。一様性のため内蔵 render も同じ境界を通る。①は加えて `ensure_inert` の exact-type 構築検証が担保
+- **render 境界ガード（runtime）**: `_bind` が各 binding を `ensure_template_safe` に通し、「テンプレに渡るのは `TemplateSafe` だけ」を入口一点で強制する（engine 所有の非 inert メンバは素通し、data は `ensure_inert` へ、それ以外は raise）。一様性のため内蔵 render も同じ境界を通る。①は加えて `ensure_inert` の詰め替え時のスカラー検証が担保
 - **surface-audit テスト**: `TemplateSafe` 各型を MRO 全域で監査する — 非 `_` 表面が参照形（container = 素 dict/list、`MissingNode` = 宣言 field で各値 inert）に一致すること、foreign 属性を植えられないこと（`__slots__`/frozen）、body に想定外 protocol dunder（`__getattr__`/`__getitem__`/`__call__`）が無いこと。`Markup` は convert 側で表面が越境しない（上の露出規則で pin 済み）ため対象外
-- **SSTI 回帰テスト（[test_ssti.py](../../../../tests/components/generator/test_ssti.py)）**: 上の 3 レイヤが前提とする engine 側の露出規則そのものを実 render で pin（前節）
+- **SSTI 回帰テスト（`test_ssti.py`）**: 上の 3 レイヤが前提とする engine 側の露出規則そのものを実 render で pin（前節）
 - **残余**: `__slots__` 除去等は behavioral テストが捕まえるが、**監査テスト自体の削除は型でもテストでも防げず code review が担う**
 
 ## Proposals

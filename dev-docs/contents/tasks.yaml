@@ -77,12 +77,12 @@ categories:
         title: 未解決リンク参照のビルドレポート警告 (link / resolve 共通)
         note: >-
           link / href (B4) と resolve (B5) は未解決参照 (MissingNode / 解決できない node: URL) を
-          素テキストで可視化するのみで BuildReport には積まない。author が壊れた参照に気づけるよう、
+          `[text]` で可視化するのみで BuildReport には積まない。author が壊れた参照に気づけるよう、
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
         phase: 18
-        proposal: 20-design/70-generator/20-anchor-spec#未解決参照の扱い
+        proposal: 20-design/70-generator/20-anchor-spec#未決事項
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
         phase: 11
@@ -99,6 +99,14 @@ categories:
         title: _NodeMeta の由来型分岐を _Anchor strategy へ多態化
         phase: 13
         done: true
+      B15:
+        title: 一意でないアンカーパスの検出 (NodeMap 後勝ちの可視化)
+        note: >-
+          view の flatten 等で正当に生じる重複アンカーパスは NodeMap で後勝ちに畳まれ、
+          ページ主語になるまで (PageCollisionError) 検出されない。構築時に検出して
+          リンク抑止か警告にするか、どこまでやるかの検討から。
+        phase: 18
+        proposal: 20-design/70-generator/20-anchor-spec#未決事項
 
   C:
     title: ページ分割 (paging)
@@ -155,6 +163,13 @@ categories:
         title: render ループの一般化 (heterogeneous edition kinds を単一ループへ)
         phase: 12
         done: true
+      C13:
+        title: edition 別ルートテンプレートの reports.yaml への露出
+        note: >-
+          Edition.root_template / templates_dir と render ループの差し替え機構は既にある。
+          残るは reports.yaml の `root_template` エントリ (スキーマ + load_editions) のみ。
+        phase: 18
+        proposal: 20-design/70-generator/40-paging-spec#edition-別ルートテンプレート将来
 
   D:
     title: ユーザコンテンツバリデーション
@@ -613,6 +628,13 @@ categories:
         title: build_info — ビルド時情報の照会関数
         phase: 16
         done: true
+      P15:
+        title: テンプレート評価のリソース上限 / プロセス隔離 (ホスト / 無人 build 向け)
+        note: >-
+          minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
+          ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
+        phase: 18
+        proposal: 20-design/70-generator/60-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
     title: 公開
@@ -823,6 +845,19 @@ categories:
         title: 既存フィルタの output_format モデルへの移行
         phase: 11
         done: true
+      U5:
+        title: output_format の拡張 (md 以外の具体仕様 / 入れ子 / ブロック切替 / 追加の位置依存正規化)
+        note: >-
+          いずれも実需が顕在化した時点で別仕様として詰める。md 以外の HTML 系は N2 と重なる。
+        phase: 18
+        proposal: 20-design/70-generator/50-output-format-spec#proposals
+      U6:
+        title: Prose 型の mime_type 多態 (text/markdown 以外の prose)
+        note: >-
+          レコード直下の mime_type を分岐キーに、text/html 等の prose をページとして扱う。
+          汎用の Typed Value 機構は採らず、組み込みコレクションに限る。
+        phase: 18
+        proposal: 20-design/70-generator/50-output-format-spec#proposals
 
   V:
     title: プロジェクトマニフェスト (sbdb.yaml)

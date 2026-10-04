@@ -113,7 +113,7 @@ A filter that renders a subtemplate against the piped value, **either as its own
 
 Whether the subtemplate becomes its own page or expands in place is driven by [`file_per`](reports.md): if the subject's [type ID](reports.md#type-ids) is listed there, the subtemplate is **split** into its own file; otherwise it expands **inline** at the call site (like `{% include %}`). The same template therefore works either way — list the type in `file_per` where you want it on its own page, omit it where you want it inlined, so one report can ship both as separate [editions](reports.md#editions).
 
-A *split* subject must be an addressable node, so a scalar raises an error; inline expansion accepts any value.
+Only an addressable node can become its own page: a scalar subject always expands inline, whatever `file_per` says.
 
 #### Output path
 
