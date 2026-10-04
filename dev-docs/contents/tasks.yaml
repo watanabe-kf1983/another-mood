@@ -74,9 +74,9 @@ categories:
         phase: 11
         done: true
       B10:
-        title: 未解決リンク参照のビルドレポート警告 (link / resolve 共通)
+        title: 未解決リンク参照のビルドレポート警告 (link / relink 共通)
         note: >-
-          link / href (B4) と resolve (B5) は未解決参照 (MissingNode / 解決できない node: URL) を
+          link / href (B4) と relink (B5) は未解決参照 (MissingNode / 解決できない node: URL) を
           `[text]` で可視化するのみで BuildReport には積まない。author が壊れた参照に気づけるよう、
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
@@ -112,7 +112,6 @@ categories:
     title: ページ分割 (paging)
     impl_paths:
       - src/another_mood/components/generator/
-      - src/another_mood/components/generator/render_processor.py
     spec: 20-design/70-generator/40-paging-spec
     tasks:
       C1:
@@ -174,8 +173,6 @@ categories:
   D:
     title: ユーザコンテンツバリデーション
     impl_paths:
-      - src/another_mood/components/preprocess/normalizer.py
-      - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/preprocess/
       - src/another_mood/resources/schemas/schema-schema.yaml
       - src/another_mood/config.py
@@ -354,7 +351,6 @@ categories:
     tasks:
       G2:
         title: another-mood.config.json 読み込み
-        note: config-spec.md
         phase: 18
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
       G5:
@@ -523,8 +519,7 @@ categories:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
         note: >-
-          カスタムレンダラ差し替えの構想 (旧 G3 render.customServer.command) はこの
-          検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
+          カスタムレンダラ差し替えの構想はこの検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
           差し替えで済む抽象は存在しない。
         phase: 18
       N2:
@@ -677,7 +672,7 @@ categories:
           — Issues は有効のまま放置・PR も放置・Dependabot version updates は有効化しない。
           うるさくなったら (AI slop 等) そのとき対策を再考。
           対応 Python 版の下限判断は Q12 へ分離した。
-          PR テンプレート / CONTRIBUTING の要否検討もここ (repo 内部には T4 の
+          CONTRIBUTING の要否検討もここ (repo 内部には T4 の
           lint コメントで足りる。外部コントリビュータという宛先が生まれて
           初めて意味を持つ装置)。
           受益者が現れるローンチまで不要。Q3 の前提。
@@ -771,14 +766,6 @@ categories:
         done: true
       S6:
         title: 要件トレーサビリティ表テンプレート
-        note: |
-          要求仕様書 4 章「検証」(要求別検証方法一覧) と要求 ↔ 設計 artifact の
-          対応表。29148 が traceability を明示的に求める成果物で、文書横断参照
-          (x-ref + 表生成) の実証。要求レコード (S3) が揃ってから。S5 の Candidates
-          判定で task 化。S8 の目次仕様で割り当てた生成部: 設計書「はじめに」章の
-          設計方針節 (設計判断 entity のサンプルデータと、根拠要求への参照を含む
-          一覧の生成)。要求仕様書 4 章 (検証) は章別 PR 4 で、設計書の設計方針節は
-          章別 PR 5 で完了 (決定事項は各 PR の本文)。
         phase: 18
         done: true
       S7:

@@ -1,6 +1,6 @@
 # タスクカタログ
 
-残タスクを機能カテゴリ別に整理したもの。各タスクは実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は {{ node(path="/roadmap") | link("ロードマップ") }} を参照。完了済みタスクは記載しない（git log を参照）。
+タスクを機能カテゴリ別に整理したもの。各カテゴリに実装箇所と仕様ドキュメントを併記する。フェーズ別の順序は {{ node(path="/roadmap") | link("ロードマップ") }} を参照。
 
 {% for category in this %}
 ## {{ category.id }}. {{ category.title }}{{ category | anchor }}
