@@ -22,7 +22,6 @@ from another_mood.components.shared.query import (
     Sort,
     Where,
     evaluation_order,
-    overlaps,
 )
 from another_mood.components.shared.record_predicate import (
     FieldPredicate,
@@ -317,6 +316,89 @@ class TestFlattenDeriveOverlap:
     )
     def test_accepts(self, base: str, as_: tuple[str, ...]) -> None:
         Flatten(of=("tasks",), as_=as_).derive(tree(base))
+
+
+class TestFlattenDeriveLanding:
+    """The element is written at ``as`` as a path: into the objects on
+    the way where the row has them, into made-up ones where it does
+    not.  Required follows from where the element is.  With
+    ``preserve_empty: false`` every remaining row has one; with ``true``
+    only the rows that had an element do, so a made-up object is
+    optional and the element is optional inside an object that was
+    already there."""
+
+    @pytest.mark.parametrize(
+        ("base", "flatten", "expected"),
+        [
+            pytest.param(
+                "id tasks[]",
+                Flatten(of=("tasks",), as_=("x", "task")),
+                "id x.task",
+                id="made up",
+            ),
+            pytest.param(
+                "id tasks[]",
+                Flatten(of=("tasks",), as_=("x", "task"), preserve_empty=True),
+                "id x?.task",
+                id="made up, rows kept",
+            ),
+            pytest.param(
+                "tasks[]",
+                Flatten(of=("tasks",), as_=("a", "b", "task"), preserve_empty=True),
+                "a?.b.task",
+                id="made up two deep, rows kept",
+            ),
+            pytest.param(
+                "id hobby.level tasks[]",
+                Flatten(of=("tasks",), as_=("hobby", "task")),
+                "id hobby.level hobby.task",
+                id="into an object on every row",
+            ),
+            pytest.param(
+                "id hobby?.level tasks[]",
+                Flatten(of=("tasks",), as_=("hobby", "task")),
+                "id hobby?.level hobby?.task",
+                id="into an object on some rows",
+            ),
+            pytest.param(
+                "id hobby?.level tasks[]",
+                Flatten(of=("tasks",), as_=("hobby", "task"), preserve_empty=True),
+                "id hobby?.level hobby?.task?",
+                id="into an object on some rows, rows kept",
+            ),
+            pytest.param(
+                "a.b.c tasks[]",
+                Flatten(of=("tasks",), as_=("a", "b", "task")),
+                "a.b.c a.b.task",
+                id="into an object two deep",
+            ),
+        ],
+    )
+    def test_shape(self, base: str, flatten: Flatten, expected: str) -> None:
+        assert paths(flatten.derive(tree(base))) == expected
+
+    def test_keeps_the_object_written_into(self) -> None:
+        """An object on the way keeps its edge and node as declared; the
+        element goes last among its children."""
+        hobby_edge = dc.Edge(
+            name="hobby",
+            type="object",
+            required=True,
+            metadata={"title": "Hobby"},
+            validation={"minProperties": 1},
+        )
+        hobby = dc.Node(
+            metadata={"title": "Hobby object"},
+            children=[(dc.Edge(name="level", type="string", required=True), dc.Node())],
+        )
+        tasks = (dc.Edge(name="tasks", type="string[]", required=True), dc.Node())
+        out = Flatten(of=("tasks",), as_=("hobby", "task")).derive(
+            dc.Node(children=[(hobby_edge, hobby), tasks])
+        )
+        kept, node = out.child_entry("hobby")
+        assert kept == hobby_edge
+        assert node.metadata == hobby.metadata
+        assert [e.name for e, _ in node.children] == ["level", "task"]
 
 
 # What the catalog side of a write path has to produce.  Strict, so
@@ -865,38 +947,6 @@ class TestSelect:
             {"id": "root_a"},
             {"id": "child_a", "parent_entity": "root_a"},
         ]
-
-
-class TestOverlaps:
-    """Two write paths overlap when one is the other or leads into it:
-    writing a name claims everything under it."""
-
-    @pytest.mark.parametrize(
-        ("a", "b"),
-        [
-            (("a",), ("a",)),
-            (("a",), ("a", "b")),
-            (("a", "b"), ("a", "b", "c")),
-        ],
-        ids=["the same", "one leads into the other", "deeper down"],
-    )
-    def test_overlapping(self, a: tuple[str, ...], b: tuple[str, ...]) -> None:
-        assert overlaps(a, b)
-        assert overlaps(b, a)
-
-    @pytest.mark.parametrize(
-        ("a", "b"),
-        [
-            (("a",), ("b",)),
-            (("a", "b"), ("a", "c")),
-            (("a", "b", "c"), ("a", "x", "c")),
-            (("hobby",), ("hobbyist",)),
-        ],
-        ids=["different names", "siblings", "parted above", "string prefix"],
-    )
-    def test_clear_of_each_other(self, a: tuple[str, ...], b: tuple[str, ...]) -> None:
-        assert not overlaps(a, b)
-        assert not overlaps(b, a)
 
 
 class TestSelectDerive:

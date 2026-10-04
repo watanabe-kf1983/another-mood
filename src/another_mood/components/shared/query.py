@@ -11,7 +11,7 @@ The ``where`` clause's per-record predicate AST lives in
 wrapper.
 """
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 from functools import reduce
@@ -20,6 +20,12 @@ from itertools import chain, combinations
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.catalog_write import (
+    Placement,
+    names,
+    overlaps,
+    place,
+)
 from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
@@ -120,25 +126,36 @@ class Flatten(QueryNode):
         # The alias must be clear of every name the row still holds once
         # the array is gone: landing on one or inside one is a collision.
         rest = dc.Node(children=[(e, c) for e, c in catalog.children if e.name != of])
-        taken = next((name for name in _names(rest) if overlaps(self.as_, name)), None)
+        taken = next((name for name in names(rest) if overlaps(self.as_, name)), None)
         if taken is not None:
             raise QueryDeriveError(
                 f"flatten alias '{as_}' collides with the attribute '{'.'.join(taken)}'",
                 offender=self.as_[0],
             )
-        wrapper = replace(
-            edge,
-            name=as_,
-            type=edge.type[:-2],
-            required=not self.preserve_empty,
+        # ``apply`` drops the rows with no element unless told to keep
+        # them: the element is on every row, or on the rows holding one.
+        source: KeyPath = (*self.of, "[]") if self.preserve_empty else ()
+        element = Placement(
+            branch=(replace(edge, type=edge.type[:-2]), child),
+            path=self.as_,
+            source=source,
         )
-        return dc.Node(
-            metadata=catalog.metadata,
-            children=[
-                (wrapper, child) if e.name == of else (e, c)
-                for e, c in catalog.children
-            ],
-        )
+        if len(self.as_) == 1:
+            # Written beside the array, the element takes its slot.
+            landed = replace(
+                element.branch[0], name=as_, required=not self.preserve_empty
+            )
+            return dc.Node(
+                metadata=catalog.metadata,
+                children=[
+                    (landed, child) if e.name == of else (e, c)
+                    for e, c in catalog.children
+                ],
+            )
+        else:
+            # Transitional: the array is at the root, so nothing is left
+            # empty by its going.
+            return place(replace(rest, metadata=catalog.metadata), [element])
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
         other = drop(parent, self.of)
@@ -314,23 +331,6 @@ class Grouped(QueryNode):
 
 
 @dataclass(frozen=True)
-class BranchPlacement:
-    """A branch, where it goes in the output catalog, and when it is there.
-
-    ``source`` is the read-side path whose presence on a row decides the
-    branch's: the row holds the branch exactly when it holds ``source``.
-    The root ``()``, on every row, says the branch is on every row.
-    Sources compare by prefix: a row holding a path holds every prefix
-    of it, so the rows of a deeper source are among those of a shallower
-    one, and nothing else about two sources' rows is known.
-    """
-
-    branch: dc.Branch
-    path: KeyPath
-    source: KeyPath
-
-
-@dataclass(frozen=True)
 class SelectItem:
     """A single field projection: read ``item``, write it at ``as_``.
 
@@ -353,7 +353,7 @@ class SelectItem:
             return out
         return put(out, self.as_, value)
 
-    def derive(self, catalog: dc.Node) -> BranchPlacement:
+    def derive(self, catalog: dc.Node) -> Placement:
         """The branch read at :attr:`item`, bound for :attr:`as_`."""
         # The whole subtree comes along, mirroring apply's ``pluck``.
         edges, node = catalog.reach(self.item)
@@ -363,7 +363,7 @@ class SelectItem:
         optional_depths = [
             depth for depth, edge in enumerate(edges, 1) if not edge.required
         ]
-        return BranchPlacement(
+        return Placement(
             branch=(edges[-1], node),
             path=self.as_,
             source=tuple(e.name for e in edges[: max(optional_depths, default=0)]),
@@ -391,70 +391,13 @@ class Select(QueryNode):
                     f"item '{'.'.join(earlier)}'",
                     offender=later[0],
                 )
-        return self._land([item.derive(catalog) for item in self.items])
+        # The row is built from nothing, so nothing the input held under
+        # the same name carries over.
+        return place(dc.Node(), [item.derive(catalog) for item in self.items])
 
     def _project(self, record: Record) -> Record:
         empty: Record = {}
         return reduce(lambda out, item: item.apply(record, out), self.items, empty)
-
-    @staticmethod
-    def _land(placements: Sequence[BranchPlacement]) -> dc.Node:
-        """The catalog node the ``placements`` build up: each branch at
-        its path, with the objects on the way made up, children in the
-        order first written to.  The row is built from nothing, so
-        nothing the input held under the same name carries over."""
-        # The row itself is on every row.
-        return Select._nest(placements, holder_sources=[()])
-
-    @staticmethod
-    def _nest(
-        placements: Sequence[BranchPlacement], *, holder_sources: Sequence[KeyPath]
-    ) -> dc.Node:
-        """The node the ``placements`` fill, each path relative to it.
-
-        ``holder_sources`` are the sources of every placement under the
-        node: the rows that hold it."""
-        return dc.Node(
-            children=[
-                Select._child(
-                    head,
-                    [p for p in placements if p.path[0] == head],
-                    holder_sources=holder_sources,
-                )
-                for head in dict.fromkeys(p.path[0] for p in placements)
-            ]
-        )
-
-    @staticmethod
-    def _child(
-        name: str,
-        placements: Sequence[BranchPlacement],
-        *,
-        holder_sources: Sequence[KeyPath],
-    ) -> dc.Branch:
-        """One child of a node, from the placements whose path starts at it."""
-        sources = [p.source for p in placements]
-        # The child is on the rows its placements are; it is required when
-        # that covers every row the holder is on.  The catalog says no more
-        # about rows than which paths they hold, so two unrelated sources
-        # never cover a third between them.
-        required = all(
-            any(_rows_within(holder, source) for source in sources)
-            for holder in holder_sources
-        )
-        if len(placements) == 1 and len(placements[0].path) == 1:
-            edge, node = placements[0].branch
-            return replace(edge, name=name, required=required), node
-        else:
-            # The path goes on under this name for every placement: one
-            # that ended here would have overlapped the others.
-            return (
-                dc.Edge(name=name, type="object", required=required),
-                Select._nest(
-                    [replace(p, path=p.path[1:]) for p in placements],
-                    holder_sources=sources,
-                ),
-            )
 
     @classmethod
     def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
@@ -677,33 +620,3 @@ def _duplicate_child_name(node: dc.Node) -> str | None:
             return edge.name
         seen.add(edge.name)
     return None
-
-
-def _names(node: dc.Node) -> Iterator[KeyPath]:
-    """The names a row of ``node`` holds: the path to each value, an
-    array taken whole since nothing is written into one.  An object on
-    the way is not a name of its own; a write beside its children is
-    clear of them."""
-    for edge, child in node.children:
-        # Transitional: an edge name can still be a literal dotted key
-        # from an upstream alias.  Read as the path it will be.
-        head = tuple(edge.name.split("."))
-        if edge.is_collection or not child.children:
-            yield head
-        else:
-            yield from ((*head, *rest) for rest in _names(child))
-
-
-def _rows_within(a: KeyPath, b: KeyPath) -> bool:
-    """Whether every row holding source path ``a`` holds ``b``: ``b`` is
-    a prefix of ``a``, the root ``()`` being a prefix of everything."""
-    return a[: len(b)] == b
-
-
-def overlaps(a: KeyPath, b: KeyPath) -> bool:
-    """Whether two write paths take the same place: one is the other, or
-    leads into it.  Segment-wise, so ``hobby`` and ``hobbyist`` do not
-    overlap; ``hobby`` and ``hobby.level`` do, since writing ``hobby``
-    claims everything under it.  Siblings (``a.b``, ``a.c``) do not."""
-    shorter = min(len(a), len(b))
-    return a[:shorter] == b[:shorter]
