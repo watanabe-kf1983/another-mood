@@ -916,9 +916,32 @@ categories:
       W3:
         title: 残タスクの GitHub Issues 移行 + ロードマップ退役
         note: >-
-          Phase 18 以降の残タスクを GH Issues へ転記し、以後のタスク管理を Issues に
-          一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
+          Phase 18 以降の残タスクを GH Issues へ転記し (W5 の proposals は Issue 本文へ)、
+          以後のタスク管理を Issues に一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
           はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
           ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
           Q カテゴリから移管 (旧 Q5)。
+        phase: 17
+      W4:
+        title: dev-docs の appendix 構造化
+        note: >-
+          dev-docs を、少ないコンテクストで作業に入れる導線にする。
+          本文には設計そのもの (構造・不変条件・契約・跨る機構と意図の一文) だけを残し、
+          設計に至った過程 (比較調査・却下案・経緯・未起票の候補) と、変更前に読む必要のない
+          精密な規則は `90-appendix/` (contents の鏡写し) へ移して本文からリンクする。
+          局所的な機構はコードが正本で書かない。文言は変えず移動のみ。
+          表記の揃えと契約文型への書き直しは W2 で行う。W2 の前提。
+        phase: 17
+      W5:
+        title: dev-docs appendix の entity 化 (decisions / rules / proposals)
+        note: >-
+          W4 で `90-appendix/` に移した内容を entity に分け、design ページは join で描く。
+          経緯は設計文書に紐づく decisions (判断・理由・却下案・帰結・PR 番号)。
+          Proposal の履歴ではなく、判断時に蒸留して書く。
+          精密な規則は設計文書と fixture に紐づく rules。
+          Proposal は task に紐づく proposals として `## Proposals` 節から独立させ、
+          `tasks.proposal` は見出しアンカーでなく prose id を指す。W3 までの一時措置で、
+          構造化しておけば task とともに Issue 本文へ移せる。
+          prose は属性を持てないので、YAML レコード + Markdown の二ファイル運用を受け入れる。
+          W4 の後、W3 の前。
         phase: 17
