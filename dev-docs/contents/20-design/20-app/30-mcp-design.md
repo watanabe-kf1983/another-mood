@@ -154,3 +154,57 @@ build（エージェントのワンショット実行）と watch（バックグ
 `mcp` は stdio-only の本ツールにも HTTP スタック（starlette / uvicorn / sse-starlette / httpx2 / cryptography 等）を引き込む。実測では、runtime 依存 26 パッケージの土台に対して SDK が **+23 パッケージ**（SDK 1.x でも +22）を足し、インストール規模がほぼ倍になる。
 
 これを承知のうえで SDK に乗り続ける。stdio JSON-RPC を自前実装して依存ゼロ化する案（300-500 行規模）は採らない。理由は、削れるのがディスク上のパッケージ数だけなのに対し、引き受けるのがプロトコル適合の恒久的な責任だから: initialize handshake、capability negotiation、型ヒントからの JSON Schema 生成、structured output、`resource_link`、そして年次で改訂される仕様への追従。MCP の仕様追従を SDK に委ねられることが、この依存を持つ主目的であって、副作用ではない。
+
+## Proposals
+
+### エージェント導線の instructions 経路への移行 (J6)
+
+MCP サーバの固有価値を問い直し、エージェントへの導線を利用者が管理するテキスト（CLAUDE.md / AGENTS.md 等の instructions ファイル）経由に寄せる。MCP サーバは派生チャネルに降格し、将来の削除候補とする。
+
+#### 背景: MCP が運んでいるものの分解
+
+MCP の 7 ツールはすべて `mood` サブコマンドの薄い皮であり、「MCP と CLI の論理的機能は一致すべき」の原則どおり、MCP でしかできない操作は一つもない。実際、MCP を登録できない環境（企業ポリシーで禁止）でも CLI だけで問題なく運用できている実例がある。
+
+MCP が CLI に対して余分に運んでいるのは Server Instructions だけで、これは本ツールのエージェント向け文章のうち **唯一 `docs/` を正本としないもの** である。他のドキュメントは「`docs/` を正本とし GitHub / MCP / CLI の複数チャネルで配る」と一元化されているのに、Instructions だけは MCP というチャネルに正本ごと埋まっている。「MCP に登録せよ」と利用者に求めているのは、この埋まり方の帰結にすぎない。
+
+「AI 向け説明文」と一括りにされがちなものは三つに分かれる:
+
+- **内容**（ツールが何をするか、どう使うか）: 人間と AI で同一であるべきで、別版は不要。`docs/` で済んでいる
+- **導線**（docs がどこにあり、いつ読むか）: 人間は README や検索で自力でたどり着くが、エージェントは文脈に書かれていなければ読みに行かない。これだけが正当に AI 固有の部分で、中身は「このディレクトリは mood で管理する。`mood --help` を見よ」程度の一行で足りる
+- **プロジェクト固有の運用**（dev-docs は `dev-docs/` にあり `mood build dev-docs` で組む、等）: ツールの文書ではなくプロジェクトの文脈。書く主体はプロジェクトの持ち主で、ツールにできるのは init で種を置くことまで
+
+結論として、ツールが出荷すべき AI 専用の文章は無い。出すべきは、良い `docs/`、エージェントが自力でたどれる導線（`mood --help` → `mood docs list` → `mood docs read`）、プロジェクトディレクトリに置く一行のポインタ、の三つ。
+
+多くのライブラリが AI 向け文書（`llms.txt`、skill、AGENTS.md テンプレート）を別途出しているのは、人間向け docs が Web レンダリング前提で機械が取りにくい、量が多すぎて索引が要る、といった「docs が機械に読めない」症状への対処であり、方向は分離ではなく収束（人間向け docs を機械にも読める形に寄せる）である。本ツールは `docs/` が素の Markdown でパッケージに同梱され `mood docs read` で引けるので、収束後の形を最初から持っている。
+
+#### 背景: instructions 経路が「コントローラブル」である理由
+
+- **テキストの所有者**: MCP の Instructions はツール作者の文章がそのまま注入され、利用者にできるのはサーバの on/off だけ。instructions ファイルなら削る・直す・自分の事情を足す・PR でレビューする、すべてできる
+- **届く単位**: MCP 登録はクライアントごと・利用者ごと（`.mcp.json` でプロジェクト単位にもなるが、クライアントが MCP を喋れることが前提）。リポジトリ内のファイルは、ローカルでも Web 版エージェントでも CI でも、チェックアウトすれば届く
+- **信頼の境界**: システムプロンプトに第三者のテキストが注入される経路は、原理的にはプロンプトインジェクションの面であり、企業が MCP を一律禁止する理由はおそらくこれ。利用者側で統制できる経路のほうが通りやすい
+
+ユーザスコープ / プロジェクトスコープの区別は両経路に並行して存在する（MCP の user scope ↔ `~/.claude/CLAUDE.md`、`.mcp.json` ↔ プロジェクトの CLAUDE.md）。構造は同じで、違いは中身が利用者に読めて書けるテキストかどうかだけ。
+
+MCP 側に残る固有価値は、シェルを持たないクライアント（Claude Desktop のチャット等）への経路と、型付きスキーマの二つ。本ツールの対象利用者はコーディングエージェントなので、どちらも効きが薄い。
+
+#### 現状の鎖
+
+`mood --help` の冒頭は既に「schema / views / templates を書く前に `mood docs list` → `mood docs read <uri>` で仕様を読め」と指しており、`docs list` は各ページの要約つきで URI を返す。「`mood --help` を見ろ」の一言から仕様の該当ページまで二手で届く。Instructions にある作業ループ（編集 → build → `__db/` 診断出力で確認）も、`docs/guides.md` の Workflow 章に段階ごとの「どこに書き、どこで確認するか」の表として既にある。Instructions の内容で `docs/` に無いものは無い。
+
+欠けているのは二点だけ: プロジェクトディレクトリに置く一言と、`--help` から Workflow 章への指し。
+
+#### 案
+
+1. **`mood --help` に作業ループへの一行を足す**。「編集 → `mood build` → `__db/` の診断ページで確認。詳細は `docs://guides.md` の Workflow」程度。既存の「仕様を読め」の一文と並べる
+2. **`mood init` / `mood blueprint apply` が `<project_dir>/README.md` を生成する**。`sbdb.yaml` と同じく、ブループリントのコピーとは別の生成経路（`_generate_manifest` の隣）。全ブループリントに一様に効き、showcase 側にファイルを置かずに済む。内容は数行のポインタに限る: Another Mood（PyPI へのリンク）が管理する source-based database であること、`mood build <dir>`、コマンドは `mood --help`、仕様は `mood docs list`。構造の説明は書かない（`--help` と `guides.md` の仕事で、書くと複製になる）。読者はディレクトリを開いた同僚とエージェントの両方で、同じ文章で済む。project 直下は `contents/` の外なので content としては読まれない
+3. **`docs/mcp.md` を「Using with AI agents」に改題**。冒頭を「CLAUDE.md / AGENTS.md / `.github/copilot-instructions.md` 等に次の一行を足す」に置き換え、置き場所はクライアント別の表で示す。本文は一つで、形式ごとのサンプルは作らない（複製は必ずどれかが古くなる）。MCP の設定手順は末尾の一節に降格
+4. **Server Instructions を上記ポインタと同等まで縮める**。ワークフローの記述は `docs/` 側に委ね、Instructions は「`list_docs` → `read_doc` で仕様を読め、`build` で検証せよ」程度に留める
+5. **将来: `mood-mcp` エントリポイントと `mcp` 依存の削除**。別 PR、`Release-Highlight: breaking`。1〜4 を先に出荷し、MCP 無しで同等の体験が得られることを確認してから落とす。削除で失うものはシェルを持たないクライアント向け経路のみで、移行案内は「CLAUDE.md に一行足す」で書ける。本ファイルの Resources / Tools 並行公開、SDK 採用理由、死荷重受容の各節は削除時に一緒に落ちる
+
+#### 波及
+
+- `docs/guides.md` の Quick Start にあるディレクトリ木と、`docs/reference/cli.md` の `init` / `blueprint apply` の説明に README.md を足す
+- help 文中の「(also exposed via MCP)」は 5 で落ちる
+- 既存プロジェクトには README.md は届かない。3 の docs ページからコピーすれば済むので、独立コマンドは急がない
+- `mood init` の冪等性: 既に README.md があるときの扱い（上書きしない）を `sbdb.yaml` と揃える
+- `docs/index.md` と `docs/catalog.yaml` の `mcp.md` のタイトル・要約を改題に合わせる
