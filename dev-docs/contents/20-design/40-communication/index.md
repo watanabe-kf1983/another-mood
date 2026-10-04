@@ -1,6 +1,6 @@
 # Component Communication
 
-コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する（[architecture](../10-architecture.md#設計判断) 設計判断 #6 の精緻化）。ファイル経由ゆえに各段を YAML として目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [prose](20-prose-spec.md) / [blob](30-blob-spec.md)。
+コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する（[architecture](../10-architecture.md#設計判断) 設計判断 #6 の精緻化）。ファイル経由ゆえに各段を目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [prose](20-prose-spec.md) / [blob](30-blob-spec.md)。
 
 ## Internal Design
 
@@ -18,4 +18,4 @@
 
 ### エラー伝播: BuildReport
 
-各ステージのエラーは即座に停止させず、`BuildReport` として upstream から下流へ伝播させる。最終出力は **reconcile** ステージが「Generator の出力（あるべき姿）」と「伝播してきた BuildReport（実際に起きたこと）」を突き合わせて確定する — エラー無しは pass-through、エラー有りは `__build_failure` ページへ差し替え。これにより下流（Render / publish）は reconcile 出力の単一視点だけを持てばよく、正常時・エラー時の分岐を知らずに済む。ステージ挙動の詳細は [generator.md の Reconcile 節](../70-generator/10-generator.md#reconcile)。
+各ステージのエラーは即座に停止させず、`BuildReport` として upstream から下流へ伝播させる。最終出力は **reconcile** ステージが「Generator の出力（あるべき姿）」と「伝播してきた BuildReport（実際に起きたこと）」を突き合わせて確定する — エラー無しは pass-through、エラー有りはビルド失敗ページへ差し替え。これにより下流（site / publish）は reconcile 出力の単一視点だけを持てばよく、正常時・エラー時の分岐を知らずに済む。ステージ挙動の詳細は [generator.md の Reconcile 節](../70-generator/10-generator.md#reconcile)。

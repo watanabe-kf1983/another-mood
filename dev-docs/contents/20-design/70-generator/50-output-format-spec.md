@@ -2,7 +2,7 @@
 
 テンプレートエンジンの出力フォーマット (Markdown / HTML / Mermaid 等) ごとに escape 関数と位置依存ヘルパを切り替える仕組みの仕様。
 
-利用者向けの API 仕様 (`md_escape` の振る舞い・4 ヘルパの使い方) は `docs/reference/template.md` を参照。本仕様は設計判断と内部構造に絞る。
+利用者向けの API 仕様 (`md_escape` の振る舞い・位置依存ヘルパの使い方) は `docs/reference/template.md` を参照。本仕様は設計判断と内部構造に絞る。
 
 ## External Design
 
@@ -53,44 +53,44 @@ def md_escape(text: str) -> str:
 
 `<projectDir>/filters.py` の auto-load や entry points 経由でプロジェクト固有の Python ヘルパを登録する仕組みは **意図的にサポートしない**。
 
-ソース (Another Mood プロジェクト) を書いた人とそのソースでツールを動かす人が一致するとは限らない。任意 Python の実行を許すと、配布されたプロジェクトを `mood build` した時点で第三者の手元で任意コードが走る。これは Excel マクロウィルスと同型の問題で、被害は受け取り側に発生する。この「著者 ≠ 実行者」の信頼境界と、テンプレート実行そのものの扱い (0.1.0 の A / 1.0 の C) は [template-trust-model.md](60-template-trust-model.md) に一般化して整理している。
+ソース (Another Mood プロジェクト) を書いた人とそのソースでツールを動かす人が一致するとは限らない。任意 Python の実行を許すと、配布されたプロジェクトを `mood build` した時点で第三者の手元で任意コードが走る。これは Excel マクロウィルスと同型の問題で、被害は受け取り側に発生する。この「著者 ≠ 実行者」の信頼境界と、テンプレート実行そのものの扱いは [template-trust-model.md](60-template-trust-model.md) に一般化して整理している。
 
-整形ニーズは Jinja2 標準フィルタ + 本仕様の位置依存ヘルパ + [system filters](#outputformat-と-system-filters-の住み分け) (built-in メタ用、ユーザ非公開) で吸収する。これらで足りないケースが顕在化したら、Python 任意実行を経由しない手段 (宣言的 DSL の拡張、データ側での事前整形 等) で詰める。
+整形ニーズは Jinja2 標準フィルタ + 本仕様の位置依存ヘルパ + [meta-template filters](#outputformat-と-meta-template-filters-の住み分け) (built-in メタ用、ユーザ非公開) で吸収する。これらで足りないケースが顕在化したら、Python 任意実行を経由しない手段 (宣言的 DSL の拡張、データ側での事前整形 等) で詰める。
 
 ## Internal Design
 
 ### finalize-based escape の選択
 
-Jinja2 の autoescape は `markupsafe.escape` (HTML escape) に決め打ちで escape 関数差し替え API が無い。output_format ごとに escape を切り替えるため、`autoescape=False` のまま `finalize` フックで `output_format.escape(str(value))` を適用する方式を採る。
+エンジンの auto-escape は HTML escape 決め打ちで、escape 関数の差し替え口が無い（minijinja はテンプレート名の拡張子で有効化を決める）。output_format ごとに escape を切り替えるため、auto-escape を `auto_escape_callback` で無条件に切り、`finalizer` フックで `output_format.escape(str(value))` を適用する方式を採る。
 
-コードを読んで `finalize=_finalize` を見ても理由は復元できないため、保守時に「autoescape に戻したい」誘惑に乗らないようここに残す。
+コードを読んで `finalizer=_finalize` を見ても理由は復元できないため、保守時に「auto-escape に戻したい」誘惑に乗らないようここに残す。
 
 ### Markup 返却契約
 
 `finalize` は `Markup` を素通しする。ヘルパは **`Markup` を返したら、そのヘルパが内部のあらゆる escape を完了させていなければならない**。契約違反のヘルパはセーフネットを素通って崩れた出力を出す。
 
-新しい位置依存ヘルパを追加する際の不変条件。各ヘルパの具体的な実装責務 (CommonMark 6.1 制約、padding 規則、safe-set 等) は `md.py` の docstring と `test_md.py` で担保する。
+新しい位置依存ヘルパを追加する際の不変条件。各ヘルパの具体的な実装責務 (CommonMark 6.1 制約、padding 規則、safe-set 等) は `md.py` のコメントと `test_md.py` で担保する。
 
 ### OutputFormat と meta-template filters の住み分け
 
-OutputFormat 記述子の `globals` / `filters` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`OutputFormat` ではなく `meta_templates.py` に `META_TEMPLATES_FILTERS` として持ち、メタテンプレート描画時のみ `TemplateEngine` の `filters` 引数で注入する。
+`md.py` のモジュール定数 `MD_GLOBALS` / `MD_FILTERS` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ、ノードのアンカーパス取り出し) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`meta_templates.py` に `META_TEMPLATES_FILTERS` として持ち、メタ edition の `extra_filters` としてのみ注入する。
 
 新しい補助関数を追加する際の判定:
 
-- フォーマット固有 (位置依存正規化) → OutputFormat
+- フォーマット固有 (位置依存正規化) → `MD_GLOBALS` / `MD_FILTERS`
 - メタテンプレート固有 (catalog 走査・整形) → META_TEMPLATES_FILTERS
 
-境界を曖昧にして OutputFormat にメタ専用 filter を混ぜると、将来 output_format を追加するたびに同じ filter を再登録する DRY 違反になり、メタテンプレートの依存をユーザテンプレートにも漏らしてしまう。
+境界を曖昧にしてフォーマット側にメタ専用 filter を混ぜると、将来 output_format を追加するたびに同じ filter を再登録する DRY 違反になり、メタテンプレートの依存をユーザテンプレートにも漏らしてしまう。
 
-### config 依存フィルタとフォーマットの注入
+### ヘルパの配線とフォーマットの注入
 
-`globals` / `filters` は config 非依存の静的ヘルパだが、source ページ相対のリンクフィルタ (`href` / `link`、[generator.md#リンク解決](10-generator.md#リンク解決)) は paging 設定 (`Edition`) に依存する。これらは `OutputFormat.link_filters` を「`Edition` を受けてフィルタ群を返す factory」フィールドとして持たせ、`make_environment(output_format, edition)` がビルドの config で呼んで登録する。こうしてフォーマットは自分のフィルタ面全体（静的 + config 依存）を一箇所で所有し、呼び出し側が個別に配線せずに済む。
+`OutputFormat` が持つのは render policy（escape 関数・ブロック空白制御・`post_process`）だけで、ヘルパは policy ではない。フォーマットの静的ヘルパ (`MD_GLOBALS` / `MD_FILTERS`) も、paging と node map に束縛されるリンクフィルタ (`make_link_filters(paging, node_map)`、[generator.md#リンク解決](10-generator.md#リンク解決)) も、合成点である Generator が edition ごとに組み立てて `TemplateEngine` の `filters` / `globals` に渡す。エンジン自身はヘルパを一つも登録しない。
 
 `make_environment` / `TemplateEngine` は使う `OutputFormat` を **注入で受け取る**（具象フォーマットを import しない）。汎用エンジンが具象フォーマットを名指しすると `template_engine → md` の循環依存になるため、フォーマットの選択は合成点 (Generator) に寄せる。
 
 ### render サブテンプレートの output_format 解決
 
-`subject | render("template.md")` でサブテンプレートを呼ぶ場合、`template_name` の拡張子から output_format を引き、対応する Environment で render する想定。テンプレート参照に拡張子が含まれていること（[P2](node:/tasks/P/tasks/P2) で確立、利用者向け仕様は `docs/reference/template.md` の render）に依存する。
+`subject | render("template.md")` でサブテンプレートを呼ぶ場合、`template_name` の拡張子から output_format を引き、対応する Environment で render する想定。テンプレート参照に拡張子が含まれていること（利用者向け仕様は `docs/reference/template.md` の render）に依存する。
 
 現状は MD output_format に決め打ち。複数 output_format を扱うテンプレートが登場した時に実装する制約として記録しておく。
 
@@ -98,9 +98,8 @@ OutputFormat 記述子の `globals` / `filters` は **「出力フォーマッ�
 
 以下は本仕様では扱わない。実際にニーズが顕在化した時点で別仕様として詰める:
 
-- **CommonMark の他の位置依存正規化** — indented code block、link title、autolink 等。実需が顕在化したら 4 ヘルパと同じ枠組みで追加する
-- **Prose 型に的を絞った mime_type 多態** — text/markdown 以外の prose (text/html をページとして解釈する等) を、レコード直下の `mime_type` を分岐キーに扱う機構。かつて「Typed Value 機構」(値が `mime_type` と `content` を持ち、テンプレートがスキーマに頼らず値自体を見て振る舞いを変える汎用の発想) として検討したが、一般機構としては採らない — ユーザデータに厳密な型を宣言させることがこのツールのアイデンティティであり、スキーマ非依存の値検査はそれと矛盾する。多態を要求しうるのは組み込みコレクション (prose / blob) に限られ、型はレコード直下の `mime_type` (envelope のヘッダ相当、[normalizer.md M9](../50-normalizer/10-normalizer.md) 参照) が持つ。機構はその布石の上に、実需が顕在化した時点で Prose 型特化として詰める
+- **CommonMark の他の位置依存正規化** — indented code block、link title、autolink 等。実需が顕在化したら既存ヘルパと同じ枠組みで追加する
+- **Prose 型に的を絞った mime_type 多態** — text/markdown 以外の prose (text/html をページとして解釈する等) を、レコード直下の `mime_type` を分岐キーに扱う機構。かつて「Typed Value 機構」(値が `mime_type` と `content` を持ち、テンプレートがスキーマに頼らず値自体を見て振る舞いを変える汎用の発想) として検討したが、一般機構としては採らない — ユーザデータに厳密な型を宣言させることがこのツールのアイデンティティであり、スキーマ非依存の値検査はそれと矛盾する。多態を要求しうるのは組み込みコレクション (prose / blob) に限られ、型はレコード直下の `mime_type` (envelope のヘッダ相当、[blob-spec.md](../40-communication/30-blob-spec.md#レコード形状の判断) 参照) が持つ。機構はその布石の上に、実需が顕在化した時点で Prose 型特化として詰める
 - **`md` 以外の output_format の具体仕様** — `html` / `adoc` / `sql` / `mermaid` の escape 関数とラッパーフィルタ。各 output_format を扱うテンプレートを実際に導入する段階で詰める
 - **入れ子 output_format** — FreeMarker の `XML{HTML}` のような「外側 XML / 内側 HTML で二重 escape」の表現。Markdown 内の Mermaid fence のような実需はあるが、単一フォーマットで動く基盤を確立した後に検討する
 - **ブロック単位の output_format 切替構文** — Twig の `{% autoescape 'js' %}` 相当。テンプレート内で部分的にフォーマットを切り替える独自タグ。入れ子 output_format と同じ理由で後送り
-- **anchor 系フィルタの escape** — [anchor-spec.md](20-anchor-spec.md) の percent-encoding 規則。アンカー実装と一緒に詰める

@@ -4,7 +4,7 @@
 
 ### 背景: 永続化形式とクエリモデルの分離
 
-著者がネスト（コンポジション）で書いたデータを、別の軸で再グループ化したいというニーズは、データの利用が進むにつれて事後的に現れる。`flatten:` 句は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上で intrinsic 配列を unwind してフラットなアクセスを可能にする。詳細は [json-data-model.md](../40-communication/10-json-data-model.md) の「背景: なぜ永続化形式をフラット化しないか」を参照。
+著者は親子関係をネスト（コンポジション）として書くのが自然で、子を別の軸で再グループ化したいというニーズ（例: タスクをフェーズ別に集計する）は、データの利用が進むにつれて事後的に現れる。だからといって最初からフラットなリレーショナルモデル（FK による参照）での記述を強制するのは現実的でなく、特に自然なユニークキーを持たないオブジェクトへの id 付与が著者の負担になる。`flatten:` 句は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上で intrinsic 配列を unwind してフラットなアクセスを可能にする。
 
 ### 背景: where の closed set から `neq` (not equal) を外した理由
 
@@ -14,7 +14,7 @@ DB DSL によくある `neq` を入れなかったのは、対象キーが欠落
 - SQL の 3 値論理として読めば **UNKNOWN** (NULL の neq は UNKNOWN なので False 寄り)
 - 「`eq` の論理否定」と読めば **True** (`eq` が False なので flip して True)
 
-`neq` を closed set に入れると、どの解釈を採っても残り 2 つを期待した利用者から不自然に見える。代わりに「atomic 述語は欠落キーで常に False」+「`not` は内側の結果を flip」の 2 規則で semantics を一意化し、「等しくない」が必要なら `not: { field: x }` と書く設計にした。否定の挙動が `not` 1 箇所に集約され、述語ごとに考えなくてよくなる。
+`neq` を closed set に入れると、どの解釈を採っても残り 2 つを期待した利用者から不自然に見える。代わりに「atomic 述語は欠落キーで常に False (`exists` を除く)」+「`not` は内側の結果を flip」の 2 規則で semantics を一意化し、「等しくない」が必要なら `not: { field: x }` と書く設計にした。否定の挙動が `not` 1 箇所に集約され、述語ごとに考えなくてよくなる。
 
 ### 背景: sort の keyword に `null` ではなく `missing` を採用した
 
@@ -38,7 +38,7 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 
 ### 背景: `flatten:` 句を「intrinsic 配列専用」とした
 
-`flatten:` (top-level 句) はデータの永続形式そのものである intrinsic な配列 (composition-child / scalar 配列 / FK 配列) のみを unwind 対象とする。後続 E3 で導入される `join:` の `as:` 由来配列は対象外で、そちらは `join[].flatten:` インライン側で扱う。
+`flatten:` (top-level 句) はデータの永続形式そのものである intrinsic な配列 (composition-child / scalar 配列 / FK 配列) のみを unwind 対象とする。`join:` の `as:` 由来配列は対象外で、そちらは `join[].flatten:` インライン側で扱う。
 
 責任分離の理由: intrinsic 配列の unwind は「永続形式に対する読み方の表明」で、データの shape そのものに紐づく。一方 join 由来の配列は query が transient に作ったものなので、その shape の調整は join 句内で完結させた方が cause-fix locality が保てる。
 
@@ -49,11 +49,11 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 利点:
 - 親 fields は flatten 後の row top-level からそのまま読めるので、別 row への遡行機構を別途用意する必要がない
 - 複数 flatten / join の重ね合わせでも namespace で衝突回避できる
-- `as:` の意味が (E3 で導入される) nested join (= 配列名) と flat 化後 (= scalar 名) で完全に一致する (どちらも namespace prefix)
+- `as:` の意味が nested join (= 配列名) と flat 化後 (= scalar 名) で完全に一致する (どちらも namespace prefix)
 
 ### 背景: 走査の非対称性を設計原則として確立した
 
-**`flatten:` 系の句以外は、現 row の attribute (nested object 内の dot path を含む) のみを参照対象とし、 nested array の中身には潜らない**。配列に潜る (= cardinality を変える) 操作は `flatten:` (および E3 で導入される join 内 inline flatten) に集約し、 `where:` / `sort.by:` のような述語・selector 句側に array walk を持ち込まない。
+**`flatten:` 系の句以外は、現 row の attribute (nested object 内の dot path を含む) のみを参照対象とし、 nested array の中身には潜らない**。配列に潜る (= cardinality を変える) 操作は `flatten:` (および join 内 inline flatten) に集約し、 `where:` / `sort.by:` のような述語・selector 句側に array walk を持ち込まない。
 
 | 句 | 現 row の attribute (nested object dot path 含む) | nested array の中身 |
 |---|---|---|
@@ -61,7 +61,7 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 | `sort.by:` | ✅ 参照可 | ❌ 参照不可 |
 | `flatten:` | (操作対象は array attribute) | ✅ (展開のために潜る) |
 
-E3 で `join.on:` がこの表に加わるが、 同じ原則 (array に潜らない) に従う。
+`join.on:` も同じ原則 (array に潜らない) に従う。
 
 この非対称性ルールにより:
 
@@ -89,7 +89,7 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 
 ### 背景: ビュー間参照に名前付き参照を採り、インラインサブクエリを採らない
 
-`from:` / `join.to:` のソース名には、データエンティティだけでなく他のビューも書ける（RDBMS の view を FROM 句に書く、Access の保存クエリを別クエリのソースにするのに相当）。builtin ビュー (`__builtin`) も同一名前空間で参照対象。動機は三つ:
+`from:` / `join.to:` のソース名には、データエンティティだけでなく他のビューも書ける（RDBMS の view を FROM 句に書く、Access の保存クエリを別クエリのソースにするのに相当）。`__` 接頭辞の内蔵ビューも同一名前空間で参照対象。動機は三つ:
 
 - **パイプライン固定順序の逃し弁の実体化**: 本 DSL は句の順序を固定し、順序に収まらない形（途中段 flatten 等）への公式の答えは「別ビューに分割する」（「パイプライン順序」節）。だが分割した後段が前段を参照できないと、実際の回避策は共通前段の複製かテンプレート側での再結合になってしまう。名前付き参照はこの逃し弁を実体化する
 - **共通前段の重複排除**: 複数ビューが同じ整形（flatten + join 等）を前段に持つとき、名前付きの中間ビューとして一度だけ書ける
@@ -98,12 +98,12 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 **インラインサブクエリ**（`from:` にクエリオブジェクトをネストさせる、SQL のサブクエリ相当）は採らない:
 
 - RDBMS 現場の「ビュー禁止」文化の根拠（オプティマイザの実行計画不透明性、ビュー重ね掛けの性能崖）は、ビルド時に全ビューを一度だけ決定的な順序で評価し結果を実体化する本ツールには存在しない。ここでのビュー参照は RDBMS の view より「スクリプト内の中間変数」に近い
-- 入れ子の内側は本ツールで唯一「中間結果が実体化されない」場所になり、`view-results/` を読んで段ごとに確かめられる実体化デバッグの強みに穴を開ける
+- 入れ子の内側は本ツールで唯一「中間結果が実体化されない」場所になり、作業ディレクトリ (`MOOD_TMP_DIR` で固定したとき) の `view-results/` を読んで段ごとに確かめられる実体化デバッグの強みに穴を開ける
 - YAML で再帰構造を書く人間工学は SQL の括弧より悪い
 - 局所性が本当に効く場所には既に制限付きインライン（`join.to:` + `join.where:`）があり、全面開放の圧力はない
 - 名前付き参照からインライン併用への拡張は純粋な追加（`from:` が名前 or クエリオブジェクトを取る schema 再帰化）なので、命名疲れの実例が積み上がってから再検討できる
 
-**提示順は不変**: ビュー間参照は評価順（依存 → 依存元の topo 順）にのみ影響し、`__definition.views` の並びはファイル順のまま。評価の実装（依存グラフ・サイクル診断・derive 失敗のカスケード抑制）は [query.py](../../../../src/another_mood/components/shared/query.py) の `evaluation_order` と query_deriver の `_derive_all` の docstring を参照。
+**提示順は不変**: ビュー間参照は評価順（依存 → 依存元の topo 順）にのみ影響し、`__definition.views` の並びはファイル順のまま。評価の実装（依存グラフ・サイクル診断・derive 失敗のカスケード抑制）は [query.py](../../../../src/another_mood/components/shared/query.py) の `evaluation_order` と query_deriver の `_derive_all` を参照。
 
 **受容済みの制約 — 名前空間汚染**: 中間段のためだけの補助ビューも、テンプレートから見え、メタドキュメンテーション（ER 図・ビューカタログ）に載る。当面は命名規約で凌ぎ、痛くなったら `internal: true` 等の可視性フラグを検討する。
 
@@ -129,7 +129,7 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 具体例: `from: __definition.entities` に `select - item: parent_entity` を入れると、top-level entity (= `parent_entity` キーが無い) は `parent_entity` キーを持たない行を吐き、child entity (= `parent_entity` に親 id) は値付きの行を吐く。出力レコードの shape が記録ごとに揺れることになるが、これは下流での `if row.parent_entity` 判定で自然に消える。
 
-この semantic は `from` / `flatten` / `where` / `grouped` といった他の DSL 句の missing-key 扱い (where 述語は欠落キーで常に False、sort は `missing: first/last` で位置を指定) と合わせて、「DSL は欠落を一級扱いする」運用に揃える。
+この semantic は `from` / `flatten` / `where` / `grouped` といった他の DSL 句の missing-key 扱い (where 述語は `exists` を除き欠落キーで常に False、sort は `missing: first/last` で位置を指定) と合わせて、「DSL は欠落を一級扱いする」運用に揃える。
 
 ### スコープ外: nested-list 操作
 
@@ -142,15 +142,9 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### 背景: `Join` を `QueryNode` に乗せず特別扱いした理由
 
-`join:` は 2 入力 1 出力で、他の op (`from` / `flatten` / `where` / `grouped` / `select` / `sort` はすべて 1-in 1-out) と arity が異なる。既存の `QueryNode` Protocol (1-in 1-out 想定) には乗らないので、`Join` を `QueryNode` 非該当のクラスとし、`Query.apply` / `Query.derive` 内で pipeline 順序を直書きする形で扱う。apply 側と derive 側で同じ順序を 2 度書き下すため ~10 行ずつ重複が生じるが、現スコープではこの局所的な特別扱いの方が抽象階層導入より軽い、と判断した。
+`join:` は 2 入力 1 出力で、他の句 (`from` / `flatten` / `where` / `grouped` / `select` / `sort`) はすべて 1 入力 1 出力。1-in 1-out 想定の `QueryNode` Protocol には乗らないので、`Join` は `QueryNode` 非該当のクラスとし、`Query.apply` / `Query.derive` がパイプライン順序を直書きして呼び分ける。apply 側と derive 側で同じ順序を二度書くため 10 行程度ずつ重複するが、2 入力の句が `join:` 一つしかない現状では、この局所的な特別扱いのほうが抽象階層より軽い。
 
-検討した代替案として、評価器を 3 層 (Query が pipeline 順序を独占し、Stage 層が汎用 wiring を担い、Op 層が純粋関数として arity ごとに分かれる) に分解する tree/pull 評価器が挙がる。Join は `BinaryOp` + `BinaryStage` の組として一貫性ある形で扱える。利点は (a) 1-input / 2-input が型レベルで対等に並ぶ、(b) apply / derive の重複コードが再帰呼び出しで自然に消える、(c) 将来 union や sub-query reference 等の追加 op に拡張しやすい、こと。
-
-欠点として、新規プロトコル / クラスが計 6 個 (`Stage`, `UnaryOp`, `BinaryOp`, `Origin`, `UnaryStage`, `BinaryStage`)、公開 API (`Query.apply` / `derive` シグネチャ) の変更、既存テスト / 呼び出し側への波及が発生する。
-
-現スコープでは 2-input op は `join:` 1 つで、union 等の追加予定もない (D 群 / F 系の隣接タスクで言及無し)。「機械的重複 ~20 行を消すために 80+ 行の抽象階層を投資する」のは現状ではコスト過大と判断。
-
-将来、2-input op が増える / 多 join のパターンが想定外に複雑化する等の signal が出たら、その時点で tree/pull への refactor を検討する。Join がすでに特別扱いされているので、その特別扱いを抽象化する方向への escalation は incremental に行える。
+代替案は、評価器を Query（順序）/ Stage（配線）/ Op（arity ごとの純粋関数）の 3 層に分解する tree/pull 評価器。1 入力と 2 入力が型レベルで対等に並び apply / derive の重複も消えるが、新規プロトコルとクラスが 6 個増え、`Query.apply` / `derive` のシグネチャも変わる。2 入力の句が増える、多段 join が想定外に複雑化する、といった兆候が出た時点で検討する。既に特別扱いになっている `Join` を抽象化する方向なので、段階的に移せる。
 
 ## Proposals
 
@@ -165,15 +159,15 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 | スロット | 省略時 | ドット入りキーが生まれる例 |
 |---|---|---|
 | `select[].as` | `item` をそのまま | `item: hobby.level` → `{"hobby.level": "pro"}` |
-| `flatten.as` | `of` をそのまま | `flatten: hobby.pets` → `{"hobby.pets": {...}}` |
+| `flatten.as` | `of` をそのまま | `{ of: pets, as: hobby.pets }` → `{"hobby.pets": {...}}` |
 | `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
 | `join.flatten.as` | join の `as` をそのまま | 同上 |
 | `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
-| `grouped.as` | （必須。E16 で省略不可になった） | `as: a.b` と書ける |
+| `grouped.as` | （必須） | `as: a.b` と書ける |
 
 この非対称が生む実害:
 
-- **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` か `pluck` フィルタでしか届かない（Jinja2 の `row.hobby` は undefined になる）
+- **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` でしか届かない（Jinja2 の `row.hobby` は undefined になる）
 - **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
 - **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
 - **読み側のうち `flatten.of` だけがパスを受けない**: apply (`_unwind`) は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` を通すと元の配列が `hobby` 内に残ったまま新キーが足され、「配列エッジを置き換えた」と言うカタログとずれる。derive がドット入りの `of` を `unknown attribute` として弾くことでずれは塞いであるが、読み側の一句だけがパスを受けない状態になっている
@@ -397,7 +391,7 @@ grouped: { by: hobby.level, as: hobby }
 
 #### 問題
 
-「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の「束縛の単一規則」) で、`render` の主題は `this` の子孫に限られるため、一つのプロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書 (S8) で表面化)。
+「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の `this` 束縛) で、`render` の主題は `this` の子孫に限られるため、一つのプロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
 
 代替案を検討して退けた:
 
@@ -433,4 +427,4 @@ grouped: { by: hobby.level, as: hobby }
 - `view-schema.yaml`: 定義本体を query / compose の oneOf にする
 - composer / query_deriver: 合成の derive (カタログ shape) と apply (コピー)。`_with_source` と同じ操作で root に吊る
 - `docs/reference/view.md` に合成の節を追加。`docs/reference/template.md` の `render` に文書の例と文書横断参照の作法を追加
-- 動機は S8 (showcase/system-dev-docs-ja)。S8 は暫定的に `index.md` の合本で進み、E17 後に文書の殻だけを合成ビューに移す
+- 動機は showcase/system-dev-docs-ja。同 showcase は暫定的に `index.md` の合本で進み、E17 後に文書の殻だけを合成ビューに移す

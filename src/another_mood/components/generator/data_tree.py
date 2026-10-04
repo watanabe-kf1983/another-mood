@@ -252,7 +252,7 @@ class _ProseAnchor(_SegmentAnchor):
 
     # Only the built-in prose/blob collections keep ``/`` raw, not every
     # ``/``-bearing id: a user entity's structure can change and reintroduce
-    # ambiguity (anchor-spec.md#prose-の例外).
+    # ambiguity.
     _raw_chars = "/"
 
 

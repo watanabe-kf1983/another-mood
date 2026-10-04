@@ -74,15 +74,15 @@ categories:
         phase: 11
         done: true
       B10:
-        title: 未解決リンク参照のビルドレポート警告 (link / resolve 共通)
+        title: 未解決リンク参照のビルドレポート警告 (link / relink 共通)
         note: >-
-          link / href (B4) と resolve (B5) は未解決参照 (MissingNode / 解決できない node: URL) を
-          素テキストで可視化するのみで BuildReport には積まない。author が壊れた参照に気づけるよう、
+          link / href (B4) と relink (B5) は未解決参照 (MissingNode / 解決できない node: URL) を
+          `[text]` で可視化するのみで BuildReport には積まない。author が壊れた参照に気づけるよう、
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
         phase: 18
-        proposal: 20-design/70-generator/20-anchor-spec#未解決参照の扱い
+        proposal: 20-design/70-generator/20-anchor-spec#未決事項
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
         phase: 11
@@ -99,12 +99,19 @@ categories:
         title: _NodeMeta の由来型分岐を _Anchor strategy へ多態化
         phase: 13
         done: true
+      B15:
+        title: 一意でないアンカーパスの検出 (NodeMap 後勝ちの可視化)
+        note: >-
+          view の flatten 等で正当に生じる重複アンカーパスは NodeMap で後勝ちに畳まれ、
+          ページ主語になるまで (PageCollisionError) 検出されない。構築時に検出して
+          リンク抑止か警告にするか、どこまでやるかの検討から。
+        phase: 18
+        proposal: 20-design/70-generator/20-anchor-spec#未決事項
 
   C:
     title: ページ分割 (paging)
     impl_paths:
       - src/another_mood/components/generator/
-      - src/another_mood/components/generator/render_processor.py
     spec: 20-design/70-generator/40-paging-spec
     tasks:
       C1:
@@ -155,12 +162,17 @@ categories:
         title: render ループの一般化 (heterogeneous edition kinds を単一ループへ)
         phase: 12
         done: true
+      C13:
+        title: edition 別ルートテンプレートの reports.yaml への露出
+        note: >-
+          Edition.root_template / templates_dir と render ループの差し替え機構は既にある。
+          残るは reports.yaml の `root_template` エントリ (スキーマ + load_editions) のみ。
+        phase: 18
+        proposal: 20-design/70-generator/40-paging-spec#edition-別ルートテンプレート将来
 
   D:
     title: ユーザコンテンツバリデーション
     impl_paths:
-      - src/another_mood/components/preprocess/normalizer.py
-      - src/another_mood/components/preprocess/schema_inspector.py
       - src/another_mood/components/preprocess/
       - src/another_mood/resources/schemas/schema-schema.yaml
       - src/another_mood/config.py
@@ -324,6 +336,10 @@ categories:
         title: システムメタを __db/ へ移動 + 二セクションの薄い表紙
         phase: 12
         done: true
+      F10:
+        title: 内部オブジェクト診断の --debug 復活スイッチ
+        phase: 18
+        proposal: 20-design/20-app/40-meta-documentation#内部オブジェクト診断の---debug-復活スイッチ
 
   G:
     title: CLI / 設定システム
@@ -335,7 +351,6 @@ categories:
     tasks:
       G2:
         title: another-mood.config.json 読み込み
-        note: config-spec.md
         phase: 18
         proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
       G5:
@@ -424,6 +439,13 @@ categories:
           型突き合わせの実需 / 利用者要望) が出るまで保留。
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
+      J6:
+        title: エージェント導線の instructions 経路への移行 (MCP の降格・削除候補化)
+        note: >-
+          --help の作業ループ指し + init の README.md 生成 + docs/mcp.md 改題を先行。
+          mood-mcp の削除は別 PR (breaking)。
+        phase: 17
+        proposal: 20-design/20-app/30-mcp-design#エージェント導線の-instructions-経路への移行-j6
 
   L:
     title: dog-fooding
@@ -504,8 +526,7 @@ categories:
       N1:
         title: Hugo 利用の見直しと代替 HTML Renderer / Live Server の導入
         note: >-
-          カスタムレンダラ差し替えの構想 (旧 G3 render.customServer.command) はこの
-          検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
+          カスタムレンダラ差し替えの構想はこの検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
           差し替えで済む抽象は存在しない。
         phase: 18
       N2:
@@ -609,6 +630,13 @@ categories:
         title: build_info — ビルド時情報の照会関数
         phase: 16
         done: true
+      P15:
+        title: テンプレート評価のリソース上限 / プロセス隔離 (ホスト / 無人 build 向け)
+        note: >-
+          minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
+          ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
+        phase: 18
+        proposal: 20-design/70-generator/60-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
     title: 公開
@@ -648,10 +676,10 @@ categories:
           外部に見られる前提のリポジトリ整備。branch protection 等の GH 設定、
           外部が読む changelog / リリースノートの体裁、メンテナンス期待値の明文化
           (as-is / no-SLA / fork 歓迎)。コントリビューションは積極受け入れしない方針
-          — Issues は有効のまま放置・PR も放置・Dependabot は有効化しない。
+          — Issues は有効のまま放置・PR も放置・Dependabot version updates は有効化しない。
           うるさくなったら (AI slop 等) そのとき対策を再考。
           対応 Python 版の下限判断は Q12 へ分離した。
-          PR テンプレート / CONTRIBUTING の要否検討もここ (repo 内部には T4 の
+          CONTRIBUTING の要否検討もここ (repo 内部には T4 の
           lint コメントで足りる。外部コントリビュータという宛先が生まれて
           初めて意味を持つ装置)。
           受益者が現れるローンチまで不要。Q3 の前提。
@@ -745,14 +773,6 @@ categories:
         done: true
       S6:
         title: 要件トレーサビリティ表テンプレート
-        note: |
-          要求仕様書 4 章「検証」(要求別検証方法一覧) と要求 ↔ 設計 artifact の
-          対応表。29148 が traceability を明示的に求める成果物で、文書横断参照
-          (x-ref + 表生成) の実証。要求レコード (S3) が揃ってから。S5 の Candidates
-          判定で task 化。S8 の目次仕様で割り当てた生成部: 設計書「はじめに」章の
-          設計方針節 (設計判断 entity のサンプルデータと、根拠要求への参照を含む
-          一覧の生成)。要求仕様書 4 章 (検証) は章別 PR 4 で、設計書の設計方針節は
-          章別 PR 5 で完了 (決定事項は各 PR の本文)。
         phase: 18
         done: true
       S7:
@@ -819,6 +839,19 @@ categories:
         title: 既存フィルタの output_format モデルへの移行
         phase: 11
         done: true
+      U5:
+        title: output_format の拡張 (md 以外の具体仕様 / 入れ子 / ブロック切替 / 追加の位置依存正規化)
+        note: >-
+          いずれも実需が顕在化した時点で別仕様として詰める。md 以外の HTML 系は N2 と重なる。
+        phase: 18
+        proposal: 20-design/70-generator/50-output-format-spec#proposals
+      U6:
+        title: Prose 型の mime_type 多態 (text/markdown 以外の prose)
+        note: >-
+          レコード直下の mime_type を分岐キーに、text/html 等の prose をページとして扱う。
+          汎用の Typed Value 機構は採らず、組み込みコレクションに限る。
+        phase: 18
+        proposal: 20-design/70-generator/50-output-format-spec#proposals
 
   V:
     title: プロジェクトマニフェスト (sbdb.yaml)

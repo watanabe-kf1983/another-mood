@@ -23,7 +23,7 @@
 - **dict キー（singleton 配下のキー）**: そのキーをそのまま使う
 - **リスト要素**: その要素の `id` フィールドの値を使う
 
-リスト要素に `id` フィールドが無い場合（Array pattern で id を schema 上要求していない場合、[schema-spec.md](../50-normalizer/20-schema-spec.md) 参照）、その要素はアンカーパスを持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカーパスを持たない。
+リスト要素に `id` フィールドが無い場合（Array pattern で id を要求していないスキーマ）、その要素はアンカーパスを持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカーパスを持たない。Array 直下の Array も同様。
 
 #### 一意性
 
@@ -31,7 +31,7 @@
 
 entity のデータについては、これを崩す入力を preprocess で検出できる。`content_normalizer` が全ソースの合流後に兄弟集合ごとの id 重複を検査し、見つかれば build を止める（合流後に見るのは、単体では妥当な 2 ファイルが合流して初めて衝突が生じるため）。一意性の単位が entity 全体ではなく兄弟集合なのは、上のセグメント構成のとおりアドレスが親のパスから合成されるからで、別の親の下の同じ id は別のノードを指す。
 
-view については一意性を保証できず、保証を強制すべきでもない。`flatten` は 1 行を N 行に割るので、親の id を `select` に残せば必ず重複する（`showcase/music` の `artist_album_pairs` が意図された用法のままこの形になる）。一方 1:1 射影の view は正当なアンカーパスを持つため、view 単位でも判別できない。したがって検出は identity が実際に消費される時点まで遅らせ、**ページ主語として描画されたときの `PageCollisionError` のみをエラーとする**。
+view については一意性を保証できず、保証を強制すべきでもない。`flatten` は 1 行を N 行に割るので、親の id を `select` に残せば必ず重複する（`showcase/music` の `artist_album_pairs` が意図された用法のままこの形になる）。一方 1:1 射影の view は正当なアンカーパスを持つため、view 単位でも判別できない。したがって検出は identity が実際に消費される時点まで遅らせ、**ページ主語として描画されたときに出力パスの衝突（`PageCollisionError`）としてのみエラーにする**。inline に描かれた重複はノードマップの後勝ちのまま検出されない。
 
 #### Escape 規則
 
@@ -40,13 +40,13 @@ view については一意性を保証できず、保証を強制すべきでも
 それ以外の文字は **IRI エスケープ**で正規化する:
 
 - **生のまま残す**: ASCII の unreserved (`A–Za–z0–9-._~`) と、**非 ASCII の `ucschar`**（RFC 3987 が IRI で許す Unicode 範囲。漢字・かな・非 ASCII 句読点・記号等。例: `書籍`、`モーニング娘。` の `。`、`藤岡弘、` の `、`）
-- **percent-encode する**: ASCII の予約・特殊文字（空白 → `%20`、`# ? : * | \ " < >` 等）と、`ucschar` 外の非 ASCII（制御・format・surrogate・private-use・noncharacter）
+- **percent-encode する**: ASCII の予約・特殊文字（空白 → `%20`、`# ? : * | \ " < >` 等）と、`ucschar` 外の非 ASCII（制御・surrogate・private-use・noncharacter）
 
-つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパス（および由来する page_path）は **URL であると同時に出力ファイルのパス**でもあるため、IRI 形にすることで「人が読めるパス（`書籍.md`）」「URL として正当」「主要 OS で生成可能なファイル名」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の link render hook・ブラウザ・静的サーバ）が行う（リンクの着地に要る `<a id>` の描画は別問題で Hugo の raw HTML 許可を要する — Internal Design の「アンカーの raw HTML レンダリング」節を参照）。
+つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパス（および由来する page_path）は **URL であると同時に出力ファイルのパス**でもあるため、IRI 形にすることで「人が読めるパス（`書籍.md`）」「URL として正当」「主要 OS で生成可能なファイル名」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の Goldmark・ブラウザ・静的サーバ）が行う（リンクの着地に要る `<a id>` の描画は別問題で Hugo の raw HTML 許可を要する — Internal Design の「アンカーの raw HTML レンダリング」節を参照）。
 
 エスケープは **encode 片道**で、生の segment/id 値に 1 回だけ適用する（既存の `%XX` を decode・二重 encode しない。`%` 自体は ASCII 特殊文字なので `%25` に encode される）。FS で危険な ASCII（`: * | \` 等）は上記のとおり encode 側に残るため Windows でも安全。
 
-なお id value（データ側セグメント）は無制約だが、attr name（構造側セグメント）はスキーマの `^[\p{L}_][\p{L}\p{N}_]*$` で識別子状に制約済みで、ucschar/unreserved を素通りする。HTML5 の `id` 属性は空白を許容しないため、空白を含む id を持つレコードは技術的にアンカーパス化不可（[未決事項](#未決事項)参照）。
+なお id value（データ側セグメント）は無制約だが、attr name（構造側セグメント）はスキーマの `^[\p{L}_][\p{L}\p{M}\p{N}_]*$` で識別子状に制約済みで、ucschar/unreserved を素通りする。
 
 > **背景: なぜ IRI 形か.** エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
 
@@ -62,11 +62,9 @@ A0–D7FF, F900–FDCF, FDF0–FFEF,
 
 #### Prose の例外
 
-（`/`-素通しは組み込みコレクション共通で `blob` にも及ぶ。見出し `#slug` 畳みは prose 固有。）
-
 **id 内の `/` は素通し** — 組み込みの `prose` / `blob` entity に限り、id 内の `/` を escape せずにアンカーパスへそのまま埋め込む。理由:
 
-- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[normalizer.md](../50-normalizer/10-normalizer.md)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
+- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
 - `prose` / `blob` はいずれも flat な配列 entity で sub-entity を持たないため、resolver が `prose/`・`blob/` 以降を「単一の id」として扱えば曖昧性は発生しない
 
 この例外は **組み込みコレクション（`prose` / `blob`）に固有** のものとして明示的に定義する。id 形がシステム側で固定されている（contents 相対パス）ため将来も曖昧性は生じない。一方、`/` を含む任意の id への一般化はしない — 利用者 entity は構造が変わりうるため、その id を素通しにすると将来曖昧性が混入する。
@@ -97,18 +95,11 @@ erds:                              # 配列 → リスト
       - id: user                   # 別の erd 配下なので user-management.entities.user とは別物
         title: ユーザー（注文視点）
 
-screens:
-  - id: user-list
-    title: ユーザー一覧画面
-
 prose:                             # flat list、id はファイル相対パス
   - id: design/architecture
     title: Architecture
     headings:                      # 本文見出し（markdown-parser-spec.md の見出し抽出）
       - { id: エラー処理, title: エラー処理, level: 2 }
-  - id: design/normalizer/schema-spec
-    title: Schema Specification
-
 blob:                              # flat list、id は拡張子込みファイル相対パス
   - id: covers/cover.png
     mime_type: image/png
@@ -121,10 +112,8 @@ blob:                              # flat list、id は拡張子込みファイ�
 | `/erds/user-management` | user-management の ER図 |
 | `/erds/user-management/entities/user` | user-management 配下の user エンティティ |
 | `/erds/order-flow/entities/user` | order-flow 配下の user エンティティ（衝突しない） |
-| `/screens/user-list` | user-list 画面 |
 | `/prose/design/architecture` | Architecture 散文（id 内 `/` を素通し） |
 | `/prose/design/architecture#エラー処理` | Architecture 本文中の見出し（`headings` セグメントは畳む） |
-| `/prose/design/normalizer/schema-spec` | Schema Specification 散文 |
 | `/blob/covers/cover.png` | cover.png への blob 参照（id 内 `/` を素通し、拡張子込み） |
 
 アンカーパスは **データツリー上の到達経路そのもの** で構成されるため、ネストしたリスト要素間で id が重複してもアンカーパスは衝突しない。
@@ -153,7 +142,7 @@ class はアンカーパスの構築には登場しない。
 
 #### Blob の例外（ファイルとして解決）
 
-blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[normalizer.md](../50-normalizer/10-normalizer.md#バイナリファイルの取り扱い-h1-h4-h7) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
+blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[blob-spec.md](../40-communication/30-blob-spec.md#出力配置-アンカーパス--出力アドレス) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
 
 - **path 部**: source ページから `blob/<id>`（＝ anchor_path の先頭 `/` を落としたファイルパス）への相対パス。`node_map` のキー一致でノードを引く点は他ノードと共通だが、URL 化の起点が `page_path`（分割 `.md` ページ）でなくファイルパスになる
 - **fragment 部**: 付けない。blob は着地点 `<a id>` を持たず（[アンカーの発行](#アンカーの発行)は主題ノードのみ・見出しは native）、fragment に anchor_path を乗せる一般則は blob には適用しない
@@ -173,39 +162,13 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 
 ### リンク記法
 
-テンプレート内では **ノード** を `node()` で得て、整形フィルタで仕上げる:
+テンプレートは **ノード** を `node()` で得て、`link` / `label` / `href` / `anchor` で整形する。呼び出しの記法と各フィルタの振る舞いは `docs/reference/template.md` の Linking / Filters / Functions を正本とし、ここには設計判断だけを置く。
 
-```jinja2
-{{ node("erds", erd.id, "entities", entity.id) | link }}
-{# 位置引数 = 生セグメント（各 escape）→ ノード解決 → [<display>](<URL>) #}
-
-{{ node(path="/erds/user-management/entities/user") | link }}
-{# path= = 出来合いのアンカーパスを verbatim 解決（prose / 定数）#}
-
-{{ member | link }}
-{# すでに手にあるノードはそのまま整形できる #}
-
-{{ node("erds", erd.id) | label }}   {# 表示文字列のみ #}
-{{ node("erds", erd.id) | href }}    {# URL のみ #}
-{{ member | link("ER 図") }}         {# display text を明示 override #}
-{{ member | anchor }}                {# <a id="…"> 着地点を発行 #}
-
-{{ node(path="/prose/design/architecture", fragment="エラー処理") | link }}
-{# fragment= = ページ内見出しの slug（見出しノード）#}
-```
-
-- `node(*segs, path=None, fragment=None)` — **ノード**を得る global 関数。引くアンカーパスを位置引数・`path=`・`fragment=` の三部品から組み、**どれが escape されるかが呼び出し側から見える**:
-    - **位置引数 `segs`**: 生の値を各 **escape** し、`/seg` の形で後置する（最多の既定）。1 引数 = 1 セグメント（`/` 入りを 1 引数に混ぜない）。
-    - **`path=`**: 出来合いのパス（prose id・定数・root `/`）を **verbatim** に前置する。
-    - **`fragment=`**: 見出し slug を `#{fragment}` として **raw** で末尾に付ける（escape しない — slug は github 互換で `#` を含まず、`#` は構造的セパレータ。[Prose の例外](#prose-の例外)）。
-    - **併用**: `path=` を base に `segs` でその子を掘れ（`node("y", path="/prose/x")` → `/prose/x/y`）、`fragment=` は最後に乗る。片方だけでもよい。
-    - **誤用は例外にしない**: 解決できないアンカーパスは MissingNode として可視化する（例: `/` 始まりの値を位置引数に渡すと `/%2F…` に escape され一致しない。`fragment` 単独も同様。[未解決参照の扱い](#未解決参照の扱い)）。
-- `link` / `label` / `href` — ノード → Markdown リンク / 表示文字列 / URL。
-- `anchor` — ノード → そのノードの着地点 `<a id="{anchor_path}">`。通常は自動刻印が主題に刻むため、本フィルタは主題以外のノードに着地点を手置きするための原始機能（発行の規則と例外は[アンカーの発行](#アンカーの発行)）。
-
-アンカーパス**文字列**だけを返す公開フィルタは置かない。当初セグメントから組む `anchor_path(seg, *segs)` として公開していたが実需が一度も現れず、組み立て自体は `node()` が既に担っているため公開名から外した（構築関数は内部に保持）。`anchor_path` の名は現在、ノードからその文字列を取り出すメタテンプレート専用フィルタが使う（[generator.md のノードメタデータ](10-generator.md#ノードメタデータ)）。
-
-display text は対象ノードから `title` → `name` → `id` → anchor_path 全体 のチェインで解決する。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できる fallback ではないため。`link(arg)` のように引数で渡せば override。
+- **escape の所在を呼び出し側から見せる**。`node(*segs, path=None, fragment=None)` はアンカーパスを三部品から組む: 位置引数は生の値を各 escape して後置（1 引数 = 1 セグメント）、`path=` は出来合いのパス（prose id・定数・root）を verbatim に前置、`fragment=` は見出し slug を raw で末尾に付ける（slug は github 互換で `#` を含まず、`#` は構造的セパレータ。[Prose の例外](#prose-の例外)）。三部品は併用でき、`path=` を base に `segs` で子を掘れる。
+- **誤用は例外にしない**。解決できないアンカーパスは MissingNode として可視化する（`/` 始まりの値を位置引数に渡せば `/%2F…` に escape され一致しない。[未解決参照の扱い](#未解決参照の扱い)）。
+- **`anchor` は主題以外のノードに着地点を手置きする原始機能**。主題には自動刻印が刻む（[アンカーの発行](#アンカーの発行)）。
+- **アンカーパス文字列だけを返す公開フィルタは置かない**。当初 `anchor_path(seg, *segs)` として公開していたが実需が一度も現れず、組み立ては `node()` が担っているため公開名から外した。`anchor_path` の名は現在、ノードから文字列を取り出すメタテンプレート専用フィルタが使う（[generator.md のノードメタデータ](10-generator.md#ノードメタデータ)）。
+- **表示テキストは `title` → `name` → `id` → anchor_path 全体のチェイン**。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できないため。
 
 ### Markdown 本文中のアンカー参照
 
@@ -239,15 +202,15 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 [エラー処理](node:/prose/design/normalizer/architecture#エラー処理)
 ```
 
-path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す（[Prose の例外](#prose-の例外)）。`relink` はこの文字列全体を見出しノードとして解決し、[出力 URL の形式](#出力-url-の形式)の fragment 規則で `#エラー処理` を出力 URL に乗せる。見出しが対象 prose に無ければ MissingNode として可視化する（[未解決参照の扱い](#未解決参照の扱い)）。
+path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す（[Prose の例外](#prose-の例外)）。`relink` はこの文字列全体を見出しノードとして解決し、[出力 URL の形式](#出力-url-の形式)の fragment 規則で `#エラー処理` を出力 URL に乗せる。見出しが対象 prose に無ければ `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。
 
 ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、Normalizer が `node:` 変換時に透過で運んでこの形を生成する（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）。
 
 #### 対象はインラインリンク形のみ
 
-`[text](node:…)` のインライン形だけを解決する。参照形（`[text][label]` + 別行 `[label]: node:…`）と autolink（`<node:…>`）は **恒久的に非対応**（後回しの deferral でなく非ゴール）。理由:
+`[text](node:…)` のインライン形（画像 `![alt](node:…)` を含む）だけを解決する。参照形（`[text][label]` + 別行 `[label]: node:…`）と autolink（`<node:…>`）、title 付き `[text](node:… "title")` は **恒久的に非対応**（後回しの deferral でなく非ゴール）。理由:
 
-- A5 が生成するのはインライン形のみ。参照・autolink が出るのは手書きの場合だけで、実利用上の頻度はきわめて小さい（インライン ≫ 参照 > autolink）
+- Normalizer のリンク正規化が生成するのはインライン形のみ。参照・autolink が出るのは手書きの場合だけで、実利用上の頻度はきわめて小さい（インライン ≫ 参照 > autolink）
 - autolink は素だと表示テキストが URL になり、参照形は未解決時の plain 化が「リンク位置」と「定義行」に跨って綺麗に畳めない — どちらも対応コストに対し需要が薄い
 - 利用者には「手書きの `node:` 参照はインライン形で書く」と案内すれば足りる
 
@@ -265,13 +228,13 @@ prose body 中の `node:` リンク先を、表示先ページからの相対 UR
 
 relink は author の明示適用（`{{ prose.content | relink }}`）を設計とし、システムによる暗黙適用は採らない（`under_heading` 等との合成時に silent に壊れるため。理由は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) が正本）。
 
-未解決の `node:` 参照は MissingNode 契約（[未解決参照の扱い](#未解決参照の扱い)）どおり `[text]` に畳む。ビルドレポートへの警告は `link` 側と揃えて [B10](node:/tasks/B/tasks/B10) で後日扱う。実装機構は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) を正本とする。
+未解決の `node:` 参照は `link` と同じく `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。実装機構は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) を正本とする。
 
 ## Internal Design
 
 ### リンク解決
 
-リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](10-generator.md#リンク解決) と [ページパスの導出](10-generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_context` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。[出力 URL の形式](#出力-url-の形式)の fragment 規則と stamp 可否は、anchor_path 文字列の再パースでなく見出し検知述語から導出するノード属性で持つ（`generator/data_tree.py` の `_NodeMeta` docstring）。
+リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](10-generator.md#リンク解決) と [ページパスの導出](10-generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_state` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。[出力 URL の形式](#出力-url-の形式)の fragment 規則と stamp 可否は、anchor_path 文字列の再パースでなくノード属性（`_meta.fragment` / `_meta.stamps_anchor`）で持ち、ノードの由来型（`origin_item_type`）で選ぶ anchor strategy が決める（`generator/data_tree.py` の `_Anchor` 各クラスの docstring）。
 
 ### アンカー自動刻印の実装
 
@@ -287,5 +250,5 @@ relink は author の明示適用（`{{ prose.content | relink }}`）を設計�
 
 ### 未決事項
 
-- **空白を含む id の扱い**: HTML5 の `id` 属性は空白不可のため、空白を含む id はアンカーパス化不可。ビルド時に警告して当該 id 配下をアンカーパス無し扱いとする方針（[F4 / D 群と連携、未タスク化](node:/tasks/F/tasks/F4a)）
+- **未解決参照のビルドレポート警告**: `link` / `relink` とも未解決参照は `[text]` で可視化するのみで、ビルドレポートには積まない。両フィルタ共通の経路で警告に載せる
 - **一意でないアンカーパスの扱い**: NodeMap はアンカーパスをキーとする dict で、一意でないノードは後勝ちに畳まれる（view では[一意性](#一意性)のとおり正当に起こる）。構築時に検出してそこへのリンクを抑止する、あるいは警告する余地はあるが、`PageCollisionError` の手前でどこまでやるかは未検討

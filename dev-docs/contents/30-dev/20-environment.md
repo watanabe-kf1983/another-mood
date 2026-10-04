@@ -6,7 +6,7 @@
 
 ### ベースイメージ
 
-Python + uv が使えるイメージを選定する。
+`mcr.microsoft.com/devcontainers/base:ubuntu`。Python 本体は入れず、uv feature が `.python-version` の interpreter を調達する。
 
 ### Features
 
@@ -49,7 +49,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 コンテナ作成後に以下をインストールする:
 
 - Claude Code CLI
-- 言語の LSP サーバ（MCP Language Server 経由で Claude Code が使用）
+- MCP Language Server（Claude Code が LSP を叩くためのブリッジ。LSP 本体の pyright-langserver は `uv sync` で入る）
 - ast-grep CLI（MCP サーバが使用）
 - Google Chrome（Playwright MCP サーバが使用、`npx playwright install chrome`）
 - Noto CJK フォント（Playwright で CJK 文字を含む描画の検証に必要、`apt-get install fonts-noto-cjk`）
@@ -67,7 +67,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | Python Environment Manager | 仮想環境の管理 |
 | Ruff | Python フォーマッタ・リンタ |
 | Makefile Tools | Makefile の編集支援 |
-| EditorConfig | 非 Python ファイルのエディタ設定統一 |
+| EditorConfig | `.editorconfig` の適用（非 Python ファイルのインデント・改行・文末改行の統一） |
 | YAML | スキーマ・データファイルの編集支援 |
 | Markdown Mermaid | Mermaid 図のプレビュー |
 | GitHub Actions | CI ワークフローの編集支援 |
@@ -77,7 +77,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 ### 設定
 
 - `editor.formatOnSave: true` — 保存時にフォーマッタを自動実行
-- デフォルトフォーマッタをプロジェクトのフォーマッタ（Ruff）に設定
+- Python のデフォルトフォーマッタを Ruff に設定
 
 ## MCP サーバ
 
@@ -88,16 +88,20 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | language-server | LSP 経由のコード解析（定義ジャンプ、参照検索等） |
 | ast-grep | 構文パターンによるコード検索 |
 | context7 | ライブラリドキュメントの取得 |
-| playwright | ヘッドレスブラウザ駆動。Mermaid 等の生成図を実機レンダリングして見た目を検証する用途。`--headless` 固定。 |
+| playwright | ヘッドレスブラウザ駆動。Mermaid 等の生成図を実機レンダリングして見た目を検証する用途。`--headless` 固定 |
+| another-mood | このリポジトリ自身の MCP サーバ（`uv run mood-mcp`）。dev-docs / showcase を編集する際の dog-fooding |
 
-language-server は言語に応じた LSP サーバを指定する（Python なら pyright 等）。テストランナーの MCP サーバは、採用するテストフレームワークに応じて選定する。
+language-server は pyright-langserver を `--stdio` で起動する。
+
+`.vscode/mcp.json` は VS Code 内蔵の MCP クライアント向けで、another-mood だけを定義する。
 
 ## .gitignore
 
-言語非依存で維持するパターン:
+Python の生成物（`__pycache__/`、`.venv/`、各ツールのキャッシュ）のほかに無視するもの:
 
 - `reports/` — テスト・カバレッジレポート
-- `.claude/settings.local.json` — Claude Code ローカル設定（個人の API キー等）
+- `/.another-mood/` — `mood build` の出力
+- `/_site/` — `make pages` が組む GitHub Pages サイト
+- `/.playwright-mcp/` — Playwright MCP の作業ファイル
+- `.claude/settings.local.json` — Claude Code の個人設定
 - `.DS_Store` — macOS メタデータ
-
-Python 固有のパターン（`__pycache__/`, `.venv`, `.pytest_cache/` 等）は `.gitignore` に追加済み。

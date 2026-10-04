@@ -20,7 +20,7 @@ dotfile・dot ディレクトリ配下は形式によらず読まない。エデ
 
 手書きソースは YAML を推奨する（Git 差分・エラー行指摘との親和性）。手書きの例として showcase に `.json` を置かないのはこのため（機械出力の取り込み例である SBOM showcase は別）。
 
-JSON 入口の位置づけは、**フィードバックループを持たない機械的ワンショット出力** — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側に居ればよい。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実例は [R6 SBOM showcase](node:/tasks/R/tasks/R6)）。JSONL・配列ルートは受理しない。
+JSON 入口の位置づけは、**フィードバックループを持たない機械的ワンショット出力** — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側に居ればよい。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実例は `showcase/sbom`）。JSONL・配列ルートは受理しない。
 
 `docs/` の文言はこの用途を謳わず、制約（ルートは mapping）と推奨（YAML）のみを書く。用途は利用者が決めることで、ツールが宣言すると受理範囲の説明とは別の約束に読まれる。謳わないのは説明を受理範囲に絞って読みやすくするためで、この用途を非推奨とする意図ではない。showcase で取り込みの例を見せるのは妨げない。
 
@@ -36,8 +36,8 @@ JSON 入口の位置づけは、**フィードバックループを持たない�
 
 正規化スコープは catalog 化スコープと一致させる。境界外で walker が走ると、新規変換の追加で silent に壊れる latent risk が生じる。
 
-- `content_normalizer`: user schema 全体が catalog 範囲 (`iter_normalized` で深く正規化)
-- `query_deriver`: top-level dict のみが catalog 範囲 (`_iter_top_level` で dict→list 変換 + `normalize_query` による DSL の sugar→canonical 変換。catalog 化はしない)
+- contents: user schema 全体が catalog 範囲（`iter_normalized` で深く正規化）
+- views: catalog 境界は top-level で止まる（`_iter_top_level` の dict→list 変換と `normalize_query` の sugar→canonical 変換まで）。クエリ本体（`where:` の AST 等）は catalog データではないので正規化しない
 
 ### dict-pattern の synthetic id は常に string
 

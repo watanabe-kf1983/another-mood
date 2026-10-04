@@ -17,8 +17,8 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 ### レコード形状の判断
 
 - **id は拡張子込み** の contents 相対パス。落とすと `fig.png` / `fig.jpg` が衝突する。prose の拡張子なし id は「.md が唯一の拡張子だから成立した省略」であり、blob には適用しない
-- **body を持たせない** — blob は payload (content) を持たないので、mime_type を包む階層に指すものがない。将来 text/html 等で inline content を持つ余地はレコード直下への `content` 追加で足りる (body 不要)。prose も M9 でフラット化し `{id, ..., mime_type, content}` に揃えた
-- mime_type を凍結表からのみ導出する理由・絶対パスを載せない理由 (いずれも診断ビュー・中間 YAML の可搬性) は `source_loader.py` の docstring にある。バイト列自体をデータモデルに載せないのは、base64 が肥大・メモリ・diff 破壊を招くため (id が実パスを復元でき、コピー役はそこからバイトを読む)
+- **body を持たせない** — blob は payload (content) を持たないので、mime_type を包む階層に指すものがない。将来 text/html 等で inline content を持つ余地はレコード直下への `content` 追加で足りる (body 不要)。prose も同じくフラットな `{id, ..., mime_type, content}` に揃えてある
+- mime_type を凍結表からのみ導出する理由・絶対パスを載せない理由 (いずれも診断ビュー・中間 YAML の可搬性) は `source_loader.py` のコメントにある。バイト列自体をデータモデルに載せないのは、base64 が肥大・メモリ・diff 破壊を招くため (id が実パスを復元でき、コピー役はそこからバイトを読む)
 - **blob レコードはファイル由来のみ** — YAML への blob レコードの手書きは normalize が FileValidationError で弾く (レコードはファイル自身が定義する。手書きはバイトの裏付けがないか、ファイル由来レコードとの重複にしかならない)。手書き id をパスとして解釈する経路は作らない (トラバーサル・YAML 再読み込みの穴を防ぐ)
 
 ### 出力配置: アンカーパス = 出力アドレス
@@ -31,9 +31,9 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 
 **Composer のデータモデルにはメタデータのみ** — composer の JSON データモデルを通るのはメタデータレコードだけ (`load_model` は拡張子で中間表現の形式のみ読むため、バイトはモデルへ混入しない)。バイト列自体は normalize が出力 data ツリーに載せ、compose の contents copytree が下流へ相乗りで運ぶ — パイプラインに blob 専用のエッジは足さない。
 
-**境界コピーは normalize** — normalize が `contents/<id>` のバイトを出力 data ツリーの **contents 相対パスそのまま** (`data/contents/<id>`) にミラーする。レコードファイルは `<rel>.yaml` と拡張子付与されるので、レコード形式の拡張子 (定義上 YAML/JSON/Markdown) を持ちえない blob と構造的に衝突しない — 専用名前空間は不要。この論法はレコードファイル側の拡張子が何であっても成立する (blob の定義がレコード形式の補集合なので、両者の拡張子集合は交わらない)。generate は下流の `data_dir/contents/<id>` から読んで各 edition ツリーへ `/blob/<id>` としてミラーする (generate の contents 直読み・`contents_dir` パラメータは廃止)。edition ルートがどこかの知識は generator の所有物なので、edition 別ミラーは generate に残す。下流 2 レーン (md publish 行き / Hugo 行き) は既存の運搬機構が自動継承し、`mood watch` (publish なし) のライブプレビューにもバイトが届く。
+**境界コピーは normalize** — normalize が `contents/<id>` のバイトを出力 data ツリーの **contents 相対パスそのまま** (`data/contents/<id>`) にミラーする。レコードファイルは `<rel>.json` と拡張子付与されるので、レコード形式の拡張子 (定義上 YAML/JSON/Markdown) を持ちえない blob と構造的に衝突しない — 専用名前空間は不要。この論法はレコードファイル側の拡張子が何であっても成立する (blob の定義がレコード形式の補集合なので、両者の拡張子集合は交わらない)。generate は下流の `data_dir/contents/<id>` から読んで各 edition ツリーへ `/blob/<id>` としてミラーする。edition ルートがどこかの知識は generator の所有物なので、edition 別ミラーは generate に残す。下流 2 レーン (md publish 行き / Hugo 行き) は既存の運搬機構が自動継承し、`mood watch` (publish なし) のライブプレビューにもバイトが届く。
 
-**Hugo レーンは static mount 経由** — prepare_site で blob を content ツリーから分離し `static` mount として渡す。理由は、content dir 内の `.html` が Hugo 既定の `security.allowContent` にビルドごと弾かれるため。運搬機構の実装 (個別 unlink での更新・`HUGO_STATICDIR` 環境変数・削除が restart まで preview に残る Hugo 仕様) とその理由は `_sync_blobs` / `_hugo_env` の docstring に置く。
+**Hugo レーンは static mount 経由** — prepare_site で blob を content ツリーから分離し `static` mount として渡す。content dir 内の `.html` blob はビルド全体を失敗させるため。運搬機構の実装 (個別 unlink での更新・`HUGO_STATICDIR` 環境変数) とその理由は `_sync_blobs` / `_hugo_env` の docstring に置く。
 
 **コピー戦略は hardlink + 増分再利用** — workspace 内の hardlink 運搬と「全ファイル write-once」不変条件は [Component Communication](index.md) の総論（運搬機構）に従う。blob 固有なのは境界コピーと増分再利用の 2 点:
 

@@ -8,13 +8,16 @@
 
 | ステージ | User Input | Upstream | Output |
 |---|---|---|---|
-| inspect_schema | schema_file | — | inspect_schemas_dir |
-| normalize_contents | contents_dir | inspect_schemas_dir | normalize_contents_dir |
-| derive_queries | views_dir | inspect_schemas_dir | derive_queries_dir |
-| compose | — | inspect_schemas_dir, normalize_contents_dir, derive_queries_dir | compose_dir |
-| generate | templates_dir | compose_dir | generate_dir |
-| reconcile | — | generate_dir | reconcile_dir |
-| site | — | reconcile_dir | site_dir |
+| inspect_schema | schema_file | — | inspect_schema/ |
+| normalize_contents | contents_dir | inspect_schema/ | normalize_contents/ |
+| derive_queries | views_dir | inspect_schema/ | derive_queries/ |
+| compose | — | normalize_contents/, derive_queries/, inspect_schema/ | compose/ |
+| generate | templates_dir, reports_file | compose/ | generate/ |
+| reconcile | — | generate/ | reconcile/ |
+| site | — | reconcile/ | prepare_site/, hugo_build/ |
+| publish | — | hugo_build/ | out_dir（reconcile/ の内容）, site_dir（hugo_build/ の内容） |
+
+Output は作業ディレクトリ（`Workspace.root`）直下のコンポーネント名ディレクトリ。`mood tap` は compose までを共有し、tap（compose/ → tap/）と publish（tap_dir）で終わる（`pipeline/stages.py` の `TAP_STAGE_FACTORIES`）。
 
 dev モードでは User Input / Upstream の変更を Watch してステージを自動再実行する（`pipeline/base.py` 参照）。build モードでは依存順に直列実行する。Upstream は前段ステージの Output であり、`BuildReport`（エラー伝播）の収集対象。
 
@@ -26,6 +29,6 @@ watchdog は Linux (WSL2 を含む) で inotify を使い、明示的に指定�
 
 #### watchdog 利用上の注意: 変更系 event のみに subscribe
 
-`Watcher` クラス (`pipeline/adapters/watcher.py`) は `on_created / on_modified / on_deleted / on_moved` のみオーバーライドし、`on_opened / on_closed` は意図的に無視する。
+`Watcher` クラス (`pipeline/adapters/watcher.py`) の event handler は `on_created / on_modified / on_deleted / on_moved` のみオーバーライドし、`on_opened / on_closed` は意図的に無視する。
 
-inotify は `IN_OPEN / IN_CLOSE_NOWRITE` などの読み取り系 event も emit し、watchdog のデフォルト (`on_any_event`) はこれらも拾ってしまう。カスケード watcher の handler は upstream を `shutil.copytree` で読み込むため、**自身の読み込みが watch 対象上に open/close event を発生させ、watcher が自己トリガーし続ける** 挙動を引き起こす (watchfiles は library レベルで読み取り系を filter するため同じ問題は出ない)。変更系 event に絞ることで、cascade が自然に終息する。
+inotify は `IN_OPEN / IN_CLOSE_NOWRITE` などの読み取り系 event も emit し、watchdog のデフォルト (`on_any_event`) はこれらも拾ってしまう。カスケード watcher の handler は upstream を `transfer_tree` (copytree) で読み込むため、**自身の読み込みが watch 対象上に open/close event を発生させ、watcher が自己トリガーし続ける** 挙動を引き起こす (watchfiles は library レベルで読み取り系を filter するため同じ問題は出ない)。変更系 event に絞ることで、cascade が自然に終息する。

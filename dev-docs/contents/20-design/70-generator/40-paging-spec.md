@@ -6,11 +6,11 @@
 
 ### レポート設定ファイル
 
-設定構文（form A の `file_per`、form B の `editions:` マップ、edition 名規則、`oneOf` 検証）は `docs/reference/reports.md` を正本とする。設計判断:
+設定構文（form A の `file_per`、form B の `editions:` マップ）は `docs/reference/reports.md`、edition 名規則と form A / B の `oneOf` 検証は `resources/schemas/reports-schema.yaml` を正本とする。設計判断:
 
 - **edition は同一 report の体裁違いの並行出力**で、当面の差は `file_per`（分割粒度）のみ。Markdown→HTML レンダリングは全 edition 同一で、別レンダラ・別フォーマットは持たない。
 - 全 edition を 1 ビルドで横並び公開する — **環境で 1 つ選ぶ "profile" ではない**。"並列ビルド" は成果物が横並びに出る意で concurrency は持たず、単一 edition 選択（`--edition`）も当面持たない。
-- form A は暗黙の単一 edition `default`。edition 名の検証は**ゆるく**（非空・最低 1 件・`__` 始まり禁止）に留め、出力セグメント化時に anchor_path と同じ IRI エスケープ（`Edition.dir_segment`、表示は raw のまま）で FS-safe にする。FS 固有のキツいエッジ（長さ・予約名等）は C7 に委ねる。
+- form A は暗黙の単一 edition `default`。edition 名の検証は**ゆるく**（非空・最低 1 件・`__` 始まり禁止）に留め、出力セグメント化時に anchor_path と同じ IRI エスケープ（`Edition.dir_segment`、表示は raw のまま）で FS-safe にする。FS 固有のキツいエッジ（長さ・予約名等）はパス書き出し側の検査に委ねる。
 
 ### テンプレート主題のノード受け取りと `this` 束縛
 
@@ -18,7 +18,7 @@
 
 - **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として root テンプレート（`index.md`）と `render` フィルタのサブテンプレートに同一適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`render` フィルタ側はパス決定とノードのパススルーだけを担い、context 構築を持たない。
 - 主題が `this` でノードとして取れることはリンク解決の足場でもある — source ページ（主題ノード）を `this` から得られるので、resolver は per-render の source-node 束縛を持たず静的な `(PagingPolicy, node_map)` だけを束縛すればよい（[generator.md のリンク解決](10-generator.md#リンク解決)）。
-- スカラ主題を**分割時のみ**エラーにするのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。
+- 分割するのはノード主題だけで、スカラ主題は `file_per` に関わらず常に inline 展開するのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。
 
 ### 分割ルール
 
@@ -41,11 +41,12 @@
   __db/                                        ← DB 自己記述（メタ edition のマウント先）
     index.md                                     メタ index（ER 図・entity/view 一覧）
     __data/  __entity_defs/  __view_defs/        診断（edition 横断・常に __db 内の同位置）
+  __build_info/  __warnings/                   ← build-report 層（reconcile が置き、表紙末尾にリンクを append）
 ```
 
 `__db` マウントと各アンカールート（`__entity_defs` 等）はどちらも `__` 始まりだが要求する事情は別レイヤ: `__db` は edition 名のユーザ空間（`__` 始まりは検証で禁止）との衝突回避、`__entity_defs` はグローバル node_map でのユーザ entity/view 名との衝突回避。ゆえに `__db/entity_defs` にはできず `__db/__entity_defs` になる（[予約プレフィックス](../40-communication/10-json-data-model.md#予約プレフィックス)）。診断系は `__db` 内で edition 横断・常に同位置。
 
-出力は **deliverable（著者の reports）と DB 自己記述（`__db/`）の 2 種**で捉え、表紙で reports を前面・`__db/` を控えめな別エントリに置く。`__db/` を reports / edition の軸には混ぜない（自己記述面を「体裁違いのレポート」に誤ラベルさせないため）。`__warnings/`（reconcile の警告ページ）は build-report 層で自己記述とは別軸ゆえ `{outDir}/__warnings/` 直下、リンクは表紙 `index.md` に append。
+出力は **deliverable（著者の reports）と DB 自己記述（`__db/`）の 2 種**で捉え、表紙で reports を前面・`__db/` を控えめな別エントリに置く。`__db/` を reports / edition の軸には混ぜない（自己記述面を「体裁違いのレポート」に誤ラベルさせないため）。`__build_info/`（奥付）と `__warnings/`（警告ページ）は reconcile の build-report 層で自己記述とは別軸ゆえ `{outDir}` 直下、リンクは表紙 `index.md` に append。
 
 マウントはリンク解決に**透過**: リンク URL は page 相対（`node_href`）なので `{edition}/` や `__db/` のマウント接頭辞は効かず、各 edition / マウントは自己完結した相対リンクのサブツリーになる（[generator.md のリンク解決](10-generator.md#リンク解決)）。
 
@@ -64,13 +65,13 @@ meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は
 - **表紙**（`{outDir}/index.md`）— deliverable を列挙する root ランディング。**データモデルを描かない**単発 render（edition ではなく、reconcile の build-report ページと同類）なのでデータ edition ループの外。
 - **データ edition**（メタ=`__db/` + ユーザ）— データモデルを描く。メタもユーザも同じ `Edition` 型なので**単一ループ**で回し、メタを特別扱いする分岐を持たない。
 
-各 `Edition` の差分フィールド（`paging` / `templates_dir` / `root_template` / `dir_segment` / `extra_filters`）と render 本体は `edition.py` / `generator.generate()` の docstring が正本。`root_template` は当面 `index.md` 固定で、[Edition 別ルートテンプレート（将来）](#edition-別ルートテンプレート将来)の継ぎ目。
+各 `Edition` の差分フィールド（`paging` / `name` / `templates_dir` / `root_template` / `extra_filters` / `mirror_blobs`）と render 本体は `edition.py` / `generator.render_edition()` の docstring が正本。`root_template` は当面 `index.md` 固定で、[Edition 別ルートテンプレート（将来）](#edition-別ルートテンプレート将来)の継ぎ目。
 
 ### 表紙の edition 列挙
 
 表紙はデータループと**同じ `editions` 集合**を受け取り、`Edition.is_system` で 2 セクションへ振り分ける。決定:
 
-- **H1 は project 名**（`project_dir` の basename）。
+- **H1 は project 名**（manifest の `title`、無ければ `project_dir` の basename）。
 - `## Reports` = 非 system（ユーザ edition）を列挙、`## Database Information` = system（メタ edition）へ 1 本リンク。
 - `## Database Information` のリンク先は**メタ edition の `dir_segment` から導出**（`__db/` を直書きしない）ので、マウント名を変えても追従する。
 - 着地する `__db/index.md` の H1 は固定 `# Database Information` — 表紙の同名セクションから同名ページへ着く導線を保ち、project 名依存を表紙 1 箇所に閉じ込める。
@@ -79,4 +80,4 @@ meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は
 
 ### Edition 別ルートテンプレート（将来）
 
-edition ごとに異なるルートテンプレート（`index.md` 以外）を**利用者が `reports.yaml` で指定したい**需要（Web 版と印刷版でトップ構成を変える等）。**機構（`Edition` の `root_template` / `templates_dir` フィールドと `generate()` ループでの差し替え）は C12 で入った**ので、残るは reports.yaml への設定露出（`root_template` エントリのパースと `load_editions` での反映）のみ。加算的拡張で、F9 のスコープからも外す。
+edition ごとに異なるルートテンプレート（`index.md` 以外）を**利用者が `reports.yaml` で指定したい**需要（Web 版と印刷版でトップ構成を変える等）。**機構（`Edition` の `root_template` / `templates_dir` フィールドと `generate()` ループでの差し替え）は既にある**ので、残るは reports.yaml への設定露出（`root_template` エントリのパースと `load_editions` での反映）のみ。加算的拡張。
