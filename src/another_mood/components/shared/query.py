@@ -25,6 +25,9 @@ from another_mood.components.shared.catalog_write import (
     names,
     overlaps,
     place,
+    remove,
+    require,
+    swap,
 )
 from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
@@ -113,49 +116,35 @@ class Flatten(QueryNode):
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # Transitional: the catalog side still takes ``of`` as one edge
-        # name and lands ``as_`` as one literal key.  A dotted path is
-        # spelled back with a dot until the catalog side takes a path.
-        of, as_ = ".".join(self.of), ".".join(self.as_)
-        edge, child = catalog.child_entry(of)
+        # Transitional: the read side still takes a dotted string.
+        edges, child = catalog.reach(".".join(self.of))
+        edge = edges[-1]
         if not edge.is_collection:
             raise QueryDeriveError(
-                f"flatten target '{of}' is not an array attribute (type '{edge.type}')",
+                f"flatten target '{'.'.join(self.of)}' is not an array attribute "
+                f"(type '{edge.type}')",
                 offender=self.of[0],
             )
-        # The alias must be clear of every name the row still holds once
-        # the array is gone: landing on one or inside one is a collision.
-        rest = dc.Node(children=[(e, c) for e, c in catalog.children if e.name != of])
+        source: KeyPath = (*self.of, "[]") if self.preserve_empty else ()
+        kept = catalog if self.preserve_empty else require(catalog, self.of[:-1])
+        rest = remove(kept, self.of)
         taken = next((name for name in names(rest) if overlaps(self.as_, name)), None)
         if taken is not None:
             raise QueryDeriveError(
-                f"flatten alias '{as_}' collides with the attribute '{'.'.join(taken)}'",
+                f"flatten alias '{'.'.join(self.as_)}' collides with the attribute "
+                f"'{'.'.join(taken)}'",
                 offender=self.as_[0],
             )
-        # ``apply`` drops the rows with no element unless told to keep
-        # them: the element is on every row, or on the rows holding one.
-        source: KeyPath = (*self.of, "[]") if self.preserve_empty else ()
-        element = Placement(
-            branch=(replace(edge, type=edge.type[:-2]), child),
-            path=self.as_,
-            source=source,
-        )
-        if len(self.as_) == 1:
-            # Written beside the array, the element takes its slot.
+        element = (replace(edge, type=edge.type[:-2]), child)
+        if self.as_[:-1] == self.of[:-1]:
             landed = replace(
-                element.branch[0], name=as_, required=not self.preserve_empty
+                element[0], name=self.as_[-1], required=not self.preserve_empty
             )
-            return dc.Node(
-                metadata=catalog.metadata,
-                children=[
-                    (landed, child) if e.name == of else (e, c)
-                    for e, c in catalog.children
-                ],
-            )
+            out = swap(kept, self.of, (landed, child))
         else:
-            # Transitional: the array is at the root, so nothing is left
-            # empty by its going.
-            return place(replace(rest, metadata=catalog.metadata), [element])
+            out = place(rest, [Placement(branch=element, path=self.as_, source=source)])
+        # A row is no longer an instance of the item type it came from.
+        return replace(out, origin_item_type=None)
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
         other = drop(parent, self.of)

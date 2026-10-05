@@ -269,11 +269,16 @@ class TestFlattenDerive:
         # Type still drops the [] — same name, different cardinality.
         assert edge_by_name["tasks"].type == "object"
 
-    def test_raises_on_unknown_attribute(self, categories: dc.Node) -> None:
+    @pytest.mark.parametrize(
+        "of", [("missing",), ("tasks", "missing")], ids=["at the root", "nested"]
+    )
+    def test_raises_on_unknown_attribute(
+        self, categories: dc.Node, of: tuple[str, ...]
+    ) -> None:
         # Catalog-layer error here; Query.derive translates it into
         # QueryDeriveError at the pipeline boundary.
         with pytest.raises(dc.UnknownChildError, match="missing"):
-            Flatten(of=("missing",), as_=("x",)).derive(categories)
+            Flatten(of=of, as_=("x",)).derive(categories)
 
     def test_raises_when_target_not_array(self, categories: dc.Node) -> None:
         with pytest.raises(QueryDeriveError, match="not an array"):
@@ -319,13 +324,14 @@ class TestFlattenDeriveOverlap:
 
 
 class TestFlattenDeriveLanding:
-    """The element is written at ``as`` as a path: into the objects on
-    the way where the row has them, into made-up ones where it does
-    not.  Required follows from where the element is.  With
-    ``preserve_empty: false`` every remaining row has one; with ``true``
-    only the rows that had an element do, so a made-up object is
-    optional and the element is optional inside an object that was
-    already there."""
+    """The array is taken from where ``of`` leads, an object it leaves
+    empty going with it, and the element is written at ``as`` as a
+    path: into the objects on the way where the row has them, into
+    made-up ones where it does not.  Required follows from where the
+    element is.  With ``preserve_empty: false`` every remaining row has
+    one; with ``true`` only the rows that had an element do, so a
+    made-up object is optional and the element is optional inside an
+    object that was already there."""
 
     @pytest.mark.parametrize(
         ("base", "flatten", "expected"),
@@ -372,10 +378,58 @@ class TestFlattenDeriveLanding:
                 "a.b.c a.b.task",
                 id="into an object two deep",
             ),
+            pytest.param(
+                "id hobby.level hobby.pets[]",
+                Flatten(of=("hobby", "pets"), as_=("pet",)),
+                "id hobby.level pet",
+                id="out of an object",
+            ),
+            pytest.param(
+                "id hobby.pets[]",
+                Flatten(of=("hobby", "pets"), as_=("pet",)),
+                "id pet",
+                id="out of an object it leaves empty",
+            ),
+            pytest.param(
+                "id a.b.pets[]",
+                Flatten(of=("a", "b", "pets"), as_=("pet",)),
+                "id pet",
+                id="out of objects it leaves empty, two deep",
+            ),
+            pytest.param(
+                "id hobby.pets[]",
+                Flatten(of=("hobby", "pets"), as_=("hobby", "x", "pet")),
+                "id hobby.x.pet",
+                id="out of an object and back under its name",
+            ),
         ],
     )
     def test_shape(self, base: str, flatten: Flatten, expected: str) -> None:
         assert paths(flatten.derive(tree(base))) == expected
+
+    def test_makes_up_the_object_the_removal_emptied(self) -> None:
+        """Taking the array out empties ``hobby`` and it goes; the
+        ``hobby`` the alias then writes under is a new object that
+        carries nothing of the old one, as with any made-up object."""
+        hobby_edge = dc.Edge(
+            name="hobby",
+            type="object",
+            required=True,
+            metadata={"title": "Hobby"},
+            validation={"minProperties": 1},
+        )
+        hobby = dc.Node(
+            metadata={"title": "Hobby object"},
+            children=[
+                (dc.Edge(name="pets", type="string[]", required=True), dc.Node())
+            ],
+        )
+        out = Flatten(of=("hobby", "pets"), as_=("hobby", "x", "pet")).derive(
+            dc.Node(children=[(hobby_edge, hobby)])
+        )
+        made, node = out.child_entry("hobby")
+        assert made == dc.Edge(name="hobby", type="object", required=True)
+        assert node.metadata is None
 
     def test_keeps_the_object_written_into(self) -> None:
         """An object on the way keeps its edge and node as declared; the
@@ -401,14 +455,6 @@ class TestFlattenDeriveLanding:
         assert [e.name for e, _ in node.children] == ["level", "task"]
 
 
-# What the catalog side of a write path has to produce.  Strict, so
-# the change that lands each case is noticed by the mark it makes
-# obsolete.
-_TARGET = pytest.mark.xfail(
-    strict=True, reason="the catalog side does not take a write path yet"
-)
-
-
 class TestFlattenDeriveRequired:
     """Flatten adds nothing to a row.  With ``preserve_empty: false`` it
     drops the rows that have no element; with ``true`` it keeps every
@@ -428,12 +474,10 @@ class TestFlattenDeriveRequired:
             pytest.param(
                 Flatten(of=("hobby", "pets"), as_=("hobby", "pet")),
                 "hobby.level hobby.pet",
-                marks=_TARGET,
             ),
             pytest.param(
                 Flatten(of=("hobby", "pets"), as_=("pet",)),
                 "hobby.level pet",
-                marks=_TARGET,
             ),
             # Every row is kept, so ``hobby`` is still on some rows only,
             # and the element is absent where there was none.
@@ -442,12 +486,10 @@ class TestFlattenDeriveRequired:
                     of=("hobby", "pets"), as_=("hobby", "pet"), preserve_empty=True
                 ),
                 "hobby?.level hobby?.pet?",
-                marks=_TARGET,
             ),
             pytest.param(
                 Flatten(of=("hobby", "pets"), as_=("pet",), preserve_empty=True),
                 "hobby?.level pet?",
-                marks=_TARGET,
             ),
         ],
     )
@@ -474,7 +516,6 @@ class TestFlattenDeriveInPlace:
         out = Flatten(of=("tasks",), as_=("task",)).derive(row)
         assert [e.name for e, _ in out.children] == ["a", "task", "z"]
 
-    @_TARGET
     def test_keeps_what_the_holder_carries(self) -> None:
         """The array being the holder's only child does not make the
         holder disposable: it is still there on every surviving row,

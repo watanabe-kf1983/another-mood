@@ -1,6 +1,7 @@
 """Catalog writes — where a view clause's branches land in the output
-catalog, the counterpart of ``json_data_model.put`` on the record side.
-``dc.Node`` stays read-only; these are functions over it.
+catalog and what its removals take away, the counterpart of
+``json_data_model.put`` and ``drop`` on the record side.  ``dc.Node``
+stays read-only; these are functions over it.
 """
 
 from collections.abc import Iterator, Sequence
@@ -40,6 +41,54 @@ def names(node: dc.Node) -> Iterator[KeyPath]:
             yield head
         else:
             yield from ((*head, *rest) for rest in names(child))
+
+
+def remove(node: dc.Node, path: KeyPath) -> dc.Node:
+    """``node`` without the branch at ``path``.  An object left with no
+    children goes with it, up the chain: a row has no key for an
+    absent value, so an object with nothing in it is on no row.  A
+    path that is not there is a no-op."""
+    head, rest = path[0], path[1:]
+    if not node.has_child(head):
+        return node
+    if not rest:
+        return _without_child(node, head)
+    edge, child = node.child_entry(head)
+    pruned = remove(child, rest)
+    if pruned.children:
+        return swap(node, (head,), (edge, pruned))
+    else:
+        return _without_child(node, head)
+
+
+def require(node: dc.Node, path: KeyPath) -> dc.Node:
+    """``node`` with every edge on the way to ``path`` required: what a
+    clause says when it drops the rows that lack the path."""
+    if not path:
+        return node
+    head, rest = path[0], path[1:]
+    return replace(
+        node,
+        children=[
+            (replace(edge, required=True), require(child, rest))
+            if edge.name == head
+            else (edge, child)
+            for edge, child in node.children
+        ],
+    )
+
+
+def swap(node: dc.Node, path: KeyPath, branch: dc.Branch) -> dc.Node:
+    """``node`` with ``branch`` in the slot of the branch at ``path``:
+    the holder keeps its other children where they were, and stays as
+    declared even when the branch was all it held."""
+    head, rest = path[0], path[1:]
+    edge, child = node.child_entry(head)
+    landed = (edge, swap(child, rest, branch)) if rest else branch
+    return replace(
+        node,
+        children=[landed if e.name == head else (e, c) for e, c in node.children],
+    )
 
 
 def place(node: dc.Node, placements: Sequence[Placement]) -> dc.Node:
@@ -123,6 +172,10 @@ def _child(
                 holder_sources=sources,
             ),
         )
+
+
+def _without_child(node: dc.Node, name: str) -> dc.Node:
+    return replace(node, children=[(e, c) for e, c in node.children if e.name != name])
 
 
 def _rows_within(a: KeyPath, b: KeyPath) -> bool:
