@@ -14,12 +14,22 @@ wrapper.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from functools import reduce
 from graphlib import CycleError, TopologicalSorter
-from itertools import chain
+from itertools import chain, combinations
 from typing import Any, ClassVar, Protocol, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import pluck
+from another_mood.components.shared.catalog_write import (
+    Placement,
+    names,
+    overlaps,
+    place,
+    remove,
+    require,
+    swap,
+)
+from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
     RecordPredicate,
     parse_record_predicate,
@@ -98,62 +108,63 @@ class Flatten(QueryNode):
     """Unwind one array attribute: each element becomes a separate row
     carrying the parent's other fields plus the element under ``as_``."""
 
-    of: str
-    as_: str
+    of: KeyPath
+    as_: KeyPath
     preserve_empty: bool = False
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # ``of`` names an attribute, not a path: ``_unwind`` drops it from
-        # the row by exact key, so a nested target could not be consumed.
-        edge, child = catalog.child_entry(self.of)
+        # Transitional: the read side still takes a dotted string.
+        edges, child = catalog.reach(".".join(self.of))
+        edge = edges[-1]
         if not edge.is_collection:
             raise QueryDeriveError(
-                f"flatten target '{self.of}' is not an array attribute "
+                f"flatten target '{'.'.join(self.of)}' is not an array attribute "
                 f"(type '{edge.type}')",
-                offender=self.of,
+                offender=self.of[0],
             )
-        wrapper = replace(
-            edge,
-            name=self.as_,
-            type=edge.type[:-2],
-            required=not self.preserve_empty,
-        )
-        out = dc.Node(
-            metadata=catalog.metadata,
-            children=[
-                (wrapper, child) if e.name == self.of else (e, c)
-                for e, c in catalog.children
-            ],
-        )
-        if _duplicate_child_name(out) is not None:
+        source: KeyPath = (*self.of, "[]") if self.preserve_empty else ()
+        kept = catalog if self.preserve_empty else require(catalog, self.of[:-1])
+        rest = remove(kept, self.of)
+        taken = next((name for name in names(rest) if overlaps(self.as_, name)), None)
+        if taken is not None:
             raise QueryDeriveError(
-                f"flatten alias '{self.as_}' collides with an existing attribute",
-                offender=self.as_,
+                f"flatten alias '{'.'.join(self.as_)}' collides with the attribute "
+                f"'{'.'.join(taken)}'",
+                offender=self.as_[0],
             )
-        return out
+        element = (replace(edge, type=edge.type[:-2]), child)
+        if self.as_[:-1] == self.of[:-1]:
+            landed = replace(
+                element[0], name=self.as_[-1], required=not self.preserve_empty
+            )
+            out = swap(kept, self.of, (landed, child))
+        else:
+            out = place(rest, [Placement(branch=element, path=self.as_, source=source)])
+        # A row is no longer an instance of the item type it came from.
+        return replace(out, origin_item_type=None)
 
     def _unwind(self, parent: Record) -> Sequence[Record]:
-        other = {k: v for k, v in parent.items() if k != self.of}
+        other = drop(parent, self.of)
         try:
             raw = pluck(parent, self.of)
         except KeyError:
             raw = []
         assert isinstance(raw, list), (
-            f"flatten target '{self.of}' must be an array; got {type(raw).__name__}"
+            f"flatten target '{self.of[-1]}' must be an array; got {type(raw).__name__}"
         )
         children = cast(list[object], raw)
         if self.preserve_empty and not children:
             return [other]
-        return [{**other, self.as_: child} for child in children]
+        return [put(other, self.as_, child) for child in children]
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Flatten":
         return cls(
-            of=cast(str, raw["of"]),
-            as_=cast(str, raw["as"]),
+            of=tuple(cast(Sequence[str], raw["of"])),
+            as_=tuple(cast(Sequence[str], raw["as"])),
             preserve_empty=cast(bool, raw["preserve_empty"]),
         )
 
@@ -310,28 +321,42 @@ class Grouped(QueryNode):
 
 @dataclass(frozen=True)
 class SelectItem:
-    """A single field projection (rename ``item`` to ``as_``)."""
+    """A single field projection: read ``item``, write it at ``as_``.
 
+    Both are paths.
+    """
+
+    #: A read path, still dotted: an edge name can be a literal dotted
+    #: key until ``grouped`` writes a path too.
     item: str
-    as_: str
+    as_: KeyPath
 
-    def apply(self, record: Record) -> Mapping[str, object]:
-        """Return ``{as_: value}`` when the source field is present, or
-        an empty mapping when it is absent.  Absent-key output matches
-        the JSON data model convention that nullable fields are
-        represented by key omission rather than a null value, so
-        projecting an optional schema attribute yields rows whose key
-        set varies with each record's presence of the field.
+    def apply(self, record: Record, out: Record) -> Record:
+        """Return ``out`` with the source value written at :attr:`as_`,
+        or ``out`` untouched when the source field is absent — no null and
+        no empty object to hang the path from, so rows vary in key set.
         """
         try:
-            return {self.as_: pluck(record, self.item)}
+            value = pluck(record, self.item)
         except KeyError:
-            return {}
+            return out
+        return put(out, self.as_, value)
 
-    def derive(self, catalog: dc.Node) -> dc.Branch:
+    def derive(self, catalog: dc.Node) -> Placement:
+        """The branch read at :attr:`item`, bound for :attr:`as_`."""
         # The whole subtree comes along, mirroring apply's ``pluck``.
-        edge, node = catalog.descend(self.item)
-        return replace(edge, name=self.as_), node
+        edges, node = catalog.reach(self.item)
+        # The deepest optional edge on the way: a row holds it exactly when
+        # it holds the value, since every edge below is required and every
+        # edge above is there whenever it is.
+        optional_depths = [
+            depth for depth, edge in enumerate(edges, 1) if not edge.required
+        ]
+        return Placement(
+            branch=(edges[-1], node),
+            path=self.as_,
+            source=tuple(e.name for e in edges[: max(optional_depths, default=0)]),
+        )
 
 
 @dataclass(frozen=True)
@@ -341,27 +366,38 @@ class Select(QueryNode):
     items: Sequence[SelectItem]
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
-        return [
-            {k: v for item in self.items for k, v in item.apply(record).items()}
-            for record in records
-        ]
+        return [self._project(record) for record in records]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        out = dc.Node(children=[item.derive(catalog) for item in self.items])
-        duplicate = _duplicate_child_name(out)
-        if duplicate is not None:
-            # The name reported is the later of the two — the overwriting
-            # write — and is the alias itself, source position and all.
-            raise QueryDeriveError(
-                f"select alias '{duplicate}' collides with an earlier item",
-                offender=duplicate,
-            )
-        return out
+        # Every two aliases must be clear of each other.  The item
+        # reported is the later of the pair -- the write that would land
+        # on or inside the earlier one.  Its first segment carries the
+        # alias's source position.
+        for earlier, later in combinations([item.as_ for item in self.items], 2):
+            if overlaps(earlier, later):
+                raise QueryDeriveError(
+                    f"select alias '{'.'.join(later)}' collides with an earlier "
+                    f"item '{'.'.join(earlier)}'",
+                    offender=later[0],
+                )
+        # The row is built from nothing, so nothing the input held under
+        # the same name carries over.
+        return place(dc.Node(), [item.derive(catalog) for item in self.items])
+
+    def _project(self, record: Record) -> Record:
+        empty: Record = {}
+        return reduce(lambda out, item: item.apply(record, out), self.items, empty)
 
     @classmethod
-    def from_dict(cls, raw: Sequence[Mapping[str, str]]) -> "Select":
+    def from_dict(cls, raw: Sequence[Mapping[str, object]]) -> "Select":
         return cls(
-            items=[SelectItem(item=entry["item"], as_=entry["as"]) for entry in raw]
+            items=[
+                SelectItem(
+                    item=cast(str, entry["item"]),
+                    as_=tuple(cast(Sequence[str], entry["as"])),
+                )
+                for entry in raw
+            ]
         )
 
 
@@ -512,7 +548,7 @@ class Query(QueryNode):
             grouped_raw = cast(Mapping[str, str], raw["grouped"])
             grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
 
-        select_raw = cast(Sequence[Mapping[str, str]], raw.get("select", []))
+        select_raw = cast(Sequence[Mapping[str, object]], raw.get("select", []))
         select: Select | PassThrough = (
             Select.from_dict(select_raw) if select_raw else PassThrough()
         )

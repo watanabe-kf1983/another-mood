@@ -150,6 +150,8 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### ドット名の意味論統一 (E14)
 
+`select` と `flatten` は #459 で対応済み。以下で書き側がリテラルだと言っているのは、残る `join` と `grouped` の別名のこと。
+
 #### 問題
 
 DSL の名前に現れるドットは、読み側と書き側で意味が違う。読み側（`from:` / `flatten.of:` / `join.on:` / `where` のキー / `sort.by:` / `select.item:` / `grouped.by:`）ではパスで、`hobby.level` は `hobby` の中の `level` を指す。一方、書き側（出力レコードのキー名を決める別名スロット）ではリテラル文字列で、`"hobby.level"` というドット入りのキーをそのまま作る。
@@ -158,8 +160,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 | スロット | 省略時 | ドット入りキーが生まれる例 |
 |---|---|---|
-| `select[].as` | `item` をそのまま | `item: hobby.level` → `{"hobby.level": "pro"}` |
-| `flatten.as` | `of` をそのまま | `{ of: pets, as: hobby.pets }` → `{"hobby.pets": {...}}` |
 | `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
 | `join.flatten.as` | join の `as` をそのまま | 同上 |
 | `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
@@ -170,7 +170,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 - **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` でしか届かない（Jinja2 の `row.hobby` は undefined になる）
 - **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
 - **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
-- **読み側のうち `flatten.of` だけがパスを受けない**: apply (`_unwind`) は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` を通すと元の配列が `hobby` 内に残ったまま新キーが足され、「配列エッジを置き換えた」と言うカタログとずれる。derive がドット入りの `of` を `unknown attribute` として弾くことでずれは塞いであるが、読み側の一句だけがパスを受けない状態になっている
 
 #### 方針: DSL の名前は読みも書きもパス
 
@@ -301,12 +300,16 @@ select:
 # カタログ: hobby?.level  →  level?
 ```
 
-| 元 | `select` | 結果 | 読み |
-|---|---|---|---|
-| `a?.p a?.b.c` | `a.p as a.p`, `a.b.c as a.d` | `a?.p a?.d` | `a` があれば `b`, `c` があるので、`d` も `a` があれば必ずある |
-| `a?.p a?.b?.c` | 同上 | `a?.p a?.d?` | `b` が任意なので、`d` は `a` があっても無いことがある |
-| `a?.p x?` | `a.p as a.p`, `x as a.d` | `a?.p? a?.d?` | `x` はあるが `a` は無い行に `a: {d}` ができるので、`p` は `a` があっても無いことがある |
-| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
+`as` の名前は読み側と無関係である。`select` は空の行から作り直すので、書き込み先の途中に現れるオブジェクトは書き込みが合成した新しいもので、読み側に同じ名前があっても何も引き継がない。
+
+書き込みが一本なら、合成されたオブジェクトはその値を書いた行にしか無い（[書く値が無ければ途中のオブジェクトも作らない](#書く値が無ければ途中のオブジェクトも作らない)）ので、値は合成されたオブジェクトがあれば必ずある。葉が任意になりうるのは、複数の書き込みが同じオブジェクトに合流するときで、それぞれの値がどの行にあるか、つまり出どころ（読み側のパス上の任意エッジ）の関係で決まる:
+
+| 元 | `select` | 出どころの関係 | 結果 | 読み |
+|---|---|---|---|---|
+| `ref?.p ref?.b.c` | `ref.p as target.p`, `ref.b.c as target.d` | 同じ: `{ref}` と `{ref}` | `target?.p target?.d` | `ref` があれば `b`, `c` があるので、`d` も `target` があれば必ずある |
+| `ref?.p ref?.b?.c` | 同上 | `d` の方が狭い: `{ref}` と `{ref, ref.b}` | `target?.p target?.d?` | `b` が任意なので、`d` は `target` があっても無いことがある |
+| `ref?.p x?` | `ref.p as target.p`, `x as target.d` | 無関係: `{ref}` と `{x}` | `target?.p? target?.d?` | `x` はあるが `ref` は無い行に `target: {d}` ができるので、`p` は `target` があっても無いことがある |
+| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | 同じ: `{ref}` と `{ref}` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
 
 `flatten` は行に何も足さない。`preserve_empty: false` なら要素の無い行が落ちるので `of` の経路は残った行の全部にあり、`true` なら元のまま:
 
