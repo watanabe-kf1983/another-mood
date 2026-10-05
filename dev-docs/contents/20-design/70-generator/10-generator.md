@@ -4,6 +4,8 @@
 
 ### ノードメタデータ
 
+> **[W4 dup]** 表 ↔ data_tree.py:29-163 の各 docstring (a, 完全。正本宣言付きで表を保持)。引用「直接触らせない」↔ data_tree.py:1-5、meta_templates.py:104-111、60-trust-model:114、10-json-data-model:63-66 (完全)。案: 表は削除→コード、残すのは「テンプレートは触れない、出口はフィルタ」の不変条件。引用は削除 (差分「meta に改名しない理由」は data_tree.py コメントへ)
+
 Generator はロードしたデータを inert に詰め替えたうえで `wrap_tree` でラップし、各ノードにシステム由来のフィールドを注入する。テンプレートは元データを Mapping / Array として直接走査し、これらのフィールドには**触れない** — 必要な値はフィルタが取り出して渡す。
 
 | フィールド | 対象ノード | 内容 |
@@ -13,6 +15,8 @@ Generator はロードしたデータを inert に詰め替えたうえで `wrap
 | `_meta.anchor_path` | 全ノード | このノードのアンカーパス（[anchor-spec.md](20-anchor-spec.md)） |
 | `_meta.fragment` / `_meta.stamps_anchor` | 全ノード | リンクの着地 fragment と `<a id>` 刻印の要否（由来型ごとの anchor strategy が決める） |
 | `_meta.object_type_id` | 全ノード | スキーマ位置を表す catalog 形 ID（Array 要素は `X.item`、singleton は `X`、Array は `X.item[]`） |
+
+> **[W4 → appendix]** (この引用段落)
 
 > **背景: なぜテンプレートから直接触らせないか.** テンプレートエンジン (minijinja) は `_` 始まりの **Python 属性**を undefined にし、メソッド呼び出しは拒否する（データ側の `_` 始まりキーは通る）。`row["_meta"]` も `attr()` も同じく undefined になるので迂回路は無い。これはホスト側の内部にテンプレートを触らせないという信頼モデルの意図そのもので、押し戻す理由がない。
 >
@@ -24,9 +28,13 @@ Generator はロードしたデータを inert に詰め替えたうえで `wrap
 
 ### anchor_path → ノードマップ
 
+> **[W4 dup]** ↔ data_tree.py:317-337 build_node_map/iter_nodes docstring (a, 完全)。案: 削除→コード (ポインタ一文のみ)
+
 リンク解決はアンカーパスからノードを引く。`build_node_map` がラップ済みツリーを `iter_nodes` で 1 度舐め、`{anchor_path: node}` のフラットなマップを構築する。キーを full anchor_path にすることで prose の `/` 素通し例外 ([anchor-spec.md](20-anchor-spec.md#prose-の例外)) を各ノードの `anchor_path` 構築側 1 箇所に閉じ込め、マップ側に特別扱いを要さない。実装は `data_tree.py` の `build_node_map` / `iter_nodes` docstring が正本。
 
 ### ページパスの導出
+
+> **[W4 dup]** ↔ edition.py:49-97 PagingPolicy/Edition docstring、data_tree.py:343-349 (a)、template.md:118-122、reports.md:47 (b)、40-paging:35 (c) — 完全。案: 削除→コード。残すのは「page_path は (node, file_per) の関数で _meta に焼かない」「data_tree は paging を知らない」の不変条件
 
 ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`render` フィルタ) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
 
@@ -34,11 +42,15 @@ paging ポリシー (どの object type が分割境界か、root→`index.md` /
 
 ### リンク解決
 
+> **[W4 dup]** 2 群構成・@pass_state・MissingNode ↔ data_tree_filters.py:4-11,160-166、md.py:174-179 (a)、40-paging:20、50-output-format:89、20-anchor-spec:247 (c) — 完全 (同じ 3 項目が 4 箇所)。案: ここを正本に 1 段落、他 3 箇所をポインタ化。実装契約の列挙は削除→コード
+
 > 基盤の [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) を使う。リンクの仕様（リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動）は [anchor-spec.md](20-anchor-spec.md) を参照。
 
 リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。ヘルパは依存方向で 2 群に分かれる: フォーマット非依存の中立ヘルパ (`node` global、`child` / `label` フィルタ) はノードマップだけに束縛され、フォーマット固有の `link` / `href` / `relink` は `PagingPolicy` に束縛される（`relink` はノードマップも引く。`anchor` は束縛を持たない）。source ページ（主題ノード）は render state の `this` から得る。実装契約 — `link` / `href` / `relink` に `@pass_state` が要る理由（source 取得）、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `data_tree_filters.py` / `output_formats/md.py` の docstring が正本。
 
 #### 描画の単一ページ不変条件 (render subtree ガード)
+
+> **[W4 dup]** ↔ render_processor.py:94-139 _guard_subtree docstring (a, ほぼ逐語)、template.md:110 (b)、80-showcase:173、40-paging:59 (c) — 完全。不変条件+理由。案?: 不変条件と「構造判定で edition 非依存」の理由は design が正本→残し、docstring を縮める。機構 (identity 判定、免除の条件) は削除→コード
 
 上のリンク解決は次の不変条件に乗っている: **各ノードは *データ位置* で一意に定まる 1 ページ (`PagingPolicy.page_path`) にだけ描かれる**。source は `page_path(this)`、target は `page_path(target)` — 両者が同じ規則でノードのデータ位置からページを引くからこそ、`| link` / `href` / `relink` が一貫して相対化できる。`render` フィルタで `this` の subtree 外にノードを inline 描画するとこの不変条件が破れ、`page_path(subject)` が実描画ページと食い違って、そのノードの内部 `this` 起点リンクも、そのノードへ張る被リンクも壊れる。
 
@@ -48,6 +60,8 @@ paging ポリシー (どの object type が分割境界か、root→`index.md` /
 
 #### prose body 処理フィルタ
 
+> **[W4 dup]** 機構 ↔ markdown.py docstring 群 (a)、template.md:278-292 (b)、20-anchor-spec relink 節、30-markdown-parser:13 (c) — 完全。案: 機構段落は削除→コード。「明示 relink、暗黙を採らない」は設計判断→残す (anchor-spec 側の再掲をポインタ化)
+
 Markdown データソースの body には、Normalizer がソース内の相対リンクを `node:` 記法に変換済みのリンクが含まれる ([markdown-parser-spec.md](../50-normalizer/30-markdown-parser-spec.md) 参照)。`relink` フィルタが body 内の `node:` リンク先を表示先ページからの相対 URL に置換する。**リンク解決の単一責務**に絞り、見出し深さ調整は `under_heading` と合成する (記法・対象範囲・未解決契約は [anchor-spec.md](20-anchor-spec.md#prose-body-処理フィルタ-relink) が正本)。
 
 body 内のどこが本物の `node:` リンクかは markdown-it でパースして判定し (レンダラには使わず位置特定のための読み取り専用パーサとして使う)、置換は元文字列への splice で行う。機構の詳細 (`normalizeLink` の恒等化、本物リンクだけが `link_open` になる性質、行範囲限定の splice) は `shared/markdown.py` の docstring が正本。
@@ -55,6 +69,8 @@ body 内のどこが本物の `node:` リンクかは markdown-it でパース�
 relink は author が明示的に書く (`{{ prose.content | relink }}`) のを設計とし、システムが暗黙に挟む案は採らない。値単位で挟める自動フックは `template_engine.py` の finalize しかない（`post_process` はページ単位の post-render 置換で、上のとおり採らない）が、finalize は `Markup` を素通しする一方、`under_heading` 等の Markdown 出力フィルタはその `Markup` を返す。ゆえに暗黙 relink は `under_heading` と合成した瞬間に発火せず、`node:` を silent に出力へ漏らす (値に「relink 未了」の印を持たせて伝播させる代案も、文字列連結・Markup 化で印が黙って落ちるため信頼できない)。明示適用は raw な `node:` content の直近に author が relink を置くから確実で、合成順序も `| relink | under_heading` と見えるまま残る。
 
 ### Reconcile
+
+> **[W4 dup]** ↔ 40-communication/index.md:21 (c, ほぼ同文)、10-architecture:46-47 (c)、generator.py:84-100 (a)、30-template-spec:49、40-paging:44,49 (c) — 完全。案: ここを正本、communication/index 側をポインタ化。末尾順序の理由は残す
 
 Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
 
@@ -71,5 +87,7 @@ Reconcile は Generator の直後に位置するステージで、「Generator �
 - 下流の site / publish ステージは Reconcile の出力の単一視点を持てばよく、エラー時と正常時の分岐を知らなくてよい
 
 #### 命名について
+
+> **[W4 → appendix]**
 
 「reconcile（突き合わせる）」は本リポジトリ独自の語ではなく一般的な英単語だが、ドキュメントビルダーの文脈では珍しい語であり、馴染みのある語が引き起こす意味の取り違えを避ける狙いで採用した。読み手はこの定義に立ち戻ることで、Reconcile ステージの責務を一意に把握できる。

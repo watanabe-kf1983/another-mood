@@ -6,6 +6,8 @@
 
 ### ステージ構成
 
+> **[W4 dup]** ↔ pipeline/stages.py の bind 引数と STAGE_FACTORIES/TAP_STAGE_FACTORIES コメント (a, 表はコードの写し)、docs/reference/cli.md:87-92 (b)。跨るモジュールの構造。案: 残す
+
 | ステージ | User Input | Upstream | Output |
 |---|---|---|---|
 | inspect_schema | schema_file | — | inspect_schema/ |
@@ -23,11 +25,15 @@ dev モードでは User Input / Upstream の変更を Watch してステージ�
 
 ### 背景: Watch ライブラリは watchdog を採用
 
+> **[W4 → appendix]**
+
 [watchdog](https://github.com/gorakhargosh/watchdog) を採用。過去に [watchfiles](https://github.com/samuelcolvin/watchfiles) を採用していた (PR #41) が、watchfiles は WSL を検出すると WSL1/WSL2 を区別せず強制 polling に切り替える挙動があり (issue #187、2022)、WSL2 環境で polling モードの event 取りこぼしが発生して watch が停止する問題があった (実測で `mood watch` 稼働中に concurrent `mood build` を当てると 10 回中 7 回最終状態が "failed" で固定)。
 
 watchdog は Linux (WSL2 を含む) で inotify を使い、明示的に指定しない限り polling に落ちないため、WSL1 のような特殊ケースを考慮しなくてよい。OS ネイティブの event 通知機構を使う点は両ライブラリ共通だが、WSL の自動 polling 判定の挙動が異なる。
 
 #### watchdog 利用上の注意: 変更系 event のみに subscribe
+
+> **[W4 → code]** 削除 (watcher.py の `_Handler` コメントに同じ申し送りあり。watchfiles への言及は上の節と一緒に appendix へ)
 
 `Watcher` クラス (`pipeline/adapters/watcher.py`) の event handler は `on_created / on_modified / on_deleted / on_moved` のみオーバーライドし、`on_opened / on_closed` は意図的に無視する。
 

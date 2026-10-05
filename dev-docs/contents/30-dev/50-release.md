@@ -7,6 +7,8 @@
 
 ## バージョニング
 
+> **[W4 dup]** tag 導出 ↔ release.yml:30-31、各 yml 同文コメント (部分)。tag 形 ↔ release.yml:4-6、pyproject.toml:45-50 (完全、pyproject が詳しい)。破壊の定義 ↔ 60-sbdb-manifest:188-200、DEVELOPMENT.md:117、compose_pr_notice.py:77-82 (完全)。案?: 破壊の定義は release.md が正本で他をポインタ化。tag 形の理由は pyproject コメントが正本→縮める
+
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
   導出する。bump コミットという工程はない
 - リリース tag は `vN.N.N` 形（ハイフンを含まない）。リリースワークフローの発火条件と
@@ -34,6 +36,8 @@
 
 ## PR 側の規律
 
+> **[W4 dup]** ↔ DEVELOPMENT.md:109-115 (b, ほぼ同文)。feature/fix 規準 ↔ compose_pr_notice.py:106-125、30-template-spec:61 (完全)。行頭の理由 ↔ check_release_trailer.py:8-12 (部分)。案: dev が正本、DEVELOPMENT.md を要約に縮める。スクリプトの通知文は利用者向け英文なので別物→残す
+
 PR タイトルにタスク ID 等の内部語彙は書かない。タイトルは自動生成の台帳にそのまま
 載り、`## Release highlight` セクションを持たない PR ではハイライトの見出しも務める
 ——どちらも利用者が読む面で、タスク ID の宛先ではない。タスク ID は PR 本文に書く。
@@ -59,6 +63,8 @@ PR タイトルにタスク ID 等の内部語彙は書かない。タイトル�
 
 ### 破壊的 PR の義務
 
+> **[W4 dup]** ↔ 60-sbdb-manifest:203-207 (c)、compose_pr_notice.py:79-81 (部分)。案: sbdb-manifest 側をポインタ化
+
 破壊的 PR（フォーマット破壊・ツール破壊とも）は、以下をすべて自身に含める。
 トレーラーと `## Release highlight` セクションだけが PR 本文に書かれ、他はレビュー
 対象のリポジトリ内容:
@@ -72,12 +78,16 @@ PR タイトルにタスク ID 等の内部語彙は書かない。タイトル�
 
 ### lint による自動検査
 
+> **[W4 dup]** ↔ pr-lint.yml:3-5,27-29,49-50、compose_pr_notice.py:10-14 (a)、55-release-background:36-39 (c) — 完全。案?: 手順の記述は dev、設計理由は yml コメントか appendix に一本化
+
 PR を開く・再開する・本文を編集する・push する、のいずれでも `PR lint` ワークフローが
 走り、上の規律のうち機械で決まる部分だけを見る。既存シグナル同士の突き合わせに徹し、「内容が破壊的かどうか」の
 意味判定はしない。出口は二種——書式・整合の決定的な違反は fail、diff とトレーラーの
 噛み合わせは非ブロックの sticky コメントで注意喚起。
 
 ## リリース手順
+
+> **[W4 dup]** ↔ 55-release-background:170,96-98,148-151,112 (c)、release.yml:51-54,83-85、pyproject.toml:59-62 (glob 三箇所) (a) — 部分〜完全。案: 残す (手順の正本)。55 側の重複は appendix 移動時に削る
 
 役割によらず単一。main へのコミットはない。5 分で回る軽さを目標とする。
 手で入れる値は次版番号ただ一つで、前回 tag は導出する（打ち間違いの余地を残さない）。

@@ -10,6 +10,8 @@ prose の並び順はファイル名の **ゼロ埋め・隙間空き番号 pref
 
 #### 背景: 三すくみ（どれか一つを必ず捨てる）
 
+> **[W4 → appendix]**
+
 prose の「順序」と「id」を巡って、次の3つは同時に満たせない:
 
 1. **読む順序がファイルシステム上で見える** — 番号をファイル名に入れる必要がある
@@ -26,6 +28,8 @@ prose の「順序」と「id」を巡って、次の3つは同時に満たせ�
 
 #### 背景: 却下した代替案（蒸し返し防止）
 
+> **[W4 → appendix]**
+
 - **front-matter で id を宣言**（順序＝ファイル名／同一性＝front-matter）: 3 を保ちつつ 1+2 を得られるが、id から **segment string ＝住所としての意味を抜く**方向で、resolver の lookup 化と宣言 id の一意性検査という機構を要する。prose id は無意味な UUID ではなく **意味ある住所**（[prose の `/`-素通し例外](../70-generator/20-anchor-spec.md#prose-の例外)）なので、住所性を残す本決定を採る
 - **toc yaml / テンプレートでの順序列挙**: リンクの有無に関わらず、**ファイルを rename するたびに spine 側の記帳を無条件に強制**する第二の編集箇所を新設してしまう
 - **番号を id から剥がす**: ファイルシステムがタダでくれる一意性・透明性を失い、自前の重複検査が要る（`01-foo` と `02-foo` が同じ id に潰れる衝突をファイルシステムが防げなくなる）
@@ -34,5 +38,7 @@ prose の「順序」と「id」を巡って、次の3つは同時に満たせ�
 ## Internal Design
 
 ### book edition のフォルダネスト
+
+> **[W4 dup]** ↔ prose.py _outline_position docstring:85-100、content-schema.yaml:63-76 (a, 完全。正本と宣言しつつ再掲)。機構。案: 削除→コード。残すのは「two-loop をフォルダ木へ一般化」「ソートはテンプレ側」の設計一文
 
 book edition（全 inline）で prose のフォルダ親子をネストさせる仕組みは、[分割ルール](../70-generator/40-paging-spec.md#分割ルール) の two-loop（`| link` + `| render`）と `under_heading` を、フォルダ木へ一般化したもの。各 prose レコードは id 由来の `order_key`（folder-preorder ソートキー）と `depth`（見出しレベル）を持ち、ルートテンプレ（`definition/templates/index.md`）が `order_key` でソートし `depth` に応じて `under_heading` で包む。両フィールドは id のみの純導出なので prose の preprocess（`prose.py` の `_outline_position` が正本）で供給し、ソートはファイル単位で行えないため collection の揃うテンプレ側に置く。`order_key` は暫定のアルファベット id でも番号付き id でも folder-preorder を与えるので、[番号 prefix](#章順は番号-prefix-で表す) を振ればテンプレ無改修で読む順が effect になる。

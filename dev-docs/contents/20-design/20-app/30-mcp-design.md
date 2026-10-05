@@ -6,6 +6,8 @@ MCP サーバの設計。AI へのコンテキスト提供として機能する�
 
 ### 基本方針
 
+> **[W4 dup]** ↔ 10-architecture 設計判断#4 (c, 完全)。案: 残す (architecture は一行、理由はここ)
+
 MCP サーバは CRUD API ではなく、**AI へのコンテキスト提供**として機能する。
 
 contents/ の作成・更新・削除（CUD）は AI が直接ファイルを編集する。ツール側で CRUD API を提供しない理由:
@@ -15,10 +17,14 @@ contents/ の作成・更新・削除（CUD）は AI が直接ファイルを編
 
 ### 設計原則
 
+> **[W4 dup]** ↔ docs/mcp.md:3-24 対応表、mcp_server.py 各 tool docstring (a/b, 部分)。案: 残す
+
 - **MCP と CLI の論理的機能は一致すべき**: MCP インタフェースの検討結果が CLI インタフェースの見直しの契機になりうる。差異が出たら「どちらかが間違っている」サインとして扱う
 - **validate を build と分離する必要はない**: このツールは入力を変更せず副作用もない純粋関数であり、全操作が冪等かつ dry-run である。build 自体が validate を兼ねる
 
 ### ドキュメント提供の一元化
+
+> **[W4 dup]** ↔ cli.md:211、docs/catalog.yaml ヘッダ、docs_catalog/catalog.py docstring、mcp_server.py:56-57 (a/b, 部分)。構造。案: 残す (チャネル列挙は docs と同文なので縮める余地)
 
 利用者向けドキュメントの canonical は `docs/` の raw Markdown として一元管理し、複数チャネルで提供する:
 
@@ -32,11 +38,17 @@ AI にとっての「ドキュメント生成パイプライン全体のナビ�
 
 ### 背景: パス引数を絶対パスに限る理由
 
+> **[W4 dup]** 第一段落の核心理由 ↔ mcp_server.py _absolute_arg docstring、command.py _require_absolute、config.py:34-37 (a, 同一)。案: 核心理由は削除→コード、issue 実例と roots/list 案は appendix
+
+> **[W4 → appendix]**
+
 ツールのパス引数は絶対パスのみ受け付け、相対パスは解決せずエラーで弾く。相対パスの基準になるのはサーバプロセスの作業ディレクトリで、決めるのは MCP クライアント、呼び出し元のエージェントからは見えないため。実際 Claude Code CLI はプロジェクトディレクトリで起動するが、同デスクトップ版は `$HOME` で起動し設定の `cwd` も無視する（[anthropics/claude-code#75266](https://github.com/anthropics/claude-code/issues/75266)、2026-09 に修正されないまま not planned でクローズ）。MCP 公式のデバッグ指針も、クライアント経由で起動されたサーバの作業ディレクトリは未定義でありうると明記している。
 
 `roots/list` でクライアントにワークスペース根を訊けば、この推測自体が要らなくなる（クライアントが絶対 `file://` URI で返すプロトコル上の正解）。ただし capability は任意で、非対応クライアントは `-32601` を返す仕様であり、Claude Code デスクトップは initialize で roots を渡さない。フォールバック設計とクライアント差の検証が別途要るため今回は採らず、将来の選択肢として残す。
 
 ### 背景: クライアント差の問題
+
+> **[W4 → appendix]**
 
 MCP の Resources は仕様上 "application-driven"（[2025-06-18 spec server/resources](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)）であり、ホスト（クライアント）がエージェントに Resources 経路を露出するか否かは実装裁量とされている。Tools の "model-controlled"（仕様 server/tools 節）と対照的。
 
@@ -64,6 +76,10 @@ Resources を残す理由:
 
 ### 背景: `docs://` URI スキーム
 
+> **[W4 dup]** 第一の理由 (RFC 3986 相対リンク) ↔ docs/catalog.yaml:9-12 ヘッダコメント (同じ例文) (b)。案: 第一の理由は削除→catalog.yaml、file:// 不採用は appendix
+
+> **[W4 → appendix]**
+
 MCP Resources の URI スキームに `docs://` カスタムスキーム + `docs/` 直下からの相対パスを採用する。例:
 
 - `docs://guides.md`
@@ -78,11 +94,19 @@ MCP Resources の URI スキームに `docs://` カスタムスキーム + `docs
 
 ### 背景: watch モードが AI エージェント向けに不要な理由
 
+> **[W4 dup]** ↔ docs/guides.md:128-133「build vs watch」(b, 結論と大筋の理由)。案?: 削除→docs (機構的理由の一文だけ appendix か)
+
+> **[W4 → appendix]**
+
 AI エージェントのツール実行モデルは同期的なリクエスト→レスポンスである。常駐プロセスのログストリームから特定の変更に対する結果を抽出するのは困難であり、ワンショットの build で結果を同期取得する方がフィードバックループに適している。
 
 ただし watch server はエージェントの背後にいる人間のために必要である。人間はブラウザでリアルタイムにドキュメントを確認したく、その仕組みは人間の直接編集・エージェント経由の編集のいずれでも機能する必要がある。
 
 ### 背景: watch をバックグラウンド化しない理由
+
+> **[W4 dup]** 運用の決定 (別ターミナルで watch を案内) ↔ mcp_server.py _INSTRUCTIONS 末尾 (a)。案: appendix のまま
+
+> **[W4 → appendix]**
 
 当初は `mood watch --detach` と MCP の start_watch / stop_watch ツールで、エージェントから watch server を起動・停止できるようにする想定だった。採らず、人間が visible terminal で `mood watch <dir>` を foreground 起動する運用に倒した。エージェントは利用者に「別ターミナルで `mood watch <dir>` を実行してください」と案内し、この案内は Server Instructions に含める。
 
@@ -101,6 +125,8 @@ MCP プロトコルの 4 層を使い分けてコンテキストを提供する�
 
 #### Server Instructions（初期化時に注入、200語以内）
 
+> **[W4 dup]** ↔ mcp_server.py:22-52 _INSTRUCTIONS (a, 方針 vs 実物)。案: 残す (方針は design)
+
 MCP 接続時にクライアントのシステムプロンプトに注入される短い誘導文。ツール横断的なワークフロー概要と「ファイルを編集する前に `list_docs` / `read_doc` で仕様を確認せよ」という行動指針を伝える。
 
 毎ターン読まれるためトークンコストが大きい。個別ツールの説明や長大なマニュアルは載せない。
@@ -110,6 +136,8 @@ MCP 接続時にクライアントのシステムプロンプトに注入され�
 各ツールの自己完結的な説明。`MCPServer` では関数の docstring から自動生成される。call site で必要な情報（目的、引数 / 戻り値の契約、CLI の同等コマンド）に絞る。Workflow やツール間の routing は Server Instructions に集約し、docstring とは重複させない。
 
 #### Resources / list_docs・read_doc（オンデマンド読み込み）
+
+> **[W4 dup]** ↔ mcp_server.py:56-84 (publish-as-both、resource_link) (a)、docs/mcp.md、catalog.yaml:14-19 (b) — 部分。案: 残す。「冗長な並行公開とした理由は…参照」はリンク化
 
 Another Mood ツール自身の利用者ドキュメント（`docs/` ツリー）をオンデマンドで読めるようにする。同じ素材を 2 経路で公開する:
 
@@ -133,6 +161,8 @@ MCP Prompts は人間がスラッシュコマンド等で明示的に選択す�
 
 ### 背景: build と watch の同時実行
 
+> **[W4 dup]** ↔ shared/component/dir_lock.py module docstring (a)、cli.md:135 (b)。注意: cli.md は同一 out-dir でレースしうると書き、前提が違う。案: 残す。前提差は不整合として別途
+
 build（エージェントのワンショット実行）と watch（バックグラウンドのファイル監視）は同時に動作しうる。エージェントがファイルを編集すると watch が検知してパイプラインを起動し、その後エージェントが build を呼ぶケースがある。
 
 これは問題にならない:
@@ -143,6 +173,8 @@ build（エージェントのワンショット実行）と watch（バックグ
 
 ### 背景: ライブラリは MCP Python SDK 内 MCPServer を採用
 
+> **[W4 → appendix]**
+
 公式 [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)（PyPI: `mcp`）にバンドルされた `mcp.server.mcpserver.MCPServer` を採用。本プロジェクトは MCP サーバを stdio 上の JSON-RPC として動かすローカルプロセス用途であり、サードパーティ製の独立 [`prefecthq/fastmcp`](https://github.com/prefecthq/fastmcp) が積み増している機能（OAuth Proxy、Middleware、サーバ間 mount / proxy、Declarative JSON Config 等の Web サービス本番運用向け機能）は使い道がない。よって追加依存を増やしてまで独立 fastmcp を採用する理由がなく、公式 SDK のみを依存に取る。
 
 両者の宣言的 API は共通である（独立 FastMCP の 1.0 が公式 SDK に寄贈されたものが SDK 1.x の `mcp.server.fastmcp.FastMCP` で、2.0 でこれが `MCPServer` に改名された。`@mcp.tool` デコレータ・型ヒントからの JSON Schema 自動生成・docstring からの description 抽出といったコア API は一貫して同等）。
@@ -150,6 +182,8 @@ build（エージェントのワンショット実行）と watch（バックグ
 なお、low-level な `mcp.server.lowlevel.Server` を直接使う選択肢もあるが、Tools / Resources を追加するたびに `list_tools` / `call_tool` ハンドラと JSON Schema 定義の boilerplate が増えるため、本プロジェクトの「関数型・宣言的を好む」スタイル（`DEVELOPMENT.md` コードスタイル節）と整合しない。`MCPServer` 層を介する。
 
 ### 背景: SDK の死荷重を受け入れる
+
+> **[W4 → appendix]**
 
 `mcp` は stdio-only の本ツールにも HTTP スタック（starlette / uvicorn / sse-starlette / httpx2 / cryptography 等）を引き込む。実測では、runtime 依存 26 パッケージの土台に対して SDK が **+23 パッケージ**（SDK 1.x でも +22）を足し、インストール規模がほぼ倍になる。
 

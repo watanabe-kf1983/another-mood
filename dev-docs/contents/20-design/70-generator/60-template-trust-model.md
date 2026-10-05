@@ -6,6 +6,8 @@
 
 ### 信頼モデル: テンプレートは閉じた値モデルで評価する（RCE 構造封鎖）
 
+> **[W4 dup]** ↔ test_ssti.py:1-9、inert.py:1-8 (a)、DoS 段落 ↔ tasks.yaml P15 note と本ファイル Proposals (c, 完全) — 部分。案: 残す (契約)。DoS 段落は Proposals と同一ファイル内重複→一文+ポインタに
+
 テンプレートは **minijinja（閉じた Rust 値モデル）＋ marshal 契約**の上で評価する。テンプレートが触れるのは host 言語のリフレクション / capability への経路を持たない値だけ — ゆえに **build / watch で第三者のプロジェクトを走らせても任意コード（RCE）は走らない**。
 
 - dunder 経路は minijinja が構造封鎖する
@@ -18,6 +20,8 @@
 
 ### 背景: 信頼境界の二択
 
+> **[W4 → appendix]**
+
 信頼境界の設計は本質的に次の二択:
 
 | 望む世界 | 設計 |
@@ -28,6 +32,8 @@
 採ったのは後者。中間形態を含めた比較検討は Internal Design を参照。
 
 ### 背景: 実行ベクタはテンプレートのみ
+
+> **[W4 → appendix?]** 推奨: 残す (防御を一点に集約する根拠)
 
 プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
 
@@ -40,6 +46,10 @@
 
 ### 背景: unsafe HTML の信頼前提との整合
 
+> **[W4 dup]** ↔ 20-anchor-spec raw HTML 節の引用「unsafe=true のトラストモデル」(c, 部分)。案: anchor-spec の引用をここへ寄せる (トラストモデルの正本はここ)
+
+> **[W4 → appendix?]** 推奨: 移す
+
 [anchor-spec.md](20-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のプロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
 
 - unsafe HTML は「著者が自分の *出力* に責任を持つ」**表現力**の問題
@@ -50,6 +60,8 @@
 ## Internal Design
 
 ### 背景: なぜ SandboxedEnvironment を採らないか（穴が N 個ではなく根が 1 個）
+
+> **[W4 → appendix]**
 
 Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直接記法、`| attr('__class__')`、`| map(attribute='__class__...')` 等）は**独立した N 個の欠陥ではなく、単一の根から生えている**:
 
@@ -65,6 +77,8 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 採ったのは前者で、`Environment` は minijinja（`template_engine.py` の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
 
 ### 背景: エンジン選定 — minijinja（spike 実測）
+
+> **[W4 → appendix]**
 
 判定基準は **テンプレートに渡るデータが host 言語のリフレクション / capability への経路を運ぶか**。spike で 3 候補を実射した。
 
@@ -96,6 +110,10 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 ### minijinja の露出規則（SSTI 回帰テストで pin）
 
+> **[W4 dup]** ↔ test_ssti.py の module/各テスト docstring (同じ規則と理由) (a)、10-generator:19 (c) — 完全。案?: 規則は design が正本 (契約の前提)、test_ssti.py の docstring を「pin する」だけに縮める。逆も可
+
+> **[W4 → appendix?]** 推奨: 残す (精密だが marshal 契約の前提)
+
 minijinja がテンプレートに露出するのは、渡した値の **非 `_`・非 dunder のメンバ**（属性・メソッド）と container の items。実測で確定した規則:
 
 - **dunder（`__class__` 等）**: 構造封鎖（undefined）。dot 記法・subscript とも。`attr` / `map(attribute=)` / `selectattr` / `groupby` の string 属性名経由でも同じ
@@ -115,6 +133,8 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 この規則は engine の側にあり、将来版で変わりうる。ゆえに **`test_ssti.py` が古典 SSTI payload を実 render に撃って pin する**。固定するのは両方向 — 封鎖側（上記の sealed 各項）と、設計上の露出側（非 `_` メンバ呼び出し・global 非保護 ＝ marshal 契約が前提とする 2 つのハザード）。露出側が赤になったら侵害ではなく engine の厳格化の合図で、契約を緩められる可能性を意味する。
 
 ### marshal 契約 ── テンプレに渡る値を型・構造で inert に閉じる
+
+> **[W4 dup]** ↔ inert.py、template_safe.py、test_ssti.py、test_template_safe.py、data_tree.py @final、render_processor.py (a, 完全)。案?: 契約の二系統と強制レイヤの一覧は design→残す。各型の docstring と重なる要点の説明は縮める
 
 信頼モデルは「テンプレが触れる値に host capability への経路が無い」ことに懸かる。だが minijinja は渡した値の非 `_`・非 dunder メンバと container items を露出し呼べるようにする（上の露出規則）。しかも**任意 Python オブジェクトの安全性は動的に確認できない** — `__getattr__` / instance 属性 / ABC 登録で内省を欺けるので `dir()` 監査は後手。
 
@@ -147,6 +167,8 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 未実装。1.0 の配布 / 共有機能に向けて詰める。
 
 ### DoS はホスティング時に別レイヤで
+
+> **[W4 dup]** ↔ tasks.yaml P15 note、本ファイル External Design 末尾の DoS 段落 (c, 完全)。案: 本文側を一文+ポインタに
 
 non-evaluating エンジン（また実行時サンドボックスも）が閉じるのは RCE であって DoS ではない。`"x" * 10**12`（メモリ爆弾）や `{% for %}` 無限ループは言語レベルの許可リストを通る（乗算は `"  " * depth` 等で正当に使われ禁止できない）。
 

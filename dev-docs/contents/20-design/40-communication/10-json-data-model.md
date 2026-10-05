@@ -14,6 +14,8 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 ### シリアライズ形式
 
+> **[W4 dup]** 表 ↔ json_data_model.py:1-13、source_loader.py:6,116 (部分)。YAML 1.2 理由 2 点目 ↔ source_loader.py:95-96、50-normalizer/10-normalizer.md「.json は YAML 1.2 リーダ」(部分)。「代償は…」「TypeError」段落 ↔ save_model docstring:244-257 (a, 完全)。案: 表と YAML 1.2 の理由は残す、「代償」「TypeError」の 2 段落は削除→コード
+
 このプロジェクトが読み書きするファイルは 3 系統あり、系統ごとにシリアライズ形式が決まる。
 
 | 系統 | 例 | 形式 |
@@ -28,6 +30,8 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 - 全ての JSON ドキュメントが valid YAML 1.2 ドキュメントとなる。(1) で JSON 入力を受けるのに追加の parser を要さない。
 - ruamel.yaml の既定が 1.2。`version` 指定が不要。
 
+> **[W4 → appendix?]** 推奨: 移す (この段落から「代償は…」の段落まで。計測と却下案)
+
 **中間表現を JSON とする理由** ((3) に適用):
 
 ビルド時間のうち ruamel.yaml が支配的だったため。差し替え前の `mood build dev-docs` は 2.67 s、うち中間表現の read/write が cProfile 下で 3.3 s（総 6.07 s の 54%）を占めていた。JSON へ差し替えた後は 1.79 s。tmp 配下は外部契約ではないので、変更は内部に閉じる。
@@ -40,17 +44,25 @@ PyYAML の CSafeLoader/Dumper (libyaml) なら YAML のまま 15 倍速くなる
 
 #### ファイル名の規約
 
+> **[W4 dup]** ↔ content_normalizer.py:68-69、schema_inspector.py:56-57 コメント (a, 完全、理由込み)。機構。案: 削除→コード
+
 中間表現のファイル名は、元ソースの名前に `.json` を **追記** する（置換しない）。`foo.yaml` / `foo.yml` / `foo.json` / `foo.md` が同じ出力先に衝突しないようにするため。データカタログもこれに倣い、`schema.yaml` から `schema.yaml.json` を書く。
 
 ### 配列内オブジェクトのフィールド統一
+
+> **[W4 dup]** ↔ json_data_model.py save_model/drop docstring (a)、70-generator/30-template-spec「欠損値は何も描かない」(c) — 部分。**理由が食い違う**: docstring は「null だと "None" と描かれる」。案: design を正本に残し、docstring の理由を直す
 
 Normalizer およびコンポーネントが出力する配列内のオブジェクトは、原則として全て共通するフィールドを持つ。ただし、nullable な項目（スキーマ上 `required` でない項目）は、値が存在しない場合はフィールド自体を省略する（null を補完しない）。
 
 理由: テンプレートは欠損したフィールドを何も描かない（[template-spec.md](../70-generator/30-template-spec.md#欠損値は何も描かない)）ので、フィールドが無いことがそのまま「描かない」になる。null を補完しても `None.child` のようなネストアクセスのエラーは防げず、`dict.get("key", {})` によるフォールバックも null が入ると効かなくなる。フィールドが存在しない方がテンプレート側で扱いやすい。
 
+> **[W4 → appendix]** (この段落。未起票の候補)
+
 なお、Generator がアンカーパス解決等のためにノードへメタ情報注入を行う仕組み（[generator.md](../70-generator/10-generator.md#ノードメタデータ) 参照）に、スキーマ情報に基づく未定義フィールドアクセスの検知（typo 検出）を相乗りさせて実現できる可能性がある。
 
 ### 予約プレフィックス
+
+> **[W4 dup]** ↔ data_tree.py:1-4、query_deriver.py:150-160、schema-schema.yaml:30-37 (a)、10-generator:19-21、10-query-dsl:106、40-paging:13 (c) — 完全。案: 残す (予約の一覧は design が正本)。edition 名の __ 禁止を表に足す
 
 JSON データモデル上のオブジェクトキーに、以下のプレフィックスを予約する。
 

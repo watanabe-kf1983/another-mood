@@ -6,6 +6,8 @@
 
 ### マニフェスト `sbdb.yaml`
 
+> **[W4 dup]** ↔ manifest.md:3、guides.md:109、workspace.py:53 (部分)。案: 残す
+
 `<projectDir>` 直下に置く（Cargo.toml / package.json の慣習。`contents/` の外なので
 contents 編集者の視界に入らない）。フィールドの記法と意味は
 `docs/reference/manifest.md` を正本とし、本節は設計判断に絞る。
@@ -21,6 +23,8 @@ author / license 等のメタ情報は additive に追加できるため今は�
 マニフェストは「このプロジェクトは何か」（識別・互換契約、projectDir 側）。
 
 ### 背景: 問題クラスと一般論の三道具
+
+> **[W4 → appendix?]** 推奨: 残す (後続節が「道具1/2/3」の語彙に依存)
 
 「人間が書いた成果物（フォーマット）を、独立に進化するツールが読む」系の互換性問題。
 成果物とツールの新旧で 2×2 の行列ができ、対角以外の 2 マスが危険:
@@ -55,6 +59,8 @@ loud に失敗させること。マイグレーション（自動移行）はス
 
 ### `sbdb_version`（道具1: edition 型）
 
+> **[W4 dup]** 必須・欠落拒否 ↔ manifest.md:14,20 (b)、エラー文言 ↔ manifest.py:96-99 (a) — 部分。案: 残す (理由が主)。エラー文言の引用は削除→コード
+
 必須とする理由: 無ければチェック不能であり、「宣言忘れの新世代ソースを旧世代として
 黙って解釈する」のは本設計が防ぎたい silent そのもの。Cargo の「省略 = 最古 edition」
 フォールバックは既存資産を壊せない事情ゆえの妥協で、pre-1.0 の本ツールには不要。
@@ -79,6 +85,8 @@ loud に失敗させること。マイグレーション（自動移行）はス
 
 ### `tools.another-mood.minimum_version`（道具2: MSRV 型）
 
+> **[W4 dup]** ↔ manifest.md:14,22、blueprints.py:110-111、manifest-schema.yaml:22-23、manifest.py:190-191 (部分)。案: 残す (理由が主)
+
 フォーマット（source-based DB, 識別子 **sbdb**）はツール中立のスペックであり、
 Another Mood はその *a processor*（[style guide](../../30-dev/40-style-guide.md) の
 Means 定義）。ゆえにスペックの語彙に
@@ -95,6 +103,8 @@ Means 定義）。ゆえにスペックの語彙に
 生成時に実行中バージョンを機械的にスタンプしてよい。
 
 ### 厳格パース（道具3: ツールの設計義務）
+
+> **[W4 dup]** 表の各行の現状挙動 ↔ schema.md:156、template.md:380-389、layout.py:58-76、template_engine.py:69-71、manifest-schema.yaml (部分)。案: 残す (設計義務の宣言と論証)
 
 **設計義務として明文化**: mood 由来の語彙（スキーマキー・クエリ演算子・タグ・
 フィルタ・マニフェストキー）に対する未知の入力は、黙って読み飛ばさずエラーにする。
@@ -120,6 +130,8 @@ Means 定義）。ゆえにスペックの語彙に
 ## Internal Design
 
 ### ゲートの実装（`components/manifest`）— 二段読み
+
+> **[W4 dup]** 手順 1-3 と「厳格検証をゲートの後に置く理由」↔ manifest.py read_manifest:136-148,171-178,197-204 のコメント (a, 完全。design 自身が docstring に記載と断りつつ再掲)。「欠落の検出は read_manifest…」↔ 20-config-spec preflight (c, 完全)。「対応集合は定数一行」↔ supported_sbdb_versions.py docstring (a, 完全)。案?: 順序の不変条件と理由は design に残しコード側コメントを一文に縮める。手順の機構記述は削除→コード。preflight 箇条は config-spec へポインタ。定数モジュール箇条は削除→コード (リリース検査との接続一文は残す)
 
 マニフェストは二段で読む——最初は凍結欄だけ、ゲート通過後に全体。手順は三つ:
 
@@ -160,6 +172,8 @@ docstring とコメントに記載してある。ここに残すのは実装形�
   置かないので過剰発火は実質起きない
 
 ### 世代の運用
+
+> **[W4 dup]** 「リリースフローとの関係」段落 ↔ 30-dev/50-release.md:16-18,66-69 (破壊の定義・義務)、55-release-background:43-45 (c, 部分。互いに管轄と指しつつ両側で書く)。案: 定義は release.md が正本、ここの段落をポインタ化
 
 ある変更（PR の差分）が破壊的かどうかは、次の**契約面**のいずれかを
 非互換に編集したかで判定する:
@@ -205,6 +219,8 @@ sbdb_version のみ。
 [リリースフロー](node:/prose/30-dev/50-release)の「PR 側の規律」を参照。
 
 ### showcase / dev-docs の実物マニフェスト
+
+> **[W4 dup]** ↔ 50-release:10-11、55-release-background:84-86 (c, 部分)。注意: 「版を持つファイルは pyproject のみ」は release.md「正本は tag」と言い回しがずれる。案: 残す (論証はここのみ)、言い回しを release.md に合わせる
 
 `minimum_version` は置かない。これらのプロジェクトは実装ワークフロー（機能 PR が
 showcase の入出力例を義務で伴う）により構造的に常に未リリースの HEAD 機能へ依存する

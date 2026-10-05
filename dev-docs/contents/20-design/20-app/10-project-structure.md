@@ -1,5 +1,7 @@
 # プロジェクト構成
 
+> **[W4 → appendix?]** 推奨: 残す (全節が「背景:」だが決定自体がここにしかない)
+
 ## External Design
 
 ### 背景: MS-Access アナロジー
@@ -24,6 +26,8 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 ### 背景: CLI が .another-mood/ を CWD 直下に配置する理由
 
+> **[W4 dup]** 帰結段落 (サブディレクトリ分離、CWD 外拒否、basename 却下) ↔ config.py ProjectConfig/_another_mood_root/verify の docstring、cli.py _load_config (a)、docs/reference/cli.md:28-30,57-65 (b)。機構+理由。案: 帰結段落は削除→コード、5 つの理由は残す
+
 CLI では、出力ディレクトリ `.another-mood/` を `<projectDir>`（入力ディレクトリ）の中ではなく、CWD（プロジェクトルート）直下に配置する。
 
 - **入力ディレクトリはユーザのコンテンツ領域**: ツールから見れば参照先であり、生成物を書き込むべきでない
@@ -37,6 +41,8 @@ CLI も次節の MCP と同じく入力ディレクトリ内出力に統一す�
 帰結として、出力は `.another-mood/<CWD から見た projectDir>/` のようにサブディレクトリで分かれる（異なる `<projectDir>` を同時に処理しても衝突しない）。このキーは `<projectDir>` が CWD 配下にあって初めて定義できるので、CWD 外を指す場合（絶対パス・相対 `../` 脱出の両方）は `ProjectConfig.verify()` がエラーで拒否する — basename へフォールバックさせると `/a/proj` と `/b/proj` が同じ `.another-mood/proj/` に着地するため。`out_dir` / `site_dir` / `tap_dir` / `tmp_dir` は「どこに書き出すか」という別の関心で、CWD 外への出力に正当な用途があるため縛らない。
 
 ### 背景: MCP が .another-mood/ を入力ディレクトリの中に配置する理由
+
+> **[W4 dup]** ↔ mcp_server.py _project_overrides docstring (a, 核心理由が同一)。理由。案?: 理由は design に残し、docstring を一文に縮める
 
 MCP 経由では逆に、出力を `<projectDir>/.another-mood/` — 入力ディレクトリの中に置く。上の第一の理由（入力ディレクトリはユーザのコンテンツ領域）に対する意図的な例外である。
 

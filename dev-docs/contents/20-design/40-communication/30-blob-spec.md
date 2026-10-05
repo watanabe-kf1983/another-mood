@@ -6,6 +6,10 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 
 ### 背景: 要求
 
+> **[W4 dup]** 自己完結・エディタ上で機能 ↔ guides.md:356,358 (b, 部分)。案: appendix のまま
+
+> **[W4 → appendix?]** 推奨: 移す
+
 - ソフトウェア開発ドキュメントには、mermaid.js で表現できない図表・画面レイアウト等を画像として `![]()` で埋め込む必要がある (コア要求)
 - 画像に限らず、動画へのリンク、ファイル仕様書からのサンプル実物 (Excel / CSV 等) へのリンクも同様に扱う
 - 出力ドキュメントの自己完結・可搬性がツールの提供価値 — 外部アップロード先へのリンクで代替しない。帰結として各 edition 出力へバイナリリソースを全コピーする
@@ -16,6 +20,8 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 
 ### レコード形状の判断
 
+> **[W4 dup]** ↔ source_loader.py:254-255,267-275、content_normalizer.py:9-11,132-135、content-schema.yaml:19-20 (a)、schema.md:283,289,294 (b)、20-anchor-spec Prose の例外 (c) — 完全 (body 以外)。案?: 判断 (id 拡張子込み、body なし、手書き拒否、トラバーサル) は残す。mime_type 表・絶対パスの理由はポインタと言いつつ再掲→削除→コード。手書き拒否の理由は schema.md と同文→削除→docs
+
 - **id は拡張子込み** の contents 相対パス。落とすと `fig.png` / `fig.jpg` が衝突する。prose の拡張子なし id は「.md が唯一の拡張子だから成立した省略」であり、blob には適用しない
 - **body を持たせない** — blob は payload (content) を持たないので、mime_type を包む階層に指すものがない。将来 text/html 等で inline content を持つ余地はレコード直下への `content` 追加で足りる (body 不要)。prose も同じくフラットな `{id, ..., mime_type, content}` に揃えてある
 - mime_type を凍結表からのみ導出する理由・絶対パスを載せない理由 (いずれも診断ビュー・中間 YAML の可搬性) は `source_loader.py` のコメントにある。バイト列自体をデータモデルに載せないのは、base64 が肥大・メモリ・diff 破壊を招くため (id が実パスを復元でき、コピー役はそこからバイトを読む)
@@ -23,11 +29,15 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 
 ### 出力配置: アンカーパス = 出力アドレス
 
+> **[W4 dup]** ↔ schema.md:292、generator.py _copy_blobs、preparation.py:88-90、20-anchor-spec Blob の例外 (部分)。案: 残す (設計判断)
+
 各 edition ルート直下の予約名前空間 `blob/` 以下に、blob ノードのアンカーパス (`/blob/<id>`) をそのまま出力パスとしてミラーする。**アンカーパス = 出力アドレス** にすることで、リンク解決 (href が blob ノードのアンカーパスを指す) と出力配置が一致する — contents 相対パスを edition ルート直下へ直接置く旧案だと両者がずれる。`/blob/` は予約名前空間でテンプレート由来のページパスが入らないため、blob 出力パスがページパスと**構造的に衝突しえない** (衝突検査は不要)。
 
 ## Internal Design
 
 ### バイトの旅程
+
+> **[W4 dup]** ↔ json_data_model.py:78-81、content_normalizer.py:9-10,60-64,96-122 (hardlink 禁止理由・リンク先行・rsync まで同文)、generator.py _copy_blobs、preparation.py:3-6 (a, 完全)。機構。案: 削除→コード。残すのは「境界だけ実コピー、専用エッジを足さない」の設計一文。Hugo static mount の .html 理由はコードに無い→コードへ移す
 
 **Composer のデータモデルにはメタデータのみ** — composer の JSON データモデルを通るのはメタデータレコードだけ (`load_model` は拡張子で中間表現の形式のみ読むため、バイトはモデルへ混入しない)。バイト列自体は normalize が出力 data ツリーに載せ、compose の contents copytree が下流へ相乗りで運ぶ — パイプラインに blob 専用のエッジは足さない。
 
@@ -39,5 +49,7 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 
 - **境界だけが実コピー、ソースへの hardlink は禁止** — contents → workspace の 1 回だけが実コピー。ユーザソースへ hardlink すると in-place 編集が workspace・公開済み出力を突き破るため禁止 (理由は `_mirror_blob_bytes` のコメント)。
 - **前回出力からの増分再利用** — stages.py が normalize へ前回出力の実パスを管理対象外の kwarg (`prev_out_dir`) で渡す。contents と size + mtime_ns が一致すれば前回出力から hardlink 再利用、不一致・前回不在・hardlink 不成立なら contents から実コピー (rsync の quick check と同じトレードオフ — mtime のみの変更も再コピー扱い)。リンク先行・比較後で、比較対象の inode を固定してから判定する (前回出力の並行置換とのレース回避)。詳細は `_reuse_unchanged`。
+
+> **[W4 → appendix]** (この段落)
 
 **背景: 効果 (実測)** — showcase/music (100MB blob・2 edition) を同一 FS 上で計測すると、build 一巡で materialize される blob の実バイトコピー (distinct inode) は **12 → 3**。3 の内訳は境界コピー 1 + Hugo の static→destination 内部コピー 2 (制御外)。md レーンは境界の 1 inode を publish 出力まで hardlink 共有する。warm 無変更リビルドは境界コピーも再利用し実コピー 0。publish 先が別 FS の場合のみ publish 境界で実コピーが復活する (publish の増分化は範囲外の後続候補)。

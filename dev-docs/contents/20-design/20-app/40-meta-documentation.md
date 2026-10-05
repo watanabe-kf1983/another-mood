@@ -6,6 +6,8 @@
 
 ### View の Shape が必須な理由
 
+> **[W4 dup]** ↔ view.md:412、reports.md:23、meta/view_def.md Shape 節、query.py derive docstring (部分)。案: 残す (理由が主)
+
 本ツールは複合型 (object / object[]) を許容するため、カラムヘッダと
 サンプル行だけでは結果形状が伝わらない (`tasks` カラムが scalar 文字列なのか、
 `categories.tasks` 型の配列なのかが値だけでは断定できない)。
@@ -21,6 +23,8 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 「定義 + そこから決まる型」の構図になる。
 
 ### ER 図シリーズ
+
+> **[W4 dup]** variation 表 ↔ meta/index.md、entity_def.md、view_def.md の Jinja ロジック、views/meta.yaml:19-36 (a, 完全: 表の全セルがテンプレートと 1:1)。機構。案?: 表は三図を比較する唯一の場所なので残す。各図の節 (下の 3 節) の機構再述は削除→コード
 
 メタドキュメンテーションは `__db/` に mount され、3 つの Mermaid classDiagram が登場する:
 
@@ -41,6 +45,8 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 #### 背景: なぜ classDiagram か (erDiagram でなく)
 
+> **[W4 → appendix]**
+
 1. **視覚密度** — `erDiagram` はヘッダ帯付きの分厚いボックスで縦に伸びる。多 entity を一画面に収めにくい。`classDiagram` の方がスキーマ可視化として読める密度になる。
 2. **意味的に分けて描ける** — このツールのカタログには 2 種類の関係がある:
     - **composition**: `Entity.parent_entity` 連鎖 (singleton-flatten によるネスト分解)。`*--` で描く
@@ -52,19 +58,27 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 #### 背景: クラス名は Entity id ではなく ObjectType id を使う
 
+> **[W4 dup]** ↔ meta テンプレートの mermaid_type_id マクロ (a, 機構のみ)。案: 残す (理由)
+
 各クラスのラベル (および sanitize した alias) は **entity.id ではなく `entity.item_type.id` (= ObjectType id)** から組む。例: entity `artists` → class `artists.item`、descendant entity `artists.members` → class `artists.item.members.item`。
 
 理由は UML / ER 用語との整合。UML の class 名は型 (= 1 件分のもの) を指すので単数形が原則であり、本ツールの 2 階層 (Entity = collection identity 複数形 / ObjectType = item identity `.item` 付き) のうち ObjectType 側がそれにあたる。`__entity_defs/<id>.md` ページが既に `### Type: artists.item` を見出しに出しているのと表記が揃う。
 
 ### `__db/index.md` の Entity Relationship 図
 
+> **[W4 dup]** ↔ meta/index.md:10-27 (a, 完全)。機構。案: 削除→コード (表に集約済み)
+
 `__db/` のトップページに「全 entity の関係を俯瞰する」図を出す。ノード集合は user 領域 + `prose` (descendant 含む)、composition は親子、association は両端がノード集合に入る FK のみ。各クラスはヘッダのみ (属性内訳は `__entity_defs` 側の表が担う)。
 
 ### `__entity_defs/<id>.md` の近傍 ER 図
 
+> **[W4 dup]** ↔ meta/entity_def.md:9-44 (a, 完全)。機構。案: 削除→コード
+
 各 entity ページの先頭 (タイトル直下、`[→ Data]` リンクの直下) に、focus entity + その descendants + focus subtree が FK 参照する先だけを描く小さな classDiagram を出す。各 variation は ER 図シリーズ節の表を参照。
 
 #### 背景: attribute 表との重複は許容
+
+> **[W4 → appendix]**
 
 主役 entity の属性は近傍図にも attributes 表にも出るが、両方とも保持する:
 
@@ -75,9 +89,15 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 ### `__view_defs/<id>.md` の Source Diagram
 
+> **[W4 dup]** ↔ meta/view_def.md:19-42 (a, 完全)。機構。案: 削除→コード
+
 各ビュー定義ページの先頭 (タイトル直下、`[→ Data]` リンクの直下) に、ビューのソース entity 群とその関係を示す classDiagram を出す。MS Access のクエリデザインビュー上部に並ぶ「テーブルとそれを結ぶ関係線」に相当するビュー。各 variation は ER 図シリーズ節の表を参照。
 
 #### 背景: association edge は subtree-aggregated
+
+> **[W4 dup]** 機構段落 (subtree を walk、rel_path ラベル) ↔ meta/view_def.md:30-40 (a)。案: 機構段落は削除→コード、理由段落は appendix
+
+> **[W4 → appendix]**
 
 各 top-level node の subtree (self + descendants) を walk して x_ref attribute を集約し、target が nodes 内なら top → target の edge として描く。edge ラベルは top からの相対 path (例: descendant `テーブル.列` の `型` 属性なら `列.型`、ネスト属性 `列.参照.テーブル` ならそのまま `列.参照.テーブル`)。
 
@@ -85,11 +105,15 @@ entity def ページが「schema 定義 + 正規化後の型表」を見せる�
 
 #### 背景: 属性表示はヘッダのみ
 
+> **[W4 → appendix]**
+
 per-view 図の目的は「このビューがどのソースを束ねているか」を一望することで、各 entity の中身は `## Shape` 節 (= `derive` による出力形状) や `__entity_defs/<id>.md` (= 各 entity の定義ページ) 側が担う。属性行を載せるとノード数 × 属性数で図が縦長になり、Source Diagram の "querydesigner-like overview" としての密度感が崩れる。
 
 ## Internal Design
 
 ### Entity と ObjectType
+
+> **[W4 dup]** ↔ 50-normalizer/20-schema-spec.md「Entity 名」(c, ほぼ逐語)、data_catalog.py Entity docstring、data_tree.py object_type_id (a)。案: 寄せる→schema-spec、ここはポインタ一文
 
 データカタログのエントリは 2 階層で表現される:
 
@@ -102,6 +126,8 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### 自己記述カタログ (`__definition.*`)
 
+> **[W4 dup]** ↔ schema_inspector.py:64-99 コメント/docstring、data_catalog.py catalog ClassVar コメント (a, 完全)。機構。案: 削除→コード。残すのは「カタログ自体を DSL から読める足場」の意図一文と「__definition 自身は entity に含まれない」(M13 関連)
+
 データカタログ自体を `__definition.entities` / `__definition.views` という built-in entity として登録し、クエリ DSL から `from: __definition.*` で walk 可能にしている。built-in メタドキュメンテーションテンプレートが自分のメタデータを自分の DSL から読めるようにするための足場。
 
 各 catalog dataclass (`Entity` / `ObjectType` / `Attribute` / `XRef` と、ビュー側の `Query`) が自身の `catalog` ClassVar で構造を Node 形式で持ち、親は子の `catalog` をそのまま子 Node として指す。呼び出し側 (`schema_inspector._emit_definition_catalog`) が `flatten_tree(catalog, root_name)` で id を割り当てて `builtin=True` を付与し、`out_dir/__builtin/__definition.json` に書き出す。データクラス自身は namespace 内の自分の位置を知らない。
@@ -112,9 +138,13 @@ Entity は自身の `item_type` フィールドを通じて ObjectType を保持
 
 ### メタドキュメンテーションの DSL 化境界
 
+> **[W4 dup]** ↔ meta_templates.py walk_entity docstring (a)、70-generator/50-output-format-spec.md 住み分け節 (c) — 部分。案: 残す (住み分けは設計判断)
+
 built-in メタドキュメンテーション (`__entity_defs` / `__view_defs` / `__data` の各ページ) では、tabular な leaf 操作のみを Query DSL に持ち出す (各ページの主題ノードを生む同名ビューがそれ。`__entity_defs` / `__view_defs` は index の一覧も駆動する — [診断対象は user コンテンツに限定](#診断対象は-user-コンテンツに限定) 参照)。entity ツリーの descent (`entity.id.startswith(...)` による子孫マッチ、`walk_entity` フィルタによる view データの `parent_entity` 連鎖 descent) は Jinja2 / Python ヘルパに残す住み分けにしている。
 
 #### 背景
+
+> **[W4 → appendix]**
 
 メタカタログは `parent_entity` リンクのツリーで、relational/tabular な DSL とは噛み合わない。ツリー descent を DSL で表現するには SQL の `WITH RECURSIVE` や Cypher のパス構文相当 (推移閉包 / 非 equi join) が要り、YAML DSL に押し込むと確実に式言語的な異物になる。
 
@@ -122,11 +152,15 @@ leaf データの集計・整形は DSL の母語、tree descent は Python (Jin
 
 ### 診断対象は user コンテンツに限定
 
+> **[W4 dup]** ↔ resources/views/meta.yaml:1-24,38-39,70 ヘッダコメント (a, 完全)。機構。案?: meta.yaml のコメントを正本として削除→コード。「__ を where.not で除外する」判断の一文だけ残す
+
 ページ生成ビュー (`__entity_defs` / `__view_defs` / `__data`) は、id が `__` で始まる catalog-internal なエンティティ・ビューを `where.not` で除外する。結果、自己記述カタログ (`__definition.entities` / `__definition.views`) や built-in メタビュー自身 (`__entity_defs` 等) の診断ページは出力されない。`prose` のように id が `__` でない user-facing built-in は残る。
 
 `__entity_defs` / `__view_defs` は index の一覧 (Entities / Views) と各 per-item ページの両方を 1 本で駆動する (`__data` が駆動するのはページ生成のみ)。
 
 #### 背景: なぜ内部オブジェクトのページを出さないか
+
+> **[W4 → appendix]**
 
 `__definition.*` やメタビュー自身のページは meta-meta な診断で、日常の編集では参照されない。出力ツリーに常時並ぶと、利用者が見たい自分のエンティティ・ビューのページが埋もれる。カタログの「データ」自体は composer の上流出力として常に存在し ([自己記述カタログ](#自己記述カタログ-__definition)) テンプレートを駆動し続けるので、抑止するのは診断「ページ」だけで、機能は失われない。
 

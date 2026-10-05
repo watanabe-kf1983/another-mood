@@ -8,11 +8,15 @@
 
 ### 課題
 
+> **[W4 → appendix?]** 推奨: 移す
+
 テンプレートエンジンに出力フォーマット別の escape 機構が無いと、ユーザ入力に出力フォーマットの特殊文字 (Markdown なら `*` `_` `|` `` ` `` `<` 等) が混じった瞬間に出力が壊れる。Jinja2 標準の `autoescape` は HTML escape 決め打ちで、Markdown / Mermaid / AsciiDoc / SQL 等の非 HTML フォーマットに直接は使えない。
 
 複数フォーマットを並行サポートしつつ、フォーマット別の escape をテンプレート著者の書き忘れに頼らず保証できる機構が要る。
 
 ### Escape 方針: ASCII punctuation 一律 backslash escape
+
+> **[W4 dup]** ↔ md.py:34-37,46-47 (正規表現込み) (a)、template.md:401-423 (b) — 完全。案?: 方針と理由 3 点は設計判断→残す。コード断片は削除→コード
 
 `md` output_format の地の文 escape (`md_escape`) は CommonMark spec の許容範囲 (任意の ASCII punctuation は `\` で escape 可能) に乗せて、全 ASCII punctuation を一律に backslash escape する。
 
@@ -28,6 +32,8 @@ def md_escape(text: str) -> str:
 - **実装の単純性**: 「文脈別に必要最小限の escape を行う」方式は安全だが、文脈判定が複雑になり保守コストが高い
 
 ### 位置依存ヘルパの 2 分類
+
+> **[W4 dup]** ↔ template.md:455-466 (b)、md.py:50-73 (a) — 部分。案: 残す
 
 `md_escape` (finalize) は「地の文」位置でしか正しくない。inline code span / fenced code block / 表セル / link URL では文脈依存の正規化が必要。これらは以下の 2 形態で提供する:
 
@@ -51,6 +57,8 @@ def md_escape(text: str) -> str:
 
 ### ユーザ提供 Python ヘルパは受け付けない
 
+> **[W4 dup]** ↔ 60-template-trust-model:9-15,49-54 (c, 部分)。案: 残す (具体的な却下対象はここのみ)
+
 `<projectDir>/filters.py` の auto-load や entry points 経由でプロジェクト固有の Python ヘルパを登録する仕組みは **意図的にサポートしない**。
 
 ソース (Another Mood プロジェクト) を書いた人とそのソースでツールを動かす人が一致するとは限らない。任意 Python の実行を許すと、配布されたプロジェクトを `mood build` した時点で第三者の手元で任意コードが走る。これは Excel マクロウィルスと同型の問題で、被害は受け取り側に発生する。この「著者 ≠ 実行者」の信頼境界と、テンプレート実行そのものの扱いは [template-trust-model.md](60-template-trust-model.md) に一般化して整理している。
@@ -61,17 +69,23 @@ def md_escape(text: str) -> str:
 
 ### finalize-based escape の選択
 
+> **[W4 dup]** ↔ template_engine.py:53-60,73-76 make_environment コメント (理由まで) (a, 完全)。注意: 「コードを読んでも理由は復元できない」は古い。案?: 設計判断→design に残し、コードのコメントを縮める。逆 (コード正本、ここは削除) も可
+
 エンジンの auto-escape は HTML escape 決め打ちで、escape 関数の差し替え口が無い（minijinja はテンプレート名の拡張子で有効化を決める）。output_format ごとに escape を切り替えるため、auto-escape を `auto_escape_callback` で無条件に切り、`finalizer` フックで `output_format.escape(str(value))` を適用する方式を採る。
 
 コードを読んで `finalizer=_finalize` を見ても理由は復元できないため、保守時に「auto-escape に戻したい」誘惑に乗らないようここに残す。
 
 ### Markup 返却契約
 
+> **[W4 dup]** ↔ md.py 各ヘルパコメント、render_processor.py:73-75 (a, 部分)。案: 残す (不変条件の一般化はここのみ)
+
 `finalize` は `Markup` を素通しする。ヘルパは **`Markup` を返したら、そのヘルパが内部のあらゆる escape を完了させていなければならない**。契約違反のヘルパはセーフネットを素通って崩れた出力を出す。
 
 新しい位置依存ヘルパを追加する際の不変条件。各ヘルパの具体的な実装責務 (CommonMark 6.1 制約、padding 規則、safe-set 等) は `md.py` のコメントと `test_md.py` で担保する。
 
 ### OutputFormat と meta-template filters の住み分け
+
+> **[W4 dup]** ↔ meta_templates.py:4,126-135、md.py:263-264 (a, 部分)。案: 残す
 
 `md.py` のモジュール定数 `MD_GLOBALS` / `MD_FILTERS` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ、ノードのアンカーパス取り出し) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`meta_templates.py` に `META_TEMPLATES_FILTERS` として持ち、メタ edition の `extra_filters` としてのみ注入する。
 
@@ -83,6 +97,8 @@ def md_escape(text: str) -> str:
 境界を曖昧にしてフォーマット側にメタ専用 filter を混ぜると、将来 output_format を追加するたびに同じ filter を再登録する DRY 違反になり、メタテンプレートの依存をユーザテンプレートにも漏らしてしまう。
 
 ### ヘルパの配線とフォーマットの注入
+
+> **[W4 dup]** ↔ template_engine.py:31-33,62-64 OutputFormat docstring、generator.py:186-225 (a, 完全)。案?: 構造の一文 (注入、エンジンはヘルパを登録しない) は残す。docstring と重なる説明は削除
 
 `OutputFormat` が持つのは render policy（escape 関数・ブロック空白制御・`post_process`）だけで、ヘルパは policy ではない。フォーマットの静的ヘルパ (`MD_GLOBALS` / `MD_FILTERS`) も、paging と node map に束縛されるリンクフィルタ (`make_link_filters(paging, node_map)`、[generator.md#リンク解決](10-generator.md#リンク解決)) も、合成点である Generator が edition ごとに組み立てて `TemplateEngine` の `filters` / `globals` に渡す。エンジン自身はヘルパを一つも登録しない。
 

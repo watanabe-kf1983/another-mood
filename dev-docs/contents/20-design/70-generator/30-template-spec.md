@@ -4,6 +4,10 @@
 
 ### 背景: なぜ undefined アクセスをエラーにしないか
 
+> **[W4 dup]** ↔ template_engine.py:69-71 (a)、template.md:378-389 (b) — 部分。案: 決定 (chainable) はコード、3 段階比較と切替条件は appendix
+
+> **[W4 → appendix?]** 推奨: 移す
+
 minijinja は `undefined_behavior` で undefined アクセスの扱いを選べる: 厳密な `strict`（全ての undefined アクセスでエラー）、チェイン可能な `chainable`、既定の `lenient`（1 階層目はサイレント、`{{ x.a }}` のチェインはエラー）の 3 段階を提供する。
 
 本プロジェクトは `chainable` を明示指定する（既定のままでは `{{ x.a }}` がエラーになる）。理由:
@@ -16,6 +20,8 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### 欠損値は何も描かない
 
+> **[W4 dup]** ↔ md.py:164-206、data_tree_filters.py:90-93,120-122 (a)、20-anchor-spec:165 (c)、template.md (b) — 完全。案?: 規約の宣言 (不変条件) は残す。missing と欠損の区別・link の text の挙動は削除→docs/コード
+
 欠損した値をテンプレートが描こうとしたとき、出力は空になる。フィルタや関数を通した場合も同じで、ヘルパーが `"None"` のような表現を発明することはない。この規則があるので [10-json-data-model.md](../40-communication/10-json-data-model.md#配列内オブジェクトのフィールド統一) の「nullable な項目は値ではなくフィールドごと省略する」規約が成り立つ。
 
 **欠損と「壊れた参照」は別に扱う。** 解決を試みて外した参照（missing node）は、リンクに描く `link` / `relink` では目立つ `[text]` を出す（`href` は空、`anchor` は何も出さない）。一方 optional フィールドの欠損は上の規約が認めている正常系なので、目立たせず何も描かない。`node` / `child` の住所を組み立てる引数が欠損したときは、参照そのものが成立しないので missing node にもならず、何も描かれない。
@@ -24,11 +30,15 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### テンプレートの語彙は filter / test / operator に限る
 
+> **[W4 dup]** ↔ template_engine.py:77-83 コメント (理由まで同内容) (a)、template.md:391-399 (b) — 完全。案?: 設計判断は design が正本→残し、template_engine.py のコメントを一文に縮める
+
 値そのものはメソッドを持たない。minijinja の `pycompat` は Python の文字列 / list / dict メソッドを値に生やすが、これを切っている（`.startswith()` は空描画ではなくメソッド名つきのエラー）。
 
 理由は **利用者に案内できる境界が引けること**。pycompat を入れたままだと「どこまでが Python 相当か」を答える主体が居ない — 本ツールの `docs/` には書けず（Python のどの版のどのメソッドか特定できない）、minijinja コアの保証でもない（実体は minijinja-contrib の `unknown_method_callback` で、上流の位置づけも「Jinja2 テンプレートの移行互換シム」。COMPATIBILITY.md も *Filters should generally be used instead of methods* と述べる）。語彙を filter / test / operator に閉じれば、案内できる集合とテンプレートから届く集合が一致する。
 
 ### 奥付
+
+> **[W4 dup]** ↔ generator.py:115-118 (ファイル境界)、workspace.py:69-81 (config 全量、workspace.*)、build_info.py:16-18,40-42 (行が無い/書式)、generator.py:84-87 (失敗ページ)、command.py:294-304 (a)、template.md:358-360 (b) — 部分〜完全。案?: 設計判断は design→残し、コード側コメント (workspace.py、build_info.py、generator.py) を一文に縮める
 
 奥付はストアの全量を列挙する独立ページ (`__build_info/`) で、表紙 (`index.md`) からはリンク節 (`## Build Information`) だけが張られる。`__warnings/` `__db/` と同じ形で、表紙の節見出しは `Database Information` に倣った綴り（パスの綴りは関数名 `build_info` 側に揃える）。
 
@@ -48,6 +58,8 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info のキーの名前空間 — 出所で三分する
 
+> **[W4 dup]** vars の綴り規則 ↔ template.md:358、cli.md:268-274 (b)、20-app/20-config-spec:27-29 (c)、50-release:51-53 (c) — 部分。案: 綴り規則は削除→docs (config-spec へポインタ)。非契約宣言は残す
+
 | 名前空間 | 出所 | 例 |
 |---|---|---|
 | `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
@@ -62,6 +74,8 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### 背景: データ層には流さない
 
+> **[W4 → appendix]**
+
 build info をシステム定義エンティティ（`__build_info`）として preprocess から流す案は、機構としては成立する（`__definition` が先例で、views から join でき、`__data` 診断にも tap にも自動で乗る）。それでも採らない理由は 2 つ。
 
 **views の出力が実行環境で変わるようになり、これは一方通行**。views が読めるようにした後で取り上げると利用者の views が壊れる。逆向き（奥付方式から後で data 層へ移す）なら余地が残る。もう一つは **ビルド失敗ページに届かない**こと。preprocess で吐く以上、上流で失敗すれば reconcile からは見えず、奥付を出す 2 か所（表紙・失敗ページ）の片方が原理的に成立しない。
@@ -71,6 +85,8 @@ build info をシステム定義エンティティ（`__build_info`）として 
 ## Internal Design
 
 ### 欠損の描画責務と「引数未指定」の区別
+
+> **[W4 dup]** ↔ omitted.py:12-20、data_tree_filters.py:90-93 (誤リンク例まで同文)、template_engine.py:112-124 as_template_helper、md.py 各ヘルパ、meta_templates.py (a) — 完全。案?: 「None は欠損、OMITTED は未指定」の不変条件と 3 分類は design→残し、omitted.py/resolve_node の docstring を縮める。各ヘルパの個別挙動は削除→コード
 
 `None` は「値が欠損している」の意味に予約する。「引数が渡されていない」には番兵 `OMITTED`（`omitted.py`）を使う。既定値を `None` にすると 2 つが区別できず、最も重い失敗は `node(path=…)` で起きる — `path` の欠損で prefix が空になり、`node("y", path=欠損)` が `/y` に解決して**別の実在ノードへ静かにリンクする**。表示の劣化ではなく誤リンク。
 
@@ -86,11 +102,15 @@ build info をシステム定義エンティティ（`__build_info`）として 
 
 #### 背景: 外した 2 案
 
+> **[W4 → appendix]**
+
 **フィルタ入口で `None` を「空文字で描かれる番兵」へ変換する。** jinja2 の配置をそのまま再現でき、フィルタは無改造で済む。外した理由は、(a) 意図的に渡された `null` と欠損を区別できない、(b) 全フィルタ呼び出しに引数走査の層が乗る、(c) フィルタが `None` を返す形は迂回ではなく素直な意味論であり、番兵という間接層を挟む必要がない。
 
 **`link` の `text` が欠損したら label へフォールバックする。** リンクが使える形で残るのは利点だが、著者が `t.別名` と書いたのに黙って `名前` を出すのは、フィルタに暗黙の `default()` を埋め込むこと。フォールバックが要る著者には `t.別名 or t.名前` / `| default(...)` という明示手段があり、*explicit is better than implicit* に反する。データ欠損が出力から検出できなくなる点も悪い（空なら表セルが空くので気づける）。
 
 ### build_info のキーを足す場所 — `Workspace` の `build_info` property
+
+> **[W4 dup]** ↔ workspace.py:60-85 (a, 部分〜完全)。機構。案: 削除→コード (design にしかない理由はコメントへ)
 
 キーは `Workspace` が既に型付きで持っている値の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。ただし `pipeline/` はカバレッジ計測対象外なので、平坦化そのものは `components/shared/` の汎用ヘルパに置く。property が持つのは「どのキーがどの源から来るか」だけ。
 

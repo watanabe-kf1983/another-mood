@@ -4,6 +4,8 @@
 
 ### 入力形式
 
+> **[W4 dup]** 表と dotfile 規則 ↔ cli.md:49,53 (b, 理由まで同文)、source_loader.py:73-80、file_type.py:1-8 (a) — 完全。約束。案: 削除→docs。「スコープ外: 固定名の定義ファイル」は残す
+
 拡張子でディスパッチするツリー（`contents/`、`definition/views/`）が受理する形式:
 
 | 拡張子 | 扱い |
@@ -18,6 +20,8 @@ dotfile・dot ディレクトリ配下は形式によらず読まない。エデ
 
 ### 背景: 手書きは YAML 推奨、JSON はワンショット機械出力の受け口
 
+> **[W4 → appendix?]** 推奨: 移す
+
 手書きソースは YAML を推奨する（Git 差分・エラー行指摘との親和性）。手書きの例として showcase に `.json` を置かないのはこのため（機械出力の取り込み例である SBOM showcase は別）。
 
 JSON 入口の位置づけは、**フィードバックループを持たない機械的ワンショット出力** — LLM の構造化出力（constrained decoding は JSON 専用）・ビルドツール・cron — の contents 流用。反復できる書き手（人間・エージェント）はビルド検証がフィードバックループになるので YAML 側に居ればよい。実在のエクスポート JSON には封筒（メタデータキー）がほぼ必ず付くが、`additionalProperties: false` の下では schema.yaml に書き込むか前段の jq で剥がして受ける（実例は `showcase/sbom`）。JSONL・配列ルートは受理しない。
@@ -28,11 +32,15 @@ JSON 入口の位置づけは、**フィードバックループを持たない�
 
 ### `.json` は YAML 1.2 リーダで読む
 
+> **[W4 dup]** ↔ source_loader.py:95-96、query_deriver.py:229-237 (a, 部分)。案: 残す (設計判断+帰結)。DuplicateKeyError の帰結はコードに無い→コードへ
+
 `parse_mapping` は `.yaml` と `.json` を同じ ruamel リーダで読む。YAML 1.2 が JSON のスーパーセットで、`.lc` による位置情報もそのまま取れるため。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになる — `query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。
 
 外から見える帰結が 2 つある。`.json` ファイル内に YAML 記法を書いても通る（緩い方向のズレなので放置）。重複キーは JSON より厳しく `DuplicateKeyError` になる。
 
 ### 正規化スコープと catalog 境界
+
+> **[W4 dup]** ↔ query_deriver.py _iter_top_level docstring (a, 部分)。案: 残す (不変条件)
 
 正規化スコープは catalog 化スコープと一致させる。境界外で walker が走ると、新規変換の追加で silent に壊れる latent risk が生じる。
 
@@ -40,6 +48,8 @@ JSON 入口の位置づけは、**フィードバックループを持たない�
 - views: catalog 境界は top-level で止まる（`_iter_top_level` の dict→list 変換と `normalize_query` の sugar→canonical 変換まで）。クエリ本体（`where:` の AST 等）は catalog データではないので正規化しない
 
 ### dict-pattern の synthetic id は常に string
+
+> **[W4 dup]** ↔ normalize_core.py:96-99 (理由 3/4)、schema-schema.yaml:178-182 (a)、20-schema-spec 書ける位置:48 (c) — 完全。案?: 不変条件なので design に残し、コード側コメントを縮める。schema-spec 側の再掲はポインタ化
 
 `additionalProperties` を持つオブジェクトを `[{"id": <key>, ...}]` 配列に正規化する際、string でないキーは `str()` でコエースする。YAML は int/bool キー (`10:`) を natively 許すが、以下の理由で string に揃える:
 

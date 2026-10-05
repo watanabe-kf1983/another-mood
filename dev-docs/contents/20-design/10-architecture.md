@@ -8,6 +8,8 @@
 
 ### 設計判断
 
+> **[W4 dup]** ↔ #3: 20-app/10-project-structure MS-Access 節末尾 / #4: 30-mcp-design 基本方針 / #6: 40-communication/index.md 冒頭 (c, 完全)。原則の一覧。案: 残す (一覧は導線、理由は各ファイル側)
+
 1. **スキーマ定義は言語非依存な資産** - YAML/JSON Schema として Git 管理
 2. **周辺ツールは差し替え可能に** - 出力形式、レンダリングツール等は疎結合に
 3. **クエリは YAML DSL** - クエリ自体が構造化データ、ツール自身で管理・可視化可能
@@ -22,6 +24,8 @@ Linux / macOS / Windows のいずれでも動作する cross-platform を維持�
 ## Internal Design
 
 ### アーキテクチャ概要
+
+> **[W4 dup]** ↔ 10-background/10-product.md Key Concepts、stages.py 各 factory docstring (部分)。Reconcile 段落 ↔ 40-communication/index.md:21、70-generator/10-generator.md Reconcile 節 (c, 完全)。構造の概要。案: 残す (要約+ポインタの範囲)
 
 以下のコンポーネント構成:
 
