@@ -150,6 +150,8 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### ドット名の意味論統一 (E14)
 
+`select` と `flatten` は #459 で対応済み。以下で書き側がリテラルだと言っているのは、残る `join` と `grouped` の別名のこと。
+
 #### 問題
 
 DSL の名前に現れるドットは、読み側と書き側で意味が違う。読み側（`from:` / `flatten.of:` / `join.on:` / `where` のキー / `sort.by:` / `select.item:` / `grouped.by:`）ではパスで、`hobby.level` は `hobby` の中の `level` を指す。一方、書き側（出力レコードのキー名を決める別名スロット）ではリテラル文字列で、`"hobby.level"` というドット入りのキーをそのまま作る。
@@ -158,8 +160,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 | スロット | 省略時 | ドット入りキーが生まれる例 |
 |---|---|---|
-| `select[].as` | `item` をそのまま | `item: hobby.level` → `{"hobby.level": "pro"}` |
-| `flatten.as` | `of` をそのまま | `{ of: pets, as: hobby.pets }` → `{"hobby.pets": {...}}` |
 | `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
 | `join.flatten.as` | join の `as` をそのまま | 同上 |
 | `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
@@ -170,7 +170,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 - **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` でしか届かない（Jinja2 の `row.hobby` は undefined になる）
 - **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
 - **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
-- **読み側のうち `flatten.of` だけがパスを受けない**: apply (`_unwind`) は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` を通すと元の配列が `hobby` 内に残ったまま新キーが足され、「配列エッジを置き換えた」と言うカタログとずれる。derive がドット入りの `of` を `unknown attribute` として弾くことでずれは塞いであるが、読み側の一句だけがパスを受けない状態になっている
 
 #### 方針: DSL の名前は読みも書きもパス
 
