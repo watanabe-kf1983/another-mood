@@ -36,6 +36,8 @@ JSON 入口の位置づけは、**フィードバックループを持たない�
 
 `parse_mapping` は `.yaml` と `.json` を同じ ruamel リーダで読む。YAML 1.2 が JSON のスーパーセットで、`.lc` による位置情報もそのまま取れるため。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになる — `query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。
 
+> **[W4 fix]** 欠落: 「重複キーは DuplicateKeyError になる」帰結が source_loader.py にも docs にも無い。コードのコメントへ
+
 外から見える帰結が 2 つある。`.json` ファイル内に YAML 記法を書いても通る（緩い方向のズレなので放置）。重複キーは JSON より厳しく `DuplicateKeyError` になる。
 
 ### 正規化スコープと catalog 境界

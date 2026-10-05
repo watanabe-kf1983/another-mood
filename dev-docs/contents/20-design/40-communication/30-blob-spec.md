@@ -43,6 +43,8 @@ blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツ
 
 **境界コピーは normalize** — normalize が `contents/<id>` のバイトを出力 data ツリーの **contents 相対パスそのまま** (`data/contents/<id>`) にミラーする。レコードファイルは `<rel>.json` と拡張子付与されるので、レコード形式の拡張子 (定義上 YAML/JSON/Markdown) を持ちえない blob と構造的に衝突しない — 専用名前空間は不要。この論法はレコードファイル側の拡張子が何であっても成立する (blob の定義がレコード形式の補集合なので、両者の拡張子集合は交わらない)。generate は下流の `data_dir/contents/<id>` から読んで各 edition ツリーへ `/blob/<id>` としてミラーする。edition ルートがどこかの知識は generator の所有物なので、edition 別ミラーは generate に残す。下流 2 レーン (md publish 行き / Hugo 行き) は既存の運搬機構が自動継承し、`mood watch` (publish なし) のライブプレビューにもバイトが届く。
 
+> **[W4 fix]** 欠落: 「content dir 内の .html blob はビルド全体を失敗させる」理由が _sync_blobs / _hugo_env の docstring に無い (機構のみ)。コードへ移す
+
 **Hugo レーンは static mount 経由** — prepare_site で blob を content ツリーから分離し `static` mount として渡す。content dir 内の `.html` blob はビルド全体を失敗させるため。運搬機構の実装 (個別 unlink での更新・`HUGO_STATICDIR` 環境変数) とその理由は `_sync_blobs` / `_hugo_env` の docstring に置く。
 
 **コピー戦略は hardlink + 増分再利用** — workspace 内の hardlink 運搬と「全ファイル write-once」不変条件は [Component Communication](index.md) の総論（運搬機構）に従う。blob 固有なのは境界コピーと増分再利用の 2 点:

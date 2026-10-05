@@ -161,6 +161,8 @@ MCP Prompts は人間がスラッシュコマンド等で明示的に選択す�
 
 ### 背景: build と watch の同時実行
 
+> **[W4 fix]** 不整合: docs/reference/cli.md:135 は同一 out-dir への concurrent build はレースしうると書く。本節の「問題にならない」は watch が既定で publish しない前提。どちらかに揃える
+
 > **[W4 dup]** ↔ shared/component/dir_lock.py module docstring (a)、cli.md:135 (b)。注意: cli.md は同一 out-dir でレースしうると書き、前提が違う。案: 残す。前提差は不整合として別途
 
 build（エージェントのワンショット実行）と watch（バックグラウンドのファイル監視）は同時に動作しうる。エージェントがファイルを編集すると watch が検知してパイプラインを起動し、その後エージェントが build を呼ぶケースがある。

@@ -220,6 +220,8 @@ sbdb_version のみ。
 
 ### showcase / dev-docs の実物マニフェスト
 
+> **[W4 fix]** 不整合: 「版を持つファイルは pyproject のみ」は 30-dev/50-release.md「版宣言の正本は git tag、pyproject は導出」と言い回しがずれる
+
 > **[W4 dup]** ↔ 50-release:10-11、55-release-background:84-86 (c, 部分)。注意: 「版を持つファイルは pyproject のみ」は release.md「正本は tag」と言い回しがずれる。案: 残す (論証はここのみ)、言い回しを release.md に合わせる
 
 `minimum_version` は置かない。これらのプロジェクトは実装ワークフロー（機能 PR が

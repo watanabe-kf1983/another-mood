@@ -58,6 +58,8 @@ lint に建てなかった装置と、建てる契機:
   かけ、出力 diff を Warn として PR に提示）— 外部コントリビュータを受け入れて
   全 diff を精読しなくなったとき、または最初の silent 破損事故が起きたとき
 
+> **[W4 fix]** 不整合: 「.github/pull_request_template.md は docs 同期のチェックリスト」は古い。実物は Summary / Test plan の 2 節のみ
+
 ゲート検討時に退けた候補: PR テンプレの自己申告（全 PR に発火して precision が低く、
 `gh pr create --body` はテンプレを適用しない。外部コントリビュータ向けの面として
 リポジトリ外部公開整備で再検討。既存の `.github/pull_request_template.md` は docs 同期の

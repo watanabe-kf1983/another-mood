@@ -50,6 +50,8 @@ PyYAML の CSafeLoader/Dumper (libyaml) なら YAML のまま 15 倍速くなる
 
 ### 配列内オブジェクトのフィールド統一
 
+> **[W4 fix]** 不整合: json_data_model.py save_model の docstring は理由を「null だと "None" と描かれるから」と書き、本節と 30-template-spec「欠損値は何も描かない」の規約と食い違う。docstring 側が古い → 直す
+
 > **[W4 dup]** ↔ json_data_model.py save_model/drop docstring (a)、70-generator/30-template-spec「欠損値は何も描かない」(c) — 部分。**理由が食い違う**: docstring は「null だと "None" と描かれる」。案: design を正本に残し、docstring の理由を直す
 
 Normalizer およびコンポーネントが出力する配列内のオブジェクトは、原則として全て共通するフィールドを持つ。ただし、nullable な項目（スキーマ上 `required` でない項目）は、値が存在しない場合はフィールド自体を省略する（null を補完しない）。
@@ -61,6 +63,8 @@ Normalizer およびコンポーネントが出力する配列内のオブジェ
 なお、Generator がアンカーパス解決等のためにノードへメタ情報注入を行う仕組み（[generator.md](../70-generator/10-generator.md#ノードメタデータ) 参照）に、スキーマ情報に基づく未定義フィールドアクセスの検知（typo 検出）を相乗りさせて実現できる可能性がある。
 
 ### 予約プレフィックス
+
+> **[W4 fix]** 欠落: edition 名の `__` 禁止 (edition.py:137-140、reports-schema.yaml) が表に無い。足す
 
 > **[W4 dup]** ↔ data_tree.py:1-4、query_deriver.py:150-160、schema-schema.yaml:30-37 (a)、10-generator:19-21、10-query-dsl:106、40-paging:13 (c) — 完全。案: 残す (予約の一覧は design が正本)。edition 名の __ 禁止を表に足す
 

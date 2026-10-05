@@ -55,6 +55,8 @@ JSON Schema 本体の property 宣言に `x-ref` キーワードを置き、参�
 
 `items:` 直下の `x-ref` を明示エラーにする理由は、現状のデータカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、catalog 構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo は catalog 上で attribute として現れるため)。
 
+> **[W4 fix]** 欠落: propertyNames 非サポートの理由が schema-schema.yaml にも docs にも無い。meta-schema のコメントへ
+
 辞書キー自体が FK となるパターン (propertyNames に x-ref を書く形) は当面サポートしない。ユーザ言語に `propertyNames` キーワードを追加する負担に対して、現実のスキーマでは「キーは任意の record id、FK は明示プロパティに置く」スタイルが支配的 (showcase/music もこのスタイルで貫かれている) で、実需が乏しいため。必要が surface したら別 Proposal で復活させる。
 
 #### 意味論: enum validation framing

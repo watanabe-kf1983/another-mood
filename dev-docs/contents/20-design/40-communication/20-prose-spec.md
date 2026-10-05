@@ -39,6 +39,8 @@ prose の「順序」と「id」を巡って、次の3つは同時に満たせ�
 
 ### book edition のフォルダネスト
 
+> **[W4 fix]** 欠落: docs/reference/schema.md の prose レコード形状に order_key / depth が載っていない (content-schema.yaml にはある)
+
 > **[W4 dup]** ↔ prose.py _outline_position docstring:85-100、content-schema.yaml:63-76 (a, 完全。正本と宣言しつつ再掲)。機構。案: 削除→コード。残すのは「two-loop をフォルダ木へ一般化」「ソートはテンプレ側」の設計一文
 
 book edition（全 inline）で prose のフォルダ親子をネストさせる仕組みは、[分割ルール](../70-generator/40-paging-spec.md#分割ルール) の two-loop（`| link` + `| render`）と `under_heading` を、フォルダ木へ一般化したもの。各 prose レコードは id 由来の `order_key`（folder-preorder ソートキー）と `depth`（見出しレベル）を持ち、ルートテンプレ（`definition/templates/index.md`）が `order_key` でソートし `depth` に応じて `under_heading` で包む。両フィールドは id のみの純導出なので prose の preprocess（`prose.py` の `_outline_position` が正本）で供給し、ソートはファイル単位で行えないため collection の揃うテンプレ側に置く。`order_key` は暫定のアルファベット id でも番号付き id でも folder-preorder を与えるので、[番号 prefix](#章順は番号-prefix-で表す) を振ればテンプレ無改修で読む順が effect になる。

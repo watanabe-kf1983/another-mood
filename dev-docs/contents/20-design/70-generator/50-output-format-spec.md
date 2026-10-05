@@ -73,6 +73,8 @@ def md_escape(text: str) -> str:
 
 エンジンの auto-escape は HTML escape 決め打ちで、escape 関数の差し替え口が無い（minijinja はテンプレート名の拡張子で有効化を決める）。output_format ごとに escape を切り替えるため、auto-escape を `auto_escape_callback` で無条件に切り、`finalizer` フックで `output_format.escape(str(value))` を適用する方式を採る。
 
+> **[W4 fix]** 不整合: この一文は古い。template_engine.py make_environment のコメント (53-60, 73-76) に理由が既にある
+
 コードを読んで `finalizer=_finalize` を見ても理由は復元できないため、保守時に「auto-escape に戻したい」誘惑に乗らないようここに残す。
 
 ### Markup 返却契約
