@@ -29,6 +29,8 @@ from another_mood.components.shared.record_predicate import (
 )
 from another_mood.components.shared import data_catalog as dc
 
+from .leaf_paths import paths, tree
+
 
 def _catalog(yaml_text: str) -> list[dc.Entity]:
     """Parse a YAML list of entity dicts into a flat Entity catalog."""
@@ -136,7 +138,7 @@ class TestFromDerive:
 
 class TestFlatten:
     def test_unwinds_array_attribute(self) -> None:
-        flat = Flatten(of="tasks", as_="tasks")
+        flat = Flatten(of=("tasks",), as_=("tasks",))
         records = [
             {"id": 1, "name": "A", "tasks": [{"t": 1}, {"t": 2}]},
             {"id": 2, "name": "B", "tasks": [{"t": 3}]},
@@ -148,12 +150,12 @@ class TestFlatten:
         ]
 
     def test_renames_to_as(self) -> None:
-        flat = Flatten(of="tasks", as_="task")
+        flat = Flatten(of=("tasks",), as_=("task",))
         records = [{"id": 1, "tasks": [{"t": 1}]}]
         assert list(flat.apply(records)) == [{"id": 1, "task": {"t": 1}}]
 
     def test_drops_empty_parents_by_default(self) -> None:
-        flat = Flatten(of="tasks", as_="task")
+        flat = Flatten(of=("tasks",), as_=("task",))
         records: list[dict[str, object]] = [
             {"id": 1, "tasks": [{"t": 1}]},
             {"id": 2, "tasks": []},
@@ -161,7 +163,7 @@ class TestFlatten:
         assert list(flat.apply(records)) == [{"id": 1, "task": {"t": 1}}]
 
     def test_preserve_empty_keeps_parent_without_as_field(self) -> None:
-        flat = Flatten(of="tasks", as_="task", preserve_empty=True)
+        flat = Flatten(of=("tasks",), as_=("task",), preserve_empty=True)
         records: list[dict[str, object]] = [
             {"id": 1, "tasks": [{"t": 1}]},
             {"id": 2, "tasks": []},
@@ -172,19 +174,50 @@ class TestFlatten:
         ]
 
     def test_missing_key_treated_as_empty(self) -> None:
-        flat = Flatten(of="tasks", as_="task", preserve_empty=True)
+        flat = Flatten(of=("tasks",), as_=("task",), preserve_empty=True)
         # Optional array attribute omitted from a record behaves the same
         # as an explicit empty list.
         records = [{"id": 1}]
         assert list(flat.apply(records)) == [{"id": 1}]
 
     def test_unwinds_scalar_array(self) -> None:
-        flat = Flatten(of="hobbies", as_="hobby")
+        flat = Flatten(of=("hobbies",), as_=("hobby",))
         records = [{"id": 1, "hobbies": ["a", "b"]}]
         assert list(flat.apply(records)) == [
             {"id": 1, "hobby": "a"},
             {"id": 1, "hobby": "b"},
         ]
+
+    def test_unwinds_a_nested_array(self) -> None:
+        flat = Flatten(of=("hobby", "pets"), as_=("pet",))
+        records = [{"id": 1, "hobby": {"level": "pro", "pets": ["a", "b"]}}]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "hobby": {"level": "pro"}, "pet": "a"},
+            {"id": 1, "hobby": {"level": "pro"}, "pet": "b"},
+        ]
+
+    def test_drops_the_parent_the_removal_empties(self) -> None:
+        # ``hobby: {}`` would be an object no row carries a value in.
+        flat = Flatten(of=("hobby", "pets"), as_=("pet",))
+        records = [{"id": 1, "hobby": {"pets": ["a"]}}]
+        assert list(flat.apply(records)) == [{"id": 1, "pet": "a"}]
+
+    def test_nests_the_element_at_a_dotted_as(self) -> None:
+        flat = Flatten(of=("pets",), as_=("hobby", "pet"))
+        records = [{"id": 1, "pets": ["a"]}]
+        assert list(flat.apply(records)) == [{"id": 1, "hobby": {"pet": "a"}}]
+
+    def test_replaces_a_nested_array_in_place(self) -> None:
+        flat = Flatten(of=("hobby", "pets"), as_=("hobby", "pets"))
+        records = [{"id": 1, "hobby": {"pets": ["a", "b"]}}]
+        assert list(flat.apply(records)) == [
+            {"id": 1, "hobby": {"pets": "a"}},
+            {"id": 1, "hobby": {"pets": "b"}},
+        ]
+
+    def test_missing_nested_key_treated_as_empty(self) -> None:
+        flat = Flatten(of=("hobby", "pets"), as_=("pet",), preserve_empty=True)
+        assert list(flat.apply([{"id": 1}])) == [{"id": 1}]
 
 
 _FLATTEN_CATALOG_YAML = """
@@ -215,7 +248,7 @@ class TestFlattenDerive:
         return dc.build_tree(_catalog(_FLATTEN_CATALOG_YAML)).child("categories")
 
     def test_replaces_array_edge_with_singleton(self, categories: dc.Node) -> None:
-        leaf = Flatten(of="tasks", as_="task").derive(categories)
+        leaf = Flatten(of=("tasks",), as_=("task",)).derive(categories)
         edge_by_name = {e.name: e for e, _ in leaf.children}
         assert "tasks" not in edge_by_name
         assert edge_by_name["task"].type == "object"
@@ -223,37 +256,303 @@ class TestFlattenDerive:
         assert edge_by_name["task"].required is True
 
     def test_preserve_empty_makes_as_field_optional(self, categories: dc.Node) -> None:
-        leaf = Flatten(of="tasks", as_="task", preserve_empty=True).derive(categories)
+        leaf = Flatten(of=("tasks",), as_=("task",), preserve_empty=True).derive(
+            categories
+        )
         edge_by_name = {e.name: e for e, _ in leaf.children}
         assert edge_by_name["task"].required is False
 
     def test_keeps_as_same_as_of_when_omitted(self, categories: dc.Node) -> None:
-        leaf = Flatten(of="tasks", as_="tasks").derive(categories)
+        leaf = Flatten(of=("tasks",), as_=("tasks",)).derive(categories)
         edge_by_name = {e.name: e for e, _ in leaf.children}
         assert "tasks" in edge_by_name
         # Type still drops the [] — same name, different cardinality.
         assert edge_by_name["tasks"].type == "object"
 
-    def test_raises_on_unknown_attribute(self, categories: dc.Node) -> None:
+    @pytest.mark.parametrize(
+        "of", [("missing",), ("tasks", "missing")], ids=["at the root", "nested"]
+    )
+    def test_raises_on_unknown_attribute(
+        self, categories: dc.Node, of: tuple[str, ...]
+    ) -> None:
         # Catalog-layer error here; Query.derive translates it into
         # QueryDeriveError at the pipeline boundary.
         with pytest.raises(dc.UnknownChildError, match="missing"):
-            Flatten(of="missing", as_="x").derive(categories)
+            Flatten(of=of, as_=("x",)).derive(categories)
 
     def test_raises_when_target_not_array(self, categories: dc.Node) -> None:
         with pytest.raises(QueryDeriveError, match="not an array"):
-            Flatten(of="title", as_="x").derive(categories)
+            Flatten(of=("title",), as_=("x",)).derive(categories)
 
     def test_raises_on_as_collision(self, categories: dc.Node) -> None:
         with pytest.raises(QueryDeriveError, match="collides"):
-            Flatten(of="tasks", as_="title").derive(categories)
+            Flatten(of=("tasks",), as_=("title",)).derive(categories)
+
+
+class TestFlattenDeriveOverlap:
+    """The alias is checked against the names left on the row once the
+    array is gone, segment-wise: it collides when it is one of them or
+    leads into one, or when one leads into it.  Siblings are clear."""
+
+    @pytest.mark.parametrize(
+        ("base", "as_", "taken"),
+        [
+            ("title tasks[]", ("title", "x"), "title"),
+            ("id hobby.level tasks[]", ("hobby",), "hobby.level"),
+            # Nothing is written into an array, so the array is one name.
+            ("tags[].name tasks[]", ("tags", "x"), "tags"),
+        ],
+        ids=["leads into a name", "a name leads into it", "inside an array"],
+    )
+    def test_rejects(self, base: str, as_: tuple[str, ...], taken: str) -> None:
+        with pytest.raises(
+            QueryDeriveError, match=f"collides with the attribute '{taken}'"
+        ) as info:
+            Flatten(of=("tasks",), as_=as_).derive(tree(base))
+        assert info.value.offender == as_[0]
+
+    @pytest.mark.parametrize(
+        ("base", "as_"),
+        [
+            ("id hobby.level tasks[]", ("hobby", "pet")),
+            ("hobby.level tasks[]", ("hobbyist",)),
+        ],
+        ids=["a sibling", "only starts the same"],
+    )
+    def test_accepts(self, base: str, as_: tuple[str, ...]) -> None:
+        Flatten(of=("tasks",), as_=as_).derive(tree(base))
+
+
+class TestFlattenDeriveLanding:
+    """The array is taken from where ``of`` leads, an object it leaves
+    empty going with it, and the element is written at ``as`` as a
+    path: into the objects on the way where the row has them, into
+    made-up ones where it does not.  Required follows from where the
+    element is.  With ``preserve_empty: false`` every remaining row has
+    one; with ``true`` only the rows that had an element do, so a
+    made-up object is optional and the element is optional inside an
+    object that was already there."""
+
+    @pytest.mark.parametrize(
+        ("base", "flatten", "expected"),
+        [
+            pytest.param(
+                "id tasks[]",
+                Flatten(of=("tasks",), as_=("x", "task")),
+                "id x.task",
+                id="made up",
+            ),
+            pytest.param(
+                "id tasks[]",
+                Flatten(of=("tasks",), as_=("x", "task"), preserve_empty=True),
+                "id x?.task",
+                id="made up, rows kept",
+            ),
+            pytest.param(
+                "tasks[]",
+                Flatten(of=("tasks",), as_=("a", "b", "task"), preserve_empty=True),
+                "a?.b.task",
+                id="made up two deep, rows kept",
+            ),
+            pytest.param(
+                "id hobby.level tasks[]",
+                Flatten(of=("tasks",), as_=("hobby", "task")),
+                "id hobby.level hobby.task",
+                id="into an object on every row",
+            ),
+            pytest.param(
+                "id hobby?.level tasks[]",
+                Flatten(of=("tasks",), as_=("hobby", "task")),
+                "id hobby?.level hobby?.task",
+                id="into an object on some rows",
+            ),
+            pytest.param(
+                "id hobby?.level tasks[]",
+                Flatten(of=("tasks",), as_=("hobby", "task"), preserve_empty=True),
+                "id hobby?.level hobby?.task?",
+                id="into an object on some rows, rows kept",
+            ),
+            pytest.param(
+                "a.b.c tasks[]",
+                Flatten(of=("tasks",), as_=("a", "b", "task")),
+                "a.b.c a.b.task",
+                id="into an object two deep",
+            ),
+            pytest.param(
+                "id hobby.level hobby.pets[]",
+                Flatten(of=("hobby", "pets"), as_=("pet",)),
+                "id hobby.level pet",
+                id="out of an object",
+            ),
+            pytest.param(
+                "id hobby.pets[]",
+                Flatten(of=("hobby", "pets"), as_=("pet",)),
+                "id pet",
+                id="out of an object it leaves empty",
+            ),
+            pytest.param(
+                "id a.b.pets[]",
+                Flatten(of=("a", "b", "pets"), as_=("pet",)),
+                "id pet",
+                id="out of objects it leaves empty, two deep",
+            ),
+            pytest.param(
+                "id hobby.pets[]",
+                Flatten(of=("hobby", "pets"), as_=("hobby", "x", "pet")),
+                "id hobby.x.pet",
+                id="out of an object and back under its name",
+            ),
+        ],
+    )
+    def test_shape(self, base: str, flatten: Flatten, expected: str) -> None:
+        assert paths(flatten.derive(tree(base))) == expected
+
+    def test_makes_up_the_object_the_removal_emptied(self) -> None:
+        """Taking the array out empties ``hobby`` and it goes; the
+        ``hobby`` the alias then writes under is a new object that
+        carries nothing of the old one, as with any made-up object."""
+        hobby_edge = dc.Edge(
+            name="hobby",
+            type="object",
+            required=True,
+            metadata={"title": "Hobby"},
+            validation={"minProperties": 1},
+        )
+        hobby = dc.Node(
+            metadata={"title": "Hobby object"},
+            children=[
+                (dc.Edge(name="pets", type="string[]", required=True), dc.Node())
+            ],
+        )
+        out = Flatten(of=("hobby", "pets"), as_=("hobby", "x", "pet")).derive(
+            dc.Node(children=[(hobby_edge, hobby)])
+        )
+        made, node = out.child_entry("hobby")
+        assert made == dc.Edge(name="hobby", type="object", required=True)
+        assert node.metadata is None
+
+    def test_keeps_the_object_written_into(self) -> None:
+        """An object on the way keeps its edge and node as declared; the
+        element goes last among its children."""
+        hobby_edge = dc.Edge(
+            name="hobby",
+            type="object",
+            required=True,
+            metadata={"title": "Hobby"},
+            validation={"minProperties": 1},
+        )
+        hobby = dc.Node(
+            metadata={"title": "Hobby object"},
+            children=[(dc.Edge(name="level", type="string", required=True), dc.Node())],
+        )
+        tasks = (dc.Edge(name="tasks", type="string[]", required=True), dc.Node())
+        out = Flatten(of=("tasks",), as_=("hobby", "task")).derive(
+            dc.Node(children=[(hobby_edge, hobby), tasks])
+        )
+        kept, node = out.child_entry("hobby")
+        assert kept == hobby_edge
+        assert node.metadata == hobby.metadata
+        assert [e.name for e, _ in node.children] == ["level", "task"]
+
+
+class TestFlattenDeriveRequired:
+    """Flatten adds nothing to a row.  With ``preserve_empty: false`` it
+    drops the rows that have no element; with ``true`` it keeps every
+    row as it is.  Either way, an object on the way to the array holds
+    what it held before, so ``level`` stays required under ``hobby``.
+
+    The input has ``hobby`` on some rows only, and each row's ``hobby``
+    holds ``level`` and the array ``pets``."""
+
+    BASE = "hobby?.level hobby?.pets[]"
+
+    @pytest.mark.parametrize(
+        ("flatten", "expected"),
+        [
+            # A row without ``hobby`` has no element, so it is dropped:
+            # ``hobby`` is on every row that remains.
+            pytest.param(
+                Flatten(of=("hobby", "pets"), as_=("hobby", "pet")),
+                "hobby.level hobby.pet",
+            ),
+            pytest.param(
+                Flatten(of=("hobby", "pets"), as_=("pet",)),
+                "hobby.level pet",
+            ),
+            # Every row is kept, so ``hobby`` is still on some rows only,
+            # and the element is absent where there was none.
+            pytest.param(
+                Flatten(
+                    of=("hobby", "pets"), as_=("hobby", "pet"), preserve_empty=True
+                ),
+                "hobby?.level hobby?.pet?",
+            ),
+            pytest.param(
+                Flatten(of=("hobby", "pets"), as_=("pet",), preserve_empty=True),
+                "hobby?.level pet?",
+            ),
+        ],
+    )
+    def test_required(self, flatten: Flatten, expected: str) -> None:
+        assert paths(flatten.derive(tree(self.BASE))) == expected
+
+
+class TestFlattenDeriveInPlace:
+    """An in-place flatten (``as`` under the same parent as ``of``)
+    replaces the array where it was: the row's other fields are
+    untouched, including the array's slot among them and what the
+    objects on the way to it carry."""
+
+    def test_keeps_the_array_slot(self) -> None:
+        """Child order shows in the generated entity pages, so the
+        column must not move to the end."""
+        row = dc.Node(
+            children=[
+                (dc.Edge(name="a", type="string", required=True), dc.Node()),
+                (dc.Edge(name="tasks", type="string[]", required=True), dc.Node()),
+                (dc.Edge(name="z", type="string", required=True), dc.Node()),
+            ]
+        )
+        out = Flatten(of=("tasks",), as_=("task",)).derive(row)
+        assert [e.name for e, _ in out.children] == ["a", "task", "z"]
+
+    def test_keeps_what_the_holder_carries(self) -> None:
+        """The array being the holder's only child does not make the
+        holder disposable: it is still there on every surviving row,
+        as it was declared."""
+        hobby_edge = dc.Edge(
+            name="hobby",
+            type="object",
+            required=True,
+            metadata={"title": "Hobby"},
+            validation={"minProperties": 1},
+        )
+        hobby = dc.Node(
+            metadata={"title": "Hobby object"},
+            children=[
+                (dc.Edge(name="pets", type="string[]", required=True), dc.Node())
+            ],
+        )
+        out = Flatten(of=("hobby", "pets"), as_=("hobby", "pet")).derive(
+            dc.Node(children=[(hobby_edge, hobby)])
+        )
+        kept, node = out.child_entry("hobby")
+        assert kept == hobby_edge
+        assert node.metadata == hobby.metadata
 
 
 class TestFlattenFromDict:
     def test_lifts_canonical_mapping(self) -> None:
         assert Flatten.from_dict(
-            {"of": "tasks", "as": "task", "preserve_empty": True}
-        ) == Flatten(of="tasks", as_="task", preserve_empty=True)
+            {"of": ("tasks",), "as": ("task",), "preserve_empty": True}
+        ) == Flatten(of=("tasks",), as_=("task",), preserve_empty=True)
+
+    def test_takes_a_nested_path_as_the_segments_it_is_given(self) -> None:
+        # Read back from the persisted canonical form, paths are lists.
+        flat = Flatten.from_dict(
+            {"of": ["hobby", "pets"], "as": ["hobby", "pet"], "preserve_empty": False}
+        )
+        assert (flat.of, flat.as_) == (("hobby", "pets"), ("hobby", "pet"))
 
 
 _CATS_TASKS_CATALOG_YAML = """
@@ -401,7 +700,7 @@ class TestJoin:
         join = Join(
             right=Query(from_=From(name="tasks")),
             merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
-            flatten=Flatten(of="tasks", as_="task"),
+            flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         left = [{"id": "A"}, {"id": "B"}]
         assert list(join.apply(left, [sources])) == [
@@ -415,7 +714,7 @@ class TestJoin:
         join = Join(
             right=Query(from_=From(name="tasks")),
             merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
-            flatten=Flatten(of="tasks", as_="task"),
+            flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         out = join.derive(root.child("cats"), root)
         attrs = {e.name: e for e, _ in out.children}
@@ -453,10 +752,12 @@ class TestJoinFromDict:
                 "to": "tasks",
                 "on": {"left": "id", "right": "cat"},
                 "as": "tasks",
-                "flatten": {"of": "tasks", "as": "task", "preserve_empty": True},
+                "flatten": {"of": ("tasks",), "as": ("task",), "preserve_empty": True},
             }
         )
-        assert join.flatten == Flatten(of="tasks", as_="task", preserve_empty=True)
+        assert join.flatten == Flatten(
+            of=("tasks",), as_=("task",), preserve_empty=True
+        )
 
     def test_wires_pre_join_where(self) -> None:
         """``join[].where:`` becomes the right sub-Query's ``where``;
@@ -597,28 +898,52 @@ class TestGroupedDerive:
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_="name").apply({"name": "Alice"}) == {
+        assert SelectItem(item="name", as_=("name",)).apply({"name": "Alice"}, {}) == {
             "name": "Alice",
         }
 
     def test_renames_field(self) -> None:
-        assert SelectItem(item="category", as_="id").apply(
-            {"category": "user-management"}
+        assert SelectItem(item="category", as_=("id",)).apply(
+            {"category": "user-management"}, {}
         ) == {"id": "user-management"}
 
-    def test_returns_empty_for_missing_field(self) -> None:
+    def test_leaves_out_untouched_for_missing_field(self) -> None:
         # The JSON data model treats a nullable field as an absent key,
         # so projecting an optional schema attribute on a record that
-        # happens to omit it yields no output entry rather than raising.
-        assert SelectItem(item="missing", as_="x").apply({"name": "Alice"}) == {}
+        # happens to omit it writes nothing rather than raising.
+        assert SelectItem(item="missing", as_=("x",)).apply(
+            {"name": "Alice"}, {"kept": 1}
+        ) == {"kept": 1}
+
+    def test_dotted_alias_nests(self) -> None:
+        assert SelectItem(item="level", as_=("hobby", "level")).apply(
+            {"level": "pro"}, {}
+        ) == {"hobby": {"level": "pro"}}
+
+    def test_siblings_converge_on_one_parent(self) -> None:
+        record = {"level": "pro", "pets": 2}
+        out = SelectItem(item="level", as_=("hobby", "level")).apply(record, {})
+        assert SelectItem(item="pets", as_=("hobby", "pets")).apply(record, out) == {
+            "hobby": {"level": "pro", "pets": 2}
+        }
+
+    def test_missing_field_leaves_no_empty_wrapper(self) -> None:
+        # ``hobby: {}`` would be an object the catalog claims a shape for
+        # but no row actually carries a value in.
+        assert (
+            SelectItem(item="missing", as_=("hobby", "level")).apply(
+                {"name": "Alice"}, {}
+            )
+            == {}
+        )
 
 
 class TestSelect:
     def test_projects_fields(self) -> None:
         select = Select(
             items=[
-                SelectItem(item="category", as_="id"),
-                SelectItem(item="category", as_="category"),
+                SelectItem(item="category", as_=("id",)),
+                SelectItem(item="category", as_=("category",)),
             ]
         )
         records = [{"category": "a", "extra": 1}, {"category": "b", "extra": 2}]
@@ -628,8 +953,22 @@ class TestSelect:
         ]
 
     def test_empty_records(self) -> None:
-        select = Select(items=[SelectItem(item="x", as_="x")])
+        select = Select(items=[SelectItem(item="x", as_=("x",))])
         assert list(select.apply([])) == []
+
+    def test_dotted_aliases_converge_across_items(self) -> None:
+        # Items are folded one write at a time, so two writing under the
+        # same parent meet in one object rather than the later one
+        # replacing what the earlier put there.
+        select = Select(
+            items=[
+                SelectItem(item="level", as_=("hobby", "level")),
+                SelectItem(item="pets", as_=("hobby", "pets")),
+            ]
+        )
+        assert list(select.apply([{"level": "pro", "pets": 2, "extra": 1}])) == [
+            {"hobby": {"level": "pro", "pets": 2}}
+        ]
 
     def test_optional_field_absent_in_some_records(self) -> None:
         # A schema-optional attribute (here ``parent_entity``) is absent
@@ -637,8 +976,8 @@ class TestSelect:
         # produce variable-shape rows that omit the key when missing.
         select = Select(
             items=[
-                SelectItem(item="id", as_="id"),
-                SelectItem(item="parent_entity", as_="parent_entity"),
+                SelectItem(item="id", as_=("id",)),
+                SelectItem(item="parent_entity", as_=("parent_entity",)),
             ]
         )
         records = [
@@ -657,8 +996,8 @@ class TestSelectDerive:
         leaf = From(name="tasks").derive(root)
         projected = Select(
             items=[
-                SelectItem(item="phase", as_="id"),
-                SelectItem(item="title", as_="title"),
+                SelectItem(item="phase", as_=("id",)),
+                SelectItem(item="title", as_=("title",)),
             ]
         ).derive(leaf)
         assert dc.flatten_tree(projected, "projection") == _catalog(
@@ -672,40 +1011,169 @@ class TestSelectDerive:
             """
         )
 
-    def test_raises_on_duplicate_alias(self) -> None:
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+    @pytest.mark.parametrize(
+        ("second", "fourth", "message"),
+        [
+            (("a",), ("a", "b"), "alias 'a.b' collides with an earlier item 'a'"),
+            (("a", "b"), ("a",), "alias 'a' collides with an earlier item 'a.b'"),
+        ],
+        ids=["whole then part", "part then whole"],
+    )
+    def test_raises_when_any_two_aliases_overlap(
+        self, second: tuple[str, ...], fourth: tuple[str, ...], message: str
+    ) -> None:
+        """What overlaps is ``overlaps``' business; here, that every pair
+        of aliases is checked, not just neighbours, and that the later
+        one is reported by its first segment, which carries the source
+        position."""
         select = Select(
             items=[
-                SelectItem(item="title", as_="label"),
-                SelectItem(item="phase", as_="label"),
+                SelectItem(item="title", as_=("x",)),
+                SelectItem(item="title", as_=second),
+                SelectItem(item="phase", as_=("y",)),
+                SelectItem(item="phase", as_=fourth),
             ]
         )
-        with pytest.raises(QueryDeriveError, match="collides with an earlier item"):
-            select.derive(leaf)
+        with pytest.raises(QueryDeriveError, match=message) as excinfo:
+            select.derive(tree("title phase"))
+        assert excinfo.value.offender == fourth[0]
 
-    def test_allows_an_alias_that_is_only_a_prefix_of_another(self) -> None:
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
-        # Dotted aliases are literal keys, so ``a`` and ``a.b`` are two
-        # distinct output keys and neither overwrites the other.
+    def test_nests_dotted_aliases_in_the_order_first_written(self) -> None:
+        """Siblings converge on one object, kept where its first child
+        put it, as ``put`` builds the record."""
         select = Select(
             items=[
-                SelectItem(item="title", as_="a"),
-                SelectItem(item="phase", as_="a.b"),
+                SelectItem(item="title", as_=("a", "p")),
+                SelectItem(item="title", as_=("b",)),
+                SelectItem(item="phase", as_=("a", "d")),
             ]
         )
-        assert [e.name for e, _ in select.derive(leaf).children] == ["a", "a.b"]
+        out = select.derive(tree("title phase"))
+        assert [e.name for e, _ in out.children] == ["a", "b"]
+        a_edge, a = out.child_entry("a")
+        assert a_edge == dc.Edge(name="a", type="object", required=True)
+        assert [e.name for e, _ in a.children] == ["p", "d"]
+
+
+class TestSelectDeriveRequired:
+    """An edge's ``required`` says the value is there whenever its parent
+    is.  ``select`` builds each row from nothing, so an object on the way
+    to an alias is a new one, there on the rows some write landed in and
+    unrelated to anything the input holds under the same name.  A
+    projected value is there whenever its source is, so what decides
+    ``required`` under such an object is where the sources of the writes
+    that made it are -- not whether a source is on every row."""
+
+    @pytest.mark.parametrize(
+        ("base", "items", "expected"),
+        [
+            # A value read through an optional parent is on some rows only,
+            # however required it is under that parent.
+            pytest.param(
+                "hobby?.level",
+                [("hobby.level", ("level",))],
+                "level?",
+                id="through an optional parent",
+            ),
+            # One write makes ``target`` on exactly the rows it lands in:
+            # ``target`` is on the rows ``level`` was, and ``level`` is on
+            # every ``target``.
+            pytest.param(
+                "name level?",
+                [("level", ("target", "level"))],
+                "target?.level",
+                id="one write",
+            ),
+            # ``ref`` is on some rows only; ``p`` keeps it on the same rows
+            # in the output.  ``d`` is there whenever ``ref`` is, because
+            # ``b`` and ``c`` are: both writes come from the same rows.
+            pytest.param(
+                "ref?.p ref?.b.c",
+                [("ref.p", ("target", "p")), ("ref.b.c", ("target", "d"))],
+                "target?.p target?.d",
+                id="same rows",
+            ),
+            # With ``b`` on some of ``ref``'s rows only, ``d`` is on some
+            # of ``target``'s rows only.
+            pytest.param(
+                "ref?.p ref?.b?.c",
+                [("ref.p", ("target", "p")), ("ref.b.c", ("target", "d"))],
+                "target?.p target?.d?",
+                id="one within the other",
+            ),
+            # A write from outside ``ref`` lands a ``target`` on rows that
+            # had no ``ref``, holding only ``d``: ``p`` is no longer on
+            # every ``target``.
+            pytest.param(
+                "ref?.p x?",
+                [("ref.p", ("target", "p")), ("x", ("target", "d"))],
+                "target?.p? target?.d?",
+                id="unrelated",
+            ),
+            # Two writes from the same source object co-occur, so both
+            # are there whenever the object they land in is.
+            pytest.param(
+                "ref?.table ref?.column",
+                [
+                    ("ref.table", ("target", "table")),
+                    ("ref.column", ("target", "column")),
+                ],
+                "target?.table target?.column",
+                id="same object",
+            ),
+            # A write from every row makes ``target`` on every row, and
+            # ``name`` on every ``target``; ``level`` is still on some only.
+            pytest.param(
+                "name level?",
+                [("name", ("target", "name")), ("level", ("target", "level"))],
+                "target.name target.level?",
+                id="one from every row",
+            ),
+            # Each object on the way is on the rows of the write below it,
+            # however deep the way is.
+            pytest.param(
+                "name level?",
+                [("level", ("a", "b", "level"))],
+                "a?.b.level",
+                id="deeper",
+            ),
+            # Two writes from unrelated rows meet under ``t.u``: ``u`` is on
+            # every ``t``, since both are on exactly the rows either write
+            # landed in, while each leaf is on some ``u`` only.
+            pytest.param(
+                "ref?.p x?",
+                [("ref.p", ("t", "u", "p")), ("x", ("t", "u", "d"))],
+                "t?.u.p? t?.u.d?",
+                id="shared way",
+            ),
+            # An object read whole brings its subtree as it is: ``required``
+            # is decided for the edge that lands, not for what hangs below.
+            pytest.param(
+                "ref?.b.c? ref?.b.e",
+                [("ref.b", ("target", "b"))],
+                "target?.b.c? target?.b.e",
+                id="carried subtree",
+            ),
+        ],
+    )
+    def test_required(
+        self, base: str, items: list[tuple[str, tuple[str, ...]]], expected: str
+    ) -> None:
+        select = Select(items=[SelectItem(item=item, as_=as_) for item, as_ in items])
+        assert paths(select.derive(tree(base))) == expected
 
 
 class TestSelectFromDict:
     def test_lifts_items(self) -> None:
         assert Select.from_dict(
-            [{"item": "category", "as": "id"}, {"item": "category", "as": "category"}]
+            [
+                {"item": "category", "as": ("id",)},
+                {"item": "category", "as": ("category",)},
+            ]
         ) == Select(
             items=[
-                SelectItem(item="category", as_="id"),
-                SelectItem(item="category", as_="category"),
+                SelectItem(item="category", as_=("id",)),
+                SelectItem(item="category", as_=("category",)),
             ]
         )
 
@@ -921,8 +1389,8 @@ class TestQueryPipeline:
             from_=From(name="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="phase", as_="rank"),
-                    SelectItem(item="title", as_="title"),
+                    SelectItem(item="phase", as_=("rank",)),
+                    SelectItem(item="title", as_=("title",)),
                 ]
             ),
             sort=Sort(by="rank"),
@@ -1201,7 +1669,7 @@ class TestQueryOptionalClauses:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             from_=From(name="items"),
-            select=Select(items=[SelectItem(item="name", as_="name")]),
+            select=Select(items=[SelectItem(item="name", as_=("name",))]),
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
 
@@ -1210,8 +1678,8 @@ class TestQueryOptionalClauses:
             from_=From(name="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="id", as_="id"),
-                    SelectItem(item="title", as_="title"),
+                    SelectItem(item="id", as_=("id",)),
+                    SelectItem(item="title", as_=("title",)),
                 ]
             ),
         )
@@ -1240,7 +1708,7 @@ class TestQueryDeriveErrorTranslation:
         # ``Query.derive`` translates into ``QueryDeriveError``.
         query = Query(
             from_=From(name="tasks"),
-            select=Select(items=[SelectItem(item="title", as_="title")]),
+            select=Select(items=[SelectItem(item="title", as_=("title",))]),
             sort=Sort(by="phase"),
         )
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
@@ -1257,7 +1725,7 @@ class TestQueryFromDict:
         that Query.from_dict does inline (Sort has no own from_dict)."""
         raw = {
             "from": "items",
-            "flatten": [{"of": "tags", "as": "tag", "preserve_empty": False}],
+            "flatten": [{"of": ("tags",), "as": ("tag",), "preserve_empty": False}],
             "join": [
                 {
                     "to": "owners",
@@ -1267,12 +1735,12 @@ class TestQueryFromDict:
             ],
             "where": {"open": True},
             "grouped": {"by": "category", "as": "members"},
-            "select": [{"item": "category", "as": "category"}],
+            "select": [{"item": "category", "as": ("category",)}],
             "sort": {"by": "category", "direction": "desc", "missing": "first"},
         }
         assert Query.from_dict(raw) == Query(
             from_=From(name="items"),
-            flatten=(Flatten(of="tags", as_="tag", preserve_empty=False),),
+            flatten=(Flatten(of=("tags",), as_=("tag",), preserve_empty=False),),
             join=(
                 Join(
                     right=Query(from_=From(name="owners")),
@@ -1285,7 +1753,7 @@ class TestQueryFromDict:
                 ),
             ),
             grouped=Grouped(by="category", as_="members"),
-            select=Select(items=[SelectItem(item="category", as_="category")]),
+            select=Select(items=[SelectItem(item="category", as_=("category",))]),
             sort=Sort(by="category", direction=Direction.DESC, missing=Missing.FIRST),
         )
 

@@ -281,6 +281,7 @@ categories:
           別名スロットのドットを入れ子として解釈し、view 出力からドット入りキーを
           排する。直列化カタログのドットが必ず入れ子を意味するようになり、カタログ
           だけから JSON の形が復元可能になる (J5 の前提)。E13 / M14 / M15 が前提。
+          select / flatten は #459 で済み、join / grouped が残る。
         proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e14
         phase: 18
       E15:

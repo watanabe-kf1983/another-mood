@@ -35,9 +35,9 @@ additionalProperties:
         Unwind one or more intrinsic array attributes of each row.
         Accepts three shapes: a bare attribute name (scalar shorthand),
         a single object describing one unwind, or an ordered list of
-        either. After flattening, the parent fields stay at the row's
-        top level and the array's element fields are nested under the
-        `as:` namespace (defaults to `of:` when omitted).
+        either. After flattening, the parent fields stay where they
+        were and the array's element fields are nested under the `as:`
+        namespace (defaults to `of:` when omitted).
       oneOf:
         - title: Scalar shorthand
           description: >-
