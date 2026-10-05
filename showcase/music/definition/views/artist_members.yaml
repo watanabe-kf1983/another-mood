@@ -1,7 +1,8 @@
 # All band members across all artists, flattened into one row per
-# member. Each row carries the parent artist's id/name at the top level
-# and the member's attributes nested under ``member`` - exercises the
-# ``flatten`` clause on the intrinsic ``artists.members`` child entity.
+# member. Each row carries the parent artist's id/name nested under
+# ``artist`` and the member's attributes nested under ``member`` -
+# exercises the ``flatten`` clause on the intrinsic ``artists.members``
+# child entity, and a dotted ``as`` that lands a field inside an object.
 artist_members:
   from: artists
   flatten:
@@ -9,7 +10,7 @@ artist_members:
     as: member
   select:
     - item: id
-      as: artist_id
+      as: artist.id
     - item: name
-      as: artist_name
+      as: artist.name
     - item: member

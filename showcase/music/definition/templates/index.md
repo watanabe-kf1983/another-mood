@@ -74,7 +74,7 @@ Flattened from the `artists.members` nested map.
 | Artist | Member | Instrument |
 |--------|--------|------------|
 {% for row in artist_members %}
-| {{ row.artist_name }} | {{ row.member.name }} | {{ row.member.instrument }} |
+| {{ row.artist.name }} | {{ row.member.name }} | {{ row.member.instrument }} |
 {% endfor %}
 
 ## Discography (LEFT-join view)
