@@ -157,9 +157,9 @@ build（エージェントのワンショット実行）と watch（バックグ
 
 ## Proposals
 
-### プロジェクトディレクトリの自己記述と MCP の削除候補化 (J6)
+### プロジェクトディレクトリの自己記述 (J6)
 
-MCP サーバの固有価値を問い直し、エージェント向けの専用経路を持たない形へ寄せる。プロジェクトディレクトリが自分の出自を人間向けに語り（README.md）、エージェントはそれを読む。MCP サーバは将来の削除候補とする。
+MCP サーバの固有価値を問い直し、エージェント向けの専用経路を持たない形へ寄せる。プロジェクトディレクトリが自分の出自を人間向けに語り（README.md）、エージェントはそれを読む。MCP サーバの削除そのものは J7（次節）。
 
 #### 背景: MCP が運んでいるものの分解
 
@@ -196,14 +196,13 @@ MCP が CLI に対して余分に運んでいるのは Server Instructions だ�
 
 `mood --help` の冒頭は既に「schema / views / templates を書く前に `mood docs list` → `mood docs read <uri>` で仕様を読め」と指しており、`docs list` は各ページの要約つきで URI を返す。「`mood --help` を見ろ」の一言から仕様の該当ページまで二手で届く。Instructions にある作業ループ（編集 → build → `__db/` 診断出力で確認）も、`docs/guides.md` の Workflow 章に段階ごとの「どこに書き、どこで確認するか」の表として既にある。Instructions の内容で `docs/` に無いものは無い。
 
-欠けているのは二点だけ: ディレクトリから `mood` へ送る数行と、`--help` から Workflow 章への指し。
+欠けているのはディレクトリから `mood` へ送る数行だけ。`--help` は慣行上の必須項目（一行説明、usage、オプション、サブコマンド一覧、docs への指し）を満たしており、Instructions のうち `--help` の領域にある記述は既に `--help` にある。残り（ソースの四種類、編集 → build → `__db/` 診断の作業ループ）は man / docs の領域で、`docs/reference/cli.md` と `docs/guides.md` Workflow にある。Instructions は「振る舞いを前もって注入する枠」であり CLI に対応物は無く、その枠ごと落とすのでよい。
 
 #### 案
 
-1. **`mood --help` に作業ループへの一行を足す**。「編集 → `mood build` → `__db/` の診断ページで確認。詳細は `docs://guides.md` の Workflow」程度。既存の「仕様を読め」の一文と並べる。これは `mood` を打てる人の体験を良くする docs の質の話で、導線ではないが同じ PR で出す
-2. **`mood init` / `mood blueprint apply` が `<project_dir>/README.md` を生成する**。`sbdb.yaml` と同じく、ブループリントのコピーとは別の生成経路（`_generate_manifest` の隣）。全ブループリントに一様に効き、showcase 側にファイルを置かずに済む。内容は数行のポインタに限る: Another Mood（GitHub へのリンク）が管理する source-based database であること、インストールコマンド、`mood build <このディレクトリ>`、コマンドは `mood --help`、仕様は `mood docs list` / `mood docs read`。題はディレクトリ名（`sbdb.yaml` の `title` と同じ値）。構造の説明は書かない（`--help` と guides.md の仕事で、書くと複製になる）。バージョンの刻印も書かない（`sbdb.yaml` の `minimum_version` が持つ）。project 直下は `contents/` の外なので content としては読まれない
-3. **自リポジトリの MCP 登録を外す**。`.mcp.json` と `.vscode/mcp.json` の another-mood を除去し、CLI だけで dev-docs を運用して同等の体験が得られることを確かめる
-4. **将来: `mood-mcp` エントリポイントと `mcp` 依存の削除**。別 PR、`Release-Highlight: breaking`。1〜3 を先に出荷してから落とす。削除で失うものはシェルを持たないクライアント向け経路のみ。`docs/mcp.md` はページごと削除し、`docs/catalog.yaml` / `docs/index.md` / リポジトリ README / `docs/guides.md` / `docs/reference/cli.md` の MCP 言及を除く。本ファイルの Resources / Tools 並行公開、SDK 採用理由、死荷重受容、AI へのコンテキスト提供の各節は削除時に一緒に落ちる
+1. **`mood init` / `mood blueprint apply` が `<project_dir>/README.md` を生成する**。`sbdb.yaml` と同じく、ブループリントのコピーとは別の生成経路（`_generate_manifest` の隣）。全ブループリントに一様に効き、showcase 側にファイルを置かずに済む。内容は数行のポインタに限る: Another Mood（GitHub へのリンク）が管理する source-based database であること、インストールコマンド、`mood build <このディレクトリ>`、コマンドは `mood --help`、仕様は `mood docs list` / `mood docs read`。題はディレクトリ名（`sbdb.yaml` の `title` と同じ値）。構造の説明は書かない（`--help` と guides.md の仕事で、書くと複製になる）。バージョンの刻印も書かない（`sbdb.yaml` の `minimum_version` が持つ）。project 直下は `contents/` の外なので content としては読まれない
+2. **自リポジトリの MCP 登録を外す**。`.mcp.json` と `.vscode/mcp.json` の another-mood を除去し、CLI だけで dev-docs を運用して同等の体験が得られることを確かめる
+3. **おまけ: `mood --help` の末尾にホームページ URL を載せる**。GNU coding standards が `--help` 末尾に求める項目で、現状欠けている。README.md と同じ GitHub の URL。導線とは独立した `--help` の整備なので、最後に添える
 
 #### README.md の文面
 
@@ -235,5 +234,13 @@ Markdown and HTML pages that stay in sync with each other.
 
 - `docs/reference/cli.md` の `init` / `blueprint apply` の説明に README.md の生成を足す。「README.md 等は触らない」の一文は「無ければ生成、あれば触らない」に書き換える
 - `docs/guides.md` の Quick Start にあるディレクトリ木に README.md を載せるかは保留。木は sbdb が入力として必要とするファイルの一覧であり、README.md は入力ではない。生成物の中身を見てから判断する
-- help 文中の「(also exposed via MCP)」、dev-docs の documentation.md にある「`docs/catalog.yaml` — MCP 公開対象のカタログ」の表現は 4 で落ちる
-- tasks.yaml の J6 の題と注記は本節に合わせる
+- help 文中の「(also exposed via MCP)」、dev-docs の documentation.md にある「`docs/catalog.yaml` — MCP 公開対象のカタログ」の表現は J7 で落ちる
+
+### mood-mcp の削除 (J7)
+
+`mood-mcp` エントリポイントと `mcp` 依存を削除する。背景は J6 の節（MCP が運んでいるものの分解、導線は人間向けに書く）。J6 を先に出荷し、自リポジトリを CLI だけで運用して同等の体験が得られることを確認してから着手する。`Release-Highlight: breaking`。
+
+- 削除で失うものはシェルを持たないクライアント（Claude Desktop のチャット等）向けの経路のみ。移行案内は「`mood` CLI を使う」で書ける
+- `docs/mcp.md` はページごと削除し、`docs/catalog.yaml` / `docs/index.md` / リポジトリ README / `docs/guides.md` / `docs/reference/cli.md` の MCP 言及を除く
+- help 文中の「(also exposed via MCP)」、dev-docs の documentation.md にある「`docs/catalog.yaml` — MCP 公開対象のカタログ」の表現を直す
+- 本ファイルの Resources / Tools 並行公開、SDK 採用理由、死荷重受容、AI へのコンテキスト提供の各節は一緒に落ちる。残るのは「MCP と CLI の論理的機能は一致すべき」等、CLI 側にも効く原則だけなので、ファイル自体の置き場も見直す

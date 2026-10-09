@@ -441,12 +441,17 @@ categories:
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
       J6:
-        title: プロジェクトディレクトリの自己記述 (README.md 生成) と MCP の削除候補化
+        title: プロジェクトディレクトリの自己記述 (README.md 生成)
         note: >-
-          --help の作業ループ指し + init の README.md 生成 + 自リポジトリの MCP 登録解除を先行。
-          mood-mcp の削除は別 PR (breaking)。
+          init の README.md 生成 + 自リポジトリの MCP 登録解除。--help のホームページ URL はおまけ。
         phase: 17
-        proposal: 20-design/20-app/30-mcp-design#プロジェクトディレクトリの自己記述と-mcp-の削除候補化-j6
+        proposal: 20-design/20-app/30-mcp-design#プロジェクトディレクトリの自己記述-j6
+      J7:
+        title: mood-mcp エントリポイントと mcp 依存の削除
+        note: >-
+          J6 を出荷し、CLI だけで同等の体験が得られることを確認してから。breaking。
+        phase: 18
+        proposal: 20-design/20-app/30-mcp-design#mood-mcp-の削除-j7
 
   L:
     title: dog-fooding
