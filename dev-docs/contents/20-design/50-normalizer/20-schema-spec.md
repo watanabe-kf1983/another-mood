@@ -124,7 +124,7 @@ property レベル配置の副次的な利点:
 
 ### Entity 名
 
-> **[W4 dup]** ↔ 20-app/40-meta-documentation「Entity と ObjectType」(c, 逐語)、data_catalog.py:146-152,256-267,565-572 (a) — 完全。案: ここを正本、meta-documentation 側をポインタ化
+> **[W4 dup]** ↔ 20-app/40-meta-documentation「Entity と ObjectType」(c, 逐語)、data_catalog.py:146-152,256-267,565-572 (a) — 完全。案: ここを正本、meta-documentation 側をポインタ化 → meta-documentation 側は削除済み (ポインタも置かず)。ここはマーカー削除で可
 
 スキーマから抽出される各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
 

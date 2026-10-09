@@ -134,7 +134,7 @@ blob:                              # flat list、id は拡張子込みファイ�
 
 #### クラスとの関係
 
-> **[W4 dup]** ↔ 20-schema-spec Entity 名、40-meta-documentation (c, 完全)。案: 削除→schema-spec へポインタ
+> **[W4 dup]** ↔ 20-schema-spec Entity 名、40-meta-documentation (c, 完全)。案: 削除→schema-spec へポインタ (40-meta-documentation 側は削除済み)
 
 class（[schema-spec.md](../50-normalizer/20-schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
 
