@@ -1,46 +1,29 @@
 # Prose
 
-散文（prose）は Markdown で書かれ、パイプラインを横断して固有の前処理を受ける唯一のコンテンツ型 — source が path から id を導き、preprocess が title 導出・リンク正規化・順序付けを行い、generator がフォルダ木をネストする。本章はそのうち **読む順と構造** を扱う: 順序を id にどう符号化するか（External Design）と、その順序を book edition がどうネストするか（Internal Design）。パース段の設計（相対リンクの `node:` 正規化・見出し抽出）は [Markdown Parser Specification](../50-normalizer/30-markdown-parser-spec.md) を参照。
+散文（prose）は `contents/` 配下の Markdown で、内蔵コレクション `prose` のレコードになる（一ファイル一レコード）。レコードの形は `docs/reference/schema.md` の prose 節が約束し、本章はその項目ごとに設計判断を置く。Markdown のパース（相対リンクの `node:` 正規化・見出し抽出）は [Markdown Parser Specification](30-markdown-parser-spec.md) を参照。
 
 ## External Design
 
-### 章順は番号 prefix で表す
+### `id` — ファイルパス由来で、読む順もここに符号化する
 
-prose の並び順はファイル名の **ゼロ埋め・隙間空き番号 prefix** で表す（例 `10-architecture.md`）。ディレクトリにも番号を振り、兄弟のファイルとフォルダを一列に並べる。**id / anchor_path は従来どおりファイルパス由来のまま**（番号込み）。番号は id / URL / ファイル名にのみ現れ、表示タイトル（first-H1 由来の `title`）には出ない。フォルダの `index` は番号を振らず、テンプレートが各フォルダの先頭に置く。順序を effect にする機構は [book edition のフォルダネスト](#book-edition-のフォルダネスト)。
+id は `contents_dir` からの相対パス（拡張子なし）そのもの。読む順は id の文字列順で決まり、フォルダの `index` がその配下に先行する。順序を表す別チャネル（front-matter、toc）は持たない。したがって順序はファイル名で表す——ゼロ埋め・隙間空き番号 prefix（`10-architecture.md`。フォルダの `index` には振らない）はその一つの運用で、dev-docs がそう使っている。id の安定（並べ替えで `node:` リンクが壊れない）を捨て、順序の可視性と id の住所性を取る判断。[背景](../../90-appendix/20-design/50-normalizer/25-prose-spec.md#三すくみどれか一つを必ず捨てる)と[却下した代替案](../../90-appendix/20-design/50-normalizer/25-prose-spec.md#却下した代替案蒸し返し防止)。
 
-#### 背景: 三すくみ（どれか一つを必ず捨てる）
+### `title` — first H1 由来
 
-> **[W4 → appendix]**
+表示タイトルは本文の最初の H1 から導出し、H1 が無ければ持たない。ファイル名（番号 prefix を含む）は id / URL にのみ現れ、タイトルには出ない。
 
-prose の「順序」と「id」を巡って、次の3つは同時に満たせない:
+### `order_key` / `depth` — 導出はレコード、ソートはテンプレート
 
-1. **読む順序がファイルシステム上で見える** — 番号をファイル名に入れる必要がある
-2. **id が並べ替え・挿入に対して安定**（＝ `node:` リンク・tasks.yaml の x-ref が壊れない）— 順序を id に入れてはいけない
-3. **id の一意性・透明性をファイルシステムがタダで担保**（id ＝ パスそのもの、ロスのない導出）
+各レコードは `order_key`（文字列順で folder-preorder になるキー。フォルダの `index` がその配下に先行する）と `depth`（フォルダ木での見出しレベル）を持つ。両者は id のみの純導出なので preprocess がレコード単位で付けられるが、ソートは collection が揃わないとできないので、テンプレート側（`sort(attribute="order_key")`）に置く。フォルダ木を見出しの入れ子として一冊に綴じる使い方（dev-docs の book edition）は、この二つと `under_heading` だけで書ける。
 
-本決定は **2 を捨てる**。理由:
+### `headings` — リンクの着地点
 
-- 散文の章立てはコードの行番号と違い **早期に安定**し、激しく動かない（書き始めが章立てなので骨格が最初に決まる）
-- 番号は順序保持のためのものなので **隙間を空けて振れば挿入は renumber 不要**（`10, 20, 30` に `15` を差す）。renumber が要るのは「隙間が尽きる／構造改組」の稀なときだけ
-- id 参照の破れは **Generate のリンク解決が検出**する（[未解決参照の扱い](../70-generator/20-anchor-spec.md#未解決参照の扱い)）。相対リンクはエディタ上でも即座に切れが分かり、rename では自動追従される
+本文の見出しを `{id, title, level}` のフラットなリストとして持つ。セクション単位のレコードは作らず、id は見出しテキストの GitHub 互換 slug、参照の妥当性は Generate で見る。設計は [見出し抽出](30-markdown-parser-spec.md#見出し抽出)。
 
-よって「並べ替えで id が変わる」コストは prose では **小さく・可視**。一方 1 は authoring の最優先事項（`contents/` に日々住むのは author 自身）、3 を捨てると衝突検査を自前で建て直す羽目になるため残す。
+### `content` — ソースそのまま、相対リンクだけ `node:` 化
 
-#### 背景: 却下した代替案（蒸し返し防止）
+本文は H1 を含むファイル全体。contents 内に解決する相対リンクだけを `node:` 記法に書き換え、他は書かれたとおりに保つ。設計は [リンク正規化](30-markdown-parser-spec.md#リンク正規化)。
 
-> **[W4 → appendix]**
+### `mime_type` — `text/markdown`
 
-- **front-matter で id を宣言**（順序＝ファイル名／同一性＝front-matter）: 3 を保ちつつ 1+2 を得られるが、id から **segment string ＝住所としての意味を抜く**方向で、resolver の lookup 化と宣言 id の一意性検査という機構を要する。prose id は無意味な UUID ではなく **意味ある住所**（[prose の `/`-素通し例外](../70-generator/20-anchor-spec.md#prose-の例外)）なので、住所性を残す本決定を採る
-- **toc yaml / テンプレートでの順序列挙**: リンクの有無に関わらず、**ファイルを rename するたびに spine 側の記帳を無条件に強制**する第二の編集箇所を新設してしまう
-- **番号を id から剥がす**: ファイルシステムがタダでくれる一意性・透明性を失い、自前の重複検査が要る（`01-foo` と `02-foo` が同じ id に潰れる衝突をファイルシステムが防げなくなる）
-- **key チャネル**（安定ハンドルを id とは別に持つ）: 上記のとおり churn が稀かつ検出可能なので **YAGNI**。加算的な機構なので、実際に痛くなってから独立タスクで足せる（後入れでも手戻りしない）
-
-## Internal Design
-
-### book edition のフォルダネスト
-
-> **[W4 fix]** 欠落: docs/reference/schema.md の prose レコード形状に order_key / depth が載っていない (content-schema.yaml にはある)
-
-> **[W4 dup]** ↔ prose.py _outline_position docstring:85-100、content-schema.yaml:63-76 (a, 完全。正本と宣言しつつ再掲)。機構。案: 削除→コード。残すのは「two-loop をフォルダ木へ一般化」「ソートはテンプレ側」の設計一文
-
-book edition（全 inline）で prose のフォルダ親子をネストさせる仕組みは、[分割ルール](../70-generator/40-paging-spec.md#分割ルール) の two-loop（`| link` + `| render`）と `under_heading` を、フォルダ木へ一般化したもの。各 prose レコードは id 由来の `order_key`（folder-preorder ソートキー）と `depth`（見出しレベル）を持ち、ルートテンプレ（`definition/templates/index.md`）が `order_key` でソートし `depth` に応じて `under_heading` で包む。両フィールドは id のみの純導出なので prose の preprocess（`prose.py` の `_outline_position` が正本）で供給し、ソートはファイル単位で行えないため collection の揃うテンプレ側に置く。`order_key` は暫定のアルファベット id でも番号付き id でも folder-preorder を与えるので、[番号 prefix](#章順は番号-prefix-で表す) を振ればテンプレ無改修で読む順が effect になる。
+blob と同じ位置に持ち、body で包まない（[blob のレコード形状](../40-communication/30-blob-spec.md#レコード形状の判断)）。

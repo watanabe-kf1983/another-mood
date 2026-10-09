@@ -1,6 +1,6 @@
 # Markdown Parser Specification
 
-散文の順序・構造は [Prose](../40-communication/20-prose-spec.md)。本章は Markdown のパース — 相対リンクの `node:` 正規化と見出し抽出 — を扱う。
+散文の順序・構造は [Prose](25-prose-spec.md)。本章は Markdown のパース — 相対リンクの `node:` 正規化と見出し抽出 — を扱う。
 
 ## Internal Design
 

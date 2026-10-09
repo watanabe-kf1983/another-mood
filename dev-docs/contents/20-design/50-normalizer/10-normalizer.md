@@ -11,7 +11,7 @@
 | 拡張子 | 扱い |
 |---|---|
 | `.yaml` / `.yml` / `.json` | レコードファイル（ルートは mapping） |
-| `.md` | [prose](../40-communication/20-prose-spec.md)（`contents/` のみ） |
+| `.md` | [prose](25-prose-spec.md)（`contents/` のみ） |
 | その他 | [blob](../40-communication/30-blob-spec.md)（`contents/` のみ。`views_dir` では検証エラー） |
 
 dotfile・dot ディレクトリ配下は形式によらず読まない。エディタ・VCS の cruft がソースツリーに同居できることを保証する側の要件で、形式ディスパッチに先行する。

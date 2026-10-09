@@ -21,7 +21,7 @@
 
 各ステージが監視するのは、利用者の入力ファイルと、直接の上流ステージの出力ディレクトリだけ。build はこの列を依存順に一回走らせ、watch は各ステージを監視状態に置く。上流が出力を書き換えれば下流が勝手に動くので、再実行の順序を中央で管理する必要がなく、変更は上流から下流へ伝わる。
 
-これが成り立つには、各ステージの出力ディレクトリが原子的に更新され、途中状態が下流に見えないことが前提になる。この不変条件と、ステージ間を流れるデータの形（[JSON データモデル](40-communication/10-json-data-model.md) / [prose](40-communication/20-prose-spec.md) / [blob](40-communication/30-blob-spec.md)）は [communication](40-communication/index.md) に書く。
+これが成り立つには、各ステージの出力ディレクトリが原子的に更新され、途中状態が下流に見えないことが前提になる。この不変条件と、ステージ間を流れるデータの形（[JSON データモデル](40-communication/10-json-data-model.md) / [blob](40-communication/30-blob-spec.md)）は [communication](40-communication/index.md) に書く。
 
 ステージの一覧と入出力は [pipeline.md](30-pipeline.md) のステージ表が正本。
 
