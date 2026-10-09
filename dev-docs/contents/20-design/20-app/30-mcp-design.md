@@ -6,14 +6,7 @@ MCP サーバの設計。AI へのコンテキスト提供として機能する�
 
 ### 基本方針
 
-> **[W4 dup]** ↔ 10-architecture 設計判断#4 (c, 完全)。案: 残す (architecture は一行、理由はここ)
-
-MCP サーバは CRUD API ではなく、**AI へのコンテキスト提供**として機能する。
-
-contents/ の作成・更新・削除（CUD）は AI が直接ファイルを編集する。ツール側で CRUD API を提供しない理由:
-- JSON Schema の構造に対する CRUD API（`AppendAdditionalProperty` 等）は設計が膨大になる
-- AI は JSON Schema の書き方を既に知っており、YAML ファイルを直接編集できる
-- ツールは YAML を読むだけでよいため、書き戻し（ラウンドトリップ保持）が不要
+MCP サーバは CRUD API ではなく、**AI エージェントへのコンテキスト提供**として機能する。contents/ の作成・更新・削除（CUD）は AI エージェントがファイルを直接編集する（[ソースは標準形式のテキスト、ツールは読むだけ](../../10-background/10-product.md#ソースは標準形式のテキストツールは読むだけ)）。
 
 ### 設計原則
 

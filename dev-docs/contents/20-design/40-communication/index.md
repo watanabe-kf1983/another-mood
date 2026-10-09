@@ -1,6 +1,6 @@
 # Component Communication
 
-コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する（[architecture](../10-architecture.md#設計判断) 設計判断 #6 の精緻化）。ファイル経由ゆえに各段を目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [prose](20-prose-spec.md) / [blob](30-blob-spec.md)。
+コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する。ファイル経由ゆえに各段を目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [prose](20-prose-spec.md) / [blob](30-blob-spec.md)。
 
 ## Internal Design
 
@@ -14,7 +14,7 @@
 
 - blob 限定でなく **全ファイル** を hardlink 対象にする。blob 判定述語をツリーの根ごとに持つと誤判定が即 inode 共有事故になるため、「全ファイル write-once」の一枚岩へ単純化した。`link_or_copy` の「dst があれば unlink」がこの不変条件の中央実装。
 - `os.link` の成立条件として、各ステージの temp を出力と同一 FS に置く（`dir_lock` の `mkdtemp`）。
-- cross-platform: hardlink が張れない環境（別 FS・Windows・非対応 FS）では `copy2` に自動フォールバックするので、[動作環境](../10-architecture.md#動作環境) の cross-platform 要件を崩さない。
+- cross-platform: hardlink が張れない環境（別 FS・Windows・非対応 FS）では `copy2` に自動フォールバックするので、[製品の動作環境](../../10-background/10-product.md#what) (Linux / macOS / Windows) を崩さない。
 
 実装と根拠の詳細は `transfer.py` / `dir_lock.py` の module docstring。データクラス別の運搬（blob の境界コピー・前回出力からの増分再利用）は [blob](30-blob-spec.md) の各論。
 
