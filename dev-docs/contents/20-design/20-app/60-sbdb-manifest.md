@@ -131,7 +131,7 @@ Means 定義）。ゆえにスペックの語彙に
 
 ### ゲートの実装（`components/manifest`）— 二段読み
 
-> **[W4 dup]** 手順 1-3 と「厳格検証をゲートの後に置く理由」↔ manifest.py read_manifest:136-148,171-178,197-204 のコメント (a, 完全。design 自身が docstring に記載と断りつつ再掲)。「欠落の検出は read_manifest…」↔ 20-config-spec preflight (c, 完全)。「対応集合は定数一行」↔ supported_sbdb_versions.py docstring (a, 完全)。案?: 順序の不変条件と理由は design に残しコード側コメントを一文に縮める。手順の機構記述は削除→コード。preflight 箇条は config-spec へポインタ。定数モジュール箇条は削除→コード (リリース検査との接続一文は残す)
+> **[W4 dup]** 手順 1-3 と「厳格検証をゲートの後に置く理由」↔ manifest.py read_manifest:136-148,171-178,197-204 のコメント (a, 完全。design 自身が docstring に記載と断りつつ再掲)。「欠落の検出は read_manifest…」↔ 20-config-spec preflight (c, 完全)。「対応集合は定数一行」↔ supported_sbdb_versions.py docstring (a, 完全)。案?: 順序の不変条件と理由は design に残しコード側コメントを一文に縮める。手順の機構記述は削除→コード。preflight 箇条は config-spec へポインタ → **前提変更**: config-spec の preflight 節は削除済みで、理由は command.py build の呼び出し順のコメントに移した。この箇条は「残す」か「削除→コード」かをここで判断。定数モジュール箇条は削除→コード (リリース検査との接続一文は残す)
 
 マニフェストは二段で読む——最初は凍結欄だけ、ゲート通過後に全体。手順は三つ:
 
