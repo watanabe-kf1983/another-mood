@@ -10,6 +10,9 @@ from another_mood.components.shared.user_error import UserError
 
 @dataclass(frozen=True)
 class SourceLayout:
+    # Also checked by read_manifest, which build calls first and whose error
+    # the user actually sees; this entry is the backstop for callers that
+    # reach resolve_layout directly.
     manifest_file: Path
     definition_dir: Path
     schema_file: Path

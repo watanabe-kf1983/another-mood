@@ -7,7 +7,7 @@
 
 ## バージョニング
 
-> **[W4 dup]** tag 導出 ↔ release.yml:30-31、各 yml 同文コメント (部分)。tag 形 ↔ release.yml:4-6、pyproject.toml:45-50 (完全、pyproject が詳しい)。破壊の定義 ↔ 60-sbdb-manifest:188-200、DEVELOPMENT.md:117、compose_pr_notice.py:77-82 (完全)。案?: 破壊の定義は release.md が正本で他をポインタ化。tag 形の理由は pyproject コメントが正本→縮める
+> **[W4 dup]** tag 導出 ↔ release.yml:30-31、各 yml 同文コメント (部分)。tag 形 ↔ release.yml:4-6、pyproject.toml:45-50 (完全、pyproject が詳しい)。破壊の定義 ↔ 60-sbdb-manifest:188-200、DEVELOPMENT.md:117、compose_pr_notice.py:77-82 (完全)。案?: 破壊の定義は release.md が正本で他をポインタ化。 → sbdb-manifest 側は対応済み (ポインタ化)。tag 形の理由は pyproject コメントが正本→縮める
 
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
   導出する。bump コミットという工程はない
@@ -63,7 +63,7 @@ PR タイトルにタスク ID 等の内部語彙は書かない。タイトル�
 
 ### 破壊的 PR の義務
 
-> **[W4 dup]** ↔ 60-sbdb-manifest:203-207 (c)、compose_pr_notice.py:79-81 (部分)。案: sbdb-manifest 側をポインタ化
+> **[W4 dup]** ↔ 60-sbdb-manifest:203-207 (c)、compose_pr_notice.py:79-81 (部分)。案: sbdb-manifest 側をポインタ化 → sbdb-manifest 側は対応済み (ポインタ化。追随一式の中身はこちらの第 1 項へ移した)
 
 破壊的 PR（フォーマット破壊・ツール破壊とも）は、以下をすべて自身に含める。
 トレーラーと `## Release highlight` セクションだけが PR 本文に書かれ、他はレビュー
@@ -71,8 +71,9 @@ PR タイトルにタスク ID 等の内部語彙は書かない。タイトル�
 
 1. **移行手順ほか（フォーマット破壊のみ）** — 利用者向けの移行手順を docs に書く
    （正本はリリースノートではなく docs。置き場所は最初の破壊的変更時に確定）。
-   および世代番号まわりの追随一式
-   （[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) の管轄）
+   および世代番号まわりの追随一式——コードの対応集合・scaffold 生成物・
+   showcase / dev-docs のマニフェスト。更新漏れは、ビルドとテストが世代番号に
+   張り付いているため既存 CI が落とす
 2. **`Release-Highlight: breaking` トレーラーと `## Release highlight` セクション** —
    上記書式で PR 本文に。セクションには移行の要約と docs の移行手順へのポインタ
 
