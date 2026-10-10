@@ -1,6 +1,6 @@
 # Prose
 
-散文（prose）は `contents/` 配下の Markdown で、内蔵コレクション `prose` のレコードになる（一ファイル一レコード）。レコードの形は `docs/reference/schema.md` の prose 節が約束し、本章はその項目ごとに設計判断を置く。Markdown のパース（相対リンクの `node:` 正規化・見出し抽出）は [Markdown Parser Specification](30-markdown-parser-spec.md) を参照。
+散文（prose）は `contents/` 配下の Markdown で、内蔵コレクション `prose` のレコードになる（一ファイル一レコード）。レコードの形は `docs/reference/schema.md` の prose 節が約束し、本章はその項目ごとに設計判断を置く。Markdown のパーサは [Normalizer](10-normalizer.md#markdown-は-markdown-it-py-で読む)。
 
 ## External Design
 
@@ -18,11 +18,21 @@ id は `contents_dir` からの相対パス（拡張子なし）そのもの。�
 
 ### `headings` — リンクの着地点
 
-本文の見出しを `{id, title, level}` のフラットなリストとして持つ。セクション単位のレコードは作らず、id は見出しテキストの GitHub 互換 slug、参照の妥当性は Generate で見る。設計は [見出し抽出](30-markdown-parser-spec.md#見出し抽出)。
+本文の見出しを **リンクの着地点** として `{id, title, level}` のフラットなリストに materialize する。見出しが持つのは住所メタデータだけで、本文 (`content`) は一度しか現れない。
+
+id は **見出しテキストから導出する GitHub 互換 slug**（`## API の設計` → `api-の設計`）。見出しリンクが我々の Hugo 出力・GitHub・VS Code preview のいずれでも同じ id に着地させるためで、規則の正本と実装参照は `github_slug` の docstring。id の安定は「不変であること」ではなく **「壊れた参照は必ずビルドで報告される」** で担保する。
+
+見出しへの参照は **ドキュメント間のクロスリンク** なので、妥当性は normalize の参照整合性検査ではなく **Generate フェーズのリンク解決** で見る（[未解決参照の扱い](../70-generator/20-anchor-spec.md#未解決参照の扱い)）。
+
+見出しがリンクの宛先としてどう住所を持つかは [anchor-spec.md の Prose の例外](../70-generator/20-anchor-spec.md#prose-の例外)。却下した代替案は[背景](../../90-appendix/20-design/50-normalizer/25-prose-spec.md#見出しの却下した代替案)。
 
 ### `content` — ソースそのまま、相対リンクだけ `node:` 化
 
-本文は H1 を含むファイル全体。contents 内に解決する相対リンクだけを `node:` 記法に書き換え、他は書かれたとおりに保つ。設計は [リンク正規化](30-markdown-parser-spec.md#リンク正規化)。
+本文は H1 を含むファイル全体。contents 内に解決する相対リンクだけを `node:` アンカーパス記法（インラインリンク形）に書き換え、他は書かれたとおりに保つ。変換規則は `docs/reference/schema.md` の prose 節、例は [anchor-spec.md の Markdown 本文中のアンカー参照](../70-generator/20-anchor-spec.md#markdown-本文中のアンカー参照)。`.md` 以外のターゲットは `node:/blob/<id>` へ向け、[blob](27-blob-spec.md) 参照を prose のリンク正規化機構に相乗りさせる。
+
+この書き換えは生成側フィルタ `relink`（`node:` → URL、[generator.md](../70-generator/10-generator.md#リンク解決)）の **逆向き処理**。解決はレキシカル（FS チェックなし）で、リンク先ノードの存在検証は relink（Generate フェーズ）に委ねる。
+
+cross-doc リンクを全て `node:` 化する理由と、同一ページ内の純 `#frag` を恒久的に非変換とする理由は[背景](../../90-appendix/20-design/50-normalizer/25-prose-spec.md#cross-doc-リンクを全て-node-化する理由)。
 
 ### `mime_type` — `text/markdown`
 

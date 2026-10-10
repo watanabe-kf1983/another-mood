@@ -1,6 +1,6 @@
 # Normalizer
 
-contents 入力を検証し、辞書形式を配列形式に正規化する。Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](30-markdown-parser-spec.md) 参照）。参照整合性もチェックする。
+contents 入力を検証し、辞書形式を配列形式に正規化する。Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する。参照整合性もチェックする。
 
 受理する入力形式（拡張子ディスパッチ、dotfile の除外）は `docs/reference/cli.md` の Content and Views を正本とする。`.md` の扱いは [prose-spec](25-prose-spec.md)、それ以外の拡張子は [blob-spec](27-blob-spec.md) が設計を持つ。
 
@@ -30,6 +30,10 @@ contents 入力を検証し、辞書形式を配列形式に正規化する。Ma
 `parse_mapping` は `.yaml` と `.json` を同じ ruamel リーダで読む。YAML 1.2 が JSON のスーパーセットで、`.lc` による位置情報もそのまま取れるため。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになる — `query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。
 
 純 JSON リーダとは外から見える挙動が二つズレるが、どちらも放置する（[背景](../../90-appendix/20-design/50-normalizer/10-normalizer.md#純-json-リーダとのズレを放置する理由)）。
+
+### Markdown は markdown-it-py で読む
+
+Markdown AST は markdown-it-py（CommonMark 準拠、AST 走査で見出し抽出・リンク検出）。
 
 ## Proposals
 

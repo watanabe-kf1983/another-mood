@@ -62,7 +62,7 @@ paging ポリシー (どの object type が分割境界か、root→`index.md` /
 
 > **[W4 dup]** 機構 ↔ markdown.py docstring 群 (a)、template.md:278-292 (b)、20-anchor-spec relink 節、30-markdown-parser:13 (c) — 完全。案: 機構段落は削除→コード。「明示 relink、暗黙を採らない」は設計判断→残す (anchor-spec 側の再掲をポインタ化)
 
-Markdown データソースの body には、Normalizer がソース内の相対リンクを `node:` 記法に変換済みのリンクが含まれる ([markdown-parser-spec.md](../50-normalizer/30-markdown-parser-spec.md) 参照)。`relink` フィルタが body 内の `node:` リンク先を表示先ページからの相対 URL に置換する。**リンク解決の単一責務**に絞り、見出し深さ調整は `under_heading` と合成する (記法・対象範囲・未解決契約は [anchor-spec.md](20-anchor-spec.md#prose-body-処理フィルタ-relink) が正本)。
+Markdown データソースの body には、Normalizer がソース内の相対リンクを `node:` 記法に変換済みのリンクが含まれる ([prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化) 参照)。`relink` フィルタが body 内の `node:` リンク先を表示先ページからの相対 URL に置換する。**リンク解決の単一責務**に絞り、見出し深さ調整は `under_heading` と合成する (記法・対象範囲・未解決契約は [anchor-spec.md](20-anchor-spec.md#prose-body-処理フィルタ-relink) が正本)。
 
 body 内のどこが本物の `node:` リンクかは markdown-it でパースして判定し (レンダラには使わず位置特定のための読み取り専用パーサとして使う)、置換は元文字列への splice で行う。機構の詳細 (`normalizeLink` の恒等化、本物リンクだけが `link_open` になる性質、行範囲限定の splice) は `shared/markdown.py` の docstring が正本。
 

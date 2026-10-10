@@ -4,7 +4,7 @@ categories:
     impl_paths:
       - src/another_mood/components/preprocess/prose.py
       - src/another_mood/components/generator/
-    spec: 20-design/50-normalizer/30-markdown-parser-spec
+    spec: 20-design/50-normalizer/25-prose-spec
     tasks:
       A1:
         title: 見出し抽出 → prose.headings 生成

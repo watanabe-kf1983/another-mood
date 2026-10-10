@@ -36,7 +36,7 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 **Content Normalizer**（[normalizer.md](50-normalizer/10-normalizer.md)）
 contents 入力を検証し、辞書形式を配列形式に正規化する。
-Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[markdown-parser-spec.md](50-normalizer/30-markdown-parser-spec.md) 参照）。
+Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する（[prose-spec.md](50-normalizer/25-prose-spec.md) 参照）。
 参照整合性もチェックする。
 
 **Query Deriver**

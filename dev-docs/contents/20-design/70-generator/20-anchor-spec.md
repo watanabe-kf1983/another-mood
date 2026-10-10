@@ -76,12 +76,12 @@ A0–D7FF, F900–FDCF, FDF0–FFEF,
 
 **id 内の `/` は素通し** — 組み込みの `prose` / `blob` entity に限り、id 内の `/` を escape せずにアンカーパスへそのまま埋め込む。理由:
 
-- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
+- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
 - `prose` / `blob` はいずれも flat な配列 entity で sub-entity を持たないため、resolver が `prose/`・`blob/` 以降を「単一の id」として扱えば曖昧性は発生しない
 
 この例外は **組み込みコレクション（`prose` / `blob`）に固有** のものとして明示的に定義する。id 形がシステム側で固定されている（contents 相対パス）ため将来も曖昧性は生じない。一方、`/` を含む任意の id への一般化はしない — 利用者 entity は構造が変わりうるため、その id を素通しにすると将来曖昧性が混入する。
 
-**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
+**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[prose-spec.md の headings](../50-normalizer/25-prose-spec.md#headings--リンクの着地点)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
 
 `#` は `/` と同様に raw で挿入する構造的セパレータ。slug は github 互換で `#` を含まず、id 内の `#` は `%23` に escape されるため、anchor_path 中のリテラル `#` は見出し区切りの一個だけ。「`prose/` 以降は単一 id」の前提も、`#` の手前までを単一 id と読み替えることでそのまま保たれ、`/`-曖昧性は生じない。
 
@@ -112,7 +112,7 @@ erds:                              # 配列 → リスト
 prose:                             # flat list、id はファイル相対パス
   - id: design/architecture
     title: Architecture
-    headings:                      # 本文見出し（markdown-parser-spec.md の見出し抽出）
+    headings:                      # 本文見出し（prose-spec.md の headings）
       - { id: エラー処理, title: エラー処理, level: 2 }
 blob:                              # flat list、id は拡張子込みファイル相対パス
   - id: covers/cover.png
@@ -200,7 +200,7 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 
 ### Markdown 本文中のアンカー参照
 
-> **[W4 dup]** 変換例 ↔ 30-markdown-parser 例 (c, 同一例)、schema.md:273、template.md:280 (b) — 完全。案: 例は削除 (markdown-parser へポインタ)。「二役」は残す
+> **[W4 dup]** 変換例 ↔ 30-markdown-parser 例 (c, 同一例)、schema.md:273、template.md:280 (b) — 完全。案: 「二役」は残す。例は 30-markdown-parser を 25-prose-spec に吸収した際にここへ一本化済み (prose-spec の content 節がここを指す)
 
 > テンプレート側のリンク解決・整形フィルタは [リンク記法](#リンク記法) を参照。
 
@@ -215,7 +215,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node(path="/…") | link`（[リンク記法](#リンク記法)）の本文版で、解決後は同じ `[display](URL)` になる
 2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
 
-ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([markdown-parser-spec.md](../50-normalizer/30-markdown-parser-spec.md) 参照):
+ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
@@ -236,7 +236,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す（[Prose の例外](#prose-の例外)）。`relink` はこの文字列全体を見出しノードとして解決し、[出力 URL の形式](#出力-url-の形式)の fragment 規則で `#エラー処理` を出力 URL に乗せる。見出しが対象 prose に無ければ `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。
 
-ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、Normalizer が `node:` 変換時に透過で運んでこの形を生成する（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）。
+ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、Normalizer が `node:` 変換時に透過で運んでこの形を生成する（[prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化)）。
 
 #### 対象はインラインリンク形のみ
 
