@@ -1,6 +1,6 @@
 # Prose (appendix)
 
-[Prose](../../20-design/50-normalizer/25-prose-spec.md) の背景。
+[Prose](../../../20-design/50-normalizer/25-prose-spec.md) の背景。
 
 ## 三すくみ（どれか一つを必ず捨てる）
 

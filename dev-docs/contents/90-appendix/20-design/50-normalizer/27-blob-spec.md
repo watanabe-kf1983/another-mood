@@ -1,6 +1,6 @@
 # Blob (appendix)
 
-[Blob](../../20-design/50-normalizer/27-blob-spec.md) の背景。
+[Blob](../../../20-design/50-normalizer/27-blob-spec.md) の背景。
 
 ## 要求
 

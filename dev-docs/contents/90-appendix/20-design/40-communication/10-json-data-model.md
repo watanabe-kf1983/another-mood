@@ -1,6 +1,6 @@
 # JSON データモデル (appendix)
 
-[JSON データモデル](../../20-design/40-communication/10-json-data-model.md) の背景。
+[JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の背景。
 
 ## YAML を 1.2 とする理由
 

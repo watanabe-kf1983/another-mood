@@ -1,6 +1,6 @@
 # Inter-Stage Communication (appendix)
 
-[Inter-Stage Communication](../../20-design/40-communication/index.md) の背景。
+[Inter-Stage Communication](../../../20-design/40-communication/index.md) の背景。
 
 ## ステージ間の受け渡しを hardlink にした理由
 
