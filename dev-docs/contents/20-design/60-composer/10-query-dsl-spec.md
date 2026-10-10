@@ -186,6 +186,8 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### ドット名の意味論統一 (E14)
 
+`select` と `flatten` は #459 で対応済み。以下で書き側がリテラルだと言っているのは、残る `join` と `grouped` の別名のこと。
+
 #### 問題
 
 DSL の名前に現れるドットは、読み側と書き側で意味が違う。読み側（`from:` / `flatten.of:` / `join.on:` / `where` のキー / `sort.by:` / `select.item:` / `grouped.by:`）ではパスで、`hobby.level` は `hobby` の中の `level` を指す。一方、書き側（出力レコードのキー名を決める別名スロット）ではリテラル文字列で、`"hobby.level"` というドット入りのキーをそのまま作る。
@@ -194,8 +196,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 | スロット | 省略時 | ドット入りキーが生まれる例 |
 |---|---|---|
-| `select[].as` | `item` をそのまま | `item: hobby.level` → `{"hobby.level": "pro"}` |
-| `flatten.as` | `of` をそのまま | `{ of: pets, as: hobby.pets }` → `{"hobby.pets": {...}}` |
 | `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
 | `join.flatten.as` | join の `as` をそのまま | 同上 |
 | `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
@@ -206,7 +206,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 - **テンプレートの式が view を通すと変わる**: 元エンティティでは `member.hobby.level` で届く値が、`select` を通した後は `row["hobby.level"]` でしか届かない（Jinja2 の `row.hobby` は undefined になる）
 - **`pluck` に longest-first 照合が要る**: 同じ `hobby.level` という文字列が、レコードによってリテラルキーにも入れ子パスにもなりうるため、`json_data_model.pluck` はまずキー全体を試し、駄目なら末尾セグメントを削って降りる。データの形が一意でないことの代償
 - **カタログから JSON の形が復元できない**: `Attribute.id` のドットが singleton 平坦化（入れ子）なのかリテラルキーなのか区別できず、`entity_def.md` は両者を同じ見た目で表示し、tap ドキュメントの JSON Schema 生成（J5）が塞がる
-- **読み側のうち `flatten.of` だけがパスを受けない**: apply (`_unwind`) は `of` と同名のトップレベルキーしか除去しないので、`of: hobby.pets` を通すと元の配列が `hobby` 内に残ったまま新キーが足され、「配列エッジを置き換えた」と言うカタログとずれる。derive がドット入りの `of` を `unknown attribute` として弾くことでずれは塞いであるが、読み側の一句だけがパスを受けない状態になっている
 
 #### 方針: DSL の名前は読みも書きもパス
 
@@ -299,6 +298,13 @@ flatten: { of: hobby.pets, as: hobby.pet }
 # カタログ: id hobby.level hobby.pets[].name  →  id hobby.level hobby.pet.name
 ```
 
+```yaml
+flatten: { of: tasks, as: hobby.task }
+# レコード: {"id": 1, "hobby": {"level": "pro"}, "tasks": ["x"]}  →  {"id": 1, "hobby": {"level": "pro", "task": "x"}}
+#           {"id": 2, "tasks": ["y"]}                              →  {"id": 2, "hobby": {"task": "y"}}
+# カタログ: id hobby?.level tasks[]  →  id hobby.level? hobby.task
+```
+
 ##### `of` と `as` の親が同じなら、その場で置き換わる
 
 配列のあった位置に要素が入り、兄弟の並びは変わらない。親の object が持つもの（メタデータ・validation）もそのまま残る:
@@ -337,21 +343,27 @@ select:
 # カタログ: hobby?.level  →  level?
 ```
 
+`as` の名前は読み側と無関係である。`select` は空の行から作り直すので、書き込み先の途中に現れるオブジェクトは書き込みが合成した新しいもので、読み側に同じ名前があっても何も引き継がない。
+
+書き込みが一本なら、合成されたオブジェクトはその値を書いた行にしか無い（[書く値が無ければ途中のオブジェクトも作らない](#書く値が無ければ途中のオブジェクトも作らない)）ので、値は合成されたオブジェクトがあれば必ずある。葉が任意になりうるのは、同じオブジェクトに複数の書き込みが合流するとき:
+
 | 元 | `select` | 結果 | 読み |
 |---|---|---|---|
-| `a?.p a?.b.c` | `a.p as a.p`, `a.b.c as a.d` | `a?.p a?.d` | `a` があれば `b`, `c` があるので、`d` も `a` があれば必ずある |
-| `a?.p a?.b?.c` | 同上 | `a?.p a?.d?` | `b` が任意なので、`d` は `a` があっても無いことがある |
-| `a?.p x?` | `a.p as a.p`, `x as a.d` | `a?.p? a?.d?` | `x` はあるが `a` は無い行に `a: {d}` ができるので、`p` は `a` があっても無いことがある |
+| `ref?.p ref?.b.c` | `ref.p as target.p`, `ref.b.c as target.d` | `target?.p target?.d` | `ref` があれば `b`, `c` があるので、`d` も `target` があれば必ずある |
+| `ref?.p ref?.b?.c` | 同上 | `target?.p target?.d?` | `b` が任意なので、`d` は `target` があっても無いことがある |
+| `ref?.p x?` | `ref.p as target.p`, `x as target.d` | `target?.p? target?.d?` | `x` はあるが `ref` は無い行に `target: {d}` ができるので、`p` は `target` があっても無いことがある |
 | `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
 
-`flatten` は行に何も足さない。`preserve_empty: false` なら要素の無い行が落ちるので `of` の経路は残った行の全部にあり、`true` なら元のまま:
+`flatten` は `of` を除いた元の名前を行に残すので、書き込みは元からあるオブジェクトにも合流する。`preserve_empty: false` では要素の無い行が落ちる:
 
-| 元 | `flatten` | 結果 |
-|---|---|---|
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet }` | `hobby.level hobby.pet` |
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet }` | `hobby.level pet` |
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet, preserve_empty: true }` | `hobby?.level hobby?.pet?` |
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet, preserve_empty: true }` | `hobby?.level pet?` |
+| 元 | `flatten` | 結果 | 読み |
+|---|---|---|---|
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet }` | `hobby.level hobby.pet` | `hobby` の無い行は要素も無いので落ち、残る行は全部 `hobby` を持つ |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet }` | `hobby.level pet` | 同上 |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet, preserve_empty: true }` | `hobby?.level hobby?.pet?` | 要素は `hobby` の中から来るので、`hobby` の無い行に `hobby` はできない。要素の無い行では `pet` も無い |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet, preserve_empty: true }` | `hobby?.level pet?` | 同上 |
+| `id hobby?.level tasks[]` | `{ of: tasks, as: hobby.task }` | `id hobby.level? hobby.task` | 要素は全行にあるので、`hobby` の無かった行にも `hobby: {task}` ができ、その `hobby` は `level` を持たない |
+| `id hobby?.level tasks[]` | `{ of: tasks, as: hobby.task, preserve_empty: true }` | `id hobby?.level? hobby?.task?` | `hobby` も要素も無い行はそのまま。要素だけの行は `hobby: {task}`、`hobby` だけの行は `hobby: {level}` になる |
 
 ##### `grouped.by` はキー値を `by` のパスの位置に書く
 

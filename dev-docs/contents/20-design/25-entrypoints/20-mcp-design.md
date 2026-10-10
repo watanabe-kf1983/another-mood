@@ -152,9 +152,9 @@ build（エージェントのワンショット実行）と watch（バックグ
 
 ## Proposals
 
-### エージェント導線の instructions 経路への移行 (J6)
+### プロジェクトディレクトリの自己記述と MCP の削除候補化 (J6)
 
-MCP サーバの固有価値を問い直し、エージェントへの導線を利用者が管理するテキスト（CLAUDE.md / AGENTS.md 等の instructions ファイル）経由に寄せる。MCP サーバは派生チャネルに降格し、将来の削除候補とする。
+MCP サーバの固有価値を問い直し、エージェント向けの専用経路を持たない形へ寄せる。プロジェクトディレクトリが自分の出自を人間向けに語り（README.md）、エージェントはそれを読む。MCP サーバは将来の削除候補とする。
 
 #### 背景: MCP が運んでいるものの分解
 
@@ -165,41 +165,70 @@ MCP が CLI に対して余分に運んでいるのは Server Instructions だ�
 「AI 向け説明文」と一括りにされがちなものは三つに分かれる:
 
 - **内容**（ツールが何をするか、どう使うか）: 人間と AI で同一であるべきで、別版は不要。`docs/` で済んでいる
-- **導線**（docs がどこにあり、いつ読むか）: 人間は README や検索で自力でたどり着くが、エージェントは文脈に書かれていなければ読みに行かない。これだけが正当に AI 固有の部分で、中身は「このディレクトリは mood で管理する。`mood --help` を見よ」程度の一行で足りる
-- **リポジトリ固有の運用**（dev-docs は `dev-docs/` にあり `mood build dev-docs` で組む、等）: ツールの文書ではなくリポジトリの文脈。書く主体はリポジトリの持ち主で、ツールにできるのは init で種を置くことまで
+- **導線**（このディレクトリを管理しているのが何者で、docs がどこにあるか）: 読者は「ディレクトリに居るが `mood` を知らない人」。`mood --help` → `mood docs list` → `mood docs read` の鎖はこの到達点より後ろにあり、欠けているのはディレクトリから `mood` への手前の一歩だけ。人間の同僚とエージェントで読者像は同じ
+- **リポジトリ固有の運用**（dev-docs は `dev-docs/` にあり `mood build dev-docs` で組む、等）: ツールの文書ではなくリポジトリの文脈。書く主体はリポジトリの持ち主で、ツールにできるのはsbdb プロジェクトに種を置くことまで
 
-結論として、ツールが出荷すべき AI 専用の文章は無い。出すべきは、良い `docs/`、エージェントが自力でたどれる導線（`mood --help` → `mood docs list` → `mood docs read`）、sbdb プロジェクトに置く一行のポインタ、の三つ。
+結論として、ツールが出荷すべき AI 専用の文章は無い。出すべきは、良い `docs/`、`mood` を知った人が自力でたどれる鎖（`mood --help` → `mood docs list` → `mood docs read`）、`mood` を知らない人をそこへ送るディレクトリ内の数行、の三つ。
 
 多くのライブラリが AI 向け文書（`llms.txt`、skill、AGENTS.md テンプレート）を別途出しているのは、人間向け docs が Web レンダリング前提で機械が取りにくい、量が多すぎて索引が要る、といった「docs が機械に読めない」症状への対処であり、方向は分離ではなく収束（人間向け docs を機械にも読める形に寄せる）である。本ツールは `docs/` が素の Markdown でパッケージに同梱され `mood docs read` で引けるので、収束後の形を最初から持っている。
 
-#### 背景: instructions 経路が「コントローラブル」である理由
+#### 背景: 導線は人間向けに書く
 
-- **テキストの所有者**: MCP の Instructions はツール作者の文章がそのまま注入され、利用者にできるのはサーバの on/off だけ。instructions ファイルなら削る・直す・自分の事情を足す・PR でレビューする、すべてできる
-- **届く単位**: MCP 登録はクライアントごと・利用者ごと（`.mcp.json` でプロジェクト単位にもなるが、クライアントが MCP を喋れることが前提）。リポジトリ内のファイルは、ローカルでも Web 版エージェントでも CI でも、チェックアウトすれば届く
-- **信頼の境界**: システムプロンプトに第三者のテキストが注入される経路は、原理的にはプロンプトインジェクションの面であり、企業が MCP を一律禁止する理由はおそらくこれ。利用者側で統制できる経路のほうが通りやすい
+指示や案内は人間の開発者に向けて書き、エージェントはそれを読む。AI エージェント向けの指示ファイル（CLAUDE.md / AGENTS.md 等）を前提にした案内は、エージェントがまともになるほど要らなくなる過渡期の慣行とみなし、ツールからは出さない。持ち主が自分の instructions ファイルに何を書くかはツールの関心外で、docs にその雛形も置かない。
 
-ユーザスコープ / プロジェクトスコープの区別は両経路に並行して存在する（MCP の user scope ↔ `~/.claude/CLAUDE.md`、`.mcp.json` ↔ プロジェクトの CLAUDE.md）。構造は同じで、違いは中身が利用者に読めて書けるテキストかどうかだけ。
+同じ理由で、MCP の Server Instructions（ツール作者の文章がエージェントのシステムプロンプトへ直接注入される経路）は、縮めて残すのではなく MCP ごと落とす対象になる。
 
-MCP 側に残る固有価値は、シェルを持たないクライアント（Claude Desktop のチャット等）への経路と、型付きスキーマの二つ。本ツールの対象利用者はコーディングエージェントなので、どちらも効きが薄い。
+導線の置き場は README.md とする。スキャフォールド系ツールの慣行を見ると、ディレクトリ内に文章を残すツール（Vite / Next / Astro / SvelteKit / Angular / Rails / Flutter）はいずれも README.md に置き、文章を残さないツール（cargo / go / uv / hugo）はマニフェストのファイル名そのものが出自を語っている。本ツールの `sbdb.yaml` は名前からツールが分からないので後者の線は取れない。却下した置き場:
+
+- **`sbdb.yaml` のコメント行**: 開いた人にしか伝わらず、開くかどうかは読者次第
+- **ブループリントの contents 内のポインタ**（MkDocs の `docs/index.md` 流）: ソースとしては `contents/` に埋もれ、出力としては `mood build` した人にしか見えない。`mood` を知らない読者には届かない
+- **init 終了時のターミナル出力**: `mood` を打てる人にしか届かず、導線ではない
+- **AGENTS.md の生成、instructions ファイル向けスニペット**: AI 専用の文章
+
+リンク先は PyPI ではなく GitHub（プロジェクトのホームページ）。調査したジェネレータのリンク先は docs サイトか GitHub リポジトリで、レジストリのページを指した例は無い。レジストリは入手する場所であって知る場所ではなく、入手はインストールコマンドを README に書くことで足りる。`pyproject.toml` の Homepage / Documentation も GitHub を指しており、`docs/` の正本が GitHub 上の raw Markdown であることとも整合する。
 
 #### 現状の鎖
 
 `mood --help` の冒頭は既に「schema / views / templates を書く前に `mood docs list` → `mood docs read <uri>` で仕様を読め」と指しており、`docs list` は各ページの要約つきで URI を返す。「`mood --help` を見ろ」の一言から仕様の該当ページまで二手で届く。Instructions にある作業ループ（編集 → build → `__db/` 診断出力で確認）も、`docs/guides.md` の Workflow 章に段階ごとの「どこに書き、どこで確認するか」の表として既にある。Instructions の内容で `docs/` に無いものは無い。
 
-欠けているのは二点だけ: sbdb プロジェクトに置く一言と、`--help` から Workflow 章への指し。
+欠けているのは二点だけ: ディレクトリから `mood` へ送る数行と、`--help` から Workflow 章への指し。
 
 #### 案
 
-1. **`mood --help` に作業ループへの一行を足す**。「編集 → `mood build` → `__db/` の診断ページで確認。詳細は `docs://guides.md` の Workflow」程度。既存の「仕様を読め」の一文と並べる
-2. **`mood init` / `mood blueprint apply` が `<project_dir>/README.md` を生成する**。`sbdb.yaml` と同じく、ブループリントのコピーとは別の生成経路（`_generate_manifest` の隣）。全ブループリントに一様に効き、showcase 側にファイルを置かずに済む。内容は数行のポインタに限る: Another Mood（PyPI へのリンク）が管理する source-based database であること、`mood build <dir>`、コマンドは `mood --help`、仕様は `mood docs list`。構造の説明は書かない（`--help` と `guides.md` の仕事で、書くと複製になる）。読者はディレクトリを開いた同僚とエージェントの両方で、同じ文章で済む。project 直下は `contents/` の外なので content としては読まれない
-3. **`docs/mcp.md` を「Using with AI agents」に改題**。冒頭を「CLAUDE.md / AGENTS.md / `.github/copilot-instructions.md` 等に次の一行を足す」に置き換え、置き場所はクライアント別の表で示す。本文は一つで、形式ごとのサンプルは作らない（複製は必ずどれかが古くなる）。MCP の設定手順は末尾の一節に降格
-4. **Server Instructions を上記ポインタと同等まで縮める**。ワークフローの記述は `docs/` 側に委ね、Instructions は「`list_docs` → `read_doc` で仕様を読め、`build` で検証せよ」程度に留める
-5. **将来: `mood-mcp` エントリポイントと `mcp` 依存の削除**。別 PR、`Release-Highlight: breaking`。1〜4 を先に出荷し、MCP 無しで同等の体験が得られることを確認してから落とす。削除で失うものはシェルを持たないクライアント向け経路のみで、移行案内は「CLAUDE.md に一行足す」で書ける。本ファイルの Resources / Tools 並行公開、SDK 採用理由、死荷重受容の各節は削除時に一緒に落ちる
+1. **`mood --help` に作業ループへの一行を足す**。「編集 → `mood build` → `__db/` の診断ページで確認。詳細は `docs://guides.md` の Workflow」程度。既存の「仕様を読め」の一文と並べる。これは `mood` を打てる人の体験を良くする docs の質の話で、導線ではないが同じ PR で出す
+2. **`mood init` / `mood blueprint apply` が `<project_dir>/README.md` を生成する**。`sbdb.yaml` と同じく、ブループリントのコピーとは別の生成経路（`_generate_manifest` の隣）。全ブループリントに一様に効き、showcase 側にファイルを置かずに済む。内容は数行のポインタに限る: Another Mood（GitHub へのリンク）が管理する source-based database であること、インストールコマンド、`mood build <このディレクトリ>`、コマンドは `mood --help`、仕様は `mood docs list` / `mood docs read`。題はディレクトリ名（`sbdb.yaml` の `title` と同じ値）。構造の説明は書かない（`--help` と guides.md の仕事で、書くと複製になる）。バージョンの刻印も書かない（`sbdb.yaml` の `minimum_version` が持つ）。project 直下は `contents/` の外なので content としては読まれない
+3. **自リポジトリの MCP 登録を外す**。`.mcp.json` と `.vscode/mcp.json` の another-mood を除去し、CLI だけで dev-docs を運用して同等の体験が得られることを確かめる
+4. **将来: `mood-mcp` エントリポイントと `mcp` 依存の削除**。別 PR、`Release-Highlight: breaking`。1〜3 を先に出荷してから落とす。削除で失うものはシェルを持たないクライアント向け経路のみ。`docs/mcp.md` はページごと削除し、`docs/catalog.yaml` / `docs/index.md` / リポジトリ README / `docs/guides.md` / `docs/reference/cli.md` の MCP 言及を除く。本ファイルの Resources / Tools 並行公開、SDK 採用理由、死荷重受容、AI へのコンテキスト提供の各節は削除時に一緒に落ちる
+
+#### README.md の文面
+
+生成物の案。題はディレクトリ名で、`my-project` は `mood init my-project` の例:
+
+```markdown
+# my-project
+
+A source-based database managed by [Another Mood](https://github.com/watanabe-kf1983/another-mood):
+the YAML and Markdown files here are the sources, and `mood build` turns them into
+Markdown and HTML pages that stay in sync with each other.
+
+    uv tool install another-mood    # or: pipx install another-mood
+    mood build <path to this directory>
+
+`mood --help` lists the commands. `mood docs list` and `mood docs read <uri>` open the bundled manual.
+```
+
+三段構成で、各段が導線の一歩に対応する: 何者か（とリンク）、入手と最初の一手、`mood` を知った人がたどる鎖の入口。`mood build` の引数を `<path to this directory>` と読者に委ねるのは、中に入って `.` を渡す使い方と、親から `mood build dev-docs` と打つ使い方が両方あり、README の位置からは読者の cwd が分からないため。
+
+#### README.md 生成の規則
+
+- **既に README.md があれば書かない**。clone 直後のリポジトリ（`.git` と README.md がある）に init するケースは保証済みで、既存の README.md は残す。`sbdb.yaml` は既存プロジェクトの検出（`verify_absent`）に守られて常に書けるが、README.md はプロジェクトの有無と独立に存在しうるので、ここだけ規則が違う
+- **書くのはプロジェクトディレクトリ直下まで**。repo 根の README や DEVELOPMENT.md に「`dev-docs/` は mood で管理する」と書くのは持ち主の仕事（プロジェクト固有の運用）で、ツールは触らない
+- **既存プロジェクトには届かない**。docs からコピーすれば済むので、独立コマンドは作らない
+- 実装細部: リンク先 URL はパッケージメタデータの `Homepage` から引けば `pyproject.toml` との二重管理を避けられる。直書きとの選択は実装時に判断
 
 #### 波及
 
-- `docs/guides.md` の Quick Start にあるディレクトリ木と、`docs/reference/cli.md` の `init` / `blueprint apply` の説明に README.md を足す
-- help 文中の「(also exposed via MCP)」は 5 で落ちる
-- 既存のsbdb プロジェクトには README.md は届かない。3 の docs ページからコピーすれば済むので、独立コマンドは急がない
-- `mood init` の冪等性: 既に README.md があるときの扱い（上書きしない）を `sbdb.yaml` と揃える
-- `docs/index.md` と `docs/catalog.yaml` の `mcp.md` のタイトル・要約を改題に合わせる
+- `docs/reference/cli.md` の `init` / `blueprint apply` の説明に README.md の生成を足す。「README.md 等は触らない」の一文は「無ければ生成、あれば触らない」に書き換える
+- `docs/guides.md` の Quick Start にあるディレクトリ木に README.md を載せるかは保留。木は sbdb が入力として必要とするファイルの一覧であり、README.md は入力ではない。生成物の中身を見てから判断する
+- help 文中の「(also exposed via MCP)」、dev-docs の documentation.md にある「`docs/catalog.yaml` — MCP 公開対象のカタログ」の表現は 4 で落ちる
+- tasks.yaml の J6 の題と注記は本節に合わせる

@@ -283,6 +283,7 @@ categories:
           別名スロットのドットを入れ子として解釈し、view 出力からドット入りキーを
           排する。直列化カタログのドットが必ず入れ子を意味するようになり、カタログ
           だけから JSON の形が復元可能になる (J5 の前提)。E13 / M14 / M15 が前提。
+          select / flatten は #459 で済み、join / grouped が残る。
         proposal: 20-design/60-composer/10-query-dsl-spec#ドット名の意味論統一-e14
         phase: 18
       E15:
@@ -442,12 +443,12 @@ categories:
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
       J6:
-        title: エージェント導線の instructions 経路への移行 (MCP の降格・削除候補化)
+        title: プロジェクトディレクトリの自己記述 (README.md 生成) と MCP の削除候補化
         note: >-
-          --help の作業ループ指し + init の README.md 生成 + docs/mcp.md 改題を先行。
+          --help の作業ループ指し + init の README.md 生成 + 自リポジトリの MCP 登録解除を先行。
           mood-mcp の削除は別 PR (breaking)。
         phase: 17
-        proposal: 20-design/25-entrypoints/20-mcp-design#エージェント導線の-instructions-経路への移行-j6
+        proposal: 20-design/25-entrypoints/20-mcp-design#プロジェクトディレクトリの自己記述と-mcp-の削除候補化-j6
 
   L:
     title: dog-fooding
