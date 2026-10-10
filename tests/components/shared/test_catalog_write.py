@@ -286,7 +286,7 @@ class TestPlaceIntoAnExistingRow:
                     write("v", "a.target.v", source="a"),
                     write("d", "a.target.d", source="x"),
                 ],
-                "a?.v? a?.target.q? a?.target.v? a?.target.d?",
+                "a?.v? a?.target.q? a?.target.v? a?.target.d? x?",
                 id="two writes merging into an object that was there",
             ),
         ],
