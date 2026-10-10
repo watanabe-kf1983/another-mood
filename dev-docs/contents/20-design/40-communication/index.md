@@ -1,25 +1,32 @@
-# Component Communication
+# Inter-Stage Communication
 
-コンポーネントはパイプライン各段の結果をファイルとして受け渡すことで連携する。ファイル経由ゆえに各段を目視確認でき、コンポーネントが疎結合になり、`rm -rf .another-mood/` でクリーンビルドできる。本章は通信の**総論** — ファイルをどう運ぶか（運搬機構）と、失敗をどう伝えるか（エラー伝播）— を扱う。通信されるデータクラスの**各論**は [JSON データモデル](10-json-data-model.md) / [blob](30-blob-spec.md)。
+ステージ間の受け渡し（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み)）の総論。出力ディレクトリをどう下流へ運ぶか（運搬機構）と、失敗をどう下流へ伝えるか（エラー伝播）を扱う。流れるデータの形は [JSON データモデル](10-json-data-model.md)。
 
 ## Internal Design
 
-### 運搬機構: workspace の write-once 不変条件と hardlink
+### 運搬機構
 
-> **[W4 dup]** ↔ shared/transfer.py:1-29 module docstring + link_or_copy、dir_lock.py:17-18,60,107 (a, 完全: 定義・unlink→再作成・突き破りの理由・fallback・同一 FS)。ソースへの hardlink 禁止理由は 30-blob-spec:40-42 と content_normalizer.py:102-103 にもあり三箇所。不変条件+機構。案?: 不変条件と「全ファイル対象にした理由」は design が正本→残し、transfer.py docstring を縮める。hop の機構 (unlink→link→copy2) は削除→コード
+workspace は、一回の実行でステージの出力ディレクトリが並ぶ作業ディレクトリ（利用者設定では `tmp_dir`、コードでは `Workspace.root`）。[ステージ構成](../30-pipeline.md#ステージ構成) の Output がその中身。
 
-不変条件: **workspace 内の全ファイルは write-once** — 既存ファイルへの in-place 書き込みは禁止し、置換は必ず unlink → 再作成で行う。
+#### ステージ間の受け渡しは hardlink
 
-この一枚岩の不変条件が、workspace 内のファイル受け渡しを **hardlink** で行うことを安全にする。ステージ間・ステージ内の hop はコピーせず hardlink で運び（`transfer.link_or_copy`: dst があれば unlink → `os.link` → 別 FS・非対応 FS では `copy2` フォールバック）、実バイトコピーは contents → workspace の境界 1 回に絞れる。in-place 書き込みを許すと、inode を共有する全ディレクトリ（公開済み出力を含む）を突き破って書き換えてしまい、かつそこに watcher の event も飛ばないため、write-once が hardlink 運搬の前提になる。
+ステージ間・ステージ内の受け渡しは、ファイルをコピーせず **hardlink** で運ぶ。受け渡しはディレクトリの写しで行うので、コピーで運ぶと一つのファイルが hop の数だけ複製されるため（[背景](../../90-appendix/20-design/40-communication/index.md#ステージ間の受け渡しを-hardlink-にした理由)）。実バイトのコピーは contents → workspace の境界の 1 回だけになり、以降の hop はすべて同じ inode を共有する。hardlink が張れない場合（別 FS をまたぐ、exFAT の外付けや SMB 共有など非対応の FS）はコピーに自動フォールバックし、[製品の動作環境](../../10-background/10-product.md#what) (Linux / macOS / Windows) を崩さない（`transfer.link_or_copy`）。
 
-- blob 限定でなく **全ファイル** を hardlink 対象にする。blob 判定述語をツリーの根ごとに持つと誤判定が即 inode 共有事故になるため、「全ファイル write-once」の一枚岩へ単純化した。`link_or_copy` の「dst があれば unlink」がこの不変条件の中央実装。
-- `os.link` の成立条件として、各ステージの temp を出力と同一 FS に置く（`dir_lock` の `mkdtemp`）。
-- cross-platform: hardlink が張れない環境（別 FS・Windows・非対応 FS）では `copy2` に自動フォールバックするので、[製品の動作環境](../../10-background/10-product.md#what) (Linux / macOS / Windows) を崩さない。
+#### ゆえに各ステージは write-once
 
-実装と根拠の詳細は `transfer.py` / `dir_lock.py` の module docstring。データクラス別の運搬（blob の境界コピー・前回出力からの増分再利用）は [blob](30-blob-spec.md) の各論。
+hardlink は inode を共有するので、どこかのステージが既存ファイルに in-place で書き込むと、同じ inode を持つ全ディレクトリ（公開済み出力を含む）を突き破って書き換わり、しかもそこに watcher の event は飛ばない。そこで **各ステージに write-once を課す**: workspace 内の既存ファイルに書き込んではならず、置換は必ず unlink → 再作成で行う。ステージを構成するコンポーネントもアダプタ（Hugo 準備等）もこの制約の下にあり、実際のパイプラインを二周させて全ステージを検査する（`tests/pipeline/test_write_once_sweep.py`）。この制約が hardlink 運搬を安全にする。利用者のソース（contents）はこの制約の外にあるので、境界では hardlink せず実コピーする。blob はこの境界コピーも、前回出力と size + mtime が一致すればそこからの hardlink で済ませる（`content_normalizer.py` の `_mirror_blob_bytes` / `_reuse_unchanged`）。
+
+#### 範囲と成立条件
+
+- [blob](../50-normalizer/27-blob-spec.md) 限定でなく **全ファイル** を hardlink 対象にする。blob 判定述語をツリーの根ごとに持つと誤判定が即 inode 共有事故になるため、「全ファイル write-once」の一枚岩へ単純化した。
+- `os.link` が成立するように、各ステージの temp を出力と同一 FS に置く（`dir_lock` の `mkdtemp`）。
+
+#### 出力ディレクトリの更新は原子的
+
+ディレクトリ単位では、各ステージの出力ディレクトリの更新は原子的で、途中状態は下流に見えない（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み) が前提にする不変条件）。実装は `dir_lock` の `exclusive_write`（temp に書いて lock 下で出力へ同期）と `exclusive_read`（lock 下で上流の時点コピーを取る）。
+
+実装と根拠の詳細は `transfer.py` / `dir_lock.py` の module docstring。
 
 ### エラー伝播: BuildReport
 
-> **[W4 dup]** ↔ 10-architecture:46-47、70-generator/10-generator.md Reconcile 節 (c, 完全。ポインタを置きつつ論拠を全部再掲)。案: generator.md を正本、ここは一文+ポインタ
-
-各ステージのエラーは即座に停止させず、`BuildReport` として upstream から下流へ伝播させる。最終出力は **reconcile** ステージが「Generator の出力（あるべき姿）」と「伝播してきた BuildReport（実際に起きたこと）」を突き合わせて確定する — エラー無しは pass-through、エラー有りはビルド失敗ページへ差し替え。これにより下流（site / publish）は reconcile 出力の単一視点だけを持てばよく、正常時・エラー時の分岐を知らずに済む。ステージ挙動の詳細は [generator.md の Reconcile 節](../70-generator/10-generator.md#reconcile)。
+コンポーネント共通の基盤が例外から作る `BuildReport`（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み)）は、各ステージの出力ディレクトリの `reports/` に置かれ、成果物の `data/` と並ぶ。下流は上流の `reports/` を集めてから本体を走らせ、失敗があれば本体を飛ばして報告だけを自分の `reports/` へ引き継ぐ。

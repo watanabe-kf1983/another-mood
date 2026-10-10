@@ -70,7 +70,7 @@ relink は author が明示的に書く (`{{ prose.content | relink }}`) のを�
 
 ### Reconcile
 
-> **[W4 dup]** ↔ 40-communication/index.md:21 (c, ほぼ同文)、10-architecture:46-47 (c)、generator.py:84-100 (a)、30-template-spec:49、40-paging:44,49 (c) — 完全。案: ここを正本、communication/index 側をポインタ化。末尾順序の理由は残す
+> **[W4 dup]** ↔ 40-communication/index.md:21 (c, ほぼ同文)、10-architecture:46-47 (c)、generator.py:84-100 (a)、30-template-spec:49、40-paging:44,49 (c) — 完全。案: ここを正本、communication/index 側をポインタ化（index 側は W4 で処理済み）。末尾順序の理由は残す
 
 Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
 

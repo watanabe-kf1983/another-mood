@@ -392,7 +392,7 @@ categories:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
-    spec: 20-design/40-communication/30-blob-spec
+    spec: 20-design/50-normalizer/27-blob-spec
     tasks:
       H1:
         title: 仕様確定

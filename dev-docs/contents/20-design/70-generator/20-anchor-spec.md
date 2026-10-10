@@ -162,7 +162,7 @@ class はアンカーパスの構築には登場しない。
 
 > **[W4 dup]** ↔ data_tree.py:259-266、edition.py:76-80、md.py:227-238 (#page=3 まで) (a)、30-blob-spec:26-28 (c)、template.md:80,203、schema.md:292 (b) — 完全。案: 削除→docs/コード (ポインタ)
 
-blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[blob-spec.md](../40-communication/30-blob-spec.md#出力配置-アンカーパス--出力アドレス) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
+blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[blob-spec.md](../50-normalizer/27-blob-spec.md#出力配置-アンカーパス--出力アドレス) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
 
 - **path 部**: source ページから `blob/<id>`（＝ anchor_path の先頭 `/` を落としたファイルパス）への相対パス。`node_map` のキー一致でノードを引く点は他ノードと共通だが、URL 化の起点が `page_path`（分割 `.md` ページ）でなくファイルパスになる
 - **fragment 部**: 付けない。blob は着地点 `<a id>` を持たず（[アンカーの発行](#アンカーの発行)は主題ノードのみ・見出しは native）、fragment に anchor_path を乗せる一般則は blob には適用しない

@@ -26,4 +26,4 @@ id は `contents_dir` からの相対パス（拡張子なし）そのもの。�
 
 ### `mime_type` — `text/markdown`
 
-blob と同じ位置に持ち、body で包まない（[blob のレコード形状](../40-communication/30-blob-spec.md#レコード形状の判断)）。
+blob と同じ位置に持ち、body で包まない（[blob のレコード形状](27-blob-spec.md#レコード形状の判断)）。

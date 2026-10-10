@@ -202,6 +202,8 @@ def render_edition(
 
 def _copy_blobs(node_map: Mapping[str, Node], blobs_dir: Path, root: Path) -> None:
     """Mirror each blob's bytes from ``blobs_dir`` to ``root/blob/<id>``."""
+    # Editions are generate's own concept, so the per-edition mirror lives
+    # here rather than one stage upstream.
     for path, node in node_map.items():
         if path.startswith(_BLOB_NAMESPACE):
             src = blobs_dir / cast(str, cast(MappingNode, node)["id"])

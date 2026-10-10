@@ -17,7 +17,7 @@ prose 本文中の相対リンクを `node:` アンカーパス記法（イン�
 変換対象は **contents 内に解決する相対リンク**。ターゲットの拡張子で行き先が分かれる:
 
 - **`.md` → prose**: `[t](rel.md)` → `node:/prose/<解決後 id>`、`[t](rel.md#見出し-slug)` → `node:/prose/<解決後 id>#見出し-slug`（`#fragment` は著者が書いた slug を **素通し** — 再 slug・encode しない。ページ内見出しを指し、対象 prose に無ければ relink が解決失敗として可視化する（[anchor-spec.md の未解決参照の扱い](../70-generator/20-anchor-spec.md#未解決参照の扱い)））
-- **`.md` 以外 → [blob](../40-communication/30-blob-spec.md)**: `![]()` 画像・`[]()` リンクとも `node:/blob/<id>` へ（id は拡張子込み）。prose のリンク正規化機構への相乗り
+- **`.md` 以外 → [blob](27-blob-spec.md)**: `![]()` 画像・`[]()` リンクとも `node:/blob/<id>` へ（id は拡張子込み）。prose のリンク正規化機構への相乗り
 - 次は **verbatim**（非変換）: 純 `#frag`（同一ページ参照）／ contents 外への脱出（`../` 突き抜け）／スキーム付き（`http:` `node:` `mailto:` 等）／絶対パス（先頭 `/`）／コード（fence・inline）内のリンク
 
 #### 例
