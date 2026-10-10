@@ -1,6 +1,6 @@
-# プロジェクト構成 (appendix)
+# 利用者プロジェクト (appendix)
 
-[プロジェクト構成](../../../20-design/20-app/10-project-structure.md) の背景。
+[利用者プロジェクト](../../../20-design/20-app/10-user-project.md) の背景。
 
 ## MS-Access アナロジー
 
