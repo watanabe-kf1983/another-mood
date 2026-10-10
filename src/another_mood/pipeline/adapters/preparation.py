@@ -74,6 +74,8 @@ def sync(
 def _sync_blobs(src_dir: Path, out_dir: Path) -> None:
     """Mirror blobs verbatim to the static mount, cleared and refilled each run
     (files only, not the dir — rmtree would break Hugo's watch)."""
+    # Blobs leave the content tree because Hugo reads any .html under
+    # content/ as a page source and fails the whole build on it.
     with dir_lock(out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         for stale in _collect_files(out_dir):

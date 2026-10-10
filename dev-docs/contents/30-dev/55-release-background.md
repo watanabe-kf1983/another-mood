@@ -1,5 +1,9 @@
 # リリースフローの設計背景
 
+> **[W4 dup]** 内部重複 (24-29 ↔ 123-129、96-98 ↔ 172-173)、50-release との同文 (3-5 ↔ 20-23、82-83 ↔ 170)、PR テンプレ記述 (61-62) が古い。案: appendix へ移すときに内部重複と 50-release 同文を削る
+
+> **[W4 → appendix]** (ファイル丸ごと → 90-appendix/30-dev/50-release.md)
+
 [リリースフロー](50-release.md)の規律を確定した検討のうち、
 維持価値のある設計判断の記録。
 
@@ -13,7 +17,7 @@
   （= 破壊的変更を越えて上がれない利用者）はローンチ前にはほぼ定義上存在しない。
   規律が払えないコストになったときの構造的解は Git Flow ではなく、sbdb_version
   対応集合の複数世代並行サポート
-  （[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) に YAGNI として
+  （[sbdb-manifest](node:/prose/20-design/20-sbdb-project/20-sbdb-manifest) に YAGNI として
   保留済み）
 - **二相構造「PR が置き、リリースが消化する」**: リリースに要る判断と記述はすべて、
   文脈が最も新鮮な PR 時点で置く。リリース時はその消化だけで、判断も、コミットも、
@@ -53,6 +57,8 @@ lint に建てなかった装置と、建てる契機:
 - **差分ハーネス**（merge-base 時点の showcase + dev-docs ソースに旧新両版の mood を
   かけ、出力 diff を Warn として PR に提示）— 外部コントリビュータを受け入れて
   全 diff を精読しなくなったとき、または最初の silent 破損事故が起きたとき
+
+> **[W4 fix]** 不整合: 「.github/pull_request_template.md は docs 同期のチェックリスト」は古い。実物は Summary / Test plan の 2 節のみ
 
 ゲート検討時に退けた候補: PR テンプレの自己申告（全 PR に発火して precision が低く、
 `gh pr create --body` はテンプレを適用しない。外部コントリビュータ向けの面として

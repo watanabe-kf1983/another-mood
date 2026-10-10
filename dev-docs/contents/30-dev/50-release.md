@@ -7,6 +7,8 @@
 
 ## バージョニング
 
+> **[W4 dup]** tag 導出 ↔ release.yml:30-31、各 yml 同文コメント (部分)。tag 形 ↔ release.yml:4-6、pyproject.toml:45-50 (完全、pyproject が詳しい)。破壊の定義 ↔ 60-sbdb-manifest:188-200、DEVELOPMENT.md:117、compose_pr_notice.py:77-82 (完全)。案?: 破壊の定義は release.md が正本で他をポインタ化。 → sbdb-manifest 側は対応済み (ポインタ化)。tag 形の理由は pyproject コメントが正本→縮める
+
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
   導出する。bump コミットという工程はない
 - リリース tag は `vN.N.N` 形（ハイフンを含まない）。リリースワークフローの発火条件と
@@ -15,7 +17,7 @@
 - リリースの役割は三値——破壊 / 互換・機能 / 互換・修正。破壊は二種の総称:
     - **フォーマット破壊** — サポート世代の脱落（old_supported − new_supported ≠ ∅。
       世代の**追加**自体は破壊ではない。世代運用は
-      [sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) の管轄）
+      [sbdb-manifest](node:/prose/20-design/20-sbdb-project/20-sbdb-manifest) の管轄）
     - **ツール破壊** — CLI 等、ツールの利用者向け契約の破壊
 - 役割から版番号の桁への写像。桁の対応はこの表だけが持ち、他の記述は役割語で書く:
 
@@ -33,6 +35,8 @@
   cherry-pick する（`git switch -c release-0.X v0.X.Y`）
 
 ## PR 側の規律
+
+> **[W4 dup]** ↔ DEVELOPMENT.md:109-115 (b, ほぼ同文)。feature/fix 規準 ↔ compose_pr_notice.py:106-125、30-template-spec:61 (完全)。行頭の理由 ↔ check_release_trailer.py:8-12 (部分)。案: dev が正本、DEVELOPMENT.md を要約に縮める。スクリプトの通知文は利用者向け英文なので別物→残す
 
 PR タイトルにタスク ID 等の内部語彙は書かない。タイトルは自動生成の台帳にそのまま
 載り、`## Release highlight` セクションを持たない PR ではハイライトの見出しも務める
@@ -59,18 +63,23 @@ PR タイトルにタスク ID 等の内部語彙は書かない。タイトル�
 
 ### 破壊的 PR の義務
 
+> **[W4 dup]** ↔ 60-sbdb-manifest:203-207 (c)、compose_pr_notice.py:79-81 (部分)。案: sbdb-manifest 側をポインタ化 → sbdb-manifest 側は対応済み (ポインタ化。追随一式の中身はこちらの第 1 項へ移した)
+
 破壊的 PR（フォーマット破壊・ツール破壊とも）は、以下をすべて自身に含める。
 トレーラーと `## Release highlight` セクションだけが PR 本文に書かれ、他はレビュー
 対象のリポジトリ内容:
 
 1. **移行手順ほか（フォーマット破壊のみ）** — 利用者向けの移行手順を docs に書く
    （正本はリリースノートではなく docs。置き場所は最初の破壊的変更時に確定）。
-   および世代番号まわりの追随一式
-   （[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) の管轄）
+   および世代番号まわりの追随一式——コードの対応集合・scaffold 生成物・
+   showcase / dev-docs のマニフェスト。更新漏れは、ビルドとテストが世代番号に
+   張り付いているため既存 CI が落とす
 2. **`Release-Highlight: breaking` トレーラーと `## Release highlight` セクション** —
    上記書式で PR 本文に。セクションには移行の要約と docs の移行手順へのポインタ
 
 ### lint による自動検査
+
+> **[W4 dup]** ↔ pr-lint.yml:3-5,27-29,49-50、compose_pr_notice.py:10-14 (a)、55-release-background:36-39 (c) — 完全。案?: 手順の記述は dev、設計理由は yml コメントか appendix に一本化
 
 PR を開く・再開する・本文を編集する・push する、のいずれでも `PR lint` ワークフローが
 走り、上の規律のうち機械で決まる部分だけを見る。既存シグナル同士の突き合わせに徹し、「内容が破壊的かどうか」の
@@ -78,6 +87,8 @@ PR を開く・再開する・本文を編集する・push する、のいずれ
 噛み合わせは非ブロックの sticky コメントで注意喚起。
 
 ## リリース手順
+
+> **[W4 dup]** ↔ 55-release-background:170,96-98,148-151,112 (c)、release.yml:51-54,83-85、pyproject.toml:59-62 (glob 三箇所) (a) — 部分〜完全。案: 残す (手順の正本)。55 側の重複は appendix 移動時に削る
 
 役割によらず単一。main へのコミットはない。5 分で回る軽さを目標とする。
 手で入れる値は次版番号ただ一つで、前回 tag は導出する（打ち間違いの余地を残さない）。

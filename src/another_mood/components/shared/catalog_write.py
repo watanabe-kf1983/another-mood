@@ -94,8 +94,10 @@ def swap(node: dc.Node, path: KeyPath, branch: dc.Branch) -> dc.Node:
 def place(node: dc.Node, placements: Sequence[Placement]) -> dc.Node:
     """``node`` with each branch at its path: objects on the way kept
     where the node has them, made up where not, new children last in
-    the order first written to.  The paths must be clear of the node's
-    :func:`names` (see :func:`overlaps`)."""
+    the order first written to.  An object kept is made up as well on
+    the rows of a write that lacked it, so what it held may turn
+    optional.  The paths must be clear of the node's :func:`names` (see
+    :func:`overlaps`)."""
     # The node is the row itself, on every row.
     return _place(node, placements, at=(), holder_sources=[()])
 
@@ -114,19 +116,8 @@ def _place(
     def toward(head: str) -> Sequence[Placement]:
         return [p for p in placements if p.path[0] == head]
 
-    # An object already there holds what it held, on the rows it was:
-    # its holder's when required, its own path's when not.  The paths
-    # go on under it, since one ending there would be a name it holds.
     kept = [
-        (
-            edge,
-            _place(
-                child,
-                [replace(p, path=p.path[1:]) for p in toward(edge.name)],
-                at=(*at, edge.name),
-                holder_sources=holder_sources if edge.required else [(*at, edge.name)],
-            ),
-        )
+        _into(edge, child, toward(edge.name), at=at, holder_sources=holder_sources)
         if edge.name in heads
         else (edge, child)
         for edge, child in node.children
@@ -137,6 +128,33 @@ def _place(
         if not node.has_child(head)
     ]
     return replace(node, children=[*kept, *made])
+
+
+def _into(
+    edge: dc.Edge,
+    child: dc.Node,
+    placements: Sequence[Placement],
+    *,
+    at: KeyPath,
+    holder_sources: Sequence[KeyPath],
+) -> dc.Branch:
+    """An object already there, with the placements going on under it.
+    A write on rows it was not on makes it up there too."""
+    # On its holder's rows when required, its own path's when not.
+    rows = holder_sources if edge.required else [(*at, edge.name)]
+    sources = [p.source for p in placements]
+    union = [*rows, *sources]
+    if not _covers(rows, sources):
+        # Where it is made up it holds only what is written there.
+        held = [(replace(e, required=False), c) for e, c in child.children]
+        child = replace(child, children=held)
+    below = _place(
+        child,
+        [replace(p, path=p.path[1:]) for p in placements],
+        at=(*at, edge.name),
+        holder_sources=union,
+    )
+    return replace(edge, required=_covers(union, holder_sources)), below
 
 
 def _child(
@@ -150,13 +168,8 @@ def _child(
     name: the branch itself when one ends here, else an object."""
     sources = [p.source for p in placements]
     # The child is on the rows its placements are; it is required when
-    # that covers every row the holder is on.  The catalog says no more
-    # about rows than which paths they hold, so two unrelated sources
-    # never cover a third between them.
-    required = all(
-        any(_rows_within(holder, source) for source in sources)
-        for holder in holder_sources
-    )
+    # that covers every row the holder is on.
+    required = _covers(sources, holder_sources)
     if len(placements) == 1 and len(placements[0].path) == 1:
         edge, node = placements[0].branch
         return replace(edge, name=name, required=required), node
@@ -176,6 +189,14 @@ def _child(
 
 def _without_child(node: dc.Node, name: str) -> dc.Node:
     return replace(node, children=[(e, c) for e, c in node.children if e.name != name])
+
+
+def _covers(sources: Sequence[KeyPath], rows: Sequence[KeyPath]) -> bool:
+    """Whether every row holding one of ``rows`` holds one of
+    ``sources``.  Each row path must be within a single source: the
+    catalog cannot tell whether two unrelated sources together cover a
+    third."""
+    return all(any(_rows_within(row, source) for source in sources) for row in rows)
 
 
 def _rows_within(a: KeyPath, b: KeyPath) -> bool:

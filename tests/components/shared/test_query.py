@@ -331,7 +331,9 @@ class TestFlattenDeriveLanding:
     element is.  With ``preserve_empty: false`` every remaining row has
     one; with ``true`` only the rows that had an element do, so a
     made-up object is optional and the element is optional inside an
-    object that was already there."""
+    object that was already there.  An object that was there on some
+    rows only is made up on the others that get an element, so what it
+    held before is optional inside it."""
 
     @pytest.mark.parametrize(
         ("base", "flatten", "expected"),
@@ -360,16 +362,21 @@ class TestFlattenDeriveLanding:
                 "id hobby.level hobby.task",
                 id="into an object on every row",
             ),
+            # The rows that lack ``hobby`` get a made-up one holding only
+            # the element, so ``hobby`` is on every row and ``level`` is
+            # not in every ``hobby``.
             pytest.param(
                 "id hobby?.level tasks[]",
                 Flatten(of=("tasks",), as_=("hobby", "task")),
-                "id hobby?.level hobby?.task",
+                "id hobby.level? hobby.task",
                 id="into an object on some rows",
             ),
+            # A row with neither ``hobby`` nor an element stays as it
+            # was, so ``hobby`` is still on some rows only.
             pytest.param(
                 "id hobby?.level tasks[]",
                 Flatten(of=("tasks",), as_=("hobby", "task"), preserve_empty=True),
-                "id hobby?.level hobby?.task?",
+                "id hobby?.level? hobby?.task?",
                 id="into an object on some rows, rows kept",
             ),
             pytest.param(
@@ -456,10 +463,11 @@ class TestFlattenDeriveLanding:
 
 
 class TestFlattenDeriveRequired:
-    """Flatten adds nothing to a row.  With ``preserve_empty: false`` it
-    drops the rows that have no element; with ``true`` it keeps every
-    row as it is.  Either way, an object on the way to the array holds
-    what it held before, so ``level`` stays required under ``hobby``.
+    """Flatten adds nothing to the objects on the way to the array.
+    With ``preserve_empty: false`` it drops the rows that have no
+    element; with ``true`` it keeps every row as it is.  Either way,
+    such an object holds what it held before, so ``level`` stays
+    required under ``hobby``.
 
     The input has ``hobby`` on some rows only, and each row's ``hobby``
     holds ``level`` and the array ``pets``."""
