@@ -275,7 +275,7 @@ Everything injected this way is listed on the build's colophon page at `output/_
 
 ## Configuration overrides
 
-[Keys and defaults](#keys-and-defaults) below lists what is configurable, with the environment variable and the command-line option that override each.
+[Keys and defaults](#keys-and-defaults) below lists what is configurable, with the environment variable and the command-line option that override each. Where both are given, the command-line option wins over the environment variable.
 
 ### Environment variables (`MOOD_*`)
 

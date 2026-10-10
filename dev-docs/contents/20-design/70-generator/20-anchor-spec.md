@@ -1,6 +1,6 @@
 # Anchor Specification
 
-データツリー上のノードの識別とリンク解決の仕様。ノードを一意に指す文字列を **アンカーパス** と呼ぶ。
+データツリー上のノードの識別とリンク解決の仕様。ノードを一意に指す文字列を **アンカーパス** と呼ぶ。本ツールが対象とする文書ではページ間・項目間の相互リンクが多く、すべてのデータにアンカーパスを付与することでそれを安定して供給する。
 
 ## External Design
 
@@ -10,6 +10,8 @@
 - **アンカーパス (anchor path)**: そのノードを一意に識別する文字列（データツリー上の住所）。本ツールが生成する。URL fragment として URL に埋め込まれる
 - **アンカー (anchor)**: HTML/Markdown の anchor target（`<a id="…">`）。リンクを受け止めるページ上の標識で、id にはアンカーパスを使う。render が描画ノード（主題）に自動で刻むほか、`node | anchor` フィルタで手置きもできる（[アンカーの発行](#アンカーの発行) 参照）
 
+> **[W4 → appendix]** (この引用段落)
+
 > **背景: なぜリゾルバを `node()` と呼ぶか.** `link` / `label` / `href` は「ノードを受けて、そのノードの何かを描画する」フィルタ族で、アンカーターゲット (`<a id>`) を描画するフィルタの自然な名前は `data | anchor` — `<a id>` / `<a href>` の両面が `anchor` / `href` という対の名前で揃う。そこで anchor の語は HTML 本来の意味（受け側の標識）に予約し、リゾルバは「アンカーパスを解決して得られるもの」の名 — ノード — で `node()` とした。node / data tree は利用者向けリファレンス (`docs/reference/template.md` の Anchor paths 節) が先行して採用していた語彙でもある。
 
 ### ID 体系
@@ -17,6 +19,8 @@
 アンカーパスは **データツリー上のパス** を `/` 区切りで表現した文字列。root を `/` とする **絶対パス形式**で、先頭の `/` が「データツリー root を起点とする絶対座標」であることを示す（相対参照と区別される）。
 
 #### セグメント構成
+
+> **[W4 dup]** ↔ data_tree.py:32-38,121-125,304-311,409-423、data_id_validator.py:40-41 (a)、template.md:84 (b) — 完全。約束。案?: 構成規則は削除→docs。「id 無しは住所を持たない」は不変条件→残す
 
 データツリーを root から目的のノードまで辿り、各ステップを 1 セグメントとして書き出す:
 
@@ -27,6 +31,8 @@
 
 #### 一意性
 
+> **[W4 dup]** ↔ data_id_validator.py:1-22、content_normalizer.py:8、template_engine.py PageCollisionError (a)、10-normalizer:66 (c)、template.md:122 (b) — 完全。案?: 不変条件と「検出は identity 消費時点まで遅らせる」判断は design→残し、コード側 docstring を縮める。view の論証は appendix
+
 アンカーパスの一意性は **`id` の一意性に依存する**。同じ親の下に同じ id のレコードが 2 件あれば、両者のアンカーパスは文字列として一致し、[リンクの解決](#リンクの解決と着地)は片方にしか到達できない。
 
 entity のデータについては、これを崩す入力を preprocess で検出できる。`content_normalizer` が全ソースの合流後に兄弟集合ごとの id 重複を検査し、見つかれば build を止める（合流後に見るのは、単体では妥当な 2 ファイルが合流して初めて衝突が生じるため）。一意性の単位が entity 全体ではなく兄弟集合なのは、上のセグメント構成のとおりアドレスが親のパスから合成されるからで、別の親の下の同じ id は別のノードを指す。
@@ -34,6 +40,10 @@ entity のデータについては、これを崩す入力を preprocess で検�
 view については一意性を保証できず、保証を強制すべきでもない。`flatten` は 1 行を N 行に割るので、親の id を `select` に残せば必ず重複する（`showcase/music` の `artist_album_pairs` が意図された用法のままこの形になる）。一方 1:1 射影の view は正当なアンカーパスを持つため、view 単位でも判別できない。したがって検出は identity が実際に消費される時点まで遅らせ、**ページ主語として描画されたときに出力パスの衝突（`PageCollisionError`）としてのみエラーにする**。inline に描かれた重複はノードマップの後勝ちのまま検出されない。
 
 #### Escape 規則
+
+> **[W4 dup]** ↔ url.py:176-211 (ucschar 表・片道・%25) (a)、template.md:91,306 (b)、40-paging:13 (FS エッジ同文) (c) — 完全。案?: 精密規則→appendix、ucschar 表はコードが持ち appendix からポインタ。40-paging の同文はポインタ化
+
+> **[W4 → appendix?]** 推奨: 移す (精密な規則。引用「なぜ IRI 形か」と ucschar レンジを含む)
 
 アンカーパスは **IRI**（RFC 3987）として扱う。URL fragment / パスとして使う以上 `/` を区切りに予約するため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**（組み込みの `prose` / `blob` は例外、下記）。
 
@@ -48,7 +58,7 @@ view については一意性を保証できず、保証を強制すべきでも
 
 なお id value（データ側セグメント）は無制約だが、attr name（構造側セグメント）はスキーマの `^[\p{L}_][\p{L}\p{M}\p{N}_]*$` で識別子状に制約済みで、ucschar/unreserved を素通りする。
 
-> **背景: なぜ IRI 形か.** エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
+> **背景: なぜ IRI 形か.** エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK のsbdb プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
 
 escape 規則は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**（パス長超過・Windows 予約名）はエスケープとは別に、パス書き出し側で対処する。
 
@@ -62,18 +72,22 @@ A0–D7FF, F900–FDCF, FDF0–FFEF,
 
 #### Prose の例外
 
+> **[W4 dup]** ↔ data_tree.py:250-289,365-374、md.py:224-226 (a)、template.md:93,308、schema.md:269 (b)、30-markdown-parser:35,65、30-blob-spec:21 (c) — 完全。案?: 例外の規則と「一般化しない」判断は design→残し、コード側コメントを縮める。差分の理由は appendix
+
 **id 内の `/` は素通し** — 組み込みの `prose` / `blob` entity に限り、id 内の `/` を escape せずにアンカーパスへそのまま埋め込む。理由:
 
-- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
+- `prose` / `blob` の id は contents/ 内ファイルの相対パスから生成され（prose は拡張子を落とし、blob は残す）、構造的にパス階層を持つ。これを `%2F` でエンコードすると `prose/design%2Farchitecture`・`blob/covers%2Fcover.png` のような可読性の低い文字列になる。加えて、blob 参照は `node:/blob/<id>` の形で相対リンクから導出される（[prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化)）ため、著者が素の `/` で綴る参照とアンカーパスのキーを一致させる必要がある
 - `prose` / `blob` はいずれも flat な配列 entity で sub-entity を持たないため、resolver が `prose/`・`blob/` 以降を「単一の id」として扱えば曖昧性は発生しない
 
 この例外は **組み込みコレクション（`prose` / `blob`）に固有** のものとして明示的に定義する。id 形がシステム側で固定されている（contents 相対パス）ため将来も曖昧性は生じない。一方、`/` を含む任意の id への一般化はしない — 利用者 entity は構造が変わりうるため、その id を素通しにすると将来曖昧性が混入する。
 
-**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[markdown-parser-spec.md の見出し抽出](../50-normalizer/30-markdown-parser-spec.md#見出し抽出)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
+**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[prose-spec.md の headings](../50-normalizer/25-prose-spec.md#headings--リンクの着地点)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
 
 `#` は `/` と同様に raw で挿入する構造的セパレータ。slug は github 互換で `#` を含まず、id 内の `#` は `%23` に escape されるため、anchor_path 中のリテラル `#` は見出し区切りの一個だけ。「`prose/` 以降は単一 id」の前提も、`#` の手前までを単一 id と読み替えることでそのまま保たれ、`/`-曖昧性は生じない。
 
 #### 例
+
+> **[W4 → appendix?]** 推奨: 移す
 
 正規化後の views データ:
 
@@ -98,7 +112,7 @@ erds:                              # 配列 → リスト
 prose:                             # flat list、id はファイル相対パス
   - id: design/architecture
     title: Architecture
-    headings:                      # 本文見出し（markdown-parser-spec.md の見出し抽出）
+    headings:                      # 本文見出し（prose-spec.md の headings）
       - { id: エラー処理, title: エラー処理, level: 2 }
 blob:                              # flat list、id は拡張子込みファイル相対パス
   - id: covers/cover.png
@@ -120,7 +134,9 @@ blob:                              # flat list、id は拡張子込みファイ�
 
 #### クラスとの関係
 
-class（[schema-spec.md](../50-normalizer/20-schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
+> **[W4 dup]** ↔ 20-schema-spec Entity 名、40-meta-documentation (c, 完全)。案: 削除→schema-spec へポインタ (40-meta-documentation 側は削除済み)
+
+class（[schema-spec.md](../45-schema/10-schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
 
 - **class**: schema 上の位置を示す path-based 名（例: `categories.tasks`, `categories.item.tasks.item`）。クエリ DSL の `from:`、paging 設定、FK 解決、表示見出しで参照される
 - **アンカーパス**: データツリー上の実体パス（例: `/categories/web/tasks/foo`）。リンク解決でのみ使われる
@@ -133,6 +149,8 @@ class はアンカーパスの構築には登場しない。
 
 #### 出力 URL の形式
 
+> **[W4 dup]** ↔ data_tree_filters.py:160-171、data_tree.py:129-135、md.py:127-131 (a)、template.md:186,198-206 (b) — 完全。案?: 約束→削除→docs。「送り側と受け側が同じ文字列で両端一致」は不変条件→親節に残す
+
 出力する URL は **対象ページへの相対パス** + URL fragment（blob は例外。[Blob の例外](#blob-の例外ファイルとして解決)）。例: `[ユーザー](../erds/user-management.md#/erds/user-management/entities/user)`。
 
 - **path 部**: source ページから target ページへの相対パス
@@ -142,7 +160,9 @@ class はアンカーパスの構築には登場しない。
 
 #### Blob の例外（ファイルとして解決）
 
-blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[blob-spec.md](../40-communication/30-blob-spec.md#出力配置-アンカーパス--出力アドレス) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
+> **[W4 dup]** ↔ data_tree.py:259-266、edition.py:76-80、md.py:227-238 (#page=3 まで) (a)、30-blob-spec:26-28 (c)、template.md:80,203、schema.md:292 (b) — 完全。案: 削除→docs/コード (ポインタ)
+
+blob ノードは「ページ上に描かれるノード」ではなく **出力ツリー上の実ファイル**（[blob-spec.md](../50-normalizer/27-blob-spec.md#出力配置-アンカーパス--出力アドレス) の出力配置、各 edition ルート直下 `blob/<id>`）。したがってリンク解決も上記のページ+fragment モデルには乗らず、**アンカーパスをそのまま出力ファイルパスとして** source ページから相対解決する:
 
 - **path 部**: source ページから `blob/<id>`（＝ anchor_path の先頭 `/` を落としたファイルパス）への相対パス。`node_map` のキー一致でノードを引く点は他ノードと共通だが、URL 化の起点が `page_path`（分割 `.md` ページ）でなくファイルパスになる
 - **fragment 部**: 付けない。blob は着地点 `<a id>` を持たず（[アンカーの発行](#アンカーの発行)は主題ノードのみ・見出しは native）、fragment に anchor_path を乗せる一般則は blob には適用しない
@@ -150,17 +170,25 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 
 #### アンカーの発行
 
+> **[W4 dup]** ↔ md.py:142-150 stamp_anchor、data_tree.py:139-145,269-275 (a)、template.md:68-74,137,226 (b)、40-paging:25 (c) — 完全。案?: 「render が唯一の経路」「見出しには刻まない」は設計判断→残し、md.py docstring を縮める
+
 一般のノードはページ上のどこに描かれるかをテンプレートしか知らないため、システムが着地点を任意に自動発行することはできない。ただし `render` フィルタ（およびルートテンプレート）は「この主題ノードを今ここに描く」ことを**システムが知っている唯一の経路**である。そこで描画はその主題のアンカー（`<a id="{anchor_path}">`）を出力の冒頭に自動で刻む（インラインはその場・分割/ルートはページ先頭）。これにより two-loop パターン（親が `| link`、子が分割/インライン）が、author の手置きなしに同ページ内 fragment 着地を成立させる。`| anchor`（[リンク記法](#リンク記法)）の手置きは、主題にせず本文で参照するだけのノード（テーブル行・リスト項目等）に着地点を与えるための escape hatch として残る。
 
 **見出しノードには発行しない**。見出しの id は Goldmark/GitHub が native で打つので、システムが刻むと native id と重複 id になる。住み分けは **合成 id（ノード）は刻む／自然 id（見出し）は renderer 任せ** — 自動刻印・`| anchor` とも見出しには何も発行しない（[Prose の例外](#prose-の例外)）。
 
 #### 未解決参照の扱い
 
+> **[W4 dup]** ↔ md.py:164-171,202-206、data_tree_filters.py:9-11,27-29 (a)、template.md 各所 (b)、30-template-spec:23 (c) — 完全。案?: [text] 可視化は約束→削除→docs。「例外を投げない」は設計判断→残す
+
 `node()` の組んだパスがマップに無いとき、解決失敗を `MissingNode`（試行パスを保持）として返す（例外は投げない）。整形側は壊れたリンクを「動くリンクの偽装」にせず、表示テキストを角括弧で囲んだ **`[text]` の形で可視化**する — `link` は表示テキストを `[..]` で囲んでリンク先を付けず、`href` は空文字列を返し、`anchor` は何も発行しない。本文側の `relink` も同形に揃え、ソースの `[text](node:/missing)` からリンク先だけ落として `[text]` を残す（[prose body 処理フィルタ `relink`](#prose-body-処理フィルタ-relink)）。
+
+> **[W4 → appendix]** (この引用段落)
 
 > **背景: 素テキストでなく角括弧を残す.** リンクを外して素テキストにすると解決成功時の通常テキストと見分けがつかず、失敗が出力に埋もれる。`[text]` は対応する参照定義を持たない shortcut reference として CommonMark が角括弧ごとそのまま描画するため、壊れた参照が目立つ。表示テキストは常に残るので author は気づいて直せる。当初は `link` を素テキスト・`relink` を `[text]` と割っていたが、両者を `[text]` に統一した。
 
 ### リンク記法
+
+> **[W4 dup]** ↔ data_tree_filters.py:78-93,143-148、meta_templates.py:104-111 (a)、template.md:296-324,210 (b)、10-generator:23、50-output-format:78 (c) — 完全。案?: 設計判断の箇条 (escape の所在、誤用は例外にしない、fallback 不採用) は残す。各フィルタの挙動は削除→docs/コード。anchor_path 公開を外した経緯は appendix
 
 テンプレートは **ノード** を `node()` で得て、`link` / `label` / `href` / `anchor` で整形する。呼び出しの記法と各フィルタの振る舞いは `docs/reference/template.md` の Linking / Filters / Functions を正本とし、ここには設計判断だけを置く。
 
@@ -171,6 +199,8 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 - **表示テキストは `title` → `name` → `id` → anchor_path 全体のチェイン**。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できないため。
 
 ### Markdown 本文中のアンカー参照
+
+> **[W4 dup]** 変換例 ↔ 30-markdown-parser 例 (c, 同一例)、schema.md:273、template.md:280 (b) — 完全。案: 「二役」は残す。例は 30-markdown-parser を 25-prose-spec に吸収した際にここへ一本化済み (prose-spec の content 節がここを指す)
 
 > テンプレート側のリンク解決・整形フィルタは [リンク記法](#リンク記法) を参照。
 
@@ -185,7 +215,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node(path="/…") | link`（[リンク記法](#リンク記法)）の本文版で、解決後は同じ `[display](URL)` になる
 2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
 
-ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([markdown-parser-spec.md](../50-normalizer/30-markdown-parser-spec.md) 参照):
+ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
@@ -196,6 +226,8 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 #### 見出しへの fragment 参照
 
+> **[W4 dup]** ↔ 30-markdown-parser:17 (c)、md.py:219-226 (a)、template.md:93,316-319 (b) — 完全。案: 削除→docs (ポインタ)
+
 `node:` 記法は見出しを URI の fragment で運ぶ:
 
 ```markdown
@@ -204,9 +236,11 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 
 path 部がページ（prose ノード）を、`#エラー処理` がページ内見出しを指す（[Prose の例外](#prose-の例外)）。`relink` はこの文字列全体を見出しノードとして解決し、[出力 URL の形式](#出力-url-の形式)の fragment 規則で `#エラー処理` を出力 URL に乗せる。見出しが対象 prose に無ければ `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。
 
-ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、Normalizer が `node:` 変換時に透過で運んでこの形を生成する（[markdown-parser-spec.md のリンク正規化](../50-normalizer/30-markdown-parser-spec.md#リンク正規化)）。
+ソース相対リンク `[t](architecture.md#エラー処理)` の `#fragment` は、Normalizer が `node:` 変換時に透過で運んでこの形を生成する（[prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化)）。
 
 #### 対象はインラインリンク形のみ
+
+> **[W4 dup]** 対象範囲 ↔ markdown.py:139-147,193 (a)、template.md:292 (b)、30-markdown-parser:13,19 (c) — 部分。案: 残す (非ゴールの決定と理由)
 
 `[text](node:…)` のインライン形（画像 `![alt](node:…)` を含む）だけを解決する。参照形（`[text][label]` + 別行 `[label]: node:…`）と autolink（`<node:…>`）、title 付き `[text](node:… "title")` は **恒久的に非対応**（後回しの deferral でなく非ゴール）。理由:
 
@@ -216,9 +250,13 @@ path 部がページ（prose ノード）を、`#エラー処理` がページ�
 
 #### scheme 名を `node:` とする背景
 
+> **[W4 → appendix]**
+
 リンク先の実体をテンプレートでは `node()` で解決する。本文側の scheme も同じ語に揃え、`[x](node:/…)` ↔ `node(path="/…") | link` を一目で対応づけられるようにする。`anchor` は受け側（`<a id>`）に予約済みなので scheme には使わない。`node:` は実在 URI スキームと衝突しない。アンカーパス参照以外の内部 URL を将来挟む場合は、傘名前空間（`mood:` 等）でなく種類ごとに別 scheme を立てる方針。
 
 ### prose body 処理フィルタ `relink`
+
+> **[W4 dup]** ↔ template.md:278-292 (同一例) (b)、10-generator:51-57、30-template-spec:23 (c) — 完全 (generator.md と互いを正本と指す)。案: 削除→docs + generator.md へポインタ
 
 prose body 中の `node:` リンク先を、表示先ページからの相対 URL（[出力 URL の形式](#出力-url-の形式)）に置換する pre-render フィルタ。**リンク解決の単一責務**に絞る — 見出し深さ調整は別フィルタ `under_heading`（`docs/reference/template.md` の under_heading）と合成する:
 
@@ -234,15 +272,23 @@ relink は author の明示適用（`{{ prose.content | relink }}`）を設計�
 
 ### リンク解決
 
+> **[W4 dup]** ↔ 10-generator:41 (c, 同じ 3 項目)、data_tree.py:147-151,189-201 (a) — 部分。案: ポインタ一文に縮める (strategy の機構は削除→コード)
+
 リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](10-generator.md#リンク解決) と [ページパスの導出](10-generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_state` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。[出力 URL の形式](#出力-url-の形式)の fragment 規則と stamp 可否は、anchor_path 文字列の再パースでなくノード属性（`_meta.fragment` / `_meta.stamps_anchor`）で持ち、ノードの由来型（`origin_item_type`）で選ぶ anchor strategy が決める（`generator/data_tree.py` の `_Anchor` 各クラスの docstring）。
 
 ### アンカー自動刻印の実装
+
+> **[W4 dup]** ↔ template_engine.py:45-49,291、md.py:260 (a)、50-output-format:89 (c) — 完全。案: 削除→コード
 
 自動刻印（[アンカーの発行](#アンカーの発行)）は出力 format の post_process フックに置き、全レンダ経路が通る単一の漏斗（`TemplateEngine._render`）で主題が Node のとき刻む。フォーマット非依存の抽象スロットとし、`md` は `stamp_anchor` を束ねる。詳細は `output_formats/md.py` / `template_engine.py` の docstring。
 
 ### アンカー (`<a id>`) の raw HTML レンダリング (Hugo unsafe)
 
+> **[W4 dup]** ↔ resources/hugo/hugo.toml:5-10 コメント (a, 同内容)、60-trust-model:38,45-54 (c) — 完全。案?: 設定とその理由は hugo.toml が持つ→削除→コード。引用のトラストモデルは trust-model へ寄せる
+
 `node | anchor` と render 自動刻印が出す着地点は **raw HTML** の `<a id="…">`。Hugo の Goldmark は既定（`markup.goldmark.renderer.unsafe = false`）で raw HTML を `<!-- raw HTML omitted -->` に潰すため、bundled `resources/hugo/hugo.toml` で **`unsafe = true`** を設定している。これが無いと fragment の着地点が描画されず、リンクはページには着くがノード位置までジャンプしない。
+
+> **[W4 → appendix]** (この引用段落。trust-model からの参照をリンクに直す)
 
 > **背景: unsafe=true のトラストモデル.** Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
 

@@ -4,9 +4,13 @@
 
 ### 背景: 永続化形式とクエリモデルの分離
 
+> **[W4 → appendix]**
+
 著者は親子関係をネスト（コンポジション）として書くのが自然で、子を別の軸で再グループ化したいというニーズ（例: タスクをフェーズ別に集計する）は、データの利用が進むにつれて事後的に現れる。だからといって最初からフラットなリレーショナルモデル（FK による参照）での記述を強制するのは現実的でなく、特に自然なユニークキーを持たないオブジェクトへの id 付与が著者の負担になる。`flatten:` 句は、著者の永続化形式（ネスト）を変更せずに、Composer のクエリモデル上で intrinsic 配列を unwind してフラットなアクセスを可能にする。
 
 ### 背景: where の closed set から `neq` (not equal) を外した理由
+
+> **[W4 → appendix]**
 
 DB DSL によくある `neq` を入れなかったのは、対象キーが欠落しているレコードで何を返すべきかが、自然な読み方で 3 通りに分かれるため:
 
@@ -18,9 +22,15 @@ DB DSL によくある `neq` を入れなかったのは、対象キーが欠落
 
 ### 背景: sort の keyword に `null` ではなく `missing` を採用した
 
+> **[W4 dup]** 決定内容 ↔ view.md:395-408、view-schema.yaml:145-150 (b)。案: 比較・先例だけ appendix
+
+> **[W4 → appendix]**
+
 ツールの data model は「nullable は項目自体を省略する」が原則で、独立した「null 値」概念を持たない ([json-data-model.md](../40-communication/10-json-data-model.md))。where 句も存在判定は `exists: true/false` で表現しており、`null` という語は DSL のどこにも出てこない。ここだけ SQL の `NULLS FIRST/LAST` を借用すると語彙が不揃いになる。`missing: first/last` は「missing key」をそのまま表現し、`exists` と語彙が並ぶ。ElasticSearch も `missing: _first/_last` を採用しており、JSON/YAML 上の DSL では先例がある。
 
 ### 背景: sort の `direction` × `missing` を直交にした上で default は direction 非依存にした
+
+> **[W4 → appendix]**
 
 null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は二派ある:
 
@@ -38,11 +48,17 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 
 ### 背景: `flatten:` 句を「intrinsic 配列専用」とした
 
+> **[W4 → appendix]**
+
 `flatten:` (top-level 句) はデータの永続形式そのものである intrinsic な配列 (composition-child / scalar 配列 / FK 配列) のみを unwind 対象とする。`join:` の `as:` 由来配列は対象外で、そちらは `join[].flatten:` インライン側で扱う。
 
 責任分離の理由: intrinsic 配列の unwind は「永続形式に対する読み方の表明」で、データの shape そのものに紐づく。一方 join 由来の配列は query が transient に作ったものなので、その shape の調整は join 句内で完結させた方が cause-fix locality が保てる。
 
 ### 背景: `flatten:` 後の row shape に namespace 保持を採用した
+
+> **[W4 dup]** 規則 ↔ view.md:86-109、view-schema.yaml:38-40、query.py:97-99 (部分)。案: 規則は docs にある→理由 3 点だけ appendix
+
+> **[W4 → appendix]**
 
 `flatten: { of: tasks, as: task }` の出力は `{ id, title, task: { ... } }` のように **親 fields を top-level に残し、 child を `as:` 名の namespace 配下に置く** 形にした。child の field を top-level に昇格させて親情報を捨てる方式は採らない。
 
@@ -52,6 +68,8 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 - `as:` の意味が nested join (= 配列名) と flat 化後 (= scalar 名) で完全に一致する (どちらも namespace prefix)
 
 ### 背景: 走査の非対称性を設計原則として確立した
+
+> **[W4 dup]** 規則 ↔ view.md:204,277 (b)、機構 ↔ data_catalog.py Node.reach、query.py:163-167,331-334 (a) — 完全。案?: 原則の宣言と表は残す (設計原則)。「実装上は…Node.descend」段落は削除→コード
 
 **`flatten:` 系の句以外は、現 row の attribute (nested object 内の dot path を含む) のみを参照対象とし、 nested array の中身には潜らない**。配列に潜る (= cardinality を変える) 操作は `flatten:` (および join 内 inline flatten) に集約し、 `where:` / `sort.by:` のような述語・selector 句側に array walk を持ち込まない。
 
@@ -69,9 +87,11 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 - 「ここだけ特例で潜れる」asymmetry が発生せず、句の責任が明確
 - 将来の DSL 拡張も「array 走査は別句で」が原則として残る
 
-実装上はこの規則を catalog の木の探索が持つ。`Node.descend` は singleton の子 Node を降りるが `[]` エッジに当たるとそこで止まる — パスは配列属性で終われるが、その先へは続けない。`where` / `sort.by` / `join.on` はこの `descend` (`require_path`) を通すだけで array 跨ぎが弾かれる。`select` は wrapper edge を選んだときその子 Node ごと連れて行く挙動 (apply 側 `pluck` の挙動と整合) で、 singleton の sub-attribute をひとまとめに扱う。
+実装上はこの規則をカタログの木の探索が持つ。`Node.descend` は singleton の子 Node を降りるが `[]` エッジに当たるとそこで止まる — パスは配列属性で終われるが、その先へは続けない。`where` / `sort.by` / `join.on` はこの `descend` (`require_path`) を通すだけで array 跨ぎが弾かれる。`select` は wrapper edge を選んだときその子 Node ごと連れて行く挙動 (apply 側 `pluck` の挙動と整合) で、 singleton の sub-attribute をひとまとめに扱う。
 
 ### パイプライン順序
+
+> **[W4 dup]** ↔ view.md:37,382、view-schema.yaml:127-130 (b)、query.py:426-427 (a) — 完全 (sort が後ろの理由とも)。約束。案: 削除→docs。「途中段 flatten は別ビューに分割」は docs に無ければ残す
 
 ```
 from
@@ -88,6 +108,10 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 `sort` を `select` の後ろに置くのは、`sort.by:` が `select:` の `as:` で導入された出力名を参照できるようにするため。SQL の論理処理順序 (`SELECT` → `ORDER BY`)、MongoDB aggregation (`$project` → `$sort`)、PRQL (`select` → `sort`)、Pandas (`assign` → `sort_values`)、LINQ (`Select` → `OrderBy`) いずれも同じ慣例。
 
 ### 背景: ビュー間参照に名前付き参照を採り、インラインサブクエリを採らない
+
+> **[W4 dup]** from/to に他ビュー、__ 同一名前空間 ↔ view.md:5,45,198、query_deriver.py:149-155 (部分)。案: 「提示順は不変」「受容済みの制約」は設計→本文に残す、動機・却下は appendix
+
+> **[W4 → appendix?]** 推奨: 移す (「提示順は不変」「受容済みの制約」を含むのが気になる)
 
 `from:` / `join.to:` のソース名には、データエンティティだけでなく他のビューも書ける（RDBMS の view を FROM 句に書く、Access の保存クエリを別クエリのソースにするのに相当）。`__` 接頭辞の内蔵ビューも同一名前空間で参照対象。動機は三つ:
 
@@ -109,11 +133,15 @@ interleave (flatten → join → flatten → ...) は list 内項目順序で表
 
 ### 背景: `join:` の inline flatten を採用した理由
 
+> **[W4 → appendix]**
+
 flat 化したいときに「join が作った array を別句 `flatten:` で fix する」のは、shape 生成と shape 修正の責任が join と flatten に分散する。**cause = fix を同じ場所に置く** ため、flat 化を意図する join では item 内に `flatten:` を inline で書く。
 
 旧案の `kind: nested | flat_inner | flat_left` enum も検討したが、(a) 動詞 (`flatten:`) を per-join 配置することで kind 名の暗記負担を減らし、(b) `preserve_empty` 等のオプションを naturally に乗せられる、(c) MongoDB の `$lookup` + `$unwind` のように nest と flat をファーストクラスで扱うエンジンの構造に近い、という利点がある。
 
 ### 背景: `grouped.as` を必須にした
+
+> **[W4 → appendix]**
 
 別名スロット `as:` の省略可否は一本の規則で引く:
 
@@ -122,6 +150,10 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 `flatten` / `join` の `as` が省略できるのは、命名対象が同じマッピングの `of:` / `to:` の要素そのものだからで、その名前を既定値にしても意味が外れない。`grouped` が束ねるのはパイプラインを通過した行であって `from:` の行ではない。
 
 ### 背景: `select` は欠落キーを出力から省く
+
+> **[W4 dup]** ↔ view.md:378、view-schema.yaml:99-104 (b)、query.py:319-325、record_predicate.py (a) — 完全 (data model 整合の理由とも)。案?: 規則も理由も docs/コードにある→削除 (appendix 不要)
+
+> **[W4 → appendix]**
 
 `select` の各 `item:` は、その attribute がレコードに存在しないとき (= schema 上 optional な属性で値が省略されているとき) は **出力レコードから当該キーを省く**。エラーにはしない。
 
@@ -141,6 +173,10 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 ## Internal Design
 
 ### 背景: `Join` を `QueryNode` に乗せず特別扱いした理由
+
+> **[W4 dup]** ↔ query.py:1-7,213-231,451-474 (a, 事実のみ。理由はコードに無い)。案: 決定の一文はコードコメントへ、代替案と移行トリガーは appendix
+
+> **[W4 → appendix]**
 
 `join:` は 2 入力 1 出力で、他の句 (`from` / `flatten` / `where` / `grouped` / `select` / `sort`) はすべて 1 入力 1 出力。1-in 1-out 想定の `QueryNode` Protocol には乗らないので、`Join` は `QueryNode` 非該当のクラスとし、`Query.apply` / `Query.derive` がパイプライン順序を直書きして呼び分ける。apply 側と derive 側で同じ順序を二度書くため 10 行程度ずつ重複するが、2 入力の句が `join:` 一つしかない現状では、この局所的な特別扱いのほうが抽象階層より軽い。
 
@@ -178,7 +214,7 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 ##### 不変条件
 
 - **データのキーはドットを含まない**。`contents/` 由来はもとより、view 出力も含めて
-- **直列化カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）
+- **カタログの直列化における `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）
 
 ##### カタログ出力の `required`
 
@@ -399,7 +435,7 @@ grouped: { by: hobby.level, as: hobby }
 
 #### 問題
 
-「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の `this` 束縛) で、`render` の主題は `this` の子孫に限られるため、一つのプロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
+「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の `this` 束縛) で、`render` の主題は `this` の子孫に限られるため、一つのsbdb プロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
 
 代替案を検討して退けた:
 

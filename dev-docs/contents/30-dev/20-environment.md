@@ -4,6 +4,8 @@
 
 ## DevContainer
 
+> **[W4 dup]** ベースイメージ・Features・postCreateCommand ↔ .devcontainer/README.md:5-8,15 (部分)、10-setup:25 (c)。案?: .devcontainer/README.md と二重。どちらかに寄せる
+
 ### ベースイメージ
 
 `mcr.microsoft.com/devcontainers/base:ubuntu`。Python 本体は入れず、uv feature が `.python-version` の interpreter を調達する。
@@ -58,6 +60,8 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 
 ### 拡張
 
+> **[W4 dup]** 表 ↔ .vscode/extensions.json / devcontainer.json の設定本体 (コメント無し、用途列のみ付加)。「コードから読めるものは書かない」との関係。案?: 残す (JSON にはコメントが書けない) か、用途を落として一覧だけ設定に委ねる
+
 | 拡張 | 用途 |
 |---|---|
 | Claude Code | AI アシスタント |
@@ -81,6 +85,8 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 
 ## MCP サーバ
 
+> **[W4 dup]** 表 ↔ .mcp.json の設定本体 (コメント無し)。案?: 同上
+
 `.mcp.json` に Claude Code 用の MCP サーバを定義する。
 
 | サーバ | 用途 |
@@ -96,6 +102,8 @@ language-server は pyright-langserver を `--stdio` で起動する。
 `.vscode/mcp.json` は VS Code 内蔵の MCP クライアント向けで、another-mood だけを定義する。
 
 ## .gitignore
+
+> **[W4 dup]** ↔ .gitignore の各見出しコメント (完全)。案: 削除→.gitignore
 
 Python の生成物（`__pycache__/`、`.venv/`、各ツールのキャッシュ）のほかに無視するもの:
 

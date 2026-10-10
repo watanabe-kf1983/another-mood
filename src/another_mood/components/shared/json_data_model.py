@@ -247,8 +247,10 @@ def save_model(path: Path, data: object) -> None:
     Applies the project's serialization conventions:
 
     * None-valued keys are dropped recursively: a nullable field is
-      omitted rather than written as null, since a null in the output
-      makes templates render the string "None".
+      omitted rather than written as null.  Templates render a missing
+      field as nothing, whereas a present null neither prevents
+      ``None.child`` errors nor lets ``dict.get(key, {})`` fallbacks
+      apply.
     * ``ensure_ascii=False`` and a 2-space indent keep the file
       readable when it is inspected post-mortem.
 

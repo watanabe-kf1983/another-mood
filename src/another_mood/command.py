@@ -196,6 +196,9 @@ def build(
     """
     config = config.resolved_for_build()
     out_dir = str(config.out_dir)
+    # Manifest before layout: layout is also a format-generation contract, so
+    # an unsupported sbdb_version must be reported before "source paths not
+    # found".
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
     workspace = _session_workspace(config, layout, manifest, "build")

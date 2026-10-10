@@ -6,6 +6,8 @@
 
 ### レポート設定ファイル
 
+> **[W4 dup]** ↔ reports-schema.yaml:3-8,41-56,64-70、edition.py:120-131 (a)、reports.md:25-43 (b) — 完全。案: 削除→docs。残すのは「profile ではない」「--edition を持たない」の判断
+
 設定構文（form A の `file_per`、form B の `editions:` マップ）は `docs/reference/reports.md`、edition 名規則と form A / B の `oneOf` 検証は `resources/schemas/reports-schema.yaml` を正本とする。設計判断:
 
 - **edition は同一 report の体裁違いの並行出力**で、当面の差は `file_per`（分割粒度）のみ。Markdown→HTML レンダリングは全 edition 同一で、別レンダラ・別フォーマットは持たない。
@@ -14,6 +16,8 @@
 
 ### テンプレート主題のノード受け取りと `this` 束縛
 
+> **[W4 dup]** ↔ template_engine.py:137-145 _bind、render_processor.py:51-53 (a)、template.md:139-165,116 (b)、10-generator:41 (c) — 完全。案: 残す (設計判断 3 点が主)。docs/コードの再掲部分は縮める
+
 主題（subject）を `this` でどう参照するか（Mapping の spread／`this`／Array 反復、スカラ値の扱い）は `docs/reference/template.md` の Subtemplate side を正本とする。設計判断:
 
 - **束縛はレンダリング境界（`template_engine._bind`）の単一規則**として root テンプレート（`index.md`）と `render` フィルタのサブテンプレートに同一適用する。利用者から見えるデータモデルがツリー全体で一致し、root も自ノードを `this` で参照できる。`render` フィルタ側はパス決定とノードのパススルーだけを担い、context 構築を持たない。
@@ -21,6 +25,8 @@
 - 分割するのはノード主題だけで、スカラ主題は `file_per` に関わらず常に inline 展開するのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。
 
 ### 分割ルール
+
+> **[W4 dup]** ↔ template.md:112-137,262-276 (b)、render_processor.py:39-45,78-81、heading_shift.py:1-18 (a) — 部分。案: 残す (決定 2 つ)。見出し深さの段落は docs にある→縮める
 
 `render` フィルタが主題の `_meta.object_type_id` を `file_per` と照合して分割/インラインを決めること、親ページのリンクは render が自動生成せず author が `| link` で書く two-loop パターン（分割なら別ページ URL・インラインなら同ページ `#fragment` に自動適応）は `docs/reference/template.md` の Split vs inline を正本とする。設計判断:
 
@@ -31,6 +37,8 @@
 > **見出し深さ.** subtemplate が「見出し＋本文」を一単位で再利用したいとき、埋め込み先によって見出しレベルが変わる（同じ型を `##` 下でも `###` 下でも置きたい）。この深さ調整は render 固有ではなく、生成側の `under_heading` フィルタ（任意の埋め込み出力をブロックで囲む／prose body をパイプで処理）が担う。split 時に render が `""` を返す性質と合わさり、同じ記述が分割でもインラインでも正しく出る。仕様は `docs/reference/template.md` の `under_heading` を参照。
 
 ### ページパスと出力ディレクトリ
+
+> **[W4 dup]** 導出規則 ↔ edition.py:71-95 (a)、10-generator:31-35 (c)、template.md:118-122、reports.md:45-47 (b) — 完全。出力図 ↔ guides.md:70-81 (部分)。__db/__entity_defs ↔ edition.py:136-139、10-json-data-model 予約プレフィックス (部分)。build-report 層 ↔ generator.py、10-generator:66-68 (部分)。案: 導出規則の再述は削除 (generator.md へポインタ)。出力図と「2 種で捉える」は残す
 
 ページパスの導出規則（anchor_path 由来、root は `index.md`、セグメントは anchor_path と同じ IRI エスケープを継承）は `PagingPolicy.page_path` が持ち、正本は [generator.md](10-generator.md#ページパスの導出)。`page_path` は **edition ルート相対**で、実ファイルは render が edition のマウント先を被せた `{outDir}/{edition}/{page_path}` に書き出す（form A は暗黙 edition `default`）。root の入口には薄い**表紙**（cover。edition ではなく一回 render）を置き、システム生成のメタ（DB の自己記述）は `__db/` マウントへ退避する:
 
@@ -54,11 +62,15 @@
 
 ### meta 診断の分割
 
+> **[W4 dup]** ↔ meta_templates.py:133-139 META_EDITION docstring (a, 完全)。案: 削除→コード。「別ページが要るならノードを一つ立てる」決定は残す
+
 meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は **実データツリーノード**（`resources/views/` のビルトインビューが生む）で、分割は通常の[分割ルール](#分割ルール)そのもの。meta には利用者の `reports.yaml` が無いので paging は固定（`META_EDITION.paging`）。
 
 > **決定: 別ページが要るならノードを一つ立てる.** 1 ノードは（データ位置で定まる）1 ページにだけ描かれる。同一 entity を Definition と Data の 2 ページに出すのに `__entity_defs` / `__data` の **2 ビュー＝2 アンカールート**を立てるのがこの実践 — 予約キーや fallback で 1 ノードを複数ページに割る手は採らない。
 
 ### render ループ
+
+> **[W4 dup]** ↔ generator.py:68-77,155 (a, 完全)。機構。案: 削除→コード、「メタを特別扱いしない」意図はコードコメントへ
 
 `generate()` は 2 サーフェスを出す:
 
@@ -68,6 +80,8 @@ meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は
 各 `Edition` の差分フィールド（`paging` / `name` / `templates_dir` / `root_template` / `extra_filters` / `mirror_blobs`）と render 本体は `edition.py` / `generator.render_edition()` の docstring が正本。`root_template` は当面 `index.md` 固定で、[Edition 別ルートテンプレート（将来）](#edition-別ルートテンプレート将来)の継ぎ目。
 
 ### 表紙の edition 列挙
+
+> **[W4 dup]** ↔ resources/templates/cover/index.md:1-13、stages.py:130-131、meta/index.md:3 (a, 完全)。機構。案: 削除→コード。「__db/ を直書きしない」「project 名依存を 1 箇所に」はテンプレートのコメントへ
 
 表紙はデータループと**同じ `editions` 集合**を受け取り、`Edition.is_system` で 2 セクションへ振り分ける。決定:
 

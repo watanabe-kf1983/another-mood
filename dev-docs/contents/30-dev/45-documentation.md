@@ -4,6 +4,8 @@
 
 ## 系統
 
+> **[W4 dup]** ↔ contents/index.md:3、同ファイル「background と dev」節 (完全)、DEVELOPMENT.md:30 (c/b)。案: 「background と dev」節を削除 (表と重複)
+
 ドキュメントは五系統で管理する。`dev-docs/` の四系統は Another Mood 自身で管理する:
 
 | 系統 | 内容 | 読者 | 言語 |
@@ -21,6 +23,8 @@
 `reference/` に書くのは約束の層だけ。利用者の関心の外にある精密な規則は `dev-docs/appendix/` に置き、reference を利用者が読める量に保つ。
 
 ## `dev-docs/design/`
+
+> **[W4 dup]** 3 セクション構造 ↔ 20-design/index.md:3-7 (完全)。本文に置く/外す ↔ DEVELOPMENT.md:22,29,36,46 (部分)。Proposals ライフサイクル ↔ DEVELOPMENT.md:104 (完全、移し先の候補が互いに違う)。案: dev が正本、DEVELOPMENT.md 側を要約に縮め、20-design/index.md はポインタ化
 
 design は作業に入る前に読む導線として書く。読者が、破ってはいけない設計を知り、次に開く正本を決められれば役割を果たす。読む量が増えるほど導線として機能しなくなるので、本文に置くものを絞る。
 
@@ -48,6 +52,8 @@ design は作業に入る前に読む導線として書く。読者が、破っ�
 
 ## `dev-docs/appendix/`
 
+> **[W4 dup]** ↔ 系統表の appendix 行 (同一ファイル内)、DEVELOPMENT.md:28,36 (部分)、非契約の文 ↔ DEVELOPMENT.md:32 (完全)。案: dev が正本、DEVELOPMENT.md 側を縮める
+
 design / dev の付録。ディレクトリ構成は design / dev の鏡写しで、本文の各ファイルに対応する位置に置く。内容は二種類:
 
 - **過程のログ** — 比較調査、却下案、経緯、未起票の候補。本文の設計がなぜこの形になったかを後から辿るためのもの
@@ -56,6 +62,8 @@ design / dev の付録。ディレクトリ構成は design / dev の鏡写し�
 appendix は本文からのリンクで到達する。appendix だけを読んで作業に入ることは想定しない。
 
 ## `dev-docs/background/` と `dev-docs/dev/`
+
+> **[W4 dup]** ↔ 系統表 (同一ファイル内、完全)。案: 削除
 
 background は製品ビジョン・ロードマップ・タスクカタログで、開発判断の根拠を置く。dev は開発規約・手順の正本で、簡潔・規範的に書く。`DEVELOPMENT.md` は dev の要約とポインタであり、規約の本文は dev に置く。
 

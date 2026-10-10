@@ -11,6 +11,8 @@
 
 ## 三つの装置
 
+> **[W4 dup]** Fresh check の意図・カナリア・cache 遮断 ↔ fresh-deps.yml:3-8,28-30 コメント (完全)。儀式 ↔ DEVELOPMENT.md:9、scripts/upgrade_deps.sh:2-3 (部分)。案?: 装置の一覧は dev、理由は yml コメント側を縮めるか dev 側を削るか
+
 | 装置 | 見るもの | 契機 | 守るもの | 応答 |
 |---|---|---|---|---|
 | Fresh dependency check | pyproject を最新版で解釈した環境 | 週次 | ユーザ（新規インストールが受け取る解決の代理） | cap（除去条件付き）or 修正 |
@@ -30,6 +32,8 @@
 - タスク途中で特定の版が要るときは `uv lock --upgrade-package <name>` を直接使ってよい
 
 ## 採らなかった選択肢
+
+> **[W4 → appendix]**
 
 - **依存への一律 cap**: 上限は未来のリリースへの推測で、動くメジャーを弾き壊すマイナーを通す。ユーザ側の脆弱性修正の自己治癒も止まる
 - **定期 bot による lock 更新 PR**（Dependabot version updates / Renovate lockFileMaintenance / 自前ワークフロー）: bot は放置問題を解決しない（merge する人間は依然必要）。さらに定期 bot は自分の commit で GitHub の 60 日 scheduled workflow 自動停止を自ら回避し続けるため、開発休止後も無人で main を変異させ、赤 PR を無限に積む。鮮度維持は開発活動に結合させ、開発が止まればシステム全体も静止する設計を採る。開発が長期休眠して儀式が回らなくなった場合の格上げ先は Renovate lockFileMaintenance

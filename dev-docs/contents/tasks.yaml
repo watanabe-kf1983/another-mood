@@ -4,7 +4,7 @@ categories:
     impl_paths:
       - src/another_mood/components/preprocess/prose.py
       - src/another_mood/components/generator/
-    spec: 20-design/50-normalizer/30-markdown-parser-spec
+    spec: 20-design/50-normalizer/25-prose-spec
     tasks:
       A1:
         title: 見出し抽出 → prose.headings 生成
@@ -81,6 +81,8 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
+          ただし可視性は出力を目で読む場面でしか効かない。W4 の dev-docs 整理では節の削除・移動で
+          裸になった `[text]` に気づけず、ソースと出力を突き合わせる検査を別途書いて見つけた。
         phase: 18
         proposal: 20-design/70-generator/20-anchor-spec#未決事項
       B11:
@@ -177,14 +179,14 @@ categories:
       - src/another_mood/resources/schemas/schema-schema.yaml
       - src/another_mood/config.py
       - src/another_mood/cli.py
-    spec: 20-design/50-normalizer/20-schema-spec
+    spec: 20-design/45-schema/10-schema-spec
     tasks:
       D1:
         title: Meta-schema 拡張 — x-ref キーワードの受理
         phase: 10
         done: true
       D2:
-        title: Schema-Inspector 拡張 — x-ref の収集
+        title: SchemaInspector 拡張 — x-ref の収集
         phase: 10
         done: true
       D3:
@@ -311,7 +313,7 @@ categories:
     impl_paths:
       - src/another_mood/resources/
       - src/another_mood/components/generator/
-    spec: 20-design/20-app/40-meta-documentation
+    spec: 20-design/75-meta-documentation
     tasks:
       F4a:
         title: ER 図テンプレート — 全体図 + 基盤
@@ -340,7 +342,7 @@ categories:
       F10:
         title: 内部オブジェクト診断の --debug 復活スイッチ
         phase: 18
-        proposal: 20-design/20-app/40-meta-documentation#内部オブジェクト診断の---debug-復活スイッチ
+        proposal: 20-design/75-meta-documentation#内部オブジェクト診断の---debug-復活スイッチ
 
   G:
     title: CLI / 設定システム
@@ -348,12 +350,12 @@ categories:
       - src/another_mood/cli.py
       - src/another_mood/config.py
       - src/another_mood/layout.py
-    spec: 20-design/20-app/20-config-spec
+    spec: 20-design/25-entrypoints/10-config-spec
     tasks:
       G2:
         title: another-mood.config.json 読み込み
         phase: 18
-        proposal: 20-design/20-app/20-config-spec#設定ファイル-g2
+        proposal: 20-design/25-entrypoints/10-config-spec#設定ファイル-g2
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         phase: 10
@@ -393,7 +395,7 @@ categories:
       - src/another_mood/components/preprocess/
       - src/another_mood/components/composer/
       - src/another_mood/components/generator/
-    spec: 20-design/40-communication/30-blob-spec
+    spec: 20-design/50-normalizer/27-blob-spec
     tasks:
       H1:
         title: 仕様確定
@@ -441,12 +443,12 @@ categories:
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
       J6:
-        title: プロジェクトディレクトリの自己記述 (README.md 生成) と MCP の削除候補化
+        title: sbdb プロジェクトの自己記述 (README.md 生成) と MCP の削除候補化
         note: >-
           --help の作業ループ指し + init の README.md 生成 + 自リポジトリの MCP 登録解除を先行。
           mood-mcp の削除は別 PR (breaking)。
         phase: 17
-        proposal: 20-design/20-app/30-mcp-design#プロジェクトディレクトリの自己記述と-mcp-の削除候補化-j6
+        proposal: 20-design/25-entrypoints/20-mcp-design#sbdb-プロジェクトの自己記述と-mcp-の削除候補化-j6
 
   L:
     title: dog-fooding
@@ -860,7 +862,7 @@ categories:
       - src/another_mood/pipeline/
       - src/another_mood/components/scaffold/
       - src/another_mood/layout.py
-    spec: 20-design/20-app/60-sbdb-manifest
+    spec: 20-design/20-sbdb-project/20-sbdb-manifest
     tasks:
       V1:
         title: sbdb.yaml 読み込みと検証 + title 反映

@@ -252,6 +252,8 @@ Record shape:
 prose:
   - id: "guides/ordering"              # relative path from contents_dir (without extension)
     title: "Ordering flow"             # text of the first H1 heading
+    order_key: "guides/ordering"       # sort key for reading order (folder pre-order)
+    depth: 3                           # heading depth in the folder outline
     headings:                          # each heading, as a link target
       - id: "placing-an-order"         # GitHub-compatible slug of the heading text
         title: "Placing an order"
@@ -266,6 +268,8 @@ prose:
 |---|---|
 | `id` | Relative path from `contents_dir` (without extension). |
 | `title` | Text of the first H1 heading. Omitted when there is no H1. |
+| `order_key` | Sort key for reading order, derived from `id`: sorting records by this string yields folder pre-order (each folder's `index` first, then its subtree). |
+| `depth` | Heading depth of the record in the folder outline, derived from `id`: the root `index` is 1, and a folder's `index` sits one level above its files. |
 | `headings` | The content's headings, in order, each a link target — `id` (the GitHub-compatible slug of the heading text, deduplicated within the content), `title` (the heading text), and `level` (1–6). A link to a heading resolves against these; see [Anchor paths](template.md#anchor-paths). |
 | `mime_type` | Media type of the content — `text/markdown` for prose. |
 | `content` | The full Markdown source. To embed it, reference `content` from a template (e.g., `{{ content }}`); resolve its cross-references with [`relink`](template.md#relink). |
