@@ -1,3 +1,3 @@
 # Normalizer
 
-正規化フェーズの設計仕様。スキーマ解釈、内蔵 prose スキーマ、Markdown パース、参照整合性を扱う。
+正規化フェーズの設計仕様。contents の検証と正規化、内蔵 prose / blob スキーマ、Markdown パースを扱う。

@@ -81,6 +81,8 @@ categories:
           未解決参照を収集して D7 の警告インフラに載せ、ビルドレポートに出す。両フィルタ共通の経路で
           一度に扱う。現契約 (可視化はするが報告はしない) は anchor-spec.md#未解決参照の扱い。
           現状でも表示テキストは残り可視なので優先度低。
+          ただし可視性は出力を目で読む場面でしか効かない。W4 の dev-docs 整理では節の削除・移動で
+          裸になった `[text]` に気づけず、ソースと出力を突き合わせる検査を別途書いて見つけた。
         phase: 18
         proposal: 20-design/70-generator/20-anchor-spec#未決事項
       B11:
@@ -177,7 +179,7 @@ categories:
       - src/another_mood/resources/schemas/schema-schema.yaml
       - src/another_mood/config.py
       - src/another_mood/cli.py
-    spec: 20-design/50-normalizer/20-schema-spec
+    spec: 20-design/45-schema/10-schema-spec
     tasks:
       D1:
         title: Meta-schema 拡張 — x-ref キーワードの受理

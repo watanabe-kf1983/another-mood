@@ -23,7 +23,7 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 | (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | JSON |
 
 - YAML は 1.2 とする（(1) (2) に適用）。`yes`/`no` の意図せぬブール化を避け、JSON 入力を追加の parser なしに受けるため（[背景](../../90-appendix/20-design/40-communication/10-json-data-model.md#yaml-を-12-とする理由)）
-- 中間表現は JSON とする（(3) に適用）。ビルド時間を ruamel.yaml の read/write が支配していたため。tmp 配下は外部契約ではないので、変更は内部に閉じる（[背景](../../90-appendix/20-design/40-communication/10-json-data-model.md#中間表現を-json-とする理由)）。非 JSON 値（日付等）の到達経路はスキーマ言語の側で塞ぐ（[schema-spec.md](../50-normalizer/20-schema-spec.md#型の付かない領域を残さない)）
+- 中間表現は JSON とする（(3) に適用）。ビルド時間を ruamel.yaml の read/write が支配していたため。tmp 配下は外部契約ではないので、変更は内部に閉じる（[背景](../../90-appendix/20-design/40-communication/10-json-data-model.md#中間表現を-json-とする理由)）。非 JSON 値（日付等）の到達経路はスキーマ言語の側で塞ぐ（[schema-spec.md](../../90-appendix/20-design/45-schema/10-schema-spec.md#型の付かない領域を残さない)）
 
 ### 配列内オブジェクトのフィールド統一
 

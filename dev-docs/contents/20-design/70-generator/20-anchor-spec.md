@@ -136,7 +136,7 @@ blob:                              # flat list、id は拡張子込みファイ�
 
 > **[W4 dup]** ↔ 20-schema-spec Entity 名、40-meta-documentation (c, 完全)。案: 削除→schema-spec へポインタ (40-meta-documentation 側は削除済み)
 
-class（[schema-spec.md](../50-normalizer/20-schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
+class（[schema-spec.md](../45-schema/10-schema-spec.md) の Entity ID および ObjectType ID）は **型レベルの識別子** で、アンカーパスとは直交する概念:
 
 - **class**: schema 上の位置を示す path-based 名（例: `categories.tasks`, `categories.item.tasks.item`）。クエリ DSL の `from:`、paging 設定、FK 解決、表示見出しで参照される
 - **アンカーパス**: データツリー上の実体パス（例: `/categories/web/tasks/foo`）。リンク解決でのみ使われる
