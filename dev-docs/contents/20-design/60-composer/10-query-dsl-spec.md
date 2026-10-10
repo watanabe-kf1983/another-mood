@@ -262,6 +262,13 @@ flatten: { of: hobby.pets, as: hobby.pet }
 # カタログ: id hobby.level hobby.pets[].name  →  id hobby.level hobby.pet.name
 ```
 
+```yaml
+flatten: { of: tasks, as: hobby.task }
+# レコード: {"id": 1, "hobby": {"level": "pro"}, "tasks": ["x"]}  →  {"id": 1, "hobby": {"level": "pro", "task": "x"}}
+#           {"id": 2, "tasks": ["y"]}                              →  {"id": 2, "hobby": {"task": "y"}}
+# カタログ: id hobby?.level tasks[]  →  id hobby.level? hobby.task
+```
+
 ##### `of` と `as` の親が同じなら、その場で置き換わる
 
 配列のあった位置に要素が入り、兄弟の並びは変わらない。親の object が持つもの（メタデータ・validation）もそのまま残る:
@@ -302,23 +309,25 @@ select:
 
 `as` の名前は読み側と無関係である。`select` は空の行から作り直すので、書き込み先の途中に現れるオブジェクトは書き込みが合成した新しいもので、読み側に同じ名前があっても何も引き継がない。
 
-書き込みが一本なら、合成されたオブジェクトはその値を書いた行にしか無い（[書く値が無ければ途中のオブジェクトも作らない](#書く値が無ければ途中のオブジェクトも作らない)）ので、値は合成されたオブジェクトがあれば必ずある。葉が任意になりうるのは、複数の書き込みが同じオブジェクトに合流するときで、それぞれの値がどの行にあるか、つまり出どころ（読み側のパス上の任意エッジ）の関係で決まる:
+書き込みが一本なら、合成されたオブジェクトはその値を書いた行にしか無い（[書く値が無ければ途中のオブジェクトも作らない](#書く値が無ければ途中のオブジェクトも作らない)）ので、値は合成されたオブジェクトがあれば必ずある。葉が任意になりうるのは、同じオブジェクトに複数の書き込みが合流するとき:
 
-| 元 | `select` | 出どころの関係 | 結果 | 読み |
-|---|---|---|---|---|
-| `ref?.p ref?.b.c` | `ref.p as target.p`, `ref.b.c as target.d` | 同じ: `{ref}` と `{ref}` | `target?.p target?.d` | `ref` があれば `b`, `c` があるので、`d` も `target` があれば必ずある |
-| `ref?.p ref?.b?.c` | 同上 | `d` の方が狭い: `{ref}` と `{ref, ref.b}` | `target?.p target?.d?` | `b` が任意なので、`d` は `target` があっても無いことがある |
-| `ref?.p x?` | `ref.p as target.p`, `x as target.d` | 無関係: `{ref}` と `{x}` | `target?.p? target?.d?` | `x` はあるが `ref` は無い行に `target: {d}` ができるので、`p` は `target` があっても無いことがある |
-| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | 同じ: `{ref}` と `{ref}` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
+| 元 | `select` | 結果 | 読み |
+|---|---|---|---|
+| `ref?.p ref?.b.c` | `ref.p as target.p`, `ref.b.c as target.d` | `target?.p target?.d` | `ref` があれば `b`, `c` があるので、`d` も `target` があれば必ずある |
+| `ref?.p ref?.b?.c` | 同上 | `target?.p target?.d?` | `b` が任意なので、`d` は `target` があっても無いことがある |
+| `ref?.p x?` | `ref.p as target.p`, `x as target.d` | `target?.p? target?.d?` | `x` はあるが `ref` は無い行に `target: {d}` ができるので、`p` は `target` があっても無いことがある |
+| `ref?.table ref?.column` | `ref.table as target.table`, `ref.column as target.column` | `target?.table target?.column` | 二つは同じ `ref` から来るので、`target` があれば両方ある |
 
-`flatten` は行に何も足さない。`preserve_empty: false` なら要素の無い行が落ちるので `of` の経路は残った行の全部にあり、`true` なら元のまま:
+`flatten` は `of` を除いた元の名前を行に残すので、書き込みは元からあるオブジェクトにも合流する。`preserve_empty: false` では要素の無い行が落ちる:
 
-| 元 | `flatten` | 結果 |
-|---|---|---|
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet }` | `hobby.level hobby.pet` |
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet }` | `hobby.level pet` |
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet, preserve_empty: true }` | `hobby?.level hobby?.pet?` |
-| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet, preserve_empty: true }` | `hobby?.level pet?` |
+| 元 | `flatten` | 結果 | 読み |
+|---|---|---|---|
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet }` | `hobby.level hobby.pet` | `hobby` の無い行は要素も無いので落ち、残る行は全部 `hobby` を持つ |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet }` | `hobby.level pet` | 同上 |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: hobby.pet, preserve_empty: true }` | `hobby?.level hobby?.pet?` | 要素は `hobby` の中から来るので、`hobby` の無い行に `hobby` はできない。要素の無い行では `pet` も無い |
+| `hobby?.level hobby?.pets[]` | `{ of: hobby.pets, as: pet, preserve_empty: true }` | `hobby?.level pet?` | 同上 |
+| `id hobby?.level tasks[]` | `{ of: tasks, as: hobby.task }` | `id hobby.level? hobby.task` | 要素は全行にあるので、`hobby` の無かった行にも `hobby: {task}` ができ、その `hobby` は `level` を持たない |
+| `id hobby?.level tasks[]` | `{ of: tasks, as: hobby.task, preserve_empty: true }` | `id hobby?.level? hobby?.task?` | `hobby` も要素も無い行はそのまま。要素だけの行は `hobby: {task}`、`hobby` だけの行は `hobby: {level}` になる |
 
 ##### `grouped.by` はキー値を `by` のパスの位置に書く
 
