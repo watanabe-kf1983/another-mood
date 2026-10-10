@@ -42,7 +42,7 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 奥付はストアの全量を列挙する独立ページ (`__build_info/`) で、表紙 (`index.md`) からはリンク節 (`## Build Information`) だけが張られる。`__warnings/` `__db/` と同じ形で、表紙の節見出しは `Database Information` に倣った綴り（パスの綴りは関数名 `build_info` 側に揃える）。
 
-**ファイル境界を分けるのは、利用者が公開対象から外せるようにするため。** 奥付が語るのはビルドした環境の事実（実行者が注入した値、入力プロジェクトの絶対パス等）で、出力を公開する利用者にとっては読者が「ビルドした人」ではなくなる。表紙に混ぜ込むと外す手段が無いが、ディレクトリが分かれていれば `__build_info/` 一つを除外指定するだけで済む。ビルド結果をコミットする利用者にとっても、毎回動くタイムスタンプで表紙が汚れなくなる（動かないタイムスタンプに意味はないので、差分が出ること自体は仕様）。
+**ファイル境界を分けるのは、利用者が公開対象から外せるようにするため。** 奥付が語るのはビルドした環境の事実（実行者が注入した値、sbdb プロジェクトの絶対パス等）で、出力を公開する利用者にとっては読者が「ビルドした人」ではなくなる。表紙に混ぜ込むと外す手段が無いが、ディレクトリが分かれていれば `__build_info/` 一つを除外指定するだけで済む。ビルド結果をコミットする利用者にとっても、毎回動くタイムスタンプで表紙が汚れなくなる（動かないタイムスタンプに意味はないので、差分が出ること自体は仕様）。
 
 **除外機構はツールに持たせない。** 何を公開するかはデプロイ手段（rsync / `aws s3 sync` / CI）の仕事で、ツールが公開ポリシーのフラグを持ち始めると同種の要求が積み上がる。ツールが負うのは「一箇所にまとまっていること」だけ。`__warnings/` も同じ立場。
 
@@ -64,7 +64,7 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 |---|---|---|
 | `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
 | `vars.*` | 実行者の注入値（供給機構は [20-config-spec.md](../20-app/20-config-spec.md)） | `vars.git_commit_id` |
-| `manifest.*` | プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
+| `manifest.*` | sbdb プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
 注入ルートは `vars.*` にしか書けない。処理系の識別（`processor.name` / `version` / `started_at` / `command`）と `manifest.*` を外から偽装する経路は無い（`processor.config.*` は環境変数 `MOOD_*` でも決まるが、それは config の写しであって注入ではない）。環境変数の素通し（`env.*`）を作らないのも同じ線で、テンプレートが環境の読み取り器になると CI のクレデンシャル等を出力に焼き込めてしまう（[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開ける）。越境するのは実行者が明示的に差し出した値だけ。
 

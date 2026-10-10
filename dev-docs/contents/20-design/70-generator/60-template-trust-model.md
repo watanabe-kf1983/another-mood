@@ -1,6 +1,6 @@
 # Template Trust Model
 
-テンプレートエンジンの信頼境界 — 「誰が書いたテンプレートを、誰の手元で実行するか」— の設計。`build` / `watch` はプロジェクトのテンプレートを評価するため、この境界 — テンプレートが host のコードに届きうるか — が製品の安全性を規定する。
+テンプレートエンジンの信頼境界 — 「誰が書いたテンプレートを、誰の手元で実行するか」— の設計。`build` / `watch` はsbdb プロジェクトのテンプレートを評価するため、この境界 — テンプレートが host のコードに届きうるか — が製品の安全性を規定する。
 
 ## External Design
 
@@ -8,7 +8,7 @@
 
 > **[W4 dup]** ↔ test_ssti.py:1-9、inert.py:1-8 (a)、DoS 段落 ↔ tasks.yaml P15 note と本ファイル Proposals (c, 完全) — 部分。案: 残す (契約)。DoS 段落は Proposals と同一ファイル内重複→一文+ポインタに
 
-テンプレートは **minijinja（閉じた Rust 値モデル）＋ marshal 契約**の上で評価する。テンプレートが触れるのは host 言語のリフレクション / capability への経路を持たない値だけ — ゆえに **build / watch で第三者のプロジェクトを走らせても任意コード（RCE）は走らない**。
+テンプレートは **minijinja（閉じた Rust 値モデル）＋ marshal 契約**の上で評価する。テンプレートが触れるのは host 言語のリフレクション / capability への経路を持たない値だけ — ゆえに **build / watch で第三者が書いたsbdb プロジェクトを走らせても任意コード（RCE）は走らない**。
 
 - dunder 経路は minijinja が構造封鎖する
 - 非 `_` 属性・メソッド・globals は marshal 契約が封じる（機構は Internal Design）
@@ -35,7 +35,7 @@
 
 > **[W4 → appendix?]** 推奨: 残す (防御を一点に集約する根拠)
 
-プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
+sbdb プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
 
 - **`contents/` (data)** — data 値は md output format の finalize で escape される（[anchor-spec.md](20-anchor-spec.md) の unsafe トラストモデル参照）
 - **`definition/schema.yaml`** — 宣言的な型定義
@@ -50,12 +50,12 @@
 
 > **[W4 → appendix?]** 推奨: 移す
 
-[anchor-spec.md](20-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のプロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
+[anchor-spec.md](20-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のsbdb プロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
 
 - unsafe HTML は「著者が自分の *出力* に責任を持つ」**表現力**の問題
 - marshal 契約は「テンプレートが host の *コード* に届かない」**実行安全**の問題
 
-**著者 ≠ 実行者**（第三者が配布プロジェクトを build）のケースは、RCE が閉じたぶん「build = コード実行」契約より安全 — これが non-evaluating エンジンを採る意義そのもの。残る差は「著者が unsafe HTML で書いた出力を第三者が信じるか」という *出力の信頼* で、実行安全とは独立に扱う。
+**著者 ≠ 実行者**（第三者が配布されたsbdb プロジェクトを build）のケースは、RCE が閉じたぶん「build = コード実行」契約より安全 — これが non-evaluating エンジンを採る意義そのもの。残る差は「著者が unsafe HTML で書いた出力を第三者が信じるか」という *出力の信頼* で、実行安全とは独立に扱う。
 
 ## Internal Design
 

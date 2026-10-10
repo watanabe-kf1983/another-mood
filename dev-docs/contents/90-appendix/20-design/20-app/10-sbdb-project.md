@@ -1,6 +1,6 @@
-# 利用者プロジェクト (appendix)
+# sbdb プロジェクト (appendix)
 
-[利用者プロジェクト](../../../20-design/20-app/10-user-project.md) の背景。
+[sbdb プロジェクト](../../../20-design/20-app/10-sbdb-project.md) の背景。
 
 ## MS-Access アナロジー
 
@@ -18,12 +18,12 @@ Access の Query は SQL で書く。テンプレートエンジンで Query を
 
 ## CLI が .another-mood/ を CWD 直下に配置する理由
 
-CLI では、出力ディレクトリ `.another-mood/` を `<projectDir>`（入力ディレクトリ）の中ではなく、CWD（プロジェクトルート）直下に配置する。
+CLI では、出力ディレクトリ `.another-mood/` を `<projectDir>`（入力ディレクトリ）の中ではなく、CWD（利用者のリポジトリのルート）直下に配置する。
 
 - **入力ディレクトリはユーザのコンテンツ領域**: ツールから見れば参照先であり、生成物を書き込むべきでない
 - `.` prefix はフレームワーク固有の作業領域を示す慣習（`.next/`, `.pytest_cache/` 等）に従う
 - gitignore がシンプル（ルートに `/.another-mood/` の1行で済む）
-- 入力がプロジェクト外（git submodule 等）にある場合でも破綻しない
+- 入力が利用者のリポジトリの外（git submodule 等）にある場合でも破綻しない
 - `contents_dir` を編集するメンバの視界に入らない
 
 入力ディレクトリ内出力に統一すれば、以下の帰結もろとも消える。それでも採らないのは、上の理由——とりわけ gitignore と視界——に正面から反するうえ、CWD 配下のディレクトリを `<projectDir>` にするのが CLI の主要ユースケースだからである。

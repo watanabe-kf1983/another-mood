@@ -27,7 +27,7 @@ AI にとっての「ドキュメント生成パイプライン全体のナビ�
 
 ### 背景: パス引数を絶対パスに限る理由
 
-ツールのパス引数は絶対パスのみ受け付け、相対パスは解決せずエラーで弾く。相対パスの基準になるのはサーバプロセスの作業ディレクトリで、決めるのは MCP クライアント、呼び出し元のエージェントからは見えないため。実際 Claude Code CLI はプロジェクトディレクトリで起動するが、同デスクトップ版は `$HOME` で起動し設定の `cwd` も無視する（[anthropics/claude-code#75266](https://github.com/anthropics/claude-code/issues/75266)、2026-09 に修正されないまま not planned でクローズ）。MCP 公式のデバッグ指針も、クライアント経由で起動されたサーバの作業ディレクトリは未定義でありうると明記している。
+ツールのパス引数は絶対パスのみ受け付け、相対パスは解決せずエラーで弾く。相対パスの基準になるのはサーバプロセスの作業ディレクトリで、決めるのは MCP クライアント、呼び出し元のエージェントからは見えないため。実際 Claude Code CLI は利用者のリポジトリで起動するが、同デスクトップ版は `$HOME` で起動し設定の `cwd` も無視する（[anthropics/claude-code#75266](https://github.com/anthropics/claude-code/issues/75266)、2026-09 に修正されないまま not planned でクローズ）。MCP 公式のデバッグ指針も、クライアント経由で起動されたサーバの作業ディレクトリは未定義でありうると明記している。
 
 `roots/list` でクライアントにワークスペース根を訊けば、この推測自体が要らなくなる（クライアントが絶対 `file://` URI で返すプロトコル上の正解）。ただし capability は任意で、非対応クライアントは `-32601` を返す仕様であり、Claude Code デスクトップは initialize で roots を渡さない。フォールバック設計とクライアント差の検証が別途要るため今回は採らず、将来の選択肢として残す。
 
@@ -120,7 +120,7 @@ Another Mood ツール自身の利用者ドキュメント（`docs/` ツリー�
 公開しないもの:
 
 - **showcase の具体例**: 静的に同梱するより `mood init` 経由で AI に展開・体験させる方が「AI が *動く* ためのインタフェース」という方針と整合する
-- **接続先プロジェクトの output**（`<project_dir>/.another-mood/output/`）: `build` ツール経由でその場で生成・取得する
+- **接続先のsbdb プロジェクトの output**（`<project_dir>/.another-mood/output/`）: `build` ツール経由でその場で生成・取得する
 
 #### Prompts（ユーザ起動）
 
@@ -166,9 +166,9 @@ MCP が CLI に対して余分に運んでいるのは Server Instructions だ�
 
 - **内容**（ツールが何をするか、どう使うか）: 人間と AI で同一であるべきで、別版は不要。`docs/` で済んでいる
 - **導線**（docs がどこにあり、いつ読むか）: 人間は README や検索で自力でたどり着くが、エージェントは文脈に書かれていなければ読みに行かない。これだけが正当に AI 固有の部分で、中身は「このディレクトリは mood で管理する。`mood --help` を見よ」程度の一行で足りる
-- **プロジェクト固有の運用**（dev-docs は `dev-docs/` にあり `mood build dev-docs` で組む、等）: ツールの文書ではなくプロジェクトの文脈。書く主体はプロジェクトの持ち主で、ツールにできるのは init で種を置くことまで
+- **リポジトリ固有の運用**（dev-docs は `dev-docs/` にあり `mood build dev-docs` で組む、等）: ツールの文書ではなくリポジトリの文脈。書く主体はリポジトリの持ち主で、ツールにできるのは init で種を置くことまで
 
-結論として、ツールが出荷すべき AI 専用の文章は無い。出すべきは、良い `docs/`、エージェントが自力でたどれる導線（`mood --help` → `mood docs list` → `mood docs read`）、プロジェクトディレクトリに置く一行のポインタ、の三つ。
+結論として、ツールが出荷すべき AI 専用の文章は無い。出すべきは、良い `docs/`、エージェントが自力でたどれる導線（`mood --help` → `mood docs list` → `mood docs read`）、sbdb プロジェクトに置く一行のポインタ、の三つ。
 
 多くのライブラリが AI 向け文書（`llms.txt`、skill、AGENTS.md テンプレート）を別途出しているのは、人間向け docs が Web レンダリング前提で機械が取りにくい、量が多すぎて索引が要る、といった「docs が機械に読めない」症状への対処であり、方向は分離ではなく収束（人間向け docs を機械にも読める形に寄せる）である。本ツールは `docs/` が素の Markdown でパッケージに同梱され `mood docs read` で引けるので、収束後の形を最初から持っている。
 
@@ -186,7 +186,7 @@ MCP 側に残る固有価値は、シェルを持たないクライアント（C
 
 `mood --help` の冒頭は既に「schema / views / templates を書く前に `mood docs list` → `mood docs read <uri>` で仕様を読め」と指しており、`docs list` は各ページの要約つきで URI を返す。「`mood --help` を見ろ」の一言から仕様の該当ページまで二手で届く。Instructions にある作業ループ（編集 → build → `__db/` 診断出力で確認）も、`docs/guides.md` の Workflow 章に段階ごとの「どこに書き、どこで確認するか」の表として既にある。Instructions の内容で `docs/` に無いものは無い。
 
-欠けているのは二点だけ: プロジェクトディレクトリに置く一言と、`--help` から Workflow 章への指し。
+欠けているのは二点だけ: sbdb プロジェクトに置く一言と、`--help` から Workflow 章への指し。
 
 #### 案
 
@@ -200,6 +200,6 @@ MCP 側に残る固有価値は、シェルを持たないクライアント（C
 
 - `docs/guides.md` の Quick Start にあるディレクトリ木と、`docs/reference/cli.md` の `init` / `blueprint apply` の説明に README.md を足す
 - help 文中の「(also exposed via MCP)」は 5 で落ちる
-- 既存プロジェクトには README.md は届かない。3 の docs ページからコピーすれば済むので、独立コマンドは急がない
+- 既存のsbdb プロジェクトには README.md は届かない。3 の docs ページからコピーすれば済むので、独立コマンドは急がない
 - `mood init` の冪等性: 既に README.md があるときの扱い（上書きしない）を `sbdb.yaml` と揃える
 - `docs/index.md` と `docs/catalog.yaml` の `mcp.md` のタイトル・要約を改題に合わせる

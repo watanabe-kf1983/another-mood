@@ -423,7 +423,7 @@ grouped: { by: hobby.level, as: hobby }
 
 #### 問題
 
-「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の `this` 束縛) で、`render` の主題は `this` の子孫に限られるため、一つのプロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
+「複数の entity / view を束ねた一つのページ」(文書) は、現状 root テンプレート (`index.md`) でしか組めない。サブテンプレートの束縛は主題だけ (paging-spec の `this` 束縛) で、`render` の主題は `this` の子孫に限られるため、一つのsbdb プロジェクトから複数の文書を別ページとして出す手段が無い。`{% include %}` は root の文脈を共有するので `index.md` の肥大化は分割できるが、ページは作らない (showcase/system-dev-docs-ja の二文書で表面化)。
 
 代替案を検討して退けた:
 
