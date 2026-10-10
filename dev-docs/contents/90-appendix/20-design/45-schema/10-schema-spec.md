@@ -39,7 +39,7 @@ attribute には一つの型を持たせる。カタログが attribute ごと�
 
 **object 属性は構造化データのためのもの** — 形の定まらないデータは string 属性で持つべきで、object で受けるものではない。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。
 
-**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../../../20-design/20-app/40-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
+**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../../../20-design/75-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
 
 ## x-ref の背景（各論）
 

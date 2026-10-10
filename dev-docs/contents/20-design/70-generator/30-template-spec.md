@@ -58,12 +58,12 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 
 ### build_info のキーの名前空間 — 出所で三分する
 
-> **[W4 dup]** vars の綴り規則 ↔ template.md:358、cli.md:268-274 (b)、20-app/20-config-spec:27-29 (c)、50-release:51-53 (c) — 部分。案: 綴り規則は削除→docs (config-spec へポインタ)。非契約宣言は残す
+> **[W4 dup]** vars の綴り規則 ↔ template.md:358、cli.md:268-274 (b)、25-entrypoints/10-config-spec:27-29 (c)、50-release:51-53 (c) — 部分。案: 綴り規則は削除→docs (config-spec へポインタ)。非契約宣言は残す
 
 | 名前空間 | 出所 | 例 |
 |---|---|---|
 | `processor.*` | 今回処理した処理系 | `processor.name`, `processor.version`, `processor.started_at`, `processor.command` |
-| `vars.*` | 実行者の注入値（供給機構は [20-config-spec.md](../20-app/20-config-spec.md)） | `vars.git_commit_id` |
+| `vars.*` | 実行者の注入値（供給機構は [20-config-spec.md](../25-entrypoints/10-config-spec.md)） | `vars.git_commit_id` |
 | `manifest.*` | sbdb プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
 注入ルートは `vars.*` にしか書けない。処理系の識別（`processor.name` / `version` / `started_at` / `command`）と `manifest.*` を外から偽装する経路は無い（`processor.config.*` は環境変数 `MOOD_*` でも決まるが、それは config の写しであって注入ではない）。環境変数の素通し（`env.*`）を作らないのも同じ線で、テンプレートが環境の読み取り器になると CI のクレデンシャル等を出力に焼き込めてしまう（[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開ける）。越境するのは実行者が明示的に差し出した値だけ。

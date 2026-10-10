@@ -17,7 +17,7 @@
   （= 破壊的変更を越えて上がれない利用者）はローンチ前にはほぼ定義上存在しない。
   規律が払えないコストになったときの構造的解は Git Flow ではなく、sbdb_version
   対応集合の複数世代並行サポート
-  （[sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) に YAGNI として
+  （[sbdb-manifest](node:/prose/20-design/20-sbdb-project/20-sbdb-manifest) に YAGNI として
   保留済み）
 - **二相構造「PR が置き、リリースが消化する」**: リリースに要る判断と記述はすべて、
   文脈が最も新鮮な PR 時点で置く。リリース時はその消化だけで、判断も、コミットも、

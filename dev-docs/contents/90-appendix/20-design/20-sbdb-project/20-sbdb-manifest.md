@@ -1,6 +1,6 @@
 # プロジェクトマニフェスト (appendix)
 
-[プロジェクトマニフェスト](../../../20-design/20-app/60-sbdb-manifest.md) の背景。
+[プロジェクトマニフェスト](../../../20-design/20-sbdb-project/20-sbdb-manifest.md) の背景。
 
 ## Cargo との比較
 

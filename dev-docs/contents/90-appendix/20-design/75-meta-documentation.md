@@ -1,6 +1,6 @@
 # メタドキュメンテーション (appendix)
 
-[メタドキュメンテーション](../../../20-design/20-app/40-meta-documentation.md) の背景。
+[メタドキュメンテーション](../../20-design/75-meta-documentation.md) の背景。
 
 ## View の Shape が必須な理由
 

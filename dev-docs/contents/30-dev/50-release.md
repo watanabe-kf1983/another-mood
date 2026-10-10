@@ -17,7 +17,7 @@
 - リリースの役割は三値——破壊 / 互換・機能 / 互換・修正。破壊は二種の総称:
     - **フォーマット破壊** — サポート世代の脱落（old_supported − new_supported ≠ ∅。
       世代の**追加**自体は破壊ではない。世代運用は
-      [sbdb-manifest](node:/prose/20-design/20-app/60-sbdb-manifest) の管轄）
+      [sbdb-manifest](node:/prose/20-design/20-sbdb-project/20-sbdb-manifest) の管轄）
     - **ツール破壊** — CLI 等、ツールの利用者向け契約の破壊
 - 役割から版番号の桁への写像。桁の対応はこの表だけが持ち、他の記述は役割語で書く:
 

@@ -2,7 +2,7 @@
 
 ユーザがシステム設計書を authoring する際に、本ツールが first-class でサポートする artifact 群。各タスクは「artifact 用のスキーマ」「サンプルデータ」「表現テンプレート」の三点セットを blueprint として提供する。
 
-[F (メタドキュメンテーション)](../20-app/40-meta-documentation.md) との違い: F はカタログから auto-derive する meta-view (ツールが自分自身を説明する用途)、本カテゴリはユーザが authoring した data 上で動く first-party blueprint (ユーザに設計書 authoring の力を授ける用途)。両者は同じ「構造化データ → 自動描画」のメカニズムを共有するが、データの出所 (カタログ vs ユーザデータ) と動機が異なる。
+[F (メタドキュメンテーション)](../75-meta-documentation.md) との違い: F はカタログから auto-derive する meta-view (ツールが自分自身を説明する用途)、本カテゴリはユーザが authoring した data 上で動く first-party blueprint (ユーザに設計書 authoring の力を授ける用途)。両者は同じ「構造化データ → 自動描画」のメカニズムを共有するが、データの出所 (カタログ vs ユーザデータ) と動機が異なる。
 
 ## External Design
 
@@ -51,7 +51,7 @@
 
 ### showcase/japanese-table-design: テーブル定義から 2 種類のスキーマ図
 
-`showcase/japanese-table-design` がユーザ-land の参照実装。題材は小規模書店の蔵書管理 (5 テーブル / 4 FK) で、スキーマ・データ・description・出力ファイルパスのすべてに日本語識別子を運用している。1 つのテーブル定義から 2 つの図 (テーブル設計図 = `erDiagram`、ドメインモデル図 = `classDiagram`) を描き分ける: 記法の責任分割は下表のとおり括弧入りの SQL 型が `classDiagram` で壊れることに由来し、論理型だけを扱う[メタドキュメンテーション](../20-app/40-meta-documentation.md)は `classDiagram` を採る。
+`showcase/japanese-table-design` がユーザ-land の参照実装。題材は小規模書店の蔵書管理 (5 テーブル / 4 FK) で、スキーマ・データ・description・出力ファイルパスのすべてに日本語識別子を運用している。1 つのテーブル定義から 2 つの図 (テーブル設計図 = `erDiagram`、ドメインモデル図 = `classDiagram`) を描き分ける: 記法の責任分割は下表のとおり括弧入りの SQL 型が `classDiagram` で壊れることに由来し、論理型だけを扱う[メタドキュメンテーション](../75-meta-documentation.md)は `classDiagram` を採る。
 
 #### Mermaid Unicode 制約の実機検証結果
 

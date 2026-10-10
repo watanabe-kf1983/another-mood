@@ -1,6 +1,6 @@
 # sbdb プロジェクト (appendix)
 
-[sbdb プロジェクト](../../../20-design/20-app/10-sbdb-project.md) の背景。
+[sbdb プロジェクト](../../../20-design/20-sbdb-project/10-sbdb-project.md) の背景。
 
 ## MS-Access アナロジー
 
