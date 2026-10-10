@@ -87,7 +87,7 @@ null/missing 位置の決め方は DB エンジン間で割れる。SQL 系は�
 - 「ここだけ特例で潜れる」asymmetry が発生せず、句の責任が明確
 - 将来の DSL 拡張も「array 走査は別句で」が原則として残る
 
-実装上はこの規則を catalog の木の探索が持つ。`Node.descend` は singleton の子 Node を降りるが `[]` エッジに当たるとそこで止まる — パスは配列属性で終われるが、その先へは続けない。`where` / `sort.by` / `join.on` はこの `descend` (`require_path`) を通すだけで array 跨ぎが弾かれる。`select` は wrapper edge を選んだときその子 Node ごと連れて行く挙動 (apply 側 `pluck` の挙動と整合) で、 singleton の sub-attribute をひとまとめに扱う。
+実装上はこの規則をカタログの木の探索が持つ。`Node.descend` は singleton の子 Node を降りるが `[]` エッジに当たるとそこで止まる — パスは配列属性で終われるが、その先へは続けない。`where` / `sort.by` / `join.on` はこの `descend` (`require_path`) を通すだけで array 跨ぎが弾かれる。`select` は wrapper edge を選んだときその子 Node ごと連れて行く挙動 (apply 側 `pluck` の挙動と整合) で、 singleton の sub-attribute をひとまとめに扱う。
 
 ### パイプライン順序
 
@@ -215,7 +215,7 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 ##### 不変条件
 
 - **データのキーはドットを含まない**。`contents/` 由来はもとより、view 出力も含めて
-- **直列化カタログの `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）
+- **カタログの直列化における `Attribute.id` のドットは必ず入れ子を意味する**。`hobby.level` は `hobby`（type=object）の中の `level`。`[]` 接尾は配列、`child_entity` は再帰。したがってカタログだけから JSON の形が一意に復元できる（ルートは M13 が前提）
 
 ##### カタログ出力の `required`
 

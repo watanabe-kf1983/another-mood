@@ -31,8 +31,8 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 以下のコンポーネント構成:
 
-**SchemaInspector**
-スキーマ定義を解析し、データカタログ（フィールド一覧）を抽出する。
+**SchemaInspector**（[schema-spec.md](45-schema/10-schema-spec.md)）
+スキーマ定義を解析し、[データカタログ](45-schema/10-schema-spec.md#データカタログ)（フィールド一覧）を抽出する。
 
 **Content Normalizer**（[normalizer.md](50-normalizer/10-normalizer.md)）
 contents 入力を検証し、辞書形式を配列形式に正規化する。
@@ -40,7 +40,7 @@ Markdown ファイルは内蔵の prose スキーマに従って自動的に正�
 参照整合性もチェックする。
 
 **Query Deriver**
-views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をデータカタログから生成する。
+views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。
 出力には `__definition.views` と `__definition.entities` の両方を書き出す。
 
 **Composer**

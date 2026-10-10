@@ -186,7 +186,7 @@ categories:
         phase: 10
         done: true
       D2:
-        title: Schema-Inspector 拡張 — x-ref の収集
+        title: SchemaInspector 拡張 — x-ref の収集
         phase: 10
         done: true
       D3:

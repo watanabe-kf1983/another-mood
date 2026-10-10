@@ -39,7 +39,7 @@ attribute には一つの型を持たせる。カタログが attribute ごと�
 
 **object 属性は構造化データのためのもの** — 形の定まらないデータは string 属性で持つべきで、object で受けるものではない。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。
 
-**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はデータカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../../../20-design/20-app/40-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
+**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../../../20-design/20-app/40-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
 
 ## x-ref の背景（各論）
 
@@ -49,7 +49,7 @@ attribute には一つの型を持たせる。カタログが attribute ごと�
 
 ### なぜ `items:` 直下を明示エラーにするか
 
-`items:` 直下の `x-ref` を明示エラーにする理由は、現状のデータカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、catalog 構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo は catalog 上で attribute として現れるため)。
+`items:` 直下の `x-ref` を明示エラーにする理由は、現状のカタログがスカラー配列要素のメタ情報を持たない (items-level の validation も同様に脱落している) ためで、カタログ構造の拡張なしには検査が効かない。「JSON Schema が未知キーワードを黙って無視する」挙動に任せると、ユーザは効いていると誤解する。明示エラーにして footgun を避ける。なお、`items: { type: object, properties: { foo: { x-ref: ... } } }` のように items のサブツリーに含まれる通常プロパティの x-ref は許容される (foo はカタログ上で attribute として現れるため)。
 
 ### なぜ data-level 警告が洪水にならないか
 
@@ -77,4 +77,4 @@ property レベル配置の副次的な利点:
 
 ### なぜ値を構造化形式にしたか
 
-文字列パス (`"artists.name"`) より構造化形式 (`{ entity: artists, attribute: name }`) を選んだのは、Schema-Inspector の 1 パス目で entity / attribute の識別を型レベルで保証するため。catalog 構築完了前の段階でも、構文的妥当性は構造から判断できる。target の存在検証は catalog 構築後の遅延処理に分離できる。
+文字列パス (`"artists.name"`) より構造化形式 (`{ entity: artists, attribute: name }`) を選んだのは、SchemaInspector の 1 パス目で entity / attribute の識別を型レベルで保証するため。カタログ構築完了前の段階でも、構文的妥当性は構造から判断できる。target の存在検証はカタログ構築後の遅延処理に分離できる。

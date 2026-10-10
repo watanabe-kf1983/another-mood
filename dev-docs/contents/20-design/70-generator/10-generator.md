@@ -14,7 +14,7 @@ Generator はロードしたデータを inert に詰め替えたうえで `wrap
 | `_parent_record` | Mapping のみ | 最も近い Mapping 祖先（間の Array を 1 段飛ばす） |
 | `_meta.anchor_path` | 全ノード | このノードのアンカーパス（[anchor-spec.md](20-anchor-spec.md)） |
 | `_meta.fragment` / `_meta.stamps_anchor` | 全ノード | リンクの着地 fragment と `<a id>` 刻印の要否（由来型ごとの anchor strategy が決める） |
-| `_meta.object_type_id` | 全ノード | スキーマ位置を表す catalog 形 ID（Array 要素は `X.item`、singleton は `X`、Array は `X.item[]`） |
+| `_meta.object_type_id` | 全ノード | スキーマ位置を表すカタログ形 ID（Array 要素は `X.item`、singleton は `X`、Array は `X.item[]`） |
 
 > **[W4 → appendix]** (この引用段落)
 

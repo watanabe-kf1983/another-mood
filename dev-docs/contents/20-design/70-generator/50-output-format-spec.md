@@ -89,12 +89,12 @@ def md_escape(text: str) -> str:
 
 > **[W4 dup]** ↔ meta_templates.py:4,126-135、md.py:263-264 (a, 部分)。案: 残す
 
-`md.py` のモジュール定数 `MD_GLOBALS` / `MD_FILTERS` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (catalog データへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ、ノードのアンカーパス取り出し) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`meta_templates.py` に `META_TEMPLATES_FILTERS` として持ち、メタ edition の `extra_filters` としてのみ注入する。
+`md.py` のモジュール定数 `MD_GLOBALS` / `MD_FILTERS` は **「出力フォーマット固有の位置依存正規化」** のためだけに使う。built-in メタテンプレートが必要とする補助関数 (カタログデータへの dotted-key access、parent_entity 連鎖 descent、YAML ダンプ、ノードのアンカーパス取り出し) はフォーマット非依存・位置非依存でメタテンプレート専用のドメインヘルパなので、`meta_templates.py` に `META_TEMPLATES_FILTERS` として持ち、メタ edition の `extra_filters` としてのみ注入する。
 
 新しい補助関数を追加する際の判定:
 
 - フォーマット固有 (位置依存正規化) → `MD_GLOBALS` / `MD_FILTERS`
-- メタテンプレート固有 (catalog 走査・整形) → META_TEMPLATES_FILTERS
+- メタテンプレート固有 (カタログ走査・整形) → META_TEMPLATES_FILTERS
 
 境界を曖昧にしてフォーマット側にメタ専用 filter を混ぜると、将来 output_format を追加するたびに同じ filter を再登録する DRY 違反になり、メタテンプレートの依存をユーザテンプレートにも漏らしてしまう。
 

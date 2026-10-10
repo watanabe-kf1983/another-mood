@@ -43,13 +43,17 @@ JSON Schema 本体の property 宣言に `x-ref` キーワードを置き、参�
 
 参照整合性違反は重大度の階層が異なる。schema-level の不整合は data の読み込み以前に build を止める。data-level は警告として常時検出・常時報告するが、build/watch を止めない (ページは正常レンダリング)。`--strict` フラグは「警告があれば exit non-zero」の意味のみを持つ (検査の ON/OFF ではない)。
 
-x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (`prose` / `blob`) のみ。catalog メタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
+x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (`prose` / `blob`) のみ。カタログのメタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
 
 ## Internal Design
 
-### Entity 名
+### データカタログ
 
-スキーマから抽出される各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
+スキーマから抽出した entity と attribute の目録を**データカタログ**（以下カタログ）と呼ぶ。`inspect_schema` ステージが `schema.yaml` から起こして永続化し、以後のステージはスキーマを読み直さずカタログを読む: normalizer の x-ref 検査、query_deriver の `from:` 解決と派生 entity の生成、composer のクエリ評価、generator のメタドキュメント描画。内蔵 content schema（prose / blob）の entity も同じカタログに載る。
+
+形は二つある。Node / Edge の木が正本で、Entity の列はその平坦な直列化（以下「カタログの直列化」）。木は query_deriver が部分木を付け替えるために要り、列はステージ間の受け渡しとメタドキュメントの走査に使う（`data_catalog.py`）。
+
+カタログの各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
 
 - **Entity**: データツリー上の到達経路を表す identifier (`id` = access path)。クエリ DSL の `from:`、paging 設定、表示見出しに使う。例: `categories`, `categories.tasks`。アンカーパス（リンク用の実体パス）とは別概念で、こちらは [anchor-spec.md](../70-generator/20-anchor-spec.md) を参照
 - **ObjectType**: Entity の中の 1 つの item の型 (`id`)。コレクションを 1 段降りるたびに `.item` を付加する path-based 名。FK 参照や型レベルの cross-reference に使う。例: `categories.item`, `categories.item.tasks.item`
@@ -70,4 +74,4 @@ properties:
 
 シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は entity 化されない。シングルトン自身が `object` 型の attribute になり、配下のプロパティが `meta.owner` のようなドット名の attribute として親エンティティに載る。entity 化されるのは collection (`additionalProperties` / `items`) のみで、シングルトン配下の collection はドット名のパスで entity になる (`categories.meta.tasks`)。
 
-データカタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
+カタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../20-app/40-meta-documentation.md) 参照。
