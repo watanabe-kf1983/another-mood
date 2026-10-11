@@ -66,7 +66,7 @@ class TestNormalizeJoin:
             {
                 "to": "tasks",
                 "on": {"left": "id", "right": "cat"},
-                "as": "tasks",
+                "as": ("tasks",),
             }
         ]
 
@@ -81,7 +81,7 @@ class TestNormalizeJoin:
 
     def test_as_defaults_to_to(self) -> None:
         [entry] = normalize_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
-        assert entry["as"] == "tasks"
+        assert entry["as"] == ("tasks",)
 
     def test_explicit_as_kept(self) -> None:
         [entry] = normalize_join(
@@ -91,7 +91,17 @@ class TestNormalizeJoin:
                 "as": "owned_tasks",
             }
         )
-        assert entry["as"] == "owned_tasks"
+        assert entry["as"] == ("owned_tasks",)
+
+    def test_dotted_as_is_a_path(self) -> None:
+        [entry] = normalize_join(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": "owner.tasks",
+            }
+        )
+        assert entry["as"] == ("owner", "tasks")
 
     def test_where_passed_through(self) -> None:
         [entry] = normalize_join(
@@ -138,6 +148,21 @@ class TestNormalizeJoin:
             "preserve_empty": True,
         }
 
+    def test_inline_flatten_of_follows_a_dotted_join_as(self) -> None:
+        [entry] = normalize_join(
+            {
+                "to": "albums",
+                "on": {"left": "album_id", "right": "id"},
+                "as": "album.matches",
+                "flatten": {"as": "album.one"},
+            }
+        )
+        assert entry["flatten"] == {
+            "of": ("album", "matches"),
+            "as": ("album", "one"),
+            "preserve_empty": False,
+        }
+
     def test_inline_flatten_empty_mapping_defaults_both(self) -> None:
         [entry] = normalize_join(
             {
@@ -164,7 +189,7 @@ class TestNormalizeJoin:
 
 class TestNormalizeInlineFlatten:
     def test_true_uses_join_as_for_of_and_as(self) -> None:
-        assert normalize_inline_flatten(True, "owned_tasks") == {
+        assert normalize_inline_flatten(True, ("owned_tasks",)) == {
             "of": ("owned_tasks",),
             "as": ("owned_tasks",),
             "preserve_empty": False,
@@ -255,7 +280,7 @@ class TestNormalizeQuery:
                 {
                     "to": "tasks",
                     "on": {"left": "id", "right": "cat"},
-                    "as": "tasks",
+                    "as": ("tasks",),
                 }
             ],
             "where": {"open": True},
@@ -314,7 +339,19 @@ class TestPreservesUserStr:
     def test_join_default_as_reuses_to_userstr(self) -> None:
         to = self._u("tasks", line=7)
         [entry] = normalize_join({"to": to, "on": {"left": "id", "right": "cat"}})
-        assert entry["as"] is to
+        assert entry["to"] is to
+        assert self._lines(entry["as"]) == [7]
+
+    def test_every_segment_of_a_dotted_join_alias_carries_the_location(self) -> None:
+        [entry] = normalize_join(
+            {
+                "to": "tasks",
+                "on": {"left": "id", "right": "cat"},
+                "as": self._u("owner.tasks", line=13),
+            }
+        )
+        assert entry["as"] == ("owner", "tasks")
+        assert self._lines(entry["as"]) == [13, 13]
 
     def test_select_default_as_reuses_item_userstr(self) -> None:
         item = self._u("name", line=9)
