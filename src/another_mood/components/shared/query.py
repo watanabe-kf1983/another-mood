@@ -86,7 +86,9 @@ class From(QueryNode):
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         (wrapper,) = records
         try:
-            value = pluck(wrapper, self.name)
+            # One edge name in the catalog, a nested path in the data
+            # (``__definition.entities``).
+            value = pluck(wrapper, tuple(self.name.split(".")))
         except KeyError:
             # A source that passed derive() is catalog-declared, but the
             # merged data model only carries keys that some content file
@@ -117,8 +119,7 @@ class Flatten(QueryNode):
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # Transitional: the read side still takes a dotted string.
-        edges, child = catalog.reach(".".join(self.of))
+        edges, child = catalog.reach(self.of)
         edge = edges[-1]
         if not edge.is_collection:
             raise QueryDeriveError(
@@ -174,12 +175,12 @@ class Flatten(QueryNode):
 class Merge:
     """Equi-join with default cardinality: attach matched right rows
     as a list at ``right_as`` on each left row.  Both ``on_*``
-    paths follow the asymmetry rule: nested object dot paths allowed,
-    array crossing not.
+    paths follow the asymmetry rule: reaching into nested objects is
+    allowed, crossing an array is not.
     """
 
-    on_left: str
-    on_right: str
+    on_left: KeyPath
+    on_right: KeyPath
     right_as: KeyPath
 
     def apply(
@@ -254,7 +255,7 @@ class Join:
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Join":
         to = cast(str, raw["to"])
-        on_raw = cast(Mapping[str, str], raw["on"])
+        on_raw = cast(Mapping[str, Sequence[str]], raw["on"])
         where: Where | PassThrough = PassThrough()
         if "where" in raw:
             where = Where.from_dict(cast(Mapping[str, object], raw["where"]))
@@ -266,8 +267,8 @@ class Join:
         return cls(
             right=Query(from_=From(name=to), where=where),
             merge=Merge(
-                on_left=on_raw["left"],
-                on_right=on_raw["right"],
+                on_left=tuple(on_raw["left"]),
+                on_right=tuple(on_raw["right"]),
                 right_as=tuple(cast(Sequence[str], raw["as"])),
             ),
             flatten=flatten,
@@ -300,8 +301,8 @@ class Grouped(QueryNode):
     Rows lacking ``by`` form one group of their own, whose row omits ``by``.
     """
 
-    by: str
-    as_: str
+    by: KeyPath
+    as_: KeyPath
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         groups: dict[object, list[Record]] = {}
@@ -310,24 +311,24 @@ class Grouped(QueryNode):
         return [self._group_row(key, items) for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        edge, child = catalog.descend(self.by)
-        out = dc.Node(
-            children=[
-                # ``apply`` writes the whole ``by`` string as the group
-                # key, so the edge mirrors the record, not the path's end.
-                (replace(edge, name=self.by), child),
-                (
-                    dc.Edge(name=self.as_, type="object[]", required=True),
-                    catalog,
-                ),
-            ],
-        )
-        if _duplicate_child_name(out) is not None:
+        if overlaps(self.by, self.as_):
             raise QueryDeriveError(
-                f"grouped alias '{self.as_}' collides with the grouping key",
-                offender=self.as_,
+                f"grouped alias '{'.'.join(self.as_)}' collides with the grouping "
+                f"key '{'.'.join(self.by)}'",
+                offender=self.as_[0],
             )
-        return out
+        key = SelectItem(item=self.by, as_=self.by).derive(catalog)
+        # Every group has its rows, so the list is on every group row.
+        members = Placement(
+            branch=(
+                dc.Edge(name=self.as_[-1], type="object[]", required=True),
+                catalog,
+            ),
+            path=self.as_,
+            source=(),
+        )
+        # The group row is built from nothing, like a projection.
+        return place(dc.Node(), [key, members])
 
     def _key_of(self, record: Record) -> object:
         try:
@@ -336,10 +337,16 @@ class Grouped(QueryNode):
             return MISSING
 
     def _group_row(self, key: object, items: Sequence[Record]) -> Record:
-        if key is MISSING:
-            return {self.as_: items}
-        else:
-            return {self.by: key, self.as_: items}
+        empty: Record = {}
+        row = empty if key is MISSING else put(empty, self.by, key)
+        return put(row, self.as_, items)
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object]) -> "Grouped":
+        return cls(
+            by=tuple(cast(Sequence[str], raw["by"])),
+            as_=tuple(cast(Sequence[str], raw["as"])),
+        )
 
 
 @dataclass(frozen=True)
@@ -349,9 +356,7 @@ class SelectItem:
     Both are paths.
     """
 
-    #: A read path, still dotted: an edge name can be a literal dotted
-    #: key until ``grouped`` writes a path too.
-    item: str
+    item: KeyPath
     as_: KeyPath
 
     def apply(self, record: Record, out: Record) -> Record:
@@ -416,7 +421,7 @@ class Select(QueryNode):
         return cls(
             items=[
                 SelectItem(
-                    item=cast(str, entry["item"]),
+                    item=tuple(cast(Sequence[str], entry["item"])),
                     as_=tuple(cast(Sequence[str], entry["as"])),
                 )
                 for entry in raw
@@ -442,7 +447,7 @@ class Missing(Enum):
 class Sort(QueryNode):
     """Order output records by a single attribute."""
 
-    by: str
+    by: KeyPath
     direction: Direction = Direction.ASC
     missing: Missing = Missing.LAST
 
@@ -532,8 +537,9 @@ class Query(QueryNode):
             out = self.sort.derive(out)
             return out
         except dc.UnknownChildError as exc:
+            # The first segment carries the path's source position.
             raise QueryDeriveError(
-                f"unknown attribute '{exc.name}'", offender=exc.name
+                f"unknown attribute '{'.'.join(exc.path)}'", offender=exc.path[0]
             ) from exc
 
     def source_names(self) -> Sequence[str]:
@@ -568,8 +574,7 @@ class Query(QueryNode):
 
         grouped: Grouped | PassThrough = PassThrough()
         if "grouped" in raw:
-            grouped_raw = cast(Mapping[str, str], raw["grouped"])
-            grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
+            grouped = Grouped.from_dict(cast(Mapping[str, object], raw["grouped"]))
 
         select_raw = cast(Sequence[Mapping[str, object]], raw.get("select", []))
         select: Select | PassThrough = (
@@ -578,11 +583,11 @@ class Query(QueryNode):
 
         sort: Sort | PassThrough = PassThrough()
         if "sort" in raw:
-            sort_raw = cast(Mapping[str, str], raw["sort"])
+            sort_raw = cast(Mapping[str, object], raw["sort"])
             sort = Sort(
-                by=sort_raw["by"],
-                direction=Direction(sort_raw["direction"]),
-                missing=Missing(sort_raw["missing"]),
+                by=tuple(cast(Sequence[str], sort_raw["by"])),
+                direction=Direction(cast(str, sort_raw["direction"])),
+                missing=Missing(cast(str, sort_raw["missing"])),
             )
 
         return cls(
@@ -622,13 +627,3 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
         raise QueryDeriveError(
             "query reference cycle: " + " → ".join(cycle), offender=offender
         ) from exc
-
-
-def _duplicate_child_name(node: dc.Node) -> str | None:
-    """Return the first child edge name that appears twice, or None."""
-    seen: set[str] = set()
-    for edge, _ in node.children:
-        if edge.name in seen:
-            return edge.name
-        seen.add(edge.name)
-    return None

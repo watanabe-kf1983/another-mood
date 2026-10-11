@@ -66,7 +66,7 @@
     {%- set f = entry.flatten %}
     {%- set inline_flatten = f and "{of: " ~ (f.of | join(".")) ~ ", as: " ~ (f.as | join(".")) ~ ", preserve_empty: " ~ (f.preserve_empty | lower) ~ "}" %}
     {{- "" }}| {{ source_link(entry.to) | safe }}
-    {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
+    {{- "" }} | {{ entry.on.left | join(".") }} = {{ entry.on.right | join(".") }}
     {{- "" }} | {{ entry.as | join(".") }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
     {{- "" }} | {% if f %}{{ code_inline(inline_flatten) }}{% endif %}
@@ -83,7 +83,7 @@
 {% if grouped %}
 ### Grouped by
 
-{{ grouped.by }} (as {{ grouped.as }})
+{{ grouped.by | join(".") }} (as {{ grouped.as | join(".") }})
 
 {% endif %}
 ### Select
@@ -92,7 +92,7 @@
 | Item | As |
 |------|----|
 {% for entry in select %}
-| {{ entry.item }} | {{ entry.as | join(".") }} |
+| {{ entry.item | join(".") }} | {{ entry.as | join(".") }} |
 {% endfor %}
 {% else %}
 (no select items defined)

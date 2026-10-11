@@ -19,15 +19,18 @@ from another_mood.components.generator.inert import (
     InertValue,
     ensure_inert,
 )
+from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared import json_data_model
+from another_mood.components.shared.json_data_model import KeyPath
+from another_mood.components.shared.query import From, Record
 
 META_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "meta")
 )
 
 
-def pluck(row: object, key_path: str) -> InertValue:
-    """Template filter wrapper around :func:`json_data_model.pluck`.
+def pluck(row: object, attribute_id: str) -> InertValue:
+    """Template filter: the value of the attribute ``attribute_id`` in ``row``.
 
     Missing keys and broken intermediate steps yield ``None``, which renders as
     nothing and is falsy — a caller needing a container guards with ``or []``.
@@ -35,7 +38,9 @@ def pluck(row: object, key_path: str) -> InertValue:
     if not isinstance(row, Mapping):
         return None
     try:
-        value = json_data_model.pluck(cast(Mapping[str, object], row), key_path)
+        value = json_data_model.pluck(
+            cast(Mapping[str, object], row), dc.Attribute.split_id(attribute_id)
+        )
     except KeyError:
         return None
     # The shared pluck is typed to return `object`; re-marshal to inert.
@@ -51,9 +56,10 @@ def walk_entity(
     the ``views`` mapping.
 
     Descent for child entities follows the catalog's ``parent_entity``
-    chain rather than parsing the dotted id, so singleton-traversed
-    paths like ``__definition.entities.item_type.attributes`` resolve
-    via :func:`json_data_model.pluck`'s dotted lookup. A non-mapping
+    chain rather than parsing the dotted id, which does not tell where the
+    arrays are; each step reads the attribute id the child extends its
+    parent's id by, singletons included (``item_type.attributes`` under
+    ``__definition.entities``). A non-mapping
     ``views``, a missing root key, or an absent intermediate key all
     collapse to an empty list — the ``{% if rows %}`` guard in built-in
     templates renders ``(no records)`` either way.
@@ -62,11 +68,11 @@ def walk_entity(
         return InertArray()
     by_id = {cast(str, e["id"]): e for e in entities}
     ancestors = _ancestor_chain(entity_id, by_id)
-    rows: Sequence[InertValue] = _safe_pluck(
-        cast(Mapping[str, object], views), ancestors[0]
+    rows = cast(
+        Sequence[InertValue], From(name=ancestors[0]).apply([cast(Record, views)])
     )
     for parent_id, child_id in pairwise(ancestors):
-        suffix = child_id.removeprefix(parent_id + ".")
+        suffix = dc.Attribute.split_id(child_id.removeprefix(parent_id + "."))
         rows = list(
             chain.from_iterable(
                 _safe_pluck(row, suffix)
@@ -159,7 +165,7 @@ def _ancestor_chain(
     return chain_
 
 
-def _safe_pluck(row: Mapping[str, object], key_path: str) -> Sequence[InertValue]:
+def _safe_pluck(row: Mapping[str, object], key_path: KeyPath) -> Sequence[InertValue]:
     """``json_data_model.pluck`` returning ``[]`` for missing keys,
     list-wrapping scalars."""
     try:

@@ -7,6 +7,7 @@ travels through normalization, which the downstream
 ``QueryDeriveError`` diagnostic relies on.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ from another_mood.components.preprocess.query_normalizer import (
     normalize_query,
     normalize_select,
     normalize_sort,
+    normalize_where,
 )
 from another_mood.components.shared.user_source.source_loader import Location, UserStr
 
@@ -65,10 +67,16 @@ class TestNormalizeJoin:
         ) == [
             {
                 "to": "tasks",
-                "on": {"left": "id", "right": "cat"},
+                "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
             }
         ]
+
+    def test_dotted_on_becomes_segments(self) -> None:
+        [entry] = normalize_join(
+            {"to": "tasks", "on": {"left": "meta.id", "right": "owner.cat"}}
+        )
+        assert entry["on"] == {"left": ("meta", "id"), "right": ("owner", "cat")}
 
     def test_list_form_preserves_order(self) -> None:
         result = normalize_join(
@@ -103,7 +111,7 @@ class TestNormalizeJoin:
         )
         assert entry["as"] == ("owner", "tasks")
 
-    def test_where_passed_through(self) -> None:
+    def test_where_normalized(self) -> None:
         [entry] = normalize_join(
             {
                 "to": "tasks",
@@ -111,7 +119,7 @@ class TestNormalizeJoin:
                 "where": {"open": True},
             }
         )
-        assert entry["where"] == {"open": True}
+        assert entry["where"] == {"field": ("open",), "operator": "eq", "target": True}
 
     def test_where_absent_stays_absent(self) -> None:
         [entry] = normalize_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
@@ -196,34 +204,99 @@ class TestNormalizeInlineFlatten:
         }
 
 
+class TestNormalizeWhere:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            pytest.param(
+                {"hobby.level": 1},
+                {"field": ("hobby", "level"), "operator": "eq", "target": 1},
+                id="scalar_is_eq_on_a_split_field",
+            ),
+            pytest.param(
+                {"age": {"gt": 10, "lt": 20}},
+                {
+                    "and": [
+                        {"field": ("age",), "operator": "gt", "target": 10},
+                        {"field": ("age",), "operator": "lt", "target": 20},
+                    ]
+                },
+                id="operator_bundle_is_and",
+            ),
+            pytest.param(
+                {"view": False, "not": {"id": {"startswith": "__"}}},
+                {
+                    "and": [
+                        {"field": ("view",), "operator": "eq", "target": False},
+                        {
+                            "not": {
+                                "field": ("id",),
+                                "operator": "startswith",
+                                "target": "__",
+                            }
+                        },
+                    ]
+                },
+                id="several_keys_are_and",
+            ),
+            pytest.param(
+                {"or": [{"x": 1}, {"x": {"gt": 5}}]},
+                {
+                    "or": [
+                        {"field": ("x",), "operator": "eq", "target": 1},
+                        {"field": ("x",), "operator": "gt", "target": 5},
+                    ]
+                },
+                id="combinator_normalizes_each_child",
+            ),
+        ],
+    )
+    def test_normalize(
+        self, raw: Mapping[str, object], expected: Mapping[str, object]
+    ) -> None:
+        assert normalize_where(raw) == expected
+
+
 class TestNormalizeGrouped:
-    def test_both_keys_pass_through(self) -> None:
+    def test_both_keys_split_into_segments(self) -> None:
         """``as`` is schema-required, so there is no default to fill."""
         assert normalize_grouped({"by": "category", "as": "items"}) == {
-            "by": "category",
-            "as": "items",
+            "by": ("category",),
+            "as": ("items",),
+        }
+
+    def test_dotted_by_and_as_split(self) -> None:
+        assert normalize_grouped({"by": "hobby.level", "as": "hobby.members"}) == {
+            "by": ("hobby", "level"),
+            "as": ("hobby", "members"),
         }
 
 
 class TestNormalizeSelect:
     def test_as_defaults_to_item(self) -> None:
         assert normalize_select([{"item": "name"}]) == [
-            {"item": "name", "as": ("name",)}
+            {"item": ("name",), "as": ("name",)}
         ]
 
     def test_explicit_as_kept(self) -> None:
         assert normalize_select([{"item": "category", "as": "id"}]) == [
-            {"item": "category", "as": ("id",)}
+            {"item": ("category",), "as": ("id",)}
         ]
 
     def test_dotted_as_becomes_segments(self) -> None:
         assert normalize_select([{"item": "level", "as": "hobby.level"}]) == [
-            {"item": "level", "as": ("hobby", "level")}
+            {"item": ("level",), "as": ("hobby", "level")}
+        ]
+
+    def test_dotted_item_becomes_segments(self) -> None:
+        """The default ``as`` follows the same path."""
+        assert normalize_select([{"item": "hobby.level"}]) == [
+            {"item": ("hobby", "level"), "as": ("hobby", "level")}
         ]
 
     def test_preserves_order(self) -> None:
         result = normalize_select([{"item": "a"}, {"item": "b"}, {"item": "c"}])
-        assert [e["item"] for e in result] == ["a", "b", "c"]
+        assert [e["item"] for e in result] == [("a",), ("b",), ("c",)]
 
     def test_empty_list(self) -> None:
         assert normalize_select([]) == []
@@ -232,24 +305,27 @@ class TestNormalizeSelect:
 class TestNormalizeSort:
     def test_fills_direction_and_missing_defaults(self) -> None:
         assert normalize_sort({"by": "phase"}) == {
-            "by": "phase",
+            "by": ("phase",),
             "direction": "asc",
             "missing": "last",
         }
 
     def test_explicit_direction_kept(self) -> None:
         assert normalize_sort({"by": "phase", "direction": "desc"}) == {
-            "by": "phase",
+            "by": ("phase",),
             "direction": "desc",
             "missing": "last",
         }
 
     def test_explicit_missing_kept(self) -> None:
         assert normalize_sort({"by": "phase", "missing": "first"}) == {
-            "by": "phase",
+            "by": ("phase",),
             "direction": "asc",
             "missing": "first",
         }
+
+    def test_dotted_by_becomes_segments(self) -> None:
+        assert normalize_sort({"by": "meta.phase"})["by"] == ("meta", "phase")
 
 
 class TestNormalizeQuery:
@@ -279,27 +355,20 @@ class TestNormalizeQuery:
             "join": [
                 {
                     "to": "tasks",
-                    "on": {"left": "id", "right": "cat"},
+                    "on": {"left": ("id",), "right": ("cat",)},
                     "as": ("tasks",),
                 }
             ],
-            "where": {"open": True},
-            "grouped": {"by": "category", "as": "items"},
-            "select": [{"item": "name", "as": ("name",)}],
-            "sort": {"by": "name", "direction": "asc", "missing": "last"},
+            "where": {"field": ("open",), "operator": "eq", "target": True},
+            "grouped": {"by": ("category",), "as": ("items",)},
+            "select": [{"item": ("name",), "as": ("name",)}],
+            "sort": {"by": ("name",), "direction": "asc", "missing": "last"},
         }
 
     def test_absent_clauses_stay_absent(self) -> None:
         result = normalize_query({"id": "q", "from": "items"})
         for key in ("flatten", "join", "where", "grouped", "select", "sort"):
             assert key not in result
-
-    def test_where_is_passed_through_unchanged(self) -> None:
-        # ``where`` keeps its original sugar (e.g. scalar-as-eq) since the
-        # typed predicate AST is built later by ``parse_record_predicate``.
-        where = {"phase": "design", "and": [{"open": True}]}
-        result = normalize_query({"id": "q", "from": "items", "where": where})
-        assert result["where"] is where
 
 
 class TestPreservesUserStr:
@@ -353,11 +422,11 @@ class TestPreservesUserStr:
         assert entry["as"] == ("owner", "tasks")
         assert self._lines(entry["as"]) == [13, 13]
 
-    def test_select_default_as_reuses_item_userstr(self) -> None:
-        item = self._u("name", line=9)
+    def test_select_item_and_default_as_carry_the_item_location(self) -> None:
+        item = self._u("hobby.level", line=9)
         [entry] = normalize_select([{"item": item}])
-        assert entry["item"] is item
-        assert self._lines(entry["as"]) == [9]
+        assert self._lines(entry["item"]) == [9, 9]
+        assert self._lines(entry["as"]) == [9, 9]
 
     def test_every_segment_of_a_dotted_alias_carries_the_location(self) -> None:
         """``str`` methods drop the location, so a plain split would

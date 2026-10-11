@@ -589,7 +589,7 @@ class TestMerge:
     """
 
     def test_attaches_matched_right_rows_under_as_(self) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",))
         left = [{"id": "A"}, {"id": "B"}]
         right = [
             {"id": "A1", "cat": "A"},
@@ -608,7 +608,7 @@ class TestMerge:
         ]
 
     def test_left_row_with_no_match_gets_empty_list(self) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",))
         left = [{"id": "A"}, {"id": "Z"}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [
@@ -620,13 +620,13 @@ class TestMerge:
         # Schema validation in ``Merge.derive`` rules out unknown
         # ``on.left``, but optional attributes can still be absent on
         # individual rows — those rows behave like a no-match.
-        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",))
         left: list[dict[str, object]] = [{}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [{"tasks": []}]
 
     def test_right_row_missing_key_excluded_from_index(self) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",))
         left = [{"id": "A"}]
         right = [{"id": "A1", "cat": "A"}, {"id": "stray"}]
         assert list(merge.apply(left, right)) == [
@@ -635,7 +635,7 @@ class TestMerge:
 
     def test_dotted_left_path(self) -> None:
         # ``pluck`` resolves dotted paths on the left row.
-        merge = Merge(on_left="meta.cat", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("meta", "cat"), on_right=("cat",), right_as=("tasks",))
         left = [{"meta": {"cat": "A"}}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [
@@ -646,7 +646,7 @@ class TestMerge:
         """The alias is a path: the list lands inside the object on the
         way where the row has it, in a made-up one where it does not --
         a no-match row still gets its empty list."""
-        merge = Merge(on_left="id", on_right="cat", right_as=("owner", "tasks"))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("owner", "tasks"))
         left = [{"id": "A", "owner": {"name": "Ann"}}, {"id": "Z"}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [
@@ -665,7 +665,7 @@ class TestMergeDerive:
         return dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
 
     def test_attaches_right_node_under_as_edge(self, root: dc.Node) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",))
         left = root.child("cats")
         right = root.child("tasks")
         merged = merge.derive(left, right)
@@ -679,18 +679,18 @@ class TestMergeDerive:
         assert node is right
 
     def test_raises_when_left_key_unknown(self, root: dc.Node) -> None:
-        merge = Merge(on_left="missing", on_right="cat", right_as=("tasks",))
+        merge = Merge(on_left=("missing",), on_right=("cat",), right_as=("tasks",))
         with pytest.raises(dc.UnknownChildError, match="missing"):
             merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_when_right_key_unknown(self, root: dc.Node) -> None:
-        merge = Merge(on_left="id", on_right="missing", right_as=("tasks",))
+        merge = Merge(on_left=("id",), on_right=("missing",), right_as=("tasks",))
         with pytest.raises(dc.UnknownChildError, match="missing"):
             merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_on_as_collision(self, root: dc.Node) -> None:
         # ``right_as=("name",)`` already exists as an attribute on cats.
-        merge = Merge(on_left="id", on_right="cat", right_as=("name",))
+        merge = Merge(on_left=("id",), on_right=("cat",), right_as=("name",))
         with pytest.raises(QueryDeriveError, match="collides"):
             merge.derive(root.child("cats"), root.child("tasks"))
 
@@ -699,7 +699,7 @@ class TestMergeDerive:
         # The flattened catalog encoding has no direct edge ``tasks.title``
         # under categories, so ``require_child`` raises.
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        merge = Merge(on_left="tasks.title", on_right="id", right_as=("x",))
+        merge = Merge(on_left=("tasks", "title"), on_right=("id",), right_as=("x",))
         with pytest.raises(dc.UnknownChildError, match="tasks.title"):
             merge.derive(root.child("categories"), root.child("categories"))
 
@@ -710,11 +710,11 @@ class TestMergeDerive:
         with pytest.raises(
             QueryDeriveError, match="collides with the attribute 'hobby.level'"
         ) as info:
-            Merge(on_left="id", on_right="rid", right_as=("hobby",)).derive(
+            Merge(on_left=("id",), on_right=("rid",), right_as=("hobby",)).derive(
                 tree("id hobby.level"), tree("rid")
             )
         assert info.value.offender == "hobby"
-        Merge(on_left="id", on_right="rid", right_as=("hobby", "clubs")).derive(
+        Merge(on_left=("id",), on_right=("rid",), right_as=("hobby", "clubs")).derive(
             tree("id hobby.level"), tree("rid")
         )
 
@@ -722,7 +722,7 @@ class TestMergeDerive:
         """The list is written on every left row, so an object on the
         way is made up where a row lacked it: it is on every row after
         the join and what it held before is optional inside it."""
-        merge = Merge(on_left="id", on_right="rid", right_as=("hobby", "tasks"))
+        merge = Merge(on_left=("id",), on_right=("rid",), right_as=("hobby", "tasks"))
         assert (
             paths(merge.derive(tree("id hobby?.level"), tree("rid")))
             == "id hobby.level? hobby.tasks[].rid"
@@ -744,7 +744,7 @@ class TestJoin:
         }
         join = Join(
             right=Query(from_=From(name="tasks")),
-            merge=Merge(on_left="id", on_right="cat", right_as=("tasks",)),
+            merge=Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",)),
             flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         left = [{"id": "A"}, {"id": "B"}]
@@ -758,7 +758,7 @@ class TestJoin:
         root = dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
         join = Join(
             right=Query(from_=From(name="tasks")),
-            merge=Merge(on_left="id", on_right="cat", right_as=("tasks",)),
+            merge=Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",)),
             flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         out = join.derive(root.child("cats"), root)
@@ -773,21 +773,33 @@ class TestJoin:
 class TestJoinFromDict:
     def test_basic(self) -> None:
         assert Join.from_dict(
-            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": ("tasks",)}
+            {
+                "to": "tasks",
+                "on": {"left": ("id",), "right": ("cat",)},
+                "as": ("tasks",),
+            }
         ) == Join(
             right=Query(from_=From(name="tasks")),
-            merge=Merge(on_left="id", on_right="cat", right_as=("tasks",)),
+            merge=Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",)),
         )
 
     def test_without_where_leaves_right_subquery_passthrough(self) -> None:
         join = Join.from_dict(
-            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": ("tasks",)}
+            {
+                "to": "tasks",
+                "on": {"left": ("id",), "right": ("cat",)},
+                "as": ("tasks",),
+            }
         )
         assert join.right.where == PassThrough()
 
     def test_without_flatten_leaves_join_flatten_none(self) -> None:
         join = Join.from_dict(
-            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": ("tasks",)}
+            {
+                "to": "tasks",
+                "on": {"left": ("id",), "right": ("cat",)},
+                "as": ("tasks",),
+            }
         )
         assert join.flatten is None
 
@@ -795,7 +807,7 @@ class TestJoinFromDict:
         join = Join.from_dict(
             {
                 "to": "tasks",
-                "on": {"left": "id", "right": "cat"},
+                "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
                 "flatten": {"of": ("tasks",), "as": ("task",), "preserve_empty": True},
             }
@@ -810,14 +822,14 @@ class TestJoinFromDict:
         join = Join.from_dict(
             {
                 "to": "tasks",
-                "on": {"left": "id", "right": "cat"},
+                "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
-                "where": {"open": True},
+                "where": {"field": ("open",), "operator": "eq", "target": True},
             }
         )
         assert join.right.where == Where(
             predicate=FieldPredicate(
-                key_path="open", operator=Operator.EQ, target=True
+                field=("open",), operator=Operator.EQ, target=True
             ),
         )
 
@@ -828,7 +840,7 @@ class TestWhere:
     def test_apply_filters_records(self) -> None:
         where = Where(
             predicate=FieldPredicate(
-                key_path="open", operator=Operator.EQ, target=True
+                field=("open",), operator=Operator.EQ, target=True
             ),
         )
         records = [{"open": True}, {"open": False}, {"open": True}]
@@ -838,7 +850,7 @@ class TestWhere:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
         where = Where(
-            predicate=FieldPredicate(key_path="phase", operator=Operator.GT, target=5),
+            predicate=FieldPredicate(field=("phase",), operator=Operator.GT, target=5),
         )
         assert where.derive(leaf) is leaf
 
@@ -851,7 +863,7 @@ class TestWhere:
         leaf = From(name="tasks").derive(root)
         where = Where(
             predicate=FieldPredicate(
-                key_path="nonexistent", operator=Operator.EQ, target=1
+                field=("nonexistent",), operator=Operator.EQ, target=1
             ),
         )
         with pytest.raises(dc.UnknownChildError, match="nonexistent"):
@@ -863,8 +875,9 @@ class TestWhereFromDict:
         """``Where.from_dict`` delegates the predicate AST construction
         to :func:`parse_record_predicate`; detailed AST shape per input
         is covered in ``test_record_predicate.TestParseRecordPredicate``."""
-        assert Where.from_dict({"x": 1}) == Where(
-            predicate=FieldPredicate(key_path="x", operator=Operator.EQ, target=1),
+        raw = {"field": ("x",), "operator": "eq", "target": 1}
+        assert Where.from_dict(raw) == Where(
+            predicate=FieldPredicate(field=("x",), operator=Operator.EQ, target=1),
         )
 
 
@@ -888,7 +901,10 @@ class TestGrouped:
                 "entities": [{"id": "order", "category": "b"}],
             },
         ]
-        assert list(Grouped(by="category", as_="entities").apply(records)) == expected
+        assert (
+            list(Grouped(by=("category",), as_=("entities",)).apply(records))
+            == expected
+        )
 
     def test_preserves_insertion_order(self) -> None:
         records = [
@@ -896,7 +912,7 @@ class TestGrouped:
             {"id": "2", "cat": "a"},
             {"id": "3", "cat": "b"},
         ]
-        result = Grouped(by="cat", as_="items").apply(records)
+        result = Grouped(by=("cat",), as_=("items",)).apply(records)
         assert [r["cat"] for r in result] == ["b", "a"]
 
     def test_rows_without_key_form_one_group_omitting_key(self) -> None:
@@ -906,16 +922,25 @@ class TestGrouped:
             {"id": "3", "cat": "a"},
             {"id": "4"},
         ]
-        assert list(Grouped(by="cat", as_="items").apply(records)) == [
+        assert list(Grouped(by=("cat",), as_=("items",)).apply(records)) == [
             {"cat": "a", "items": [{"id": "1", "cat": "a"}, {"id": "3", "cat": "a"}]},
             {"items": [{"id": "2"}, {"id": "4"}]},
         ]
 
-    def test_nested_key_missing_midway_counts_as_absent(self) -> None:
+    def test_writes_key_and_members_at_their_paths(self) -> None:
+        """The key value lands where ``by`` read it and the members at
+        ``as``, siblings under one object.  A row lacking the path partway
+        lacks the key, and the keyless group's row omits the key's path."""
         records = [{"id": "1", "hobby": {"level": "pro"}}, {"id": "2"}]
-        assert list(Grouped(by="hobby.level", as_="items").apply(records)) == [
-            {"hobby.level": "pro", "items": [{"id": "1", "hobby": {"level": "pro"}}]},
-            {"items": [{"id": "2"}]},
+        grouped = Grouped(by=("hobby", "level"), as_=("hobby", "members"))
+        assert list(grouped.apply(records)) == [
+            {
+                "hobby": {
+                    "level": "pro",
+                    "members": [{"id": "1", "hobby": {"level": "pro"}}],
+                }
+            },
+            {"hobby": {"members": [{"id": "2"}]}},
         ]
 
 
@@ -923,7 +948,7 @@ class TestGroupedDerive:
     def test_wraps_with_by_and_alias(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
-        wrapped = Grouped(by="phase", as_="tasks").derive(leaf)
+        wrapped = Grouped(by=("phase",), as_=("tasks",)).derive(leaf)
         assert dc.flatten_tree(wrapped, "groups") == _catalog(
             """
             - id: groups
@@ -949,21 +974,38 @@ class TestGroupedDerive:
             """
         )
 
-    def test_raises_when_alias_collides_with_grouping_key(self) -> None:
-        root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
-        with pytest.raises(QueryDeriveError, match="collides with the grouping key"):
-            Grouped(by="phase", as_="phase").derive(leaf)
+    def test_raises_when_alias_overlaps_grouping_key(self) -> None:
+        """What overlaps is ``overlaps``' business; here, that the alias
+        is checked against the key and reported by its first segment,
+        which carries the source position."""
+        with pytest.raises(
+            QueryDeriveError, match="collides with the grouping key"
+        ) as excinfo:
+            Grouped(by=("hobby", "level"), as_=("hobby",)).derive(tree("hobby.level"))
+        assert excinfo.value.offender == "hobby"
+
+    def test_lands_key_and_members_at_their_paths(self) -> None:
+        """The key lands where ``by`` read it and the members at ``as``;
+        siblings converge on one object.  The members are on every group
+        row, so the object is too, while a key read through an optional
+        parent is missing from the keyless group's row."""
+        grouped = Grouped(by=("hobby", "level"), as_=("hobby", "members"))
+        assert (
+            paths(grouped.derive(tree("id hobby?.level")))
+            == "hobby.level? hobby.members[].id hobby.members[].hobby?.level"
+        )
 
 
 class TestSelectItem:
     def test_extracts_field(self) -> None:
-        assert SelectItem(item="name", as_=("name",)).apply({"name": "Alice"}, {}) == {
+        assert SelectItem(item=("name",), as_=("name",)).apply(
+            {"name": "Alice"}, {}
+        ) == {
             "name": "Alice",
         }
 
     def test_renames_field(self) -> None:
-        assert SelectItem(item="category", as_=("id",)).apply(
+        assert SelectItem(item=("category",), as_=("id",)).apply(
             {"category": "user-management"}, {}
         ) == {"id": "user-management"}
 
@@ -971,19 +1013,19 @@ class TestSelectItem:
         # The JSON data model treats a nullable field as an absent key,
         # so projecting an optional schema attribute on a record that
         # happens to omit it writes nothing rather than raising.
-        assert SelectItem(item="missing", as_=("x",)).apply(
+        assert SelectItem(item=("missing",), as_=("x",)).apply(
             {"name": "Alice"}, {"kept": 1}
         ) == {"kept": 1}
 
     def test_dotted_alias_nests(self) -> None:
-        assert SelectItem(item="level", as_=("hobby", "level")).apply(
+        assert SelectItem(item=("level",), as_=("hobby", "level")).apply(
             {"level": "pro"}, {}
         ) == {"hobby": {"level": "pro"}}
 
     def test_siblings_converge_on_one_parent(self) -> None:
         record = {"level": "pro", "pets": 2}
-        out = SelectItem(item="level", as_=("hobby", "level")).apply(record, {})
-        assert SelectItem(item="pets", as_=("hobby", "pets")).apply(record, out) == {
+        out = SelectItem(item=("level",), as_=("hobby", "level")).apply(record, {})
+        assert SelectItem(item=("pets",), as_=("hobby", "pets")).apply(record, out) == {
             "hobby": {"level": "pro", "pets": 2}
         }
 
@@ -991,7 +1033,7 @@ class TestSelectItem:
         # ``hobby: {}`` would be an object the catalog claims a shape for
         # but no row actually carries a value in.
         assert (
-            SelectItem(item="missing", as_=("hobby", "level")).apply(
+            SelectItem(item=("missing",), as_=("hobby", "level")).apply(
                 {"name": "Alice"}, {}
             )
             == {}
@@ -1002,8 +1044,8 @@ class TestSelect:
     def test_projects_fields(self) -> None:
         select = Select(
             items=[
-                SelectItem(item="category", as_=("id",)),
-                SelectItem(item="category", as_=("category",)),
+                SelectItem(item=("category",), as_=("id",)),
+                SelectItem(item=("category",), as_=("category",)),
             ]
         )
         records = [{"category": "a", "extra": 1}, {"category": "b", "extra": 2}]
@@ -1013,7 +1055,7 @@ class TestSelect:
         ]
 
     def test_empty_records(self) -> None:
-        select = Select(items=[SelectItem(item="x", as_=("x",))])
+        select = Select(items=[SelectItem(item=("x",), as_=("x",))])
         assert list(select.apply([])) == []
 
     def test_dotted_aliases_converge_across_items(self) -> None:
@@ -1022,8 +1064,8 @@ class TestSelect:
         # replacing what the earlier put there.
         select = Select(
             items=[
-                SelectItem(item="level", as_=("hobby", "level")),
-                SelectItem(item="pets", as_=("hobby", "pets")),
+                SelectItem(item=("level",), as_=("hobby", "level")),
+                SelectItem(item=("pets",), as_=("hobby", "pets")),
             ]
         )
         assert list(select.apply([{"level": "pro", "pets": 2, "extra": 1}])) == [
@@ -1036,8 +1078,8 @@ class TestSelect:
         # produce variable-shape rows that omit the key when missing.
         select = Select(
             items=[
-                SelectItem(item="id", as_=("id",)),
-                SelectItem(item="parent_entity", as_=("parent_entity",)),
+                SelectItem(item=("id",), as_=("id",)),
+                SelectItem(item=("parent_entity",), as_=("parent_entity",)),
             ]
         )
         records = [
@@ -1056,8 +1098,8 @@ class TestSelectDerive:
         leaf = From(name="tasks").derive(root)
         projected = Select(
             items=[
-                SelectItem(item="phase", as_=("id",)),
-                SelectItem(item="title", as_=("title",)),
+                SelectItem(item=("phase",), as_=("id",)),
+                SelectItem(item=("title",), as_=("title",)),
             ]
         ).derive(leaf)
         assert dc.flatten_tree(projected, "projection") == _catalog(
@@ -1088,10 +1130,10 @@ class TestSelectDerive:
         position."""
         select = Select(
             items=[
-                SelectItem(item="title", as_=("x",)),
-                SelectItem(item="title", as_=second),
-                SelectItem(item="phase", as_=("y",)),
-                SelectItem(item="phase", as_=fourth),
+                SelectItem(item=("title",), as_=("x",)),
+                SelectItem(item=("title",), as_=second),
+                SelectItem(item=("phase",), as_=("y",)),
+                SelectItem(item=("phase",), as_=fourth),
             ]
         )
         with pytest.raises(QueryDeriveError, match=message) as excinfo:
@@ -1103,9 +1145,9 @@ class TestSelectDerive:
         put it, as ``put`` builds the record."""
         select = Select(
             items=[
-                SelectItem(item="title", as_=("a", "p")),
-                SelectItem(item="title", as_=("b",)),
-                SelectItem(item="phase", as_=("a", "d")),
+                SelectItem(item=("title",), as_=("a", "p")),
+                SelectItem(item=("title",), as_=("b",)),
+                SelectItem(item=("phase",), as_=("a", "d")),
             ]
         )
         out = select.derive(tree("title phase"))
@@ -1219,7 +1261,11 @@ class TestSelectDeriveRequired:
     def test_required(
         self, base: str, items: list[tuple[str, tuple[str, ...]]], expected: str
     ) -> None:
-        select = Select(items=[SelectItem(item=item, as_=as_) for item, as_ in items])
+        select = Select(
+            items=[
+                SelectItem(item=tuple(item.split(".")), as_=as_) for item, as_ in items
+            ]
+        )
         assert paths(select.derive(tree(base))) == expected
 
 
@@ -1227,13 +1273,13 @@ class TestSelectFromDict:
     def test_lifts_items(self) -> None:
         assert Select.from_dict(
             [
-                {"item": "category", "as": ("id",)},
-                {"item": "category", "as": ("category",)},
+                {"item": ("category",), "as": ("id",)},
+                {"item": ("category",), "as": ("category",)},
             ]
         ) == Select(
             items=[
-                SelectItem(item="category", as_=("id",)),
-                SelectItem(item="category", as_=("category",)),
+                SelectItem(item=("category",), as_=("id",)),
+                SelectItem(item=("category",), as_=("category",)),
             ]
         )
 
@@ -1260,7 +1306,7 @@ class TestSort:
     ) -> None:
         records = [{"x": 2}, {}, {"x": 1}]
         assert (
-            list(Sort(by="x", direction=direction, missing=missing).apply(records))
+            list(Sort(by=("x",), direction=direction, missing=missing).apply(records))
             == expected
         )
 
@@ -1273,10 +1319,10 @@ class TestSort:
             {"x": 1, "tag": "b"},
             {"x": 1, "tag": "c"},
         ]
-        assert list(Sort(by="x").apply(records)) == records
+        assert list(Sort(by=("x",)).apply(records)) == records
 
     def test_empty_records(self) -> None:
-        assert list(Sort(by="x").apply([])) == []
+        assert list(Sort(by=("x",)).apply([])) == []
 
     def test_dotted_by_path(self) -> None:
         # ``pluck`` resolves dotted paths; sort inherits that.
@@ -1285,7 +1331,7 @@ class TestSort:
             {"meta": {"phase": 8}},
             {"meta": {"phase": 10}},
         ]
-        assert list(Sort(by="meta.phase").apply(records)) == [
+        assert list(Sort(by=("meta", "phase")).apply(records)) == [
             {"meta": {"phase": 8}},
             {"meta": {"phase": 10}},
             {"meta": {"phase": 12}},
@@ -1296,18 +1342,18 @@ class TestSortDerive:
     def test_returns_catalog_unchanged_for_valid_by(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
-        assert Sort(by="phase").derive(leaf) is leaf
+        assert Sort(by=("phase",)).derive(leaf) is leaf
 
     def test_raises_on_unknown_by(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
         with pytest.raises(dc.UnknownChildError, match="nonexistent"):
-            Sort(by="nonexistent").derive(leaf)
+            Sort(by=("nonexistent",)).derive(leaf)
 
     def test_raises_on_by_path_crossing_array(self) -> None:
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
         with pytest.raises(dc.UnknownChildError, match="tasks.title"):
-            Sort(by="tasks.title").derive(root.child("categories"))
+            Sort(by=("tasks", "title")).derive(root.child("categories"))
 
 
 class TestQueryPipeline:
@@ -1449,11 +1495,11 @@ class TestQueryPipeline:
             from_=From(name="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="phase", as_=("rank",)),
-                    SelectItem(item="title", as_=("title",)),
+                    SelectItem(item=("phase",), as_=("rank",)),
+                    SelectItem(item=("title",), as_=("title",)),
                 ]
             ),
-            sort=Sort(by="rank"),
+            sort=Sort(by=("rank",)),
         )
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         result = dc.flatten_tree(query.derive(root), "ranked_tasks")
@@ -1729,7 +1775,7 @@ class TestQueryOptionalClauses:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
             from_=From(name="items"),
-            select=Select(items=[SelectItem(item="name", as_=("name",))]),
+            select=Select(items=[SelectItem(item=("name",), as_=("name",))]),
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
 
@@ -1738,8 +1784,8 @@ class TestQueryOptionalClauses:
             from_=From(name="tasks"),
             select=Select(
                 items=[
-                    SelectItem(item="id", as_=("id",)),
-                    SelectItem(item="title", as_=("title",)),
+                    SelectItem(item=("id",), as_=("id",)),
+                    SelectItem(item=("title",), as_=("title",)),
                 ]
             ),
         )
@@ -1768,8 +1814,8 @@ class TestQueryDeriveErrorTranslation:
         # ``Query.derive`` translates into ``QueryDeriveError``.
         query = Query(
             from_=From(name="tasks"),
-            select=Select(items=[SelectItem(item="title", as_=("title",))]),
-            sort=Sort(by="phase"),
+            select=Select(items=[SelectItem(item=("title",), as_=("title",))]),
+            sort=Sort(by=("phase",)),
         )
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         with pytest.raises(QueryDeriveError, match="phase") as exc_info:
@@ -1789,14 +1835,14 @@ class TestQueryFromDict:
             "join": [
                 {
                     "to": "owners",
-                    "on": {"left": "owner_id", "right": "id"},
+                    "on": {"left": ("owner_id",), "right": ("id",)},
                     "as": ("owner",),
                 }
             ],
-            "where": {"open": True},
-            "grouped": {"by": "category", "as": "members"},
-            "select": [{"item": "category", "as": ("category",)}],
-            "sort": {"by": "category", "direction": "desc", "missing": "first"},
+            "where": {"field": ("open",), "operator": "eq", "target": True},
+            "grouped": {"by": ("category",), "as": ("members",)},
+            "select": [{"item": ("category",), "as": ("category",)}],
+            "sort": {"by": ("category",), "direction": "desc", "missing": "first"},
         }
         assert Query.from_dict(raw) == Query(
             from_=From(name="items"),
@@ -1804,17 +1850,21 @@ class TestQueryFromDict:
             join=(
                 Join(
                     right=Query(from_=From(name="owners")),
-                    merge=Merge(on_left="owner_id", on_right="id", right_as=("owner",)),
+                    merge=Merge(
+                        on_left=("owner_id",), on_right=("id",), right_as=("owner",)
+                    ),
                 ),
             ),
             where=Where(
                 predicate=FieldPredicate(
-                    key_path="open", operator=Operator.EQ, target=True
+                    field=("open",), operator=Operator.EQ, target=True
                 ),
             ),
-            grouped=Grouped(by="category", as_="members"),
-            select=Select(items=[SelectItem(item="category", as_=("category",))]),
-            sort=Sort(by="category", direction=Direction.DESC, missing=Missing.FIRST),
+            grouped=Grouped(by=("category",), as_=("members",)),
+            select=Select(items=[SelectItem(item=("category",), as_=("category",))]),
+            sort=Sort(
+                by=("category",), direction=Direction.DESC, missing=Missing.FIRST
+            ),
         )
 
     def test_minimal_query_uses_passthrough_for_absent_clauses(self) -> None:
@@ -1840,7 +1890,7 @@ class TestQueryFromDict:
             "join": [
                 {
                     "to": "customers",
-                    "on": {"left": "customer_id", "right": "id"},
+                    "on": {"left": ("customer_id",), "right": ("id",)},
                     "as": ("customer",),
                     "flatten": {
                         "of": ("customer",),
@@ -1850,17 +1900,17 @@ class TestQueryFromDict:
                 },
                 {
                     "to": "addresses",
-                    "on": {"left": "customer.address_id", "right": "id"},
+                    "on": {"left": ("customer", "address_id"), "right": ("id",)},
                     "as": ("address",),
                 },
             ],
-            "select": [{"item": "id", "as": ("id",)}],
+            "select": [{"item": ("id",), "as": ("id",)}],
         }
         joins = list(Query.from_dict(raw).join)
         assert [j.merge.right_as for j in joins] == [("customer",), ("address",)]
         assert [j.merge.on_left for j in joins] == [
-            "customer_id",
-            "customer.address_id",
+            ("customer_id",),
+            ("customer", "address_id"),
         ]
 
 
@@ -1887,7 +1937,7 @@ def _ref_query(from_: str, *join_tos: str) -> Query:
         join=tuple(
             Join(
                 right=Query(from_=From(name=to)),
-                merge=Merge(on_left="id", on_right="id", right_as=(to,)),
+                merge=Merge(on_left=("id",), on_right=("id",), right_as=(to,)),
             )
             for to in join_tos
         ),
@@ -1923,7 +1973,7 @@ class TestSourceNames:
             join=(
                 Join(
                     right=_ref_query("categories", "phases"),
-                    merge=Merge(on_left="id", on_right="id", right_as=("c",)),
+                    merge=Merge(on_left=("id",), on_right=("id",), right_as=("c",)),
                 ),
             ),
         )
