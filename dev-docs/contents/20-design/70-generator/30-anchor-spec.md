@@ -195,7 +195,7 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 - **escape の所在を呼び出し側から見せる**。`node(*segs, path=None, fragment=None)` はアンカーパスを三部品から組む: 位置引数は生の値を各 escape して後置（1 引数 = 1 セグメント）、`path=` は出来合いのパス（prose id・定数・root）を verbatim に前置、`fragment=` は見出し slug を raw で末尾に付ける（slug は github 互換で `#` を含まず、`#` は構造的セパレータ。[Prose の例外](#prose-の例外)）。三部品は併用でき、`path=` を base に `segs` で子を掘れる。
 - **誤用は例外にしない**。解決できないアンカーパスは MissingNode として可視化する（`/` 始まりの値を位置引数に渡せば `/%2F…` に escape され一致しない。[未解決参照の扱い](#未解決参照の扱い)）。
 - **`anchor` は主題以外のノードに着地点を手置きする原始機能**。主題には自動刻印が刻む（[アンカーの発行](#アンカーの発行)）。
-- **アンカーパス文字列だけを返す公開フィルタは置かない**。当初 `anchor_path(seg, *segs)` として公開していたが実需が一度も現れず、組み立ては `node()` が担っているため公開名から外した。`anchor_path` の名は現在、ノードから文字列を取り出すメタテンプレート専用フィルタが使う（[generator.md のノードメタデータ](10-generator.md#ノードメタデータ)）。
+- **アンカーパス文字列だけを返す公開フィルタは置かない**。当初 `anchor_path(seg, *segs)` として公開していたが実需が一度も現れず、組み立ては `node()` が担っているため公開名から外した。`anchor_path` の名は現在、ノードから文字列を取り出すメタテンプレート専用フィルタが使う（[ノードメタデータ](#ノードメタデータ)）。
 - **表示テキストは `title` → `name` → `id` → anchor_path 全体のチェイン**。「末尾セグメント」を fallback に入れないのは、それが意味を持つのはリスト要素か入れ子オブジェクトに限られ、一般化できないため。
 
 ### Markdown 本文中のアンカー参照
@@ -269,6 +269,29 @@ relink は author の明示適用（`{{ prose.content | relink }}`）を設計�
 未解決の `node:` 参照は `link` と同じく `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。実装機構は [prose body 処理フィルタ](#prose-body-処理フィルタ) を正本とする。
 
 ## Internal Design
+
+### ノードメタデータ
+
+Composer が渡す木は純粋なデータで、ノードは自分が木のどこにいるかを知らない。木をページに割り、ページ間をリンクで繋ぐには、任意のノードについて三つの問いに答える必要がある: **住所**は何か（リンクの着地先とページパス）、**どの型**か（`file_per` による分割と、由来型ごとのアンカーの刻み方）、**容れ物**は何か（住所の親からの合成と、`render` の subtree ガード）。Generator はその答えをシステム由来のフィールドとして、各ノードの、テンプレートからは直接読み取れない場所に注入する。
+
+| フィールド | 答える問い | 読む側 |
+|---|---|---|
+| `_parent` / `_parent_record` | 容れ物: データツリー上の直近の親ノード / 最も近い Mapping 祖先（間の Array を 1 段飛ばす。Mapping のみ） | アンカーパスの合成、`render` の subtree ガード |
+| `_meta.anchor_path` | 住所: このノードのアンカーパス | `href` / `link` フィルタ、[ページパスの導出](#ページパスの導出)、`<a id>` 刻印 |
+| `_meta.fragment` / `_meta.stamps_anchor` | リンクの着地 fragment と `<a id>` 刻印の要否（由来型ごとの anchor strategy が決める） | `href` / `anchor` フィルタ |
+| `_meta.object_type_id` | 型: スキーマ位置を表すカタログ形 ID（Array 要素は `X.item`、singleton は `X`、Array は `X.item[]`） | `file_per` 判定、anchor strategy の選択 |
+
+テンプレートはこれらの値をフィルタ経由で使う。`_` prefix はデータ側のキーを影にしないための予約。
+
+> **[W4 → appendix]** (この引用段落)
+
+> **背景: なぜテンプレートから直接触らせないか.** テンプレートエンジン (minijinja) は `_` 始まりの **Python 属性**を undefined にし、メソッド呼び出しは拒否する（データ側の `_` 始まりキーは通る）。`row["_meta"]` も `attr()` も同じく undefined になるので迂回路は無い。これはホスト側の内部にテンプレートを触らせないという信頼モデルの意図そのもので、押し戻す理由がない。
+>
+> かといって prefix を外して `meta` 等にはしない。ノードは dict / list のサブクラスで、テンプレートからの `row.meta` は getitem を先に引くため、データ側に `meta` キーがあると静かにそちらが勝つ。`_` prefix はまさにこの shadowing を防ぐためにあり、Python 側では load-bearing なまま残す。したがって prefix は据え置き、**テンプレートへの出口だけをフィルタに移す**。
+>
+> 実際の消費者はこれで足りる: テンプレートからの実需はメタテンプレートの診断テーブルが描くアンカーパス列 1 箇所だけで、それはメタテンプレート専用フィルタ `anchor_path`（ノード → 文字列）が担う。残りの `_parent` / `_parent_record` / `_meta.object_type_id` は `render` の subtree guard・`page_path`・アンカー合成が Python 側で読むだけで、テンプレートからは元々使われていない。
+
+ラップ対象（id 無し Array 要素・ネスト Array は inert container のまま除外）、`_parent` / `_parent_record` の二系統セマンティクス、`anchor_path` / `_type_path` の `cached_property` による再帰合成（amortized O(depth)）、prose 例外といった厳密な規則は `data_tree.py` の docstring が正本。
 
 ### anchor_path → ノードマップ
 

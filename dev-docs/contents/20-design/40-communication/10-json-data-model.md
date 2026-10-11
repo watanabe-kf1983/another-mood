@@ -37,7 +37,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 | プレフィックス | 用途 | 例 |
 |---|---|---|
-| `_`（単一） | Generator がノードへ注入するメタデータ（[generator.md](../70-generator/10-generator.md#ノードメタデータ)） | `_parent`, `_meta` |
+| `_`（単一） | Generator がノードへ注入するメタデータ（[anchor-spec.md](../70-generator/30-anchor-spec.md#ノードメタデータ)） | `_parent`, `_meta` |
 | `__`（二重） | システム内部フィールド（ユーザは直接扱わない） | `__build_report`, `__definition` |
 
 `__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。

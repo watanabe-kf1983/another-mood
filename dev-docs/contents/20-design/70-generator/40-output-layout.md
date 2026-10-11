@@ -28,7 +28,7 @@ edition は `definition/reports.yaml` に宣言する。`editions:` マップに
   __build_info/  __warnings/                   ← build-report 層（reconcile が置き、表紙末尾にリンクを append）
 ```
 
-`__db/` の内側は [DB 自己記述](../75-meta-documentation/10-database-information.md)、`__build_info/` は [奥付](../75-meta-documentation/20-build-information.md)。
+`__db/` の内側は [DB 自己記述](../75-meta-documentation/10-database-information.md)、`__build_info/` は [奥付](../75-meta-documentation/20-build-information.md)、`__warnings/` と失敗ページは [ビルドレポート](../75-meta-documentation/30-build-report.md)。
 
 マウントはリンク解決に**透過**: リンク URL は page 相対（`node_href`）なので `{edition}/` や `__db/` のマウント接頭辞は効かず、各 edition / マウントは自己完結した相対リンクのサブツリーになる（[anchor-spec.md のリンク解決](30-anchor-spec.md#リンク解決)）。
 
