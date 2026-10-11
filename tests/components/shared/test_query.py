@@ -589,7 +589,7 @@ class TestMerge:
     """
 
     def test_attaches_matched_right_rows_under_as_(self) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
         left = [{"id": "A"}, {"id": "B"}]
         right = [
             {"id": "A1", "cat": "A"},
@@ -608,7 +608,7 @@ class TestMerge:
         ]
 
     def test_left_row_with_no_match_gets_empty_list(self) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
         left = [{"id": "A"}, {"id": "Z"}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [
@@ -620,13 +620,13 @@ class TestMerge:
         # Schema validation in ``Merge.derive`` rules out unknown
         # ``on.left``, but optional attributes can still be absent on
         # individual rows — those rows behave like a no-match.
-        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
         left: list[dict[str, object]] = [{}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [{"tasks": []}]
 
     def test_right_row_missing_key_excluded_from_index(self) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
         left = [{"id": "A"}]
         right = [{"id": "A1", "cat": "A"}, {"id": "stray"}]
         assert list(merge.apply(left, right)) == [
@@ -635,7 +635,7 @@ class TestMerge:
 
     def test_dotted_left_path(self) -> None:
         # ``pluck`` resolves dotted paths on the left row.
-        merge = Merge(on_left="meta.cat", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="meta.cat", on_right="cat", right_as=("tasks",))
         left = [{"meta": {"cat": "A"}}]
         right = [{"id": "A1", "cat": "A"}]
         assert list(merge.apply(left, right)) == [
@@ -653,7 +653,7 @@ class TestMergeDerive:
         return dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
 
     def test_attaches_right_node_under_as_edge(self, root: dc.Node) -> None:
-        merge = Merge(on_left="id", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="id", on_right="cat", right_as=("tasks",))
         left = root.child("cats")
         right = root.child("tasks")
         merged = merge.derive(left, right)
@@ -667,18 +667,18 @@ class TestMergeDerive:
         assert node is right
 
     def test_raises_when_left_key_unknown(self, root: dc.Node) -> None:
-        merge = Merge(on_left="missing", on_right="cat", right_as="tasks")
+        merge = Merge(on_left="missing", on_right="cat", right_as=("tasks",))
         with pytest.raises(dc.UnknownChildError, match="missing"):
             merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_when_right_key_unknown(self, root: dc.Node) -> None:
-        merge = Merge(on_left="id", on_right="missing", right_as="tasks")
+        merge = Merge(on_left="id", on_right="missing", right_as=("tasks",))
         with pytest.raises(dc.UnknownChildError, match="missing"):
             merge.derive(root.child("cats"), root.child("tasks"))
 
     def test_raises_on_as_collision(self, root: dc.Node) -> None:
-        # ``right_as="name"`` already exists as an attribute on cats.
-        merge = Merge(on_left="id", on_right="cat", right_as="name")
+        # ``right_as=("name",)`` already exists as an attribute on cats.
+        merge = Merge(on_left="id", on_right="cat", right_as=("name",))
         with pytest.raises(QueryDeriveError, match="collides"):
             merge.derive(root.child("cats"), root.child("tasks"))
 
@@ -687,7 +687,7 @@ class TestMergeDerive:
         # The flattened catalog encoding has no direct edge ``tasks.title``
         # under categories, so ``require_child`` raises.
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
-        merge = Merge(on_left="tasks.title", on_right="id", right_as="x")
+        merge = Merge(on_left="tasks.title", on_right="id", right_as=("x",))
         with pytest.raises(dc.UnknownChildError, match="tasks.title"):
             merge.derive(root.child("categories"), root.child("categories"))
 
@@ -707,7 +707,7 @@ class TestJoin:
         }
         join = Join(
             right=Query(from_=From(name="tasks")),
-            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+            merge=Merge(on_left="id", on_right="cat", right_as=("tasks",)),
             flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         left = [{"id": "A"}, {"id": "B"}]
@@ -721,7 +721,7 @@ class TestJoin:
         root = dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
         join = Join(
             right=Query(from_=From(name="tasks")),
-            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+            merge=Merge(on_left="id", on_right="cat", right_as=("tasks",)),
             flatten=Flatten(of=("tasks",), as_=("task",)),
         )
         out = join.derive(root.child("cats"), root)
@@ -736,21 +736,21 @@ class TestJoin:
 class TestJoinFromDict:
     def test_basic(self) -> None:
         assert Join.from_dict(
-            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": ("tasks",)}
         ) == Join(
             right=Query(from_=From(name="tasks")),
-            merge=Merge(on_left="id", on_right="cat", right_as="tasks"),
+            merge=Merge(on_left="id", on_right="cat", right_as=("tasks",)),
         )
 
     def test_without_where_leaves_right_subquery_passthrough(self) -> None:
         join = Join.from_dict(
-            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": ("tasks",)}
         )
         assert join.right.where == PassThrough()
 
     def test_without_flatten_leaves_join_flatten_none(self) -> None:
         join = Join.from_dict(
-            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": "tasks"}
+            {"to": "tasks", "on": {"left": "id", "right": "cat"}, "as": ("tasks",)}
         )
         assert join.flatten is None
 
@@ -759,7 +759,7 @@ class TestJoinFromDict:
             {
                 "to": "tasks",
                 "on": {"left": "id", "right": "cat"},
-                "as": "tasks",
+                "as": ("tasks",),
                 "flatten": {"of": ("tasks",), "as": ("task",), "preserve_empty": True},
             }
         )
@@ -774,7 +774,7 @@ class TestJoinFromDict:
             {
                 "to": "tasks",
                 "on": {"left": "id", "right": "cat"},
-                "as": "tasks",
+                "as": ("tasks",),
                 "where": {"open": True},
             }
         )
@@ -1738,7 +1738,7 @@ class TestQueryFromDict:
                 {
                     "to": "owners",
                     "on": {"left": "owner_id", "right": "id"},
-                    "as": "owner",
+                    "as": ("owner",),
                 }
             ],
             "where": {"open": True},
@@ -1752,7 +1752,7 @@ class TestQueryFromDict:
             join=(
                 Join(
                     right=Query(from_=From(name="owners")),
-                    merge=Merge(on_left="owner_id", on_right="id", right_as="owner"),
+                    merge=Merge(on_left="owner_id", on_right="id", right_as=("owner",)),
                 ),
             ),
             where=Where(
@@ -1789,23 +1789,23 @@ class TestQueryFromDict:
                 {
                     "to": "customers",
                     "on": {"left": "customer_id", "right": "id"},
-                    "as": "customer",
+                    "as": ("customer",),
                     "flatten": {
-                        "of": "customer",
-                        "as": "customer",
+                        "of": ("customer",),
+                        "as": ("customer",),
                         "preserve_empty": False,
                     },
                 },
                 {
                     "to": "addresses",
                     "on": {"left": "customer.address_id", "right": "id"},
-                    "as": "address",
+                    "as": ("address",),
                 },
             ],
-            "select": [{"item": "id", "as": "id"}],
+            "select": [{"item": "id", "as": ("id",)}],
         }
         joins = list(Query.from_dict(raw).join)
-        assert [j.merge.right_as for j in joins] == ["customer", "address"]
+        assert [j.merge.right_as for j in joins] == [("customer",), ("address",)]
         assert [j.merge.on_left for j in joins] == [
             "customer_id",
             "customer.address_id",
@@ -1835,7 +1835,7 @@ def _ref_query(from_: str, *join_tos: str) -> Query:
         join=tuple(
             Join(
                 right=Query(from_=From(name=to)),
-                merge=Merge(on_left="id", on_right="id", right_as=to),
+                merge=Merge(on_left="id", on_right="id", right_as=(to,)),
             )
             for to in join_tos
         ),
@@ -1871,7 +1871,7 @@ class TestSourceNames:
             join=(
                 Join(
                     right=_ref_query("categories", "phases"),
-                    merge=Merge(on_left="id", on_right="id", right_as="c"),
+                    merge=Merge(on_left="id", on_right="id", right_as=("c",)),
                 ),
             ),
         )

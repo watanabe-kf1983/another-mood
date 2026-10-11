@@ -179,7 +179,7 @@ class Merge:
 
     on_left: str
     on_right: str
-    right_as: str
+    right_as: KeyPath
 
     def apply(
         self,
@@ -200,7 +200,8 @@ class Merge:
             except KeyError:
                 return []
 
-        return [{**row, self.right_as: _matched(row)} for row in left]
+        # Transitional: the alias is still written as one literal key.
+        return [{**row, ".".join(self.right_as): _matched(row)} for row in left]
 
     def derive(self, left: dc.Node, right: dc.Node) -> dc.Node:
         left.require_path(self.on_left)
@@ -209,13 +210,19 @@ class Merge:
             metadata=left.metadata,
             children=[
                 *left.children,
-                (dc.Edge(name=self.right_as, type="object[]", required=True), right),
+                (
+                    dc.Edge(
+                        name=".".join(self.right_as), type="object[]", required=True
+                    ),
+                    right,
+                ),
             ],
         )
         if _duplicate_child_name(out) is not None:
             raise QueryDeriveError(
-                f"join alias '{self.right_as}' collides with an existing attribute",
-                offender=self.right_as,
+                f"join alias '{'.'.join(self.right_as)}' collides with an existing "
+                "attribute",
+                offender=self.right_as[0],
             )
         return out
 
@@ -258,7 +265,7 @@ class Join:
             merge=Merge(
                 on_left=on_raw["left"],
                 on_right=on_raw["right"],
-                right_as=cast(str, raw["as"]),
+                right_as=tuple(cast(Sequence[str], raw["as"])),
             ),
             flatten=flatten,
         )
