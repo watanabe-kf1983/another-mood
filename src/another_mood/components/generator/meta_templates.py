@@ -121,6 +121,11 @@ def anchor_path(a: object) -> str | None:
         return None
 
 
+# Where a new helper goes: format-specific, position-aware normalisation
+# belongs in the format's own tables (md.py's MD_GLOBALS / MD_FILTERS); a
+# format-neutral helper that only the meta templates need (catalog traversal,
+# shaping) belongs here.  Mixing the two would make every added output format
+# re-register these, and expose them to user templates.
 META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue]] = {
     "anchor_path": anchor_path,
     "pluck": pluck,

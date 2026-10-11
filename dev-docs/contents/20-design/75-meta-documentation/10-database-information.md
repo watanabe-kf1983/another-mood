@@ -18,7 +18,7 @@
 
 > **[W4 dup]** ↔ meta_templates.py:133-139 META_EDITION docstring (a, 完全)。案: 削除→コード。「別ページが要るならノードを一つ立てる」決定は残す
 
-meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は **実データツリーノード**（`resources/views/` のビルトインビューが生む）で、分割は通常の[分割ルール](../70-generator/20-template-spec.md#分割ルール)そのもの。meta には利用者の `reports.yaml` が無いので paging は固定（`META_EDITION.paging`）。
+meta 診断ページ（`__entity_defs` / `__view_defs` / `__data`）の主題は **実データツリーノード**（`resources/views/` のビルトインビューが生む）で、分割は通常の[ページ分割](../70-generator/30-anchor-spec.md#ページ分割)そのもの。meta には利用者の `reports.yaml` が無いので paging は固定（`META_EDITION.paging`）。
 
 > **決定: 別ページが要るならノードを一つ立てる.** 1 ノードは（データ位置で定まる）1 ページにだけ描かれる。同一 entity を Definition と Data の 2 ページに出すのに `__entity_defs` / `__data` の **2 ビュー＝2 アンカールート**を立てるのがこの実践 — 予約キーや fallback で 1 ノードを複数ページに割る手は採らない。
 

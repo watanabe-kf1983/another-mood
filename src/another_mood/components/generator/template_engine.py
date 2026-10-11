@@ -51,7 +51,9 @@ class OutputFormat:
 
 def make_environment(output_format: OutputFormat) -> Environment:
     # Per-format escaping is implemented via the finalizer hook; Markup values
-    # are passed through.
+    # are passed through.  That pass-through is the helpers' contract: a helper
+    # returning Markup must have completed every escape itself, since nothing
+    # downstream catches what it missed.
     def _finalize(value: object) -> object:
         if value is None:
             return ""
@@ -75,11 +77,8 @@ def make_environment(output_format: OutputFormat) -> Environment:
         # HTML-escaped on top.
         auto_escape_callback=lambda name: False,
         # Off, against the default: a template's vocabulary is filters and
-        # tests, and nothing else.  pycompat grafts Python's own string / list /
-        # dict methods onto values, which would leave users guessing how far the
-        # Python resemblance runs — a boundary neither this tool's reference nor
-        # the engine's can draw, since the methods come from a contrib shim for
-        # migrating Jinja2 templates rather than from the engine proper.
+        # tests, and nothing else — pycompat would graft Python's own string /
+        # list / dict methods onto values.
         pycompat=False,
     )
 

@@ -114,7 +114,7 @@ categories:
     title: ページ分割 (paging)
     impl_paths:
       - src/another_mood/components/generator/
-    spec: 20-design/70-generator/10-generator
+    spec: 20-design/70-generator/40-output-layout
     tasks:
       C1:
         title: reports.yaml の読み込み・パース
