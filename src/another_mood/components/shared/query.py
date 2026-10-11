@@ -310,34 +310,32 @@ class Grouped(QueryNode):
         return [self._group_row(key, items) for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
+        if overlaps(self.by, self.as_):
+            raise QueryDeriveError(
+                f"grouped alias '{'.'.join(self.as_)}' collides with the grouping "
+                f"key '{'.'.join(self.by)}'",
+                offender=self.as_[0],
+            )
         # Transitional: the read side still takes a dotted string.  Joining
         # drops the segments' source position, so the unknown-path error
         # is re-raised here with the first segment as its anchor.
-        by = ".".join(self.by)
-        as_ = ".".join(self.as_)
         try:
-            edge, child = catalog.descend(by)
+            key = SelectItem(item=".".join(self.by), as_=self.by).derive(catalog)
         except dc.UnknownChildError as exc:
             raise QueryDeriveError(
                 f"unknown attribute '{exc.name}'", offender=self.by[0]
             ) from exc
-        out = dc.Node(
-            children=[
-                # ``apply`` writes the whole ``by`` string as the group
-                # key, so the edge mirrors the record, not the path's end.
-                (replace(edge, name=by), child),
-                (
-                    dc.Edge(name=as_, type="object[]", required=True),
-                    catalog,
-                ),
-            ],
+        # Every group has its rows, so the list is on every group row.
+        members = Placement(
+            branch=(
+                dc.Edge(name=self.as_[-1], type="object[]", required=True),
+                catalog,
+            ),
+            path=self.as_,
+            source=(),
         )
-        if _duplicate_child_name(out) is not None:
-            raise QueryDeriveError(
-                f"grouped alias '{as_}' collides with the grouping key",
-                offender=self.as_[0],
-            )
-        return out
+        # The group row is built from nothing, like a projection.
+        return place(dc.Node(), [key, members])
 
     def _key_of(self, record: Record) -> object:
         try:
@@ -346,10 +344,9 @@ class Grouped(QueryNode):
             return MISSING
 
     def _group_row(self, key: object, items: Sequence[Record]) -> Record:
-        if key is MISSING:
-            return {".".join(self.as_): items}
-        else:
-            return {".".join(self.by): key, ".".join(self.as_): items}
+        empty: Record = {}
+        row = empty if key is MISSING else put(empty, self.by, key)
+        return put(row, self.as_, items)
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Grouped":
@@ -366,8 +363,8 @@ class SelectItem:
     Both are paths.
     """
 
-    #: A read path, still dotted: an edge name can be a literal dotted
-    #: key until ``grouped`` writes a path too.
+    #: A read path, still dotted (transitional: the catalog and record
+    #: lookups take the string form).
     item: str
     as_: KeyPath
 
@@ -638,13 +635,3 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
         raise QueryDeriveError(
             "query reference cycle: " + " → ".join(cycle), offender=offender
         ) from exc
-
-
-def _duplicate_child_name(node: dc.Node) -> str | None:
-    """Return the first child edge name that appears twice, or None."""
-    seen: set[str] = set()
-    for edge, _ in node.children:
-        if edge.name in seen:
-            return edge.name
-        seen.add(edge.name)
-    return None

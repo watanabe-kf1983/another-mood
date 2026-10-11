@@ -123,10 +123,9 @@ class Node:
     def _longest_child_name(self, path: str) -> str | None:
         # Longest-first, and the match commits — no backtracking — mirroring
         # how the data side resolves the same string against a record.
-        # Transitional: the view aliases ``join.as``, ``grouped.by`` and
-        # ``grouped.as`` become record keys verbatim, so an edge name can
-        # still be a literal dotted key.  Once every alias is a path, every
-        # dot means nesting and this is a plain split.
+        # Transitional: every view alias is a path now, so no edge name
+        # holds a dot and every dot in ``path`` means nesting; the walk
+        # stays only until the read side passes segments instead.
         candidate = path
         while not self.has_child(candidate):
             if "." not in candidate:

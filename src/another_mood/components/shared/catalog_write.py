@@ -34,9 +34,7 @@ def names(node: dc.Node) -> Iterator[KeyPath]:
     """The paths a row of ``node`` holds a value at, an array taken whole
     and an object on the way not a name of its own."""
     for edge, child in node.children:
-        # Transitional: an edge name can still be a literal dotted key
-        # from an upstream alias.  Read as the path it will be.
-        head = tuple(edge.name.split("."))
+        head = (edge.name,)
         if edge.is_collection or not child.children:
             yield head
         else:

@@ -77,15 +77,6 @@ class TestNames:
             ("tags",),
         ]
 
-    def test_reads_a_literal_dotted_edge_name_as_a_path(self) -> None:
-        # Transitional: an upstream alias can still land as one dotted key.
-        node = dc.Node(
-            children=[
-                (dc.Edge(name="hobby.level", type="string", required=True), dc.Node())
-            ]
-        )
-        assert list(names(node)) == [("hobby", "level")]
-
 
 class TestRemove:
     """The counterpart of ``json_data_model.drop``: the branch goes, and
