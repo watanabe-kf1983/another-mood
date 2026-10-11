@@ -31,6 +31,7 @@ from another_mood.components.shared.catalog_write import (
 )
 from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
+    MISSING,
     RecordPredicate,
     parse_record_predicate,
 )
@@ -292,6 +293,7 @@ class Grouped(QueryNode):
     """Group input rows by ``by`` and package each group under ``as_``.
 
     Grouped rows are preserved verbatim (including their own ``by`` field).
+    Rows lacking ``by`` form one group of their own, whose row omits ``by``.
     """
 
     by: str
@@ -300,8 +302,8 @@ class Grouped(QueryNode):
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         groups: dict[object, list[Record]] = {}
         for record in records:
-            groups.setdefault(pluck(record, self.by), []).append(record)
-        return [{self.by: key, self.as_: items} for key, items in groups.items()]
+            groups.setdefault(self._key_of(record), []).append(record)
+        return [self._group_row(key, items) for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         edge, child = catalog.descend(self.by)
@@ -322,6 +324,18 @@ class Grouped(QueryNode):
                 offender=self.as_,
             )
         return out
+
+    def _key_of(self, record: Record) -> object:
+        try:
+            return pluck(record, self.by)
+        except KeyError:
+            return MISSING
+
+    def _group_row(self, key: object, items: Sequence[Record]) -> Record:
+        if key is MISSING:
+            return {self.as_: items}
+        else:
+            return {self.by: key, self.as_: items}
 
 
 @dataclass(frozen=True)
