@@ -31,16 +31,16 @@ properties:
 The root of the schema file must satisfy:
 
 - `type: object` is required.
-- `properties` is required. Each entry represents one **entity** (a collection of records of the same shape).
+- `properties` is required. Each entry declares one top-level key of the data. An entry whose value is a collection (the map and array patterns below) is an **entity**: a collection of records of the same shape.
 - `additionalProperties: false` is required (any undeclared top-level key becomes an error). The same pairing is required wherever `properties:` appears — see [Other constraints](#other-constraints).
 
 A [map pattern](#map-pattern) (`additionalProperties: <schema>` without accompanying `properties`) is not allowed at the root level (the meta-schema rejects it).
 
 A single fixed file. Splitting into multiple files or `$ref`-based references to external schemas is not supported.
 
-## Three entity patterns
+## Three top-level patterns
 
-For the type of each entity (one entry under `properties`), choose from the following three patterns.
+For the type of each top-level key (one entry under `properties`), choose from the following three patterns. The first two produce an entity; the third produces a plain value.
 
 ### Map pattern
 
