@@ -186,7 +186,7 @@ flat 化したいときに「join が作った array を別句 `flatten:` で fi
 
 ### ドット名の意味論統一 (E14)
 
-`select` と `flatten` は #459 で対応済み。以下で書き側がリテラルだと言っているのは、残る `join` と `grouped` の別名のこと。
+`select` と `flatten` は #459 で、`join` は #489 で対応済み。以下で書き側がリテラルだと言っているのは、残る `grouped` の別名のこと。
 
 #### 問題
 
@@ -196,8 +196,6 @@ DSL の名前に現れるドットは、読み側と書き側で意味が違う�
 
 | スロット | 省略時 | ドット入りキーが生まれる例 |
 |---|---|---|
-| `join.as` | `to` をそのまま | `to: __definition.entities` → `{"__definition.entities": [...]}` |
-| `join.flatten.as` | join の `as` をそのまま | 同上 |
 | `grouped.by` | （別名の口が無い） | `by: hobby.level` → `{"hobby.level": "pro", members: [...]}` |
 | `grouped.as` | （必須） | `as: a.b` と書ける |
 
