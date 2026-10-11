@@ -143,6 +143,18 @@ class（[schema-spec.md](../45-schema/10-schema-spec.md) の Entity ID および
 
 class はアンカーパスの構築には登場しない。
 
+### ページ分割
+
+> **[W4 dup]** ↔ template.md:112-137,262-276 (b)、render_processor.py:39-45,78-81、heading_shift.py:1-18 (a) — 部分。案: 残す (決定 2 つ)。見出し深さの段落は docs にある→縮める
+
+`render` フィルタが主題の `_meta.object_type_id` を `file_per` と照合して分割/インラインを決めること、親ページのリンクは render が自動生成せず author が `| link` で書く two-loop パターン（分割なら別ページ URL・インラインなら同ページ `#fragment` に自動適応）は `docs/reference/template.md` の Split vs inline を正本とする。分割するのはノード主題だけで、スカラ主題は `file_per` に関わらず常に inline 展開するのは、ページはアンカーパスを持つノードであるべきだから（inline 展開は単なる差し込みなので任意の値を許す）。設計判断:
+
+> **決定: 親リンクを render に畳み込まない.** リンク解決は既に `| link` ＋ page_path が持ち分割/インラインへ自動適応するので、render に持たせると二重実装になり、親側の周辺マークアップ（リスト記号等）も author の制御外になる。render の責務は「このノードの内容をどこに置くか」に保つ。
+
+> **決定: インラインは型単位ポリシー（call-site 上書きは持たない）.** インライン意図は型を `file_per` から外して表現する。file_per 対象の型を call-site で `inline` 強制すると、そのノードが自前ページとインライン本文に**二重出力**され、`| link` の指す先と実体の所在がずれる（footgun）。
+
+> **見出し深さ.** subtemplate が「見出し＋本文」を一単位で再利用したいとき、埋め込み先によって見出しレベルが変わる（同じ型を `##` 下でも `###` 下でも置きたい）。この深さ調整は render 固有ではなく、生成側の `under_heading` フィルタ（任意の埋め込み出力をブロックで囲む／prose body をパイプで処理）が担う。split 時に render が `""` を返す性質と合わさり、同じ記述が分割でもインラインでも正しく出る。仕様は `docs/reference/template.md` の `under_heading` を参照。
+
 ### リンクの解決と着地
 
 解決されたリンクがどう URL になり、ページ上のどこに落ちるかの規則。テンプレートの `node()`（[リンク記法](#リンク記法)）から来ても本文の `node:`（[Markdown 本文中のアンカー参照](#markdown-本文中のアンカー参照)）から来ても共通で、送り側（URL の fragment）と受け側（ページ上の id）が同じ文字列 — データノードは anchor_path、見出しノードは slug — を使うことで両端が構築上一致する。
@@ -180,7 +192,7 @@ blob ノードは「ページ上に描かれるノード」ではなく **出力
 
 > **[W4 dup]** ↔ md.py:164-171,202-206、data_tree_filters.py:9-11,27-29 (a)、template.md 各所 (b)、30-template-spec:23 (c) — 完全。案?: [text] 可視化は約束→削除→docs。「例外を投げない」は設計判断→残す
 
-`node()` の組んだパスがマップに無いとき、解決失敗を `MissingNode`（試行パスを保持）として返す（例外は投げない）。整形側は壊れたリンクを「動くリンクの偽装」にせず、表示テキストを角括弧で囲んだ **`[text]` の形で可視化**する — `link` は表示テキストを `[..]` で囲んでリンク先を付けず、`href` は空文字列を返し、`anchor` は何も発行しない。本文側の `relink` も同形に揃え、ソースの `[text](node:/missing)` からリンク先だけ落として `[text]` を残す（[prose body 処理フィルタ `relink`](#prose-body-処理フィルタ-relink)）。
+`node()` の組んだパスがマップに無いとき、解決失敗を `MissingNode`（試行パスを保持）として返す（例外は投げない）。整形側は壊れたリンクを「動くリンクの偽装」にせず、表示テキストを角括弧で囲んだ **`[text]` の形で可視化**する — `link` は表示テキストを `[..]` で囲んでリンク先を付けず、`href` は空文字列を返し、`anchor` は何も発行しない。本文側の `relink` も同形に揃え、ソースの `[text](node:/missing)` からリンク先だけ落として `[text]` を残す（[prose body 処理フィルタ `relink`](#prose-body-処理フィルタ-relink)）。`node` / `child` の住所を組み立てる引数が欠損したときは、参照そのものが成立しないので missing node にもならず、何も描かれない。
 
 > **[W4 → appendix]** (この引用段落)
 
@@ -306,6 +318,16 @@ Composer が渡す木は純粋なデータで、ノードは自分が木のど�
 ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`render` フィルタ) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
 
 paging ポリシー (どの object type が分割境界か、root→`index.md` / 分割対象→`{anchor_path}.md` / blob→ファイルそのもの) は `PagingPolicy` (`file_per` ＋ `is_split_target` / `page_path`) が担い、構造的な木の遡上だけは data_tree の free function `nearest_ancestor` に分離する (`PagingPolicy` は paging を知らない木に触れず、data_tree は paging を知らないまま保つ)。`Edition` はこの `PagingPolicy` を保持し、generator だけが full な `Edition` を持つ。座標系をレポートルート相対に取る理由を含め、導出規則とコードは `edition.py` の `PagingPolicy` docstring が正本。
+
+### 描画の単一ページ不変条件 (render subtree ガード)
+
+> **[W4 dup]** ↔ render_processor.py:94-139 _guard_subtree docstring (a, ほぼ逐語)、template.md:110 (b)、80-showcase:173、40-paging:59 (c) — 完全。不変条件+理由。案?: 不変条件と「構造判定で edition 非依存」の理由は design が正本→残し、docstring を縮める。機構 (identity 判定、免除の条件) は削除→コード
+
+[リンク解決](#リンク解決)は次の不変条件に乗っている: **各ノードは *データ位置* で一意に定まる 1 ページ (`PagingPolicy.page_path`) にだけ描かれる**。source は `page_path(this)`、target は `page_path(target)` — 両者が同じ規則でノードのデータ位置からページを引くからこそ、`| link` / `href` / `relink` が一貫して相対化できる。`render` フィルタで `this` の subtree 外にノードを inline 描画するとこの不変条件が破れ、`page_path(subject)` が実描画ページと食い違って、そのノードの内部 `this` 起点リンクも、そのノードへ張る被リンクも壊れる。
+
+そこで render フィルタは、subject が `this` の子孫（subject から `_parent` を遡上して `this` に identity 一致）でなければ、描画元テンプレートのファイル付き（行は無い）のビルドエラーにする。判定は **構造（子孫）** で行い、split / inline や edition (file_per) に依存しない — 妥当性をテンプレート単体で決めたいため（同じ呼び出しが「split する edition では通り、しない edition では弾かれる」ような edition 依存エラーを避ける）。
+
+**非ノード subject は免除**（anchor も page identity も持たない）。ただしこの免除が健全なのは、その子テンプレが `this` 起点の描画（`link` / `href` / `anchor` / `relink`・アンカー刻印）を一切しないときに限る。id 等を受け取り内部でノードを引き直して描く子テンプレはガードの射程外で、リンク正当性は author 責任になる（例: meta の `record_table.md` は entity id を受けてデータ行の表を描くのみで、entity ノード自体は配置しない）。他所のノードを描きたいときはクエリ (join 等) で subtree に取り込んで子孫化するか、`| link` で参照する。導出規則とコードは `render_processor.py` の `_guard_subtree` docstring が正本。
 
 ### リンク解決
 
