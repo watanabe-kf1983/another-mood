@@ -578,6 +578,7 @@ categories:
           R6 (SBOM showcase) で遭遇。E14 の grouped 片 (グループキーの
           required の導出) の前提。
         phase: 17
+        done: true
 
   P:
     title: テンプレートエンジン拡張
