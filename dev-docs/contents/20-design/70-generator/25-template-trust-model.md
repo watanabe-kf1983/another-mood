@@ -6,8 +6,6 @@
 
 ### 信頼モデル: テンプレートは閉じた値モデルで評価する（RCE 構造封鎖）
 
-> **[W4 dup]** ↔ test_ssti.py:1-9、inert.py:1-8 (a)、DoS 段落 ↔ tasks.yaml P15 note と本ファイル Proposals (c, 完全) — 部分。案: 残す (契約)。DoS 段落は Proposals と同一ファイル内重複→一文+ポインタに
-
 テンプレートは **minijinja（閉じた Rust 値モデル）＋ marshal 契約**の上で評価する。テンプレートが触れるのは host 言語のリフレクション / capability への経路を持たない値だけ — ゆえに **build / watch で第三者が書いたsbdb プロジェクトを走らせても任意コード（RCE）は走らない**。
 
 - dunder 経路は minijinja が構造封鎖する
@@ -16,103 +14,24 @@
 
 ゆえに `make` / `npm install` / Jekyll 型の「build = コードを走らせる」契約とは異なり、テンプレートを安全なコンテンツとして扱える。**`docs/` に RCE の危険注記は置かない** — RCE が閉じている以上、注記は過剰警告になる。
 
-残る攻撃面は **DoS**（`"x" * 10**12` 等のメモリ爆弾・`{% for %}` 無限ループ）のみで、ローカル CLI では Ctrl-C の accepted-risk。リソース上限は無人 / ホスト build を導入するマイルストーンで入れる（[Proposals](#proposals) の DoS 節）。
+残る攻撃面は **DoS** のみで、ローカル CLI では accepted-risk（[Proposals](#proposals) の DoS 節）。
 
-### 背景: 信頼境界の二択
-
-> **[W4 → appendix]**
-
-信頼境界の設計は本質的に次の二択:
-
-| 望む世界 | 設計 |
-|---|---|
-| **「build = コードを走らせる」と理解させる**(ビルドツールとして正直に立つ) | **素の評価エンジン ＋ 危険注記**。untrusted build は OS / コンテナ隔離で守る。言語は不変 |
-| **「テンプレは安全なコンテンツ、知らない人が無警戒に build してよい」を維持** | **non-evaluating エンジン**。知覚を「安全なコンテンツ」に保つには実態もそう作る |
-
-採ったのは後者。中間形態を含めた比較検討は Internal Design を参照。
+この選択に至った二択（素の評価エンジン ＋ 危険注記か、non-evaluating エンジンか）、実行時サンドボックスを中間形態として採らない理由、エンジン選定の spike は[背景](../../90-appendix/20-design/70-generator/25-template-trust-model.md)。
 
 ### 背景: 実行ベクタはテンプレートのみ
 
-> **[W4 → appendix?]** 推奨: 残す (防御を一点に集約する根拠)
-
 sbdb プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
 
-- **`contents/` (data)** — data 値は md output format の finalize で escape される（[anchor-spec.md](30-anchor-spec.md) の unsafe トラストモデル参照）
+- **`contents/` (data)** — data 値は md output format の finalize で escape される（[unsafe HTML の信頼前提との整合](../../90-appendix/20-design/70-generator/25-template-trust-model.md#unsafe-html-の信頼前提との整合)参照）
 - **`definition/schema.yaml`** — 宣言的な型定義
 - **`definition/views/`** — 境界付きの宣言 DSL（`from`/`flatten`/`join`/`where`/`grouped`/`select`/`sort`）。`where` 述語は演算子の閉じた enum（`EQ`/`GT`/`STARTSWITH`/`CONTAINS` 等）を `and`/`or`/`not` で結合するだけで、フィールド参照は dotted-key lookup（Python の `getattr` ではない）。`eval`/`exec`/式言語は無い（`shared/record_predicate.py`）
 - **`definition/reports.yaml` / `sbdb.yaml`** — 宣言的な設定
 
 ゆえに防御は**テンプレート評価の一点**（engine の閉じた値モデル ＋ marshal 契約）に集約してよい。
 
-### 背景: unsafe HTML の信頼前提との整合
-
-> **[W4 dup]** ↔ 20-anchor-spec raw HTML 節の引用「unsafe=true のトラストモデル」(c, 部分)。案: anchor-spec の引用をここへ寄せる (トラストモデルの正本はここ)
-
-> **[W4 → appendix?]** 推奨: 移す
-
-[anchor-spec.md](30-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のsbdb プロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
-
-- unsafe HTML は「著者が自分の *出力* に責任を持つ」**表現力**の問題
-- marshal 契約は「テンプレートが host の *コード* に届かない」**実行安全**の問題
-
-**著者 ≠ 実行者**（第三者が配布されたsbdb プロジェクトを build）のケースは、RCE が閉じたぶん「build = コード実行」契約より安全 — これが non-evaluating エンジンを採る意義そのもの。残る差は「著者が unsafe HTML で書いた出力を第三者が信じるか」という *出力の信頼* で、実行安全とは独立に扱う。
-
 ## Internal Design
 
-### 背景: なぜ SandboxedEnvironment を採らないか（穴が N 個ではなく根が 1 個）
-
-> **[W4 → appendix]**
-
-Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直接記法、`| attr('__class__')`、`| map(attribute='__class__...')` 等）は**独立した N 個の欠陥ではなく、単一の根から生えている**:
-
-> Jinja2 の値モデルは「Python オブジェクトをリフレクションで触る」。全 Python オブジェクトは `__class__` を持ち、そこからオブジェクトグラフ全体（`os` / `subprocess`）へ到達できる。
-
-したがって:
-
-- **`SandboxedEnvironment`（Jinja2 の実行時サンドボックス）は実行時ブロックリスト** — 危険属性を都度「禁止」する。禁止漏れの属性パスが見つかるたびに脱出 CVE が出る、後手のイタチごっこ。しかも DoS 等は塞がず偽の安心を生む
-- **穴を個別に塞ぐ発想も同じ轍** — `attr`/`map(attribute=)`/`selectattr`/`groupby` は string 属性名でリフレクションへ迂回でき、しかもこれらは showcase で属性ソート等に広く使われる load-bearing なフィルタ。フィルタごと禁止できず、許可リスト側で「属性文字列を安全なリテラルに制約」する必要がある
-
-正しい対処は値モデルを叩くことではなく、**値モデルが構造的に安全なエンジンへ移す**か、**プロセス / OS 隔離**でビルドごと囲うか。External Design の二択に中間形態（実行時サンドボックス）が無いのはこのため — 言語を縛るが漏れる／隔離もしない、の両世界で中途半端になる。
-
-採ったのは前者で、`Environment` は minijinja（`template_engine.py` の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
-
-### 背景: エンジン選定 — minijinja（spike 実測）
-
-> **[W4 → appendix]**
-
-判定基準は **テンプレートに渡るデータが host 言語のリフレクション / capability への経路を運ぶか**。spike で 3 候補を実射した。
-
-**python-liquid** — non-evaluating が言語仕様:
-
-- 呼び出し構文が host allowlist（filter/tag）のみ ＝ **安全がバインディング非依存**。注入した capability オブジェクトすら *呼べない*
-- 一方 macro 無し、`groupby`・`format`・文字列反復も無し ＝ 移行時にテンプレ logic をクエリ・custom filter へ押し出す必要がある（spike 時点の全テンプレ走査で要手当ては 3 箇所、いずれも「テンプレに漏れた logic」）
-
-**minijinja（`minijinja-py`）** — 閉じた値モデル（Rust）:
-
-- 評価器は Rust、素データは Rust `Value` に marshal され Python 不在 ＝ dunder 経路は**構造封鎖**
-- **ただしそれだけでは RCE 閉包に不十分** — 渡したオブジェクトの非 `_` 属性・メソッドと global は露出し呼べる（下の露出規則）。安全は**境界の marshal 契約**に懸かる
-- Jinja 互換で書き直し最小（macro native・`env.finalizer` フックあり）。エラーは最厚（前後行＋キャレット＋参照変数）
-
-**小さな自作評価器** — logic-less / 許可リスト:
-
-- 言語は安全にできるが、真に難しい**コンテキスト別エスケープ**（`finalize`/`Markup`/whitespace）を再オープンする。不採
-
-残る二択の軸は「**liquid ＝ 言語で構造保証**（未信頼テンプレを既定安全で build する世界）」対「**minijinja ＝ ほぼ drop-in ＋ marshal 契約**（自作・半信頼の世界）」。
-
-**決定: minijinja 採用。** 決め手（spike 時点）:
-
-- **移行コスト最小** — 当時 macro 使用 0・Jinja 互換（演算子 `~`/`//`/三項もそのまま通る）・`env.finalizer` フックあり
-- **LLM 執筆性** — Jinja 系の訓練データを相続（Stack Overflow 質問数で Jinja 系 ≈ 40k、Liquid ≈ 4k の約 10 倍）
-- **エラー品質** — minijinja / liquid とも jinja2 を上回る（キャレット＋前後行＋列、構造化フィールドで Diagnostic 化可）が、minijinja が最厚
-- **移植性** — ブラウザ / WASM プレビューを作る場合、minijinja は Rust→WASM で**同一 engine**（最高忠実度）。liquid は python-liquid ＋ LiquidJS の別実装になる
-
-安全は言語構造保証（liquid）ではなく marshal 契約で確保する。liquid は「未信頼テンプレを既定安全で build する」へ倒す場合の対抗案として残す。
-
 ### minijinja の露出規則（SSTI 回帰テストで pin）
-
-> **[W4 dup]** ↔ test_ssti.py の module/各テスト docstring (同じ規則と理由) (a)、10-generator:19 (c) — 完全。案?: 規則は design が正本 (契約の前提)、test_ssti.py の docstring を「pin する」だけに縮める。逆も可
-
-> **[W4 → appendix?]** 推奨: 残す (精密だが marshal 契約の前提)
 
 minijinja がテンプレートに露出するのは、渡した値の **非 `_`・非 dunder のメンバ**（属性・メソッド）と container の items。実測で確定した規則:
 
@@ -134,21 +53,16 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 
 ### marshal 契約 ── テンプレに渡る値を型・構造で inert に閉じる
 
-> **[W4 dup]** ↔ inert.py、template_safe.py、test_ssti.py、test_template_safe.py、data_tree.py @final、render_processor.py (a, 完全)。案?: 契約の二系統と強制レイヤの一覧は design→残す。各型の docstring と重なる要点の説明は縮める
-
 信頼モデルは「テンプレが触れる値に host capability への経路が無い」ことに懸かる。だが minijinja は渡した値の非 `_`・非 dunder メンバと container items を露出し呼べるようにする（上の露出規則）。しかも**任意 Python オブジェクトの安全性は動的に確認できない** — `__getattr__` / instance 属性 / ABC 登録で内省を欺けるので `dir()` 監査は後手。
 
 ゆえに契約は runtime 検査ではなく、**型と構造でツール側コードの規律を保つ**問題として解く。露出する二系統を各々閉じる:
 
-- **(a) データ**: inert 値モデル `InertValue = str|int|float|bool|None|InertMapping|InertArray` で閉じる。`load_model`（`Any`）由来の木を `ensure_inert` が検証・詰め替え（parse, don't validate）、`MappingNode`/`ArrayNode` が Inert container を継承してアンカーを足す。
-    - **Inert container は構築後 read-only**: dict / list の非 dunder mutator は明示的に raise する（静かな no-op にはしない。dunder は engine が封鎖するので構築用に開けたまま）。露出規則の wrap 側で非 `_` メソッドはテンプレートから呼べ、木はビルド全体で共有されるため、mutator が生きていると別ページのデータ破壊と「テンプレに渡る値は inert」不変条件の破れを許してしまう
+- **(a) データ**: inert 値モデル `InertValue = str|int|float|bool|None|InertMapping|InertArray` で閉じる。`load_model`（`Any`）由来の木を `ensure_inert` が検証・詰め替え（parse, don't validate）、`MappingNode`/`ArrayNode` が Inert container を継承してアンカーを足す。Inert container は構築後 read-only（mutator は raise。理由は `inert.py`）
 - **(b) filters/globals の戻り値**: エンジン所有の受け入れ列挙 `TemplateSafe = InertValue | Node | Markup | MissingNode` で閉じる。
 
 設計の要点:
 
-- **container は派生禁止／スカラーは正規化、の非対称**:
-    - container は **wrap** され Python メソッドが漏れるので、派生で capability を足せてはならない。runtime の `ensure_inert` は既に inert な container を `isinstance` でそのまま通す（派生を runtime で弾く検査は無い）ので、派生の封じ込めは静的側 — `MappingNode` / `ArrayNode` の `@final` と、`InertMapping` / `InertArray` を他で継承しないツール側の規律 — が担う
-    - スカラーは **convert** されメンバが届かないので、`isinstance` で受理し exact 型へ正規化する（安全な `str` サブクラスを誤って弾かないため）
+- **container は派生禁止／スカラーは正規化、の非対称**: container は **wrap** され Python メソッドが漏れるので、派生で capability を足せてはならない。runtime の `ensure_inert` は既に inert な container を `isinstance` でそのまま通す（派生を runtime で弾く検査は無い）ので、派生の封じ込めは静的側 — `MappingNode` / `ArrayNode` の `@final` と、`InertMapping` / `InertArray` を他で継承しないツール側の規律 — が担う。スカラーは **convert** されメンバが届かないので、exact 型へ正規化して受理する
 - **`TemplateSafe` は基底でなく列挙**: 受け入れ要件は継承で表せない（派生すれば capability を足せる）ので、各具体型を列挙する:
     - **受け入れ側 `template_safe` が所有し、エンジン境界（`template_engine` と、ヘルパを渡す generator）だけが参照**。生産者は自分の具体戻り型（`Node | MissingNode` 等）を正直に宣言するだけ ── 消費者→生産者の一方向 import ∴ cast も循環も生じない
     - minijinja の undefined は `None` として届き、`pluck` は `None`、`to_yaml` は空文字を返す（`Undefined` 型は列挙に無い）
@@ -167,8 +81,6 @@ minijinja がテンプレートに露出するのは、渡した値の **非 `_`
 未実装。1.0 の配布 / 共有機能に向けて詰める。
 
 ### DoS はホスティング時に別レイヤで
-
-> **[W4 dup]** ↔ tasks.yaml P15 note、本ファイル External Design 末尾の DoS 段落 (c, 完全)。案: 本文側を一文+ポインタに
 
 non-evaluating エンジン（また実行時サンドボックスも）が閉じるのは RCE であって DoS ではない。`"x" * 10**12`（メモリ爆弾）や `{% for %}` 無限ループは言語レベルの許可リストを通る（乗算は `"  " * depth` 等で正当に使われ禁止できない）。
 
