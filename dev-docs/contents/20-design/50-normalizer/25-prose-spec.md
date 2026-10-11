@@ -24,11 +24,11 @@ id は **見出しテキストから導出する GitHub 互換 slug**（`## API 
 
 見出しへの参照は **ドキュメント間のクロスリンク** なので、妥当性は normalize の参照整合性検査ではなく **Generate フェーズのリンク解決** で見る（[未解決参照の扱い](../70-generator/30-anchor-spec.md#未解決参照の扱い)）。
 
-見出しがリンクの宛先としてどう住所を持つかは [anchor-spec.md の Prose の例外](../70-generator/30-anchor-spec.md#prose-の例外)。却下した代替案は[背景](../../90-appendix/20-design/50-normalizer/25-prose-spec.md#見出しの却下した代替案)。
+見出しがリンクの宛先としてどう住所を持つかは [anchor-spec.md の Prose の例外](../70-generator/30-anchor-spec.md#prose--blob-の例外)。却下した代替案は[背景](../../90-appendix/20-design/50-normalizer/25-prose-spec.md#見出しの却下した代替案)。
 
 ### `content` — ソースそのまま、相対リンクだけ `node:` 化
 
-本文は H1 を含むファイル全体。contents 内に解決する相対リンクだけを `node:` アンカーパス記法（インラインリンク形）に書き換え、他は書かれたとおりに保つ。変換規則は `docs/reference/schema.md` の prose 節、例は [anchor-spec.md の Markdown 本文中のアンカー参照](../70-generator/30-anchor-spec.md#markdown-本文中のアンカー参照)。`.md` 以外のターゲットは `node:/blob/<id>` へ向け、[blob](27-blob-spec.md) 参照を prose のリンク正規化機構に相乗りさせる。
+本文は H1 を含むファイル全体。contents 内に解決する相対リンクだけを `node:` アンカーパス記法（インラインリンク形）に書き換え、他は書かれたとおりに保つ。変換規則は `docs/reference/schema.md` の prose 節、例は [anchor-spec.md の Markdown 本文中のアンカー参照](../70-generator/30-anchor-spec.md#本文からの参照)。`.md` 以外のターゲットは `node:/blob/<id>` へ向け、[blob](27-blob-spec.md) 参照を prose のリンク正規化機構に相乗りさせる。
 
 この書き換えは生成側フィルタ `relink`（`node:` → URL、[generator.md](../70-generator/30-anchor-spec.md#リンク解決)）の **逆向き処理**。解決はレキシカル（FS チェックなし）で、リンク先ノードの存在検証は relink（Generate フェーズ）に委ねる。
 

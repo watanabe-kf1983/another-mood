@@ -40,7 +40,7 @@
 
 ### 内蔵ヘルパ
 
-Jinja2 標準に加えて本ツールが定義する filter / 関数。リンク系（`node` / `link` / `href` / `anchor` / `relink` / `child` / `label`）は [anchor-spec.md のリンク記法](30-anchor-spec.md#リンク記法) が扱う。
+Jinja2 標準に加えて本ツールが定義する filter / 関数。リンク系（`node` / `link` / `href` / `anchor` / `relink` / `child` / `label`）は [anchor-spec.md のテンプレートからの参照](30-anchor-spec.md#テンプレートからの参照) が扱う。
 
 #### render とサブテンプレート
 

@@ -62,7 +62,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 Another Mood は **著者が所有するデータベース** をレンダーする SSG で、Hugo 既定の `unsafe=false`（untrusted な Markdown をレンダーするモデル向けの防御）とは前提が異なる。raw HTML を通しても露出は狭い: データ値 `{{ field }}` は md 出力 format の finalize で `md_escape` され（`<`→`\<`）無害化され、code span / fenced block の内容は Goldmark が `unsafe` と無関係に常に HTML エスケープする。新たに通る raw HTML は **著者自身のテンプレート・prose・(verbatim 外の) `| safe`** のみで、著者は既にソースとテンプレートの全権を持つため escalation にはならない。Hugo/Jekyll/MkDocs 等も自前コンテンツには unsafe HTML を許可するのが標準。
 
-この raw HTML（`unsafe=true`、[anchor-spec.md](../../../20-design/70-generator/30-anchor-spec.md#アンカー-a-id-の-raw-html-レンダリング-hugo-unsafe)）の扱いは「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のsbdb プロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
+この raw HTML（bundled `resources/hugo/hugo.toml` の `unsafe = true`）の扱いは「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のsbdb プロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
 
 - unsafe HTML は「著者が自分の *出力* に責任を持つ」**表現力**の問題
 - marshal 契約は「テンプレートが host の *コード* に届かない」**実行安全**の問題
