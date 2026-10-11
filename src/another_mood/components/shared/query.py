@@ -225,6 +225,10 @@ class Join:
     """Attach a right relation, with an optional inline flatten.
     ``apply`` / ``derive`` run ``right`` → ``merge`` → optional
     ``flatten`` in sequence; ``right`` reads the outer Query's sources.
+
+    Deliberately not a ``QueryNode``: it is the only two-input clause, and
+    ``Query.apply`` / ``Query.derive`` spell out the pipeline order around
+    it rather than widening the one-in one-out protocol for a single case.
     """
 
     right: "Query"
