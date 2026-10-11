@@ -77,10 +77,10 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - `document_schema(entities) -> Mapping` — data.json 全体のスキーマ
 - `entity_schema(entity_id, entities) -> Mapping` — 単一エンティティの断片（子孫を入れ子展開）
 
-変換の要点: ドット名の入れ子復元（E14 で「カタログのドットは必ず入れ子」が保証される前提）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
+変換の要点: ドット名の入れ子復元（[view 出力にドット入りキーは生まれない](../60-composer/10-query-dsl-spec.md#external-design)ので、カタログのドットは必ず入れ子）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
 
 提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`、MCP ツール。導線（docs / MCP ツール記述）とセットで初めて使われる点に注意。
 
 その他の論点: レコード 0 件エンティティのキー欠落と required 方針、`additionalProperties: false` の採否。
 
-**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: E14, M13。
+**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: M13。

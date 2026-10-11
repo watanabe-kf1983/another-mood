@@ -10,8 +10,7 @@ A dot in a write path is sugar too — it lets a nested target be
 written on one YAML line — so it is resolved here, into the segments
 the canonical form carries.  The ``__view_defs`` template spells the
 dot back for display, which is why the form it shows stays one a
-reader can copy into a source file.  ``select``, ``flatten`` and
-``join`` write paths so far; ``grouped`` follows when it switches.
+reader can copy into a source file.
 """
 
 from collections.abc import Mapping, Sequence
@@ -139,8 +138,15 @@ def normalize_inline_flatten(
 
 
 def normalize_grouped(raw: Mapping[str, object]) -> Mapping[str, object]:
-    """Normalize the ``grouped`` clause.  Both keys are schema-required."""
-    return {"by": cast(str, raw["by"]), "as": cast(str, raw["as"])}
+    """Normalize the ``grouped`` clause.  Both keys are schema-required.
+
+    ``by`` is split too: it is read as a path and the key value is
+    written back at that same path.
+    """
+    return {
+        "by": split_path(cast(str, raw["by"])),
+        "as": split_path(cast(str, raw["as"])),
+    }
 
 
 def normalize_select(

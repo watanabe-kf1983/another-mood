@@ -197,11 +197,17 @@ class TestNormalizeInlineFlatten:
 
 
 class TestNormalizeGrouped:
-    def test_both_keys_pass_through(self) -> None:
+    def test_both_keys_split_into_segments(self) -> None:
         """``as`` is schema-required, so there is no default to fill."""
         assert normalize_grouped({"by": "category", "as": "items"}) == {
-            "by": "category",
-            "as": "items",
+            "by": ("category",),
+            "as": ("items",),
+        }
+
+    def test_dotted_by_and_as_split(self) -> None:
+        assert normalize_grouped({"by": "hobby.level", "as": "hobby.members"}) == {
+            "by": ("hobby", "level"),
+            "as": ("hobby", "members"),
         }
 
 
@@ -284,7 +290,7 @@ class TestNormalizeQuery:
                 }
             ],
             "where": {"open": True},
-            "grouped": {"by": "category", "as": "items"},
+            "grouped": {"by": ("category",), "as": ("items",)},
             "select": [{"item": "name", "as": ("name",)}],
             "sort": {"by": "name", "direction": "asc", "missing": "last"},
         }
