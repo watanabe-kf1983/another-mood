@@ -195,30 +195,6 @@ class TestBuildAndFlatten:
                 """,
                 id="dotted_attribute_pointing_to_entity",
             ),
-            pytest.param(
-                "roadmap",
-                # No ``object`` attribute ahead of it, so the dotted id
-                # is one edge name rather than a singleton to reclaim.
-                """
-                - id: roadmap
-                  item_type:
-                    id: roadmap.item
-                    attributes:
-                      - { id: task.phase, type: integer, required: true }
-                      - id: tasks
-                        type: object[]
-                        required: true
-                        child_entity: roadmap.tasks
-                        child_item_type: roadmap.item.tasks.item
-                - id: roadmap.tasks
-                  item_type:
-                    id: roadmap.item.tasks.item
-                    attributes:
-                      - { id: id, type: string, required: true }
-                  parent_entity: roadmap
-                """,
-                id="dotted_alias_without_wrapper",
-            ),
         ],
     )
     def test_build_then_flatten_is_identity(

@@ -187,17 +187,23 @@ class Attribute:
     #
     # ``id`` is one segment per edge, joined with dots: a singleton
     # object folds into the entity holding it rather than opening one of
-    # its own.  These three are the only place spelling the separator.
+    # its own.  These two are the only place spelling the separator.
 
     @staticmethod
     def join_id(names: Iterable[str]) -> str:
         return ".".join(names)
 
-    def inlined_into(self, holder: "Attribute") -> bool:
-        return self.id.startswith(f"{holder.id}.")
+    @staticmethod
+    def split_id(id_: str) -> KeyPath:
+        return tuple(id_.split("."))
 
-    def segment_under(self, holder: "Attribute | None") -> str:
-        return self.id if holder is None else self.id[len(holder.id) + 1 :]
+    @property
+    def key_path(self) -> KeyPath:
+        return Attribute.split_id(self.id)
+
+    def inlined_into(self, holder: "Attribute") -> bool:
+        depth = len(holder.key_path)
+        return len(self.key_path) > depth and self.key_path[:depth] == holder.key_path
 
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
@@ -363,10 +369,7 @@ def _build_entity_node(
     return Node(
         metadata=entity.item_type.metadata,
         children=_build_branches(
-            entity.item_type.attributes,
-            holder=None,
-            sub_by_id=sub_by_id,
-            catalog=catalog,
+            entity.item_type.attributes, sub_by_id=sub_by_id, catalog=catalog
         ),
         origin_item_type=entity.item_type.id,
     )
@@ -375,17 +378,13 @@ def _build_entity_node(
 def _build_branches(
     attributes: Sequence[Attribute],
     *,
-    holder: Attribute | None,
     sub_by_id: Mapping[str, Entity],
     catalog: Sequence[Entity],
 ) -> Sequence[Branch]:
-    """Restore one node's children from the attributes folded into it.
-
-    ``holder`` is the singleton being restored, None at an entity's own body.
-    """
+    """Restore one node's children from the attributes folded into it."""
     return [
         (
-            _edge_from_attribute(attr, name=attr.segment_under(holder)),
+            _edge_from_attribute(attr, name=attr.key_path[-1]),
             _build_attribute_node(attr, inlined, sub_by_id=sub_by_id, catalog=catalog),
         )
         for attr, inlined in _inlined_attributes(attributes)
@@ -399,8 +398,7 @@ def _inlined_attributes(
 
     The inverse of ``_flatten_attributes``, whose emission order leaves
     the inlined attributes right after the ``object`` attribute whose id
-    they extend.  A dotted id with no ``object`` attribute in front of it
-    stays one edge name: a view alias becomes a record key verbatim.
+    they extend.
     """
     if not attributes:
         return []
@@ -424,12 +422,7 @@ def _build_attribute_node(
         return _build_entity_node(sub_by_id[attr.id], catalog)
     elif inlined:
         return Node(
-            children=_build_branches(
-                inlined,
-                holder=attr,
-                sub_by_id=sub_by_id,
-                catalog=catalog,
-            )
+            children=_build_branches(inlined, sub_by_id=sub_by_id, catalog=catalog)
         )
     else:
         # ``Node()``, not an empty ``_build_branches``: ``children``
