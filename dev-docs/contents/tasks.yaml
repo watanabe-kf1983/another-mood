@@ -571,9 +571,12 @@ categories:
         title: grouped.by が存在しないキーを指すと KeyError で落ちる
         note: >-
           grouped.by に一部のレコードで欠けるキー (例: flatten した
-          lic.license.id) を指定すると、診断ではなく素の KeyError traceback で
-          ビルドが落ちる。where / select の欠損キー扱いと揃えた診断にする。
-          R6 (SBOM showcase) で遭遇。
+          lic.license.id) を指定すると、素の KeyError traceback でビルドが
+          落ちる。欠落を一級扱いする他の句に揃え、キーの無い行はエラーにせず
+          一つのグループにまとめる。そのグループ行はキーを省く (nullable =
+          キー省略)。行を落としたければ利用者が where の exists を書く。
+          R6 (SBOM showcase) で遭遇。E14 の grouped 片 (グループキーの
+          required の導出) の前提。
         phase: 17
 
   P:
