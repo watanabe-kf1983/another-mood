@@ -170,7 +170,7 @@ categories:
           Edition.root_template / templates_dir と render ループの差し替え機構は既にある。
           残るは reports.yaml の `root_template` エントリ (スキーマ + load_editions) のみ。
         phase: 18
-        proposal: 20-design/70-generator/10-generator#edition-別ルートテンプレート将来
+        proposal: 20-design/70-generator/40-output-layout#edition-別ルートテンプレート将来
 
   D:
     title: ユーザコンテンツバリデーション
@@ -313,7 +313,7 @@ categories:
     impl_paths:
       - src/another_mood/resources/
       - src/another_mood/components/generator/
-    spec: 20-design/75-meta-documentation
+    spec: 20-design/75-meta-documentation/10-database-information
     tasks:
       F4a:
         title: ER 図テンプレート — 全体図 + 基盤
@@ -342,7 +342,7 @@ categories:
       F10:
         title: 内部オブジェクト診断の --debug 復活スイッチ
         phase: 18
-        proposal: 20-design/75-meta-documentation#内部オブジェクト診断の---debug-復活スイッチ
+        proposal: 20-design/75-meta-documentation/10-database-information#内部オブジェクト診断の---debug-復活スイッチ
 
   G:
     title: CLI / 設定システム
@@ -639,7 +639,7 @@ categories:
           minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
           ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
         phase: 18
-        proposal: 20-design/70-generator/60-template-trust-model#dos-はホスティング時に別レイヤで
+        proposal: 20-design/70-generator/25-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
     title: 公開
