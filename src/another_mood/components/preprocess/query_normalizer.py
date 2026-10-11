@@ -145,13 +145,10 @@ def normalize_inline_flatten(
 
 
 def normalize_where(raw: Mapping[str, object]) -> Mapping[str, object]:
-    """Expand one ``where`` node into the predicate tree, a node per predicate.
+    """Normalize the ``where`` clause to a predicate tree.
 
-    A field predicate becomes ``{field, operator, target}`` -- keyed by
-    role rather than by field name, so the field can be a path of
-    segments.  A scalar is ``eq``; an operator bundle (``{gt: 10, lt:
-    20}``) and several keys on one node each become an ``and`` of their
-    parts, unwrapped when there is just one.
+    A field predicate is keyed by role -- ``{field, operator, target}`` --
+    so that its field can be a path of segments.
     """
     clauses = [_where_entry(key, value) for key, value in raw.items()]
     return clauses[0] if len(clauses) == 1 else {"and": clauses}
