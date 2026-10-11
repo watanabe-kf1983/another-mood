@@ -28,7 +28,8 @@ album_tracklist:
 # the ``join:`` list form (multi-join): the first join brings the album
 # in, and the second join uses an attribute introduced by the first
 # join's ``flatten: { as: album }`` (``album.artist_id``) as the lookup
-# key for the second match.
+# key for the second match.  The second join's ``as`` is a dotted path,
+# so the artist lands inside ``album`` (``row.album.artist``).
 tracks_with_artist:
   from: tracks
   join:
@@ -38,10 +39,9 @@ tracks_with_artist:
       flatten: { as: album }
     - to: artists
       on: { left: album.artist_id, right: id }
-      as: artist_matches
-      flatten: { as: artist }
+      as: album.artist_matches
+      flatten: { as: album.artist }
   select:
     - item: id
     - item: title
     - item: album
-    - item: artist

@@ -31,6 +31,7 @@ from another_mood.components.shared.catalog_write import (
 )
 from another_mood.components.shared.json_data_model import KeyPath, drop, pluck, put
 from another_mood.components.shared.record_predicate import (
+    MISSING,
     RecordPredicate,
     parse_record_predicate,
 )
@@ -172,14 +173,14 @@ class Flatten(QueryNode):
 @dataclass(frozen=True)
 class Merge:
     """Equi-join with default cardinality: attach matched right rows
-    as a list under ``right_as`` on each left row.  Both ``on_*``
+    as a list at ``right_as`` on each left row.  Both ``on_*``
     paths follow the asymmetry rule: nested object dot paths allowed,
     array crossing not.
     """
 
     on_left: str
     on_right: str
-    right_as: str
+    right_as: KeyPath
 
     def apply(
         self,
@@ -200,24 +201,29 @@ class Merge:
             except KeyError:
                 return []
 
-        return [{**row, self.right_as: _matched(row)} for row in left]
+        return [put(row, self.right_as, _matched(row)) for row in left]
 
     def derive(self, left: dc.Node, right: dc.Node) -> dc.Node:
         left.require_path(self.on_left)
         right.require_path(self.on_right)
-        out = dc.Node(
-            metadata=left.metadata,
-            children=[
-                *left.children,
-                (dc.Edge(name=self.right_as, type="object[]", required=True), right),
-            ],
+        taken = next(
+            (name for name in names(left) if overlaps(self.right_as, name)), None
         )
-        if _duplicate_child_name(out) is not None:
+        if taken is not None:
             raise QueryDeriveError(
-                f"join alias '{self.right_as}' collides with an existing attribute",
-                offender=self.right_as,
+                f"join alias '{'.'.join(self.right_as)}' collides with the attribute "
+                f"'{'.'.join(taken)}'",
+                offender=self.right_as[0],
             )
-        return out
+        # Every left row gets its list (empty on no match), so the
+        # branch is on every row.
+        attached = (
+            dc.Edge(name=self.right_as[-1], type="object[]", required=True),
+            right,
+        )
+        out = place(left, [Placement(branch=attached, path=self.right_as, source=())])
+        # A row is no longer an instance of the item type it came from.
+        return replace(out, origin_item_type=None)
 
 
 @dataclass(frozen=True)
@@ -262,7 +268,7 @@ class Join:
             merge=Merge(
                 on_left=on_raw["left"],
                 on_right=on_raw["right"],
-                right_as=cast(str, raw["as"]),
+                right_as=tuple(cast(Sequence[str], raw["as"])),
             ),
             flatten=flatten,
         )
@@ -291,6 +297,7 @@ class Grouped(QueryNode):
     """Group input rows by ``by`` and package each group under ``as_``.
 
     Grouped rows are preserved verbatim (including their own ``by`` field).
+    Rows lacking ``by`` form one group of their own, whose row omits ``by``.
     """
 
     by: str
@@ -299,8 +306,8 @@ class Grouped(QueryNode):
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         groups: dict[object, list[Record]] = {}
         for record in records:
-            groups.setdefault(pluck(record, self.by), []).append(record)
-        return [{self.by: key, self.as_: items} for key, items in groups.items()]
+            groups.setdefault(self._key_of(record), []).append(record)
+        return [self._group_row(key, items) for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
         edge, child = catalog.descend(self.by)
@@ -321,6 +328,18 @@ class Grouped(QueryNode):
                 offender=self.as_,
             )
         return out
+
+    def _key_of(self, record: Record) -> object:
+        try:
+            return pluck(record, self.by)
+        except KeyError:
+            return MISSING
+
+    def _group_row(self, key: object, items: Sequence[Record]) -> Record:
+        if key is MISSING:
+            return {self.as_: items}
+        else:
+            return {self.by: key, self.as_: items}
 
 
 @dataclass(frozen=True)

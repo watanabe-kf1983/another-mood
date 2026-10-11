@@ -10,8 +10,8 @@ A dot in a write path is sugar too — it lets a nested target be
 written on one YAML line — so it is resolved here, into the segments
 the canonical form carries.  The ``__view_defs`` template spells the
 dot back for display, which is why the form it shows stays one a
-reader can copy into a source file.  ``select`` and ``flatten``
-write paths so far; the other clauses follow as they switch.
+reader can copy into a source file.  ``select``, ``flatten`` and
+``join`` write paths so far; ``grouped`` follows when it switches.
 """
 
 from collections.abc import Mapping, Sequence
@@ -109,7 +109,7 @@ def normalize_join(raw: object) -> list[Mapping[str, object]]:
 
 def _normalize_join_entry(raw: Mapping[str, object]) -> Mapping[str, object]:
     to = cast(str, raw["to"])
-    as_ = cast(str, raw.get("as", to))
+    as_ = split_path(cast(str, raw.get("as", to)))
     out: dict[str, object] = {"to": to, "on": raw["on"], "as": as_}
     if "where" in raw:
         out["where"] = raw["where"]
@@ -118,14 +118,15 @@ def _normalize_join_entry(raw: Mapping[str, object]) -> Mapping[str, object]:
     return out
 
 
-def normalize_inline_flatten(raw: object, join_as: str) -> Mapping[str, object]:
+def normalize_inline_flatten(
+    raw: object, join_as: Sequence[str]
+) -> Mapping[str, object]:
     """Expand ``join[].flatten`` shorthand (``true`` or partial mapping) to object form.
 
-    ``of:`` is fixed to ``join_as`` since the unwind target is always
-    the just-attached array.  It is one segment, not a split: the join
-    lands its right side under an edge named ``join_as`` verbatim.
+    ``of:`` is fixed to ``join_as`` -- the path the join just wrote its
+    right side to -- since the unwind target is always that array.
     """
-    target = (join_as,)
+    target = tuple(join_as)
     if raw is True:
         return {"of": target, "as": target, "preserve_empty": False}
     mapping = cast(Mapping[str, object], raw)

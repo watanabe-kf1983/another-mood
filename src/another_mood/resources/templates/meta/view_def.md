@@ -67,7 +67,7 @@
     {%- set inline_flatten = f and "{of: " ~ (f.of | join(".")) ~ ", as: " ~ (f.as | join(".")) ~ ", preserve_empty: " ~ (f.preserve_empty | lower) ~ "}" %}
     {{- "" }}| {{ source_link(entry.to) | safe }}
     {{- "" }} | {{ entry.on.left }} = {{ entry.on.right }}
-    {{- "" }} | {{ entry.as }}
+    {{- "" }} | {{ entry.as | join(".") }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
     {{- "" }} | {% if f %}{{ code_inline(inline_flatten) }}{% endif %}
     {{- "" }} |
