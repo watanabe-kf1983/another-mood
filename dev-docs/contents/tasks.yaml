@@ -35,7 +35,7 @@ categories:
     title: アンカー / リンク解決
     impl_paths:
       - src/another_mood/components/generator/
-    spec: 20-design/70-generator/20-anchor-spec
+    spec: 20-design/70-generator/30-anchor-spec
     tasks:
       B1:
         title: 親参照の注入 (`_parent` / `_parent_record`)
@@ -84,7 +84,7 @@ categories:
           ただし可視性は出力を目で読む場面でしか効かない。W4 の dev-docs 整理では節の削除・移動で
           裸になった `[text]` に気づけず、ソースと出力を突き合わせる検査を別途書いて見つけた。
         phase: 18
-        proposal: 20-design/70-generator/20-anchor-spec#未決事項
+        proposal: 20-design/70-generator/30-anchor-spec#未決事項
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
         phase: 11
@@ -108,13 +108,13 @@ categories:
           ページ主語になるまで (PageCollisionError) 検出されない。構築時に検出して
           リンク抑止か警告にするか、どこまでやるかの検討から。
         phase: 18
-        proposal: 20-design/70-generator/20-anchor-spec#未決事項
+        proposal: 20-design/70-generator/30-anchor-spec#未決事項
 
   C:
     title: ページ分割 (paging)
     impl_paths:
       - src/another_mood/components/generator/
-    spec: 20-design/70-generator/40-paging-spec
+    spec: 20-design/70-generator/10-generator
     tasks:
       C1:
         title: reports.yaml の読み込み・パース
@@ -170,7 +170,7 @@ categories:
           Edition.root_template / templates_dir と render ループの差し替え機構は既にある。
           残るは reports.yaml の `root_template` エントリ (スキーマ + load_editions) のみ。
         phase: 18
-        proposal: 20-design/70-generator/40-paging-spec#edition-別ルートテンプレート将来
+        proposal: 20-design/70-generator/40-output-layout#edition-別ルートテンプレート将来
 
   D:
     title: ユーザコンテンツバリデーション
@@ -315,7 +315,7 @@ categories:
     impl_paths:
       - src/another_mood/resources/
       - src/another_mood/components/generator/
-    spec: 20-design/75-meta-documentation
+    spec: 20-design/75-meta-documentation/10-database-information
     tasks:
       F4a:
         title: ER 図テンプレート — 全体図 + 基盤
@@ -344,7 +344,7 @@ categories:
       F10:
         title: 内部オブジェクト診断の --debug 復活スイッチ
         phase: 18
-        proposal: 20-design/75-meta-documentation#内部オブジェクト診断の---debug-復活スイッチ
+        proposal: 20-design/75-meta-documentation/10-database-information#内部オブジェクト診断の---debug-復活スイッチ
 
   G:
     title: CLI / 設定システム
@@ -585,7 +585,7 @@ categories:
     impl_paths:
       - src/another_mood/components/generator/render_processor.py
       - src/another_mood/components/generator/template_engine.py
-    spec: 20-design/70-generator/30-template-spec
+    spec: 20-design/70-generator/20-template-spec
     tasks:
       P2:
         title: テンプレート参照の拡張子明示化
@@ -645,7 +645,7 @@ categories:
           minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
           ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
         phase: 18
-        proposal: 20-design/70-generator/60-template-trust-model#dos-はホスティング時に別レイヤで
+        proposal: 20-design/70-generator/25-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
     title: 公開
@@ -830,7 +830,7 @@ categories:
     impl_paths:
       - src/another_mood/components/generator/template_engine.py
       - src/another_mood/components/generator/generator.py
-    spec: 20-design/70-generator/50-output-format-spec
+    spec: 20-design/70-generator/20-template-spec
     tasks:
       U1:
         title: output_format モデル基盤
@@ -853,14 +853,14 @@ categories:
         note: >-
           いずれも実需が顕在化した時点で別仕様として詰める。md 以外の HTML 系は N2 と重なる。
         phase: 18
-        proposal: 20-design/70-generator/50-output-format-spec#proposals
+        proposal: 20-design/70-generator/20-template-spec#proposals
       U6:
         title: Prose 型の mime_type 多態 (text/markdown 以外の prose)
         note: >-
           レコード直下の mime_type を分岐キーに、text/html 等の prose をページとして扱う。
           汎用の Typed Value 機構は採らず、組み込みコレクションに限る。
         phase: 18
-        proposal: 20-design/70-generator/50-output-format-spec#proposals
+        proposal: 20-design/70-generator/20-template-spec#proposals
 
   V:
     title: プロジェクトマニフェスト (sbdb.yaml)

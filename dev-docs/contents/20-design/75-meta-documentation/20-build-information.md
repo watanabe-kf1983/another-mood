@@ -1,40 +1,8 @@
-# Template Specification
+# 奥付
+
+ビルドそのものの記録（処理系・注入値・manifest）を可視化する機能。出力は `__build_info/` に置く。
 
 ## External Design
-
-### 背景: なぜ undefined アクセスをエラーにしないか
-
-> **[W4 dup]** ↔ template_engine.py:69-71 (a)、template.md:378-389 (b) — 部分。案: 決定 (chainable) はコード、3 段階比較と切替条件は appendix
-
-> **[W4 → appendix?]** 推奨: 移す
-
-minijinja は `undefined_behavior` で undefined アクセスの扱いを選べる: 厳密な `strict`（全ての undefined アクセスでエラー）、チェイン可能な `chainable`、既定の `lenient`（1 階層目はサイレント、`{{ x.a }}` のチェインはエラー）の 3 段階を提供する。
-
-本プロジェクトは `chainable` を明示指定する（既定のままでは `{{ x.a }}` がエラーになる）。理由:
-
-- 内蔵テンプレート・ユーザテンプレートのいずれも、スキーマから抽出される optional フィールド（`metadata`, `validation` 等）を頻繁に参照するため、ガードの記述負荷が重い
-- `lenient` は 1 階層目の typo も同様にサイレント失敗するため、チェインだけエラーにする中途半端な挙動になっている
-- 厳密な typo 検出が必要になった時点で `strict` への切り替えを検討する（その際は内蔵テンプレート側のガード追加が必要）
-
-なお `chainable` でも minijinja 組込みフィルタは undefined を受けない（`{{ x | length }}` は raise。jinja2 の `ChainableUndefined` は `0` を返した）。次節の「何も描かない」規則が及ぶのは本ツールのヘルパー。
-
-### 欠損値は何も描かない
-
-> **[W4 dup]** ↔ md.py:164-206、data_tree_filters.py:90-93,120-122 (a)、20-anchor-spec:165 (c)、template.md (b) — 完全。案?: 規約の宣言 (不変条件) は残す。missing と欠損の区別・link の text の挙動は削除→docs/コード
-
-欠損した値をテンプレートが描こうとしたとき、出力は空になる。フィルタや関数を通した場合も同じで、ヘルパーが `"None"` のような表現を発明することはない。この規則があるので [10-json-data-model.md](../40-communication/10-json-data-model.md#配列内オブジェクトのフィールド統一) の「nullable な項目は値ではなくフィールドごと省略する」規約が成り立つ。
-
-**欠損と「壊れた参照」は別に扱う。** 解決を試みて外した参照（missing node）は、リンクに描く `link` / `relink` では目立つ `[text]` を出す（`href` は空、`anchor` は何も出さない）。一方 optional フィールドの欠損は上の規約が認めている正常系なので、目立たせず何も描かない。`node` / `child` の住所を組み立てる引数が欠損したときは、参照そのものが成立しないので missing node にもならず、何も描かれない。
-
-**`link` の表示テキスト。** 引数を渡さなければ label、渡した値が欠損していれば空のテキスト（`[](url)`）になる。参照は健在なので、表示テキストの欠損でリンクごと消すことはしない。
-
-### テンプレートの語彙は filter / test / operator に限る
-
-> **[W4 dup]** ↔ template_engine.py:77-83 コメント (理由まで同内容) (a)、template.md:391-399 (b) — 完全。案?: 設計判断は design が正本→残し、template_engine.py のコメントを一文に縮める
-
-値そのものはメソッドを持たない。minijinja の `pycompat` は Python の文字列 / list / dict メソッドを値に生やすが、これを切っている（`.startswith()` は空描画ではなくメソッド名つきのエラー）。
-
-理由は **利用者に案内できる境界が引けること**。pycompat を入れたままだと「どこまでが Python 相当か」を答える主体が居ない — 本ツールの `docs/` には書けず（Python のどの版のどのメソッドか特定できない）、minijinja コアの保証でもない（実体は minijinja-contrib の `unknown_method_callback` で、上流の位置づけも「Jinja2 テンプレートの移行互換シム」。COMPATIBILITY.md も *Filters should generally be used instead of methods* と述べる）。語彙を filter / test / operator に閉じれば、案内できる集合とテンプレートから届く集合が一致する。
 
 ### 奥付
 
@@ -66,7 +34,7 @@ minijinja は `undefined_behavior` で undefined アクセスの扱いを選べ�
 | `vars.*` | 実行者の注入値（供給機構は [20-config-spec.md](../25-entrypoints/10-config-spec.md)） | `vars.git_commit_id` |
 | `manifest.*` | sbdb プロジェクトの宣言 (sbdb.yaml) | `manifest.title`, `manifest.sbdb_version` |
 
-注入ルートは `vars.*` にしか書けない。処理系の識別（`processor.name` / `version` / `started_at` / `command`）と `manifest.*` を外から偽装する経路は無い（`processor.config.*` は環境変数 `MOOD_*` でも決まるが、それは config の写しであって注入ではない）。環境変数の素通し（`env.*`）を作らないのも同じ線で、テンプレートが環境の読み取り器になると CI のクレデンシャル等を出力に焼き込めてしまう（[60-template-trust-model.md](60-template-trust-model.md) の閉じた値モデルに穴を開ける）。越境するのは実行者が明示的に差し出した値だけ。
+注入ルートは `vars.*` にしか書けない。処理系の識別（`processor.name` / `version` / `started_at` / `command`）と `manifest.*` を外から偽装する経路は無い（`processor.config.*` は環境変数 `MOOD_*` でも決まるが、それは config の写しであって注入ではない）。環境変数の素通し（`env.*`）を作らないのも同じ線で、テンプレートが環境の読み取り器になると CI のクレデンシャル等を出力に焼き込めてしまう（[25-template-trust-model.md](../70-generator/25-template-trust-model.md) の閉じた値モデルに穴を開ける）。越境するのは実行者が明示的に差し出した値だけ。
 
 `processor.*` / `manifest.*` のキー目録は `docs/` で**意図的に非契約**とし、「処理系が供給するもので、目録はバージョン間で変わりうる。奥付ページで確認せよ」と明言する（沈黙を暗黙の安定保証に読ませない）。release.md の feature / breaking 判定は「docs/reference の約束の集合」に基づくため、目録を約束しないことでキーの増減・改廃がリリース分類上の破壊にならない。
 
@@ -83,30 +51,6 @@ build info をシステム定義エンティティ（`__build_info`）として 
 同じ理由で tap にも provenance を載せない。tap 出力は差分を取る使い方が主なので、毎回動く値が混ざると実質的な差分がノイズに埋もれる。守る線は「ソースだけで決まる」ではなく **「マシンと起動のしかたには依存しない」**（tap 出力には既に `__definition` 等のツール生成目録が乗っており、ツール版には依存している）。
 
 ## Internal Design
-
-### 欠損の描画責務と「引数未指定」の区別
-
-> **[W4 dup]** ↔ omitted.py:12-20、data_tree_filters.py:90-93 (誤リンク例まで同文)、template_engine.py:112-124 as_template_helper、md.py 各ヘルパ、meta_templates.py (a) — 完全。案?: 「None は欠損、OMITTED は未指定」の不変条件と 3 分類は design→残し、omitted.py/resolve_node の docstring を縮める。各ヘルパの個別挙動は削除→コード
-
-`None` は「値が欠損している」の意味に予約する。「引数が渡されていない」には番兵 `OMITTED`（`omitted.py`）を使う。既定値を `None` にすると 2 つが区別できず、最も重い失敗は `node(path=…)` で起きる — `path` の欠損で prefix が空になり、`node("y", path=欠損)` が `/y` に解決して**別の実在ノードへ静かにリンクする**。表示の劣化ではなく誤リンク。
-
-欠損を描くのは `_finalize` 一点で、ヘルパーは欠損を文字列化せず `None` を返す。テキストを被写体に取るものは境界（`as_template_helper`）が包むので、欠損はプロセッサに届かない。
-
-引数の欠損は結果ごと消さず、その引数が担う仕事だけを失わせる。引数が何をするかで 3 通りに分かれる:
-
-- **表示に混ざるだけ**（`link` の `text`）→ その箇所が空になる
-- **出力の形を選ぶ**（`code_fenced` の `language`、`to_yaml` の `flow`）→「渡されていない」と同じ扱い
-- **住所を組み立てる**（`node` の `segs` / `path` / `fragment`、`child` の `seg`）→ 参照が成立しないので `None`。ここだけ「空にする」が使えない（上の誤リンクになる）
-
-番兵を入れるのは、この 3 通りのうち「渡されていない」と挙動が分かれるものだけ。例外は 2 つあり、`under_heading` の `marker` は既定値が無く、囲みの深さが決まらないと描けないので raise のまま（欠損を静かに扱わない唯一の場所）。コレクションを返す `walk_entity` は空コレクションを返す（`{% if rows %}` / `for` が回る形を保つ）。
-
-#### 背景: 外した 2 案
-
-> **[W4 → appendix]**
-
-**フィルタ入口で `None` を「空文字で描かれる番兵」へ変換する。** jinja2 の配置をそのまま再現でき、フィルタは無改造で済む。外した理由は、(a) 意図的に渡された `null` と欠損を区別できない、(b) 全フィルタ呼び出しに引数走査の層が乗る、(c) フィルタが `None` を返す形は迂回ではなく素直な意味論であり、番兵という間接層を挟む必要がない。
-
-**`link` の `text` が欠損したら label へフォールバックする。** リンクが使える形で残るのは利点だが、著者が `t.別名` と書いたのに黙って `名前` を出すのは、フィルタに暗黙の `default()` を埋め込むこと。フォールバックが要る著者には `t.別名 or t.名前` / `| default(...)` という明示手段があり、*explicit is better than implicit* に反する。データ欠損が出力から検出できなくなる点も悪い（空なら表セルが空くので気づける）。
 
 ### build_info のキーを足す場所 — `Workspace` の `build_info` property
 

@@ -12,7 +12,7 @@ Generator はロードしたデータを inert に詰め替えたうえで `wrap
 |---|---|---|
 | `_parent` | 全ノード | データツリー上の直近の親ノード |
 | `_parent_record` | Mapping のみ | 最も近い Mapping 祖先（間の Array を 1 段飛ばす） |
-| `_meta.anchor_path` | 全ノード | このノードのアンカーパス（[anchor-spec.md](20-anchor-spec.md)） |
+| `_meta.anchor_path` | 全ノード | このノードのアンカーパス（[anchor-spec.md](30-anchor-spec.md)） |
 | `_meta.fragment` / `_meta.stamps_anchor` | 全ノード | リンクの着地 fragment と `<a id>` 刻印の要否（由来型ごとの anchor strategy が決める） |
 | `_meta.object_type_id` | 全ノード | スキーマ位置を表すカタログ形 ID（Array 要素は `X.item`、singleton は `X`、Array は `X.item[]`） |
 
@@ -26,47 +26,16 @@ Generator はロードしたデータを inert に詰め替えたうえで `wrap
 
 ラップ対象（id 無し Array 要素・ネスト Array は inert container のまま除外）、`_parent` / `_parent_record` の二系統セマンティクス、`anchor_path` / `_type_path` の `cached_property` による再帰合成（amortized O(depth)）、prose 例外といった厳密な規則は `data_tree.py` の docstring が正本。
 
-### anchor_path → ノードマップ
+### render ループ
 
-> **[W4 dup]** ↔ data_tree.py:317-337 build_node_map/iter_nodes docstring (a, 完全)。案: 削除→コード (ポインタ一文のみ)
+> **[W4 dup]** ↔ generator.py:68-77,155 (a, 完全)。機構。案: 削除→コード、「メタを特別扱いしない」意図はコードコメントへ
 
-リンク解決はアンカーパスからノードを引く。`build_node_map` がラップ済みツリーを `iter_nodes` で 1 度舐め、`{anchor_path: node}` のフラットなマップを構築する。キーを full anchor_path にすることで prose の `/` 素通し例外 ([anchor-spec.md](20-anchor-spec.md#prose-の例外)) を各ノードの `anchor_path` 構築側 1 箇所に閉じ込め、マップ側に特別扱いを要さない。実装は `data_tree.py` の `build_node_map` / `iter_nodes` docstring が正本。
+`generate()` は 2 サーフェスを出す:
 
-### ページパスの導出
+- **表紙**（`{outDir}/index.md`）— deliverable を列挙する root ランディング。**データモデルを描かない**単発 render（edition ではなく、reconcile の build-report ページと同類）なのでデータ edition ループの外。
+- **データ edition**（メタ=`__db/` + ユーザ）— データモデルを描く。メタもユーザも同じ `Edition` 型なので**単一ループ**で回し、メタを特別扱いする分岐を持たない。
 
-> **[W4 dup]** ↔ edition.py:49-97 PagingPolicy/Edition docstring、data_tree.py:343-349 (a)、template.md:118-122、reports.md:47 (b)、40-paging:35 (c) — 完全。案: 削除→コード。残すのは「page_path は (node, file_per) の関数で _meta に焼かない」「data_tree は paging を知らない」の不変条件
-
-ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`render` フィルタ) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
-
-paging ポリシー (どの object type が分割境界か、root→`index.md` / 分割対象→`{anchor_path}.md` / blob→ファイルそのもの) は `PagingPolicy` (`file_per` ＋ `is_split_target` / `page_path`) が担い、構造的な木の遡上だけは data_tree の free function `nearest_ancestor` に分離する (`PagingPolicy` は paging を知らない木に触れず、data_tree は paging を知らないまま保つ)。`Edition` はこの `PagingPolicy` を保持し、generator だけが full な `Edition` を持つ。座標系をレポートルート相対に取る理由を含め、導出規則とコードは `edition.py` の `PagingPolicy` docstring が正本。
-
-### リンク解決
-
-> **[W4 dup]** 2 群構成・@pass_state・MissingNode ↔ data_tree_filters.py:4-11,160-166、md.py:174-179 (a)、40-paging:20、50-output-format:89、20-anchor-spec:247 (c) — 完全 (同じ 3 項目が 4 箇所)。案: ここを正本に 1 段落、他 3 箇所をポインタ化。実装契約の列挙は削除→コード
-
-> 基盤の [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) を使う。リンクの仕様（リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動）は [anchor-spec.md](20-anchor-spec.md) を参照。
-
-リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。ヘルパは依存方向で 2 群に分かれる: フォーマット非依存の中立ヘルパ (`node` global、`child` / `label` フィルタ) はノードマップだけに束縛され、フォーマット固有の `link` / `href` / `relink` は `PagingPolicy` に束縛される（`relink` はノードマップも引く。`anchor` は束縛を持たない）。source ページ（主題ノード）は render state の `this` から得る。実装契約 — `link` / `href` / `relink` に `@pass_state` が要る理由（source 取得）、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `data_tree_filters.py` / `output_formats/md.py` の docstring が正本。
-
-#### 描画の単一ページ不変条件 (render subtree ガード)
-
-> **[W4 dup]** ↔ render_processor.py:94-139 _guard_subtree docstring (a, ほぼ逐語)、template.md:110 (b)、80-showcase:173、40-paging:59 (c) — 完全。不変条件+理由。案?: 不変条件と「構造判定で edition 非依存」の理由は design が正本→残し、docstring を縮める。機構 (identity 判定、免除の条件) は削除→コード
-
-上のリンク解決は次の不変条件に乗っている: **各ノードは *データ位置* で一意に定まる 1 ページ (`PagingPolicy.page_path`) にだけ描かれる**。source は `page_path(this)`、target は `page_path(target)` — 両者が同じ規則でノードのデータ位置からページを引くからこそ、`| link` / `href` / `relink` が一貫して相対化できる。`render` フィルタで `this` の subtree 外にノードを inline 描画するとこの不変条件が破れ、`page_path(subject)` が実描画ページと食い違って、そのノードの内部 `this` 起点リンクも、そのノードへ張る被リンクも壊れる。
-
-そこで render フィルタは、subject が `this` の子孫（subject から `_parent` を遡上して `this` に identity 一致）でなければ、描画元テンプレートのファイル付き（行は無い）のビルドエラーにする。判定は **構造（子孫）** で行い、split / inline や edition (file_per) に依存しない — 妥当性をテンプレート単体で決めたいため（同じ呼び出しが「split する edition では通り、しない edition では弾かれる」ような edition 依存エラーを避ける）。
-
-**非ノード subject は免除**（anchor も page identity も持たない）。ただしこの免除が健全なのは、その子テンプレが `this` 起点の描画（`link` / `href` / `anchor` / `relink`・アンカー刻印）を一切しないときに限る。id 等を受け取り内部でノードを引き直して描く子テンプレはガードの射程外で、リンク正当性は author 責任になる（例: meta の `record_table.md` は entity id を受けてデータ行の表を描くのみで、entity ノード自体は配置しない）。他所のノードを描きたいときはクエリ (join 等) で subtree に取り込んで子孫化するか、`| link` で参照する。導出規則とコードは `render_processor.py` の `_guard_subtree` docstring が正本。
-
-#### prose body 処理フィルタ
-
-> **[W4 dup]** 機構 ↔ markdown.py docstring 群 (a)、template.md:278-292 (b)、20-anchor-spec relink 節、30-markdown-parser:13 (c) — 完全。案: 機構段落は削除→コード。「明示 relink、暗黙を採らない」は設計判断→残す (anchor-spec 側の再掲をポインタ化)
-
-Markdown データソースの body には、Normalizer がソース内の相対リンクを `node:` 記法に変換済みのリンクが含まれる ([prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化) 参照)。`relink` フィルタが body 内の `node:` リンク先を表示先ページからの相対 URL に置換する。**リンク解決の単一責務**に絞り、見出し深さ調整は `under_heading` と合成する (記法・対象範囲・未解決契約は [anchor-spec.md](20-anchor-spec.md#prose-body-処理フィルタ-relink) が正本)。
-
-body 内のどこが本物の `node:` リンクかは markdown-it でパースして判定し (レンダラには使わず位置特定のための読み取り専用パーサとして使う)、置換は元文字列への splice で行う。機構の詳細 (`normalizeLink` の恒等化、本物リンクだけが `link_open` になる性質、行範囲限定の splice) は `shared/markdown.py` の docstring が正本。
-
-relink は author が明示的に書く (`{{ prose.content | relink }}`) のを設計とし、システムが暗黙に挟む案は採らない。値単位で挟める自動フックは `template_engine.py` の finalize しかない（`post_process` はページ単位の post-render 置換で、上のとおり採らない）が、finalize は `Markup` を素通しする一方、`under_heading` 等の Markdown 出力フィルタはその `Markup` を返す。ゆえに暗黙 relink は `under_heading` と合成した瞬間に発火せず、`node:` を silent に出力へ漏らす (値に「relink 未了」の印を持たせて伝播させる代案も、文字列連結・Markup 化で印が黙って落ちるため信頼できない)。明示適用は raw な `node:` content の直近に author が relink を置くから確実で、合成順序も `| relink | under_heading` と見えるまま残る。
+各 `Edition` の差分フィールド（`paging` / `name` / `templates_dir` / `root_template` / `extra_filters` / `mirror_blobs`）と render 本体は `edition.py` / `generator.render_edition()` の docstring が正本。`root_template` は当面 `index.md` 固定で、[Edition 別ルートテンプレート（将来）](40-output-layout.md#edition-別ルートテンプレート将来)の継ぎ目。
 
 ### Reconcile
 

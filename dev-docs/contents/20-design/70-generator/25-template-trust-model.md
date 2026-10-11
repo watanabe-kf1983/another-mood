@@ -37,7 +37,7 @@
 
 sbdb プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
 
-- **`contents/` (data)** — data 値は md output format の finalize で escape される（[anchor-spec.md](20-anchor-spec.md) の unsafe トラストモデル参照）
+- **`contents/` (data)** — data 値は md output format の finalize で escape される（[anchor-spec.md](30-anchor-spec.md) の unsafe トラストモデル参照）
 - **`definition/schema.yaml`** — 宣言的な型定義
 - **`definition/views/`** — 境界付きの宣言 DSL（`from`/`flatten`/`join`/`where`/`grouped`/`select`/`sort`）。`where` 述語は演算子の閉じた enum（`EQ`/`GT`/`STARTSWITH`/`CONTAINS` 等）を `and`/`or`/`not` で結合するだけで、フィールド参照は dotted-key lookup（Python の `getattr` ではない）。`eval`/`exec`/式言語は無い（`shared/record_predicate.py`）
 - **`definition/reports.yaml` / `sbdb.yaml`** — 宣言的な設定
@@ -50,7 +50,7 @@ sbdb プロジェクトのソースのうち host コードへの経路を持ち
 
 > **[W4 → appendix?]** 推奨: 移す
 
-[anchor-spec.md](20-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のsbdb プロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
+[anchor-spec.md](30-anchor-spec.md) の raw HTML（`unsafe=true`）は「著者は既にソースとテンプレートの全権を持つため escalation にならない」＝**著者 = 実行者**を前提に組まれている。これは著者が自分のsbdb プロジェクトに埋める HTML の話で、RCE 封鎖とは別レイヤ:
 
 - unsafe HTML は「著者が自分の *出力* に責任を持つ」**表現力**の問題
 - marshal 契約は「テンプレートが host の *コード* に届かない」**実行安全**の問題
