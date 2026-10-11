@@ -242,6 +242,10 @@ class TestPluck:
         with pytest.raises(KeyError):
             pluck({"a": 1}, "a.b")
 
+    def test_key_path_raises_when_intermediate_value_is_scalar(self) -> None:
+        with pytest.raises(KeyError):
+            pluck({"a": 1}, ("a", "b"))
+
     def test_returns_falsy_value_verbatim(self) -> None:
         # Bug-shield: ``None`` / ``False`` / ``0`` must surface as-is
         # rather than be folded into "missing".

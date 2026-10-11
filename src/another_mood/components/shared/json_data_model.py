@@ -150,6 +150,8 @@ def pluck(record: Mapping[str, object], key_path: str | KeyPath) -> object:
         keys = key_path
     value: object = record
     for k in keys:
+        if not isinstance(value, Mapping):
+            raise KeyError(k)
         value = cast(Mapping[str, object], value)[k]  # type: ignore[reportUnnecessaryCast]
     return value
 

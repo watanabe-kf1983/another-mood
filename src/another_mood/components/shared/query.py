@@ -86,7 +86,9 @@ class From(QueryNode):
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         (wrapper,) = records
         try:
-            value = pluck(wrapper, self.name)
+            # One edge name in the catalog, a nested path in the data
+            # (``__definition.entities``).
+            value = pluck(wrapper, tuple(self.name.split(".")))
         except KeyError:
             # A source that passed derive() is catalog-declared, but the
             # merged data model only carries keys that some content file
