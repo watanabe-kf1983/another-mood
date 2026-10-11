@@ -264,17 +264,48 @@ prose body 中の `node:` リンク先を、表示先ページからの相対 UR
 {{ prose.content | relink | under_heading("##") }}
 ```
 
-relink は author の明示適用（`{{ prose.content | relink }}`）を設計とし、システムによる暗黙適用は採らない（`under_heading` 等との合成時に silent に壊れるため。理由は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) が正本）。
+relink は author の明示適用（`{{ prose.content | relink }}`）を設計とし、システムによる暗黙適用は採らない（`under_heading` 等との合成時に silent に壊れるため。理由は [prose body 処理フィルタ](#prose-body-処理フィルタ) が正本）。
 
-未解決の `node:` 参照は `link` と同じく `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。実装機構は [generator.md の prose body 処理フィルタ](10-generator.md#prose-body-処理フィルタ) を正本とする。
+未解決の `node:` 参照は `link` と同じく `[text]` に畳む（[未解決参照の扱い](#未解決参照の扱い)）。実装機構は [prose body 処理フィルタ](#prose-body-処理フィルタ) を正本とする。
 
 ## Internal Design
 
+### anchor_path → ノードマップ
+
+> **[W4 dup]** ↔ data_tree.py:317-337 build_node_map/iter_nodes docstring (a, 完全)。案: 削除→コード (ポインタ一文のみ)
+
+リンク解決はアンカーパスからノードを引く。`build_node_map` がラップ済みツリーを `iter_nodes` で 1 度舐め、`{anchor_path: node}` のフラットなマップを構築する。キーを full anchor_path にすることで prose の `/` 素通し例外 ([Prose の例外](#prose-の例外)) を各ノードの `anchor_path` 構築側 1 箇所に閉じ込め、マップ側に特別扱いを要さない。実装は `data_tree.py` の `build_node_map` / `iter_nodes` docstring が正本。
+
+### ページパスの導出
+
+> **[W4 dup]** ↔ edition.py:49-97 PagingPolicy/Edition docstring、data_tree.py:343-349 (a)、template.md:118-122、reports.md:47 (b)、40-paging:35 (c) — 完全。案: 削除→コード。残すのは「page_path は (node, file_per) の関数で _meta に焼かない」「data_tree は paging を知らない」の不変条件
+
+ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`render` フィルタ) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
+
+paging ポリシー (どの object type が分割境界か、root→`index.md` / 分割対象→`{anchor_path}.md` / blob→ファイルそのもの) は `PagingPolicy` (`file_per` ＋ `is_split_target` / `page_path`) が担い、構造的な木の遡上だけは data_tree の free function `nearest_ancestor` に分離する (`PagingPolicy` は paging を知らない木に触れず、data_tree は paging を知らないまま保つ)。`Edition` はこの `PagingPolicy` を保持し、generator だけが full な `Edition` を持つ。座標系をレポートルート相対に取る理由を含め、導出規則とコードは `edition.py` の `PagingPolicy` docstring が正本。
+
 ### リンク解決
+
+> **[W4 dup]** 2 群構成・@pass_state・MissingNode ↔ data_tree_filters.py:4-11,160-166、md.py:174-179 (a)、40-paging:20、50-output-format:89、20-anchor-spec:247 (c) — 完全 (同じ 3 項目が 4 箇所)。案: ここを正本に 1 段落、他 3 箇所をポインタ化。実装契約の列挙は削除→コード
+
+> 基盤の [anchor_path → ノードマップ](#anchor_path--%E3%83%8E%E3%83%BC%E3%83%89%E3%83%9E%E3%83%83%E3%83%97) を使う。リンクの仕様（リンク記法 / フィルタ API / 解決のタイミング / 未解決時の挙動）は [External Design](#external-design) を参照。
+
+リンク解決は pre-render 段階で完結する (post-render の文字列置換は採らない)。ヘルパは依存方向で 2 群に分かれる: フォーマット非依存の中立ヘルパ (`node` global、`child` / `label` フィルタ) はノードマップだけに束縛され、フォーマット固有の `link` / `href` / `relink` は `PagingPolicy` に束縛される（`relink` はノードマップも引く。`anchor` は束縛を持たない）。source ページ（主題ノード）は render state の `this` から得る。実装契約 — `link` / `href` / `relink` に `@pass_state` が要る理由（source 取得）、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと — は `data_tree_filters.py` / `output_formats/md.py` の docstring が正本。
+
 
 > **[W4 dup]** ↔ 10-generator:41 (c, 同じ 3 項目)、data_tree.py:147-151,189-201 (a) — 部分。案: ポインタ一文に縮める (strategy の機構は削除→コード)
 
-リンク解決の内部配線（フィルタの 2 群構成・供給経路・レポートルート相対の座標系・page_path / URL をノードに焼かない判断）はこの文書では持たず、[generator.md のリンク解決](10-generator.md#リンク解決) と [ページパスの導出](10-generator.md#ページパスの導出) を正本とする。実装レベルの契約（`link` / `href` / `relink` に `@pass_state` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。[出力 URL の形式](#出力-url-の形式)の fragment 規則と stamp 可否は、anchor_path 文字列の再パースでなくノード属性（`_meta.fragment` / `_meta.stamps_anchor`）で持ち、ノードの由来型（`origin_item_type`）で選ぶ anchor strategy が決める（`generator/data_tree.py` の `_Anchor` 各クラスの docstring）。
+実装レベルの契約（`link` / `href` / `relink` に `@pass_state` が要る理由、`anchor` には不要なこと、`MissingNode` を整形フィルタ側で捌き `node_href` には渡さないこと）は `generator/data_tree_filters.py` と `generator/output_formats/md.py` の docstring に残している。[出力 URL の形式](#出力-url-の形式)の fragment 規則と stamp 可否は、anchor_path 文字列の再パースでなくノード属性（`_meta.fragment` / `_meta.stamps_anchor`）で持ち、ノードの由来型（`origin_item_type`）で選ぶ anchor strategy が決める（`generator/data_tree.py` の `_Anchor` 各クラスの docstring）。
+
+### prose body 処理フィルタ
+
+> **[W4 dup]** 機構 ↔ markdown.py docstring 群 (a)、template.md:278-292 (b)、20-anchor-spec relink 節、30-markdown-parser:13 (c) — 完全。案: 機構段落は削除→コード。「明示 relink、暗黙を採らない」は設計判断→残す (anchor-spec 側の再掲をポインタ化)
+
+Markdown データソースの body には、Normalizer がソース内の相対リンクを `node:` 記法に変換済みのリンクが含まれる ([prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化) 参照)。`relink` フィルタが body 内の `node:` リンク先を表示先ページからの相対 URL に置換する。**リンク解決の単一責務**に絞り、見出し深さ調整は `under_heading` と合成する (記法・対象範囲・未解決契約は [prose body 処理フィルタ `relink`](#prose-body-処理フィルタ-relink) が正本)。
+
+body 内のどこが本物の `node:` リンクかは markdown-it でパースして判定し (レンダラには使わず位置特定のための読み取り専用パーサとして使う)、置換は元文字列への splice で行う。機構の詳細 (`normalizeLink` の恒等化、本物リンクだけが `link_open` になる性質、行範囲限定の splice) は `shared/markdown.py` の docstring が正本。
+
+relink は author が明示的に書く (`{{ prose.content | relink }}`) のを設計とし、システムが暗黙に挟む案は採らない。値単位で挟める自動フックは `template_engine.py` の finalize しかない（`post_process` はページ単位の post-render 置換で、上のとおり採らない）が、finalize は `Markup` を素通しする一方、`under_heading` 等の Markdown 出力フィルタはその `Markup` を返す。ゆえに暗黙 relink は `under_heading` と合成した瞬間に発火せず、`node:` を silent に出力へ漏らす (値に「relink 未了」の印を持たせて伝播させる代案も、文字列連結・Markup 化で印が黙って落ちるため信頼できない)。明示適用は raw な `node:` content の直近に author が relink を置くから確実で、合成順序も `| relink | under_heading` と見えるまま残る。
 
 ### アンカー自動刻印の実装
 
