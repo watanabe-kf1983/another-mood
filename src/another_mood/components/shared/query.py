@@ -172,7 +172,7 @@ class Flatten(QueryNode):
 @dataclass(frozen=True)
 class Merge:
     """Equi-join with default cardinality: attach matched right rows
-    as a list under ``right_as`` on each left row.  Both ``on_*``
+    as a list at ``right_as`` on each left row.  Both ``on_*``
     paths follow the asymmetry rule: nested object dot paths allowed,
     array crossing not.
     """
@@ -200,31 +200,29 @@ class Merge:
             except KeyError:
                 return []
 
-        # Transitional: the alias is still written as one literal key.
-        return [{**row, ".".join(self.right_as): _matched(row)} for row in left]
+        return [put(row, self.right_as, _matched(row)) for row in left]
 
     def derive(self, left: dc.Node, right: dc.Node) -> dc.Node:
         left.require_path(self.on_left)
         right.require_path(self.on_right)
-        out = dc.Node(
-            metadata=left.metadata,
-            children=[
-                *left.children,
-                (
-                    dc.Edge(
-                        name=".".join(self.right_as), type="object[]", required=True
-                    ),
-                    right,
-                ),
-            ],
+        taken = next(
+            (name for name in names(left) if overlaps(self.right_as, name)), None
         )
-        if _duplicate_child_name(out) is not None:
+        if taken is not None:
             raise QueryDeriveError(
-                f"join alias '{'.'.join(self.right_as)}' collides with an existing "
-                "attribute",
+                f"join alias '{'.'.join(self.right_as)}' collides with the attribute "
+                f"'{'.'.join(taken)}'",
                 offender=self.right_as[0],
             )
-        return out
+        # Every left row gets its list (empty on no match), so the
+        # branch is on every row.
+        attached = (
+            dc.Edge(name=self.right_as[-1], type="object[]", required=True),
+            right,
+        )
+        out = place(left, [Placement(branch=attached, path=self.right_as, source=())])
+        # A row is no longer an instance of the item type it came from.
+        return replace(out, origin_item_type=None)
 
 
 @dataclass(frozen=True)

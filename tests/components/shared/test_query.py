@@ -642,6 +642,18 @@ class TestMerge:
             {"meta": {"cat": "A"}, "tasks": [{"id": "A1", "cat": "A"}]},
         ]
 
+    def test_dotted_as_writes_the_list_at_a_nested_path(self) -> None:
+        """The alias is a path: the list lands inside the object on the
+        way where the row has it, in a made-up one where it does not --
+        a no-match row still gets its empty list."""
+        merge = Merge(on_left="id", on_right="cat", right_as=("owner", "tasks"))
+        left = [{"id": "A", "owner": {"name": "Ann"}}, {"id": "Z"}]
+        right = [{"id": "A1", "cat": "A"}]
+        assert list(merge.apply(left, right)) == [
+            {"id": "A", "owner": {"name": "Ann", "tasks": [{"id": "A1", "cat": "A"}]}},
+            {"id": "Z", "owner": {"tasks": []}},
+        ]
+
 
 class TestMergeDerive:
     """``Merge.derive``: schema-side merge.  ``require_child`` runs on
@@ -690,6 +702,31 @@ class TestMergeDerive:
         merge = Merge(on_left="tasks.title", on_right="id", right_as=("x",))
         with pytest.raises(dc.UnknownChildError, match="tasks.title"):
             merge.derive(root.child("categories"), root.child("categories"))
+
+    def test_as_overlaps_a_left_name_segment_wise(self) -> None:
+        """The alias is checked against the names on the left row the
+        way ``flatten`` checks its own: leading into one collides, a
+        sibling is clear."""
+        with pytest.raises(
+            QueryDeriveError, match="collides with the attribute 'hobby.level'"
+        ) as info:
+            Merge(on_left="id", on_right="rid", right_as=("hobby",)).derive(
+                tree("id hobby.level"), tree("rid")
+            )
+        assert info.value.offender == "hobby"
+        Merge(on_left="id", on_right="rid", right_as=("hobby", "clubs")).derive(
+            tree("id hobby.level"), tree("rid")
+        )
+
+    def test_as_lands_inside_an_object_on_some_rows(self) -> None:
+        """The list is written on every left row, so an object on the
+        way is made up where a row lacked it: it is on every row after
+        the join and what it held before is optional inside it."""
+        merge = Merge(on_left="id", on_right="rid", right_as=("hobby", "tasks"))
+        assert (
+            paths(merge.derive(tree("id hobby?.level"), tree("rid")))
+            == "id hobby.level? hobby.tasks[].rid"
+        )
 
 
 class TestJoin:
