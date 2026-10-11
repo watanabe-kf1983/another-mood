@@ -11,13 +11,15 @@ from dataclasses import asdict, dataclass
 from itertools import takewhile
 from typing import Any, ClassVar, cast
 
+from another_mood.components.shared.json_data_model import KeyPath
+
 # ── In-memory tree form (canonical) ───────────────────────────────────
 
 type Branch = tuple[Edge, Node]
 
 #: A node together with the chain of edges reaching it from the node a
 #: path is walked from.  A ``Branch`` is one step; this is the several
-#: steps a dotted path stands for, as in an ``Attribute.id``, where the
+#: steps a path stands for, as in an ``Attribute.id``, where the
 #: singletons on the way fold into the entity holding them.
 type AttributeReach = tuple[Sequence[Edge], Node]
 
@@ -76,7 +78,7 @@ class Node:
         for e, c in self.children:
             if e.name == name:
                 return e, c
-        raise UnknownChildError(name)
+        raise UnknownChildError((name,))
 
     def child(self, name: str) -> "Node":
         """Raises :class:`UnknownChildError` if no child edge is named ``name``."""
@@ -84,9 +86,9 @@ class Node:
 
     # ── Child access by path ──────────────────────────────────────────
 
-    def reach(self, path: str) -> AttributeReach:
-        """Walk the dotted ``path``, traversing singleton objects only: a
-        path may end on a collection attribute but never continue past one.
+    def reach(self, path: KeyPath) -> AttributeReach:
+        """Walk ``path``, traversing singleton objects only: a path may end
+        on a collection attribute but never continue past one.
 
         Returns every edge passed on the way, outermost first, with the
         node the last one leads to.
@@ -98,40 +100,28 @@ class Node:
             raise UnknownChildError(path)
         return reach
 
-    def descend(self, path: str) -> Branch:
+    def descend(self, path: KeyPath) -> Branch:
         """The last edge of :meth:`reach` with its node."""
         edges, node = self.reach(path)
         return edges[-1], node
 
-    def require_path(self, path: str) -> None:
+    def require_path(self, path: KeyPath) -> None:
         """Raises :class:`UnknownChildError` if ``path`` does not resolve."""
         self.reach(path)
 
-    def _reach(self, path: str, *, above: Sequence[Edge]) -> AttributeReach | None:
+    def _reach(self, path: KeyPath, *, above: Sequence[Edge]) -> AttributeReach | None:
         """``above`` is the chain walked so far, which the result extends."""
-        name = self._longest_child_name(path)
-        if name is None:
+        # Not ``head, *rest``: starred unpacking makes ``rest`` a list.
+        head, rest = path[0], path[1:]
+        if not self.has_child(head):
             return None
-        edge, child = self.child_entry(name)
-        if name == path:
+        edge, child = self.child_entry(head)
+        if not rest:
             return (*above, edge), child
         else:
             if edge.is_collection:
                 return None
-            return child._reach(path[len(name) + 1 :], above=(*above, edge))
-
-    def _longest_child_name(self, path: str) -> str | None:
-        # Longest-first, and the match commits — no backtracking — mirroring
-        # how the data side resolves the same string against a record.
-        # Transitional: every view alias is a path now, so no edge name
-        # holds a dot and every dot in ``path`` means nesting; the walk
-        # stays only until the read side passes segments instead.
-        candidate = path
-        while not self.has_child(candidate):
-            if "." not in candidate:
-                return None
-            candidate = candidate.rsplit(".", 1)[0]
-        return candidate
+            return child._reach(rest, above=(*above, edge))
 
 
 XRef.catalog = Node(
@@ -155,13 +145,14 @@ class UnknownChildError(LookupError):
     """Raised by the :class:`Node` accessors when a name or path does not
     resolve to a child edge.
 
-    Carries ``name`` so callers (e.g. query derive) can re-raise their
-    own typed error referencing the offending identifier.
+    Carries the whole ``path`` (one segment for a name) so callers (e.g.
+    query derive) can re-raise their own typed error referencing the
+    offending identifier.
     """
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
-        self.name = name
+    def __init__(self, path: KeyPath) -> None:
+        super().__init__(".".join(path))
+        self.path = path
 
 
 # ── Persistence form (serialization view) ─────────────────────────────
