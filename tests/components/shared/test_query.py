@@ -888,7 +888,10 @@ class TestGrouped:
                 "entities": [{"id": "order", "category": "b"}],
             },
         ]
-        assert list(Grouped(by="category", as_="entities").apply(records)) == expected
+        assert (
+            list(Grouped(by=("category",), as_=("entities",)).apply(records))
+            == expected
+        )
 
     def test_preserves_insertion_order(self) -> None:
         records = [
@@ -896,7 +899,7 @@ class TestGrouped:
             {"id": "2", "cat": "a"},
             {"id": "3", "cat": "b"},
         ]
-        result = Grouped(by="cat", as_="items").apply(records)
+        result = Grouped(by=("cat",), as_=("items",)).apply(records)
         assert [r["cat"] for r in result] == ["b", "a"]
 
     def test_rows_without_key_form_one_group_omitting_key(self) -> None:
@@ -906,14 +909,14 @@ class TestGrouped:
             {"id": "3", "cat": "a"},
             {"id": "4"},
         ]
-        assert list(Grouped(by="cat", as_="items").apply(records)) == [
+        assert list(Grouped(by=("cat",), as_=("items",)).apply(records)) == [
             {"cat": "a", "items": [{"id": "1", "cat": "a"}, {"id": "3", "cat": "a"}]},
             {"items": [{"id": "2"}, {"id": "4"}]},
         ]
 
     def test_nested_key_missing_midway_counts_as_absent(self) -> None:
         records = [{"id": "1", "hobby": {"level": "pro"}}, {"id": "2"}]
-        assert list(Grouped(by="hobby.level", as_="items").apply(records)) == [
+        assert list(Grouped(by=("hobby", "level"), as_=("items",)).apply(records)) == [
             {"hobby.level": "pro", "items": [{"id": "1", "hobby": {"level": "pro"}}]},
             {"items": [{"id": "2"}]},
         ]
@@ -923,7 +926,7 @@ class TestGroupedDerive:
     def test_wraps_with_by_and_alias(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
-        wrapped = Grouped(by="phase", as_="tasks").derive(leaf)
+        wrapped = Grouped(by=("phase",), as_=("tasks",)).derive(leaf)
         assert dc.flatten_tree(wrapped, "groups") == _catalog(
             """
             - id: groups
@@ -953,7 +956,7 @@ class TestGroupedDerive:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         leaf = From(name="tasks").derive(root)
         with pytest.raises(QueryDeriveError, match="collides with the grouping key"):
-            Grouped(by="phase", as_="phase").derive(leaf)
+            Grouped(by=("phase",), as_=("phase",)).derive(leaf)
 
 
 class TestSelectItem:
@@ -1794,7 +1797,7 @@ class TestQueryFromDict:
                 }
             ],
             "where": {"open": True},
-            "grouped": {"by": "category", "as": "members"},
+            "grouped": {"by": ("category",), "as": ("members",)},
             "select": [{"item": "category", "as": ("category",)}],
             "sort": {"by": "category", "direction": "desc", "missing": "first"},
         }
@@ -1812,7 +1815,7 @@ class TestQueryFromDict:
                     key_path="open", operator=Operator.EQ, target=True
                 ),
             ),
-            grouped=Grouped(by="category", as_="members"),
+            grouped=Grouped(by=("category",), as_=("members",)),
             select=Select(items=[SelectItem(item="category", as_=("category",))]),
             sort=Sort(by="category", direction=Direction.DESC, missing=Missing.FIRST),
         )

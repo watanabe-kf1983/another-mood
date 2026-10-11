@@ -300,8 +300,8 @@ class Grouped(QueryNode):
     Rows lacking ``by`` form one group of their own, whose row omits ``by``.
     """
 
-    by: str
-    as_: str
+    by: KeyPath
+    as_: KeyPath
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         groups: dict[object, list[Record]] = {}
@@ -310,22 +310,32 @@ class Grouped(QueryNode):
         return [self._group_row(key, items) for key, items in groups.items()]
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        edge, child = catalog.descend(self.by)
+        # Transitional: the read side still takes a dotted string.  Joining
+        # drops the segments' source position, so the unknown-path error
+        # is re-raised here with the first segment as its anchor.
+        by = ".".join(self.by)
+        as_ = ".".join(self.as_)
+        try:
+            edge, child = catalog.descend(by)
+        except dc.UnknownChildError as exc:
+            raise QueryDeriveError(
+                f"unknown attribute '{exc.name}'", offender=self.by[0]
+            ) from exc
         out = dc.Node(
             children=[
                 # ``apply`` writes the whole ``by`` string as the group
                 # key, so the edge mirrors the record, not the path's end.
-                (replace(edge, name=self.by), child),
+                (replace(edge, name=by), child),
                 (
-                    dc.Edge(name=self.as_, type="object[]", required=True),
+                    dc.Edge(name=as_, type="object[]", required=True),
                     catalog,
                 ),
             ],
         )
         if _duplicate_child_name(out) is not None:
             raise QueryDeriveError(
-                f"grouped alias '{self.as_}' collides with the grouping key",
-                offender=self.as_,
+                f"grouped alias '{as_}' collides with the grouping key",
+                offender=self.as_[0],
             )
         return out
 
@@ -337,9 +347,16 @@ class Grouped(QueryNode):
 
     def _group_row(self, key: object, items: Sequence[Record]) -> Record:
         if key is MISSING:
-            return {self.as_: items}
+            return {".".join(self.as_): items}
         else:
-            return {self.by: key, self.as_: items}
+            return {".".join(self.by): key, ".".join(self.as_): items}
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object]) -> "Grouped":
+        return cls(
+            by=tuple(cast(Sequence[str], raw["by"])),
+            as_=tuple(cast(Sequence[str], raw["as"])),
+        )
 
 
 @dataclass(frozen=True)
@@ -568,8 +585,7 @@ class Query(QueryNode):
 
         grouped: Grouped | PassThrough = PassThrough()
         if "grouped" in raw:
-            grouped_raw = cast(Mapping[str, str], raw["grouped"])
-            grouped = Grouped(by=grouped_raw["by"], as_=grouped_raw["as"])
+            grouped = Grouped.from_dict(cast(Mapping[str, object], raw["grouped"]))
 
         select_raw = cast(Sequence[Mapping[str, object]], raw.get("select", []))
         select: Select | PassThrough = (

@@ -291,9 +291,13 @@ categories:
         note: >-
           E14 でデータキーからドットが消えるので、split_path / match_key を
           素朴な分割に戻す。読み側スロット (`join.on` / `where` のキー / `sort.by` /
-          `select.item` / `grouped.by`、`flatten.of` の transitional な join) を
-          KeyPath に揃えるのもここ。内部整理のみ (pluck は内蔵メタエディション専用
-          フィルタで利用者向け契約の外)。E14 が前提。
+          `select.item`、`flatten.of` と `grouped.by` の transitional な join) を
+          KeyPath に揃えるのもここ。join は UserStr の位置情報を落とすので、
+          未知の `flatten.of` の診断は現状 YAML の位置を指せない (`grouped.by` は
+          Grouped.derive で先頭セグメントを anchor に再送出して補っている)。
+          読み側が KeyPath を取れば、その補いを外して診断も揃う。内部整理のみ
+          (pluck は内蔵メタエディション専用フィルタで利用者向け契約の外)。
+          E14 が前提。
         phase: 18
       E16:
         title: grouped の as 必須化 (合成デフォルトの廃止)

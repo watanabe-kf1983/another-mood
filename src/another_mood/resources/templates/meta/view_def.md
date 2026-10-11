@@ -83,7 +83,7 @@
 {% if grouped %}
 ### Grouped by
 
-{{ grouped.by }} (as {{ grouped.as }})
+{{ grouped.by | join(".") }} (as {{ grouped.as | join(".") }})
 
 {% endif %}
 ### Select
