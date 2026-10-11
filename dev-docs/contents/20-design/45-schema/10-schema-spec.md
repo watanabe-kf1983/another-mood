@@ -9,7 +9,7 @@
 - **単一ファイル・単一ルート** — `$ref` / `$defs` / `$id` などの参照・識別機構を持たない。スキーマの再利用は別スキーマに切り出してキー参照する
 - **合成・条件を持たない** — `allOf` / `anyOf` / `oneOf` / `not` / `if` を持たない。型のバリエーションはスキーマ（= テーブル）を分ける
 - **`$comment` を持たない** — YAML のコメント構文（`#`）で代替する
-- **ルートは record 形** — `properties` + `additionalProperties: false`。ルートの各プロパティが entity になり、map 形はルートに置けない
+- **ルートに `additionalProperties: <schema>` を許さない** — このツールではそれはレコードの集合を意味し、ルートがレコードの集合では各 entity への入口の役目を果たせない
 - **`type` は単一の文字列** — 配列形（`[string, "null"]`）と `null` 型を持たない
 - **型の付かない領域を残さない** — 素の `type: object`、`items` の無い `type: array`、宣言した `type` に一致しないリテラルを弾く
 - **`x-ref` を足す** — JSON Schema に無い参照整合性制約を拡張キーワードとして加える（後述）
