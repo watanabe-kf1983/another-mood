@@ -498,7 +498,7 @@ categories:
       M13:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
         note: E14 とは独立に着手できる。E17 (合成ビュー) の前提
-        proposal: 20-design/40-communication/10-json-data-model#ルート-entity-の導入-m13
+        proposal: 20-design/45-schema/10-schema-spec#ルート-entity-の導入-m13
         phase: 18
       M14:
         title: singleton 平坦化の 1 段制限の撤廃
