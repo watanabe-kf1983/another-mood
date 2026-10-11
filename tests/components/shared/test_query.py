@@ -899,9 +899,24 @@ class TestGrouped:
         result = Grouped(by="cat", as_="items").apply(records)
         assert [r["cat"] for r in result] == ["b", "a"]
 
-    def test_raises_on_missing_key(self) -> None:
-        with pytest.raises(KeyError):
-            Grouped(by="missing", as_="items").apply([{"id": "x"}])
+    def test_rows_without_key_form_one_group_omitting_key(self) -> None:
+        records = [
+            {"id": "1", "cat": "a"},
+            {"id": "2"},
+            {"id": "3", "cat": "a"},
+            {"id": "4"},
+        ]
+        assert list(Grouped(by="cat", as_="items").apply(records)) == [
+            {"cat": "a", "items": [{"id": "1", "cat": "a"}, {"id": "3", "cat": "a"}]},
+            {"items": [{"id": "2"}, {"id": "4"}]},
+        ]
+
+    def test_nested_key_missing_midway_counts_as_absent(self) -> None:
+        records = [{"id": "1", "hobby": {"level": "pro"}}, {"id": "2"}]
+        assert list(Grouped(by="hobby.level", as_="items").apply(records)) == [
+            {"hobby.level": "pro", "items": [{"id": "1", "hobby": {"level": "pro"}}]},
+            {"items": [{"id": "2"}]},
+        ]
 
 
 class TestGroupedDerive:
