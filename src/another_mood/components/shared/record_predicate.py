@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Protocol, TypeGuard, cast, runtime_checkable
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.shared.json_data_model import pluck
+from another_mood.components.shared.json_data_model import KeyPath, pluck
 
 type Record = Mapping[str, object]
 
@@ -82,33 +82,28 @@ class RecordPredicate(Protocol):
 
     def validate_by_catalog(self, catalog: dc.Node) -> None:
         """Raise :class:`dc.UnknownChildError` for any unresolved
-        ``key_path`` — catches typos that would otherwise degrade
+        ``field`` — catches typos that would otherwise degrade
         :meth:`matches` to a silent always-false filter."""
         ...
 
 
 @dataclass(frozen=True)
 class FieldPredicate(RecordPredicate):
-    """One field, one predicate.  ``key_path`` may be a dotted path.
+    """One field, one predicate.  ``field`` may reach into nested objects."""
 
-    ``parse_record_predicate`` unfolds the YAML sugar
-    ``{ age: { gt: 10, lt: 20 } }`` into an :class:`And` of singletons,
-    so the AST stays one-predicate-per-leaf.
-    """
-
-    key_path: str
+    field: KeyPath
     operator: Operator
     target: object
 
     def matches(self, record: Record) -> bool:
         try:
-            value: object = pluck(record, self.key_path)
+            value: object = pluck(record, self.field)
         except KeyError:
             value = MISSING
         return self.operator.evaluate(value, self.target)
 
     def validate_by_catalog(self, catalog: dc.Node) -> None:
-        catalog.require_path(self.key_path)
+        catalog.require_path(self.field)
 
 
 @dataclass(frozen=True)
@@ -153,56 +148,29 @@ class Not(RecordPredicate):
 
 
 def parse_record_predicate(raw: Mapping[str, object]) -> RecordPredicate:
-    """Parse one whereClause.  Multiple top-level keys → :class:`And`
-    (the spec's implicit-AND rule); a single key returns its sole
-    child unwrapped."""
-    clauses: list[RecordPredicate] = []
-    for key, value in raw.items():
-        if key == "and":
-            clauses.append(
-                And(
-                    clauses=[
-                        parse_record_predicate(cast(Mapping[str, object], child))
-                        for child in cast(Sequence[object], value)
-                    ]
-                )
-            )
-        elif key == "or":
-            clauses.append(
-                Or(
-                    clauses=[
-                        parse_record_predicate(cast(Mapping[str, object], child))
-                        for child in cast(Sequence[object], value)
-                    ]
-                )
-            )
-        elif key == "not":
-            clauses.append(
-                Not(
-                    clause=parse_record_predicate(cast(Mapping[str, object], value)),
-                )
-            )
-        else:
-            clauses.append(_parse_field_predicate(key, value))
-    if len(clauses) == 1:
-        return clauses[0]
-    return And(clauses=clauses)
+    """Build the predicate tree from one canonical ``where`` node.
 
-
-def _parse_field_predicate(key_path: str, value: object) -> RecordPredicate:
-    if isinstance(value, Mapping):
-        items = [
-            (Operator(name), target)
-            for name, target in cast(Mapping[str, object], value).items()
-        ]
+    The YAML sugar (implicit AND, scalar ``eq``, operator bundles) is
+    already expanded upstream, so each node maps onto one AST node.
+    """
+    if "and" in raw:
+        return And(clauses=_parse_clauses(raw["and"]))
+    elif "or" in raw:
+        return Or(clauses=_parse_clauses(raw["or"]))
+    elif "not" in raw:
+        return Not(
+            clause=parse_record_predicate(cast(Mapping[str, object], raw["not"]))
+        )
     else:
-        items = [(Operator.EQ, value)]
-    if len(items) == 1:
-        op, target = items[0]
-        return FieldPredicate(key_path=key_path, operator=op, target=target)
-    return And(
-        clauses=[
-            FieldPredicate(key_path=key_path, operator=op, target=target)
-            for op, target in items
-        ],
-    )
+        return FieldPredicate(
+            field=tuple(cast(Sequence[str], raw["field"])),
+            operator=Operator(cast(str, raw["operator"])),
+            target=raw["target"],
+        )
+
+
+def _parse_clauses(raw: object) -> Sequence[RecordPredicate]:
+    return [
+        parse_record_predicate(cast(Mapping[str, object], child))
+        for child in cast(Sequence[object], raw)
+    ]

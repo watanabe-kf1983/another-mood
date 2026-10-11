@@ -162,7 +162,7 @@ class TestDeriveQueries:
                     {
                         "id": "names",
                         "from": "items",
-                        "select": [{"item": "name", "as": ["name"]}],
+                        "select": [{"item": ["name"], "as": ["name"]}],
                     }
                 ],
                 "entities": [
@@ -212,13 +212,14 @@ class TestDeriveQueries:
             {
                 "id": "names",
                 "from": "items",
-                "select": [{"item": "name", "as": ["name"]}],
+                "select": [{"item": ["name"], "as": ["name"]}],
             }
         ]
 
-    def test_query_body_passes_through_untouched(self, tmp_path: Path) -> None:
-        """Query body passes through the normalizer verbatim — the
-        schema-driven normalizer stops at the top level."""
+    def test_query_body_skips_schema_normalization(self, tmp_path: Path) -> None:
+        """The schema-driven normalizer stops at the top level, so the
+        query body takes only the query normalizer's canonical form —
+        the quoted ``'10'`` stays a string."""
         views = tmp_path / "views"
         _write(
             views / "filtered.yaml",
@@ -254,8 +255,8 @@ class TestDeriveQueries:
             {
                 "id": "phase10",
                 "from": "items",
-                "where": {"phase": {"eq": "10"}},
-                "select": [{"item": "name", "as": ["name"]}],
+                "where": {"field": ["phase"], "operator": "eq", "target": "10"},
+                "select": [{"item": ["name"], "as": ["name"]}],
             }
         ]
 
@@ -357,6 +358,21 @@ class TestIdentifierDiagnostics:
         assert diags[0].line == 4
         assert diags[0].column == 13
         assert "ghost" in diags[0].message
+
+    def test_unknown_dotted_path_names_the_whole_path(self, tmp_path: Path) -> None:
+        query_yaml = (
+            "names:\n"  # line 1
+            "  from: items\n"  # line 2
+            "  select:\n"  # line 3
+            "    - item: meta.ghost\n"  # line 4, value column 13
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run(tmp_path, query_yaml)
+        diags = exc_info.value.diagnostics
+        assert len(diags) == 1
+        assert diags[0].line == 4
+        assert diags[0].column == 13
+        assert "'meta.ghost'" in diags[0].message
 
     def test_duplicate_select_alias_points_at_the_later_as_value(
         self, tmp_path: Path

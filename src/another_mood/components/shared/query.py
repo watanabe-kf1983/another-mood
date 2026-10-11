@@ -86,7 +86,9 @@ class From(QueryNode):
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         (wrapper,) = records
         try:
-            value = pluck(wrapper, self.name)
+            # One edge name in the catalog, a nested path in the data
+            # (``__definition.entities``).
+            value = pluck(wrapper, tuple(self.name.split(".")))
         except KeyError:
             # A source that passed derive() is catalog-declared, but the
             # merged data model only carries keys that some content file
@@ -117,8 +119,7 @@ class Flatten(QueryNode):
         return list(chain.from_iterable(self._unwind(parent) for parent in records))
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # Transitional: the read side still takes a dotted string.
-        edges, child = catalog.reach(".".join(self.of))
+        edges, child = catalog.reach(self.of)
         edge = edges[-1]
         if not edge.is_collection:
             raise QueryDeriveError(
@@ -174,12 +175,12 @@ class Flatten(QueryNode):
 class Merge:
     """Equi-join with default cardinality: attach matched right rows
     as a list at ``right_as`` on each left row.  Both ``on_*``
-    paths follow the asymmetry rule: nested object dot paths allowed,
-    array crossing not.
+    paths follow the asymmetry rule: reaching into nested objects is
+    allowed, crossing an array is not.
     """
 
-    on_left: str
-    on_right: str
+    on_left: KeyPath
+    on_right: KeyPath
     right_as: KeyPath
 
     def apply(
@@ -254,7 +255,7 @@ class Join:
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Join":
         to = cast(str, raw["to"])
-        on_raw = cast(Mapping[str, str], raw["on"])
+        on_raw = cast(Mapping[str, Sequence[str]], raw["on"])
         where: Where | PassThrough = PassThrough()
         if "where" in raw:
             where = Where.from_dict(cast(Mapping[str, object], raw["where"]))
@@ -266,8 +267,8 @@ class Join:
         return cls(
             right=Query(from_=From(name=to), where=where),
             merge=Merge(
-                on_left=on_raw["left"],
-                on_right=on_raw["right"],
+                on_left=tuple(on_raw["left"]),
+                on_right=tuple(on_raw["right"]),
                 right_as=tuple(cast(Sequence[str], raw["as"])),
             ),
             flatten=flatten,
@@ -316,15 +317,7 @@ class Grouped(QueryNode):
                 f"key '{'.'.join(self.by)}'",
                 offender=self.as_[0],
             )
-        # Transitional: the read side still takes a dotted string.  Joining
-        # drops the segments' source position, so the unknown-path error
-        # is re-raised here with the first segment as its anchor.
-        try:
-            key = SelectItem(item=".".join(self.by), as_=self.by).derive(catalog)
-        except dc.UnknownChildError as exc:
-            raise QueryDeriveError(
-                f"unknown attribute '{exc.name}'", offender=self.by[0]
-            ) from exc
+        key = SelectItem(item=self.by, as_=self.by).derive(catalog)
         # Every group has its rows, so the list is on every group row.
         members = Placement(
             branch=(
@@ -363,9 +356,7 @@ class SelectItem:
     Both are paths.
     """
 
-    #: A read path, still dotted (transitional: the catalog and record
-    #: lookups take the string form).
-    item: str
+    item: KeyPath
     as_: KeyPath
 
     def apply(self, record: Record, out: Record) -> Record:
@@ -430,7 +421,7 @@ class Select(QueryNode):
         return cls(
             items=[
                 SelectItem(
-                    item=cast(str, entry["item"]),
+                    item=tuple(cast(Sequence[str], entry["item"])),
                     as_=tuple(cast(Sequence[str], entry["as"])),
                 )
                 for entry in raw
@@ -456,7 +447,7 @@ class Missing(Enum):
 class Sort(QueryNode):
     """Order output records by a single attribute."""
 
-    by: str
+    by: KeyPath
     direction: Direction = Direction.ASC
     missing: Missing = Missing.LAST
 
@@ -546,8 +537,9 @@ class Query(QueryNode):
             out = self.sort.derive(out)
             return out
         except dc.UnknownChildError as exc:
+            # The first segment carries the path's source position.
             raise QueryDeriveError(
-                f"unknown attribute '{exc.name}'", offender=exc.name
+                f"unknown attribute '{'.'.join(exc.path)}'", offender=exc.path[0]
             ) from exc
 
     def source_names(self) -> Sequence[str]:
@@ -591,11 +583,11 @@ class Query(QueryNode):
 
         sort: Sort | PassThrough = PassThrough()
         if "sort" in raw:
-            sort_raw = cast(Mapping[str, str], raw["sort"])
+            sort_raw = cast(Mapping[str, object], raw["sort"])
             sort = Sort(
-                by=sort_raw["by"],
-                direction=Direction(sort_raw["direction"]),
-                missing=Missing(sort_raw["missing"]),
+                by=tuple(cast(Sequence[str], sort_raw["by"])),
+                direction=Direction(cast(str, sort_raw["direction"])),
+                missing=Missing(cast(str, sort_raw["missing"])),
             )
 
         return cls(

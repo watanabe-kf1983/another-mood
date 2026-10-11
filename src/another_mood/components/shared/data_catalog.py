@@ -11,13 +11,15 @@ from dataclasses import asdict, dataclass
 from itertools import takewhile
 from typing import Any, ClassVar, cast
 
+from another_mood.components.shared.json_data_model import KeyPath
+
 # ── In-memory tree form (canonical) ───────────────────────────────────
 
 type Branch = tuple[Edge, Node]
 
 #: A node together with the chain of edges reaching it from the node a
 #: path is walked from.  A ``Branch`` is one step; this is the several
-#: steps a dotted path stands for, as in an ``Attribute.id``, where the
+#: steps a path stands for, as in an ``Attribute.id``, where the
 #: singletons on the way fold into the entity holding them.
 type AttributeReach = tuple[Sequence[Edge], Node]
 
@@ -76,7 +78,7 @@ class Node:
         for e, c in self.children:
             if e.name == name:
                 return e, c
-        raise UnknownChildError(name)
+        raise UnknownChildError((name,))
 
     def child(self, name: str) -> "Node":
         """Raises :class:`UnknownChildError` if no child edge is named ``name``."""
@@ -84,9 +86,9 @@ class Node:
 
     # ── Child access by path ──────────────────────────────────────────
 
-    def reach(self, path: str) -> AttributeReach:
-        """Walk the dotted ``path``, traversing singleton objects only: a
-        path may end on a collection attribute but never continue past one.
+    def reach(self, path: KeyPath) -> AttributeReach:
+        """Walk ``path``, traversing singleton objects only: a path may end
+        on a collection attribute but never continue past one.
 
         Returns every edge passed on the way, outermost first, with the
         node the last one leads to.
@@ -98,40 +100,28 @@ class Node:
             raise UnknownChildError(path)
         return reach
 
-    def descend(self, path: str) -> Branch:
+    def descend(self, path: KeyPath) -> Branch:
         """The last edge of :meth:`reach` with its node."""
         edges, node = self.reach(path)
         return edges[-1], node
 
-    def require_path(self, path: str) -> None:
+    def require_path(self, path: KeyPath) -> None:
         """Raises :class:`UnknownChildError` if ``path`` does not resolve."""
         self.reach(path)
 
-    def _reach(self, path: str, *, above: Sequence[Edge]) -> AttributeReach | None:
+    def _reach(self, path: KeyPath, *, above: Sequence[Edge]) -> AttributeReach | None:
         """``above`` is the chain walked so far, which the result extends."""
-        name = self._longest_child_name(path)
-        if name is None:
+        # Not ``head, *rest``: starred unpacking makes ``rest`` a list.
+        head, rest = path[0], path[1:]
+        if not self.has_child(head):
             return None
-        edge, child = self.child_entry(name)
-        if name == path:
+        edge, child = self.child_entry(head)
+        if not rest:
             return (*above, edge), child
         else:
             if edge.is_collection:
                 return None
-            return child._reach(path[len(name) + 1 :], above=(*above, edge))
-
-    def _longest_child_name(self, path: str) -> str | None:
-        # Longest-first, and the match commits — no backtracking — mirroring
-        # how the data side resolves the same string against a record.
-        # Transitional: every view alias is a path now, so no edge name
-        # holds a dot and every dot in ``path`` means nesting; the walk
-        # stays only until the read side passes segments instead.
-        candidate = path
-        while not self.has_child(candidate):
-            if "." not in candidate:
-                return None
-            candidate = candidate.rsplit(".", 1)[0]
-        return candidate
+            return child._reach(rest, above=(*above, edge))
 
 
 XRef.catalog = Node(
@@ -155,13 +145,14 @@ class UnknownChildError(LookupError):
     """Raised by the :class:`Node` accessors when a name or path does not
     resolve to a child edge.
 
-    Carries ``name`` so callers (e.g. query derive) can re-raise their
-    own typed error referencing the offending identifier.
+    Carries the whole ``path`` (one segment for a name) so callers (e.g.
+    query derive) can re-raise their own typed error referencing the
+    offending identifier.
     """
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
-        self.name = name
+    def __init__(self, path: KeyPath) -> None:
+        super().__init__(".".join(path))
+        self.path = path
 
 
 # ── Persistence form (serialization view) ─────────────────────────────
@@ -196,17 +187,23 @@ class Attribute:
     #
     # ``id`` is one segment per edge, joined with dots: a singleton
     # object folds into the entity holding it rather than opening one of
-    # its own.  These three are the only place spelling the separator.
+    # its own.  These two are the only place spelling the separator.
 
     @staticmethod
     def join_id(names: Iterable[str]) -> str:
         return ".".join(names)
 
-    def inlined_into(self, holder: "Attribute") -> bool:
-        return self.id.startswith(f"{holder.id}.")
+    @staticmethod
+    def split_id(id_: str) -> KeyPath:
+        return tuple(id_.split("."))
 
-    def segment_under(self, holder: "Attribute | None") -> str:
-        return self.id if holder is None else self.id[len(holder.id) + 1 :]
+    @property
+    def key_path(self) -> KeyPath:
+        return Attribute.split_id(self.id)
+
+    def inlined_into(self, holder: "Attribute") -> bool:
+        depth = len(holder.key_path)
+        return len(self.key_path) > depth and self.key_path[:depth] == holder.key_path
 
     def to_dict(self) -> Mapping[str, object]:
         return asdict(self)
@@ -372,10 +369,7 @@ def _build_entity_node(
     return Node(
         metadata=entity.item_type.metadata,
         children=_build_branches(
-            entity.item_type.attributes,
-            holder=None,
-            sub_by_id=sub_by_id,
-            catalog=catalog,
+            entity.item_type.attributes, sub_by_id=sub_by_id, catalog=catalog
         ),
         origin_item_type=entity.item_type.id,
     )
@@ -384,17 +378,13 @@ def _build_entity_node(
 def _build_branches(
     attributes: Sequence[Attribute],
     *,
-    holder: Attribute | None,
     sub_by_id: Mapping[str, Entity],
     catalog: Sequence[Entity],
 ) -> Sequence[Branch]:
-    """Restore one node's children from the attributes folded into it.
-
-    ``holder`` is the singleton being restored, None at an entity's own body.
-    """
+    """Restore one node's children from the attributes folded into it."""
     return [
         (
-            _edge_from_attribute(attr, name=attr.segment_under(holder)),
+            _edge_from_attribute(attr, name=attr.key_path[-1]),
             _build_attribute_node(attr, inlined, sub_by_id=sub_by_id, catalog=catalog),
         )
         for attr, inlined in _inlined_attributes(attributes)
@@ -408,8 +398,7 @@ def _inlined_attributes(
 
     The inverse of ``_flatten_attributes``, whose emission order leaves
     the inlined attributes right after the ``object`` attribute whose id
-    they extend.  A dotted id with no ``object`` attribute in front of it
-    stays one edge name: a view alias becomes a record key verbatim.
+    they extend.
     """
     if not attributes:
         return []
@@ -433,12 +422,7 @@ def _build_attribute_node(
         return _build_entity_node(sub_by_id[attr.id], catalog)
     elif inlined:
         return Node(
-            children=_build_branches(
-                inlined,
-                holder=attr,
-                sub_by_id=sub_by_id,
-                catalog=catalog,
-            )
+            children=_build_branches(inlined, sub_by_id=sub_by_id, catalog=catalog)
         )
     else:
         # ``Node()``, not an empty ``_build_branches``: ``children``

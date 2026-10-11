@@ -62,6 +62,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - `__entity_defs` / `__data` / `__entity_tree` は `__definition.entities` を filter する view なので、`__root` レコードの表示方針（除外か、index の情報源への昇格か）
 - `from:` が singleton を指した場合のエラーを「unknown source」から「collection ではない」に改善できる
 - `check_xref_coherence` の `parent_entity is None` フィルタから `__root` を除外
+- ソース名のドットを文字列操作で読んでいる箇所の整理: `__definition.entities` はカタログでは一本のエッジ名、データでは入れ子のパスで、`From.apply` はソース名をドットで分割してデータを引いている。メタテンプレートの `walk_entity` も子エンティティ id から親 id を前方一致で外して属性 id を得ている。`__definition` が `__root` の属性として入れ子になれば、`from:` をパスとして読む形にでき、どちらもカタログの構造から引ける
 - **穴は singleton 一段ぶん深いところにも開いている**: トップレベル singleton が丸ごと落ちるので、その内側の collection（`wrapper: {items: [...]}` の `items`）もカタログに現れない。データは素通しされるので、上のねじれが一段深い位置で同じ形に起きる。`__root` の属性として吸収するか、メタスキーマ側で書けなくするかを決める
 
 依存: E14 とは独立に着手できる（ルート singleton の吸収は既に「ドット = 入れ子」の規約に乗っている）。J5 は両方を前提とする。

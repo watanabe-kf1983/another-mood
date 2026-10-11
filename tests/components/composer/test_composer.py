@@ -50,7 +50,7 @@ class TestCompose:
                     - id: names
                       from: items
                       select:
-                        - {item: name, as: [name]}
+                        - {item: [name], as: [name]}
                   entities:
                     - id: names
                       item_type:
@@ -124,7 +124,7 @@ class TestCompose:
                     - id: con
                       from: items
                       select:
-                        - {item: name, as: [name]}
+                        - {item: [name], as: [name]}
             """),
         )
         data_catalog = tmp_path / "data-catalog"
@@ -189,12 +189,12 @@ class TestCompose:
                   views:
                     - id: high_values
                       from: projected
-                      where: {value: {gte: 3}}
+                      where: {field: [value], operator: gte, target: 3}
                     - id: projected
                       from: items
                       select:
-                        - {item: name, as: [name]}
-                        - {item: value, as: [value]}
+                        - {item: [name], as: [name]}
+                        - {item: [value], as: [value]}
             """),
         )
 
@@ -253,7 +253,7 @@ class TestCompose:
                     - id: entity_ids
                       from: __definition.entities
                       select:
-                        - {item: id, as: [id]}
+                        - {item: [id], as: [id]}
                   entities: []
             """),
         )
