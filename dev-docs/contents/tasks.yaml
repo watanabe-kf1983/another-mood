@@ -666,6 +666,9 @@ categories:
         note: >-
           Q1 は静かな公開に留め、S2-S5 (システム開発ドキュメント) の完成を待って
           告知する。内容 (告知先・訴求) は接近時に具体化。前提 W2, W3, Q7。
+          Context7 には登録しない: 引かれるのはインストール済みのツールについて
+          コードを書く場面で、そこでは同梱の `mood docs` が版の一致した正本で
+          あり、main の一時点を索引する Context7 はそれと競合するだけになる。
         phase: 17
       Q6:
         title: リリース手順の明文化 (チェックリスト + バージョン運用)
@@ -726,16 +729,6 @@ categories:
           classifiers の Development Status がサイドバーに出す生態系の定位置)。
           PyPI ページはリリース時の同梱 README で更新されるため、1.0.0 の tag より
           前に main へ入っていればよい。Q3 の前提。
-        phase: 17
-      R4:
-        title: context7.json 設置 + Context7 登録
-        note: >-
-          LLM 経由の発見性整備。リポジトリ直下に context7.json を置いて
-          docs/ をインデックス対象に指定し、context7.com にライブラリ登録、
-          インデックス結果を確認する。登録は誰でもできる (所有確認なし) ため、
-          第三者登録で README だけ雑に拾われる前に、正本の docs/ を向かせる
-          のが目的。publish イベントとの依存はなく public リポジトリなら
-          いつでも可。Q3 の近傍。
         phase: 17
       R5:
         title: showcase / dev-docs の実物マニフェストから minimum_version を削除
