@@ -13,6 +13,7 @@ from another_mood.components.scaffold.blueprints import (
     load_blueprints,
     scaffold_project,
 )
+from another_mood.components.shared.tool_version import tool_homepage
 
 
 @pytest.fixture()
@@ -38,6 +39,7 @@ class TestScaffoldCopy:
             target / "dir_a" / "file1.txt",
             target / "dir_b" / "file2.txt",
             target / "sbdb.yaml",
+            target / "README.md",
         }
         assert (target / "dir_a" / "file1.txt").read_text() == "content1"
         assert (target / "dir_b" / "file2.txt").read_text() == "content2"
@@ -53,6 +55,33 @@ class TestScaffoldCopy:
 
         assert (target / "dir_a" / "file1.txt") in result.created
         assert (target / "README.md").read_text() == "# proj"
+
+
+class TestScaffoldReadme:
+    """Generation of the README.md that says what manages the directory."""
+
+    def test_points_at_another_mood(self, template: Path, tmp_path: Path) -> None:
+        target = tmp_path / "proj"
+
+        scaffold_project(template, target)
+
+        readme = (target / "README.md").read_text(encoding="utf-8")
+        assert readme.startswith("# proj\n")
+        assert f"[Another Mood]({tool_homepage()})" in readme
+        assert "mood build" in readme
+        assert "mood --help" in readme
+
+    def test_existing_readme_kept_and_not_reported(
+        self, template: Path, tmp_path: Path
+    ) -> None:
+        target = tmp_path / "proj"
+        target.mkdir()
+        (target / "README.md").write_text("# proj")
+
+        result = scaffold_project(template, target)
+
+        assert (target / "README.md").read_text() == "# proj"
+        assert (target / "README.md") not in result.created
 
 
 class TestScaffoldManifest:

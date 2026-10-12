@@ -8,6 +8,7 @@ lives at ``showcase/<name>/``.
 """
 
 import shutil
+import textwrap
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
@@ -15,7 +16,7 @@ from typing import Sequence, cast
 
 import yaml
 
-from another_mood.components.shared.tool_version import tool_version
+from another_mood.components.shared.tool_version import tool_homepage, tool_version
 
 DEFAULT_BLUEPRINT = "starter"
 INDEX_FILE = "index.yaml"
@@ -23,6 +24,7 @@ INDEX_FILE = "index.yaml"
 # violate the dependency rule: components may only depend on shared).
 MANIFEST_FILENAME = "sbdb.yaml"
 SBDB_VERSION = 1
+README_FILENAME = "README.md"
 
 
 @dataclass(frozen=True)
@@ -80,20 +82,29 @@ def scaffold_project(template_root: Path, project_dir: Path) -> ScaffoldResult:
     """Copy *template_root* into *project_dir* and generate a fresh manifest.
 
     Overwrites whatever it lands on: guarding the target directory is the
-    caller's job.  The template's own manifest is not copied.
+    caller's job.  The template's own manifest is not copied.  A README.md
+    pointing at Another Mood is generated only where none exists, since one
+    may predate the project (a freshly cloned repository).
     """
-    targets = [
-        *(project_dir / rel for rel in _collect_template_files(template_root)),
-        project_dir / MANIFEST_FILENAME,
-    ]
-    for rel in _collect_template_files(template_root):
+    template_files = _collect_template_files(template_root)
+    for rel in template_files:
         dest = project_dir / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(template_root / rel, dest)
     manifest = project_dir / MANIFEST_FILENAME
     manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(_generate_manifest(project_dir), encoding="utf-8")
-    return ScaffoldResult(created=targets)
+    readme = project_dir / README_FILENAME
+    readme_absent = not readme.exists()
+    if readme_absent:
+        readme.write_text(_generate_readme(project_dir), encoding="utf-8")
+    return ScaffoldResult(
+        created=[
+            *(project_dir / rel for rel in template_files),
+            manifest,
+            *([readme] if readme_absent else []),
+        ]
+    )
 
 
 def _collect_template_files(template_root: Path) -> Sequence[Path]:
@@ -105,16 +116,37 @@ def _collect_template_files(template_root: Path) -> Sequence[Path]:
 
 
 def _generate_manifest(project_dir: Path) -> str:
-    # resolve() folds any `..` before the last component is read off it.
-    title = project_dir.resolve().name
     # A verified floor ("known to work"), not an audited true minimum.
     running = tool_version()
     return yaml.safe_dump(
         {
             "sbdb_version": SBDB_VERSION,
-            "title": title,
+            "title": _project_title(project_dir),
             "tools": {"another-mood": {"minimum_version": running}},
         },
         sort_keys=False,
         allow_unicode=True,
     )
+
+
+def _generate_readme(project_dir: Path) -> str:
+    # A pointer for readers who do not know `mood` yet: what manages the
+    # directory, how to get it, and where the command's own help starts.
+    # Structure and workflow stay out; `mood --help` and the docs own them.
+    return textwrap.dedent(f"""\
+        # {_project_title(project_dir)}
+
+        A source-based database managed by [Another Mood]({tool_homepage()}):
+        the YAML and Markdown files here are the sources, and `mood build` turns them into
+        Markdown and HTML pages that stay in sync with each other.
+
+            uv tool install another-mood    # or: pipx install another-mood
+            mood build <path to this directory>
+
+        `mood --help` lists the commands. `mood docs list` and `mood docs read <uri>` open the bundled manual.
+        """)
+
+
+def _project_title(project_dir: Path) -> str:
+    # resolve() folds any `..` before the last component is read off it.
+    return project_dir.resolve().name
