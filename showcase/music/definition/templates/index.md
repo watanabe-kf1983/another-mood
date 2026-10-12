@@ -1,6 +1,38 @@
-# Music Catalog
+# {{ catalog.title }}
 
 {{ node(path="/prose/background") | render("prose.md") | under_heading("#") }}
+
+## Front page
+
+The front matter is one record, `catalog`, read straight from the root
+along with two plain values beside it, `updated_at` and `moods` (the
+single-record pattern). The `series` map arrives as a list with each key
+lifted into `id`, like any other map.
+
+*Kept by {{ catalog.maintainer }}; last revised {{ updated_at }}. Moods: {{ moods | join(", ") }}.*
+
+### Featured
+
+{% for entry in catalog.featured %}
+- {{ node("album_tracklist", entry.album_id) | link }} - {{ entry.note }}
+{% endfor %}
+
+### Series
+
+{% for series in catalog.series %}
+- **{{ series.name }}** ({{ series.id }}) - {{ series.description }}
+{% for entry in series.albums %}
+  - {{ node("album_tracklist", entry.album_id) | link }}
+{% endfor %}
+{% endfor %}
+
+### Editor's picks
+
+Signed by {{ catalog.editorial.editor }}.
+
+{% for pick in catalog.editorial.picks %}
+- {{ node("tracks", pick.track_id).title }} - {{ pick.comment }}
+{% endfor %}
 
 ## Artists
 

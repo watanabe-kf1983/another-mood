@@ -177,3 +177,104 @@ properties:
           type: integer
           description: 1-indexed playback position within the playlist.
       required: [playlist_id, track_id, position]
+
+  # The catalog's own front matter: one record, not a collection (the
+  # single-record pattern), together with two plain values beside it. It
+  # covers every shape that can sit directly under the root besides a
+  # collection: a singleton, the scalars and collections inside it (array
+  # and map forms, one with a child collection), a singleton nested in it
+  # that holds a collection (map form), a top-level scalar and a top-level
+  # scalar array.
+  catalog:
+    type: object
+    description: Front matter of the catalog as a whole - its title, who keeps it, and the editorial selections shown on the front page.
+    additionalProperties: false
+    properties:
+      title:
+        type: string
+        description: Title of the catalog, shown as the front page heading.
+      maintainer:
+        type: string
+        description: Who keeps the catalog up to date (free-form).
+      featured:
+        type: array
+        description: Albums highlighted on the front page, in display order.
+        items:
+          type: object
+          description: One highlighted album.
+          additionalProperties: false
+          properties:
+            album_id:
+              type: string
+              description: Id of the highlighted album.
+              x-ref:
+                entity: albums
+            note:
+              type: string
+              description: One-line reason for the highlight.
+          required: [album_id]
+      series:
+        type: object
+        description: Thematic series grouping albums across artists, keyed by a short slug.
+        additionalProperties:
+          type: object
+          description: One series.
+          additionalProperties: false
+          properties:
+            name:
+              type: string
+              description: Display name of the series.
+            description:
+              type: string
+              description: Short blurb about what ties the series together.
+            albums:
+              type: array
+              description: The albums in the series, in listening order.
+              items:
+                type: object
+                description: One album's place in the series.
+                additionalProperties: false
+                properties:
+                  album_id:
+                    type: string
+                    description: Id of the album.
+                    x-ref:
+                      entity: albums
+                required: [album_id]
+          required: [name]
+      editorial:
+        type: object
+        description: The editorial desk's corner of the front page.
+        additionalProperties: false
+        properties:
+          editor:
+            type: string
+            description: Name of the editor currently signing the picks.
+          picks:
+            type: object
+            description: Single tracks the editor recommends, keyed by a short slug.
+            additionalProperties:
+              type: object
+              description: One recommended track.
+              additionalProperties: false
+              properties:
+                track_id:
+                  type: string
+                  description: Id of the recommended track.
+                  x-ref:
+                    entity: tracks
+                comment:
+                  type: string
+                  description: The editor's one-line comment.
+              required: [track_id]
+    required: [title]
+
+  updated_at:
+    type: string
+    description: Date the catalog was last revised (YYYY-MM-DD).
+
+  moods:
+    type: array
+    description: Mood tags describing the catalog as a whole.
+    items:
+      type: string
