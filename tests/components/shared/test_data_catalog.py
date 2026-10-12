@@ -244,6 +244,57 @@ class TestCatalogDriftSuppression:
         }
 
 
+class TestBuildTreeTopLevel:
+    def test_hangs_the_roots_children_and_the_views_but_not_the_root(
+        self,
+    ) -> None:
+        """The root entity's children hang under their full id, a collection
+        inside a root-level singleton included; a view has no parent and
+        hangs too; the root entity itself does not."""
+        flat = _catalog(
+            """
+            - id: __root
+              item_type:
+                id: __root.item
+                attributes:
+                  - { id: site_config, type: object, required: false }
+                  - id: site_config.items
+                    type: object[]
+                    required: false
+                    child_entity: site_config.items
+                    child_item_type: site_config.items.item
+                  - id: users
+                    type: object[]
+                    required: false
+                    child_entity: users
+                    child_item_type: users.item
+            - id: site_config.items
+              item_type:
+                id: site_config.items.item
+                attributes:
+                  - { id: name, type: string, required: false }
+              parent_entity: __root
+            - id: users
+              item_type:
+                id: users.item
+                attributes:
+                  - { id: name, type: string, required: false }
+              parent_entity: __root
+            - id: user_names
+              item_type:
+                id: user_names.item
+                attributes:
+                  - { id: name, type: string, required: false }
+              view: true
+            """
+        )
+        assert [edge.name for edge, _ in dc.build_tree(flat).children] == [
+            "site_config.items",
+            "users",
+            "user_names",
+        ]
+
+
 class TestRenameOnFlatten:
     def test_flatten_tree_renames_root_and_propagates(self) -> None:
         flat = _catalog(

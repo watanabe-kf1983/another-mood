@@ -15,6 +15,7 @@ from another_mood.components.preprocess.query_deriver import (
     build_view_schema,
     derive_queries,
 )
+from another_mood.components.preprocess.schema_inspector import definition_catalog_node
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.json_data_model import load_model, save_model
@@ -43,16 +44,13 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
     Built-in views reference ``__definition.entities`` and
     ``__definition.views``; tests that exercise ``derive_queries``
     need these entries so the bundled built-in views pass
-    ``derive``-time validation.  Mirrors what
-    ``schema_inspector._emit_definition_catalog`` writes in the real
-    pipeline — kept linked through the dataclass ``catalog`` ClassVars
-    rather than a literal YAML constant so changes to those classes
-    propagate to the fixture automatically.
+    ``derive``-time validation.  Mirrors what ``schema_inspector`` writes
+    for the ``__definition`` branch in the real pipeline — kept linked
+    through ``definition_catalog_node`` rather than a literal YAML
+    constant so changes to the catalog dataclasses propagate to the
+    fixture automatically.
     """
-    entities = [
-        *dc.flatten_tree(dc.Entity.catalog, "__definition.entities"),
-        *dc.flatten_tree(Query.catalog, "__definition.views"),
-    ]
+    entities = dc.flatten_root(definition_catalog_node())[1:]
     save_model(
         catalog_dir / "data" / "__builtin" / "__definition.json",
         {

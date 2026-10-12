@@ -11,7 +11,7 @@ from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 
-from another_mood.components.preprocess.schema_catalog import collect_entities
+from another_mood.components.preprocess.schema_catalog import build_catalog_node
 from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     parse_mapping,
@@ -41,62 +41,102 @@ def inspect_schema(schema_file: Path, *, out_dir: Path) -> None:
     """Validate the user schema file and extract a data catalog."""
     check_schema(schema_file)
 
-    user_entities = _extract_from_file(schema_file)
-    builtin_entities = _extract_from_file(_BUILTIN_CONTENTS_SCHEMA_FILE, builtin=True)
+    # The three sources each describe branches of the one root record;
+    # merged into one node, they flatten to a single root entity.
+    user_node = _catalog_node_from_file(schema_file)
+    content_node = _catalog_node_from_file(_BUILTIN_CONTENTS_SCHEMA_FILE)
+    definition_node = definition_catalog_node()
+    root, *under_root = dc.flatten_root(
+        dc.Node(
+            metadata=user_node.metadata,
+            children=[
+                *user_node.children,
+                *content_node.children,
+                *definition_node.children,
+            ],
+        )
+    )
+    user_entities = _branching_from(user_node, under_root)
+    content_entities = _as_builtin(_branching_from(content_node, under_root))
+    definition_entities = _as_builtin(_branching_from(definition_node, under_root))
 
-    # __definition.* (emitted below) is intentionally not in valid_targets:
-    # references to catalog metadata are not a meaningful FK relation.
+    # __definition.* is intentionally not in valid_targets: references to
+    # catalog metadata are not a meaningful FK relation.
     diagnostics = check_xref_coherence(
         user_entities,
-        valid_targets=[*user_entities, *builtin_entities],
+        valid_targets=[*user_entities, *content_entities],
     )
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
 
     # Append (not replace) ``.json`` so the catalog keeps naming its
-    # source schema file, as the other stages do for their sources.
-    _write_catalog(user_entities, out_dir / f"{schema_file.name}.json")
+    # source schema file, as the other stages do for their sources.  The
+    # root goes to one file only: the files merge by concatenation.
+    _write_catalog([root, *user_entities], out_dir / f"{schema_file.name}.json")
     _write_catalog(
-        builtin_entities,
+        content_entities,
         out_dir / "__builtin" / f"{_BUILTIN_CONTENTS_SCHEMA_FILE.name}.json",
     )
-
-    # Emit the self-description catalog so queries can read the catalog
+    # The self-description catalog, so queries can read the catalog
     # itself (e.g. ``from: __definition.entities``).  Data and schema
     # coincide here: each persisted Entity record describes one Entity.
-    _emit_definition_catalog(out_dir / "__builtin" / "__definition.json")
+    _write_catalog(definition_entities, out_dir / "__builtin" / "__definition.json")
 
 
-def _extract_from_file(
-    schema_file: Path, *, builtin: bool = False
-) -> Sequence[dc.Entity]:
+def definition_catalog_node() -> dc.Node:
+    """The root-level ``__definition`` branch: the catalog's own records.
+
+    Built in Python from the dataclasses' own ``catalog`` class attributes
+    (rather than read from a JSON Schema source like
+    ``content-schema.yaml``), because no authoritative external schema
+    exists for the catalog dataclasses themselves.
+    """
+    return dc.Node(
+        children=[
+            (
+                dc.Edge(name="__definition", type="object", required=True),
+                dc.Node(
+                    children=[
+                        (
+                            dc.Edge(name="entities", type="object[]", required=True),
+                            dc.Entity.catalog,
+                        ),
+                        (
+                            dc.Edge(name="views", type="object[]", required=True),
+                            Query.catalog,
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    )
+
+
+def _catalog_node_from_file(schema_file: Path) -> dc.Node:
     schema = parse_mapping(schema_file)
-    return extract_entities(schema, builtin=builtin)
+    if schema.get("type") != "object" or "properties" not in schema:
+        raise ValueError(
+            f"Root schema must be an object with properties; got {schema.get('type')!r}"
+        )
+    return build_catalog_node(schema)
+
+
+def _branching_from(
+    source: dc.Node, under_root: Sequence[dc.Entity]
+) -> Sequence[dc.Entity]:
+    """The entities descending from one of ``source``'s root branches."""
+    names = frozenset(edge.name for edge, _ in source.children)
+    return [e for e in under_root if dc.Attribute.split_id(e.id)[0] in names]
+
+
+def _as_builtin(entities: Sequence[dc.Entity]) -> Sequence[dc.Entity]:
+    return [replace(e, builtin=True) for e in entities]
 
 
 def _write_catalog(entities: Sequence[dc.Entity], dst: Path) -> None:
     if entities:
         catalog = {"entities": [e.to_dict() for e in entities]}
         save_model(dst, {"__definition": catalog})
-
-
-def _emit_definition_catalog(dst: Path) -> None:
-    """Emit the self-description catalog for the ``__definition`` namespace.
-
-    The entries are constructed in Python from the dataclasses' own
-    ``catalog`` class attributes (rather than read from a JSON Schema source
-    like ``content-schema.yaml``), because no authoritative external
-    schema exists for the catalog dataclasses themselves.
-    """
-    entities = [
-        *dc.flatten_tree(dc.Entity.catalog, "__definition.entities"),
-        *dc.flatten_tree(Query.catalog, "__definition.views"),
-    ]
-    entities = [replace(e, builtin=True) for e in entities]
-    save_model(
-        dst,
-        {"__definition": {"entities": [e.to_dict() for e in entities]}},
-    )
 
 
 def check_schema(schema_file: Path) -> None:
@@ -113,18 +153,6 @@ def check_schema(schema_file: Path) -> None:
         raise FileValidationError(diagnostics=diagnostics)
 
 
-def extract_entities(
-    schema: Mapping[str, object], *, builtin: bool = False
-) -> Sequence[dc.Entity]:
-    """Convert a root schema into a flat list of Entity."""
-    if schema.get("type") != "object" or "properties" not in schema:
-        raise ValueError(
-            f"Root schema must be an object with properties; got {schema.get('type')!r}"
-        )
-    entities = collect_entities(schema)
-    return [replace(e, builtin=True) for e in entities] if builtin else entities
-
-
 def build_schema_validator() -> Validator:
     """Build a Validator for the user schema file (against built-in SchemaSchema)."""
     return Validator(load_schema(_SCHEMA_SCHEMA_FILE))
@@ -135,11 +163,18 @@ def check_xref_coherence(
     *,
     valid_targets: Sequence[dc.Entity],
 ) -> Sequence[Diagnostic]:
-    """Diagnose x-refs whose entity/attribute target is absent from ``valid_targets``."""
+    """Diagnose x-refs whose entity/attribute target is absent from ``valid_targets``.
+
+    Only the root's direct collections are targets.
+    """
+    # A collection inside a root-level singleton (``site_config.items``)
+    # also has the root as its parent, but the data side gathers no
+    # records for it to check values against; its dotted id keeps it out.
     target_index: Mapping[str, frozenset[str]] = {
         e.id: frozenset(a.id for a in e.item_type.attributes)
         for e in valid_targets
-        if e.parent_entity is None
+        if e.parent_entity == dc.ROOT_ENTITY_ID
+        and len(dc.Attribute.split_id(e.id)) == 1
     }
     return [
         diag

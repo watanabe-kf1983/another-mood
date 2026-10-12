@@ -1,14 +1,13 @@
 """How a build treats the shapes placed directly under the root today.
 
-Current limitation, not a contract.  A top-level singleton and the
-collection inside it reach ``tap`` and the templates but never the
-catalog, so views cannot name them and ``__db/`` has no page for them.
-The intended behavior is what the same shapes get inside a record: the
-singleton folds into the holding record and the collection opens an
-entity of its own.
+Partly a current limitation, not a contract.  The root is catalogued as
+a record: a top-level singleton folds into it, and the collection inside
+the singleton opens an entity of its own, which views can name and
+``__db/`` gives pages to.  The singleton itself still has no page, and
+``from:`` naming it reads as a key that does not exist at all.
 
-TODO: rewrite every expectation here once the root is catalogued as a
-record; none of them is to be preserved.
+TODO: rewrite the expectations marked "Intended" as the root's own page
+and the "not a collection" diagnostic land.
 """
 
 from pathlib import Path
@@ -75,26 +74,26 @@ def _build(tmp_path: Path, *, views: str = "") -> command.BuildResult:
     return command.build(ProjectConfig(namespace_root=tmp_path, project_dir=project))
 
 
-def test_top_level_singleton_reaches_templates_but_has_no_db_pages(
+def test_collection_in_top_level_singleton_gets_db_pages(
     tmp_path: Path,
 ) -> None:
     result = _build(tmp_path)
 
     assert not result.has_errors()
     out_dir = Path(result.out_dir)
-    # Intended: ``site_config.items`` gets Entity / Data pages like ``users``.
-    # The data itself is intact: the template read the singleton.
     page = (out_dir / "default" / "index.md").read_text(encoding="utf-8")
     assert "# My Site" in page
-    # The catalog lists the collection only.
+    # ``site_config.items`` gets Entity / Data pages like ``users``.
     db_dir = out_dir / "__db"
     assert (db_dir / "__entity_defs" / "users.md").is_file()
+    assert (db_dir / "__entity_defs" / "site_config.items.md").is_file()
+    data_page = (db_dir / "__data" / "site_config.items.md").read_text(encoding="utf-8")
+    assert "| first |" in data_page
+    # Intended: the singleton shows on the root's own page.
     assert not (db_dir / "__entity_defs" / "site_config.md").exists()
-    assert not (db_dir / "__entity_defs" / "site_config.items.md").exists()
-    assert "site_config" not in (db_dir / "index.md").read_text(encoding="utf-8")
 
 
-def test_from_cannot_name_a_top_level_singleton_or_its_collection(
+def test_from_names_the_collection_but_not_the_singleton(
     tmp_path: Path,
 ) -> None:
     views = dedent("""\
@@ -108,10 +107,6 @@ def test_from_cannot_name_a_top_level_singleton_or_its_collection(
 
     assert result.has_errors()
     messages = sorted(d.message for d in result.diagnostics)
-    # Today both read as a key that does not exist at all.  Intended:
-    # ``site_config.items`` resolves, and ``site_config`` is diagnosed as
-    # "not a collection" instead.
-    assert messages == [
-        "unknown source 'site_config'",
-        "unknown source 'site_config.items'",
-    ]
+    # ``site_config.items`` resolves.  Intended: ``site_config`` is
+    # diagnosed as "not a collection" instead.
+    assert messages == ["unknown source 'site_config'"]

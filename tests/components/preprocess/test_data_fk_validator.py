@@ -14,9 +14,13 @@ from another_mood.components.shared.user_source.diagnostic import Diagnostic
 
 
 def _catalog(yaml_text: str) -> Sequence[dc.Entity]:
-    """Build a typed catalog list from a YAML entity-list string."""
+    """Build a typed catalog list from a YAML entity-list string.
+
+    An entry without ``parent_entity`` is placed under the root entity,
+    as the schema stage places a top-level collection.
+    """
     raw = cast(list[Mapping[str, object]], yaml.safe_load(dedent(yaml_text)))
-    return [dc.Entity.from_dict(e) for e in raw]
+    return [dc.Entity.from_dict({"parent_entity": dc.ROOT_ENTITY_ID, **e}) for e in raw]
 
 
 def _data(
