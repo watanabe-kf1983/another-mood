@@ -80,43 +80,40 @@ properties:
 
 ### ルート Entity の導入 (M13)
 
-#### As-Is
+#### ゴール
 
-ルート直下のキーの扱いが、層ごとに食い違っている（例は `users`: map 形、`users.orders`: その中の object 配列、`site_config`: singleton、`site_config.items`: その中の object 配列）:
+ルート直下に置いた各形の振る舞いを、record（collection の 1 item）の中に置いた同じ形の振る舞いに揃える。言い換えると、ルートオブジェクトを一件の record として扱う。
 
-| 層 | collection（`users`） | collection の中の collection（`users.orders`） | singleton object（`site_config`） | singleton の中の collection（`site_config.items`） | scalar / scalar 配列 |
-|---|---|---|---|---|---|
-| meta-schema | 許す | 許す | 許す（`rootSchema` が課すのは `type: object`・`properties` 必須・`__` 禁止だけ） | 許す | 許す |
-| normalize → compose → tap / テンプレート | entity として流れる | entity として流れる | 値のまま素通し（`tap` のトップレベルキーに出る） | 親の値の一部として素通し | 値のまま素通し |
-| カタログ（`collect_entities`） | Entity を emit | `child_entity` として emit | 黙って落とす | 親ごと落ちる（内側に降りない） | 黙って落とす |
+| 形 | record の中（As-Is） | ルート直下（As-Is） | ルート直下（To-Be） |
+|---|---|---|---|
+| collection（`users.orders` / `users`） | 親を `parent_entity` とする entity。`from:` では引けず、親から `flatten` で降りる。`__db/` では親の Entity / Data ページの中に出る | entity。`from:` で引け、`__db/` に Entity / Data ページが出る | 変更なし |
+| singleton object（`users.profile` / `site_config`） | entity にならず、親 record の `object` 属性になる。配下の値は `profile.name` のようなドット名の属性として親に載り、`__db/` では親の属性表に出る | カタログに載らない。`from:` は `unknown source`、`__db/` のどこにも出ない | ルート record の `object` 属性。配下はドット名の属性として載り、`__db/` ではルート record の属性表に出る |
+| singleton の中の collection（`users.profile.tags` / `site_config.items`） | 親を `parent_entity` とするドット名の entity `users.profile.tags`。`from:` では引けず、親から `flatten` で降りる。`__db/` では親のページの中に出る | カタログに載らない。`from:` は `unknown source`、x-ref の参照先に指定すると `not found` | ルート record を親とするドット名の entity `site_config.items`。ルート直下の collection と同じく `from:` で引け、x-ref で名指しでき、`__db/` の Entities にドット名で載って Entity / Data ページを持つ |
+| scalar / scalar 配列 | 親 record の属性。`__db/` では親の属性表に出る | カタログに載らない。`from:` は `unknown source`（存在しないキーと同じ診断） | ルート record の属性。`__db/` ではルート record の属性表に出る |
 
-結果、右三列では「データは存在するのに view からは `unknown source`、カタログ・メタページには不可視」というねじれが起きる。singleton object は docs/reference/schema.md が Single-record pattern として数える正規の書き方なので、これはエッジケースの濫用ではなく文書化済み機能の不可視性である。`users.orders` と `site_config.items` はスキーマ上は同じ object 配列なのに、親が collection か singleton かだけで可視性が分かれる。
+normalize は既にこの対称性を持っている（ルート直下の singleton の中の map 形も `id` 付き配列になり、data.json のルートに出る）。揃っていないのはカタログと、カタログを読む view / x-ref / `__db/` である。
 
-内蔵の `__definition` は同じ形（singleton の中の collection）だが、別経路で可視になっている。`schema_inspector._emit_definition_catalog` が `__definition.entities` / `__definition.views` という**ドット入り id の top-level Entity** を Python で直接組み立てるので、カタログ上は `parent_entity` が無く、`__definition` の下にいるという構造を持たない。それでも `from: __definition.entities` が引けるのは `From.apply` がソース名をドットで割ってデータを掘るからで、メタテンプレートの `walk_entity` も子 id から親 id を前方一致で外して属性 id を得ている。つまり「ドット = 入れ子」を、カタログの構造ではなく文字列操作で辻褄合わせしている。
+#### To-Be に伴う外部仕様
 
-#### To-Be
+- **tap / テンプレート**: 変更なし。data.json のルートは従来どおり
+- **view**: ルート直下の singleton の中の collection（`site_config.items`）を `from:` で名指しできる。`from:` がルート直下の singleton / scalar を指したときは、存在しないキーと区別して「collection ではない」と診断する
+- **x-ref**: `entity:` に `site_config.items` を指定できる
+- **`__db/`**: `site_config.items` は Entities にドット名で載り、ルート直下の collection と同じく Entity / Data ページを持つ。ルート record は index に Entities / Views とは別枠の節を持ち、Entity と同じく Definition / Data の二ページに割る。トップレベルの singleton / scalar が利用者に見える唯一の場所。Definition はルート record の属性表（collection 属性は entity / view のページへのリンク、singleton はドット名の属性、scalar はそのまま。種別の列で entity / view / singleton / scalar を区別する）、Data はルート record の値（collection は値を描かず、その source の Data ページへのリンク）
+- **docs**: docs/reference/schema.md の Single-record pattern の「view から名指しできず `__db/` にページも出ない」を書き換える
 
-JSON データモデルのルートオブジェクトを、データカタログ上はルート Entity の一件の record として扱い、「ルートは一件の record で、collection 形の属性が entity になる」をユーザ schema と内蔵の両方に対する唯一の規約にする。予約 id `__root` でルートの Entity を一件 emit し、`item_type.attributes` にトップレベルの全キーを載せる:
+#### 現状、ルートが record と違う扱いを受けている場所
 
-- collection → `object[]` + `child_entity`（従来どおり）
-- singleton object → wrapper + ドット名エッジ（エンティティ内と同じ吸収規約）。内側の collection はエンティティ内の `categories.meta.tasks` と同様、ドット名のパスで `child_entity` になる（`site_config.items`）。ルートだけ禁止する理由は無く、E17 の文書ノードの器にもなる
-- scalar / scalar 配列 → 通常の属性（`child_entity` なし）
-- view → collection 属性。`child_entity` はその view（`view: true` の Entity）。data.json のルートには view の結果も top-level キーとして入るので、`__root` の属性はそれを含めて初めて data.json のルートの写しになる（J5 の前提）
-- `__definition` も `__root` の属性として同じ規約で正規化する。`_emit_definition_catalog` の手書きは無くなり、`__definition.entities` は親を持つ
-
-id を `__` 接頭辞にするのは、ユーザが schema.yaml でルートに名前を付ける場所が無く、ツールが割り当てる名前だから（`__definition` と同じ側）。ユーザ名との衝突も起きない。ルートに `additionalProperties: <schema>` を許さない制約はそのまま。
-
-**`__db/` での見せ方**: `__root` を entity の列には混ぜない（`__entity_tree` / `__entity_defs` / `__data` の `__` 除外はそのまま）。entity 用テンプレートに流すと Type Diagram に全 entity がぶら下がり、index の ER 図の焼き直しになるため。代わりに **Root Object** 専用の Definition view / Data view とテンプレートを設け、Database Information（`__db/index.md`）に Entities / Views とは別枠の Root Object 節を置いてそこへ導線を張る。Definition ページは `__root.item` の属性表（collection 属性は entity / view ページへのリンク、singleton はドット名の属性、scalar はそのまま。種別の列で entity / view / singleton / scalar を区別する）、Data ページはルート record の値（collection は Data ページへのリンク）。トップレベルの singleton / scalar が利用者に見えるのはここ。
-
-#### やること（波及）
-
-- Root Object 用のメタ view（`__` 除外の外で `id: __root` を一件引く Definition view と、ルート record を引く Data view）とテンプレートを足し、index に Root Object 節を置く
-- `from:` が singleton を指した場合のエラーを「unknown source」から「collection ではない」に改善する
-- `check_xref_coherence` の `parent_entity is None` フィルタから `__root` を除外する
-- ドットの文字列操作の整理: `__definition.entities` が `__root` の属性として入れ子になれば、`from:` をパスとして読む形にでき、`From.apply` と `walk_entity` の前方一致はどちらもカタログの構造から引ける
+| 場所 | record の扱い | ルートの扱い |
+|---|---|---|
+| **schema → 木**（`schema_catalog.build_catalog_node`） | record schema を一つの Node にする。singleton は wrapper Node、scalar は葉 Node として、全プロパティが子に揃う | 同じ。ルート schema も一つの Node になり、singleton / scalar も子に揃う |
+| **木 → 列**（`schema_catalog.collect_entities` → `data_catalog.flatten_tree`） | record の Node を `flatten_tree` に渡す。singleton / scalar はドット名の属性として Entity に載り、collection の子は `child_entity` 付き属性と子 Entity になる | ルートの Node は `flatten_tree` に渡さない。entity を開く子だけを拾って子ごとに `flatten_tree` する。ルートの Entity は作られず、singleton / scalar とその配下はここで落ちる |
+| **列 → 木**（`data_catalog.build_tree`） | 自分の Entity record から復元する。属性から singleton / scalar の枝を戻し、`child_entity` 付き属性から子 Entity を引き当てて吊る | Entity record が無いので、`parent_entity` を持たない Entity を `object[]` の edge として吊った**仮想ルート** Node を都度作る。singleton / scalar の枝は無い |
+| **内蔵 `__definition`**（`schema_inspector._emit_definition_catalog`） | record の中の singleton の中の collection は、上の一般経路でドット名の子 Entity になる（`categories.meta.tasks`） | ルート直下の singleton `__definition` の中の collection は一般経路を通らず、`__definition.entities` / `__definition.views` というドット入り id の top-level Entity を Python で直接組み立てる。`__definition` の下にいるという構造はカタログに無い |
+| **source 名の解決**（`query.From.derive`） | record の中のパスは `Node.reach` でセグメントごとに降りる（`flatten` の `of:` 等） | source 名は `has_child` で edge 名と丸ごと完全一致させる。`__definition.entities` が引けるのは、上の手書きでその名前の edge が一本あるから |
+| **メタページの行の取得**（`meta_templates.walk_entity`） | 親の行から属性 id を `pluck` して子の行に降りる | 先頭の一段だけ `From(name).apply` でラッパーから引く。ルートが record なら、他の段と同じく属性 id の `pluck` で済む |
 
 #### 依存
 
-E14 とは独立に着手できる（ルート singleton の吸収は既に「ドット = 入れ子」の規約に乗っている）。J5 は両方を前提とする。
+J5 は M13 を前提とする。
 
-[E17 (合成ビュー)](../60-composer/10-query-dsl-spec.md#合成ビュー-e17) はトップレベル・シングルトンのカタログ表現を前提にするので、M13 は E17 の前段でもある。E17 の文書ノードは、ユーザの singleton と同じ形で `__root` の属性に入り、型 id・アンカーパス・Root Object ページへの表示はすべて M13 の規約に乗る。
+[E17 (合成ビュー)](../60-composer/10-query-dsl-spec.md#合成ビュー-e17) はトップレベル・シングルトンのカタログ表現を前提にするので、M13 は E17 の前段でもある。
