@@ -6,7 +6,7 @@
 import math
 from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
-from itertools import chain, pairwise
+from itertools import chain
 from pathlib import Path
 from typing import cast
 
@@ -22,7 +22,6 @@ from another_mood.components.generator.inert import (
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared import json_data_model
 from another_mood.components.shared.json_data_model import KeyPath
-from another_mood.components.shared.query import From, Record
 
 META_TEMPLATES_DIR = Path(
     str(resources.files("another_mood.resources") / "templates" / "meta")
@@ -59,20 +58,20 @@ def walk_entity(
     chain rather than parsing the dotted id, which does not tell where the
     arrays are; each step reads the attribute id the child extends its
     parent's id by, singletons included (``item_type.attributes`` under
-    ``__definition.entities``). A non-mapping
-    ``views``, a missing root key, or an absent intermediate key all
-    collapse to an empty list — the ``{% if rows %}`` guard in built-in
-    templates renders ``(no records)`` either way.
+    ``__definition.entities``). ``views`` itself is the one row the walk
+    starts from, so the top-level step is the same pluck as every other
+    step. A non-mapping ``views`` or an absent key at any step collapses
+    to an empty list — the ``{% if rows %}`` guard in built-in templates
+    renders ``(no records)`` either way.
     """
     if not isinstance(views, Mapping):
         return InertArray()
     by_id = {cast(str, e["id"]): e for e in entities}
     ancestors = _ancestor_chain(entity_id, by_id)
-    rows = cast(
-        Sequence[InertValue], From(name=ancestors[0]).apply([cast(Record, views)])
-    )
-    for parent_id, child_id in pairwise(ancestors):
-        suffix = dc.Attribute.split_id(child_id.removeprefix(parent_id + "."))
+    rows: Sequence[InertValue] = [cast(InertValue, views)]
+    # ``None`` stands for the parent of the top-level entity: ``views``.
+    for parent_id, child_id in zip([None, *ancestors[:-1]], ancestors, strict=True):
+        suffix = dc.Attribute.split_id(_attribute_suffix(parent_id, child_id))
         rows = list(
             chain.from_iterable(
                 _safe_pluck(row, suffix)
@@ -163,6 +162,14 @@ def _ancestor_chain(
         chain_.insert(0, current)
         current = cast("str | None", by_id[current].get("parent_entity"))
     return chain_
+
+
+def _attribute_suffix(parent_id: str | None, child_id: str) -> str:
+    """The attribute id ``child_id`` extends ``parent_id`` by."""
+    if parent_id is None:
+        return child_id
+    else:
+        return child_id.removeprefix(parent_id + ".")
 
 
 def _safe_pluck(row: Mapping[str, object], key_path: KeyPath) -> Sequence[InertValue]:
