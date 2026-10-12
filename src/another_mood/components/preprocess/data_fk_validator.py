@@ -75,7 +75,7 @@ def _build_target_index(
     index: dict[tuple[str, str], frozenset[object]] = {}
     for entity_id, records in data_by_entity.items():
         entity = catalog_by_id.get(entity_id)
-        if entity is None or entity.parent_entity is not None:
+        if entity is None or entity.parent_entity != dc.ROOT_ENTITY_ID:
             continue
         for attr in entity.item_type.attributes:
             if attr.type not in _SCALAR_TYPES:

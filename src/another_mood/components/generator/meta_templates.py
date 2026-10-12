@@ -6,7 +6,7 @@
 import math
 from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
-from itertools import chain
+from itertools import chain, pairwise
 from pathlib import Path
 from typing import cast
 
@@ -69,8 +69,7 @@ def walk_entity(
     by_id = {cast(str, e["id"]): e for e in entities}
     ancestors = _ancestor_chain(entity_id, by_id)
     rows: Sequence[InertValue] = [cast(InertValue, views)]
-    # ``None`` stands for the parent of the top-level entity: ``views``.
-    for parent_id, child_id in zip([None, *ancestors[:-1]], ancestors, strict=True):
+    for parent_id, child_id in pairwise(ancestors):
         suffix = dc.Attribute.split_id(_attribute_suffix(parent_id, child_id))
         rows = list(
             chain.from_iterable(
@@ -157,16 +156,20 @@ def _ancestor_chain(
 ) -> Sequence[str]:
     """Walk ``parent_entity`` links upward, returning ids root-first."""
     chain_: list[str] = []
-    current: str | None = entity_id
-    while current is not None:
+    current = entity_id
+    while current != dc.ROOT_ENTITY_ID:
         chain_.insert(0, current)
-        current = cast("str | None", by_id[current].get("parent_entity"))
-    return chain_
+        parent = cast("str | None", by_id[current].get("parent_entity"))
+        # A view has no parent, but is read from ``views`` like a
+        # top-level entity.
+        current = parent or dc.ROOT_ENTITY_ID
+    return [dc.ROOT_ENTITY_ID, *chain_]
 
 
-def _attribute_suffix(parent_id: str | None, child_id: str) -> str:
+def _attribute_suffix(parent_id: str, child_id: str) -> str:
     """The attribute id ``child_id`` extends ``parent_id`` by."""
-    if parent_id is None:
+    if parent_id == dc.ROOT_ENTITY_ID:
+        # The root's id does not prefix the ids under it.
         return child_id
     else:
         return child_id.removeprefix(parent_id + ".")

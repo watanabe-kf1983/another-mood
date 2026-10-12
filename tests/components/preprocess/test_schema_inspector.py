@@ -17,6 +17,7 @@ from another_mood.components.preprocess.schema_inspector import (
 )
 from another_mood.components.shared.user_source.source_loader import Location, UserStr
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.json_data_model import load_model
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 
 
@@ -772,7 +773,58 @@ class TestInspectSchema:
         assert out_file.exists()
         data = json.loads(out_file.read_text())
         entities = data["__definition"]["entities"]
-        assert entities[0]["id"] == "recipes"
+        assert [(e["id"], e.get("parent_entity")) for e in entities] == [
+            ("__root", None),
+            ("recipes", "__root"),
+        ]
+
+    def test_root_entity_holds_every_root_branch(self, tmp_path: Path) -> None:
+        """The root entity is one record over all three sources: the user
+        schema's branches (singletons and scalars included, folded in as
+        on any record), the built-in content branches, and ``__definition``.
+        A collection inside a root-level singleton opens an entity under
+        the root, as one inside a record does under that record."""
+        schema = dedent("""
+            type: object
+            additionalProperties: false
+            properties:
+              site_config:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        name: { type: string }
+              title: { type: string }
+        """)
+        schema_file = _write_schema(tmp_path / "schema.yaml", schema)
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        entities = load_model(out_dir)["__definition"]["entities"]
+        roots = [e for e in entities if e["id"] == "__root"]
+        assert len(roots) == 1
+        root = roots[0]
+        assert root["item_type"]["id"] == "__root.item"
+        assert {a["id"] for a in root["item_type"]["attributes"]} >= {
+            "site_config",
+            "site_config.items",
+            "title",
+            "blob",
+            "prose",
+            "__definition",
+            "__definition.entities",
+            "__definition.views",
+        }
+        items = next(e for e in entities if e["id"] == "site_config.items")
+        assert items["parent_entity"] == "__root"
+        assert items["builtin"] is False
 
     def test_emits_builtin_prose_catalog(self, tmp_path: Path) -> None:
         """Built-in prose schema is emitted under __builtin/ so it shows up in meta-docs."""

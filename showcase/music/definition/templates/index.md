@@ -13,8 +13,11 @@ lifted into `id`, like any other map.
 
 ### Featured
 
-{% for entry in catalog.featured %}
-- {{ node("album_tracklist", entry.album_id) | link }} - {{ entry.note }}
+Each entry comes with its album attached by the `featured_albums` view,
+which names the collection inside the front matter as `from: catalog.featured`.
+
+{% for entry in featured_albums %}
+- {{ node("album_tracklist", entry.album_id) | link }} ({{ entry.album.year }}) - {{ entry.note }}
 {% endfor %}
 
 ### Series

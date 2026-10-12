@@ -1,0 +1,14 @@
+# The front page's featured albums with each album record attached -
+# exercises ``from:`` naming a collection inside a top-level singleton
+# (``catalog.featured``), which reads like any top-level collection.
+featured_albums:
+  from: catalog.featured
+  join:
+    to: albums
+    on: { left: album_id, right: id }
+    as: album_matches
+    flatten: { as: album }
+  select:
+    - item: album_id
+    - item: note
+    - item: album
