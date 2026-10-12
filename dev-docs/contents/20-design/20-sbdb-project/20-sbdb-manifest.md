@@ -97,7 +97,7 @@ edition は破壊的変更のときにしか動かず、minimum version は任�
 
 マニフェストは二段で読む。最初は凍結欄（`sbdb_version` / `tools.another-mood.minimum_version`）だけを読んで互換ゲートにかけ、通過後にマニフェスト全体を厳格検証する。ゲートの順序とその理由は `manifest.py` の `read_manifest` に記載してある。
 
-対応集合は定数一行の専用モジュール `supported_sbdb_versions.py` に単独で置く。このファイルの diff が、リリース側の破壊検知の信号になる（[リリースフロー背景](node:/prose/30-dev/55-release-background)）。
+対応集合は定数一行の専用モジュール `supported_sbdb_versions.py` に単独で置く。このファイルの diff が、リリース側の破壊検知の信号になる（[リリースフロー背景](../../90-appendix/30-dev/50-release.md#破壊的変更のゲート構造)）。
 
 ### showcase / dev-docs の実物マニフェスト
 

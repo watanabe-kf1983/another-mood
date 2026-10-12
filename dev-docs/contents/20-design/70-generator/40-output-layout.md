@@ -10,6 +10,8 @@
 
 edition は、環境ごとに 1 つを選んで切り替える profile **ではない**。ビルド時に 1 つを選ぶ `--edition` のようなオプションも持たない。レンダラやフォーマットの違いを表す軸でもない（Markdown→HTML の変換は全 edition で同一）。「並列出力」と言うとき、それは成果物が並ぶ意味であって concurrency の意味ではない。
 
+DB 自己記述の `__db/` は edition の機構で描くが、体裁違いの report ではないので、表紙では Reports に並べず別エントリに置く。
+
 edition は `definition/reports.yaml` に宣言する。`editions:` マップに名前付きで複数書くか、マップを省いてトップレベルに `file_per` を書く。後者は `default` という名の唯一の edition を宣言したものと見なされる。構文は `docs/reference/reports.md`、edition 名の規則と両形式の排他検証は `resources/schemas/reports-schema.yaml` が正本。
 
 ### ページパスと出力ディレクトリ

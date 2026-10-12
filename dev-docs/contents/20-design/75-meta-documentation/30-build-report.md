@@ -6,8 +6,6 @@
 
 ### Reconcile
 
-> **[W4 dup]** ↔ 40-communication/index.md:21 (c, ほぼ同文)、10-architecture:46-47 (c)、generator.py:84-100 (a)、30-template-spec:49、40-paging:44,49 (c) — 完全。案: ここを正本、communication/index 側をポインタ化（index 側は W4 で処理済み）。末尾順序の理由は残す
-
 Reconcile は Generator の直後に位置するステージで、「Generator の出力（あるべき姿）」と「上流から伝播してきた `BuildReport`（実際に何が起きたか）」を突き合わせ、ユーザに見せる最終出力を確定する役割を持つ。
 
 - エラー無し: Generator の出力をそのまま reconcile の出力ディレクトリに通す（pass-through）
@@ -22,8 +20,4 @@ Reconcile は Generator の直後に位置するステージで、「Generator �
 - Generator は「views を Markdown に変換する」純粋な責務に集中できる（エラー時の出力差し替えロジックを持たない）
 - 下流の site / publish ステージは Reconcile の出力の単一視点を持てばよく、エラー時と正常時の分岐を知らなくてよい
 
-#### 命名について
-
-> **[W4 → appendix]**
-
-「reconcile（突き合わせる）」は本リポジトリ独自の語ではなく一般的な英単語だが、ドキュメントビルダーの文脈では珍しい語であり、馴染みのある語が引き起こす意味の取り違えを避ける狙いで採用した。読み手はこの定義に立ち戻ることで、Reconcile ステージの責務を一意に把握できる。
+「reconcile」の語を採った理由は[背景](../../90-appendix/20-design/75-meta-documentation/30-build-report.md#reconcile-の命名)。
