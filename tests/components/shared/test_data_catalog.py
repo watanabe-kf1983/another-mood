@@ -195,30 +195,6 @@ class TestBuildAndFlatten:
                 """,
                 id="dotted_attribute_pointing_to_entity",
             ),
-            pytest.param(
-                "roadmap",
-                # No ``object`` attribute ahead of it, so the dotted id
-                # is one edge name rather than a singleton to reclaim.
-                """
-                - id: roadmap
-                  item_type:
-                    id: roadmap.item
-                    attributes:
-                      - { id: task.phase, type: integer, required: true }
-                      - id: tasks
-                        type: object[]
-                        required: true
-                        child_entity: roadmap.tasks
-                        child_item_type: roadmap.item.tasks.item
-                - id: roadmap.tasks
-                  item_type:
-                    id: roadmap.item.tasks.item
-                    attributes:
-                      - { id: id, type: string, required: true }
-                  parent_entity: roadmap
-                """,
-                id="dotted_alias_without_wrapper",
-            ),
         ],
     )
     def test_build_then_flatten_is_identity(
@@ -338,7 +314,7 @@ class TestIsEntity:
 
 
 class TestDescend:
-    """``descend`` walks a dotted path; ``child`` reads one edge name."""
+    """``descend`` walks a path of segments; ``child`` reads one edge name."""
 
     #: ``members`` holds a singleton ``hobby``, itself holding a scalar
     #: ``level`` and a collection ``pets``.
@@ -361,11 +337,11 @@ class TestDescend:
     )
 
     def test_traverses_a_singleton(self) -> None:
-        edge, _ = self.TREE.descend("hobby.level")
+        edge, _ = self.TREE.descend(("hobby", "level"))
         assert edge.name == "level"
 
     def test_ends_on_a_collection(self) -> None:
-        edge, node = self.TREE.descend("hobby.pets")
+        edge, node = self.TREE.descend(("hobby", "pets"))
         assert edge.type == "object[]"
         assert node.has_child("name")
 
@@ -373,28 +349,16 @@ class TestDescend:
         """The asymmetry rule: reaching a field must mean reaching it on
         the row at hand."""
         with pytest.raises(dc.UnknownChildError):
-            self.TREE.descend("hobby.pets.name")
+            self.TREE.descend(("hobby", "pets", "name"))
 
     def test_unknown_path_carries_the_whole_path(self) -> None:
         with pytest.raises(dc.UnknownChildError) as excinfo:
-            self.TREE.descend("hobby.nope")
-        assert excinfo.value.name == "hobby.nope"
-
-    def test_prefers_a_literal_dotted_edge_over_descent(self) -> None:
-        """Longest-first: a view alias can still write a literal dotted key."""
-        node = dc.Node(
-            children=[
-                (_edge("a", "object"), dc.Node(children=[(_edge("b"), dc.Node())])),
-                (_edge("a.b", "integer"), dc.Node()),
-            ]
-        )
-        edge, _ = node.descend("a.b")
-        assert edge.type == "integer"
+            self.TREE.descend(("hobby", "nope"))
+        assert excinfo.value.path == ("hobby", "nope")
 
     def test_child_does_not_walk_a_path(self) -> None:
         """A dot in a name belongs to the name — top-level entity ids carry
-        dots (``__definition.entities``).  Same string, different accessor:
-        ``descend`` resolves ``hobby.level``, ``child`` does not."""
+        dots (``__definition.entities``)."""
         assert not self.TREE.has_child("hobby.level")
         with pytest.raises(dc.UnknownChildError):
             self.TREE.child("hobby.level")
@@ -408,24 +372,24 @@ class TestReach:
     TREE = TestDescend.TREE
 
     def test_returns_the_edges_passed_outermost_first(self) -> None:
-        edges, node = self.TREE.reach("hobby.level")
+        edges, node = self.TREE.reach(("hobby", "level"))
         assert [e.name for e in edges] == ["hobby", "level"]
         assert node == dc.Node()
 
     def test_ends_on_a_collection_keeping_the_edges_above(self) -> None:
-        edges, node = self.TREE.reach("hobby.pets")
+        edges, node = self.TREE.reach(("hobby", "pets"))
         assert [e.name for e in edges] == ["hobby", "pets"]
         assert node.has_child("name")
 
     def test_a_top_level_name_is_one_edge(self) -> None:
-        (edge,), _ = self.TREE.reach("id")
+        (edge,), _ = self.TREE.reach(("id",))
         assert edge.name == "id"
 
     def test_descend_is_the_last_edge_of_reach(self) -> None:
-        edges, node = self.TREE.reach("hobby.level")
-        assert self.TREE.descend("hobby.level") == (edges[-1], node)
+        edges, node = self.TREE.reach(("hobby", "level"))
+        assert self.TREE.descend(("hobby", "level")) == (edges[-1], node)
 
     def test_unknown_path_carries_the_whole_path(self) -> None:
         with pytest.raises(dc.UnknownChildError) as excinfo:
-            self.TREE.reach("hobby.pets.name")
-        assert excinfo.value.name == "hobby.pets.name"
+            self.TREE.reach(("hobby", "pets", "name"))
+        assert excinfo.value.path == ("hobby", "pets", "name")

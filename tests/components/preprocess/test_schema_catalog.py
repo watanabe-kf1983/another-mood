@@ -325,6 +325,48 @@ class TestBuildCatalogNode:
 class TestCatalogNodeToEntities:
     """build_catalog_node + dc.flatten_tree: schema → flat Entity list."""
 
+    def test_top_level_non_collections_open_no_entity(self) -> None:
+        """Current limitation, not a contract: a top-level singleton, the
+        collection inside it, and a top-level scalar all leave the catalog,
+        so only ``users`` is listed.
+
+        The intended behavior is what the same shapes get inside a record
+        (see the singleton tests below): the singleton and the scalar fold
+        into the holding entity, and the collection opens an entity of its
+        own.
+
+        TODO: rewrite the expectation once the root is catalogued as a record.
+        """
+        assert collect_entities(yaml.safe_load("""
+            type: object
+            additionalProperties: false
+            properties:
+              site_config:
+                type: object
+                additionalProperties: false
+                properties:
+                  title: { type: string }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        name: { type: string }
+              title: { type: string }
+              users:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    name: { type: string }
+        """)) == [
+            dc.Entity("users", item_type=dc.ObjectType("users.item", origin_item_type="users.item", attributes=[
+                dc.Attribute("name", "string", False),
+            ])),
+        ]
+
     def test_top_level_array_of_objects(self) -> None:
         """A top-level collection → entity with item_type.id == name + .item."""
         assert _entities("""

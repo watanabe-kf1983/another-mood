@@ -1,6 +1,6 @@
 # Normalizer
 
-contents 入力を検証し、辞書形式を配列形式に正規化する。Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する。参照整合性もチェックする。
+contents 入力を検証し、辞書形式を配列形式に正規化する（[データモデルの制約](../../10-concept/10-product.md#データモデル-規律を与えた-json-の木)）。Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する。参照整合性もチェックする。
 
 受理する入力形式（拡張子ディスパッチ、dotfile の除外）は `docs/reference/cli.md` の Content and Views を正本とする。`.md` の扱いは [prose-spec](25-prose-spec.md)、それ以外の拡張子は [blob-spec](27-blob-spec.md) が設計を持つ。
 

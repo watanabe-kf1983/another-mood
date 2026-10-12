@@ -29,7 +29,7 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 Normalizer およびコンポーネントが出力する配列内のオブジェクトは、原則として全て共通するフィールドを持つ。ただし、nullable な項目（スキーマ上 `required` でない項目）は、値が存在しない場合はフィールド自体を省略する（null を補完しない）。
 
-理由: テンプレートは欠損したフィールドを何も描かない（[template-spec.md](../70-generator/30-template-spec.md#欠損値は何も描かない)）ので、フィールドが無いことがそのまま「描かない」になる。null を補完しても `None.child` のようなネストアクセスのエラーは防げず、`dict.get("key", {})` によるフォールバックも null が入ると効かなくなる。フィールドが存在しない方がテンプレート側で扱いやすい。
+理由: テンプレートは欠損したフィールドを何も描かない（[template-spec.md](../70-generator/20-template-spec.md#欠損値は何も描かない)）ので、フィールドが無いことがそのまま「描かない」になる。null を補完しても `None.child` のようなネストアクセスのエラーは防げず、`dict.get("key", {})` によるフォールバックも null が入ると効かなくなる。フィールドが存在しない方がテンプレート側で扱いやすい。
 
 ### 予約プレフィックス
 
@@ -37,7 +37,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 | プレフィックス | 用途 | 例 |
 |---|---|---|
-| `_`（単一） | Generator がノードへ注入するメタデータ（[generator.md](../70-generator/10-generator.md#ノードメタデータ)） | `_parent`, `_meta` |
+| `_`（単一） | Generator がノードへ注入するメタデータ（[anchor-spec.md](../70-generator/30-anchor-spec.md#ノードメタデータ)） | `_parent`, `_meta` |
 | `__`（二重） | システム内部フィールド（ユーザは直接扱わない） | `__build_report`, `__definition` |
 
 `__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。
@@ -45,28 +45,6 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 内蔵 prose スキーマのキー名 `prose` はプレフィックスなしで維持する。ユーザ定義との衝突が問題になった場合は、設定によるキー名変更で対応する。
 
 ## Proposals
-
-### ルート Entity の導入 (M13)
-
-カタログの直列化（Entity の列）にルートオブジェクト自身を表すレコードが無い。`collect_entities` はトップレベルの非 collection を黙って落とすが、schema-schema はトップレベルに singleton object / scalar / scalar array をすべて許し、データは normalize → compose → tap / テンプレートまで素通しする。結果、「データは存在するのに view からは `unknown source`、カタログ・meta ページには不可視」という三層のねじれがある（実証済み）。しかも singleton object は docs/reference/schema.md が「Single-record pattern」として三パターンの一つに数える正規の書き方であり、この穴はエッジケースの濫用ではなく文書化済み機能の不可視性である。`__definition` 自身も同じ穴にいる: `__definition.entities` というルートレベルのドット付き id が親無しでぶら下がり、`__definition` の下に入れ子であることを示す情報がカタログに無い。
-
-**案**: 予約 id（`__root` 等。`__` 接頭辞はユーザ名から保護済み）でルートの Entity を一件 emit し、`item_type.attributes` にトップレベルの全キーを載せる:
-
-- collection → `object[]` + `child_entity`（従来どおり）
-- singleton object → wrapper + ドット名エッジ（エンティティ内と同じ吸収規約）
-- scalar / scalar array → 通常の属性（`child_entity` なし）
-- `__definition` も `__root` の属性として正規化される
-
-波及として決める点:
-
-- `__entity_defs` / `__data` / `__entity_tree` は `__definition.entities` を filter する view なので、`__root` レコードの表示方針（除外か、index の情報源への昇格か）
-- `from:` が singleton を指した場合のエラーを「unknown source」から「collection ではない」に改善できる
-- `check_xref_coherence` の `parent_entity is None` フィルタから `__root` を除外
-- **穴は singleton 一段ぶん深いところにも開いている**: トップレベル singleton が丸ごと落ちるので、その内側の collection（`wrapper: {items: [...]}` の `items`）もカタログに現れない。データは素通しされるので、上のねじれが一段深い位置で同じ形に起きる。`__root` の属性として吸収するか、メタスキーマ側で書けなくするかを決める
-
-依存: E14 とは独立に着手できる（ルート singleton の吸収は既に「ドット = 入れ子」の規約に乗っている）。J5 は両方を前提とする。
-
-[E17 (合成ビュー)](../60-composer/10-query-dsl-spec.md#合成ビュー-e17) はトップレベル・シングルトンのカタログ表現を前提にするので、M13 は E17 の前段でもある。合成ビューを `__root` の属性として吸収するか、view 同様に独立の項目として emit するかは E17 側で決める。
 
 ### tap ドキュメントの JSON Schema 提供 (J5)
 
@@ -77,10 +55,10 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 - `document_schema(entities) -> Mapping` — data.json 全体のスキーマ
 - `entity_schema(entity_id, entities) -> Mapping` — 単一エンティティの断片（子孫を入れ子展開）
 
-変換の要点: ドット名の入れ子復元（E14 で「カタログのドットは必ず入れ子」が保証される前提）、ルートの合成（M13 の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
+変換の要点: ドット名の入れ子復元（[view 出力にドット入りキーは生まれない](../60-composer/10-query-dsl-spec.md#external-design)ので、カタログのドットは必ず入れ子）、ルートの合成（[M13](../45-schema/10-schema-spec.md#ルート-entity-の導入-m13) の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
 
 提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`、MCP ツール。導線（docs / MCP ツール記述）とセットで初めて使われる点に注意。
 
 その他の論点: レコード 0 件エンティティのキー欠落と required 方針、`additionalProperties: false` の採否。
 
-**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: E14, M13。
+**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: M13。

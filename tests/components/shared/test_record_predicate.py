@@ -20,16 +20,18 @@ from another_mood.components.shared.record_predicate import (
 type Record = Mapping[str, object]
 
 
-def _fp(key_path: str, **preds: object) -> FieldPredicate | And:
-    """Build a per-field predicate.  One kwarg → :class:`FieldPredicate`;
-    multiple kwargs → :class:`And` of singletons (mirrors the parser)."""
+def _fp(field: str, **preds: object) -> FieldPredicate | And:
+    """Build a per-field predicate from a dotted ``field``.  One kwarg →
+    :class:`FieldPredicate`; multiple kwargs → :class:`And` of singletons
+    (mirrors the parser)."""
+    path = tuple(field.split("."))
     items = [(Operator(name), target) for name, target in preds.items()]
     if len(items) == 1:
         op, target = items[0]
-        return FieldPredicate(key_path=key_path, operator=op, target=target)
+        return FieldPredicate(field=path, operator=op, target=target)
     return And(
         clauses=[
-            FieldPredicate(key_path=key_path, operator=op, target=target)
+            FieldPredicate(field=path, operator=op, target=target)
             for op, target in items
         ],
     )
@@ -206,7 +208,7 @@ _TASKS_CATALOG = """
 
 
 class TestValidateByCatalog:
-    """``validate_by_catalog`` walks ``key_path`` references and raises
+    """``validate_by_catalog`` walks ``field`` references and raises
     :class:`dc.UnknownChildError` on misses; combinators recurse."""
 
     @pytest.fixture
@@ -215,13 +217,13 @@ class TestValidateByCatalog:
 
     def test_field_predicate_resolves(self, catalog: dc.Node) -> None:
         FieldPredicate(
-            key_path="phase", operator=Operator.GT, target=5
+            field=("phase",), operator=Operator.GT, target=5
         ).validate_by_catalog(catalog)
 
     def test_field_predicate_raises_on_unknown(self, catalog: dc.Node) -> None:
         with pytest.raises(dc.UnknownChildError, match="nonexistent"):
             FieldPredicate(
-                key_path="nonexistent", operator=Operator.EQ, target=1
+                field=("nonexistent",), operator=Operator.EQ, target=1
             ).validate_by_catalog(catalog)
 
     @pytest.mark.parametrize(
@@ -229,18 +231,18 @@ class TestValidateByCatalog:
         [
             And(
                 clauses=[
-                    FieldPredicate(key_path="phase", operator=Operator.GT, target=5),
-                    FieldPredicate(key_path="bad", operator=Operator.EQ, target=1),
+                    FieldPredicate(field=("phase",), operator=Operator.GT, target=5),
+                    FieldPredicate(field=("bad",), operator=Operator.EQ, target=1),
                 ],
             ),
             Or(
                 clauses=[
-                    FieldPredicate(key_path="phase", operator=Operator.GT, target=5),
-                    FieldPredicate(key_path="bad", operator=Operator.EQ, target=1),
+                    FieldPredicate(field=("phase",), operator=Operator.GT, target=5),
+                    FieldPredicate(field=("bad",), operator=Operator.EQ, target=1),
                 ],
             ),
             Not(
-                clause=FieldPredicate(key_path="bad", operator=Operator.EQ, target=1),
+                clause=FieldPredicate(field=("bad",), operator=Operator.EQ, target=1),
             ),
         ],
         ids=["and", "or", "not"],
@@ -276,74 +278,40 @@ class TestValidateByCatalog:
         ).child("members")
         with pytest.raises(dc.UnknownChildError, match="tasks.title"):
             FieldPredicate(
-                key_path="tasks.title", operator=Operator.EQ, target="x"
+                field=("tasks", "title"), operator=Operator.EQ, target="x"
             ).validate_by_catalog(catalog)
 
 
 class TestParseRecordPredicate:
+    """The input is canonical (sugar expanded upstream), so each node
+    maps onto one AST node."""
+
+    _LEAF = {"field": ["a"], "operator": "eq", "target": 1}
+
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
             pytest.param(
-                {"name": "alice"},
-                FieldPredicate(key_path="name", operator=Operator.EQ, target="alice"),
-                id="scalar_sugars_to_eq",
-            ),
-            pytest.param(
-                {"age": {"gt": 10}},
-                FieldPredicate(key_path="age", operator=Operator.GT, target=10),
-                id="single_predicate_unwraps",
-            ),
-            pytest.param(
-                {"a": 1, "b": 2},
-                And(
-                    clauses=[
-                        FieldPredicate(key_path="a", operator=Operator.EQ, target=1),
-                        FieldPredicate(key_path="b", operator=Operator.EQ, target=2),
-                    ],
+                {"field": ["hobby", "level"], "operator": "gt", "target": 1},
+                FieldPredicate(
+                    field=("hobby", "level"), operator=Operator.GT, target=1
                 ),
-                id="multi_top_level_keys_wrap_in_and",
+                id="field",
             ),
             pytest.param(
-                {"age": {"gt": 10, "lt": 20}},
-                And(
-                    clauses=[
-                        FieldPredicate(key_path="age", operator=Operator.GT, target=10),
-                        FieldPredicate(key_path="age", operator=Operator.LT, target=20),
-                    ],
-                ),
-                id="multi_predicate_bundle_unfolds_into_and",
+                {"and": [_LEAF, _LEAF]},
+                And(clauses=[_fp("a", eq=1), _fp("a", eq=1)]),
+                id="and",
             ),
             pytest.param(
-                {"and": [{"a": 1}, {"b": 2}]},
-                And(
-                    clauses=[
-                        FieldPredicate(key_path="a", operator=Operator.EQ, target=1),
-                        FieldPredicate(key_path="b", operator=Operator.EQ, target=2),
-                    ],
-                ),
-                id="explicit_and",
+                {"or": [_LEAF, _LEAF]},
+                Or(clauses=[_fp("a", eq=1), _fp("a", eq=1)]),
+                id="or",
             ),
             pytest.param(
-                {"or": [{"x": 1}, {"x": 2}]},
-                Or(
-                    clauses=[
-                        FieldPredicate(key_path="x", operator=Operator.EQ, target=1),
-                        FieldPredicate(key_path="x", operator=Operator.EQ, target=2),
-                    ],
-                ),
-                id="explicit_or",
-            ),
-            pytest.param(
-                {"not": {"id": {"startswith": "__"}}},
-                Not(
-                    clause=FieldPredicate(
-                        key_path="id",
-                        operator=Operator.STARTSWITH,
-                        target="__",
-                    ),
-                ),
-                id="explicit_not_unwraps_single_inner",
+                {"not": {"or": [_LEAF]}},
+                Not(clause=Or(clauses=[_fp("a", eq=1)])),
+                id="not",
             ),
         ],
     )

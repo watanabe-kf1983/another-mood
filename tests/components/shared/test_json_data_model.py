@@ -217,37 +217,26 @@ class TestSaveModel:
 
 
 class TestPluck:
-    def test_flat_literal_key(self) -> None:
-        assert pluck({"a": "v"}, "a") == "v"
+    def test_one_key(self) -> None:
+        assert pluck({"a": "v"}, ("a",)) == "v"
 
-    def test_dotted_path_into_nested_mapping(self) -> None:
-        assert pluck({"a": {"b": "v"}}, "a.b") == "v"
+    def test_path_into_nested_mapping(self) -> None:
+        assert pluck({"a": {"b": "v"}}, ("a", "b")) == "v"
 
-    def test_flat_dotted_key_takes_precedence_over_nested(self) -> None:
-        # When the record could be resolved either way, the longer literal
-        # key wins.
-        record: dict[str, Any] = {"a.b": "flat", "a": {"b": "nested"}}
-        assert pluck(record, "a.b") == "flat"
-
-    def test_partial_prefix_match_then_recurse_into_remainder(self) -> None:
-        # Catalog edge ``a.b.c``; record carries flat ``a.b`` with ``c`` nested
-        # inside.  Longest match consumes ``a.b`` first, then ``c``.
-        assert pluck({"a.b": {"c": "v"}}, "a.b.c") == "v"
-
-    def test_raises_when_no_prefix_matches(self) -> None:
+    def test_raises_when_key_is_missing(self) -> None:
         with pytest.raises(KeyError):
-            pluck({"x": 1}, "missing")
+            pluck({"x": 1}, ("missing",))
 
     def test_raises_when_intermediate_value_is_scalar(self) -> None:
         with pytest.raises(KeyError):
-            pluck({"a": 1}, "a.b")
+            pluck({"a": 1}, ("a", "b"))
 
     def test_returns_falsy_value_verbatim(self) -> None:
         # Bug-shield: ``None`` / ``False`` / ``0`` must surface as-is
         # rather than be folded into "missing".
-        assert pluck({"a": False}, "a") is False
-        assert pluck({"a": None}, "a") is None
-        assert pluck({"a": 0}, "a") == 0
+        assert pluck({"a": False}, ("a",)) is False
+        assert pluck({"a": None}, ("a",)) is None
+        assert pluck({"a": 0}, ("a",)) == 0
 
 
 class TestPut:

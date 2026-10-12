@@ -25,9 +25,9 @@ OpenAPI は API 通信プロトコルを記述するため、エンドポイン�
 
 YAML のコメント構文（`#`）で代替可能。
 
-### ルートは record 形
+### ルートに `additionalProperties: <schema>` を許さない
 
-entity の集合はスキーマの宣言だけで確定させる。ルートの各プロパティがそのまま entity で、カタログもクエリの `from:` もメタドキュメントの目次も、データを読む前にこの集合を知っている。ルートに map 形を許すと entity 名がデータ側で決まることになり、スキーマから起こしたカタログが entity を列挙できない。
+ルートはデータ総体への入口で、各プロパティがそれぞれの entity への入口になる。`additionalProperties: <schema>` はこのツールではレコードの集合（map 形）を意味し、ルートがレコードの集合だと、その入口が無くなる。
 
 ### `type` は単一の文字列
 
@@ -39,7 +39,7 @@ attribute には一つの型を持たせる。カタログが attribute ごと�
 
 **object 属性は構造化データのためのもの** — 形の定まらないデータは string 属性で持つべきで、object で受けるものではない。素の `type: object` を残すと、その配下だけスキーマ検査が効かない穴が残り続ける。
 
-**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../../../20-design/75-meta-documentation.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
+**スキーマに書いた値もデータになる** — `title` / `description` / `default` / `examples` / `enum` / `const` はカタログ構築が値のまま転記し、カタログは永続化されて generator がメタドキュメントを描くときに読み直す ([meta-documentation.md](../../../20-design/75-meta-documentation/10-database-information.md))。つまりスキーマの値には、データと同じ [JSON データモデル](../../../20-design/40-communication/10-json-data-model.md) の制約が及ぶ。YAML は JSON のスーパーセットなので、型が無制約な場所には YAML ローダが構築した `datetime.date` 等が入りうる。
 
 ## x-ref の背景（各論）
 

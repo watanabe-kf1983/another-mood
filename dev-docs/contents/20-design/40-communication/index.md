@@ -10,7 +10,7 @@ workspace は、一回の実行でステージの出力ディレクトリが並�
 
 #### ステージ間の受け渡しは hardlink
 
-ステージ間・ステージ内の受け渡しは、ファイルをコピーせず **hardlink** で運ぶ。受け渡しはディレクトリの写しで行うので、コピーで運ぶと一つのファイルが hop の数だけ複製されるため（[背景](../../90-appendix/20-design/40-communication/index.md#ステージ間の受け渡しを-hardlink-にした理由)）。実バイトのコピーは contents → workspace の境界の 1 回だけになり、以降の hop はすべて同じ inode を共有する。hardlink が張れない場合（別 FS をまたぐ、exFAT の外付けや SMB 共有など非対応の FS）はコピーに自動フォールバックし、[製品の動作環境](../../10-background/10-product.md#what) (Linux / macOS / Windows) を崩さない（`transfer.link_or_copy`）。
+ステージ間・ステージ内の受け渡しは、ファイルをコピーせず **hardlink** で運ぶ。受け渡しはディレクトリの写しで行うので、コピーで運ぶと一つのファイルが hop の数だけ複製されるため（[背景](../../90-appendix/20-design/40-communication/index.md#ステージ間の受け渡しを-hardlink-にした理由)）。実バイトのコピーは contents → workspace の境界の 1 回だけになり、以降の hop はすべて同じ inode を共有する。hardlink が張れない場合（別 FS をまたぐ、exFAT の外付けや SMB 共有など非対応の FS）はコピーに自動フォールバックし、[製品の動作環境](../../10-concept/10-product.md#what) (Linux / macOS / Windows) を崩さない（`transfer.link_or_copy`）。
 
 #### ゆえに各ステージは write-once
 

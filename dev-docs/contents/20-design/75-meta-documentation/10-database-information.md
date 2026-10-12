@@ -1,10 +1,10 @@
-# メタドキュメンテーション
+# DB 自己記述
 
-ユーザが書いたスキーマ定義とビュー定義を、ツールが内蔵のテンプレートで自動的に可視化する機能。
+ユーザが書いたスキーマ定義とビュー定義を、ツールが内蔵のテンプレートで自動的に可視化する機能。出力は `__db/` に置く。
 
 ## External Design
 
-- ビュー定義ページは Shape (各出力フィールドの型 + entity ref) を出し、Query Object の `derive` がそれを生成する。複合型を許容する本ツールでは、カラムヘッダとサンプル行だけでは結果形状が伝わらないため（[背景](../90-appendix/20-design/75-meta-documentation.md#view-の-shape-が必須な理由)）
+- ビュー定義ページは Shape (各出力フィールドの型 + entity ref) を出し、Query Object の `derive` がそれを生成する。複合型を許容する本ツールでは、カラムヘッダとサンプル行だけでは結果形状が伝わらないため（[背景](../../90-appendix/20-design/75-meta-documentation/10-database-information.md#view-の-shape-が必須な理由)）
 
 ## Proposals
 

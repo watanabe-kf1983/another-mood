@@ -92,7 +92,7 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 | Track | Album | Artist |
 |-------|-------|--------|
 {% for row in tracks_with_artist %}
-| {{ row.title }} | {{ row.album.title }} | {{ row.artist.name }} |
+| {{ row.title }} | {{ row.album.title }} | {{ row.album.artist.name }} |
 {% endfor %}
 
 ## Playlists

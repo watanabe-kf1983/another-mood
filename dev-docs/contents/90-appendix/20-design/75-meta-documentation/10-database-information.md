@@ -1,6 +1,6 @@
-# メタドキュメンテーション (appendix)
+# DB 自己記述 (appendix)
 
-[メタドキュメンテーション](../../20-design/75-meta-documentation.md) の背景。
+[DB 自己記述](../../../20-design/75-meta-documentation/10-database-information.md) の背景。
 
 ## View の Shape が必須な理由
 

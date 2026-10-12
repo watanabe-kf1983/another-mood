@@ -46,11 +46,11 @@ views 入力を検証・正規化し、各ビュー定義をパースして派�
 **Composer**
 正規化済みデータを自動的にビューとしてパススルーし、さらにビュー定義があれば contents に対して適用して結果を出力する。派生エンティティは Query Deriver で生成済みのため Composer は views の passthrough として伝搬させる。
 
-**Document Generator**（[generator.md](70-generator/10-generator.md)）
+**Document Generator**（[generator](70-generator/index.md)）
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
 
 **Reconcile**
-Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありならビルド失敗ページに差し替える。詳細は [generator.md](70-generator/10-generator.md) 参照。
+Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありならビルド失敗ページに差し替える。詳細は [build-report.md](75-meta-documentation/30-build-report.md) 参照。
 
 **Site Builder**
 生成された Markdown を HTML にレンダリングする。

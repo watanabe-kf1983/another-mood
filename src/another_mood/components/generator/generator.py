@@ -66,6 +66,9 @@ def generate(
     out_dir: Path,
 ) -> None:
     """Render views data through Jinja2 templates to Markdown."""
+    # The meta edition (``__db/``) and the user editions share the ``Edition``
+    # type on purpose: one loop renders them all, with no branch that treats
+    # the meta edition specially.
     user_editions = load_editions(reports_file, templates_dir)
     editions = (META_EDITION, *user_editions)
 
