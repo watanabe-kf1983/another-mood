@@ -665,7 +665,8 @@ categories:
         title: 告知・宣伝を伴うローンチ
         note: >-
           Q1 は静かな公開に留め、S2-S5 (システム開発ドキュメント) の完成を待って
-          告知する。内容 (告知先・訴求) は接近時に具体化。前提 W2, W3, Q7。
+          告知する。告知先・訴求のラフは R3 より先に決める (README の章立てが
+          そこから決まる)。前提 W2, W3, R3。
           Context7 には登録しない: 引かれるのはインストール済みのツールについて
           コードを書く場面で、そこでは同梱の `mood docs` が版の一致した正本で
           あり、main の一時点を索引する Context7 はそれと競合するだけになる。
@@ -678,20 +679,6 @@ categories:
         title: PR マージ側の破壊的変更ゲート
         phase: 15
         done: true
-      Q7:
-        title: リポジトリの外部公開整備 (GH 設定 / CONTRIBUTING / changelog)
-        note: >-
-          外部に見られる前提のリポジトリ整備。branch protection 等の GH 設定、
-          外部が読む changelog / リリースノートの体裁、メンテナンス期待値の明文化
-          (as-is / no-SLA / fork 歓迎)。コントリビューションは積極受け入れしない方針
-          — Issues は有効のまま放置・PR も放置・Dependabot version updates は有効化しない。
-          うるさくなったら (AI slop 等) そのとき対策を再考。
-          対応 Python 版の下限判断は Q12 へ分離した。
-          CONTRIBUTING の要否検討もここ (repo 内部には T4 の
-          lint コメントで足りる。外部コントリビュータという宛先が生まれて
-          初めて意味を持つ装置)。
-          受益者が現れるローンチまで不要。Q3 の前提。
-        phase: 17
       Q8:
         title: PyPI アカウント準備 (登録 + 2FA)
         phase: 14
@@ -719,16 +706,14 @@ categories:
       R3:
         title: README の 1.0.0 向け全面改稿
         note: >-
-          ローンチの顔としての書き直し。R2 の最小版を、告知に耐える体裁へ
-          格上げする。R2 は README を「何であるか / Install / Quick start /
-          Documentation」の 4 節に絞り、Status・License・DEVELOPMENT.md 導線は
-          意図的に置いていない。メンテナンス期待値 (as-is / no-SLA / fork 歓迎) の
-          文言は Q7 が持つので、README に戻すならそちらと揃える。
-          classifiers / keywords / description 磨きなど Q9 で最小に留めた残メタ
-          データも同じ籠で拾う (「どのくらい枯れているか」は README の散文ではなく
-          classifiers の Development Status がサイドバーに出す生態系の定位置)。
-          PyPI ページはリリース時の同梱 README で更新されるため、1.0.0 の tag より
-          前に main へ入っていればよい。Q3 の前提。
+          ローンチの顔としての書き直し。章立ては Q3 の訴求のラフから決める。
+          R2 で意図的に外した Status・License・DEVELOPMENT.md 導線は要否を再判断。
+          メンテナンス期待値 (as-is / no-SLA / fork 歓迎) を一文置き、
+          CONTRIBUTING・Issue テンプレート・SECURITY.md は置かない
+          (外部コントリビューションは受け入れない方針で、宛先がいない)。
+          About 欄 (description / topics) と Q9 の残メタデータ (authors /
+          classifiers / keywords) も同じ籠。1.0.0 の tag より前に main へ入れる。
+          Q3 の前提。旧 Q7 (リポジトリの外部公開整備) を縮小して吸収。
         phase: 17
       R5:
         title: showcase / dev-docs の実物マニフェストから minimum_version を削除
