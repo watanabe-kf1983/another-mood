@@ -103,7 +103,7 @@ normalize は既にこの対称性を持っている（ルート直下の single
 
 #### 現状、ルートが record と違う扱いを受けている場所
 
-行は揃える順に並べる。「扱いを合わせたときの波及」の列は、ルートの Entity を列に出した瞬間にその場所で起きること。先頭の二行は単独で潰せる。「schema の出どころ」「木 → 列」「列での親の表現」「列 → 木」「内蔵 `__definition`」の五行は一斉に壊れるので、一つの PR で揃える。以下これを**ルート Entity を列に出す PR** と呼ぶ。残りの三行は壊れず、この PR の後に一行ずつ潰せる。x-ref の参照先に `site_config.items` を許すのは「データ側の record の取得」と同時にするのがよいかもしれない: ルート Entity を列に出す PR では参照先集合から外したままにし、FK 検査の袋に入った時点で許す。ルート Entity を列に出す PR の前に、各行の As-Is（`from:` の `unknown source`、x-ref の `not found`、`__db/` にトップレベルの singleton が出ないこと）を fixture テストに固定しておく。
+行は揃える順に並べる。「扱いを合わせたときの波及」の列は、ルートの Entity を列に出した瞬間にその場所で起きること。先頭の二行は単独で潰せる。「schema の出どころ」「木 → 列」「列での親の表現」「列 → 木」「内蔵 `__definition`」の五行は一斉に壊れるので、一つの PR で揃える。以下これを**ルート Entity を列に出す PR** と呼ぶ。残りの三行は壊れず、この PR の後に一行ずつ潰せる。x-ref の参照先に `site_config.items` を許すのは「データ側の record の取得」と同時にするのがよいかもしれない: ルート Entity を列に出す PR では参照先集合から外したままにし、FK 検査の袋に入った時点で許す。各行の As-Is（`from:` の `unknown source`、x-ref の `not found`、`__db/` にトップレベルの singleton が出ないこと）は fixture テストに固定済み（`tests/pipeline/test_top_level_shapes.py` と preprocess の各テスト）。揃えるたびに、そのテストの期待値を To-Be に書き換える。
 
 | 場所 | record の扱い | ルートの扱い | 扱いを合わせたときの波及 |
 |---|---|---|---|
@@ -123,10 +123,7 @@ normalize は既にこの対称性を持っている（ルート直下の single
 - ルートの `id` は `__root`、`item_type.id` は `__root.item`。`__` で始まるので内蔵 view の `__` 除外がそのまま効き、`__db/` が変わらないまま表示の判断を「メタページ」の行まで先送りできる。利用者の entity 名と view 名は `__` を使えないので衝突しない
 - ルートの属性に view を含める。`inspect_schema` が出したルートのカタログに query_deriver が view の属性を追記する。J5 が求める「tap のルートを映す」属性表はこれで得られ、J5 側に合成の仕事を持ち込まない。懸念: カタログはファイル別に書いて `load_model` の連結で合流させるので、素朴に追記すると `__root` の Entity record が二件並ぶ。追記の形（query_deriver が完全なルートを出し直す、読む側で同じ id の record を束ねる、等）は実装時に決める
 
-進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）:
-
-1. 各行の As-Is を fixture テストに固定する（`from: site_config` の `unknown source`、x-ref で `site_config.items` を指したときの `not found`、`__db/` にトップレベルの singleton が出ないこと）
-2. 以降は表の順: 「メタページの行の取得」→ ルート Entity を列に出す PR（五行を同時に）→ 「source 名の解決」→ 「データ側の record の取得」→ 「メタページ」→ docs の同期
+進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「メタページの行の取得」→ ルート Entity を列に出す PR（五行を同時に）→ 「source 名の解決」→ 「データ側の record の取得」→ 「メタページ」→ docs の同期
 
 #### 依存
 
