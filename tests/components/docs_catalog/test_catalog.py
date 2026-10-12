@@ -15,7 +15,7 @@ from another_mood.components.docs_catalog.catalog import (
 def synthetic_docs(tmp_path: Path) -> Path:
     """Create a small synthetic docs tree with a manifest."""
     (tmp_path / "catalog.yaml").write_text(
-        "resources:\n"
+        "docs:\n"
         "  - path: foo.md\n"
         "    description: |\n"
         "      Foo description.\n"
@@ -35,14 +35,8 @@ def test_load_catalog_parses_manifest(synthetic_docs: Path) -> None:
     assert set(catalog) == {"docs://foo.md", "docs://bar/baz.yaml"}
 
     foo = catalog["docs://foo.md"]
-    assert foo.name == "foo.md"
     assert foo.description == "Foo description."
-    assert foo.mime_type == "text/markdown"
     assert foo.path == (synthetic_docs / "foo.md").resolve()
-
-    baz = catalog["docs://bar/baz.yaml"]
-    assert baz.name == "bar/baz.yaml"
-    assert baz.mime_type == "application/yaml"
 
 
 def test_list_docs_returns_bundled_catalog() -> None:

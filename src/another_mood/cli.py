@@ -16,7 +16,7 @@ import typer
 from another_mood import command
 from another_mood.command import BuildResult, UserError
 from another_mood.components.scaffold.blueprints import ScaffoldResult
-from another_mood.components.shared.tool_version import tool_version
+from another_mood.components.shared.tool_version import tool_homepage, tool_version
 from another_mood.components.tap.tap import TAP_DOCUMENT_NAME
 from another_mood.config import ConfigValidationError, ProjectConfig
 
@@ -24,10 +24,10 @@ from another_mood.config import ConfigValidationError, ProjectConfig
 # options. Shell completion is rarely set up for a `uv tool install`-distributed
 # CLI, and the two options only clutter the `mood --help` surface that readers
 # (humans and coding agents alike) scan to discover commands.
-app = typer.Typer(add_completion=False)
+app = typer.Typer(add_completion=False, epilog=f"Home page: {tool_homepage()}")
 blueprint_app = typer.Typer(help="Manage built-in blueprints (sample projects).")
 app.add_typer(blueprint_app, name="blueprint")
-docs_app = typer.Typer(help="Inspect bundled documentation (also exposed via MCP).")
+docs_app = typer.Typer(help="Inspect bundled documentation.")
 app.add_typer(docs_app, name="docs")
 
 

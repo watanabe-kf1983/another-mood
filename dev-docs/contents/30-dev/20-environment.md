@@ -89,8 +89,5 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | ast-grep | 構文パターンによるコード検索 |
 | context7 | ライブラリドキュメントの取得 |
 | playwright | ヘッドレスブラウザ駆動。Mermaid 等の生成図を実機レンダリングして見た目を検証する用途。`--headless` 固定 |
-| another-mood | このリポジトリ自身の MCP サーバ（`uv run mood-mcp`）。dev-docs / showcase を編集する際の dog-fooding |
 
 language-server は pyright-langserver を `--stdio` で起動する。
-
-`.vscode/mcp.json` は VS Code 内蔵の MCP クライアント向けで、another-mood だけを定義する。

@@ -204,11 +204,11 @@ mood blueprint apply <name> <project_dir>
 
 Applies the named blueprint by copying its sources into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name fails with the available list.
 
-A fresh [manifest](manifest.md) (`sbdb.yaml`) is also generated. Files unrelated to Another Mood (`.git`, `README.md`, …) are left alone, but a blueprint is never merged into an existing project: applying into one fails without writing anything.
+A fresh [manifest](manifest.md) (`sbdb.yaml`) is also generated, and a `README.md` pointing to Another Mood unless one exists. Other files (`.git`, …) are left alone, but a blueprint is never merged into an existing project: applying into one fails without writing anything.
 
 ## docs
 
-Inspect the documentation that ships with Another Mood. The same catalog is exposed to AI agents as MCP Resources and Tools; these CLI commands give you the same view from the terminal.
+Inspect the documentation that ships with Another Mood.
 
 ### docs list
 
@@ -250,7 +250,7 @@ Prints usage and the command list. Also available per command (`mood build --hel
 
 ## Injected values (`vars`)
 
-`vars` carries values of your own into the build, for templates to read back through [`build_info`](template.md#build_info). Three channels supply them, and a value arrives under `vars.<name>` whichever one you reach for:
+`vars` carries values of your own into the build, for templates to read back through [`build_info`](template.md#build_info). Two channels supply them, and a value arrives under `vars.<name>` whichever one you reach for:
 
 ```bash
 MOOD_VARS_GIT_COMMIT_ID=$(git rev-parse --short HEAD) mood build .
@@ -267,9 +267,8 @@ The name is yours to choose, and values are carried as strings, whatever they lo
 
 - **`MOOD_VARS_<NAME>`** — the prefix is stripped and the rest lowercased. The underscores that remain are part of the name rather than separators, so `MOOD_VARS_CI_RUN_URL` arrives as `vars.ci_run_url`. This channel reaches one level only: a name with a dot in it has no spelling here.
 - **`--var NAME=VALUE`** on `build` and `watch`, repeatable — the name is taken as written, dots and capitals included, so `--var ci.run_id=7` arrives as `vars.ci.run_id`. Only the first `=` splits, leaving any others to the value; `--var channel=` injects an empty string, and a `--var` without a name or without `=` is an error that stops the run.
-- **`vars`** on the MCP [`build`](../mcp.md) tool — a mapping of names to values, taken as written like `--var`.
 
-Where two channels name the same key, `--var` and the MCP argument win over the environment.
+Where both channels name the same key, `--var` wins over the environment.
 
 Everything injected this way is listed on the build's colophon page at `output/__build_info/` — including values that only one template reads, or none.
 

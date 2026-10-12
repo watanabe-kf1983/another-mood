@@ -57,7 +57,7 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 変換の要点: ドット名の入れ子復元（[view 出力にドット入りキーは生まれない](../60-composer/10-query-dsl-spec.md#external-design)ので、カタログのドットは必ず入れ子）、ルートの合成（[M13](../45-schema/10-schema-spec.md#ルート-entity-の導入-m13) の `__root` 前提）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
 
-提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`、MCP ツール。導線（docs / MCP ツール記述）とセットで初めて使われる点に注意。
+提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`。導線（docs）とセットで初めて使われる点に注意。
 
 その他の論点: レコード 0 件エンティティのキー欠落と required 方針、`additionalProperties: false` の採否。
 

@@ -19,10 +19,6 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
     },
-    "another-mood": {
-      "command": "uv",
-      "args": ["run", "mood-mcp"]
-    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest", "--headless"]
