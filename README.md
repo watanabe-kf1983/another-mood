@@ -14,7 +14,7 @@ Requires Python 3.12 or later.
 pipx install another-mood
 ```
 
-If you use [uv](https://docs.astral.sh/uv/), `uv tool install` takes the same argument and fetches a suitable Python for you. Either way you get the `mood` command on your PATH, along with `mood-mcp` for coding agents.
+If you use [uv](https://docs.astral.sh/uv/), `uv tool install` takes the same argument and fetches a suitable Python for you. Either way you get the `mood` command on your PATH.
 
 ## Quick start
 
@@ -27,6 +27,6 @@ mood build my-project
 
 ## Documentation
 
-[User guide](https://github.com/watanabe-kf1983/another-mood/blob/main/docs/index.md) — concepts and walkthrough, per-feature reference, and how to give coding agents the same operations over MCP. It ships with the package too, so an agent can read it through the MCP server without leaving your project.
+[User guide](https://github.com/watanabe-kf1983/another-mood/blob/main/docs/index.md) — concepts and walkthrough, and per-feature reference. It ships with the package too, so a coding agent can read it with `mood docs read` without leaving your project.
 
 [Showcases](https://watanabe-kf1983.github.io/another-mood/) — the sample projects, built and hosted, each linked to its sources.

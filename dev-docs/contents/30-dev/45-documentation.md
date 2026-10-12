@@ -61,5 +61,5 @@ appendix は本文からのリンクで到達する。appendix だけを読ん�
 
 - dev-docs の `index.md`（ビルド出力 `.another-mood/dev-docs/output/web/index.md`）— dev-docs 全体インデックス
 - `docs/index.md` — 利用者向けトップ
-- `docs/catalog.yaml` — MCP 公開対象のカタログ
+- `docs/catalog.yaml` — `mood docs` が配るドキュメントのカタログ
 - `DEVELOPMENT.md` — 開発者向けポインタ

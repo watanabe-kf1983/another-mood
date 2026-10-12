@@ -33,20 +33,19 @@ class ProjectConfig(BaseSettings):
 
     Paths are taken as given: nothing here reads the process CWD, so every
     path must be absolute already (``verify`` enforces it). Absolutizing —
-    and thereby choosing what relative paths mean — belongs to the CLI / MCP
+    and thereby choosing what relative paths mean — belongs to the CLI
     boundary that owns the caller's standing position.
     """
 
     model_config = SettingsConfigDict(env_prefix="MOOD_")
 
     # The directory the derived `.another-mood/` tree hangs from, and the base
-    # the tree is namespaced by. The CLI binds it to the current directory, the
-    # MCP server to project_dir (which collapses the namespacing tail).
+    # the tree is namespaced by. The CLI binds it to the current directory.
     #
     # Bound by the boundary layer, not configured by the user: no CLI option
-    # and no MCP argument sets it, and MOOD_NAMESPACE_ROOT never takes effect,
-    # since both boundaries pass the field explicitly and init arguments
-    # outrank environment sources. Move the output instead — out_dir /
+    # sets it, and MOOD_NAMESPACE_ROOT never takes effect, since the CLI
+    # passes the field explicitly and init arguments outrank environment
+    # sources. Move the output instead — out_dir /
     # site_dir / tap_dir reach every path this would move, one at a time.
     namespace_root: Path
 
@@ -69,8 +68,8 @@ class ProjectConfig(BaseSettings):
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=5077)
 
-    # Caller-injected values, for templates to query by key. The CLI / MCP
-    # channels add onto what the environment supplied here.
+    # Caller-injected values, for templates to query by key. The CLI's
+    # --var adds onto what the environment supplied here.
     vars: dict[str, str] = Field(default_factory=_vars_from_env)
 
     def with_injected_vars(self, injected: Mapping[str, str]) -> "ProjectConfig":

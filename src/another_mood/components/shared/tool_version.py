@@ -18,9 +18,8 @@ PROCESSOR_ID = "another-mood"
 def tool_version() -> str:
     """Return the running another-mood's version as a PEP 440 string.
 
-    Every surface that names a version -- ``mood --version``, the MCP server's
-    serverInfo, the manifest's ``minimum_version`` gate -- reports this one
-    value, so a version the gate rejects is the version ``--version`` shows.
+    Every surface that names a version -- ``mood --version``, the manifest's
+    ``minimum_version`` gate -- reports this one value, so a version the gate rejects is the version ``--version`` shows.
     """
     return metadata.version(DISTRIBUTION_NAME)
 
