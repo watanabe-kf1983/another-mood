@@ -932,6 +932,56 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)  # should not raise
 
+    def test_xref_to_collection_inside_top_level_singleton_rejected(
+        self, tmp_path: Path
+    ) -> None:
+        """Current limitation, not a contract: ``site_config.items`` opens
+        no entity today, so an x-ref naming it gets the same "not found"
+        as a typo.
+
+        The intended behavior is that a collection inside a top-level
+        singleton is a valid x-ref target, as it is inside a record.
+
+        TODO: rewrite the expectation once the root is catalogued as a record.
+        """
+        schema_file = _write_schema(
+            tmp_path / "schema.yaml",
+            dedent("""\
+                type: object
+                additionalProperties: false
+                properties:
+                  site_config:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            id: { type: string }
+                  refs:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        item_id:
+                          type: string
+                          x-ref:
+                            entity: site_config.items
+            """),
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        with pytest.raises(FileValidationError) as exc_info:
+            inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        messages = [d.message for d in exc_info.value.diagnostics]
+        assert messages == ["x-ref target entity 'site_config.items' not found"]
+
     def test_xref_to_definition_namespace_rejected(self, tmp_path: Path) -> None:
         schema_file = _write_schema(
             tmp_path / "schema.yaml",
