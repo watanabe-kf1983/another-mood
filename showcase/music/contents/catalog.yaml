@@ -1,0 +1,34 @@
+catalog:
+  title: Music Catalog
+  maintainer: The editorial desk
+  featured:
+    - album_id: tidal_atlas
+      note: The record that put Coastal Tapes on the map.
+    - album_id: winter_in_the_machine
+      note: Newest arrival, cover art included.
+  series:
+    city_nights:
+      name: City Nights
+      description: Records made for streets after dark.
+      albums:
+        - album_id: neon_after_rain
+        - album_id: last_train_to_dawn
+    live_rooms:
+      name: Live Rooms
+      description: Concert recordings, small rooms first.
+      albums:
+        - album_id: live_at_the_garage
+        - album_id: live_in_osaka
+  editorial:
+    editor: Midori Circuit
+    picks:
+      engine_room:
+        track_id: diesel_hymn
+        comment: Five minutes of engine-room gospel.
+      open_window:
+        track_id: estuary_mirror
+        comment: Best heard with the window open.
+
+updated_at: "2026-10-12"
+
+moods: [nocturnal, industrial, coastal]

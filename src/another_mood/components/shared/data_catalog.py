@@ -299,6 +299,10 @@ class Entity:
 
 # ── Conversion between forms ──────────────────────────────────────────
 
+#: Id of the root entity: the one record the whole data tree is.  Names
+#: in the user's namespaces cannot start with ``__``, so it never collides.
+ROOT_ENTITY_ID = "__root"
+
 
 def build_tree(catalog: Sequence[Entity]) -> Node:
     """Build a virtual-root tree from a flat catalog list — the inverse
@@ -307,7 +311,9 @@ def build_tree(catalog: Sequence[Entity]) -> Node:
     The virtual root mirrors the records-side ``Sequence[Record]``
     wrapping that ``From.apply`` receives: every top-level entity hangs
     off it as an ``object[]`` edge so path traversal walks ``object[]``
-    edges uniformly down to any leaf entity.
+    edges uniformly down to any leaf entity.  The top-level entities are
+    the root entity's children, under their full id, and the views; the
+    root entity itself is not hung.
     """
     return Node(
         children=[
@@ -320,7 +326,9 @@ def build_tree(catalog: Sequence[Entity]) -> Node:
                 ),
                 _build_entity_node(entity, catalog),
             )
-            for entity in _children_of(None, catalog)
+            for entity in catalog
+            if entity.parent_entity == ROOT_ENTITY_ID
+            or (entity.parent_entity is None and entity.id != ROOT_ENTITY_ID)
         ],
     )
 
@@ -343,6 +351,18 @@ def flatten_tree(
         parent_entity_id=None,
         metadata=metadata,
     )
+
+
+def flatten_root(node: Node) -> Sequence[Entity]:
+    """Flatten the root record ``node`` into Entity records, the root
+    entity (:data:`ROOT_ENTITY_ID`) first.
+
+    Unlike :func:`flatten_tree`, the root's id does not prefix the ids
+    under it: a top-level collection keeps its bare name (``users``), so
+    the first segment of every id below the root names the root's branch
+    it descends from.
+    """
+    return _flatten_entity(node, edge_path=(), parent_entity_id=None, metadata=None)
 
 
 # ── Internal helpers ──────────────────────────────────────────────────
@@ -442,7 +462,7 @@ def _edge_from_attribute(attr: Attribute, *, name: str) -> Edge:
     )
 
 
-def _children_of(parent_id: str | None, catalog: Sequence[Entity]) -> Sequence[Entity]:
+def _children_of(parent_id: str, catalog: Sequence[Entity]) -> Sequence[Entity]:
     """Entities in ``catalog`` whose ``parent_entity`` equals ``parent_id``."""
     return [e for e in catalog if e.parent_entity == parent_id]
 
@@ -461,9 +481,10 @@ def _flatten_entity(
     so this function is only ever invoked on composite nodes.
 
     ``edge_path`` stays a tuple rather than a dot-joined string because
-    an attribute id can itself contain dots (``hobby.pets``).
+    an attribute id can itself contain dots (``hobby.pets``).  An empty
+    ``edge_path`` is the root entity.
     """
-    self_id = ".".join(edge_path)
+    self_id = _entity_id(edge_path)
     attributes = _flatten_attributes(((), node))
     self_entity = Entity(
         id=self_id,
@@ -545,6 +566,13 @@ def _to_attribute(node: Node, *, edge: Edge, edge_path: Sequence[str]) -> Attrib
     )
 
 
+def _entity_id(edge_path: Sequence[str]) -> str:
+    if edge_path:
+        return ".".join(edge_path)
+    else:
+        return ROOT_ENTITY_ID
+
+
 def _item_type_id(edge_path: Sequence[str]) -> str:
     """Compute the ObjectType id for an entity reached via ``edge_path``.
 
@@ -552,4 +580,7 @@ def _item_type_id(edge_path: Sequence[str]) -> str:
     to match the recursive ``{...}.{name}.item`` ObjectType-id
     convention.  Dots inside a single segment are preserved.
     """
-    return ".item.".join(edge_path) + ".item"
+    if edge_path:
+        return ".item.".join(edge_path) + ".item"
+    else:
+        return ROOT_ENTITY_ID + ".item"

@@ -4,7 +4,7 @@
 
 ## Entity Relationships
 
-{# `prose` is always a built-in root entity, so __entity_tree / __entity_defs
+{# `prose` is always a built-in top-level entity, so __entity_tree / __entity_defs
    are never empty — no empty-state branch here (cf. ## Views, which keeps
    one: user views can be absent). #}
 {% filter dedent %}
@@ -13,11 +13,12 @@
     {% for entity in __entity_tree %}
         class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
     {% endfor %}
-    {% for entity in __entity_tree if entity.parent_entity %}
+    {% set node_ids = __entity_tree | map(attribute='id') | list %}
+    {# The root entity is not a node: top-level entities draw no edge to it. #}
+    {% for entity in __entity_tree if entity.parent_entity in node_ids %}
         {% set parent = entities | child(entity.parent_entity) %}
         {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
     {% endfor %}
-    {% set node_ids = __entity_tree | map(attribute='id') | list %}
     {% for entity in __entity_tree %}
         {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
             {% set target = entities | child(attr.x_ref.entity) %}
@@ -29,7 +30,7 @@
 
 ## Entities
 
-{# never empty: `prose` is always a built-in root entity (see ## Entity Relationships). #}
+{# never empty: `prose` is always a built-in top-level entity (see ## Entity Relationships). #}
 {% filter dedent %}
     {% for entity in __entity_defs %}
         - {{ entity | link }}{% if entity.builtin %} (built-in){% endif %}{% if entity.metadata.title %} — {{ entity.metadata.title }}{% endif +%}
@@ -53,7 +54,7 @@
 {% else %}
 (no views defined yet)
 {% endif %}
-{# Data pages for every root source, entities and views alike; each
+{# Data pages for every top-level source, entities and views alike; each
    render splits to its own /__data/{id} page, so nothing shows inline. #}
 {% filter dedent %}
     {% for source in __data %}

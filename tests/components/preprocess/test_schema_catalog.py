@@ -5,10 +5,7 @@ from collections.abc import Sequence
 import yaml
 
 from another_mood.components.shared import data_catalog as dc
-from another_mood.components.preprocess.schema_catalog import (
-    build_catalog_node,
-    collect_entities,
-)
+from another_mood.components.preprocess.schema_catalog import build_catalog_node
 
 # fmt: off
 
@@ -27,11 +24,11 @@ def _root_entities(name: str, src: str) -> Sequence[dc.Entity]:
     Unlike ``_entities``, the walk starts above the property, so the edge
     carrying the collection layer's metadata is part of it.
     """
-    return collect_entities({
+    return dc.flatten_root(build_catalog_node({
         "type": "object",
         "additionalProperties": False,
         "properties": {name: yaml.safe_load(src)},
-    })
+    }))[1:]
 
 
 # ── Schema → catalog node tree ──────────────────────────────────────
@@ -323,21 +320,14 @@ class TestBuildCatalogNode:
 
 
 class TestCatalogNodeToEntities:
-    """build_catalog_node + dc.flatten_tree: schema → flat Entity list."""
+    """build_catalog_node + dc.flatten_tree / dc.flatten_root: schema → flat Entity list."""
 
-    def test_top_level_non_collections_open_no_entity(self) -> None:
-        """Current limitation, not a contract: a top-level singleton, the
-        collection inside it, and a top-level scalar all leave the catalog,
-        so only ``users`` is listed.
-
-        The intended behavior is what the same shapes get inside a record
-        (see the singleton tests below): the singleton and the scalar fold
-        into the holding entity, and the collection opens an entity of its
-        own.
-
-        TODO: rewrite the expectation once the root is catalogued as a record.
-        """
-        assert collect_entities(yaml.safe_load("""
+    def test_root_is_flattened_as_a_record(self) -> None:
+        """The root flattens as a record does: a top-level singleton and a
+        top-level scalar fold into the root entity under dotted ids, and the
+        collection inside the singleton opens an entity of its own.  The
+        root's id does not prefix the ids under it."""
+        assert dc.flatten_root(_node("""
             type: object
             additionalProperties: false
             properties:
@@ -362,9 +352,27 @@ class TestCatalogNodeToEntities:
                   properties:
                     name: { type: string }
         """)) == [
-            dc.Entity("users", item_type=dc.ObjectType("users.item", origin_item_type="users.item", attributes=[
-                dc.Attribute("name", "string", False),
+            dc.Entity("__root", item_type=dc.ObjectType("__root.item", origin_item_type="__root.item", attributes=[
+                dc.Attribute("site_config",       "object",   False),
+                dc.Attribute("site_config.title", "string",   False),
+                dc.Attribute("site_config.items", "object[]", False, child_entity="site_config.items", child_item_type="site_config.items.item"),
+                dc.Attribute("title",             "string",   False),
+                dc.Attribute("users",             "object[]", False, child_entity="users", child_item_type="users.item"),
             ])),
+            dc.Entity(
+                "site_config.items",
+                item_type=dc.ObjectType("site_config.items.item", origin_item_type="site_config.items.item", attributes=[
+                    dc.Attribute("name", "string", False),
+                ]),
+                parent_entity="__root",
+            ),
+            dc.Entity(
+                "users",
+                item_type=dc.ObjectType("users.item", origin_item_type="users.item", attributes=[
+                    dc.Attribute("name", "string", False),
+                ]),
+                parent_entity="__root",
+            ),
         ]
 
     def test_top_level_array_of_objects(self) -> None:

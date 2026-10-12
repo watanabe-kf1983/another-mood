@@ -1,7 +1,7 @@
 """SchemaCatalog — build the data catalog tree from a JSON Schema.
 
 Converts the accepted JSON Schema subset into the catalog's ``dc.Node`` /
-``dc.Edge`` tree; ``dc.flatten_tree`` turns that into the flat entity
+``dc.Edge`` tree; ``dc.flatten_root`` turns that into the flat entity
 list the rest of the pipeline consumes.
 """
 
@@ -54,21 +54,6 @@ _ID_BRANCH: dc.Branch = (dc.Edge(name="id", type="string", required=True), dc.No
 
 
 # ── Schema → DataCatalog ─────────────────────────────────────────────
-
-
-def collect_entities(schema: SchemaNode) -> Sequence[dc.Entity]:
-    """Walk a root schema's top-level properties and collect their entities.
-
-    Each top-level property must be a collection (a map, or an array of
-    objects); top-level non-collections are silently dropped.
-    """
-    root = build_catalog_node(schema)
-    return [
-        entity
-        for edge, child in root.children
-        if dc.is_entity(edge, child)
-        for entity in dc.flatten_tree(child, edge.name, metadata=edge.metadata)
-    ]
 
 
 def build_catalog_node(schema: SchemaNode) -> dc.Node:
