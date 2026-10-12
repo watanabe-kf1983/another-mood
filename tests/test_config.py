@@ -25,7 +25,7 @@ class TestAnotherMoodRoot:
         assert config.out_dir == ROOT / ".another-mood/showcase/starter/output"
 
     def test_project_dir_as_the_root_itself(self) -> None:
-        # The MCP binding: the tail collapses and output lands in the project.
+        # Run from inside the project: the tail collapses and output lands in it.
         project = ROOT / "docs"
         config = ProjectConfig(
             namespace_root=project, project_dir=project

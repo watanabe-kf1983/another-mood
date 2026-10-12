@@ -26,7 +26,7 @@ With Python 3.12 or later already installed, [pipx](https://pipx.pypa.io/) does 
 pipx install another-mood
 ```
 
-Either way you get the `mood` command on your PATH (along with `mood-mcp` — see [Using with AI agents](mcp.md)).
+Either way you get the `mood` command on your PATH.
 
 ### Scaffold a sample and build
 

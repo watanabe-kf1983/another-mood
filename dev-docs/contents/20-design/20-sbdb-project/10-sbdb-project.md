@@ -4,7 +4,7 @@
 
 ### sbdb プロジェクトとは
 
-利用者がソースを書き、ツールに渡す単位となる一つのディレクトリ。CLI / MCP の `<project_dir>` はこれを指し、ツールはここを読んで文書を生成する。利用者向けの導線は `docs/guides.md` の Source structure 節。
+利用者がソースを書き、ツールに渡す単位となる一つのディレクトリ。CLI の `<project_dir>` はこれを指し、ツールはここを読んで文書を生成する。利用者向けの導線は `docs/guides.md` の Source structure 節。
 
 ### 構成
 
@@ -31,5 +31,3 @@
 ### sbdb プロジェクトと生成物の分離
 
 CLI は `<projectDir>` に生成物を書き込まず、出力 `.another-mood/` を CWD 直下に置く。入力ディレクトリはユーザのコンテンツ領域で、ツールから見れば参照先のため。利用者への約束は `docs/reference/cli.md` の `<project_dir>` 節、理由の全体は[背景](../../90-appendix/20-design/20-sbdb-project/10-sbdb-project.md#cli-が-another-mood-を-cwd-直下に配置する理由)。
-
-MCP 経由は意図的な例外で、出力を `<projectDir>/.another-mood/` に置く。エージェントが確実に読み戻せる場所がそこしかないため（`mcp_server.py` の `_project_overrides`）。
