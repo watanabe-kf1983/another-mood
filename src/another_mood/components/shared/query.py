@@ -11,7 +11,7 @@ The ``where`` clause's per-record predicate AST lives in
 wrapper.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Container, Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 from functools import reduce
@@ -79,16 +79,14 @@ class QueryNode(Protocol):
 
 @dataclass(frozen=True)
 class From(QueryNode):
-    """Read all rows of one entity by direct name lookup."""
+    """Read all rows of one entity, named by its path from the root."""
 
-    name: str
+    path: KeyPath
 
     def apply(self, records: Sequence[Record]) -> Sequence[Record]:
         (wrapper,) = records
         try:
-            # One edge name in the catalog, a nested path in the data
-            # (``__definition.entities``).
-            value = pluck(wrapper, tuple(self.name.split(".")))
+            value = pluck(wrapper, self.path)
         except KeyError:
             # A source that passed derive() is catalog-declared, but the
             # merged data model only carries keys that some content file
@@ -96,14 +94,23 @@ class From(QueryNode):
             # has no key at all.  Absent means zero rows.
             return []
         assert isinstance(value, list), (
-            f"from '{self.name}' must resolve to a list; got {type(value).__name__}"
+            f"from '{'.'.join(self.path)}' must resolve to a list; "
+            f"got {type(value).__name__}"
         )
         return cast(Sequence[Record], value)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        if not catalog.has_child(self.name):
-            raise QueryDeriveError(f"unknown source '{self.name}'", offender=self.name)
-        return catalog.child(self.name)
+        # The catalog's virtual root hangs each top-level entity under its
+        # whole id, so a path into a singleton (``__definition.entities``)
+        # is one edge name there.  Joining the path back borrows the
+        # catalog's id spelling; it is scaffolding until the root is
+        # rebuilt from its own record, where the singleton is a branch of
+        # its own and the path descends segment by segment.
+        name = ".".join(self.path)
+        if not catalog.has_child(name):
+            # The first segment carries the path's source position.
+            raise QueryDeriveError(f"unknown source '{name}'", offender=self.path[0])
+        return catalog.child(name)
 
 
 @dataclass(frozen=True)
@@ -254,7 +261,7 @@ class Join:
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Join":
-        to = cast(str, raw["to"])
+        to = tuple(cast(Sequence[str], raw["to"]))
         on_raw = cast(Mapping[str, Sequence[str]], raw["on"])
         where: Where | PassThrough = PassThrough()
         if "where" in raw:
@@ -265,7 +272,7 @@ class Join:
             else None
         )
         return cls(
-            right=Query(from_=From(name=to), where=where),
+            right=Query(from_=From(path=to), where=where),
             merge=Merge(
                 on_left=tuple(on_raw["left"]),
                 on_right=tuple(on_raw["right"]),
@@ -502,7 +509,7 @@ class Query(QueryNode):
     catalog: ClassVar[dc.Node] = dc.Node(
         children=[
             (dc.Edge(name="id", type="string", required=True), dc.Node()),
-            (dc.Edge(name="from", type="string", required=True), dc.Node()),
+            (dc.Edge(name="from", type="string[]", required=True), dc.Node()),
             (dc.Edge(name="flatten", type="object", required=False), dc.Node()),
             (dc.Edge(name="join", type="object", required=False), dc.Node()),
             (dc.Edge(name="where", type="object", required=False), dc.Node()),
@@ -542,11 +549,23 @@ class Query(QueryNode):
                 f"unknown attribute '{'.'.join(exc.path)}'", offender=exc.path[0]
             ) from exc
 
-    def source_names(self) -> Sequence[str]:
+    def source_paths(self) -> Sequence[KeyPath]:
         return (
-            self.from_.name,
-            *chain.from_iterable(join.right.source_names() for join in self.join),
+            self.from_.path,
+            *chain.from_iterable(join.right.source_paths() for join in self.join),
         )
+
+    def query_references(self, query_names: Container[str]) -> Sequence[str]:
+        """The names in ``query_names`` this query reads from.
+
+        A query is named by one segment (query names hold no dot), so a
+        longer source path never refers to one.
+        """
+        return [
+            path[0]
+            for path in self.source_paths()
+            if len(path) == 1 and path[0] in query_names
+        ]
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Query":
@@ -556,7 +575,7 @@ class Query(QueryNode):
         in (sugar expanded, optional defaults filled by upstream
         normalization), validated Query objects come out.
         """
-        from_ = From(name=cast(str, raw["from"]))
+        from_ = From(path=tuple(cast(Sequence[str], raw["from"])))
 
         flatten: Sequence[Flatten] = tuple(
             Flatten.from_dict(entry)
@@ -604,14 +623,11 @@ class Query(QueryNode):
 def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
     """Order query names so each is preceded by the queries it reads.
 
-    A query's dependencies are its ``source_names()`` entries that name
-    another query in ``queries``; other sources impose no ordering.
+    A query's dependencies are its references to another query in
+    ``queries``; other sources impose no ordering.
     Raises :class:`QueryDeriveError` if these references form a cycle.
     """
-    deps = {
-        name: [n for n in q.source_names() if n in queries]
-        for name, q in queries.items()
-    }
+    deps = {name: q.query_references(queries) for name, q in queries.items()}
     try:
         return list(TopologicalSorter(deps).static_order())
     except CycleError as exc:
@@ -623,7 +639,9 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
         # as the offender — taken from the query, not from ``cycle``, so
         # the anchor doesn't depend on which string instance graphlib
         # surfaces in the cycle.
-        offender = next(s for s in queries[cycle[0]].source_names() if s == cycle[1])
+        offender = next(
+            s for s in queries[cycle[0]].query_references(queries) if s == cycle[1]
+        )
         raise QueryDeriveError(
             "query reference cycle: " + " → ".join(cycle), offender=offender
         ) from exc

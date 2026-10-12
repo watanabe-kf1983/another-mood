@@ -66,7 +66,7 @@ class TestNormalizeJoin:
             {"to": "tasks", "on": {"left": "id", "right": "cat"}}
         ) == [
             {
-                "to": "tasks",
+                "to": ("tasks",),
                 "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
             }
@@ -85,7 +85,13 @@ class TestNormalizeJoin:
                 {"to": "tags", "on": {"left": "tag_id", "right": "id"}},
             ]
         )
-        assert [entry["to"] for entry in result] == ["tasks", "tags"]
+        assert [entry["to"] for entry in result] == [("tasks",), ("tags",)]
+
+    def test_dotted_to_is_a_path(self) -> None:
+        [entry] = normalize_join(
+            {"to": "catalog.series", "on": {"left": "series_id", "right": "id"}}
+        )
+        assert entry["to"] == ("catalog", "series")
 
     def test_as_defaults_to_to(self) -> None:
         [entry] = normalize_join({"to": "tasks", "on": {"left": "id", "right": "cat"}})
@@ -334,8 +340,12 @@ class TestNormalizeQuery:
     def test_minimal_query_passes_through(self) -> None:
         assert normalize_query({"id": "q", "from": "items"}) == {
             "id": "q",
-            "from": "items",
+            "from": ("items",),
         }
+
+    def test_dotted_from_is_a_path(self) -> None:
+        result = normalize_query({"id": "q", "from": "catalog.featured"})
+        assert result["from"] == ("catalog", "featured")
 
     def test_all_clauses_normalized(self) -> None:
         raw = {
@@ -350,11 +360,11 @@ class TestNormalizeQuery:
         }
         assert normalize_query(raw) == {
             "id": "q",
-            "from": "entities",
+            "from": ("entities",),
             "flatten": [{"of": ("tags",), "as": ("tags",), "preserve_empty": False}],
             "join": [
                 {
-                    "to": "tasks",
+                    "to": ("tasks",),
                     "on": {"left": ("id",), "right": ("cat",)},
                     "as": ("tasks",),
                 }
@@ -405,10 +415,10 @@ class TestPreservesUserStr:
         assert entry["of"] == ("hobby", "pets")
         assert self._lines(entry["of"]) == [11, 11]
 
-    def test_join_default_as_reuses_to_userstr(self) -> None:
+    def test_join_to_and_default_as_carry_the_location(self) -> None:
         to = self._u("tasks", line=7)
         [entry] = normalize_join({"to": to, "on": {"left": "id", "right": "cat"}})
-        assert entry["to"] is to
+        assert self._lines(entry["to"]) == [7]
         assert self._lines(entry["as"]) == [7]
 
     def test_every_segment_of_a_dotted_join_alias_carries_the_location(self) -> None:

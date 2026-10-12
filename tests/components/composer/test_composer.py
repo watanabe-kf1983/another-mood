@@ -48,7 +48,7 @@ class TestCompose:
                 __definition:
                   views:
                     - id: names
-                      from: items
+                      from: [items]
                       select:
                         - {item: [name], as: [name]}
                   entities:
@@ -122,7 +122,7 @@ class TestCompose:
                 __definition:
                   views:
                     - id: con
-                      from: items
+                      from: [items]
                       select:
                         - {item: [name], as: [name]}
             """),
@@ -188,10 +188,10 @@ class TestCompose:
                 __definition:
                   views:
                     - id: high_values
-                      from: projected
+                      from: [projected]
                       where: {field: [value], operator: gte, target: 3}
                     - id: projected
-                      from: items
+                      from: [items]
                       select:
                         - {item: [name], as: [name]}
                         - {item: [value], as: [value]}
@@ -251,7 +251,7 @@ class TestCompose:
                 __definition:
                   views:
                     - id: entity_ids
-                      from: __definition.entities
+                      from: [__definition, entities]
                       select:
                         - {item: [id], as: [id]}
                   entities: []

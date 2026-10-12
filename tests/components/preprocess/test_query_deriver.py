@@ -159,7 +159,7 @@ class TestDeriveQueries:
                 "views": [
                     {
                         "id": "names",
-                        "from": "items",
+                        "from": ["items"],
                         "select": [{"item": ["name"], "as": ["name"]}],
                     }
                 ],
@@ -209,7 +209,7 @@ class TestDeriveQueries:
         assert data["__definition"]["views"] == [
             {
                 "id": "names",
-                "from": "items",
+                "from": ["items"],
                 "select": [{"item": ["name"], "as": ["name"]}],
             }
         ]
@@ -252,7 +252,7 @@ class TestDeriveQueries:
         assert data["__definition"]["views"] == [
             {
                 "id": "phase10",
-                "from": "items",
+                "from": ["items"],
                 "where": {"field": ["phase"], "operator": "eq", "target": "10"},
                 "select": [{"item": ["name"], "as": ["name"]}],
             }
@@ -527,7 +527,10 @@ class TestQueryReferences:
             ),
         )
         derived = _derive_all(
-            {"a": Query(from_=From(name="items")), "b": Query(from_=From(name="a"))},
+            {
+                "a": Query(from_=From(path=("items",))),
+                "b": Query(from_=From(path=("a",))),
+            },
             dc.build_tree([items]),
         )
         assert derived.keys() == {"a", "b"}

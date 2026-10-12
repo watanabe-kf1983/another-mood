@@ -188,9 +188,7 @@ def _derive_all(
     poisoned: set[str] = set()
     for name in order:
         query = queries[name]
-        # ``poisoned`` only ever holds view names, so a data-entity source
-        # is never in it — no need to filter source_names to views here.
-        if any(source in poisoned for source in query.source_names()):
+        if query.query_references(poisoned):
             poisoned.add(name)
         else:
             try:
