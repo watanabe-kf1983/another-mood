@@ -936,6 +936,7 @@ categories:
           局所的な機構はコードが正本で書かない。文言は変えず移動のみ。
           表記の揃えと契約文型への書き直しは W2 で行う。W2 の前提。
         phase: 17
+        done: true
       W5:
         title: dev-docs appendix の entity 化 (decisions / rules / proposals)
         note: >-
