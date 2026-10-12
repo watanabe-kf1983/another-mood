@@ -204,7 +204,7 @@ mood blueprint apply <name> <project_dir>
 
 Applies the named blueprint by copying its sources into `<project_dir>`. If `<project_dir>` does not exist, it is created along with any missing parent directories. Passing an unknown blueprint name fails with the available list.
 
-A fresh [manifest](manifest.md) (`sbdb.yaml`) is also generated. Files unrelated to Another Mood (`.git`, `README.md`, …) are left alone, but a blueprint is never merged into an existing project: applying into one fails without writing anything.
+A fresh [manifest](manifest.md) (`sbdb.yaml`) is also generated, and a `README.md` pointing to Another Mood unless one exists. Other files (`.git`, …) are left alone, but a blueprint is never merged into an existing project: applying into one fails without writing anything.
 
 ## docs
 
