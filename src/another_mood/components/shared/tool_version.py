@@ -1,5 +1,5 @@
 """The running another-mood's own identity: the id it answers to, and its
-version read from installed metadata."""
+version and home page read from installed metadata."""
 
 from importlib import metadata
 
@@ -23,3 +23,14 @@ def tool_version() -> str:
     value, so a version the gate rejects is the version ``--version`` shows.
     """
     return metadata.version(DISTRIBUTION_NAME)
+
+
+def tool_homepage() -> str:
+    """Return the project's home page URL, read from installed metadata.
+
+    pyproject.toml's ``Homepage`` stays the one place the URL is written;
+    every surface that points a reader at the project links this value.
+    """
+    entries = metadata.metadata(DISTRIBUTION_NAME).get_all("Project-URL") or []
+    labelled = (entry.split(", ", 1) for entry in entries)
+    return next(url for label, url in labelled if label == "Homepage")
