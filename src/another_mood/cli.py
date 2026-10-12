@@ -27,7 +27,7 @@ from another_mood.config import ConfigValidationError, ProjectConfig
 app = typer.Typer(add_completion=False, epilog=f"Home page: {tool_homepage()}")
 blueprint_app = typer.Typer(help="Manage built-in blueprints (sample projects).")
 app.add_typer(blueprint_app, name="blueprint")
-docs_app = typer.Typer(help="Inspect bundled documentation (also exposed via MCP).")
+docs_app = typer.Typer(help="Inspect bundled documentation.")
 app.add_typer(docs_app, name="docs")
 
 

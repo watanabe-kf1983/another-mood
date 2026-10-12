@@ -1,26 +1,22 @@
-# Catalog of files in this docs/ tree that are exposed as MCP Resources.
+# Catalog of files in this docs/ tree that `mood docs list` / `mood docs read`
+# serve.
 #
-# Each entry registers one resource at the URI `docs://<path>`.  Markdown
-# relative links between resources resolve correctly under that scheme
-# per RFC 3986 (e.g. `[view](view.md)` on `docs://reference/cli.md`
-# points to `docs://reference/view.md`).
+# Each entry is addressed by the URI `docs://<path>`.  Markdown relative
+# links between entries resolve correctly under that scheme per RFC 3986
+# (e.g. `[view](view.md)` on `docs://reference/cli.md` points to
+# `docs://reference/view.md`).
 #
-# `description` is shown to AI agents in `resources/list` responses, so
-# it must be self-contained — keep it in sync with the Guides / Reference
-# link descriptions in docs/index.md and docs/reference/index.md.
+# `description` is printed by `mood docs list`, so it must be
+# self-contained — keep it in sync with the Guides / Reference link
+# descriptions in docs/index.md and docs/reference/index.md.
 #
-# index.md files are deliberately omitted: agents browse via this catalog,
+# index.md files are deliberately omitted: readers browse via this catalog,
 # not by reading hand-written index pages.
-resources:
+docs:
   - path: guides.md
     description: >-
       Walks through concepts, Quick Start, workflow, schema and content,
       views, and templates in a single file.
-  - path: mcp.md
-    description: >-
-      Install and configure the Another Mood MCP server in coding
-      agents (Claude Code, VS Code Copilot Chat); lists the MCP tools
-      mirroring the `mood` CLI.
   - path: reference/cli.md
     description: >-
       `mood` command reference (`init` / `build` / `watch` / `tap` / `blueprint` / `docs`).

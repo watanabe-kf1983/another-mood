@@ -445,10 +445,8 @@ categories:
         done: true
       J7:
         title: mood-mcp エントリポイントと mcp 依存の削除
-        note: >-
-          J6 を出荷し、CLI だけで同等の体験が得られることを確認してから。breaking。
         phase: 18
-        proposal: 20-design/25-entrypoints/20-mcp-design#mood-mcp-の削除-j7
+        done: true
 
   L:
     title: dog-fooding

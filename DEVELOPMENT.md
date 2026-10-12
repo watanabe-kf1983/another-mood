@@ -50,8 +50,7 @@
 ```
 another_mood/
 ├── cli.py                  # CLI エントリポイント
-├── mcp_server.py           # MCP サーバエントリポイント
-├── command.py              # CLI / MCP 共通の操作層（BuildResult 等を返す）
+├── command.py              # CLI の背後の操作層（BuildResult 等を返す）
 ├── config.py               # 設定
 ├── components/             # ビジネスロジック
 │   ├── shared/             #   共通基盤
@@ -66,7 +65,7 @@ another_mood/
 └── resources/              # 静的リソース
 ```
 
-依存方向: `{cli, mcp_server}` → `command` → `pipeline` → `components/*` → `components/shared`
+依存方向: `cli` → `command` → `pipeline` → `components/*` → `components/shared`
 
 #### コードスタイル
 

@@ -1,8 +1,8 @@
-"""Commands shared between CLI and MCP server.
+"""Commands behind the CLI.
 
 Each function performs the work of one user-visible command and returns its
 result as a value.  No stderr / stdout writes from this module: the CLI
-renders the value to the terminal; MCP tools return it to the agent.
+renders the value to the terminal.
 
 Live progress / error feedback that does not fit into a return value (for
 example, per-rebuild reports during watch) is delivered via callback
@@ -120,7 +120,7 @@ class WatchSession:
 class BuildResult:
     """Outcome of a pipeline run, as exposed across the command-layer boundary.
 
-    Slim view of a :class:`BuildReport` for CLI / MCP consumers.  Per-stage
+    Slim view of a :class:`BuildReport` for CLI consumers.  Per-stage
     results and per-diagnostic snippets — both useful only for human debugging
     of the on-disk ``__build_report.json`` — are stripped here.
 
@@ -268,7 +268,7 @@ def _require_absolute(name: str, path: Path) -> None:
     if not path.is_absolute():
         raise ValueError(
             f"{name} must be an absolute path, got {str(path)!r}. Resolving "
-            "one belongs to the CLI / MCP boundary that owns the caller's "
+            "one belongs to the CLI boundary that owns the caller's "
             "working directory."
         )
 

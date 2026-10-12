@@ -9,7 +9,7 @@
 `categories.tasks` 型の配列なのかが値だけでは断定できない)。
 
 Shape セクションで各出力フィールドの型 + entity ref を明示する
-ことで、template 著者 / MCP 経由の LLM / 人間の読者すべてに対して型情報が
+ことで、template 著者 / AI エージェント / 人間の読者すべてに対して型情報が
 programmatic に伝わる。SQL クライアントが (全カラムスカラ前提で) 型表示を
 省略できるのと対照的。
 

@@ -241,8 +241,8 @@ def test_rejects_invalid(source: str, tmp_path: Path) -> None:
 
 
 def test_error_carries_file_anchored_diagnostics(tmp_path: Path) -> None:
-    # ManifestError anchors diagnostics at sbdb.yaml so the CLI / MCP boundary
-    # can point the user at the offending file.
+    # ManifestError anchors diagnostics at sbdb.yaml so the CLI boundary can
+    # point the user at the offending file.
     _write(tmp_path, "sbdb_version: 1\nauthor: me\n")
     with pytest.raises(ManifestError) as exc_info:
         read_manifest(tmp_path)
