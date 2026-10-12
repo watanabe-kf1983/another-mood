@@ -16,7 +16,7 @@
 
 ## Source Diagram
 
-{% set node_ids = ([from] + (join | map(attribute='to') | list)) | unique | list %}
+{% set node_ids = ([from | join(".")] + (join | map(attribute='to') | map('join', '.') | list)) | unique | list %}
 {% filter dedent %}
     ```mermaid
     classDiagram
@@ -45,7 +45,7 @@
 
 ### From
 
-{{ source_link(from) | safe }}
+{{ source_link(from | join(".")) | safe }}
 
 {% if flatten %}
 ### Flatten
@@ -65,7 +65,7 @@
 {% for entry in join %}
     {%- set f = entry.flatten %}
     {%- set inline_flatten = f and "{of: " ~ (f.of | join(".")) ~ ", as: " ~ (f.as | join(".")) ~ ", preserve_empty: " ~ (f.preserve_empty | lower) ~ "}" %}
-    {{- "" }}| {{ source_link(entry.to) | safe }}
+    {{- "" }}| {{ source_link(entry.to | join(".")) | safe }}
     {{- "" }} | {{ entry.on.left | join(".") }} = {{ entry.on.right | join(".") }}
     {{- "" }} | {{ entry.as | join(".") }}
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}

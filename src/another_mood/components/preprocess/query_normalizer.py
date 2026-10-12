@@ -43,7 +43,10 @@ def normalize_query(raw: Mapping[str, object]) -> Mapping[str, object]:
     ``raw`` plus all defaults required by the canonical form;
     clauses absent from ``raw`` stay absent in the output.
     """
-    out: dict[str, object] = {"id": raw["id"], "from": cast(str, raw["from"])}
+    out: dict[str, object] = {
+        "id": raw["id"],
+        "from": split_path(cast(str, raw["from"])),
+    }
     if "flatten" in raw:
         out["flatten"] = normalize_flatten(raw["flatten"])
     if "join" in raw:
@@ -113,7 +116,7 @@ def _normalize_join_entry(raw: Mapping[str, object]) -> Mapping[str, object]:
     as_ = split_path(cast(str, raw.get("as", to)))
     on = cast(Mapping[str, str], raw["on"])
     out: dict[str, object] = {
-        "to": to,
+        "to": split_path(to),
         "on": {"left": split_path(on["left"]), "right": split_path(on["right"])},
         "as": as_,
     }

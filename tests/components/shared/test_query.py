@@ -50,14 +50,14 @@ def _parse_query_yaml(yaml_text: str) -> Query:
 class TestFrom:
     def test_returns_rows_of_named_top_level_entity(self) -> None:
         sources = {"entities": [{"id": "user"}, {"id": "role"}]}
-        assert list(From(name="entities").apply([sources])) == [
+        assert list(From(path=("entities",)).apply([sources])) == [
             {"id": "user"},
             {"id": "role"},
         ]
 
     def test_resolves_dotted_entity_id(self) -> None:
         sources = {"__definition": {"entities": [{"id": "user"}, {"id": "role"}]}}
-        assert list(From(name="__definition.entities").apply([sources])) == [
+        assert list(From(path=("__definition", "entities")).apply([sources])) == [
             {"id": "user"},
             {"id": "role"},
         ]
@@ -66,7 +66,7 @@ class TestFrom:
         # An entity whose records were all deleted contributes no key to
         # the merged data model; reading it is zero rows, not an error
         # (unknown names are rejected earlier, by derive()).
-        assert list(From(name="members").apply([{"prose": []}])) == []
+        assert list(From(path=("members",)).apply([{"prose": []}])) == []
 
 
 _TOP_LEVEL_TASKS_CATALOG_YAML = """
@@ -105,7 +105,7 @@ _TASKS_CATALOG_YAML = """
 class TestFromDerive:
     def test_returns_named_top_level_entity(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        assert From(name="tasks").derive(root) is root.child("tasks")
+        assert From(path=("tasks",)).derive(root) is root.child("tasks")
 
     def test_accepts_dotted_top_level_id(self) -> None:
         root = dc.build_tree(
@@ -119,21 +119,21 @@ class TestFromDerive:
                 """
             )
         )
-        assert From(name="__definition.entities").derive(root) is root.child(
+        assert From(path=("__definition", "entities")).derive(root) is root.child(
             "__definition.entities"
         )
 
     def test_rejects_unknown_name(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         with pytest.raises(QueryDeriveError, match="unknown source 'missing'"):
-            From(name="missing").derive(root)
+            From(path=("missing",)).derive(root)
 
     def test_rejects_composition_walk(self) -> None:
         # ``categories.tasks`` is a child entity, not a root edge —
         # composition descent is the job of ``flatten:``.
         root = dc.build_tree(_catalog(_TASKS_CATALOG_YAML))
         with pytest.raises(QueryDeriveError, match="categories.tasks"):
-            From(name="categories.tasks").derive(root)
+            From(path=("categories", "tasks")).derive(root)
 
 
 class TestFlatten:
@@ -743,7 +743,7 @@ class TestJoin:
             ],
         }
         join = Join(
-            right=Query(from_=From(name="tasks")),
+            right=Query(from_=From(path=("tasks",))),
             merge=Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",)),
             flatten=Flatten(of=("tasks",), as_=("task",)),
         )
@@ -757,7 +757,7 @@ class TestJoin:
     def test_derive_chains_right_then_merge_then_flatten(self) -> None:
         root = dc.build_tree(_catalog(_CATS_TASKS_CATALOG_YAML))
         join = Join(
-            right=Query(from_=From(name="tasks")),
+            right=Query(from_=From(path=("tasks",))),
             merge=Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",)),
             flatten=Flatten(of=("tasks",), as_=("task",)),
         )
@@ -774,19 +774,19 @@ class TestJoinFromDict:
     def test_basic(self) -> None:
         assert Join.from_dict(
             {
-                "to": "tasks",
+                "to": ["tasks"],
                 "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
             }
         ) == Join(
-            right=Query(from_=From(name="tasks")),
+            right=Query(from_=From(path=("tasks",))),
             merge=Merge(on_left=("id",), on_right=("cat",), right_as=("tasks",)),
         )
 
     def test_without_where_leaves_right_subquery_passthrough(self) -> None:
         join = Join.from_dict(
             {
-                "to": "tasks",
+                "to": ["tasks"],
                 "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
             }
@@ -796,7 +796,7 @@ class TestJoinFromDict:
     def test_without_flatten_leaves_join_flatten_none(self) -> None:
         join = Join.from_dict(
             {
-                "to": "tasks",
+                "to": ["tasks"],
                 "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
             }
@@ -806,7 +806,7 @@ class TestJoinFromDict:
     def test_wires_inline_flatten(self) -> None:
         join = Join.from_dict(
             {
-                "to": "tasks",
+                "to": ["tasks"],
                 "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
                 "flatten": {"of": ("tasks",), "as": ("task",), "preserve_empty": True},
@@ -821,7 +821,7 @@ class TestJoinFromDict:
         no special handling on ``Join`` itself."""
         join = Join.from_dict(
             {
-                "to": "tasks",
+                "to": ["tasks"],
                 "on": {"left": ("id",), "right": ("cat",)},
                 "as": ("tasks",),
                 "where": {"field": ("open",), "operator": "eq", "target": True},
@@ -848,7 +848,7 @@ class TestWhere:
 
     def test_derive_returns_catalog_unchanged_for_valid_key_path(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+        leaf = From(path=("tasks",)).derive(root)
         where = Where(
             predicate=FieldPredicate(field=("phase",), operator=Operator.GT, target=5),
         )
@@ -860,7 +860,7 @@ class TestWhere:
         into a user-facing :class:`QueryDeriveError` at the pipeline
         boundary."""
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+        leaf = From(path=("tasks",)).derive(root)
         where = Where(
             predicate=FieldPredicate(
                 field=("nonexistent",), operator=Operator.EQ, target=1
@@ -947,7 +947,7 @@ class TestGrouped:
 class TestGroupedDerive:
     def test_wraps_with_by_and_alias(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+        leaf = From(path=("tasks",)).derive(root)
         wrapped = Grouped(by=("phase",), as_=("tasks",)).derive(leaf)
         assert dc.flatten_tree(wrapped, "groups") == _catalog(
             """
@@ -1095,7 +1095,7 @@ class TestSelect:
 class TestSelectDerive:
     def test_projects_and_renames(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+        leaf = From(path=("tasks",)).derive(root)
         projected = Select(
             items=[
                 SelectItem(item=("phase",), as_=("id",)),
@@ -1341,12 +1341,12 @@ class TestSort:
 class TestSortDerive:
     def test_returns_catalog_unchanged_for_valid_by(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+        leaf = From(path=("tasks",)).derive(root)
         assert Sort(by=("phase",)).derive(leaf) is leaf
 
     def test_raises_on_unknown_by(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
-        leaf = From(name="tasks").derive(root)
+        leaf = From(path=("tasks",)).derive(root)
         with pytest.raises(dc.UnknownChildError, match="nonexistent"):
             Sort(by=("nonexistent",)).derive(leaf)
 
@@ -1492,7 +1492,7 @@ class TestQueryPipeline:
         ``select.derive`` — ``by:`` resolves against an alias that
         only exists in the projected catalog."""
         query = Query(
-            from_=From(name="tasks"),
+            from_=From(path=("tasks",)),
             select=Select(
                 items=[
                     SelectItem(item=("phase",), as_=("rank",)),
@@ -1774,14 +1774,14 @@ class TestQueryOptionalClauses:
     def test_apply_without_grouped(self) -> None:
         sources = {"items": [{"name": "a", "value": 1}, {"name": "b", "value": 2}]}
         query = Query(
-            from_=From(name="items"),
+            from_=From(path=("items",)),
             select=Select(items=[SelectItem(item=("name",), as_=("name",))]),
         )
         assert list(query.apply([sources])) == [{"name": "a"}, {"name": "b"}]
 
     def test_derive_without_grouped(self) -> None:
         query = Query(
-            from_=From(name="tasks"),
+            from_=From(path=("tasks",)),
             select=Select(
                 items=[
                     SelectItem(item=("id",), as_=("id",)),
@@ -1813,7 +1813,7 @@ class TestQueryDeriveErrorTranslation:
         # ``Sort.derive`` raises ``dc.UnknownChildError``, which
         # ``Query.derive`` translates into ``QueryDeriveError``.
         query = Query(
-            from_=From(name="tasks"),
+            from_=From(path=("tasks",)),
             select=Select(items=[SelectItem(item=("title",), as_=("title",))]),
             sort=Sort(by=("phase",)),
         )
@@ -1830,11 +1830,11 @@ class TestQueryFromDict:
         ``direction`` / ``missing`` on ``sort`` cover the enum lookups
         that Query.from_dict does inline (Sort has no own from_dict)."""
         raw = {
-            "from": "items",
+            "from": ["items"],
             "flatten": [{"of": ("tags",), "as": ("tag",), "preserve_empty": False}],
             "join": [
                 {
-                    "to": "owners",
+                    "to": ["owners"],
                     "on": {"left": ("owner_id",), "right": ("id",)},
                     "as": ("owner",),
                 }
@@ -1845,11 +1845,11 @@ class TestQueryFromDict:
             "sort": {"by": ("category",), "direction": "desc", "missing": "first"},
         }
         assert Query.from_dict(raw) == Query(
-            from_=From(name="items"),
+            from_=From(path=("items",)),
             flatten=(Flatten(of=("tags",), as_=("tag",), preserve_empty=False),),
             join=(
                 Join(
-                    right=Query(from_=From(name="owners")),
+                    right=Query(from_=From(path=("owners",))),
                     merge=Merge(
                         on_left=("owner_id",), on_right=("id",), right_as=("owner",)
                     ),
@@ -1871,8 +1871,8 @@ class TestQueryFromDict:
         """All optional clauses absent: each field defaults to
         ``PassThrough`` (or an empty tuple for the list-typed
         clauses)."""
-        query = Query.from_dict({"from": "items"})
-        assert query.from_ == From(name="items")
+        query = Query.from_dict({"from": ["items"]})
+        assert query.from_ == From(path=("items",))
         assert tuple(query.flatten) == ()
         assert tuple(query.join) == ()
         assert query.where == PassThrough()
@@ -1886,10 +1886,10 @@ class TestQueryFromDict:
         multi-join chaining (later ``on.left`` can refer to attributes
         introduced by earlier ``flatten.as``)."""
         raw = {
-            "from": "orders",
+            "from": ["orders"],
             "join": [
                 {
-                    "to": "customers",
+                    "to": ["customers"],
                     "on": {"left": ("customer_id",), "right": ("id",)},
                     "as": ("customer",),
                     "flatten": {
@@ -1899,7 +1899,7 @@ class TestQueryFromDict:
                     },
                 },
                 {
-                    "to": "addresses",
+                    "to": ["addresses"],
                     "on": {"left": ("customer", "address_id"), "right": ("id",)},
                     "as": ("address",),
                 },
@@ -1926,17 +1926,18 @@ def _catalog_name(field_name: str) -> str:
 
 
 def _ref_query(from_: str, *join_tos: str) -> Query:
-    """A minimal query reading ``from_`` and joining each of ``join_tos``.
+    """A minimal query reading ``from_`` and joining each of ``join_tos``,
+    each a one-segment source path.
 
-    Clause payloads beyond the source names are irrelevant to
-    ``source_names`` / ``evaluation_order``, so the join condition is a
+    Clause payloads beyond the source paths are irrelevant to
+    ``source_paths`` / ``evaluation_order``, so the join condition is a
     placeholder.
     """
     return Query(
-        from_=From(name=from_),
+        from_=From(path=(from_,)),
         join=tuple(
             Join(
-                right=Query(from_=From(name=to)),
+                right=Query(from_=From(path=(to,))),
                 merge=Merge(on_left=("id",), on_right=("id",), right_as=(to,)),
             )
             for to in join_tos
@@ -1944,11 +1945,25 @@ def _ref_query(from_: str, *join_tos: str) -> Query:
     )
 
 
-class TestSourceNames:
-    """Query.source_names: the names a query reads, in clause order."""
+class TestSourcePaths:
+    """Query.source_paths: the paths a query reads, in clause order."""
 
     def test_from_only(self) -> None:
-        assert Query(from_=From(name="tasks")).source_names() == ("tasks",)
+        assert Query(from_=From(path=("tasks",))).source_paths() == (("tasks",),)
+
+    def test_a_dotted_source_is_a_path(self) -> None:
+        query = _parse_query_yaml(
+            """
+            from: catalog.featured
+            join:
+              - to: catalog.series
+                on: { left: series_id, right: id }
+            """
+        )
+        assert query.source_paths() == (
+            ("catalog", "featured"),
+            ("catalog", "series"),
+        )
 
     def test_includes_each_join_target(self) -> None:
         query = _parse_query_yaml(
@@ -1961,15 +1976,15 @@ class TestSourceNames:
                 on: { left: phase_id, right: id }
             """
         )
-        assert query.source_names() == ("tasks", "categories", "phases")
+        assert query.source_paths() == (("tasks",), ("categories",), ("phases",))
 
     def test_collects_join_right_sources_recursively(self) -> None:
         """``from_dict`` only ever builds a join's right side as a bare
-        ``from:`` wrapper today, but source_names must not depend on
+        ``from:`` wrapper today, but source_paths must not depend on
         that shallowness — a richer right side contributes everything
         it reads."""
         query = Query(
-            from_=From(name="tasks"),
+            from_=From(path=("tasks",)),
             join=(
                 Join(
                     right=_ref_query("categories", "phases"),
@@ -1977,14 +1992,14 @@ class TestSourceNames:
                 ),
             ),
         )
-        assert query.source_names() == ("tasks", "categories", "phases")
+        assert query.source_paths() == (("tasks",), ("categories",), ("phases",))
 
 
 class TestEvaluationOrder:
     """evaluation_order: the wrapper over ``graphlib.TopologicalSorter``.
 
     The sort itself is graphlib's; these cover only what this function
-    adds — building query→query dependencies from ``source_names`` and
+    adds — building query→query dependencies from ``source_paths`` and
     turning a cycle into a positioned ``QueryDeriveError``.
     """
 
@@ -2002,6 +2017,16 @@ class TestEvaluationOrder:
         # and creates no dependency edge.
         queries = {"a": _ref_query("items", "items")}
         assert evaluation_order(queries) == ["a"]
+
+    def test_a_longer_path_never_names_a_query(self) -> None:
+        # A query is named by one segment, so ``b.x`` reads data under a
+        # top-level ``b``, not the query ``b``; it creates no edge, and
+        # the would-be cycle through it does not form.
+        queries = {
+            "a": Query(from_=From(path=("b", "x"))),
+            "b": _ref_query("a"),
+        }
+        assert evaluation_order(queries) == ["a", "b"]
 
     def test_cycle_reported_in_reference_direction(self) -> None:
         # a reads b, b reads c, c reads a — the message must read forward
