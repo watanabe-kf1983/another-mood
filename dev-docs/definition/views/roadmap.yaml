@@ -1,12 +1,14 @@
 # Tasks regrouped by phase for the roadmap page. Named `roadmap` so the
 # rendered page is `roadmap.md` (the page path follows the view name).
 # Flattens each category's `tasks`, then groups the flattened tasks by
-# phase.
+# phase. Finished phases are hidden; the task catalog still lists every task.
 roadmap:
   from: categories
   flatten:
     of: tasks
     as: task
+  where:
+    task.phase: { gte: 16 }
   grouped:
     by: task.phase
     as: tasks

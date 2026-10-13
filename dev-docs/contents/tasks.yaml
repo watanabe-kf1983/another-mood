@@ -83,7 +83,7 @@ categories:
           現状でも表示テキストは残り可視なので優先度低。
           ただし可視性は出力を目で読む場面でしか効かない。W4 の dev-docs 整理では節の削除・移動で
           裸になった `[text]` に気づけず、ソースと出力を突き合わせる検査を別途書いて見つけた。
-        phase: 18
+        phase: 20
         proposal: 20-design/70-generator/30-anchor-spec#未決事項
       B11:
         title: node() のモード分離（位置=segments escape / path=verbatim を kwarg で surface）
@@ -107,7 +107,7 @@ categories:
           view の flatten 等で正当に生じる重複アンカーパスは NodeMap で後勝ちに畳まれ、
           ページ主語になるまで (PageCollisionError) 検出されない。構築時に検出して
           リンク抑止か警告にするか、どこまでやるかの検討から。
-        phase: 18
+        phase: 20
         proposal: 20-design/70-generator/30-anchor-spec#未決事項
 
   C:
@@ -169,7 +169,7 @@ categories:
         note: >-
           Edition.root_template / templates_dir と render ループの差し替え機構は既にある。
           残るは reports.yaml の `root_template` エントリ (スキーマ + load_editions) のみ。
-        phase: 18
+        phase: 20
         proposal: 20-design/70-generator/40-output-layout#edition-別ルートテンプレート将来
 
   D:
@@ -212,12 +212,12 @@ categories:
       D8:
         title: Unique 制約の仕様確定
         note: 宣言場所 / 複合キー対応の有無
-        phase: 18
+        phase: 20
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D9:
         title: Unique 制約の実装 + チェック
         note: --strict 連動
-        phase: 18
+        phase: 20
         proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
@@ -275,24 +275,19 @@ categories:
         done: true
       E13:
         title: 出力パスの重なり検出 (select / grouped の別名衝突)
-        phase: 18
+        phase: 17
         done: true
       E14:
         title: DSL のドット名意味論の統一 (読みも書きもパス)
-        note: >-
-          別名スロットのドットを入れ子として解釈し、view 出力からドット入りキーを
-          排する。直列化カタログのドットが必ず入れ子を意味するようになり、カタログ
-          だけから JSON の形が復元可能になる (J5 の前提)。E13 / M14 / M15 が前提。
-          select / flatten (#459)、join (#489)、grouped の三段で対応。
-        phase: 18
+        phase: 17
         done: true
       E15:
         title: "`pluck` の longest-first 照合の廃止"
-        phase: 18
+        phase: 17
         done: true
       E16:
         title: grouped の as 必須化 (合成デフォルトの廃止)
-        phase: 18
+        phase: 17
         done: true
       E17:
         title: 合成ビュー (compose) — source を束ねる第二の view 文法
@@ -303,7 +298,7 @@ categories:
           動機は S8 の二文書。トップレベル・シングルトンのカタログ表現が要るので
           M13 が前提。
         proposal: 20-design/60-composer/10-query-dsl-spec#合成ビュー-e17
-        phase: 18
+        phase: 17
 
   F:
     title: メタドキュメンテーション拡張
@@ -338,7 +333,7 @@ categories:
         done: true
       F10:
         title: 内部オブジェクト診断の --debug 復活スイッチ
-        phase: 18
+        phase: 20
         proposal: 20-design/75-meta-documentation/10-database-information#内部オブジェクト診断の---debug-復活スイッチ
 
   G:
@@ -351,7 +346,7 @@ categories:
     tasks:
       G2:
         title: another-mood.config.json 読み込み
-        phase: 18
+        phase: 20
         proposal: 20-design/25-entrypoints/10-config-spec#設定ファイル-g2
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
@@ -435,13 +430,13 @@ categories:
       J5:
         title: tap ドキュメントの JSON Schema 提供
         note: >-
-          E14 / M13 が前提。着手トリガー (エージェントの実つまずき /
-          型突き合わせの実需 / 利用者要望) が出るまで保留。
+          E14 / M13 が前提。当初は実需が出るまで保留としていたが、
+          ローンチ前に入れる (入ってしまう) 見込み。
         proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
       J6:
         title: sbdb プロジェクトの自己記述 (README.md 生成)
-        phase: 17
+        phase: 18
         done: true
       J7:
         title: mood-mcp エントリポイントと mcp 依存の削除
@@ -500,22 +495,22 @@ categories:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
         note: E14 とは独立に着手できる。E17 (合成ビュー) の前提
         proposal: 20-design/45-schema/10-schema-spec#ルート-entity-の導入-m13
-        phase: 18
+        phase: 17
       M14:
         title: singleton 平坦化の 1 段制限の撤廃
-        phase: 18
+        phase: 17
         done: true
       M15:
         title: カタログの木を JSON データモデルと同形にする
-        phase: 18
+        phase: 17
         done: true
       M16:
         title: スキーマ中間木を dc.Node / dc.Edge へ寄せる
-        phase: 18
+        phase: 17
         done: true
       M17:
         title: カタログが取りこぼすスキーマ注釈を塞ぐ
-        phase: 18
+        phase: 17
         done: true
 
   N:
@@ -529,10 +524,10 @@ categories:
         note: >-
           カスタムレンダラ差し替えの構想はこの検討に吸収。現行は report / error 伝播まで Hugo と密結合で、設定値の
           差し替えで済む抽象は存在しない。
-        phase: 18
+        phase: 20
       N2:
         title: HTML / Asciidoc / PlantUML ジェネレート対応
-        phase: 18
+        phase: 20
       N3:
         title: "watch で捨てられる hugo_build をスキップ (レンダリング効率)"
         note: |
@@ -541,7 +536,7 @@ categories:
           捨てられる full hugo build がリビルド遅延に乗る。ただし report / error 伝播が
           publish (upstream = hugo_build) を経由するため、単純に外すと連鎖が切れる。連鎖を
           reconcile 側へ張り替える等の再配線が要る。build は static html が成果物なので hugo_build を残す。
-        phase: 18
+        phase: 20
       N4:
         title: render 語彙の site への改名 (render/ ディレクトリ・render stage)
         phase: 14
@@ -565,14 +560,6 @@ categories:
         done: true
       O5:
         title: grouped.by が存在しないキーを指すと KeyError で落ちる
-        note: >-
-          grouped.by に一部のレコードで欠けるキー (例: flatten した
-          lic.license.id) を指定すると、素の KeyError traceback でビルドが
-          落ちる。欠落を一級扱いする他の句に揃え、キーの無い行はエラーにせず
-          一つのグループにまとめる。そのグループ行はキーを省く (nullable =
-          キー省略)。行を落としたければ利用者が where の exists を書く。
-          R6 (SBOM showcase) で遭遇。E14 の grouped 片 (グループキーの
-          required の導出) の前提。
         phase: 17
         done: true
 
@@ -640,7 +627,7 @@ categories:
         note: >-
           minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
           ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
-        phase: 18
+        phase: 20
         proposal: 20-design/70-generator/25-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
@@ -663,14 +650,7 @@ categories:
         done: true
       Q3:
         title: 告知・宣伝を伴うローンチ
-        note: >-
-          Q1 は静かな公開に留め、S2-S5 (システム開発ドキュメント) の完成を待って
-          告知する。告知先・訴求のラフは R3 より先に決める (README の章立てが
-          そこから決まる)。前提 W2, W3, R3。
-          Context7 には登録しない: 引かれるのはインストール済みのツールについて
-          コードを書く場面で、そこでは同梱の `mood docs` が版の一致した正本で
-          あり、main の一時点を索引する Context7 はそれと競合するだけになる。
-        phase: 17
+        phase: 19
       Q6:
         title: リリース手順の明文化 (チェックリスト + バージョン運用)
         phase: 15
@@ -704,17 +684,14 @@ categories:
         phase: 14
         done: true
       R3:
-        title: README の 1.0.0 向け全面改稿
+        title: README の見直し
         note: >-
-          ローンチの顔としての書き直し。章立ては Q3 の訴求のラフから決める。
-          R2 で意図的に外した Status・License・DEVELOPMENT.md 導線は要否を再判断。
-          メンテナンス期待値 (as-is / no-SLA / fork 歓迎) を一文置き、
-          CONTRIBUTING・Issue テンプレート・SECURITY.md は置かない
-          (外部コントリビューションは受け入れない方針で、宛先がいない)。
-          About 欄 (description / topics) と Q9 の残メタデータ (authors /
-          classifiers / keywords) も同じ籠。1.0.0 の tag より前に main へ入れる。
-          Q3 の前提。旧 Q7 (リポジトリの外部公開整備) を縮小して吸収。
-        phase: 17
+          S10 の二文書 showcase への直リンクを導入文に足し、例の並びで設計書を
+          先頭にする。GitHub の About 欄の description も埋める (告知リンクの
+          プレビューに出る)。topics / pyproject の残メタデータ (authors /
+          classifiers / keywords) は埋めるか検討。1.0.0 の tag より前に main へ
+          入れる。Q3 の前提。
+        phase: 19
       R5:
         title: showcase / dev-docs の実物マニフェストから minimum_version を削除
         phase: 15
@@ -756,7 +733,7 @@ categories:
         done: true
       S6:
         title: 要件トレーサビリティ表テンプレート
-        phase: 18
+        phase: 17
         done: true
       S7:
         title: 二文書 showcase のモデル構築 (showcase/system-dev-docs-ja)
@@ -766,6 +743,21 @@ categories:
         title: モデルと目次の突合・確定目次仕様
         phase: 16
         done: true
+      S9:
+        title: 二文書 showcase への合成ビュー適用 (system-dev-docs-ja の完成)
+        note: >-
+          S8 までの showcase は index.md の合本で暫定。E17 の合成ビューで要求仕様書・
+          設計書を別ページの文書に割り、二文書として完成させる。E17 (と M13) が前提。
+        phase: 17
+      S10:
+        title: 二文書 showcase の英語版 (showcase/system-dev-docs-en)
+        note: >-
+          ローンチの見本。S9 の system-dev-docs-ja を英訳して SRS / SDD として出す
+          (日本語で作り切ってから英訳する方針は spec に既述)。語彙は IPA 由来の
+          日本語名ではなく 29148 の英語名を当てる。同じモデルから両言語の文書を
+          出す形にできればそれ自体が分離の実演になるが、別プロジェクトとして
+          複製するのが最小。Q3 の前提。
+        phase: 17
 
   T:
     title: ビルドインフラ
@@ -826,14 +818,14 @@ categories:
         title: output_format の拡張 (md 以外の具体仕様 / 入れ子 / ブロック切替 / 追加の位置依存正規化)
         note: >-
           いずれも実需が顕在化した時点で別仕様として詰める。md 以外の HTML 系は N2 と重なる。
-        phase: 18
+        phase: 20
         proposal: 20-design/70-generator/20-template-spec#proposals
       U6:
         title: Prose 型の mime_type 多態 (text/markdown 以外の prose)
         note: >-
           レコード直下の mime_type を分岐キーに、text/html 等の prose をページとして扱う。
           汎用の Typed Value 機構は採らず、組み込みコレクションに限る。
-        phase: 18
+        phase: 20
         proposal: 20-design/70-generator/20-template-spec#proposals
 
   V:
@@ -890,29 +882,22 @@ categories:
       W2:
         title: dev-docs の全面英語化
         note: >-
-          ローンチで外部コントリビュータが設計判断を読める状態にする。
-          background / design を英語へ移行し、DEVELOPMENT.md の「日本語」規約も改める。
-          S2-S5 は仕様検討で dev-docs に最も書き込むタスク群なので、
-          その完了後・告知前に実施する。Q3 の前提。
+          読者は fork して育てる人で、設計判断と経緯を英語で読めるようにする。
+          concept / design / appendix を英語へ移行し、
+          DEVELOPMENT.md の「日本語」規約も改める。ローンチの前提ではない
+          (訪問者の道の上にない。fork した人が読むもの)。
           Q カテゴリから移管 (旧 Q4)。
-        phase: 17
+        phase: 19
       W3:
         title: 残タスクの GitHub Issues 移行 + ロードマップ退役
         note: >-
-          Phase 18 以降の残タスクを GH Issues へ転記し (Proposal 節は Issue 本文へ)、
+          Phase 20 以降の残タスクを GH Issues へ転記し (Proposal 節は Issue 本文へ)、
           以後のタスク管理を Issues に一本化する。tasks.yaml / roadmap・tasks ビュー (L カテゴリの dog-fooding 成果物)
           はここで役割を終えて撤去。タスクの出し入れが止まり残りが backlog だけになる
-          ローンチ直前が、転記コスト・鮮度とも最小。Q3 の前提。
+          ローンチ直前が、転記コスト・鮮度とも最小。ただしローンチの前提ではない。
           Q カテゴリから移管 (旧 Q5)。
-        phase: 17
+        phase: 19
       W4:
         title: dev-docs の appendix 構造化
-        note: >-
-          dev-docs を、少ないコンテクストで作業に入れる導線にする。
-          本文には設計そのもの (構造・不変条件・契約・跨る機構と意図の一文) だけを残し、
-          設計に至った過程 (比較調査・却下案・経緯・未起票の候補) と、変更前に読む必要のない
-          精密な規則は `90-appendix/` (contents の鏡写し) へ移して本文からリンクする。
-          局所的な機構はコードが正本で書かない。文言は変えず移動のみ。
-          表記の揃えと契約文型への書き直しは W2 で行う。W2 の前提。
-        phase: 17
+        phase: 19
         done: true
