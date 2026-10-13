@@ -7,7 +7,7 @@ relied on in query derivation.
 """
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from itertools import takewhile
 from typing import Any, ClassVar, cast
 
@@ -305,32 +305,25 @@ ROOT_ENTITY_ID = "__root"
 
 
 def build_tree(catalog: Sequence[Entity]) -> Node:
-    """Build a virtual-root tree from a flat catalog list — the inverse
-    of :func:`flatten_tree`.
+    """The inverse of :func:`flatten_root`, plus each view hung off the
+    root as an ``object[]`` edge named by its id.
 
-    The virtual root mirrors the records-side ``Sequence[Record]``
-    wrapping that ``From.apply`` receives: every top-level entity hangs
-    off it as an ``object[]`` edge so path traversal walks ``object[]``
-    edges uniformly down to any leaf entity.  The top-level entities are
-    the root entity's children, under their full id, and the views; the
-    root entity itself is not hung.
+    Without the root entity in ``catalog``, the root holds only the views.
     """
-    return Node(
-        children=[
-            (
-                Edge(
-                    name=entity.id,
-                    type="object[]",
-                    required=True,
-                    metadata=entity.metadata,
-                ),
-                _build_entity_node(entity, catalog),
-            )
-            for entity in catalog
-            if entity.parent_entity == ROOT_ENTITY_ID
-            or (entity.parent_entity is None and entity.id != ROOT_ENTITY_ID)
-        ],
-    )
+    root = next((e for e in catalog if e.id == ROOT_ENTITY_ID), None)
+    root_node = _build_entity_node(root, catalog) if root is not None else Node()
+    views = [e for e in catalog if e.parent_entity is None and e.id != ROOT_ENTITY_ID]
+    view_branches = [_build_view_branch(view, catalog) for view in views]
+    return replace(root_node, children=[*root_node.children, *view_branches])
+
+
+def attribute_suffix(parent_id: str, child_id: str) -> str:
+    """The attribute id the entity ``child_id`` extends ``parent_id`` by."""
+    if parent_id == ROOT_ENTITY_ID:
+        # The root's id does not prefix the ids under it.
+        return child_id
+    else:
+        return child_id.removeprefix(parent_id + ".")
 
 
 def flatten_tree(
@@ -372,6 +365,11 @@ def _without(d: Mapping[str, Any], *keys: str) -> dict[str, Any]:
     return {k: v for k, v in d.items() if k not in keys}
 
 
+def _build_view_branch(view: Entity, catalog: Sequence[Entity]) -> Branch:
+    edge = Edge(name=view.id, type="object[]", required=True, metadata=view.metadata)
+    return edge, _build_entity_node(view, catalog)
+
+
 def _build_entity_node(
     entity: Entity,
     catalog: Sequence[Entity],
@@ -384,7 +382,7 @@ def _build_entity_node(
     flattening; the built-in flag stays a flat-catalog concept.
     """
     sub_by_id = {
-        e.id[len(entity.id) + 1 :]: e for e in _children_of(entity.id, catalog)
+        attribute_suffix(entity.id, e.id): e for e in _children_of(entity.id, catalog)
     }
     return Node(
         metadata=entity.item_type.metadata,

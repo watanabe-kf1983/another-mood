@@ -63,7 +63,7 @@ def derive_queries(
     # references need each source name unique.
     _reject_source_name_conflicts(
         [cast(str, q["id"]) for _, queries in user_files for q in queries],
-        frozenset(e.id for e in catalog_entities),
+        frozenset(edge.name for edge, _ in catalog.children),
     )
 
     file_groups = [
@@ -131,24 +131,25 @@ def _iter_top_level(
 
 
 def _reject_source_name_conflicts(
-    names: Sequence[str], entity_ids: frozenset[str]
+    names: Sequence[str], data_keys: frozenset[str]
 ) -> None:
     """Raise :class:`FileValidationError` for name conflicts, each diagnostic
     positioned at the offending view name's YAML location."""
     conflicts = [
         _diagnostic_from(QueryDeriveError(message, offender=name))
-        for message, name in _source_name_conflicts(names, entity_ids)
+        for message, name in _source_name_conflicts(names, data_keys)
     ]
     if conflicts:
         raise FileValidationError(diagnostics=conflicts)
 
 
 def _source_name_conflicts(
-    names: Sequence[str], entity_ids: frozenset[str]
+    names: Sequence[str], data_keys: frozenset[str]
 ) -> list[tuple[str, str]]:
     """Find view names that shadow another source, as ``(message, name)``.
 
-    Data entities and views share one flat source namespace, so a
+    The data's top-level keys (``data_keys``: collections, singletons
+    and scalars alike) and views share one flat source namespace, so a
     reused name would silently shadow its source in the composer.  The
     ``__`` prefix is reserved for built-in sources — which is also why
     built-in view names never need this check.
@@ -158,8 +159,8 @@ def _source_name_conflicts(
     for name in names:
         if name.startswith("__"):
             message = f"view name '{name}' is reserved: '__' marks built-in names"
-        elif name in entity_ids:
-            message = f"view name '{name}' collides with data entity '{name}'"
+        elif name in data_keys:
+            message = f"view name '{name}' collides with top-level data '{name}'"
         elif name in seen:
             message = f"duplicate view name '{name}'"
         else:
@@ -212,9 +213,9 @@ def _derive_all(
 
 
 def _with_source(catalog: dc.Node, name: str, view: dc.Node) -> dc.Node:
-    """Hang a derived view off the catalog's virtual root as a top-level
-    ``object[]`` source, so a downstream ``From`` resolves it by name the
-    same way it resolves a data entity (see ``data_catalog.build_tree``)."""
+    """Hang a derived view off the catalog's root as an ``object[]``
+    source, so a downstream ``From`` resolves it by name the same way it
+    resolves a top-level data entity (see ``data_catalog.build_tree``)."""
     return replace(
         catalog,
         children=[

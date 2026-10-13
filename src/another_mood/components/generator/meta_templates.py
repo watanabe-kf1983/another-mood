@@ -70,7 +70,7 @@ def walk_entity(
     ancestors = _ancestor_chain(entity_id, by_id)
     rows: Sequence[InertValue] = [cast(InertValue, views)]
     for parent_id, child_id in pairwise(ancestors):
-        suffix = dc.Attribute.split_id(_attribute_suffix(parent_id, child_id))
+        suffix = dc.Attribute.split_id(dc.attribute_suffix(parent_id, child_id))
         rows = list(
             chain.from_iterable(
                 _safe_pluck(row, suffix)
@@ -164,15 +164,6 @@ def _ancestor_chain(
         # top-level entity.
         current = parent or dc.ROOT_ENTITY_ID
     return [dc.ROOT_ENTITY_ID, *chain_]
-
-
-def _attribute_suffix(parent_id: str, child_id: str) -> str:
-    """The attribute id ``child_id`` extends ``parent_id`` by."""
-    if parent_id == dc.ROOT_ENTITY_ID:
-        # The root's id does not prefix the ids under it.
-        return child_id
-    else:
-        return child_id.removeprefix(parent_id + ".")
 
 
 def _safe_pluck(row: Mapping[str, object], key_path: KeyPath) -> Sequence[InertValue]:

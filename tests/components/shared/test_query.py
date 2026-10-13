@@ -28,6 +28,7 @@ from another_mood.components.shared.record_predicate import (
     Operator,
 )
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.json_data_model import KeyPath
 
 from .leaf_paths import paths, tree
 
@@ -102,26 +103,49 @@ _TASKS_CATALOG_YAML = """
 """
 
 
+_ROOT_SHAPES_CATALOG_YAML = """
+- id: __root
+  item_type:
+    id: __root.item
+    attributes:
+      - { id: site_config, type: object, required: false }
+      - { id: site_config.title, type: string, required: false }
+      - id: site_config.items
+        type: object[]
+        required: false
+        child_entity: site_config.items
+        child_item_type: site_config.items.item
+      - { id: moods, type: "string[]", required: false }
+- id: site_config.items
+  item_type:
+    id: site_config.items.item
+    attributes:
+      - { id: name, type: string, required: false }
+  parent_entity: __root
+"""
+
+
 class TestFromDerive:
     def test_returns_named_top_level_entity(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))
         assert From(path=("tasks",)).derive(root) is root.child("tasks")
 
-    def test_accepts_dotted_top_level_id(self) -> None:
-        root = dc.build_tree(
-            _catalog(
-                """
-                - id: __definition.entities
-                  item_type:
-                    id: __definition.entities.item
-                    attributes:
-                      - { id: id, type: string, required: true }
-                """
-            )
-        )
-        assert From(path=("__definition", "entities")).derive(root) is root.child(
-            "__definition.entities"
-        )
+    def test_reaches_a_collection_inside_a_top_level_singleton(self) -> None:
+        root = dc.build_tree(_catalog(_ROOT_SHAPES_CATALOG_YAML))
+        assert From(path=("site_config", "items")).derive(root) is root.child(
+            "site_config"
+        ).child("items")
+
+    @pytest.mark.parametrize(
+        "path", [("site_config",), ("site_config", "title"), ("moods",)]
+    )
+    def test_rejects_a_top_level_non_collection(self, path: KeyPath) -> None:
+        # A singleton, a scalar inside it, a scalar array: each resolves
+        # in the catalog but holds no rows.
+        root = dc.build_tree(_catalog(_ROOT_SHAPES_CATALOG_YAML))
+        name = ".".join(path)
+        with pytest.raises(QueryDeriveError, match=f"unknown source '{name}'"):
+            From(path=path).derive(root)
 
     def test_rejects_unknown_name(self) -> None:
         root = dc.build_tree(_catalog(_TOP_LEVEL_TASKS_CATALOG_YAML))

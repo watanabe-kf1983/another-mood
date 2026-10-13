@@ -1,6 +1,6 @@
 """Tests for query_deriver."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import date
 import json
@@ -38,7 +38,9 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
+def _write_catalog(
+    catalog_dir: Path, *extra_yaml: str, root: Sequence[dc.Branch] = ()
+) -> None:
     """Write a data-catalog dir including the ``__definition.*`` entries.
 
     Built-in views reference ``__definition.entities`` and
@@ -48,9 +50,15 @@ def _write_catalog(catalog_dir: Path, *extra_yaml: str) -> None:
     for the ``__definition`` branch in the real pipeline — kept linked
     through ``definition_catalog_node`` rather than a literal YAML
     constant so changes to the catalog dataclasses propagate to the
-    fixture automatically.
+    fixture automatically.  The root entity comes along, holding
+    ``__definition`` and the branches in ``root``.  An entity in
+    ``extra_yaml`` has no parent, so it hangs off the root the way a
+    view does.
     """
-    entities = dc.flatten_root(definition_catalog_node())[1:]
+    definition = definition_catalog_node()
+    entities = dc.flatten_root(
+        replace(definition, children=[*definition.children, *root])
+    )
     save_model(
         catalog_dir / "data" / "__builtin" / "__definition.json",
         {
@@ -421,22 +429,22 @@ class TestIdentifierDiagnostics:
 class TestSourceNameConflicts:
     """_source_name_conflicts: shadowing detection over a flat name list.
 
-    A view name shadows another source when it reuses a catalog entity
-    id, repeats an earlier view name, or takes the reserved ``__``
+    A view name shadows another source when it reuses a top-level data
+    key, repeats an earlier view name, or takes the reserved ``__``
     built-in prefix.  Each conflict is reported as ``(message, name)``.
     """
 
-    _ENTITY_IDS = frozenset({"items", "albums"})
+    _DATA_KEYS = frozenset({"items", "albums"})
 
     def _conflicts(self, names: list[str]) -> list[tuple[str, str]]:
-        return _source_name_conflicts(names, self._ENTITY_IDS)
+        return _source_name_conflicts(names, self._DATA_KEYS)
 
     def test_distinct_names_have_no_conflict(self) -> None:
         assert self._conflicts(["ranked", "named"]) == []
 
     def test_entity_collision(self) -> None:
         assert self._conflicts(["items"]) == [
-            ("view name 'items' collides with data entity 'items'", "items")
+            ("view name 'items' collides with top-level data 'items'", "items")
         ]
 
     def test_duplicate_reports_only_the_later_occurrence(self) -> None:
@@ -479,10 +487,41 @@ class TestSourceNameDiagnostics:
         assert diags[0].file == tmp_path / "views" / "q.yaml"
         assert diags[0].line == 1
         assert diags[0].column == 1  # the view name key, not the ``from:`` value
-        assert "collides with data entity 'items'" in diags[0].message
+        assert "collides with top-level data 'items'" in diags[0].message
+
+    def test_collision_with_a_top_level_singleton(self, tmp_path: Path) -> None:
+        # Not only a collection: a view reusing a singleton's name would
+        # be unreachable behind it.
+        _write(tmp_path / "views" / "q.yaml", "site_config:\n  from: items\n")
+        _write_catalog(
+            tmp_path / "catalog",
+            _CATALOG_YAML,
+            root=[
+                (
+                    dc.Edge(name="site_config", type="object", required=False),
+                    dc.Node(
+                        children=[
+                            (
+                                dc.Edge(name="title", type="string", required=False),
+                                dc.Node(),
+                            )
+                        ]
+                    ),
+                )
+            ],
+        )
+        with pytest.raises(FileValidationError) as exc_info:
+            derive_queries.fn(
+                views_dir=tmp_path / "views",
+                data_catalog_dir=tmp_path / "catalog",
+                out_dir=tmp_path / "out",
+            )
+        assert [d.message for d in exc_info.value.diagnostics] == [
+            "view name 'site_config' collides with top-level data 'site_config'"
+        ]
 
     def test_name_conflict_short_circuits_derivation(self, tmp_path: Path) -> None:
-        # The ``items`` query both shadows the entity ``items`` (a name
+        # The ``items`` query both shadows the data ``items`` (a name
         # conflict) and reads a missing source (a derive-time error).
         # Fail-fast reports only the name conflict: deriving over an
         # ambiguous namespace is unreliable, so name checking short-circuits
@@ -497,7 +536,7 @@ class TestSourceNameDiagnostics:
             )
         diags = exc_info.value.diagnostics
         assert len(diags) == 1
-        assert "collides with data entity 'items'" in diags[0].message
+        assert "collides with top-level data 'items'" in diags[0].message
 
 
 class TestQueryReferences:

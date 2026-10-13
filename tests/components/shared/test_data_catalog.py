@@ -244,55 +244,97 @@ class TestCatalogDriftSuppression:
         }
 
 
-class TestBuildTreeTopLevel:
-    def test_hangs_the_roots_children_and_the_views_but_not_the_root(
-        self,
-    ) -> None:
-        """The root entity's children hang under their full id, a collection
-        inside a root-level singleton included; a view has no parent and
-        hangs too; the root entity itself does not."""
+_ROOT_CATALOG_YAML = """
+- id: __root
+  item_type:
+    id: __root.item
+    attributes:
+      - { id: site_config, type: object, required: false }
+      - { id: site_config.title, type: string, required: false }
+      - id: site_config.items
+        type: object[]
+        required: false
+        child_entity: site_config.items
+        child_item_type: site_config.items.item
+      - { id: moods, type: "string[]", required: false }
+      - id: users
+        type: object[]
+        required: false
+        child_entity: users
+        child_item_type: users.item
+- id: site_config.items
+  item_type:
+    id: site_config.items.item
+    attributes:
+      - { id: name, type: string, required: false }
+  parent_entity: __root
+- id: users
+  item_type:
+    id: users.item
+    attributes:
+      - { id: name, type: string, required: false }
+      - { id: profile, type: object, required: false }
+      - id: profile.tags
+        type: object[]
+        required: false
+        child_entity: users.profile.tags
+        child_item_type: users.item.profile.tags.item
+  parent_entity: __root
+- id: users.profile.tags
+  item_type:
+    id: users.item.profile.tags.item
+    attributes:
+      - { id: label, type: string, required: false }
+  parent_entity: users
+"""
+
+
+class TestBuildTreeRoot:
+    def test_restores_the_root_record(self) -> None:
+        """A singleton under the root is a branch of its own, holding the
+        collection inside it; a scalar array is a leaf."""
+        tree = dc.build_tree(_catalog(_ROOT_CATALOG_YAML))
+        assert [edge.name for edge, _ in tree.children] == [
+            "site_config",
+            "moods",
+            "users",
+        ]
+        assert [edge.name for edge, _ in tree.child("site_config").children] == [
+            "title",
+            "items",
+        ]
+        assert tree.child("moods") == dc.Node()
+
+    def test_hangs_the_views_after_the_roots_branches(self) -> None:
+        flat = _catalog(
+            _ROOT_CATALOG_YAML
+            + """
+- id: user_names
+  item_type:
+    id: user_names.item
+    attributes:
+      - { id: name, type: string, required: false }
+  view: true
+"""
+        )
+        edge, _ = dc.build_tree(flat).children[-1]
+        assert (edge.name, edge.type) == ("user_names", "object[]")
+
+    def test_build_then_flatten_root_is_identity(self) -> None:
+        flat = _catalog(_ROOT_CATALOG_YAML)
+        assert dc.flatten_root(dc.build_tree(flat)) == flat
+
+    def test_without_the_root_entity_hangs_only_the_views(self) -> None:
         flat = _catalog(
             """
-            - id: __root
-              item_type:
-                id: __root.item
-                attributes:
-                  - { id: site_config, type: object, required: false }
-                  - id: site_config.items
-                    type: object[]
-                    required: false
-                    child_entity: site_config.items
-                    child_item_type: site_config.items.item
-                  - id: users
-                    type: object[]
-                    required: false
-                    child_entity: users
-                    child_item_type: users.item
-            - id: site_config.items
-              item_type:
-                id: site_config.items.item
-                attributes:
-                  - { id: name, type: string, required: false }
-              parent_entity: __root
-            - id: users
-              item_type:
-                id: users.item
-                attributes:
-                  - { id: name, type: string, required: false }
-              parent_entity: __root
             - id: user_names
               item_type:
                 id: user_names.item
                 attributes:
                   - { id: name, type: string, required: false }
-              view: true
             """
         )
-        assert [edge.name for edge, _ in dc.build_tree(flat).children] == [
-            "site_config.items",
-            "users",
-            "user_names",
-        ]
+        assert [edge.name for edge, _ in dc.build_tree(flat).children] == ["user_names"]
 
 
 class TestRenameOnFlatten:
