@@ -100,17 +100,18 @@ class From(QueryNode):
         return cast(Sequence[Record], value)
 
     def derive(self, catalog: dc.Node) -> dc.Node:
-        # The catalog's virtual root hangs each top-level entity under its
-        # whole id, so a path into a singleton (``__definition.entities``)
-        # is one edge name there.  Joining the path back borrows the
-        # catalog's id spelling; it is scaffolding until the root is
-        # rebuilt from its own record, where the singleton is a branch of
-        # its own and the path descends segment by segment.
         name = ".".join(self.path)
-        if not catalog.has_child(name):
+        try:
+            edge, node = catalog.descend(self.path)
+        except dc.UnknownChildError:
             # The first segment carries the path's source position.
+            raise QueryDeriveError(
+                f"unknown source '{name}'", offender=self.path[0]
+            ) from None
+        if not dc.is_entity(edge, node):
+            # A singleton or a scalar resolves but holds no rows.
             raise QueryDeriveError(f"unknown source '{name}'", offender=self.path[0])
-        return catalog.child(name)
+        return node
 
 
 @dataclass(frozen=True)

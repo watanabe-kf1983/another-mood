@@ -103,22 +103,19 @@ normalize は既にこの対称性を持っている（ルート直下の single
 
 #### 現状、ルートが record と違う扱いを受けている場所
 
-ルートは `__root`（`item_type.id` は `__root.item`）という一件の Entity として列に出ている。利用者 schema、内蔵 content schema、`__definition` の三つの出どころを一つの Node に合成してから `data_catalog.flatten_root` で起こすので、ルートの属性は三つ全ての枝を持ち、ルート直下の entity と `site_config.items` は `parent_entity: __root` を持つ。ルートの id は子の id の接頭辞にならない（`users` は `users` のまま）。`__root` の record は利用者 schema のカタログファイルにだけ書き、連結で二件並ばないようにしている。`parent_entity` を持たないのはルートと view だけ。
+カタログはすでにルートを一件の record（`__root`）として持ち、`from:` もそこから降りる。record と扱いが違うまま残っているのは次の場所だけ。各行の As-Is は fixture テスト（`tests/pipeline/test_top_level_shapes.py` と preprocess の各テスト）に固定してあり、揃えるたびに期待値を To-Be に書き換える。
 
-残る場所を、揃える順に並べる。「扱いを合わせたときの波及」の列は、その場所を record と同じ扱いにしたときに起きること。各行の As-Is（`from: site_config` の `unknown source`、x-ref の `not found`、`__db/` にトップレベルの singleton が出ないこと）は fixture テストに固定済み（`tests/pipeline/test_top_level_shapes.py` と preprocess の各テスト）。揃えるたびに、そのテストの期待値を To-Be に書き換える。
-
-| 場所 | record の扱い | ルートの扱い | 扱いを合わせたときの波及 |
-|---|---|---|---|
-| **列 → 木**（`data_catalog.build_tree`） | 自分の Entity record から復元する。属性から singleton / scalar の枝を戻し、`child_entity` 付き属性から子 Entity を引き当てて吊る | `__root` の record があるのに復元に使わず、親が `__root` の Entity と、親を持たない view（ルートを除く）を、id をそのまま edge 名にした `object[]` の edge で吊った**仮想ルート** Node を都度作る。singleton / scalar の枝は無い。`site_config.items` / `__definition.entities` は一本の edge として吊られる | `__root` の record から復元した Node は singleton / scalar の枝を持ち、view は query_deriver がその Node に従来どおり `object[]` の枝として吊る。ただし `site_config.items` / `__definition.entities` は `site_config` → `items` の二段になり、次の行の `has_child` では引けなくなって内蔵 view が全て壊れる。次の行と一つの PR で揃える |
-| **source 名の解決**（`query.From.derive`） | record の中のパスは `Node.reach` でセグメントごとに降りる（`flatten` の `of:` 等） | source 名は `has_child` で edge 名と丸ごと完全一致させる。`site_config.items` / `__definition.entities` が引けるのは、仮想ルートにその名前の edge が一本あるから。`from: site_config` は「collection ではない」でなく `unknown source` | `reach` で降りれば、前の行の二段の枝でも `site_config.items` / `__definition.entities` を引ける。`from: site_config` を「collection ではない」と診断できるようになる。`_reject_source_name_conflicts` は entity id の集合で見るので、view 名と singleton 名の衝突を見逃す |
-| **データ側の record の取得**（`content_normalizer._accumulate` → `data_fk_validator` / `data_id_validator`） | record の中の collection は、親の record から `child_entity` を辿って降りる（`_walk_records`） | ルート直下の collection は、各ファイルの top-level の list を集めて entity ごとの袋にする。singleton の中の collection はこの袋に入らず、x-ref の参照先にも参照元にもならない。x-ref の参照先集合（`check_xref_coherence`）は、親が `__root` でも id がドット名のもの（`site_config.items`）を除いている | 袋に入れば、`check_xref_coherence` のドット名の除外を外して `site_config.items` を x-ref の参照先に許せる。`site_config.items` の中の x-ref も検査されるようになる |
-| **メタページ**（`meta.yaml` / `index.md` / `META_EDITION`） | `__entity_defs` / `__data` が Entity / Data のページを出す | `site_config.items` は親が `__root` なので Entities に載り、Entity / Data ページを持つ（To-Be どおり）。ルート自身は id が `__` で始まり、内蔵 view の `__` 除外で落ちるのでページが無い | ルートのページ（To-Be の Definition / Data の二ページ）を出す |
+| 場所 | ルートでいま違うこと | 揃えると |
+|---|---|---|
+| **source 名の診断**（`query.From.derive`） | `from:` がルート直下の singleton / scalar を指すと、存在しないキーと同じ `unknown source` になる。record の中なら `flatten` の `of:` は配列でないと診断する | 「collection ではない」と診断する |
+| **データ側の record の取得**（`content_normalizer`） | singleton の中の collection（`site_config.items`）の record が集められず、x-ref の参照先にも参照元にもならない。そのため x-ref の参照先の候補からも外してある | x-ref の参照先に指定でき、その中の x-ref も検査される。参照先の候補から外している除外も消す |
+| **メタページ**（`meta.yaml` / `index.md`） | ルート自身のページが無い | To-Be の Definition / Data の二ページを出す |
 
 仮決め（実装で問題が見つかれば見直す）:
 
 - ルートの属性に view を含める。`inspect_schema` が出したルートのカタログに query_deriver が view の属性を追記する。J5 が求める「tap のルートを映す」属性表はこれで得られ、J5 側に合成の仕事を持ち込まない。懸念: カタログはファイル別に書いて `load_model` の連結で合流させるので、素朴に追記すると `__root` の Entity record が二件並ぶ。追記の形（query_deriver が完全なルートを出し直す、読む側で同じ id の record を束ねる、等）は実装時に決める
 
-進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「列 → 木」と「source 名の解決」（二行を同時に）→ 「データ側の record の取得」→ 「メタページ」→ docs の同期
+進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「source 名の診断」→ 「データ側の record の取得」→ 「メタページ」→ docs の同期
 
 #### 依存
 
