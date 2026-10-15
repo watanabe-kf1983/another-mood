@@ -392,6 +392,106 @@ class TestScalarMapValue:
         ]
 
 
+class TestInsideSingleton:
+    """FK on, or targeting, an attribute folded in from a singleton object.
+
+    The dotted attribute id (``profile.best``) names a value nested
+    inside the singleton in the data, not a key spelled with a dot.
+    """
+
+    CATALOG = """
+        - id: countries
+          item_type:
+            id: countries.item
+            attributes:
+              - { id: id, type: string, required: true }
+              - { id: codes, type: object, required: false }
+              - { id: codes.iso, type: string, required: false }
+        - id: artists
+          item_type:
+            id: artists.item
+            attributes:
+              - { id: id, type: string, required: true }
+              - { id: profile, type: object, required: false }
+              - id: profile.rival
+                type: string
+                required: false
+                x_ref: { entity: artists, attribute: id }
+              - id: profile.home
+                type: string
+                required: false
+                x_ref: { entity: countries, attribute: codes.iso }
+              - id: profile.tours
+                type: object[]
+                required: false
+                child_entity: artists.profile.tours
+                child_item_type: artists.item.profile.tours.item
+        - id: artists.profile.tours
+          parent_entity: artists
+          item_type:
+            id: artists.item.profile.tours.item
+            attributes:
+              - { id: id, type: string, required: true }
+              - id: guest
+                type: string
+                required: false
+                x_ref: { entity: artists, attribute: id }
+    """
+
+    def test_all_resolve(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG)
+        data = _data(
+            """
+            countries:
+              - id: jp
+                codes:
+                  iso: JPN
+            artists:
+              - id: miyavi
+                profile:
+                  rival: hyde
+                  home: JPN
+                  tours:
+                    - id: t1
+                      guest: hyde
+              - id: hyde
+            """,
+            tmp_path,
+        )
+        assert list(check_fk_data(catalog, data)) == []
+
+    def test_all_dangling(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG)
+        data = _data(
+            """
+            countries:
+              - id: jp
+                codes:
+                  iso: JPN
+            artists:
+              - id: miyavi
+                profile:
+                  rival: ghost
+                  home: USA
+                  tours:
+                    - id: t1
+                      guest: ghost
+            """,
+            tmp_path,
+        )
+        assert [_summary(d) for d in check_fk_data(catalog, data)] == [
+            (8, "x-ref artists.profile.rival = 'ghost' has no match in artists.id"),
+            (
+                9,
+                "x-ref artists.profile.home = 'USA' has no match in countries.codes.iso",
+            ),
+            (
+                12,
+                "x-ref artists.profile.tours.guest = 'ghost' has no match in artists.id",
+            ),
+        ]
+
+
 class TestUntaggedValue:
     """A FROM-side value without UserStr tagging still produces a diagnostic."""
 

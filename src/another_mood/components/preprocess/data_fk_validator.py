@@ -22,6 +22,7 @@ from typing import cast
 
 from another_mood.components.shared.user_source.source_loader import UserStr
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared import json_data_model
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     DiagnosticSeverity,
@@ -84,7 +85,9 @@ def _build_target_index(
                 # targets and their dict/list values are unhashable.
                 continue
             values = frozenset(
-                rec[attr.id] for rec in records if rec.get(attr.id) is not None
+                value
+                for rec in records
+                if (value := _attribute_value(rec, attr)) is not None
             )
             index[(entity.id, attr.id)] = values
     return index
@@ -107,7 +110,7 @@ def _walk_records(
         return
     for record in records:
         for attr in entity.item_type.attributes:
-            value = record.get(attr.id)
+            value = _attribute_value(record, attr)
             if value is None:
                 continue
             if attr.child_entity is not None and isinstance(value, list):
@@ -117,6 +120,18 @@ def _walk_records(
                 )
             else:
                 yield (entity, attr, value)
+
+
+def _attribute_value(record: Mapping[str, object], attr: dc.Attribute) -> object:
+    """The value of ``attr`` in ``record``, or ``None`` when absent.
+
+    A dotted id (``profile.best``) names a value nested inside the
+    singleton object it folds in, not a key spelled with a dot.
+    """
+    try:
+        return json_data_model.pluck(record, attr.key_path)
+    except KeyError:
+        return None
 
 
 def _fk_violation(entity: dc.Entity, attr: dc.Attribute, value: object) -> Diagnostic:
