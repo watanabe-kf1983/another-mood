@@ -13,14 +13,40 @@ from another_mood.components.shared import data_catalog as dc
 from another_mood.components.shared.user_source.diagnostic import Diagnostic
 
 
-def _catalog(yaml_text: str) -> Sequence[dc.Entity]:
+def _catalog(yaml_text: str, *, root_attributes: str = "[]") -> Sequence[dc.Entity]:
     """Build a typed catalog list from a YAML entity-list string.
 
     An entry without ``parent_entity`` is placed under the root entity,
-    as the schema stage places a top-level collection.
+    as the schema stage places a top-level collection, and the root
+    entity linking to each of them is added.  ``root_attributes`` lists
+    the root's other attributes (a top-level singleton and its values).
     """
     raw = cast(list[Mapping[str, object]], yaml.safe_load(dedent(yaml_text)))
-    return [dc.Entity.from_dict({"parent_entity": dc.ROOT_ENTITY_ID, **e}) for e in raw]
+    entities = [
+        dc.Entity.from_dict({"parent_entity": dc.ROOT_ENTITY_ID, **e}) for e in raw
+    ]
+    links = [
+        {
+            "id": e.id,
+            "type": "object[]",
+            "required": False,
+            "child_entity": e.id,
+            "child_item_type": e.item_type.id,
+        }
+        for e in entities
+        if e.parent_entity == dc.ROOT_ENTITY_ID
+    ]
+    others = cast(list[Mapping[str, object]], yaml.safe_load(dedent(root_attributes)))
+    root = dc.Entity.from_dict(
+        {
+            "id": dc.ROOT_ENTITY_ID,
+            "item_type": {
+                "id": f"{dc.ROOT_ENTITY_ID}.item",
+                "attributes": [*others, *links],
+            },
+        }
+    )
+    return [root, *entities]
 
 
 def _data(
@@ -489,6 +515,89 @@ class TestInsideSingleton:
                 12,
                 "x-ref artists.profile.tours.guest = 'ghost' has no match in artists.id",
             ),
+        ]
+
+
+class TestInsideTopLevelSingleton:
+    """A singleton directly under the root behaves as one inside a record."""
+
+    CATALOG = """
+        - id: artists
+          item_type:
+            id: artists.item
+            attributes:
+              - { id: id, type: string, required: true }
+        - id: site_config.items
+          item_type:
+            id: site_config.items.item
+            attributes:
+              - { id: id, type: string, required: true }
+              - id: artist
+                type: string
+                required: false
+                x_ref: { entity: artists, attribute: id }
+        - id: picks
+          item_type:
+            id: picks.item
+            attributes:
+              - { id: id, type: string, required: true }
+              - id: item
+                type: string
+                required: false
+                x_ref: { entity: site_config.items, attribute: id }
+    """
+
+    ROOT_ATTRIBUTES = """
+        - { id: site_config, type: object, required: false }
+        - id: site_config.owner
+          type: string
+          required: false
+          x_ref: { entity: artists, attribute: id }
+    """
+
+    def test_all_resolve(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG, root_attributes=self.ROOT_ATTRIBUTES)
+        data = _data(
+            """
+            artists:
+              - id: miyavi
+            site_config:
+              owner: miyavi
+              items:
+                - id: i1
+                  artist: miyavi
+            picks:
+              - id: p1
+                item: i1
+            """,
+            tmp_path,
+        )
+        assert list(check_fk_data(catalog, data)) == []
+
+    def test_all_dangling(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG, root_attributes=self.ROOT_ATTRIBUTES)
+        data = _data(
+            """
+            artists:
+              - id: miyavi
+            site_config:
+              owner: ghost
+              items:
+                - id: i1
+                  artist: ghost
+            picks:
+              - id: p1
+                item: i9
+            """,
+            tmp_path,
+        )
+        assert [_summary(d) for d in check_fk_data(catalog, data)] == [
+            (4, "x-ref site_config.owner = 'ghost' has no match in artists.id"),
+            (
+                7,
+                "x-ref site_config.items.artist = 'ghost' has no match in artists.id",
+            ),
+            (10, "x-ref picks.item = 'i9' has no match in site_config.items.id"),
         ]
 
 

@@ -198,3 +198,20 @@ class TestNestedCollections:
             "duplicate id 'home' in members/alice/profile/links",
             "duplicate id 'home' in members/alice/profile/links",
         ]
+
+    def test_duplicates_under_a_top_level_object_are_reported(
+        self, tmp_path: Path
+    ) -> None:
+        data = _data(
+            """
+            site_config:
+              items:
+                - id: first
+                - id: first
+            """,
+            tmp_path,
+        )
+        assert [_summary(d) for d in check_duplicate_ids(data)] == [
+            (3, "duplicate id 'first' in site_config/items"),
+            (4, "duplicate id 'first' in site_config/items"),
+        ]
