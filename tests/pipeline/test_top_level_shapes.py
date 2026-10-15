@@ -4,10 +4,10 @@ Partly a current limitation, not a contract.  The root is catalogued as
 a record: a top-level singleton folds into it, and the collection inside
 the singleton opens an entity of its own, which views can name and
 ``__db/`` gives pages to.  The singleton itself still has no page, and
-``from:`` naming it reads as a key that does not exist at all.
+``from:`` naming it is diagnosed as not an entity.
 
 TODO: rewrite the expectations marked "Intended" as the root's own page
-and the "not a collection" diagnostic land.
+lands.
 """
 
 from pathlib import Path
@@ -107,6 +107,6 @@ def test_from_names_the_collection_but_not_the_singleton(
 
     assert result.has_errors()
     messages = sorted(d.message for d in result.diagnostics)
-    # ``site_config.items`` resolves.  Intended: ``site_config`` is
-    # diagnosed as "not a collection" instead.
-    assert messages == ["unknown source 'site_config'"]
+    # ``site_config.items`` resolves; ``site_config`` is told apart from
+    # a key that does not exist.
+    assert messages == ["source 'site_config' is not an entity (type 'object')"]
