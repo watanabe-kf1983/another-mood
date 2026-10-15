@@ -96,7 +96,7 @@ normalize は既にこの対称性を持っている（ルート直下の single
 #### To-Be に伴う外部仕様
 
 - **tap / テンプレート**: 変更なし。data.json のルートは従来どおり
-- **view**: ルート直下の singleton の中の collection（`site_config.items`）を `from:` で名指しできる。`from:` がルート直下の singleton / scalar を指したときは、存在しないキーと区別して「collection ではない」と診断する
+- **view**: ルート直下の singleton の中の collection（`site_config.items`）を `from:` で名指しできる。`from:` がルート直下の singleton / scalar を指したときは、存在しないキーと区別して「entity ではない」と診断し、その型を添える（実装済み）
 - **x-ref**: `entity:` に `site_config.items` を指定できる
 - **`__db/`**: `site_config.items` は Entities にドット名で載り、ルート直下の collection と同じく Entity / Data ページを持つ。ルート record は index に Entities / Views とは別枠の節を持ち、Entity と同じく Definition / Data の二ページに割る。トップレベルの singleton / scalar が利用者に見える唯一の場所。Definition はルート record の属性表（collection 属性は entity / view のページへのリンク、singleton はドット名の属性、scalar はそのまま。種別の列で entity / view / singleton / scalar を区別する）、Data はルート record の値（collection は値を描かず、その source の Data ページへのリンク）
 - **docs**: docs/reference/schema.md の Single-record pattern の「view から名指しできず `__db/` にページも出ない」を書き換える
@@ -107,7 +107,6 @@ normalize は既にこの対称性を持っている（ルート直下の single
 
 | 場所 | ルートでいま違うこと | 揃えると |
 |---|---|---|
-| **source 名の診断**（`query.From.derive`） | `from:` がルート直下の singleton / scalar を指すと、存在しないキーと同じ `unknown source` になる。record の中なら `flatten` の `of:` は配列でないと診断する | 「collection ではない」と診断する |
 | **データ側の record の取得**（`content_normalizer`） | singleton の中の collection（`site_config.items`）の record が集められず、x-ref の参照先にも参照元にもならない。そのため x-ref の参照先の候補からも外してある | x-ref の参照先に指定でき、その中の x-ref も検査される。参照先の候補から外している除外も消す |
 | **メタページ**（`meta.yaml` / `index.md`） | ルート自身のページが無い | To-Be の Definition / Data の二ページを出す |
 
@@ -115,7 +114,7 @@ normalize は既にこの対称性を持っている（ルート直下の single
 
 - ルートの属性に view を含める。`inspect_schema` が出したルートのカタログに query_deriver が view の属性を追記する。J5 が求める「tap のルートを映す」属性表はこれで得られ、J5 側に合成の仕事を持ち込まない。懸念: カタログはファイル別に書いて `load_model` の連結で合流させるので、素朴に追記すると `__root` の Entity record が二件並ぶ。追記の形（query_deriver が完全なルートを出し直す、読む側で同じ id の record を束ねる、等）は実装時に決める
 
-進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「source 名の診断」→ 「データ側の record の取得」→ 「メタページ」→ docs の同期
+進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「データ側の record の取得」→ 「メタページ」→ docs の同期
 
 #### 依存
 

@@ -1,6 +1,7 @@
 """Tests for Query DSL — object model and evaluation."""
 
 import dataclasses
+import re
 
 import pytest
 from ruamel.yaml import YAML
@@ -137,14 +138,21 @@ class TestFromDerive:
         ).child("items")
 
     @pytest.mark.parametrize(
-        "path", [("site_config",), ("site_config", "title"), ("moods",)]
+        ("path", "message"),
+        [
+            (("site_config",), "source 'site_config' is not an entity (type 'object')"),
+            (
+                ("site_config", "title"),
+                "source 'site_config.title' is not an entity (type 'string')",
+            ),
+            (("moods",), "source 'moods' is not an entity (type 'string[]')"),
+        ],
     )
-    def test_rejects_a_top_level_non_collection(self, path: KeyPath) -> None:
+    def test_rejects_a_top_level_non_entity(self, path: KeyPath, message: str) -> None:
         # A singleton, a scalar inside it, a scalar array: each resolves
         # in the catalog but holds no rows.
         root = dc.build_tree(_catalog(_ROOT_SHAPES_CATALOG_YAML))
-        name = ".".join(path)
-        with pytest.raises(QueryDeriveError, match=f"unknown source '{name}'"):
+        with pytest.raises(QueryDeriveError, match=re.escape(message)):
             From(path=path).derive(root)
 
     def test_rejects_unknown_name(self) -> None:

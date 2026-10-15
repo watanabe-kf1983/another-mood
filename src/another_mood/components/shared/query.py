@@ -110,7 +110,10 @@ class From(QueryNode):
             ) from None
         if not dc.is_entity(edge, node):
             # A singleton or a scalar resolves but holds no rows.
-            raise QueryDeriveError(f"unknown source '{name}'", offender=self.path[0])
+            raise QueryDeriveError(
+                f"source '{name}' is not an entity (type '{edge.type}')",
+                offender=self.path[0],
+            )
         return node
 
 
