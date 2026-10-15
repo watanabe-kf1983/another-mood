@@ -33,6 +33,7 @@ from another_mood.components.shared.user_source.source_loader import (
     is_blob_file,
 )
 from another_mood.components.shared.json_data_model import (
+    deep_merge,
     load_model,
     load_schema,
     save_model,
@@ -63,20 +64,20 @@ def normalize_contents(
     unchanged blob bytes are reused from it instead of re-copied.
     """
     schema = build_contents_schema(schema_file)
-    data_by_entity: dict[str, list[Mapping[str, object]]] = {}
+    root: Mapping[str, object] = {}
     for src_file, data in iter_normalized(src_dir, schema):
         # Append (not replace) ``.json`` so foo.yaml / foo.yml / foo.json /
         # foo.md never collide on the same destination.
         rel = src_file.relative_to(src_dir)
         save_model(out_dir / rel.with_name(rel.name + ".json"), data)
         _mirror_blob_bytes(src_file, data, out_dir / rel, prev_out_dir / rel)
-        _accumulate(data, data_by_entity)
+        root = _merge(root, data)
 
-    for diagnostic in check_fk_data(_load_catalog(data_catalog_dir), data_by_entity):
+    for diagnostic in check_fk_data(_load_catalog(data_catalog_dir), root):
         reporter.report(diagnostic)
     # After the FK loop: the stage drains the reporter even on a raise,
     # so those warnings still surface.
-    if duplicates := check_duplicate_ids(data_by_entity):
+    if duplicates := check_duplicate_ids(root):
         raise FileValidationError(diagnostics=duplicates)
 
 
@@ -155,23 +156,15 @@ def _handwritten_blob(value: object) -> Diagnostic:
     )
 
 
-def _accumulate(data: object, sink: dict[str, list[Mapping[str, object]]]) -> None:
-    """Merge a per-file normalized payload into the per-entity record bag.
+def _merge(root: Mapping[str, object], data: object) -> Mapping[str, object]:
+    """Merge a per-file normalized payload into the whole data tree.
 
-    Only top-level keys whose value is a list (= an entity collection
-    after normalization) contribute.  Fixed-object top-levels do not
-    surface as FK targets and are skipped.  Multiple files sharing a
-    top-level key (e.g. prose pages contributing to ``prose``) have
-    their record lists concatenated.
+    Merged as the later stages merge the saved files, so a top-level
+    singleton split across files is seen whole.
     """
     if not isinstance(data, Mapping):
-        return
-    payload = cast(Mapping[str, object], data)
-    for entity_id, records in payload.items():
-        if isinstance(records, list):
-            sink.setdefault(entity_id, []).extend(
-                cast(Sequence[Mapping[str, object]], records)
-            )
+        return root
+    return deep_merge(dict(root), dict(cast(Mapping[str, object], data)))
 
 
 def _load_catalog(data_catalog_dir: Path) -> Sequence[dc.Entity]:

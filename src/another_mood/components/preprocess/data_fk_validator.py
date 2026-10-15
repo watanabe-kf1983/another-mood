@@ -37,26 +37,20 @@ _SCALAR_TYPES = frozenset({"string", "integer", "number", "boolean"})
 
 def check_fk_data(
     catalog: Sequence[dc.Entity],
-    data_by_entity: Mapping[str, Sequence[Mapping[str, object]]],
+    root: Mapping[str, object],
 ) -> Sequence[Diagnostic]:
     """Diagnose FK values with no match in the declared target set.
 
-    ``catalog`` carries every entity (user + builtin, top-level +
-    nested).  ``data_by_entity`` maps each top-level entity id to its
-    list of normalized records; nested entities are reached by
-    recursive descent through attributes whose ``child_entity`` is set.
-
-    Only top-level entities can be FK targets per the schema spec, so
-    the target index is built solely from records at the top.  The
-    FROM-side walk covers every entity (top-level or nested), since
-    ``x-ref`` may be declared on any property in the catalog.
+    ``catalog`` carries every entity, the root entity included.  ``root``
+    is the whole normalized data tree, merged across every source file.
     """
     catalog_by_id = {e.id: e for e in catalog}
-    target_index = _build_target_index(catalog_by_id, data_by_entity)
+    target_index = _build_target_index(catalog_by_id, root)
     return [
         _fk_violation(entity, attr, value)
-        for entity_id, records in data_by_entity.items()
-        for entity, attr, value in _walk_records(entity_id, records, catalog_by_id)
+        for entity, attr, value in _walk_records(
+            dc.ROOT_ENTITY_ID, [root], catalog_by_id
+        )
         if attr.x_ref is not None
         and value
         not in target_index.get((attr.x_ref.entity, attr.x_ref.attribute), frozenset())
@@ -65,32 +59,45 @@ def check_fk_data(
 
 def _build_target_index(
     catalog_by_id: Mapping[str, dc.Entity],
-    data_by_entity: Mapping[str, Sequence[Mapping[str, object]]],
+    root: Mapping[str, object],
 ) -> Mapping[tuple[str, str], frozenset[object]]:
     """Build ``(target_entity_id, target_attribute_id) -> value set``.
 
-    Only top-level entities are valid FK targets; nested entities are
-    skipped.  Missing values (``None`` / absent key) are excluded so
-    optional attributes do not pollute the set with an implicit null.
+    Missing values (``None`` / absent key) are excluded so optional
+    attributes do not pollute the set with an implicit null.
     """
-    index: dict[tuple[str, str], frozenset[object]] = {}
-    for entity_id, records in data_by_entity.items():
-        entity = catalog_by_id.get(entity_id)
-        if entity is None or entity.parent_entity != dc.ROOT_ENTITY_ID:
+    return {
+        (entity.id, attr.id): frozenset(
+            value
+            for rec in records
+            if (value := _attribute_value(rec, attr)) is not None
+        )
+        for entity, records in _root_collections(catalog_by_id, root)
+        for attr in entity.item_type.attributes
+        # Non-scalar attributes (singleton-flatten parents like ``body`` /
+        # ``x_ref``, child-entity links) cannot be FK targets and their
+        # dict/list values are unhashable.
+        if attr.type in _SCALAR_TYPES
+    }
+
+
+def _root_collections(
+    catalog_by_id: Mapping[str, dc.Entity],
+    root: Mapping[str, object],
+) -> Iterator[tuple[dc.Entity, Sequence[Mapping[str, object]]]]:
+    """Yield each collection whose parent is the root, with its records."""
+    root_entity = catalog_by_id.get(dc.ROOT_ENTITY_ID)
+    if root_entity is None:
+        return
+    for link in root_entity.item_type.attributes:
+        if link.child_entity is None:
             continue
-        for attr in entity.item_type.attributes:
-            if attr.type not in _SCALAR_TYPES:
-                # Non-scalar attributes (singleton-flatten parents like
-                # ``body`` / ``x_ref``, child-entity links) cannot be FK
-                # targets and their dict/list values are unhashable.
-                continue
-            values = frozenset(
-                value
-                for rec in records
-                if (value := _attribute_value(rec, attr)) is not None
+        records = _attribute_value(root, link)
+        if isinstance(records, list):
+            yield (
+                catalog_by_id[link.child_entity],
+                cast(Sequence[Mapping[str, object]], records),
             )
-            index[(entity.id, attr.id)] = values
-    return index
 
 
 def _walk_records(
@@ -143,8 +150,9 @@ def _fk_violation(entity: dc.Entity, attr: dc.Attribute, value: object) -> Diagn
     qualified name to locate the offending record.
     """
     assert attr.x_ref is not None
+    qualified = attr.id if entity.id == dc.ROOT_ENTITY_ID else f"{entity.id}.{attr.id}"
     message = (
-        f"x-ref {entity.id}.{attr.id} = {str(value)!r} has no match in "
+        f"x-ref {qualified} = {str(value)!r} has no match in "
         f"{attr.x_ref.entity}.{attr.x_ref.attribute}"
     )
     if isinstance(value, UserStr):

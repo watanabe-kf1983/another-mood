@@ -500,3 +500,52 @@ def test_ids_duplicated_across_files_fail_validation(tmp_path: Path) -> None:
         (src / "members copy.yaml", 2, "duplicate id 'alice' in members"),
         (src / "members.yaml", 2, "duplicate id 'alice' in members"),
     ]
+
+
+_SITE_CONFIG_SCHEMA = """
+    type: object
+    additionalProperties: false
+    properties:
+      site_config:
+        type: object
+        additionalProperties: false
+        properties:
+          items:
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string }
+"""
+
+
+def test_top_level_singleton_split_across_files_is_merged(tmp_path: Path) -> None:
+    """Each file validates on its own; the clash shows only once merged."""
+    schema_file = tmp_path / "schema.yaml"
+    schema_file.write_text(dedent(_SITE_CONFIG_SCHEMA).lstrip("\n"))
+    src = tmp_path / "contents"
+    src.mkdir()
+    record = "site_config:\n  items:\n    first: {}\n"
+    (src / "a.yaml").write_text(record)
+    (src / "b.yaml").write_text(record)
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    inspect_schema.fn(schema_file, out_dir=catalog_dir)
+    out = tmp_path / "normalized"
+    out.mkdir()
+
+    with pytest.raises(FileValidationError) as exc_info:
+        normalize_contents.fn(
+            src_dir=src,
+            out_dir=out,
+            prev_out_dir=tmp_path / "prev",
+            schema_file=schema_file,
+            data_catalog_dir=catalog_dir,
+            reporter=DiagnosticReporter(),
+        )
+
+    assert [(d.file, d.line, d.message) for d in exc_info.value.diagnostics] == [
+        (src / "a.yaml", 3, "duplicate id 'first' in site_config/items"),
+        (src / "b.yaml", 3, "duplicate id 'first' in site_config/items"),
+    ]
