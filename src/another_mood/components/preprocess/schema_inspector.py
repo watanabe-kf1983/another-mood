@@ -167,14 +167,10 @@ def check_xref_coherence(
 
     Only the root's direct collections are targets.
     """
-    # A collection inside a root-level singleton (``site_config.items``)
-    # also has the root as its parent, but the data side gathers no
-    # records for it to check values against; its dotted id keeps it out.
     target_index: Mapping[str, frozenset[str]] = {
         e.id: frozenset(a.id for a in e.item_type.attributes)
         for e in valid_targets
         if e.parent_entity == dc.ROOT_ENTITY_ID
-        and len(dc.Attribute.split_id(e.id)) == 1
     }
     return [
         diag

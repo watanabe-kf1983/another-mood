@@ -99,22 +99,21 @@ normalize は既にこの対称性を持っている（ルート直下の single
 - **view**: ルート直下の singleton の中の collection（`site_config.items`）を `from:` で名指しできる。`from:` がルート直下の singleton / scalar を指したときは、存在しないキーと区別して「entity ではない」と診断し、その型を添える（実装済み）
 - **x-ref**: `entity:` に `site_config.items` を指定できる
 - **`__db/`**: `site_config.items` は Entities にドット名で載り、ルート直下の collection と同じく Entity / Data ページを持つ。ルート record は index に Entities / Views とは別枠の節を持ち、Entity と同じく Definition / Data の二ページに割る。トップレベルの singleton / scalar が利用者に見える唯一の場所。Definition はルート record の属性表（collection 属性は entity / view のページへのリンク、singleton はドット名の属性、scalar はそのまま。種別の列で entity / view / singleton / scalar を区別する）、Data はルート record の値（collection は値を描かず、その source の Data ページへのリンク）
-- **docs**: docs/reference/schema.md の Single-record pattern の「view から名指しできず `__db/` にページも出ない」を書き換える
+- **docs**: docs/reference/schema.md の Single-record pattern の「view から名指しできず `__db/` にページも出ない」を書き換え、その中の collection がドット名の entity（`site_config.items`）になることを書く。view.md の `from:` が entity 名を「the top-level key」と言い換えている括弧書きはこれと食い違うので合わせる
 
 #### 現状、ルートが record と違う扱いを受けている場所
 
-カタログはすでにルートを一件の record（`__root`）として持ち、`from:` もそこから降りる。record と扱いが違うまま残っているのは次の場所だけ。各行の As-Is は fixture テスト（`tests/pipeline/test_top_level_shapes.py` と preprocess の各テスト）に固定してあり、揃えるたびに期待値を To-Be に書き換える。
+カタログはすでにルートを一件の record（`__root`）として持ち、`from:` もそこから降りる。record と扱いが違うまま残っているのは次の場所だけ。各行の As-Is は fixture テスト（`tests/pipeline/test_top_level_shapes.py`）に固定してあり、揃えるたびに期待値を To-Be に書き換える。
 
 | 場所 | ルートでいま違うこと | 揃えると |
 |---|---|---|
-| **データ側の record の取得**（`content_normalizer`） | singleton の中の collection（`site_config.items`）の record が集められず、x-ref の参照先にも参照元にもならない。そのため x-ref の参照先の候補からも外してある | x-ref の参照先に指定でき、その中の x-ref も検査される。参照先の候補から外している除外も消す |
 | **メタページ**（`meta.yaml` / `index.md`） | ルート自身のページが無い | To-Be の Definition / Data の二ページを出す |
 
 仮決め（実装で問題が見つかれば見直す）:
 
 - ルートの属性に view を含める。`inspect_schema` が出したルートのカタログに query_deriver が view の属性を追記する。J5 が求める「tap のルートを映す」属性表はこれで得られ、J5 側に合成の仕事を持ち込まない。懸念: カタログはファイル別に書いて `load_model` の連結で合流させるので、素朴に追記すると `__root` の Entity record が二件並ぶ。追記の形（query_deriver が完全なルートを出し直す、読む側で同じ id の record を束ねる、等）は実装時に決める
 
-進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「データ側の record の取得」→ 「メタページ」→ docs の同期
+進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「メタページ」→ docs の同期
 
 #### 依存
 
