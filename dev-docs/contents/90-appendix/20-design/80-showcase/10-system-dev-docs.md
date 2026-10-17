@@ -60,7 +60,7 @@ PoC で Mermaid v11 (CDN 経由、Chromium ヘッドレス + Noto CJK) に対し
 
 ### showcase で表面化したツール側・将来の検討事項 (未起票)
 
-showcase の設計対話で見つかったが、showcase タスクの範囲外として起票を保留しているもの。起票先はツール本体のタスクか本ファイルの Candidates。目次確定の過程で表面化した合成ビューは E17 として起票済み (前提は M13)。
+showcase の設計対話で見つかったが、showcase タスクの範囲外として起票を保留しているもの。起票先はツール本体のタスクか本ファイルの Candidates。目次確定の過程で表面化した文書ノードは E17 として起票済み (前提は M13)。
 
 - **`{% include %}` / `{% import %}` の文書化**: 動くが `docs/reference/template.md` に記述が無い (template-trust-model の loader の節で触れているのみ)。root テンプレートの分割手段 (include) と、テンプレート間でマクロを共有する手段 (import。業務モデルの 業務マクロ.md で実機確認、再帰マクロも動く) として記述する。小さな docs PR
 - **string 配列への x-ref**: `items: { type: string, x-ref }` を許す拡張。現状はオブジェクト配列に包む
