@@ -35,6 +35,28 @@ __entity_tree:
     - item: metadata
     - item: item_type
 
+# The root record's Definition and Data pages.  The root is the one
+# record the whole data tree is (id `__root`, hence absent from the
+# views above); its attributes are where top-level singletons and
+# scalars show.  Each view's whole result array splits to one page
+# (/__root_def, /__root_data) — two views because one node cannot land
+# on two pages.
+__root_def:
+  from: __definition.entities
+  where:
+    id: __root
+  select:
+    - item: id
+    - item: metadata
+    - item: item_type
+
+__root_data:
+  from: __definition.entities
+  where:
+    id: __root
+  select:
+    - item: id
+
 # Per-entity Entity Definition pages, and the index's Entity list.  The
 # top-level content entities (parent_entity: __root) — user-authored plus
 # user-facing built-ins like `prose`.  One result item per entity; its

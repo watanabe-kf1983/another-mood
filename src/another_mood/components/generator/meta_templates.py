@@ -133,7 +133,15 @@ META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue]] = {
 
 
 META_EDITION = Edition(
-    paging=PagingPolicy(("__entity_defs.item", "__view_defs.item", "__data.item")),
+    paging=PagingPolicy(
+        (
+            "__root_def.item[]",
+            "__root_data.item[]",
+            "__entity_defs.item",
+            "__view_defs.item",
+            "__data.item",
+        )
+    ),
     name="__db",
     templates_dir=META_TEMPLATES_DIR,
     extra_filters=META_TEMPLATES_FILTERS,
@@ -145,7 +153,9 @@ META_EDITION = Edition(
 
 ``file_per`` is the fixed internal page split: with no user ``reports.yaml``,
 listing the built-in views' item ids routes each view's result to its own
-``{view}/{id}.md`` page via the ordinary ``page_path`` derivation."""
+``{view}/{id}.md`` page via the ordinary ``page_path`` derivation.  The
+root's views list their array id instead, so the one-record result lands
+on a single ``{view}.md`` page."""
 
 
 # ── walk_entity helpers ──────────────────────────────────────────────
