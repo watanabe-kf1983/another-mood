@@ -28,7 +28,11 @@ _TRAILER = re.compile(rf"{re.escape(TRAILER_KEY)}: (?P<kind>{'|'.join(KINDS)})")
 # narrow, and matched as a prefix — it has to stay clear of prose that merely
 # mentions these words.
 _LOOKALIKE = re.compile(r"release[-_ ]?(?:highlight|note)s?[ \t]*:", re.IGNORECASE)
+# Each explanation section belongs to a group of kinds, and the two have to
+# appear together so the release notes can file the section under its kind.
+_BREAKING_HEADING = re.compile(r"##[ \t]+breaking change", re.IGNORECASE)
 _HIGHLIGHT_HEADING = re.compile(r"##[ \t]+release highlight", re.IGNORECASE)
+_HIGHLIGHT_KINDS = frozenset({"feature", "fix"})
 
 
 def main() -> int:
@@ -44,16 +48,17 @@ def main() -> int:
 def trailer_defects(body: str) -> Sequence[str]:
     """Everything about the trailer this body gets wrong, in reading order."""
     lines = _stripped_lines(body)
-    return (*_malformed_trailers(lines), *_orphan_highlight_section(lines))
+    kinds = _declared_kinds_in(lines)
+    return (
+        *_malformed_trailers(lines),
+        *_breaking_section_mismatch(lines, kinds),
+        *_orphan_highlight_section(lines, kinds),
+    )
 
 
 def declared_kinds(body: str) -> frozenset[str]:
     """The kinds the release-time collection would read out of this body."""
-    return frozenset(
-        match["kind"]
-        for line in _stripped_lines(body)
-        if (match := _TRAILER.fullmatch(line))
-    )
+    return _declared_kinds_in(_stripped_lines(body))
 
 
 def publish_step_output(name: str, value: str) -> None:
@@ -71,6 +76,12 @@ def _stripped_lines(body: str) -> Sequence[str]:
     return tuple(line.rstrip() for line in body.splitlines())
 
 
+def _declared_kinds_in(lines: Sequence[str]) -> frozenset[str]:
+    return frozenset(
+        match["kind"] for line in lines if (match := _TRAILER.fullmatch(line))
+    )
+
+
 def _malformed_trailers(lines: Sequence[str]) -> Sequence[str]:
     return tuple(
         f"Malformed {TRAILER_KEY} trailer: {line!r}. Write exactly "
@@ -81,18 +92,47 @@ def _malformed_trailers(lines: Sequence[str]) -> Sequence[str]:
     )
 
 
-def _orphan_highlight_section(lines: Sequence[str]) -> Sequence[str]:
+def _breaking_section_mismatch(
+    lines: Sequence[str], kinds: frozenset[str]
+) -> Sequence[str]:
+    """A break and its migration summary come together, in either direction."""
+    has_section = _has_heading(lines, _BREAKING_HEADING)
+    declares_break = "breaking" in kinds
+    if has_section and not declares_break:
+        return (
+            f"This body has a '## Breaking change' section but no "
+            f"'{TRAILER_KEY}: breaking' trailer. Add the trailer at the end of the "
+            f"body, or, if nothing breaks, retitle the section "
+            f"'## Release highlight' and declare feature or fix.",
+        )
+    elif declares_break and not has_section:
+        return (
+            f"This body declares '{TRAILER_KEY}: breaking' but has no "
+            f"'## Breaking change' section. A break goes out with a summary of "
+            f"the migration and a pointer to its steps under docs/; write them "
+            f"under that heading.",
+        )
+    else:
+        return ()
+
+
+def _orphan_highlight_section(
+    lines: Sequence[str], kinds: frozenset[str]
+) -> Sequence[str]:
     """A highlight section settles the intent; the flag cannot then be absent."""
-    has_section = any(_HIGHLIGHT_HEADING.fullmatch(line) for line in lines)
-    has_trailer = any(_TRAILER.fullmatch(line) for line in lines)
-    if has_trailer or not has_section:
+    if kinds & _HIGHLIGHT_KINDS or not _has_heading(lines, _HIGHLIGHT_HEADING):
         return ()
     else:
         return (
-            f"This body has a '## Release highlight' section but no {TRAILER_KEY} "
-            f"trailer, so the release-time collection would skip it. Add "
-            f"'{TRAILER_KEY}: <{' | '.join(KINDS)}>' at the end of the body.",
+            f"This body has a '## Release highlight' section but no feature or "
+            f"fix trailer, so the release notes have nowhere to file it. Add "
+            f"'{TRAILER_KEY}: <feature | fix>' at the end of the body. If the "
+            f"section describes a break, retitle it '## Breaking change'.",
         )
+
+
+def _has_heading(lines: Sequence[str], heading: re.Pattern[str]) -> bool:
+    return any(heading.fullmatch(line) for line in lines)
 
 
 if __name__ == "__main__":
