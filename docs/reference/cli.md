@@ -54,13 +54,12 @@ A YAML or JSON source must have a mapping at its root; a sequence or a bare scal
 
 ### Output path resolution
 
-`build` places its Markdown and HTML output — and `tap` its JSON document — under `.another-mood/<project_dir>/`, relative to the current directory:
+`build` places its Markdown and HTML output under `.another-mood/<project_dir>/`, relative to the current directory:
 
 | Kind | Default | Env var |
 |---|---|---|
 | Markdown output | `.another-mood/<project_dir>/output` | `MOOD_OUT_DIR` |
 | HTML output | `.another-mood/<project_dir>/site` | `MOOD_SITE_DIR` |
-| Tap output | `.another-mood/<project_dir>/tap` | `MOOD_TAP_DIR` |
 
 Subdirectories matching the input path are created automatically, so that running different `<project_dir>` values in parallel processes does not cause output collisions.
 
@@ -166,11 +165,11 @@ Extract the project's data — the entities and the evaluated views — as one J
 mood tap <project_dir>
 ```
 
-Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document; the same document is also written to `.another-mood/<project_dir>/tap/data.json` for consumers that prefer a path over a pipe. `tap` takes no options.
+Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document. Nothing is written into `.another-mood/`: redirect stdout when you want a file. `tap` takes no options.
 
 The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed diagnostic views and `__definition`.
 
-Exits with code 0 on success. Schema, contents, and view errors are printed to stderr and fail the command with exit code 1, writing nothing — stdout stays empty and the previously published document, if any, is left untouched.
+Exits with code 0 on success. Schema, contents, and view errors are printed to stderr and fail the command with exit code 1 — stdout stays empty.
 
 ### Querying the document
 
@@ -299,5 +298,4 @@ MOOD_PORT=8080 mood watch .
 | `site_dir` | `build`: `.another-mood/<project_dir>/site`; `watch`: not published | `MOOD_SITE_DIR` | `--site-dir` (only on `build`) |
 | `host` | `127.0.0.1` | `MOOD_HOST` | `--host` (only on `watch`) |
 | `port` | `5077` | `MOOD_PORT` | `--port` (only on `watch`) |
-| `tap_dir` | `.another-mood/<project_dir>/tap` | `MOOD_TAP_DIR` | — |
 | `vars` | (nothing injected) | [`MOOD_VARS_<NAME>`](#injected-values-vars) | [`--var NAME=VALUE`](#injected-values-vars) (on `build` / `watch`) |

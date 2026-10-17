@@ -17,9 +17,7 @@ def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
     for template in (project / "definition" / "templates").rglob("*"):
         if template.is_file():
             template.write_text("{% broken", encoding="utf-8")
-    config = ProjectConfig(
-        namespace_root=tmp_path, project_dir=project, tap_dir=tmp_path / "out"
-    )
+    config = ProjectConfig(namespace_root=tmp_path, project_dir=project)
     workspace = Workspace(
         config,
         tmp_path / "work",
@@ -31,4 +29,3 @@ def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
     report = tap_pipeline(workspace).run()
 
     assert not report.has_errors()
-    assert (tmp_path / "out" / "data.json").exists()

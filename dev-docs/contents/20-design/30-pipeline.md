@@ -17,7 +17,7 @@
 | site | — | reconcile/ | prepare_site/, hugo_build/ |
 | publish | — | hugo_build/ | out_dir（reconcile/ の内容）, site_dir（hugo_build/ の内容） |
 
-Output は作業ディレクトリ（`Workspace.root`）直下のコンポーネント名ディレクトリ。`mood tap` は compose までを共有し、tap（compose/ → tap/）と publish（tap_dir）で終わる（`pipeline/stages.py` の `TAP_STAGE_FACTORIES`）。
+Output は作業ディレクトリ（`Workspace.root`）直下のコンポーネント名ディレクトリ。`mood tap` は compose までを共有し、tap（compose/ → tap/）で終わる（`pipeline/stages.py` の `TAP_STAGE_FACTORIES`）。publish は持たず、command 層が tap/ の文書を読み取って返す。
 
 dev モードでは User Input / Upstream の変更を Watch してステージを自動再実行する（`pipeline/base.py` 参照）。build モードでは依存順に直列実行する。Upstream は前段ステージの Output であり、`BuildReport`（エラー伝播）の収集対象。
 
