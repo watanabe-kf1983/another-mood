@@ -41,10 +41,10 @@ Markdown ファイルは内蔵の prose スキーマに従って自動的に正�
 
 **Query Deriver**
 views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。
-出力には `__definition.views` と `__definition.entities` の両方を書き出す。
+出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。
 
 **Composer**
-正規化済みデータを自動的にビューとしてパススルーし、さらにビュー定義があれば contents に対して適用して結果を出力する。派生エンティティは Query Deriver で生成済みのため Composer は views の passthrough として伝搬させる。
+正規化済みデータを自動的にビューとしてパススルーし、さらにビュー定義があれば contents に対して適用して結果を出力する。カタログは Query Deriver の出力を passthrough として伝搬させる。
 
 **Document Generator**（[generator](70-generator/index.md)）
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。

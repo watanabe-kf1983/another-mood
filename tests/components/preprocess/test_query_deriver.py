@@ -52,8 +52,7 @@ def _write_catalog(
     constant so changes to the catalog dataclasses propagate to the
     fixture automatically.  The root entity comes along, holding
     ``__definition`` and the branches in ``root``.  An entity in
-    ``extra_yaml`` has no parent, so it hangs off the root the way a
-    view does.
+    ``extra_yaml`` has no parent, so it hangs off the root.
     """
     definition = definition_catalog_node()
     entities = dc.flatten_root(
@@ -161,7 +160,7 @@ class TestDeriveQueries:
             out_dir=out,
         )
 
-        data = json.loads((out / "data" / "names.yaml.json").read_text())
+        data = json.loads((out / "data" / "views" / "names.yaml.json").read_text())
         assert data == {
             "__definition": {
                 "views": [
@@ -181,12 +180,17 @@ class TestDeriveQueries:
                                 {"id": "name", "type": "string", "required": True}
                             ],
                         },
+                        "parent_entity": "__root",
                         "builtin": False,
                         "view": True,
                     }
                 ],
             }
         }
+        # The root lists the view among its attributes.
+        catalog = load_model(out / "data" / "data-catalog")["__definition"]["entities"]
+        (root,) = [e for e in catalog if e["id"] == dc.ROOT_ENTITY_ID]
+        assert "names" in [a["id"] for a in root["item_type"]["attributes"]]
 
     def test_json_view_file_accepted(self, tmp_path: Path) -> None:
         views = tmp_path / "views"
@@ -213,7 +217,7 @@ class TestDeriveQueries:
             out_dir=out,
         )
 
-        data = json.loads((out / "data" / "names.json.json").read_text())
+        data = json.loads((out / "data" / "views" / "names.json.json").read_text())
         assert data["__definition"]["views"] == [
             {
                 "id": "names",
@@ -256,7 +260,7 @@ class TestDeriveQueries:
             out_dir=out,
         )
 
-        data = json.loads((out / "data" / "filtered.yaml.json").read_text())
+        data = json.loads((out / "data" / "views" / "filtered.yaml.json").read_text())
         assert data["__definition"]["views"] == [
             {
                 "id": "phase10",
@@ -572,7 +576,7 @@ class TestQueryReferences:
             },
             dc.build_tree([items]),
         )
-        assert derived.keys() == {"a", "b"}
+        assert [edge.name for edge, _ in derived.children] == ["a", "b"]
 
     def test_failed_source_suppresses_downstream_cascade(self, tmp_path: Path) -> None:
         # ``broken`` reads a missing source; ``downstream`` reads ``broken``.

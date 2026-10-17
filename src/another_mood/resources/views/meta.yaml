@@ -76,17 +76,14 @@ __entity_defs:
   sort: { by: builtin }
 
 # Per-source Data pages.  Every top-level source — entities and views
-# alike: views sit in the catalog as `view: true` entities, the top-level
-# ones with no parent, so reading __definition.entities covers both kinds
-# without a union.  A distinct anchor root (/__data/{id}) so each data
-# view lands on its own page.
+# alike: views sit in the catalog as `view: true` entities under the root
+# like top-level data entities, so reading __definition.entities covers
+# both kinds without a union.  A distinct anchor root (/__data/{id}) so
+# each data view lands on its own page.
 __data:
   from: __definition.entities
   where:
-    or:
-      - parent_entity: __root
-      - view: true
-        parent_entity: { exists: false }
+    parent_entity: __root
     not:
       id: { startswith: __ }
   select:

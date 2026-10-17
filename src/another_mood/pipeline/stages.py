@@ -70,19 +70,17 @@ def derive_queries_stage(workspace: Workspace) -> Task:
 def compose_stage(workspace: Workspace) -> Task:
     """Compose views from normalized contents + query evaluation."""
     contents_out = workspace.component_output(normalize_contents)
-    views_out = workspace.component_output(derive_queries)
-    inspect_out = workspace.component_output(inspect_schema)
+    catalog_out = workspace.component_output(derive_queries)
     out = workspace.component_output(compose)
     call = compose.bind(
         contents_dir=contents_out.dir,
-        views_dir=views_out.dir,
-        data_catalog_dir=inspect_out.dir,
+        catalog_dir=catalog_out.dir,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
         watch_paths=[],
-        upstreams=[contents_out, views_out, inspect_out],
+        upstreams=[contents_out, catalog_out],
     )
 
 

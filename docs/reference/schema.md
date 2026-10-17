@@ -31,7 +31,7 @@ properties:
 The root of the schema file must satisfy:
 
 - `type: object` is required.
-- `properties` is required. Each entry declares one top-level key of the data. An entry whose value is a collection (the map and array patterns below) is an **entity**: a collection of records of the same shape.
+- `properties` is required. Each entry declares one top-level key of the data. Every collection (the map and array patterns below), top-level or nested, is an **entity**: records of the same shape.
 - `additionalProperties: false` is required (any undeclared top-level key becomes an error). The same pairing is required wherever `properties:` appears — see [Other constraints](#other-constraints).
 
 A [map pattern](#map-pattern) (`additionalProperties: <schema>` without accompanying `properties`) is not allowed at the root level (the meta-schema rejects it).
@@ -128,7 +128,7 @@ tags:
   - name: draft
 ```
 
-No normalization happens; the array you wrote is passed to templates as-is. Unlike the map pattern, **there is no implicit `id`**.
+Nothing is normalized at this level: unlike the map pattern, **there is no implicit `id`**.
 
 ### Single-record pattern
 
@@ -149,7 +149,7 @@ site_config:
   base_url: https://example.com
 ```
 
-No normalization happens; the value is passed to templates as written. The result is a plain value rather than an entity: views cannot name it in `from:`, and no pages are generated for it under `output/__db/`.
+Nothing is normalized at this level. The value is a plain value rather than an entity: views cannot name it in `from:`. A collection inside it is an entity named by its dotted path (`site_config.items`).
 
 ## Supported keywords
 
@@ -162,7 +162,7 @@ Keywords this tool interprets to determine the shape of data and the normalizati
 | Keyword | Role |
 |---|---|
 | `type` | The value's type (one of `object`, `array`, `string`, `number`, `integer`, `boolean`). |
-| `properties` | Enumerated keys for the single-record pattern. |
+| `properties` | Enumerated keys of an object. |
 | `additionalProperties` | Map-pattern signal, or `false`. |
 | `items` | Schema for array elements. |
 
@@ -190,7 +190,7 @@ Annotation keywords that do not affect validation or normalization:
 
 ### Entity references (x-ref)
 
-`x-ref` declares that a property's value references a record in another top-level entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
+`x-ref` declares that a property's value references a record in another entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
 
 ```yaml
 albums:
@@ -210,7 +210,7 @@ albums:
 
 Fields:
 
-- `entity` (required) — name of a top-level entity.
+- `entity` (required) — name of an entity reached from the root without crossing another collection (`users`, `site_config.items`).
 - `attribute` (optional) — name of an attribute on the target entity. When omitted, the synthetic `.id` of a map-pattern target is referenced; the target must therefore use the [map pattern](#map-pattern). When the target uses the [array pattern](#array-pattern) (no implicit `id`), `attribute` is required.
 
 Constraints:

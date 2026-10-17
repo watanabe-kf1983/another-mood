@@ -72,7 +72,8 @@ What the tool generates (under `.another-mood/my-project/`):
 │       ├── index.md                          # auto overview (entities + views)
 │       ├── __data/                           # described later
 │       ├── __entity_defs/                    # described later
-│       └── __view_defs/                      # described later
+│       ├── __view_defs/                      # described later
+│       └── __root_def.md, __root_data.md     # top-level values that are not entities
 └── site/                                     # HTML
 ```
 
@@ -116,7 +117,7 @@ In the table below, "where to write" paths are relative to the project directory
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
+| 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>`<br>`/__db/__root_def` (top-level values that are not entities) |
 | 2 | Content | `contents/**/*.yaml` (structured data; `.json` is read the same way)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
 | 3 | View | `definition/views/**/*.yaml` | `/__db/__view_defs/<view>` (definition and shape)<br>`/__db/__data/<view>` (records) |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
@@ -172,12 +173,12 @@ members:
 The root structure is fixed and always satisfies these three rules:
 
 - The outermost type is `type: object`
-- Each entry under `properties:` represents one **entity** (a collection of records of the same shape) — `members` in the example above
+- Each entry under `properties:` declares one top-level key; a collection there is an **entity** (records of the same shape) — `members` in the example above
 - `additionalProperties: false` (written immediately above `properties:`) makes any undeclared top-level key an error
 
-The entity name (`members`) must match the top-level key in the content file.
+The key (`members`) must match the top-level key in the content file.
 
-There are three standard patterns for the body of each entity (the value under `properties`): multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
+There are three standard patterns for the value of each key: multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
 
 #### Multiple records — write as a map
 
@@ -243,7 +244,7 @@ steps:
   - label: Wait 3 minutes
 ```
 
-Unlike the map pattern, no normalization happens; the array you wrote is passed to templates as-is.
+Unlike the map pattern, nothing is normalized at this level — there is no implicit `id`.
 
 #### Single record — enumerate keys via `properties`
 
@@ -266,7 +267,7 @@ site_config:
   base_url: https://example.com
 ```
 
-Like the array form, no normalization happens; the value is passed to templates as written.
+Like the array form, nothing is normalized at this level.
 
 #### When to nest vs split into a separate entity
 
@@ -427,7 +428,7 @@ A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) 
 |---|---|
 | `from` | Specifies the source data by name — an entity, or another view. |
 | `flatten` | Unwinds an array attribute — one input row produces N output rows where N is the array length. |
-| `join` | Attaches matching rows from another entity onto each input row. |
+| `join` | Attaches matching rows from another source onto each input row. |
 | `where` | Filters records by a predicate (e.g. `{ active: true }`). |
 | `grouped` | Combines records that share the same value for the field named by `by`. |
 | `select` | Lists fields to include in the output. Use `as` to rename. |

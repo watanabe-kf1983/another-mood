@@ -3,8 +3,9 @@
 Validates view files against the built-in view schema, parses each
 view's body into a typed Query, and derives the synthesized catalog
 entities (``view: true``) by composing the query's catalog transform
-against the data catalog.  The output carries both the views and the
-derived entities under ``__definition``.
+against the data catalog.  The output is the whole catalog: the data
+catalog with the views among the root's attributes, and the views with
+their derived entities, under ``__definition``.
 """
 
 from collections.abc import Iterator, Mapping, Sequence
@@ -26,6 +27,7 @@ from another_mood.components.shared.user_source.diagnostic import (
     FileValidationError,
 )
 from another_mood.components.shared.json_data_model import (
+    collect_files,
     load_model,
     load_schema,
     save_model,
@@ -67,8 +69,8 @@ def derive_queries(
     )
 
     file_groups = [
-        (views_dir, out_dir, user_files),
-        (_BUILTIN_VIEWS_DIR, out_dir / "__builtin", builtin_files),
+        (views_dir, out_dir / "views", user_files),
+        (_BUILTIN_VIEWS_DIR, out_dir / "views" / "__builtin", builtin_files),
     ]
     all_queries = {
         cast(str, raw["id"]): Query.from_dict(raw)
@@ -77,7 +79,10 @@ def derive_queries(
         for raw in queries
     }
 
-    derived = _derive_all(all_queries, catalog)
+    view_root, *view_entities = dc.flatten_root(_derive_all(all_queries, catalog))
+    _write_catalog_with_views(
+        data_catalog_dir, out_dir / "data-catalog", view_root.item_type.attributes
+    )
 
     for src_dir, dst_dir, files in file_groups:
         for src_file, queries in files:
@@ -85,15 +90,16 @@ def derive_queries(
             # never collide on the same destination.
             rel = src_file.relative_to(src_dir)
             dst = dst_dir / rel.with_name(rel.name + ".json")
+            names = frozenset(cast(str, raw["id"]) for raw in queries)
             save_model(
                 dst,
                 {
                     "__definition": {
                         "views": list(queries),
                         "entities": [
-                            entity
-                            for raw in queries
-                            for entity in derived[cast(str, raw["id"])]
+                            replace(e, view=True).to_dict()
+                            for e in view_entities
+                            if dc.Attribute.split_id(e.id)[0] in names
                         ],
                     }
                 },
@@ -170,11 +176,9 @@ def _source_name_conflicts(
     return conflicts
 
 
-def _derive_all(
-    queries: Mapping[str, Query], catalog: dc.Node
-) -> Mapping[str, Sequence[Mapping[str, object]]]:
-    """Derive every query in dependency order, returning each query's
-    ``view: true`` entities keyed by name.
+def _derive_all(queries: Mapping[str, Query], catalog: dc.Node) -> dc.Node:
+    """Derive every query in dependency order, returning a root holding
+    each view as a branch, in ``queries`` order.
 
     Each view is fed back as a catalog source (see ``_with_source``) so a
     later query can read it by name.  Raises :class:`FileValidationError`
@@ -202,14 +206,8 @@ def _derive_all(
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
     # Reaching here means every query derived, so each is now a top-level
-    # source in ``catalog``; read the views back to serialize.
-    return {
-        name: [
-            replace(e, view=True).to_dict()
-            for e in dc.flatten_tree(catalog.child(name), name)
-        ]
-        for name in queries
-    }
+    # source in ``catalog``.
+    return dc.Node(children=[catalog.child_entry(name) for name in queries])
 
 
 def _with_source(catalog: dc.Node, name: str, view: dc.Node) -> dc.Node:
@@ -242,6 +240,41 @@ def _diagnostic_from(exc: QueryDeriveError) -> Diagnostic:
         message=str(exc),
         source="query_deriver",
     )
+
+
+def _write_catalog_with_views(
+    src_dir: Path, dst_dir: Path, view_attributes: Sequence[dc.Attribute]
+) -> None:
+    """Copy the catalog files of ``src_dir`` under ``dst_dir``, appending
+    ``view_attributes`` to the root entity's."""
+    for src_file in sorted(collect_files(src_dir)):
+        entities = cast(
+            Sequence[Mapping[str, object]],
+            load_model(src_file)["__definition"]["entities"],
+        )
+        save_model(
+            dst_dir / src_file.relative_to(src_dir),
+            {
+                "__definition": {
+                    "entities": [
+                        _with_attributes(dc.Entity.from_dict(e), view_attributes)
+                        if e["id"] == dc.ROOT_ENTITY_ID
+                        else e
+                        for e in entities
+                    ]
+                }
+            },
+        )
+
+
+def _with_attributes(
+    entity: dc.Entity, attributes: Sequence[dc.Attribute]
+) -> Mapping[str, object]:
+    item_type = entity.item_type
+    return replace(
+        entity,
+        item_type=replace(item_type, attributes=[*item_type.attributes, *attributes]),
+    ).to_dict()
 
 
 def _load_catalog(data_catalog_dir: Path) -> list[dc.Entity]:

@@ -169,10 +169,7 @@ def _ancestor_chain(
     current = entity_id
     while current != dc.ROOT_ENTITY_ID:
         chain_.insert(0, current)
-        parent = cast("str | None", by_id[current].get("parent_entity"))
-        # A view has no parent, but is read from ``views`` like a
-        # top-level entity.
-        current = parent or dc.ROOT_ENTITY_ID
+        current = cast(str, by_id[current]["parent_entity"])
     return [dc.ROOT_ENTITY_ID, *chain_]
 
 
