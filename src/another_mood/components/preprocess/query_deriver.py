@@ -202,11 +202,12 @@ def _derive_all(
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
     # Reaching here means every query derived, so each is now a top-level
-    # source in ``catalog``; read the views back to serialize.
+    # source in ``catalog``; read the views back to serialize, each as a
+    # branch of the root record like a top-level data entity.
     return {
         name: [
             replace(e, view=True).to_dict()
-            for e in dc.flatten_tree(catalog.child(name), name)
+            for e in dc.flatten_root(dc.Node(children=[catalog.child_entry(name)]))[1:]
         ]
         for name in queries
     }

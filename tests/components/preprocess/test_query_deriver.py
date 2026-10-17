@@ -181,6 +181,7 @@ class TestDeriveQueries:
                                 {"id": "name", "type": "string", "required": True}
                             ],
                         },
+                        "parent_entity": "__root",
                         "builtin": False,
                         "view": True,
                     }

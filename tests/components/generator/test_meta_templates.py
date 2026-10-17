@@ -68,7 +68,7 @@ class TestWalkEntityFilter:
 
     def test_root_entity_returns_views_list(self) -> None:
         views = {"posts": [{"id": "a"}, {"id": "b"}]}
-        entities = [{"id": "posts"}]
+        entities = [{"id": "posts", "parent_entity": "__root"}]
         assert walk_entity(views, "posts", entities) == [{"id": "a"}, {"id": "b"}]
 
     def test_single_step_child_flattens_array_attribute(self) -> None:
@@ -83,7 +83,7 @@ class TestWalkEntityFilter:
             ]
         }
         entities = [
-            {"id": "entities"},
+            {"id": "entities", "parent_entity": "__root"},
             {"id": "entities.fields", "parent_entity": "entities"},
         ]
         assert walk_entity(views, "entities.fields", entities) == [
@@ -105,7 +105,7 @@ class TestWalkEntityFilter:
             }
         }
         entities = [
-            {"id": "__definition.entities"},
+            {"id": "__definition.entities", "parent_entity": "__root"},
             {
                 "id": "__definition.entities.item_type.attributes",
                 "parent_entity": "__definition.entities",
@@ -129,7 +129,7 @@ class TestWalkEntityFilter:
             ]
         }
         entities = [
-            {"id": "erds"},
+            {"id": "erds", "parent_entity": "__root"},
             {"id": "erds.entities", "parent_entity": "erds"},
             {"id": "erds.entities.fields", "parent_entity": "erds.entities"},
         ]
@@ -142,7 +142,7 @@ class TestWalkEntityFilter:
     def test_missing_root_yields_empty(self) -> None:
         # An entity declared in the catalog but with no records yet:
         # template's `{% if rows %}` guard renders `(no records)`.
-        entities = [{"id": "posts"}]
+        entities = [{"id": "posts", "parent_entity": "__root"}]
         assert walk_entity({}, "posts", entities) == []
 
     def test_missing_intermediate_suffix_skips_row(self) -> None:
@@ -156,7 +156,7 @@ class TestWalkEntityFilter:
             ]
         }
         entities = [
-            {"id": "entities"},
+            {"id": "entities", "parent_entity": "__root"},
             {"id": "entities.fields", "parent_entity": "entities"},
         ]
         assert walk_entity(views, "entities.fields", entities) == [{"id": "id"}]
