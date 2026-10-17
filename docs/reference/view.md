@@ -28,7 +28,7 @@ by_role:                     # ← top-level key of the file becomes the view na
 |---|---|---|
 | `from` | Required | Source data (what to operate on). |
 | `flatten` | Optional | Unwind one or more intrinsic array attributes. |
-| `join` | Optional | Attach one or more related entities. |
+| `join` | Optional | Attach one or more related sources. |
 | `where` | Optional | Per-record filter applied before grouping. |
 | `grouped` | Optional | Grouping of records. |
 | `select` | Optional | Projection of output fields. When omitted, records pass through unchanged. |
@@ -38,7 +38,7 @@ Evaluation order: `from` → `flatten` → `join` → `where` → `grouped` → 
 
 ## Automatic pass-through
 
-Data for entities declared in [Schema](schema.md) is automatically passed through and can be referenced from templates by entity name without defining any view. Views are only needed when you want an additional shape (grouping, projection, and so on).
+Data declared in [Schema](schema.md) is automatically passed through and can be referenced from templates by name without defining any view. Views are only needed when you want an additional shape (grouping, projection, and so on).
 
 ## from
 
@@ -114,7 +114,7 @@ When N = 0 (the array at `of:` resolves to `[]` or the attribute is absent), an 
 
 ## join
 
-For each input row, looks up matching rows in another entity and attaches them. "Matching" is defined by single key equality: one attribute on the current row equals one attribute on the other entity's row.
+For each input row, looks up matching rows in another source and attaches them. "Matching" is defined by single key equality: one attribute on the current row equals one attribute on the other source's row.
 
 Throughout this section the examples assume two source entities:
 
@@ -149,7 +149,7 @@ Intermediate result after `join` (before `where`):
 - { id: Z, name: Zephyr,  albums: [] }    # no match — kept with an empty list
 ```
 
-The list lives under the join's `as:`, which defaults to `to:` (here `albums`). Set `as:` explicitly to avoid collisions with existing attributes or to disambiguate multiple joins to the same entity.
+The list lives under the join's `as:`, which defaults to `to:` (here `albums`). Set `as:` explicitly to avoid collisions with existing attributes or to disambiguate multiple joins to the same source.
 
 ### Inline `flatten:` — one row per match
 
@@ -195,8 +195,8 @@ The shorthand `flatten: true` stands for the all-defaults form `flatten: {}` —
 
 | Key | Required | Role |
 |---|---|---|
-| `to` | Required | Id of the source to match against — a data entity or another view. |
-| `on` | Required | `{ left, right }` — match rows where the input row's `left:` attribute equals the other entity's `right:` attribute. |
+| `to` | Required | Name of the source to match against — an entity or another view. |
+| `on` | Required | `{ left, right }` — match rows where the input row's `left:` attribute equals the other source's `right:` attribute. |
 | `as` | Optional | Name given to the matches on each output row. Defaults to the value of `to:`. |
 | `where` | Optional | Pre-join filter applied to `to:` before matching. Same grammar as the top-level `where:`. |
 | `flatten` | Optional | Unwind the attached list in place. `true` for shorthand, or an object with `as:` (defaults to the join's `as:`) and `preserve_empty:` (defaults to `false`). |
