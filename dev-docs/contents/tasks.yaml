@@ -290,14 +290,15 @@ categories:
         phase: 17
         done: true
       E17:
-        title: 合成ビュー (compose) — source を束ねる第二の view 文法
+        title: 文書ノード — ドット区切りの view 名 (書き込みパス)
         note: >-
-          複数の entity / view を束ねた単一レコードのビュー。文書 (と章節項) を
-          データ木のノードとして立て、root 以外のページから複数 source を描ける
-          ようにする。views ディレクトリに書き、名前空間・評価順は query と共有。
+          view 名のドットを書き込みパスとして読み、view を root 直下以外の
+          位置に置けるようにする。中間セグメントは暗黙のシングルトンとして
+          立ち、文書 (と章節項) がデータ木のノードになる。文法の追加は無く、
+          衝突規則・評価順・カタログ表現は既存のものの延長。
           動機は S8 の二文書。トップレベル・シングルトンのカタログ表現が要るので
           M13 が前提。
-        proposal: 20-design/60-composer/10-query-dsl-spec#合成ビュー-e17
+        proposal: 20-design/60-composer/10-query-dsl-spec#文書ノード--ドット区切りの-view-名-e17
         phase: 17
 
   F:
@@ -743,9 +744,9 @@ categories:
         phase: 16
         done: true
       S9:
-        title: 二文書 showcase への合成ビュー適用 (system-dev-docs-ja の完成)
+        title: 二文書 showcase への文書ノード適用 (system-dev-docs-ja の完成)
         note: >-
-          S8 までの showcase は index.md の合本で暫定。E17 の合成ビューで要求仕様書・
+          S8 までの showcase は index.md の合本で暫定。E17 の文書ノードで要求仕様書・
           設計書を別ページの文書に割り、二文書として完成させる。E17 (と M13) が前提。
         phase: 17
       S10:
