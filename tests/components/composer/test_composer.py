@@ -39,11 +39,11 @@ class TestCompose:
             """),
         )
 
-        # Views dir simulates query_deriver output: views plus their
-        # derived view entities under __definition.
-        views = tmp_path / "views" / "data"
+        # Catalog dir simulates query_deriver output: the data catalog
+        # and the views with their derived entities.
+        catalog = tmp_path / "catalog" / "data"
         _write_model(
-            views / "name_query.json",
+            catalog / "views" / "name_query.json",
             dedent("""\
                 __definition:
                   views:
@@ -62,9 +62,8 @@ class TestCompose:
             """),
         )
 
-        data_catalog = tmp_path / "data-catalog" / "data"
         _write_model(
-            data_catalog / "schema.json",
+            catalog / "data-catalog" / "schema.json",
             dedent("""\
                 __definition:
                   entities:
@@ -80,23 +79,18 @@ class TestCompose:
         out = tmp_path / "composed"
         compose(
             contents_dir=tmp_path / "contents",
-            views_dir=tmp_path / "views",
-            data_catalog_dir=tmp_path / "data-catalog",
+            catalog_dir=tmp_path / "catalog",
             out_dir=out,
         )
 
         data_out = out / "data"
         # Passthrough: each input file is copied bytewise into a dedicated subdir.
-        for src, sub in (
-            (contents, "contents"),
-            (data_catalog, "data-catalog"),
-            (views, "views"),
-        ):
+        for src, sub in ((contents, "contents"), (catalog, "catalog")):
             for f in src.rglob("*.json"):
                 dst = data_out / sub / f.relative_to(src)
                 assert dst.read_text() == f.read_text()
 
-        # View result: applied records only; entities flow via the views passthrough.
+        # View result: applied records only; entities flow via the catalog passthrough.
         assert json.loads((data_out / "view-results" / "names.json").read_text()) == {
             "names": [{"name": "a"}, {"name": "b"}]
         }
@@ -115,9 +109,9 @@ class TestCompose:
                   - {name: a, value: 1}
             """),
         )
-        views = tmp_path / "views"
+        catalog = tmp_path / "catalog"
         _write_model(
-            views / "con_query.json",
+            catalog / "con_query.json",
             dedent("""\
                 __definition:
                   views:
@@ -127,29 +121,23 @@ class TestCompose:
                         - {item: [name], as: [name]}
             """),
         )
-        data_catalog = tmp_path / "data-catalog"
-        data_catalog.mkdir()
-
         with pytest.raises(WindowsReservedNameError):
             compose.fn(
                 contents_dir=contents,
-                views_dir=views,
-                data_catalog_dir=data_catalog,
+                catalog_dir=catalog,
                 out_dir=tmp_path / "composed",
             )
 
-    def test_empty_views_dir(self, tmp_path: Path) -> None:
+    def test_empty_catalog_dir(self, tmp_path: Path) -> None:
         contents = tmp_path / "contents" / "data"
         _write(contents / "data.json", '{"key": "value"}')
 
-        (tmp_path / "views" / "data").mkdir(parents=True)
-        (tmp_path / "data-catalog" / "data").mkdir(parents=True)
+        (tmp_path / "catalog" / "data").mkdir(parents=True)
 
         out = tmp_path / "composed"
         compose(
             contents_dir=tmp_path / "contents",
-            views_dir=tmp_path / "views",
-            data_catalog_dir=tmp_path / "data-catalog",
+            catalog_dir=tmp_path / "catalog",
             out_dir=out,
         )
 
@@ -181,9 +169,9 @@ class TestCompose:
             """),
         )
 
-        views = tmp_path / "views"
+        catalog = tmp_path / "catalog"
         _write_model(
-            views / "chain.json",
+            catalog / "chain.json",
             dedent("""\
                 __definition:
                   views:
@@ -198,14 +186,10 @@ class TestCompose:
             """),
         )
 
-        data_catalog = tmp_path / "data-catalog"
-        data_catalog.mkdir()
-
         out = tmp_path / "composed"
         compose.fn(
             contents_dir=contents,
-            views_dir=views,
-            data_catalog_dir=data_catalog,
+            catalog_dir=catalog,
             out_dir=out,
         )
 
@@ -220,7 +204,7 @@ class TestCompose:
     def test_query_can_walk_definition_entities(self, tmp_path: Path) -> None:
         """``from: __definition.entities`` returns the catalog records as data.
 
-        Demonstrates that the data catalog (under data_catalog_dir) is
+        Demonstrates that the data catalog (under catalog_dir) is
         merged into ``sources`` alongside contents and queries, so a
         query can walk the catalog itself — the F8 self-description
         plumbing lands here.
@@ -229,9 +213,9 @@ class TestCompose:
 
         # Two catalog entries (one user-defined, one builtin) so the
         # query result can be checked for both pass-through and filtering.
-        data_catalog = tmp_path / "data-catalog" / "data"
+        catalog = tmp_path / "catalog" / "data"
         _write_model(
-            data_catalog / "schema.json",
+            catalog / "data-catalog" / "schema.json",
             dedent("""\
                 __definition:
                   entities:
@@ -244,9 +228,8 @@ class TestCompose:
             """),
         )
 
-        views = tmp_path / "views" / "data"
         _write_model(
-            views / "all_entities.json",
+            catalog / "views" / "all_entities.json",
             dedent("""\
                 __definition:
                   views:
@@ -261,8 +244,7 @@ class TestCompose:
         out = tmp_path / "composed"
         compose(
             contents_dir=tmp_path / "contents",
-            views_dir=tmp_path / "views",
-            data_catalog_dir=tmp_path / "data-catalog",
+            catalog_dir=tmp_path / "catalog",
             out_dir=out,
         )
 

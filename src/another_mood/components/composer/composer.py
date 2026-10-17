@@ -14,26 +14,23 @@ from another_mood.components.shared.windows_reserved_name import (
 
 @Component(
     out_dir="out_dir",
-    upstream_dirs=["contents_dir", "views_dir", "data_catalog_dir"],
+    upstream_dirs=["contents_dir", "catalog_dir"],
 )
 def compose(
     contents_dir: Path,
-    views_dir: Path,
-    data_catalog_dir: Path,
+    catalog_dir: Path,
     *,
     out_dir: Path,
 ) -> None:
     """Copy upstream outputs, merge into a sources namespace, evaluate views."""
     contents_out = out_dir / "contents"
-    data_catalog_out = out_dir / "data-catalog"
-    views_out = out_dir / "views"
+    catalog_out = out_dir / "catalog"
     view_results_out = out_dir / "view-results"
 
     transfer_tree(contents_dir, contents_out)
-    transfer_tree(data_catalog_dir, data_catalog_out)
-    transfer_tree(views_dir, views_out)
+    transfer_tree(catalog_dir, catalog_out)
 
-    sources = load_model(contents_out, data_catalog_out, views_out)
+    sources = load_model(contents_out, catalog_out)
     raw_views = cast(
         list[dict[str, object]],
         sources.get("__definition", {}).get("views", []),
