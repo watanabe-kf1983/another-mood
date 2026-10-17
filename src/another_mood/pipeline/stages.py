@@ -99,23 +99,6 @@ def tap_stage(workspace: Workspace) -> Task:
     )
 
 
-def tap_publish_stage(workspace: Workspace) -> Task:
-    """Copy the tap document from tmp to its public destination."""
-    config = workspace.config
-    tap_out = workspace.component_output(tap)
-    publish_out = workspace.component_output(publish)
-    # Publish only where the destination is set (a bare Workspace may set none).
-    targets = [(tap_out.dir / "data", config.tap_dir)]
-    active = [(src, dist) for src, dist in targets if dist is not None]
-    call = publish.bind(
-        upstream=tap_out.dir,
-        out_dir=publish_out.dir,
-        src_dirs=[src for src, _ in active],
-        dist_dirs=[dist for _, dist in active],
-    )
-    return Stage(run_fn=call, watch_paths=[], upstreams=[tap_out])
-
-
 def generator_stage(workspace: Workspace) -> Task:
     """Generate Markdown from views YAML + Jinja2 templates."""
     layout = workspace.layout
@@ -233,7 +216,6 @@ TAP_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     derive_queries_stage,
     compose_stage,
     tap_stage,
-    tap_publish_stage,
 )
 
 
@@ -247,6 +229,6 @@ def pipeline(
 
 
 def tap_pipeline(workspace: Workspace) -> Pipeline:
-    """Create the tap pipeline: stop after compose, publish one JSON document."""
+    """Create the tap pipeline: stop after compose, assemble one JSON document."""
     stages = [factory(workspace) for factory in TAP_STAGE_FACTORIES]
     return Pipeline(stages, reporting=build_report_stage(workspace))

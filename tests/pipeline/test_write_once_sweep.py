@@ -77,9 +77,9 @@ def test_no_tap_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
         workspace, observers, run_label="run2", factories=TAP_STAGE_FACTORIES
     )
 
-    # Guard against a vacuous sweep: the change must reach the published
-    # tap document.
-    document = published / "tap" / "data.json"
+    # Guard against a vacuous sweep: the change must reach the tap document
+    # (never published: the command layer hands it back from the workspace).
+    document = workspace.root / "tap" / "data" / "data.json"
     assert "Alicia" in document.read_text(encoding="utf-8")
 
 
@@ -118,7 +118,6 @@ def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
         project_dir=project,
         out_dir=published / "output",
         site_dir=published / "site",
-        tap_dir=published / "tap",
     )
     workspace = Workspace(
         config,

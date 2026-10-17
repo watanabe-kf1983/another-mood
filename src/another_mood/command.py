@@ -37,6 +37,8 @@ from another_mood.components.shared.component.build_report import (
 )
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
+from another_mood.components.tap.tap import TAP_DOCUMENT_NAME
+from another_mood.components.tap.tap import tap as tap_component
 from another_mood.config import ProjectConfig
 from another_mood.layout import SourceLayout, resolve_layout, verify_absent
 from another_mood.pipeline.site import (
@@ -54,6 +56,7 @@ from another_mood.pipeline.workspace import (
 __all__ = [
     "BuildResult",
     "ResultDiagnostic",
+    "TapResult",
     "UserError",
     "WatchSession",
     "WatchStartupError",
@@ -116,20 +119,17 @@ class WatchSession:
     shutdown: Event
 
 
-@dataclass(frozen=True)
-class BuildResult:
+@dataclass(frozen=True, kw_only=True)
+class _RunOutcome:
     """Outcome of a pipeline run, as exposed across the command-layer boundary.
 
     Slim view of a :class:`BuildReport` for CLI consumers.  Per-stage
     results and per-diagnostic snippets — both useful only for human debugging
-    of the on-disk ``__build_report.json`` — are stripped here.
-
-    ``out_dir`` is the resolved directory where the run's published output
-    landed (build: ``.another-mood/<project_dir>/output/``, tap:
-    ``.another-mood/<project_dir>/tap/``).
+    of the on-disk ``__build_report.json`` — are stripped here.  Each command
+    adds what it hands back on success (:class:`BuildResult`,
+    :class:`TapResult`).
     """
 
-    out_dir: str
     errors: Sequence[ErrorEntry] = ()
     diagnostics: Sequence[ResultDiagnostic] = ()
 
@@ -142,6 +142,21 @@ class BuildResult:
     def has_warnings(self) -> bool:
         """True if any diagnostic was recorded with ``severity="warning"``."""
         return any(d.severity == "warning" for d in self.diagnostics)
+
+
+@dataclass(frozen=True, kw_only=True)
+class BuildResult(_RunOutcome):
+    """``out_dir`` is the resolved directory where the run's published output
+    landed (``.another-mood/<project_dir>/output/`` by default)."""
+
+    out_dir: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class TapResult(_RunOutcome):
+    """``document`` is the tap document's JSON text, None when the run failed."""
+
+    document: str | None
 
 
 # -- Commands ----------------------------------------------------------------
@@ -240,22 +255,30 @@ def watch(
         )
 
 
-def tap(config: ProjectConfig) -> BuildResult:
-    """Run the pipeline through compose and publish the composed namespace.
+def tap(config: ProjectConfig) -> TapResult:
+    """Run the pipeline through compose and return the composed namespace.
 
-    The document lands at ``out_dir/TAP_DOCUMENT_NAME``, with ``out_dir``
-    resolved from ``config.tap_dir`` (default:
-    ``.another-mood/<project_dir>/tap/``). Rendering stages never run, so
-    template problems cannot fail a tap run; schema / contents / view
-    errors can, in which case the destination is left untouched and
+    Nothing is published: the document lives in the run's workspace and is
+    handed back as ``document`` for the caller to print or pipe. Rendering
+    stages never run, so template problems cannot fail a tap run; schema /
+    contents / view errors can, in which case ``document`` is None and
     ``errors`` carries the report.
     """
-    config = config.resolved_for_tap()
-    out_dir = str(config.tap_dir)
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
     workspace = _session_workspace(config, layout, manifest, "tap")
-    result = _to_result(tap_pipeline(workspace).run(), out_dir)
+    report = tap_pipeline(workspace).run()
+    document_path = (
+        workspace.component_output(tap_component).dir / "data" / TAP_DOCUMENT_NAME
+    )
+    document = (
+        None if report.has_errors() else document_path.read_text(encoding="utf-8")
+    )
+    result = TapResult(
+        document=document,
+        errors=tuple(report.errors),
+        diagnostics=tuple(ResultDiagnostic.from_entry(d) for d in report.diagnostics),
+    )
     _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
     return result
 
