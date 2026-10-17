@@ -1,13 +1,10 @@
-"""How a build treats the shapes placed directly under the root today.
+"""How a build treats the shapes placed directly under the root.
 
-Partly a current limitation, not a contract.  The root is catalogued as
-a record: a top-level singleton folds into it, and the collection inside
-the singleton opens an entity of its own, which views can name and
-``__db/`` gives pages to.  The singleton itself still has no page, and
-``from:`` naming it is diagnosed as not an entity.
-
-TODO: rewrite the expectations marked "Intended" as the root's own page
-lands.
+The root is catalogued as a record: a top-level singleton folds into it,
+and the collection inside the singleton opens an entity of its own,
+which views can name and ``__db/`` gives pages to.  The singleton and
+its scalars show on the root's own pages, and ``from:`` naming the
+singleton is diagnosed as not an entity.
 """
 
 from pathlib import Path
@@ -74,7 +71,7 @@ def _build(tmp_path: Path, *, views: str = "") -> command.BuildResult:
     return command.build(ProjectConfig(namespace_root=tmp_path, project_dir=project))
 
 
-def test_collection_in_top_level_singleton_gets_db_pages(
+def test_top_level_shapes_get_db_pages(
     tmp_path: Path,
 ) -> None:
     result = _build(tmp_path)
@@ -89,8 +86,14 @@ def test_collection_in_top_level_singleton_gets_db_pages(
     assert (db_dir / "__entity_defs" / "site_config.items.md").is_file()
     data_page = (db_dir / "__data" / "site_config.items.md").read_text(encoding="utf-8")
     assert "| first |" in data_page
-    # Intended: the singleton shows on the root's own page.
+    # The singleton and its scalar get no page of their own; they show on
+    # the root's pages.
     assert not (db_dir / "__entity_defs" / "site_config.md").exists()
+    root_def = (db_dir / "__root_def.md").read_text(encoding="utf-8")
+    assert "| `site_config` |" in root_def
+    assert "| `site_config.title` |" in root_def
+    root_data = (db_dir / "__root_data.md").read_text(encoding="utf-8")
+    assert "| My Site |" in root_data
 
 
 def test_from_names_the_collection_but_not_the_singleton(

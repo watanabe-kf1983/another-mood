@@ -54,8 +54,17 @@
 {% else %}
 (no views defined yet)
 {% endif %}
-{# Data pages for every top-level source, entities and views alike; each
-   render splits to its own /__data/{id} page, so nothing shows inline. #}
+
+{# Absent only without a catalog root entity (a bare data tree). #}
+{% if __root_def %}
+## Attributes
+
+- {{ __root_def | link("Attributes") }}
+{{ __root_def | render("root_def.md") }}
+{% endif %}
+{# Data pages for the root and every top-level source, entities and views
+   alike; each render splits to its own page, so nothing shows inline. #}
+{% if __root_data %}{{ __root_data | render("root_data.md") }}{% endif %}
 {% filter dedent %}
     {% for source in __data %}
         {{- source | render("data.md") -}}
