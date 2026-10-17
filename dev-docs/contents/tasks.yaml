@@ -493,9 +493,8 @@ categories:
         done: true
       M13:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
-        note: E14 とは独立に着手できる。E17 (合成ビュー) の前提
-        proposal: 20-design/45-schema/10-schema-spec#ルート-entity-の導入-m13
         phase: 17
+        done: true
       M14:
         title: singleton 平坦化の 1 段制限の撤廃
         phase: 17

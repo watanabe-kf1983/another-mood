@@ -43,8 +43,6 @@ JSON Schema 本体の property 宣言に `x-ref` キーワードを置き、参�
 
 参照整合性違反は重大度の階層が異なる。schema-level の不整合は data の読み込み以前に build を止める。data-level は警告として常時検出・常時報告するが、build/watch を止めない (ページは正常レンダリング)。`--strict` フラグは「警告があれば exit non-zero」の意味のみを持つ (検査の ON/OFF ではない)。
 
-x-ref target の許容範囲: ユーザスキーマで宣言された top-level entity と、内蔵 content schema が提供する top-level entity (`prose` / `blob`) のみ。カタログのメタデータ (`__definition.*`) は FK 参照の意味を持たないため target から除外する。
-
 ## Internal Design
 
 ### データカタログ
@@ -55,8 +53,11 @@ x-ref target の許容範囲: ユーザスキーマで宣言された top-level 
 
 カタログの各エントリは **Entity** と **ObjectType** の 2 階層で表現される。
 
-- **Entity**: データツリー上の到達経路を表す identifier (`id` = access path)。クエリ DSL の `from:`、paging 設定、表示見出しに使う。例: `categories`, `categories.tasks`。アンカーパス（リンク用の実体パス）とは別概念で、こちらは [anchor-spec.md](../70-generator/30-anchor-spec.md) を参照
-- **ObjectType**: Entity の中の 1 つの item の型 (`id`)。コレクションを 1 段降りるたびに `.item` を付加する path-based 名。FK 参照や型レベルの cross-reference に使う。例: `categories.item`, `categories.item.tasks.item`
+- **Entity**: record の置き場。collection（`additionalProperties` / `items`）ごとに一つと、データ木全体を一件の record とするルート（`__root`）
+    - `id` はデータ木上の到達経路 (access path)。`from:`、paging 設定、表示見出しが使う。例: `categories`, `categories.tasks`
+    - アンカーパス（リンク用の実体パス）とは別概念。[anchor-spec.md](../70-generator/30-anchor-spec.md) を参照
+- **ObjectType**: Entity の 1 つの item の型。collection を降りずに届く値はすべてその attribute で、入れ子の object の配下はドット名で載る（`meta.owner`）
+    - `id` は collection を 1 段降りるたびに `.item` を付加する path-based 名。型レベルの cross-reference が使う。例: `categories.item`, `categories.item.tasks.item`
 
 Entity は自身の `item_type` フィールドを通じて ObjectType を保持する。
 
@@ -72,55 +73,4 @@ properties:
           additionalProperties: { type: object, properties: { ... } }
 ```
 
-シングルトン (record 形、すなわち `properties` + `additionalProperties: false`) は entity 化されない。シングルトン自身が `object` 型の attribute になり、配下のプロパティが `meta.owner` のようなドット名の attribute として親エンティティに載る。entity 化されるのは collection (`additionalProperties` / `items`) のみで、シングルトン配下の collection はドット名のパスで entity になる (`categories.meta.tasks`)。
-
 カタログ / メタドキュメンテーション側での扱いは [meta-documentation.md](../75-meta-documentation/10-database-information.md) 参照。
-
-## Proposals
-
-### ルート Entity の導入 (M13)
-
-#### ゴール
-
-ルート直下に置いた各形の振る舞いを、record（collection の 1 item）の中に置いた同じ形の振る舞いに揃える。言い換えると、ルートオブジェクトを一件の record として扱う。
-
-| 形 | record の中（As-Is） | ルート直下（As-Is） | ルート直下（To-Be） |
-|---|---|---|---|
-| collection（`users.orders` / `users`） | 親を `parent_entity` とする entity。`from:` では引けず、親から `flatten` で降りる。`__db/` では親の Entity / Data ページの中に出る | entity。`from:` で引け、`__db/` に Entity / Data ページが出る | 変更なし |
-| singleton object（`users.profile` / `site_config`） | entity にならず、親 record の `object` 属性になる。配下の値は `profile.name` のようなドット名の属性として親に載り、`__db/` では親の属性表に出る | カタログに載らない。`from:` は `unknown source`、`__db/` のどこにも出ない | ルート record の `object` 属性。配下はドット名の属性として載り、`__db/` ではルート record の属性表に出る |
-| singleton の中の collection（`users.profile.tags` / `site_config.items`） | 親を `parent_entity` とするドット名の entity `users.profile.tags`。`from:` では引けず、親から `flatten` で降りる。`__db/` では親のページの中に出る | カタログに載らない。`from:` は `unknown source`、x-ref の参照先に指定すると `not found` | ルート record を親とするドット名の entity `site_config.items`。ルート直下の collection と同じく `from:` で引け、x-ref で名指しでき、`__db/` の Entities にドット名で載って Entity / Data ページを持つ |
-| scalar / scalar 配列 | 親 record の属性。`__db/` では親の属性表に出る | カタログに載らない。`from:` は `unknown source`（存在しないキーと同じ診断） | ルート record の属性。`__db/` ではルート record の属性表に出る |
-
-normalize は既にこの対称性を持っている（ルート直下の singleton の中の map 形も `id` 付き配列になり、data.json のルートに出る）。揃っていないのはカタログと、カタログを読む view / x-ref / `__db/` である。
-
-#### To-Be に伴う外部仕様
-
-- **tap / テンプレート**: 変更なし。data.json のルートは従来どおり
-- **view**: ルート直下の singleton の中の collection（`site_config.items`）を `from:` で名指しできる。`from:` がルート直下の singleton / scalar を指したときは、存在しないキーと区別して「entity ではない」と診断し、その型を添える（実装済み）
-- **x-ref**: `entity:` に `site_config.items` を指定できる
-- **`__db/`**: `site_config.items` は Entities にドット名で載り、ルート直下の collection と同じく Entity / Data ページを持つ。ルート record は index の末尾に Entities / Views とは別枠の節（Attributes）を持ち、Entity と同じく Definition / Data の二ページに割る。トップレベルの singleton / scalar が利用者に見える唯一の場所。collection は Entities / Views に自分のページを持つので載せない。Definition は singleton / scalar の属性表（singleton はドット名の属性として配下の scalar と並ぶ）、Data はその値
-- **docs**: docs/reference/schema.md の Single-record pattern の「view から名指しできず `__db/` にページも出ない」を書き換え、その中の collection がドット名の entity（`site_config.items`）になることを書く。view.md の `from:` が entity 名を「the top-level key」と言い換えている括弧書きはこれと食い違うので合わせる
-
-#### 現状、ルートが record と違う扱いを受けている場所
-
-カタログはすでにルートを一件の record（`__root`）として持ち、`from:` もそこから降りる。record と扱いが違うまま残っているのは次の場所だけ。各行の As-Is は fixture テスト（`tests/pipeline/test_top_level_shapes.py`）に固定してあり、揃えるたびに期待値を To-Be に書き換える。
-
-| 場所 | ルートでいま違うこと | 揃えると |
-|---|---|---|
-| **ルートの属性**（カタログの `__root`） | view を属性に持たない。ルート record の属性はスキーマ由来のキーだけで、tap のルートのキーを覆いきらない | view を属性に含め、ルート record の属性が tap のルートの全キー（スキーマ由来と view 由来）を表す |
-
-仮決め（実装で問題が見つかれば見直す）:
-
-- ルートの属性に view を含める。`inspect_schema` が出したルートのカタログに query_deriver が view の属性を追記する。J5 が求める「tap のルートを映す」属性表はこれで得られ、J5 側に合成の仕事を持ち込まない。ルートの形を決める場所を J5 と E17 に分けないため、M13 で先に確定させる
-- view の属性はスキーマ側の同じ形に倣う。query view は collection なので `object[]` 属性（child_entity はその view の entity）、合成ビュー（E17）は singleton なので `object` 属性で配下はドット名の属性。E17 はこの受け皿に乗り、「`__root` に吸収するか独立の項目か」を改めて決めない。`__db/` の Attributes ページは collection を載せないので、query view は載らず合成ビューは載る
-- 懸念: カタログはファイル別に書いて `load_model` の連結で合流させるので、素朴に追記すると `__root` の Entity record が二件並ぶ。追記の形（query_deriver が完全なルートを出し直す、読む側で同じ id の record を束ねる、等）は実装時に決める
-
-完了条件: ルート record の属性が tap のルートの全キーを表し、ルート直下の各形の見え方が record の中と揃っている。
-
-進め方メモ（一歩ごとに本節を更新し、揃った行は表から消す）: 表の順に進める。「ルートの属性」（着手前に上の懸念 = `__root` の二重 record の扱いを案にして合意する）→ docs の同期
-
-#### 依存
-
-J5 は M13 を前提とする。
-
-[E17 (合成ビュー)](../60-composer/10-query-dsl-spec.md#合成ビュー-e17) はトップレベル・シングルトンのカタログ表現を前提にするので、M13 は E17 の前段でもある。

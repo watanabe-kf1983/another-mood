@@ -42,7 +42,7 @@ Data for entities declared in [Schema](schema.md) is automatically passed throug
 
 ## from
 
-Specifies the source to read from. The value is a **source name**: either an entity name (= the top-level key in source YAML, declared under `properties` in schema.yaml) or the name of another view (a join's [`to:`](#join) accepts the same).
+Specifies the source to read from. The value is a **source name**: either an entity name or the name of another view (a join's [`to:`](#join) accepts the same).
 
 ```yaml
 from: members

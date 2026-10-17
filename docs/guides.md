@@ -172,12 +172,12 @@ members:
 The root structure is fixed and always satisfies these three rules:
 
 - The outermost type is `type: object`
-- Each entry under `properties:` represents one **entity** (a collection of records of the same shape) — `members` in the example above
+- Each entry under `properties:` declares one top-level key; a collection there is an **entity** (records of the same shape) — `members` in the example above
 - `additionalProperties: false` (written immediately above `properties:`) makes any undeclared top-level key an error
 
-The entity name (`members`) must match the top-level key in the content file.
+The key (`members`) must match the top-level key in the content file.
 
-There are three standard patterns for the body of each entity (the value under `properties`): multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
+There are three standard patterns for the value of each key: multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
 
 #### Multiple records — write as a map
 

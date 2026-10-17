@@ -149,7 +149,7 @@ site_config:
   base_url: https://example.com
 ```
 
-No normalization happens; the value is passed to templates as written. The result is a plain value rather than an entity: views cannot name it in `from:`, and no pages are generated for it under `output/__db/`.
+No normalization happens; the value is passed to templates as written. The result is a plain value rather than an entity: views cannot name it in `from:`.
 
 ## Supported keywords
 
@@ -190,7 +190,7 @@ Annotation keywords that do not affect validation or normalization:
 
 ### Entity references (x-ref)
 
-`x-ref` declares that a property's value references a record in another top-level entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
+`x-ref` declares that a property's value references a record in another entity. It is an Another Mood extension (hence the `x-` prefix, following the OpenAPI/JSON Schema convention for non-standard fields).
 
 ```yaml
 albums:
@@ -210,7 +210,7 @@ albums:
 
 Fields:
 
-- `entity` (required) — name of a top-level entity.
+- `entity` (required) — name of an entity.
 - `attribute` (optional) — name of an attribute on the target entity. When omitted, the synthetic `.id` of a map-pattern target is referenced; the target must therefore use the [map pattern](#map-pattern). When the target uses the [array pattern](#array-pattern) (no implicit `id`), `attribute` is required.
 
 Constraints:
