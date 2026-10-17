@@ -11,7 +11,7 @@
 | inspect_schema | schema_file | — | inspect_schema/ |
 | normalize_contents | contents_dir | inspect_schema/ | normalize_contents/ |
 | derive_queries | views_dir | inspect_schema/ | derive_queries/ |
-| compose | — | normalize_contents/, derive_queries/, inspect_schema/ | compose/ |
+| compose | — | normalize_contents/, derive_queries/ | compose/ |
 | generate | templates_dir, reports_file | compose/ | generate/ |
 | reconcile | — | generate/ | reconcile/ |
 | site | — | reconcile/ | prepare_site/, hugo_build/ |
