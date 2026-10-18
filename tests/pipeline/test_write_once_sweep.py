@@ -18,7 +18,11 @@ from another_mood.components.manifest import Manifest
 from another_mood.config import ProjectConfig
 from another_mood.layout import resolve_layout
 from another_mood.pipeline.base import Task
-from another_mood.pipeline.stages import STAGE_FACTORIES, TAP_STAGE_FACTORIES
+from another_mood.pipeline.stages import (
+    STAGE_FACTORIES,
+    TAP_SCHEMA_STAGE_FACTORIES,
+    TAP_STAGE_FACTORIES,
+)
 from another_mood.pipeline.workspace import Workspace, make_processor_info
 
 _BLOB_V1 = b"\x89PNG-fake-bytes-v1"
@@ -81,6 +85,34 @@ def test_no_tap_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
     # (never published: the command layer hands it back from the workspace).
     document = workspace.root / "tap" / "data" / "data.json"
     assert "Alicia" in document.read_text(encoding="utf-8")
+
+
+def test_no_tap_schema_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
+    project = _scaffold_project(tmp_path)
+    workspace, published = _make_workspace(tmp_path, project)
+    observers = _Observers(
+        watch_roots=(workspace.root, published), obs_root=tmp_path / "observers"
+    )
+
+    _run_all_stages(
+        workspace, observers, run_label="run1", factories=TAP_SCHEMA_STAGE_FACTORIES
+    )
+
+    schema = project / "definition" / "schema.yaml"
+    schema.write_text(
+        schema.read_text(encoding="utf-8").replace(
+            "Display name of the member.", "Display name of the member (edited)."
+        ),
+        encoding="utf-8",
+    )
+
+    _run_all_stages(
+        workspace, observers, run_label="run2", factories=TAP_SCHEMA_STAGE_FACTORIES
+    )
+
+    # Guard against a vacuous sweep: the change must reach the schema document.
+    document = workspace.root / "tap_schema" / "data" / "schema.json"
+    assert "(edited)" in document.read_text(encoding="utf-8")
 
 
 def test_observers_flag_in_place_writes_only(tmp_path: Path) -> None:

@@ -314,15 +314,23 @@ def watch(
 
 
 @app.command()
-def tap(project_dir: str = typer.Argument(help="Project directory")) -> None:
+def tap(
+    project_dir: str = typer.Argument(help="Project directory"),
+    schema: bool = typer.Option(
+        False,
+        "--schema",
+        help="Print the JSON Schema of the document instead of the document.",
+    ),
+) -> None:
     """Extract the project's data as one JSON document.
 
     The document is self-describing: `mood tap . | jq 'keys'` lists what is
     inside, and `.__definition.entities` holds the type definitions.
+    `--schema` prints the JSON Schema of that document instead.
     """
     config = _load_config(project_dir=_absolute(project_dir))
     try:
-        result = command.tap(config)
+        result = command.tap(config, schema=schema)
     except UserError as exc:
         print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1) from exc

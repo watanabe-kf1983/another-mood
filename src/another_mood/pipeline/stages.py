@@ -11,6 +11,7 @@ from another_mood.components import (
     publish,
     reconcile,
     tap,
+    tap_schema,
 )
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.dir_lock import dir_lock
@@ -96,6 +97,21 @@ def tap_stage(workspace: Workspace) -> Task:
         run_fn=call,
         watch_paths=[],
         upstreams=[compose_out],
+    )
+
+
+def tap_schema_stage(workspace: Workspace) -> Task:
+    """Describe the tap document with a JSON Schema derived from the catalog."""
+    derive_out = workspace.component_output(derive_queries)
+    out = workspace.component_output(tap_schema)
+    call = tap_schema.bind(
+        catalog_dir=derive_out.dir,
+        out_dir=out.dir,
+    )
+    return Stage(
+        run_fn=call,
+        watch_paths=[],
+        upstreams=[derive_out],
     )
 
 
@@ -218,6 +234,15 @@ TAP_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     tap_stage,
 )
 
+# The schema needs only the catalog, which derive_queries completes: views
+# are evaluated downstream of it but declared within it.
+TAP_SCHEMA_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
+    inspect_schema_stage,
+    normalize_contents_stage,
+    derive_queries_stage,
+    tap_schema_stage,
+)
+
 
 def pipeline(
     workspace: Workspace,
@@ -231,4 +256,11 @@ def pipeline(
 def tap_pipeline(workspace: Workspace) -> Pipeline:
     """Create the tap pipeline: stop after compose, assemble one JSON document."""
     stages = [factory(workspace) for factory in TAP_STAGE_FACTORIES]
+    return Pipeline(stages, reporting=build_report_stage(workspace))
+
+
+def tap_schema_pipeline(workspace: Workspace) -> Pipeline:
+    """Create the tap schema pipeline: stop after derive_queries, write the
+    tap document's JSON Schema."""
+    stages = [factory(workspace) for factory in TAP_SCHEMA_STAGE_FACTORIES]
     return Pipeline(stages, reporting=build_report_stage(workspace))

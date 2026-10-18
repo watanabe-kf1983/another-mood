@@ -38,13 +38,15 @@ from another_mood.components.shared.component.build_report import (
 from another_mood.components.shared.user_error import UserError
 from another_mood.components.shared.user_source.diagnostic import DiagnosticEntry
 from another_mood.components.tap.tap import TAP_DOCUMENT_NAME
+from another_mood.components.tap.tap_schema import TAP_SCHEMA_NAME
+from another_mood.components.tap.tap_schema import tap_schema as tap_schema_component
 from another_mood.components.tap.tap import tap as tap_component
 from another_mood.config import ProjectConfig
 from another_mood.layout import SourceLayout, resolve_layout, verify_absent
 from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
-from another_mood.pipeline.stages import pipeline, tap_pipeline
+from another_mood.pipeline.stages import pipeline, tap_pipeline, tap_schema_pipeline
 from another_mood.pipeline.workspace import (
     ProcessorCommand,
     Workspace,
@@ -154,7 +156,8 @@ class BuildResult(_RunOutcome):
 
 @dataclass(frozen=True, kw_only=True)
 class TapResult(_RunOutcome):
-    """``document`` is the tap document's JSON text, None when the run failed."""
+    """``document`` is the JSON text the run produced (the tap document, or
+    its JSON Schema when asked for), None when the run failed."""
 
     document: str | None
 
@@ -255,8 +258,9 @@ def watch(
         )
 
 
-def tap(config: ProjectConfig) -> TapResult:
-    """Run the pipeline through compose and return the composed namespace.
+def tap(config: ProjectConfig, *, schema: bool = False) -> TapResult:
+    """Run the pipeline through compose and return the composed namespace,
+    or with ``schema`` stop after derive_queries and return its JSON Schema.
 
     Nothing is published: the document lives in the run's workspace and is
     handed back as ``document`` for the caller to print or pipe. Rendering
@@ -267,10 +271,14 @@ def tap(config: ProjectConfig) -> TapResult:
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
     workspace = _session_workspace(config, layout, manifest, "tap")
-    report = tap_pipeline(workspace).run()
-    document_path = (
-        workspace.component_output(tap_component).dir / "data" / TAP_DOCUMENT_NAME
-    )
+    if schema:
+        report = tap_schema_pipeline(workspace).run()
+        output = workspace.component_output(tap_schema_component)
+        document_path = output.dir / "data" / TAP_SCHEMA_NAME
+    else:
+        report = tap_pipeline(workspace).run()
+        output = workspace.component_output(tap_component)
+        document_path = output.dir / "data" / TAP_DOCUMENT_NAME
     document = (
         None if report.has_errors() else document_path.read_text(encoding="utf-8")
     )
