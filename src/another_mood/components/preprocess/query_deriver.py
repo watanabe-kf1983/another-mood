@@ -15,18 +15,23 @@ from pathlib import Path
 from typing import cast
 
 from another_mood.components.preprocess.normalize_core import check
-from another_mood.components.preprocess.query_normalizer import normalize_query
+from another_mood.components.preprocess.query_normalizer import (
+    normalize_query,
+    split_path,
+)
 from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     load_source,
 )
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.catalog_write import overlaps
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
 from another_mood.components.shared.json_data_model import (
+    KeyPath,
     collect_files,
     load_model,
     load_schema,
@@ -152,25 +157,25 @@ def _reject_source_name_conflicts(
 def _source_name_conflicts(
     names: Sequence[str], data_keys: frozenset[str]
 ) -> list[tuple[str, str]]:
-    """Find view names that shadow another source, as ``(message, name)``.
-
-    The data's top-level keys (``data_keys``: collections, singletons
-    and scalars alike) and views share one flat source namespace, so a
-    reused name would silently shadow its source in the composer.  The
-    ``__`` prefix is reserved for built-in sources — which is also why
-    built-in view names never need this check.
-    """
+    """Find view names that take another source's place, as ``(message, name)``:
+    a path starting at one of ``data_keys``, overlapping an earlier name
+    (see ``catalog_write.overlaps``), or taking the ``__`` prefix reserved
+    for built-in sources."""
     conflicts: list[tuple[str, str]] = []
-    seen: set[str] = set()
+    seen: dict[str, KeyPath] = {}
     for name in names:
+        path = split_path(name)
+        taken = next((s for s, p in seen.items() if overlaps(p, path)), None)
         if name.startswith("__"):
             message = f"view name '{name}' is reserved: '__' marks built-in names"
-        elif name in data_keys:
-            message = f"view name '{name}' collides with top-level data '{name}'"
-        elif name in seen:
+        elif path[0] in data_keys:
+            message = f"view name '{name}' collides with top-level data '{path[0]}'"
+        elif taken == name:
             message = f"duplicate view name '{name}'"
+        elif taken is not None:
+            message = f"view name '{name}' collides with an earlier view '{taken}'"
         else:
-            seen.add(name)
+            seen[name] = path
             continue
         conflicts.append((message, name))
     return conflicts

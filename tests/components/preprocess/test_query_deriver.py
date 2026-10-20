@@ -113,6 +113,20 @@ class TestBuildViewSchema:
         data = {"my-query": {"from": "items"}}
         assert len(self._validate(data)) >= 1
 
+    def test_dotted_query_name_accepted(self) -> None:
+        # The name is a write path: each dot steps down one level.
+        data = {"文書.用語集": {"from": "items"}}
+        assert self._validate(data) == []
+
+    @pytest.mark.parametrize(
+        "name",
+        ["doc.", ".doc", "doc..glossary", "doc.my-part"],
+        ids=["trailing_dot", "leading_dot", "empty_segment", "hyphen_in_segment"],
+    )
+    def test_malformed_dotted_query_name_rejected(self, name: str) -> None:
+        data = {name: {"from": "items"}}
+        assert len(self._validate(data)) >= 1
+
     @pytest.mark.parametrize(
         "value",
         ["draft", 42, 1.5, True],
@@ -431,11 +445,14 @@ class TestIdentifierDiagnostics:
 
 
 class TestSourceNameConflicts:
-    """_source_name_conflicts: shadowing detection over a flat name list.
+    """_source_name_conflicts: write-path collision detection over the
+    view names in definition order.
 
-    A view name shadows another source when it reuses a top-level data
-    key, repeats an earlier view name, or takes the reserved ``__``
-    built-in prefix.  Each conflict is reported as ``(message, name)``.
+    A view name is the path the view is written at.  It takes another
+    source's place when it starts at a top-level data key, overlaps an
+    earlier view's path (the same path, or one leading into the other),
+    or takes the reserved ``__`` built-in prefix.  Each conflict is
+    reported as ``(message, name)``.
     """
 
     _DATA_KEYS = frozenset({"items", "albums"})
@@ -455,6 +472,37 @@ class TestSourceNameConflicts:
         assert self._conflicts(["ranked", "named", "ranked"]) == [
             ("duplicate view name 'ranked'", "ranked")
         ]
+
+    def test_dotted_name_collides_by_its_first_segment(self) -> None:
+        # Writing below a data key would bury that source, whatever its
+        # kind, so the first segment alone decides.
+        assert self._conflicts(["items.ranked"]) == [
+            (
+                "view name 'items.ranked' collides with top-level data 'items'",
+                "items.ranked",
+            )
+        ]
+
+    def test_path_leading_into_an_earlier_view(self) -> None:
+        assert self._conflicts(["doc", "doc.glossary"]) == [
+            (
+                "view name 'doc.glossary' collides with an earlier view 'doc'",
+                "doc.glossary",
+            )
+        ]
+
+    def test_path_an_earlier_view_leads_into(self) -> None:
+        # The later of the pair is reported, whichever is the longer.
+        assert self._conflicts(["doc.glossary", "doc"]) == [
+            ("view name 'doc' collides with an earlier view 'doc.glossary'", "doc")
+        ]
+
+    def test_sibling_paths_share_their_holder(self) -> None:
+        # ``doc`` is made up once to hold both.
+        assert self._conflicts(["doc.glossary", "doc.requirements"]) == []
+
+    def test_overlap_is_segment_wise(self) -> None:
+        assert self._conflicts(["hobby", "hobbyist"]) == []
 
     def test_reserved_prefix(self) -> None:
         assert self._conflicts(["__mine"]) == [
