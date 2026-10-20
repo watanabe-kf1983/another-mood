@@ -16,6 +16,7 @@ from another_mood.components.shared.windows_reserved_name import (
     WindowsReservedNameError,
     _is_reserved_segment,  # pyright: ignore[reportPrivateUsage]
     ensure_not_windows_reserved,
+    fs_escape_segment,
 )
 
 # Characters and fragments that exercise every branch of the predicate:
@@ -142,3 +143,49 @@ class TestMatchesStdlibReference:
                 and _is_reserved_segment(s) != ntpath.isreserved(s)
             ]
         assert disagreed == []
+
+
+# ── fs_escape_segment ──────────────────────────────────────────────
+
+
+class TestFsEscapeSegment:
+    """A raw id as a file-name segment."""
+
+    def test_ordinary_name_is_identity(self) -> None:
+        assert fs_escape_segment("dave (ops)") == "dave (ops)"
+        assert fs_escape_segment("モーニング娘。") == "モーニング娘。"
+
+    def test_reserved_chars_become_tilde_hex(self) -> None:
+        assert fs_escape_segment('a:b*c?d"e<f>g|h/i\\j') == (
+            "a~3Ab~2Ac~3Fd~22e~3Cf~3Eg~7Ch~2Fi~5Cj"
+        )
+
+    def test_control_char_is_escaped(self) -> None:
+        assert fs_escape_segment("a\x01b") == "a~01b"
+
+    def test_tilde_is_escaped_for_injectivity(self) -> None:
+        assert fs_escape_segment("a~3Ab") == "a~7E3Ab"
+        assert fs_escape_segment("a:b") == "a~3Ab"
+
+    def test_trailing_dot_and_space_are_escaped(self) -> None:
+        assert fs_escape_segment("foo.") == "foo~2E"
+        assert fs_escape_segment("foo ") == "foo~20"
+        # Only the last one: an inner dot / space is an ordinary character.
+        assert fs_escape_segment("a. b") == "a. b"
+
+    def test_dot_segments_become_plain_names(self) -> None:
+        assert fs_escape_segment(".") == "~2E"
+        assert fs_escape_segment("..") == ".~2E"
+
+    def test_percent_is_not_an_escape_here(self) -> None:
+        assert fs_escape_segment("100%") == "100%"
+
+    @pytest.mark.parametrize(
+        "raw", ["a:b", "foo.", "foo ", "..", "a\x01b", "x/y", "a~b", "dave (ops)"]
+    )
+    def test_escaped_segment_passes_the_character_checks(self, raw: str) -> None:
+        assert not _is_reserved_segment(fs_escape_segment(raw))
+
+    def test_device_name_is_left_to_the_predicate(self) -> None:
+        assert fs_escape_segment("CON") == "CON"
+        assert _is_reserved_segment("CON")

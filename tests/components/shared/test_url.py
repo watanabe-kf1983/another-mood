@@ -1,4 +1,4 @@
-from another_mood.components.generator.url import url_escape
+from another_mood.components.shared.url import url_escape
 
 
 class TestUrlEscape:

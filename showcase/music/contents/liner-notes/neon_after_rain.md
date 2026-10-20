@@ -6,4 +6,8 @@ Neon After Rain was tracked in a single humid week in Midori Circuit's home stud
 
 The cover — a long-exposure of a crossing seen through a fogged bus window — was shot that same week, and its palette is the one the mixes kept chasing: magenta bleeding into wet asphalt.
 
+![Neon After Rain — back cover](../covers/neon_after_rain%20(back).svg)
+
+The back cover lists the tracks over the same palette.
+
 The scene, the artwork, and the band, like [everything in this catalog](../background.md#everything-is-invented), are invented.
