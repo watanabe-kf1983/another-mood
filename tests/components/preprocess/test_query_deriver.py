@@ -206,6 +206,31 @@ class TestDeriveQueries:
         (root,) = [e for e in catalog if e["id"] == dc.ROOT_ENTITY_ID]
         assert "names" in [a["id"] for a in root["item_type"]["attributes"]]
 
+    def test_dotted_views_fold_into_a_made_up_object(self, tmp_path: Path) -> None:
+        views = tmp_path / "views"
+        _write(views / "doc.yaml", "doc.glossary:\n  from: items\n")
+        _write(views / "other.yaml", "doc.terms:\n  from: items\n")
+        _write_catalog(tmp_path / "data-catalog", _CATALOG_YAML)
+        out = tmp_path / "derived"
+        derive_queries(
+            views_dir=views,
+            data_catalog_dir=tmp_path / "data-catalog",
+            out_dir=out,
+        )
+
+        # Each file carries its own views' entities, named by their paths.
+        data = json.loads((out / "data" / "views" / "doc.yaml.json").read_text())
+        assert [e["id"] for e in data["__definition"]["entities"]] == ["doc.glossary"]
+        # The root folds the views in under the object made up to hold them.
+        catalog = load_model(out / "data" / "data-catalog")["__definition"]["entities"]
+        (root,) = [e for e in catalog if e["id"] == dc.ROOT_ENTITY_ID]
+        user_attributes = [
+            a["id"]
+            for a in root["item_type"]["attributes"]
+            if not a["id"].startswith("__")
+        ]
+        assert user_attributes == ["doc", "doc.glossary", "doc.terms"]
+
     def test_json_view_file_accepted(self, tmp_path: Path) -> None:
         views = tmp_path / "views"
         _write(
@@ -605,26 +630,66 @@ class TestQueryReferences:
             out_dir=tmp_path / "out",
         )
 
+    _ITEMS = dc.build_tree(
+        [
+            dc.Entity(
+                id="items",
+                item_type=dc.ObjectType(
+                    id="items.item",
+                    origin_item_type="items.item",
+                    attributes=[dc.Attribute(id="name", type="string", required=True)],
+                ),
+            )
+        ]
+    )
+
     def test_query_reads_another_querys_view(self) -> None:
         # ``b`` reads ``a``.  It derives (rather than failing with "unknown
         # source 'a'") only because ``a``'s view is fed back as a source
         # before ``b`` is derived — so ``b`` in the result proves feedback.
-        items = dc.Entity(
-            id="items",
-            item_type=dc.ObjectType(
-                id="items.item",
-                origin_item_type="items.item",
-                attributes=[dc.Attribute(id="name", type="string", required=True)],
-            ),
-        )
         derived = _derive_all(
             {
                 "a": Query(from_=From(path=("items",))),
                 "b": Query(from_=From(path=("a",))),
             },
-            dc.build_tree([items]),
+            self._ITEMS,
         )
         assert [edge.name for edge, _ in derived.children] == ["a", "b"]
+
+    def test_dotted_names_share_a_made_up_object(self) -> None:
+        derived = _derive_all(
+            {
+                "doc.glossary": Query(from_=From(path=("items",))),
+                "doc.terms": Query(from_=From(path=("items",))),
+            },
+            self._ITEMS,
+        )
+        doc_edge, doc = derived.child_entry("doc")
+        assert doc_edge.type == "object"
+        assert [edge.name for edge, _ in doc.children] == ["glossary", "terms"]
+
+    @pytest.mark.parametrize(
+        ("query_yaml", "message"),
+        [
+            (
+                "doc.glossary:\n  from: items\nsummary:\n  from: doc\n",
+                "source 'doc' is not an entity (type 'object')",
+            ),
+            (
+                "summary:\n  from: doc\ndoc.glossary:\n  from: items\n",
+                "unknown source 'doc'",
+            ),
+        ],
+        ids=["holder_already_made_up", "holder_not_yet_made_up"],
+    )
+    def test_reading_a_made_up_object_fails(
+        self, tmp_path: Path, query_yaml: str, message: str
+    ) -> None:
+        # Reading the holder is no reference to the view below it, so the
+        # two derive in definition order and the holder may not exist yet.
+        with pytest.raises(FileValidationError) as exc_info:
+            self._run_fn(tmp_path, query_yaml)
+        assert [d.message for d in exc_info.value.diagnostics] == [message]
 
     def test_failed_source_suppresses_downstream_cascade(self, tmp_path: Path) -> None:
         # ``broken`` reads a missing source; ``downstream`` reads ``broken``.
