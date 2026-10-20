@@ -430,11 +430,8 @@ categories:
         done: true
       J5:
         title: tap ドキュメントの JSON Schema 提供
-        note: >-
-          E14 / M13 が前提。当初は実需が出るまで保留としていたが、
-          ローンチ前に入れる (入ってしまう) 見込み。
-        proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
+        done: true
       J6:
         title: sbdb プロジェクトの自己記述 (README.md 生成)
         phase: 18
