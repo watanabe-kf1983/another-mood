@@ -47,14 +47,14 @@ class TestCompose:
             dedent("""\
                 __definition:
                   views:
-                    - id: names
+                    - id: doc.names
                       from: [items]
                       select:
                         - {item: [name], as: [name]}
                   entities:
-                    - id: names
+                    - id: doc.names
                       item_type:
-                        id: names.item
+                        id: doc.names.item
                         attributes:
                           - {id: name, type: string, required: true}
                       builtin: false
@@ -90,10 +90,11 @@ class TestCompose:
                 dst = data_out / sub / f.relative_to(src)
                 assert dst.read_text() == f.read_text()
 
-        # View result: applied records only; entities flow via the catalog passthrough.
-        assert json.loads((data_out / "view-results" / "names.json").read_text()) == {
-            "names": [{"name": "a"}, {"name": "b"}]
-        }
+        # View result: applied records only, at the path the view name
+        # spells; entities flow via the catalog passthrough.
+        assert json.loads(
+            (data_out / "view-results" / "doc.names.json").read_text()
+        ) == {"doc": {"names": [{"name": "a"}, {"name": "b"}]}}
 
     def test_rejects_reserved_query_id(self, tmp_path: Path) -> None:
         # A query whose id is `con` would write view-results/con.json — a
