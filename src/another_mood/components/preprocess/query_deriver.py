@@ -8,25 +8,30 @@ catalog with the views among the root's attributes, and the views with
 their derived entities, under ``__definition``.
 """
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Container, Iterator, Mapping, Sequence
 from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 from typing import cast
 
 from another_mood.components.preprocess.normalize_core import check
-from another_mood.components.preprocess.query_normalizer import normalize_query
+from another_mood.components.preprocess.query_normalizer import (
+    normalize_query,
+    split_path,
+)
 from another_mood.components.shared.user_source.source_loader import (
     UserStr,
     load_source,
 )
 from another_mood.components.shared import data_catalog as dc
+from another_mood.components.shared.catalog_write import Placement, overlaps, place
 from another_mood.components.shared.component.component import Component
 from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
 from another_mood.components.shared.json_data_model import (
+    KeyPath,
     collect_files,
     load_model,
     load_schema,
@@ -99,7 +104,7 @@ def derive_queries(
                         "entities": [
                             replace(e, view=True).to_dict()
                             for e in view_entities
-                            if dc.Attribute.split_id(e.id)[0] in names
+                            if _written_by(e.id, names)
                         ],
                     }
                 },
@@ -152,25 +157,25 @@ def _reject_source_name_conflicts(
 def _source_name_conflicts(
     names: Sequence[str], data_keys: frozenset[str]
 ) -> list[tuple[str, str]]:
-    """Find view names that shadow another source, as ``(message, name)``.
-
-    The data's top-level keys (``data_keys``: collections, singletons
-    and scalars alike) and views share one flat source namespace, so a
-    reused name would silently shadow its source in the composer.  The
-    ``__`` prefix is reserved for built-in sources — which is also why
-    built-in view names never need this check.
-    """
+    """Find view names that take another source's place, as ``(message, name)``:
+    a path starting at one of ``data_keys``, overlapping an earlier name
+    (see ``catalog_write.overlaps``), or taking the ``__`` prefix reserved
+    for built-in sources."""
     conflicts: list[tuple[str, str]] = []
-    seen: set[str] = set()
+    seen: dict[str, KeyPath] = {}
     for name in names:
+        path = split_path(name)
+        taken = next((s for s, p in seen.items() if overlaps(p, path)), None)
         if name.startswith("__"):
             message = f"view name '{name}' is reserved: '__' marks built-in names"
-        elif name in data_keys:
-            message = f"view name '{name}' collides with top-level data '{name}'"
-        elif name in seen:
+        elif path[0] in data_keys:
+            message = f"view name '{name}' collides with top-level data '{path[0]}'"
+        elif taken == name:
             message = f"duplicate view name '{name}'"
+        elif taken is not None:
+            message = f"view name '{name}' collides with an earlier view '{taken}'"
         else:
-            seen.add(name)
+            seen[name] = path
             continue
         conflicts.append((message, name))
     return conflicts
@@ -178,7 +183,7 @@ def _source_name_conflicts(
 
 def _derive_all(queries: Mapping[str, Query], catalog: dc.Node) -> dc.Node:
     """Derive every query in dependency order, returning a root holding
-    each view as a branch, in ``queries`` order.
+    each view at its name's path, the views placed in ``queries`` order.
 
     Each view is fed back as a catalog source (see ``_with_source``) so a
     later query can read it by name.  Raises :class:`FileValidationError`
@@ -191,36 +196,43 @@ def _derive_all(queries: Mapping[str, Query], catalog: dc.Node) -> dc.Node:
 
     diagnostics: list[Diagnostic] = []
     poisoned: set[str] = set()
+    views: dict[str, dc.Node] = {}
     for name in order:
         query = queries[name]
         if query.query_references(poisoned):
             poisoned.add(name)
         else:
             try:
-                view = query.derive(catalog)
+                views[name] = query.derive(catalog)
             except QueryDeriveError as exc:
                 diagnostics.append(_diagnostic_from(exc))
                 poisoned.add(name)
             else:
-                catalog = _with_source(catalog, name, view)
+                catalog = _with_source(catalog, name, views[name])
     if diagnostics:
         raise FileValidationError(diagnostics=diagnostics)
-    # Reaching here means every query derived, so each is now a top-level
-    # source in ``catalog``.
-    return dc.Node(children=[catalog.child_entry(name) for name in queries])
+    return place(dc.Node(), [_placement(name, views[name]) for name in queries])
 
 
 def _with_source(catalog: dc.Node, name: str, view: dc.Node) -> dc.Node:
-    """Hang a derived view off the catalog's root as an ``object[]``
-    source, so a downstream ``From`` resolves it by name the same way it
-    resolves a top-level data entity (see ``data_catalog.build_tree``)."""
-    return replace(
-        catalog,
-        children=[
-            *catalog.children,
-            (dc.Edge(name=name, type="object[]", required=True), view),
-        ],
-    )
+    """Place a derived view in the catalog at its name's path, so a
+    downstream ``From`` resolves it the same way it resolves a data
+    entity (see ``data_catalog.build_tree``)."""
+    return place(catalog, [_placement(name, view)])
+
+
+def _placement(name: str, view: dc.Node) -> Placement:
+    """The view as an ``object[]`` branch at its name's path.  The root
+    is one record, so the view is on every row."""
+    path = split_path(name)
+    edge = dc.Edge(name=path[-1], type="object[]", required=True)
+    return Placement(branch=(edge, view), path=path, source=())
+
+
+def _written_by(entity_id: str, names: Container[str]) -> bool:
+    """Whether the entity is one of the views ``names`` or lies below one."""
+    path = dc.Attribute.split_id(entity_id)
+    return any(".".join(path[:n]) in names for n in range(1, len(path) + 1))
 
 
 def _diagnostic_from(exc: QueryDeriveError) -> Diagnostic:

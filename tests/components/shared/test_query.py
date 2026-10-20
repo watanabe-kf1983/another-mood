@@ -2051,14 +2051,42 @@ class TestEvaluationOrder:
         assert evaluation_order(queries) == ["a"]
 
     def test_a_longer_path_never_names_a_query(self) -> None:
-        # A query is named by one segment, so ``b.x`` reads data under a
-        # top-level ``b``, not the query ``b``; it creates no edge, and
-        # the would-be cycle through it does not form.
+        # A query is named by its whole path, so ``b.x`` reads below the
+        # query ``b``'s output, not the query itself; it creates no edge,
+        # and the would-be cycle through it does not form.
         queries = {
             "a": Query(from_=From(path=("b", "x"))),
             "b": _ref_query("a"),
         }
         assert evaluation_order(queries) == ["a", "b"]
+
+    def test_a_dotted_query_name_is_referenced_by_its_path(self) -> None:
+        queries = {
+            "a": Query(from_=From(path=("doc", "glossary"))),
+            "doc.glossary": _ref_query("items"),
+        }
+        assert evaluation_order(queries) == ["doc.glossary", "a"]
+
+    def test_a_shorter_path_never_names_a_query(self) -> None:
+        # ``doc`` is the object made up to hold ``doc.glossary``, not a
+        # query; the read creates no edge.
+        queries = {
+            "a": Query(from_=From(path=("doc",))),
+            "doc.glossary": _ref_query("items"),
+        }
+        assert evaluation_order(queries) == ["a", "doc.glossary"]
+
+    def test_cycle_offender_through_a_dotted_name(self) -> None:
+        # The offender is the first segment of the closing reference, the
+        # segment that carries the path's source position.
+        queries = {
+            "a": Query(from_=From(path=("doc", "glossary"))),
+            "doc.glossary": _ref_query("a"),
+        }
+        with pytest.raises(QueryDeriveError) as exc_info:
+            evaluation_order(queries)
+        assert "a → doc.glossary → a" in str(exc_info.value)
+        assert exc_info.value.offender == "doc"
 
     def test_cycle_reported_in_reference_direction(self) -> None:
         # a reads b, b reads c, c reads a — the message must read forward

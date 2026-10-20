@@ -411,6 +411,30 @@ For `from: members` with three records `[{name: alice, age: 30}, {name: bob}, {n
 
 Each view is exposed via two auto-generated meta pages: `output/__db/__view_defs/<view>.md` shows the definition and the shape it resolves to, and `output/__db/__data/<view>.md` shows the records. While writing a query, you can verify the result in real time on `mood watch`.
 
+## Nested views
+
+A view name may be dotted. `handbook.roster` nests the view under `handbook`, an object made up to hold it; `handbook.actives` beside it shares the same object.
+
+```yaml
+handbook.roster:
+  from: members
+handbook.actives:
+  from: members
+  where:
+    active: true
+```
+
+The data then holds one `handbook` with both views inside:
+
+```yaml
+handbook:
+  roster:
+    - { id: alice, name: Alice, active: true }
+    - { id: bob, name: Bob, active: false }
+  actives:
+    - { id: alice, name: Alice, active: true }
+```
+
 ## Full view-schema
 
 The schema that constrains the form of view files. The canonical specification is the YAML at [`./schemas/view-schema.yaml`](./schemas/view-schema.yaml).

@@ -559,17 +559,10 @@ class Query(QueryNode):
             *chain.from_iterable(join.right.source_paths() for join in self.join),
         )
 
-    def query_references(self, query_names: Container[str]) -> Sequence[str]:
-        """The names in ``query_names`` this query reads from.
-
-        A query is named by one segment (query names hold no dot), so a
-        longer source path never refers to one.
-        """
-        return [
-            path[0]
-            for path in self.source_paths()
-            if len(path) == 1 and path[0] in query_names
-        ]
+    def query_references(self, query_names: Container[str]) -> Sequence[KeyPath]:
+        """The source paths of this query whose dotted form is a name in
+        ``query_names``, each as written."""
+        return [path for path in self.source_paths() if ".".join(path) in query_names]
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "Query":
@@ -631,7 +624,10 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
     ``queries``; other sources impose no ordering.
     Raises :class:`QueryDeriveError` if these references form a cycle.
     """
-    deps = {name: q.query_references(queries) for name, q in queries.items()}
+    deps = {
+        name: [".".join(path) for path in q.query_references(queries)]
+        for name, q in queries.items()
+    }
     try:
         return list(TopologicalSorter(deps).static_order())
     except CycleError as exc:
@@ -642,9 +638,12 @@ def evaluation_order(queries: Mapping[str, Query]) -> Sequence[str]:
         # ``cycle[0]`` reads ``cycle[1]``; use that reference's own value
         # as the offender — taken from the query, not from ``cycle``, so
         # the anchor doesn't depend on which string instance graphlib
-        # surfaces in the cycle.
+        # surfaces in the cycle.  The first segment carries the path's
+        # source position.
         offender = next(
-            s for s in queries[cycle[0]].query_references(queries) if s == cycle[1]
+            path[0]
+            for path in queries[cycle[0]].query_references(queries)
+            if ".".join(path) == cycle[1]
         )
         raise QueryDeriveError(
             "query reference cycle: " + " → ".join(cycle), offender=offender
