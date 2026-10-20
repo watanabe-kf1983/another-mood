@@ -291,15 +291,8 @@ categories:
         done: true
       E17:
         title: 文書ノード — ドット区切りの view 名 (書き込みパス)
-        note: >-
-          view 名のドットを書き込みパスとして読み、view を root 直下以外の
-          位置に置けるようにする。中間セグメントは暗黙のシングルトンとして
-          立ち、文書 (と章節項) がデータ木のノードになる。文法の追加は無く、
-          衝突規則・評価順・カタログ表現は既存のものの延長。
-          動機は S8 の二文書。トップレベル・シングルトンのカタログ表現が要るので
-          M13 が前提。
-        proposal: 20-design/60-composer/10-query-dsl-spec#文書ノード--ドット区切りの-view-名-e17
         phase: 17
+        done: true
 
   F:
     title: メタドキュメンテーション拡張
@@ -745,6 +738,7 @@ categories:
         note: >-
           S8 までの showcase は index.md の合本で暫定。E17 の文書ノードで要求仕様書・
           設計書を別ページの文書に割り、二文書として完成させる。E17 (と M13) が前提。
+        proposal: 20-design/80-showcase/10-system-dev-docs#二文書を文書ノードに移す-s9
         phase: 17
       S10:
         title: 二文書 showcase の英語版 (showcase/system-dev-docs-en)
