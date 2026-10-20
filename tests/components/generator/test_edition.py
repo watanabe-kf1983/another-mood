@@ -126,11 +126,15 @@ def test_dir_segment_ascii_safe_name_is_identity() -> None:
     assert _named("web").dir_segment == "web"
 
 
-def test_dir_segment_escapes_unsafe_name() -> None:
-    # Same per-segment escape as anchor_path: URL-unsafe ASCII (space, `/`)
-    # is percent-encoded, non-ASCII ucschar (版) is kept raw.
-    assert _named("Web 版").dir_segment == "Web%20版"
-    assert _named("a/b").dir_segment == "a%2Fb"
+def test_dir_segment_is_a_file_name() -> None:
+    assert _named("Web 版").dir_segment == "Web 版"
+    assert _named("a/b").dir_segment == "a~2Fb"
+
+
+def test_dir_url_is_the_segment_percent_encoded() -> None:
+    assert _named("web").dir_url == "web"
+    assert _named("Web 版").dir_url == "Web%20版"
+    assert _named("a/b").dir_url == "a~2Fb"
 
 
 # ── is_system ──────────────────────────────────────────────────────
@@ -203,3 +207,24 @@ class TestPagePath:
         erd = erds[0]
         assert isinstance(erd, Node)
         assert PagingPolicy(("erds.item",)).page_path(erd) == "erds/user-mgmt.md"
+
+    def test_page_path_is_a_file_name_not_the_anchor_path(self) -> None:
+        # The anchor path escapes the space and parentheses; the file does not.
+        tree = {"erds": [{"id": "user (v2)"}]}
+        root = wrap_tree(ensure_inert_mapping(tree))
+        erds = root["erds"]
+        assert isinstance(erds, ArrayNode)
+        erd = erds[0]
+        assert isinstance(erd, Node)
+        assert PagingPolicy(("erds.item",)).page_path(erd) == "erds/user (v2).md"
+
+    def test_slash_inside_an_id_stays_one_segment(self) -> None:
+        # The id's own `/` (`%2F` in the anchor path) is a file-name character
+        # to escape, not a directory separator.
+        tree = {"erds": [{"id": "a/b"}]}
+        root = wrap_tree(ensure_inert_mapping(tree))
+        erds = root["erds"]
+        assert isinstance(erds, ArrayNode)
+        erd = erds[0]
+        assert isinstance(erd, Node)
+        assert PagingPolicy(("erds.item",)).page_path(erd) == "erds/a~2Fb.md"

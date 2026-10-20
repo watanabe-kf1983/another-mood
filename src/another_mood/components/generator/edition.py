@@ -24,10 +24,12 @@ from importlib import resources
 from pathlib import Path
 from types import MappingProxyType
 from typing import cast
+from urllib.parse import unquote
 
 from another_mood.components.generator.data_tree import Node, is_blob, nearest_ancestor
 from another_mood.components.generator.inert import InertValue
-from another_mood.components.generator.url import url_escape
+from another_mood.components.shared.url import url_escape
+from another_mood.components.shared.windows_reserved_name import fs_escape_segment
 from another_mood.components.shared.json_data_model import load_schema
 from another_mood.components.shared.user_source.diagnostic import FileValidationError
 from another_mood.components.shared.user_source.source_loader import parse_mapping
@@ -72,18 +74,28 @@ class PagingPolicy:
         """Report-root-relative page path the ``node`` is rendered on.
 
         The nearest split-target ``node``-or-ancestor's own page
-        (``{anchor_path}.md``), or ``index.md`` when no ancestor is a
+        (``{_anchor_file_path}.md``), or ``index.md`` when no ancestor is a
         split boundary (including the root).  A blob is not a rendered page
         but an output file, so its ``page`` is the blob file itself.
         """
         if is_blob(node):
-            return node._meta.anchor_path.removeprefix("/")
+            return _anchor_file_path(node._meta.anchor_path)
         page = nearest_ancestor(
             node, lambda n: self.is_split_target(n._meta.object_type_id)
         )
         if page is None:
             return "index.md"
-        return page._meta.anchor_path.removeprefix("/") + ".md"
+        return _anchor_file_path(page._meta.anchor_path) + ".md"
+
+
+def _anchor_file_path(anchor_path: str) -> str:
+    """The output-root-relative file path of ``anchor_path``: each segment
+    percent-decoded, then :func:`fs_escape_segment`-ed (per segment, so an
+    id's own ``%2F`` never becomes a separator)."""
+    return "/".join(
+        fs_escape_segment(unquote(seg))
+        for seg in anchor_path.removeprefix("/").split("/")
+    )
 
 
 @dataclass(frozen=True)
@@ -119,18 +131,14 @@ class Edition:
 
     @property
     def dir_segment(self) -> str:
-        """The output subdirectory segment — ``name`` IRI-escaped.
+        """The output subdirectory segment — ``name`` as a file-name segment
+        (edition names are validated loosely, so an unsafe one is escaped)."""
+        return fs_escape_segment(self.name)
 
-        Edition names are validated loosely (any non-empty, non-``__``
-        string), so an unsafe name is made FS- and link-safe with the same
-        per-segment escape anchor_path uses (``url_escape`` with no extra
-        safe chars; see :mod:`another_mood.components.generator.data_tree`).
-        The generator mounts the edition at ``{out_dir}/{dir_segment}/`` and
-        the meta index links to ``{dir_segment}/``, so both stay consistent.
-        ASCII-safe names (``default`` / ``web`` / ``pdf``) escape to
-        themselves.
-        """
-        return url_escape(self.name, safe="")
+    @property
+    def dir_url(self) -> str:
+        """:attr:`dir_segment` percent-encoded, as the URL that reaches it."""
+        return url_escape(self.dir_segment, safe="")
 
     @property
     def is_system(self) -> bool:

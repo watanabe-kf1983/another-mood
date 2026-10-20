@@ -27,6 +27,7 @@ _DATA = {
     "members": [
         {"id": "alice", "name": "Alice"},
         {"id": "bob", "name": "Bob"},
+        {"id": "dave (ops)", "name": "Dave"},
     ],
     "by_role": [
         {"id": "dev", "role": "Developer"},
@@ -40,6 +41,7 @@ _DATA = {
     ],
     "blob": [
         {"id": "covers/cover.png", "mime_type": "image/png"},
+        {"id": "covers/shot (2).png", "mime_type": "image/png"},
     ],
 }
 _FILE_PER = ("members.item", "by_role.item", "prose.item")
@@ -283,6 +285,22 @@ class TestNodeHref:
         source = nodes["/"]  # renders on index.md
         target = nodes["/blob/covers/cover.png"]
         assert node_href(_paging(), source, target) == "blob/covers/cover.png"
+
+    def test_path_is_the_file_path_percent_encoded(self) -> None:
+        # The file is `members/dave (ops).md`; the URL encodes it, the
+        # fragment is the anchor path as-is.
+        nodes = _node_map()
+        source = nodes["/"]
+        target = nodes["/members/dave%20%28ops%29"]
+        assert node_href(_paging(), source, target) == (
+            "members/dave%20%28ops%29.md#/members/dave%20%28ops%29"
+        )
+
+    def test_blob_path_is_percent_encoded(self) -> None:
+        nodes = _node_map()
+        source = nodes["/"]
+        target = nodes["/blob/covers/shot%20%282%29.png"]
+        assert node_href(_paging(), source, target) == "blob/covers/shot%20%282%29.png"
 
     def test_blob_target_relative_from_split_page(self) -> None:
         nodes = _node_map()

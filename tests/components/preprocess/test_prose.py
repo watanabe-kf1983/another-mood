@@ -217,6 +217,30 @@ class TestNormalizeLinksBlob:
             "[p](node:/blob/a/b/doc.pdf#page=3)"
         )
 
+    def test_destination_is_a_url_and_the_node_is_the_anchor_path(self) -> None:
+        # The destination is decoded like CommonMark does; the `node:` form
+        # is the blob's anchor path, escaped like one.
+        assert normalize_links("![a](shot(1).png)", _DOC) == (
+            "![a](node:/blob/a/b/shot%281%29.png)"
+        )
+        assert normalize_links("![a](shot%20(2).png)", _DOC) == (
+            "![a](node:/blob/a/b/shot%20%282%29.png)"
+        )
+        assert normalize_links("![a](shot%20%282%29.png)", _DOC) == (
+            "![a](node:/blob/a/b/shot%20%282%29.png)"
+        )
+
+    def test_non_ascii_stays_raw_either_way(self) -> None:
+        assert normalize_links("![a](図4.png)", _DOC) == "![a](node:/blob/a/b/図4.png)"
+        assert normalize_links("![a](%E5%9B%B34.png)", _DOC) == (
+            "![a](node:/blob/a/b/図4.png)"
+        )
+
+    def test_prose_destination_is_decoded_and_escaped_too(self) -> None:
+        assert normalize_links("[t](my%20doc.md)", _DOC) == (
+            "[t](node:/prose/a/b/my%20doc)"
+        )
+
     def test_extensionless_file_is_still_a_blob(self) -> None:
         # No `.md`, so a blob keyed by its full path; downstream drops it if no
         # such blob exists.
