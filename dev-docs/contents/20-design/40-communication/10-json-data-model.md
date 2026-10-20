@@ -43,22 +43,3 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 `__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。
 
 内蔵 prose スキーマのキー名 `prose` はプレフィックスなしで維持する。ユーザ定義との衝突が問題になった場合は、設定によるキー名変更で対応する。
-
-## Proposals
-
-### tap ドキュメントの JSON Schema 提供 (J5)
-
-`mood tap` の data.json はテンプレートに流し込まれるルートオブジェクトそのものであり、その JSON Schema は tap 消費者（typegen・検証）とテンプレートを書く LLM の両方に効く。データからの探索と違い、レコード 0 件のエンティティ（キーごと消える）や absent な任意項目も語れる。
-
-**案**: `components/shared/json_schema.py` に純関数を置く:
-
-- `document_schema(entities) -> Mapping` — data.json 全体のスキーマ
-- `entity_schema(entity_id, entities) -> Mapping` — 単一エンティティの断片（子孫を入れ子展開）
-
-変換の要点: ドット名の入れ子復元（[view 出力にドット入りキーは生まれない](../60-composer/10-query-dsl-spec.md#external-design)ので、カタログのドットは必ず入れ子）、ルートの合成（カタログの `__root` の attribute が tap のルートの全キーを表す）、`[]` 接尾の再帰的な `items` への展開、`validation` / `metadata` キーの素通し移送。
-
-提供口は未決（tap データ本体には混ぜない — インタフェース分離）。候補: `__db/` メタ面への埋め込み（entity_def.md / view_def.md / 全体スキーマページ）、`mood tap --schema`。導線（docs）とセットで初めて使われる点に注意。
-
-その他の論点: レコード 0 件エンティティのキー欠落と required 方針、`additionalProperties: false` の採否。
-
-**着手トリガー**（いずれかが発生するまで保留）: (a) エージェントが tap データやテンプレート執筆で実際につまずく事例が出る、(b) SBOM 等で外部 JSON との型突き合わせが必要になる、(c) 利用者からスキーマ / typegen の要望が来る。前提タスク: M13。

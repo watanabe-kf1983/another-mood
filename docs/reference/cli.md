@@ -17,7 +17,7 @@ mood watch .
 | [`mood init <project_dir>`](#init) | Shortcut for `mood blueprint apply starter <project_dir>`. |
 | [`mood build <project_dir>`](#build) | Run all stages once and generate Markdown and HTML. |
 | [`mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>]`](#watch) | Watch for file changes, rebuild incrementally, and serve a preview. |
-| [`mood tap <project_dir>`](#tap) | Extract the project's data (entities and views) as one JSON document. |
+| [`mood tap <project_dir> [--schema]`](#tap) | Extract the project's data (entities and views) as one JSON document, or the JSON Schema of that document. |
 | [`mood blueprint list`](#blueprint-list) | List the available blueprints. |
 | [`mood blueprint apply <name> <project_dir>`](#blueprint-apply) | Apply a blueprint into a project directory. |
 | [`mood docs list`](#docs-list) | List bundled documentation entries with their `docs://` URIs. |
@@ -162,14 +162,16 @@ Injects a value the same way [`build --var`](#--var) does, so a template that re
 Extract the project's data — the entities and the evaluated views — as one JSON document, for external programs that compute over the data and for ad-hoc queries.
 
 ```bash
-mood tap <project_dir>
+mood tap <project_dir> [--schema]
 ```
 
-Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document. Nothing is written into `.another-mood/`: redirect stdout when you want a file. `tap` takes no options.
+Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document. Nothing is written into `.another-mood/`: redirect stdout when you want a file.
 
 The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed diagnostic views and `__definition`.
 
 Exits with code 0 on success. Schema, contents, and view errors are printed to stderr and fail the command with exit code 1 — stdout stays empty.
+
+`--schema` prints a [JSON Schema](https://json-schema.org/) (draft 2020-12) of the document instead of the document itself: what it can contain, including entities that currently have no records and fields no record fills in, with the types and annotations from your [schema](schema.md).
 
 ### Querying the document
 
