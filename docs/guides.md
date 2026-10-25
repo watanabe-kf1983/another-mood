@@ -554,5 +554,5 @@ Be aware that misspellings silently produce empty strings — no error is raised
 ## Further reading
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
-- [showcase/music/](../showcase/music/) — a more complex working sample than the member list, modeling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises groupings, joins, multi-join chains, intrinsic flatten, self-referencing entities, prose alongside structured data, and blob assets (album cover art).
+- [showcase/music/](../showcase/music/) — a larger sample than the member list: a fictional music catalog spread over linked pages, with views that use every clause, prose and cover art alongside the data, and two editions from the same templates.
 - [showcase/sbom/](../showcase/sbom/) — a sample that takes another program's JSON output as its data: Another Mood's own CycloneDX SBOM, with the component pages, dependency graph and license ledger all derived by views.
