@@ -4,12 +4,12 @@ User-facing YAML accepts shape sugar (bare-string flatten, single
 mapping join, ``flatten: true`` shorthand, ``where``'s field-keyed
 predicates) and omitted defaults; the persisted ``__definition.views``
 carries the canonical mapping that downstream consumers
-(``parse_query``, ``__view_defs`` template) read.  Per-clause shape and
+(``parse_query``, ``view_def.md`` template) read.  Per-clause shape and
 defaults are documented on each helper.
 
 A dot in a path is sugar too — it lets a nested field be read or
 written on one YAML line — so it is resolved here, into the segments
-the canonical form carries.  The ``__view_defs`` template spells the
+the canonical form carries.  The ``view_def.md`` template spells the
 dot back for display, except in ``where``, which it shows in its
 canonical form: that page shows how a view resolved, and spelling a
 predicate tree back would mean inverting this module.

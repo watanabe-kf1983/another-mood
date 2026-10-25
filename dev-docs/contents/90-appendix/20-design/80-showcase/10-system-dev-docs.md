@@ -45,7 +45,7 @@ PoC で Mermaid v11 (CDN 経由、Chromium ヘッドレス + Noto CJK) に対し
 | erDiagram 型表記 | `VARCHAR(16)` `VARCHAR(255)` | OK (括弧入り) |
 | erDiagram relationship label | `"A" }o--|| "B" : "日本語ラベル"` | OK |
 | erDiagram キー指定 (PK/FK/UK) | ASCII のみ | docs に明記: Unicode 非対応 |
-| 日本語 entity ID を含む出力ファイルパス | `__db/__entity_defs/テーブル.md` 等 | OK (mood build 通過) |
+| 日本語 entity ID を含む出力ファイルパス | `__db/__defs/entities/テーブル.md` 等 | OK (mood build 通過) |
 
 ## Candidates (未タスク化)
 

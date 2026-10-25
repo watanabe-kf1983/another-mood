@@ -2,7 +2,12 @@
 
 import pytest
 
-from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
+from another_mood.components.generator.data_tree import (
+    ArrayNode,
+    MappingNode,
+    Node,
+    wrap_tree,
+)
 from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.meta_templates import (
     META_EDITION,
@@ -15,19 +20,24 @@ from another_mood.components.generator.meta_templates import (
 
 class TestMetaEdition:
     """The meta render's fixed ``file_per`` splits each built-in meta
-    query's result items onto their own anchor-derived ``{view}/{id}.md``
-    page.  This is the contract that keeps the diagnostics from inlining
-    back into ``index.md`` — ``page_path`` returns ``index.md`` for a
-    non-split node, so asserting the path covers both the split decision
-    and its derivation."""
+    query's result items onto their own anchor-derived
+    ``{holder}/{kind}/{id}.md`` page.  This is
+    the contract that keeps the diagnostics from inlining back into
+    ``index.md`` — ``page_path`` returns ``index.md`` for a non-split node,
+    so asserting the path covers both the split decision and its
+    derivation."""
 
-    @pytest.mark.parametrize("view", ["__entity_defs", "__view_defs", "__data"])
-    def test_meta_query_item_splits_to_its_page(self, view: str) -> None:
-        array = wrap_tree(ensure_inert_mapping({view: [{"id": "sample"}]}))[view]
+    @pytest.mark.parametrize("holder", ["__defs", "__data"])
+    @pytest.mark.parametrize("kind", ["entities", "views"])
+    def test_meta_query_item_splits_to_its_page(self, holder: str, kind: str) -> None:
+        root = wrap_tree(ensure_inert_mapping({holder: {kind: [{"id": "sample"}]}}))
+        parent = root[holder]
+        assert isinstance(parent, MappingNode)
+        array = parent[kind]
         assert isinstance(array, ArrayNode)
         node = array[0]
         assert isinstance(node, Node)
-        assert META_EDITION.paging.page_path(node) == f"{view}/sample.md"
+        assert META_EDITION.paging.page_path(node) == f"{holder}/{kind}/sample.md"
 
 
 class TestAnchorPathFilter:

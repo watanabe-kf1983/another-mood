@@ -1,18 +1,18 @@
 {% set entities = node(path="/__definition/entities") %}
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
 {# ``source_link(name)`` renders the inline link to a source's meta page:
-   into __view_defs when the name is a view, else __entity_defs
+   into __defs/views when the name is a view, else __defs/entities
    (filtered to view: false, so a view name would 404 there). ``| safe``
    at each call site is required — the macro returns a plain string that
    the finalize hook would otherwise markdown-escape (brackets and all),
    breaking the link; the body's own ``{{ }}`` are already escaped
    per-value while the macro renders, so nothing is double-escaped. #}
 {% macro source_link(name) -%}
-[{{ name }}]({{ node("__view_defs" if (entities | child(name)).view else "__entity_defs", name) | href }})
+[{{ name }}]({{ node("__defs", "views" if (entities | child(name)).view else "entities", name) | href }})
 {%- endmacro %}
 # View Definition: {{ id }}
 
-[→ Data]({{ node("__data", id) | href }})
+[→ Data]({{ node("__data", "views", id) | href }})
 
 ## Source Diagram
 

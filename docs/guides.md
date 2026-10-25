@@ -70,10 +70,12 @@ What the tool generates (under `.another-mood/my-project/`):
 │   ├── index.md                              # cover: your reports + link to __db/
 │   └── __db/                                 # the database's self-description
 │       ├── index.md                          # auto overview (entities + views)
-│       ├── __data/                           # described later
-│       ├── __entity_defs/                    # described later
-│       ├── __view_defs/                      # described later
-│       └── __root_def.md, __root_data.md     # top-level values that are not entities
+│       ├── __defs/                           # definitions (described later)
+│       │   ├── entities/, views/
+│       │   └── root.md                       # top-level values that are not entities
+│       └── __data/                           # data, the same layout (described later)
+│           ├── entities/, views/
+│           └── root.md
 └── site/                                     # HTML
 ```
 
@@ -113,13 +115,13 @@ One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, a
 
 You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the views are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
-In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__entity_defs/<entity>.md`).
+In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__defs/entities/<entity>.md`).
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>`<br>`/__db/__root_def` (top-level values that are not entities) |
-| 2 | Content | `contents/**/*.yaml` (structured data; `.json` is read the same way)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
-| 3 | View | `definition/views/**/*.yaml` | `/__db/__view_defs/<view>` (definition and shape)<br>`/__db/__data/<view>` (records) |
+| 1 | Schema | `definition/schema.yaml` | `/__db/__defs/entities/<entity>`<br>`/__db/__defs/root` (top-level values that are not entities) |
+| 2 | Content | `contents/**/*.yaml` (structured data; `.json` is read the same way)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/entities/<entity>`<br>`/__db/__data/root` (top-level values that are not entities) |
+| 3 | View | `definition/views/**/*.yaml` | `/__db/__defs/views/<view>` (definition and shape)<br>`/__db/__data/views/<view>` (records) |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
 Schema and content are required; views are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, views, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
@@ -216,7 +218,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__data/<entity>` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__defs/entities/<entity>` view (how the tool interpreted the declared type) and `__db/__data/entities/<entity>` (whether the data is being loaded as expected).
 
 The reason to write as a map is readability: even as the number of records grows, the YAML data stays easier to read than the array form, because each record's `id` comes first and acts like a heading.
 
@@ -547,7 +549,7 @@ Assets can be linked from a template as well: the same [`link`](reference/templa
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__data/` and the shape of each view in `__db/__view_defs/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__data/` and the shape of each view in `__db/__defs/views/` ([Workflow](#workflow)).
 
 ## Further reading
 

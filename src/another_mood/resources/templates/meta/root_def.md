@@ -1,10 +1,10 @@
-{# ``this`` is the whole __root_def result: one item, the root entity. #}
+{# ``this`` is the whole __defs.root result: one item, the root entity. #}
 {% set root = this | first %}
 # Attributes
 
 The top-level singletons and scalars: the values that sit directly under the root, outside any collection.
 
-[→ Data]({{ node("__root_data") | href }})
+[→ Data]({{ node("__data", "root") | href }})
 
 {% if root.metadata %}
 ## metadata
@@ -29,7 +29,7 @@ The top-level singletons and scalars: the values that sit directly under the roo
     {{- "" }}| {{ code_inline(attr.id) }}
     {{- "" }} | {{ code_inline(attr.type) }}
     {{- "" }} | {% if attr.required %}yes{% endif %}
-    {{- "" }} | {% if xr %}[{{ code_inline(xr.entity ~ "." ~ xr.attribute) }}]({{ node("__entity_defs", xr.entity) | href }}){% endif %}
+    {{- "" }} | {% if xr %}[{{ code_inline(xr.entity ~ "." ~ xr.attribute) }}]({{ node("__defs", "entities", xr.entity) | href }}){% endif %}
     {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
     {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
     {{- "" }} |

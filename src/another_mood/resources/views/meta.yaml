@@ -1,28 +1,12 @@
-# Built-in meta diagnostic views.  Each top-level key is a view that
-# powers an auto-generated diagnostic surface (the per-item pages, the
-# index's Entity/View lists, the ER diagram) describing the user's own
-# schema, data, and views.  All are scoped to user content:
-# catalog-internal entities/views (ids starting with `__`, e.g.
-# __definition.*) are excluded so their internals do not clutter the
-# output.
-#
-# The two entity views form a containment chain (the child reads its
-# parent by name, so the shared `from` + `where` are written once):
-#
-#   __entity_tree  — every user content entity, top-level and children
-#     └ __entity_defs — the top-level only (the root entity's children)
-#
-# __data stands outside the chain: it covers every top-level source — views
-# included — so it reads __definition.entities directly rather than the
-# entity-only chain above.
+# Built-in meta diagnostic views, rendered by the meta templates into
+# `__db/`.  Ids starting with `__` are catalog-internal (e.g.
+# __definition.*) and are filtered out so their internals do not clutter
+# the user's diagnostics.
 
-# Node set for the built-in ER diagram on the index template.  Every user
-# content entity, including child entities like `artists.members` (no
-# `parent_entity` filter), so the diagram can draw the composition edges.
-# The base of the entity chain: __entity_defs narrows it to the top
-# level.  Not split to pages (absent from META_EDITION's file_per) — a
-# pure helper feeding the diagram and the view below.
-__entity_tree:
+# Every user content entity, children included — the node set of the ER
+# diagram.  A helper, not paged (absent from META_EDITION's file_per);
+# `entities` below narrows it to the top level.
+__defs.entity_tree:
   from: __definition.entities
   where:
     view: false
@@ -35,13 +19,8 @@ __entity_tree:
     - item: metadata
     - item: item_type
 
-# The root record's Definition and Data pages.  The root is the one
-# record the whole data tree is (id `__root`, hence absent from the
-# views above); its attributes are where top-level singletons and
-# scalars show.  Each view's whole result array splits to one page
-# (/__root_def, /__root_data) — two views because one node cannot land
-# on two pages.
-__root_def:
+# The root entity, whose attributes are the top-level singletons and scalars.
+__defs.root:
   from: __definition.entities
   where:
     id: __root
@@ -50,22 +29,10 @@ __root_def:
     - item: metadata
     - item: item_type
 
-__root_data:
-  from: __definition.entities
-  where:
-    id: __root
-  select:
-    - item: id
-
-# Per-entity Entity Definition pages, and the index's Entity list.  The
-# top-level content entities (parent_entity: __root) — user-authored plus
-# user-facing built-ins like `prose`.  One result item per entity; its
-# anchor path (/__entity_defs/{id}) is the page the built-in root template
-# splits it to.  Parallel to __data (a distinct anchor root) so the
-# definition and data views land on separate pages without a
-# one-node-two-pages collision.
-__entity_defs:
-  from: __entity_tree
+# The top-level content entities, user-authored and user-facing built-ins
+# like `prose`.
+__defs.entities:
+  from: __defs.entity_tree
   where:
     parent_entity: __root
   select:
@@ -75,27 +42,28 @@ __entity_defs:
     - item: item_type
   sort: { by: builtin }
 
-# Per-source Data pages.  Every top-level source — entities and views
-# alike: views sit in the catalog as `view: true` entities under the root
-# like top-level data entities, so reading __definition.entities covers
-# both kinds without a union.  A distinct anchor root (/__data/{id}) so
-# each data view lands on its own page.
-__data:
-  from: __definition.entities
-  where:
-    parent_entity: __root
-    not:
-      id: { startswith: __ }
-  select:
-    - item: id
-
-# Per-view View Definition pages, and the index's Views list.
-# User-defined views only.  Passthrough (no select) so each item carries
-# the full query the view template renders (from / flatten / join /
-# where / grouped / select); its anchor path (/__view_defs/{id}) is the
-# page it splits to.
-__view_defs:
+# The user-defined views, passed through whole so the template can spell
+# each query (from / flatten / join / where / grouped / select).
+__defs.views:
   from: __definition.views
   where:
     not:
       id: { startswith: __ }
+
+# The data pages mirror the definition pages one to one: each is the id
+# projection of its __defs counterpart, so the two sides can never list
+# different sources.
+__data.root:
+  from: __defs.root
+  select:
+    - item: id
+
+__data.entities:
+  from: __defs.entities
+  select:
+    - item: id
+
+__data.views:
+  from: __defs.views
+  select:
+    - item: id

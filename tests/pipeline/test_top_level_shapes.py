@@ -82,17 +82,19 @@ def test_top_level_shapes_get_db_pages(
     assert "# My Site" in page
     # ``site_config.items`` gets Entity / Data pages like ``users``.
     db_dir = out_dir / "__db"
-    assert (db_dir / "__entity_defs" / "users.md").is_file()
-    assert (db_dir / "__entity_defs" / "site_config.items.md").is_file()
-    data_page = (db_dir / "__data" / "site_config.items.md").read_text(encoding="utf-8")
+    assert (db_dir / "__defs" / "entities" / "users.md").is_file()
+    assert (db_dir / "__defs" / "entities" / "site_config.items.md").is_file()
+    data_page = (db_dir / "__data" / "entities" / "site_config.items.md").read_text(
+        encoding="utf-8"
+    )
     assert "| first |" in data_page
     # The singleton and its scalar get no page of their own; they show on
     # the root's pages.
-    assert not (db_dir / "__entity_defs" / "site_config.md").exists()
-    root_def = (db_dir / "__root_def.md").read_text(encoding="utf-8")
+    assert not (db_dir / "__defs" / "entities" / "site_config.md").exists()
+    root_def = (db_dir / "__defs" / "root.md").read_text(encoding="utf-8")
     assert "| `site_config` |" in root_def
     assert "| `site_config.title` |" in root_def
-    root_data = (db_dir / "__root_data.md").read_text(encoding="utf-8")
+    root_data = (db_dir / "__data" / "root.md").read_text(encoding="utf-8")
     assert "| My Site |" in root_data
 
 
