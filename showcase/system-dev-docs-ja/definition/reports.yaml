@@ -4,33 +4,21 @@
 # under output/{edition}/ and renders the same data, differing only in
 # `file_per` (which ObjectType IDs are split into their own pages).
 #
-#   web  — browse online: the glossary (the 用語 collection) and each
-#          use-case description (a ユースケース記述 view row: the use case
-#          with its requirements joined), each non-functional section
-#          (a 要求種別 view row: one requirement kind with its requirements),
-#          the design policy section (the 設計判断 collection), the design
-#          document's context chapter (the コンテキスト view, a chapter-sized
-#          collection of its own) and the logical data model section (the
-#          エンティティ collection: the ER diagram and entity list on one page,
-#          each entity definition on a page of its own) and the CRUD matrix
-#          section (the CRUDマトリクス view: use cases with their data
-#          accesses joined) and the screen design chapter (the 画面 collection:
-#          the screen list and the transition diagram on one page, each
-#          screen definition on a page of its own) and the requirements
-#          spec's business model appendix (the 分解図 view: the process
-#          hierarchy and its lists on one page, each decomposition
-#          diagram on a page of its own) are split into their own
-#          pages; both documents stay on index.md until
-#          composite views let a document be a node of its own.
-#   book — read as one bound document: empty file_per keeps everything
-#          inlined into a single index.md.
+# The two documents are nodes of the data tree (the 要求仕様書 / 設計書
+# objects that the dotted views hold), each chapter an object or a view
+# below its document, so pages are cut along document → chapter → row.
 #
-# Prose chapters are not split in either edition: they are inlined where
-# the document shell embeds them (`| render("prose.md")`), and the section
-# notes (設計書/論理データモデル.md, 設計書/CRUDマトリクス.md) are embedded as
-# content by their section templates. Neither is the verification chapter: it re-lists the chapter 3 requirements by looping over
-# the same view rows, so its tables have no subject of their own and its ID
-# links land on the chapter 3 copies.
+#   web  — browse online: each document and each of its chapters gets a
+#          page, and so does each row with a detail of its own (a use-case
+#          description, a non-functional requirement kind, a decomposition
+#          diagram, an entity definition, a screen definition). Sections
+#          inside a chapter stay on the chapter page.
+#   book — read as bound documents: each document is one page, with its
+#          chapters inlined.
+#
+# Prose is never split: a chapter renders its copied prose records inline,
+# and the section notes (設計書/論理データモデル.md and the like) are embedded
+# as content by their section templates.
 editions:
   web:
     file_per:
@@ -43,13 +31,14 @@ editions:
       - 要求仕様書.検証
       - 要求仕様書.付録
       - 要求仕様書.付録.業務モデル.item
-      - 設計判断.item[]
-      - コンテキスト.item[]
-      - エンティティ.item[]
-      - エンティティ.item
-      - CRUDマトリクス.item[]
-      - 画面.item[]
-      - 画面.item
+      - 設計書
+      - 設計書.はじめに
+      - 設計書.コンテキスト.item[]
+      - 設計書.データ設計
+      - 設計書.データ設計.論理データモデル.item
+      - 設計書.画面設計.item[]
+      - 設計書.画面設計.item
   book:
     file_per:
       - 要求仕様書
+      - 設計書

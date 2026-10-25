@@ -8,4 +8,6 @@
 
 {{ 要求仕様書 | render("要求仕様書.md") | under_heading("#") }}
 
-{% include "設計書.md" %}
+- {{ 設計書 | link("設計書") }}
+
+{{ 設計書 | render("設計書.md") | under_heading("#") }}
