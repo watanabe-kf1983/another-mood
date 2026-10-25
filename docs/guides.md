@@ -555,4 +555,5 @@ Be aware that misspellings silently produce empty strings — no error is raised
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
 - [showcase/music/](../showcase/music/) — a larger sample than the member list: a fictional music catalog spread over linked pages, with views that use every clause, prose and cover art alongside the data, and two editions from the same templates.
+- [showcase/system-dev-docs-ja/](../showcase/system-dev-docs-ja/) — a sample that derives two documents from one model, in Japanese — a requirements specification and a design document for a small bookstore inventory system, each a document of its own with its chapters as pages, and the design document linking into the requirements throughout.
 - [showcase/sbom/](../showcase/sbom/) — a sample that takes another program's JSON output as its data: Another Mood's own CycloneDX SBOM, with the component pages, dependency graph and license ledger all derived by views.

@@ -5,5 +5,7 @@ blueprints:
     description: Worked example modelling a fictional music catalog spread over linked pages, with views that use every clause, prose and cover art alongside the data, and two editions from the same templates.
   - name: japanese-table-design
     description: System-design-document showcase modelling a small bookstore inventory in Japanese (top-level entity, property names, data values, and descriptions are all Japanese). Demonstrates authoring a table-design document with auto-generated ERD via Mermaid classDiagram and erDiagram, drawn from a user-authored data file rather than a built-in catalog.
+  - name: system-dev-docs-ja
+    description: Worked example deriving two documents from one model, in Japanese — a requirements specification and a design document for a small bookstore inventory system, each a document of its own with its chapters as pages, and the design document linking into the requirements throughout.
   - name: sbom
     description: Worked example of ingesting machine-generated JSON — Another Mood's own CycloneDX SBOM, reshaped with a minimal jq step and read through views into a license ledger and one page per component with its dependency neighbourhood drawn in Mermaid. The generation steps ship alongside the data.
