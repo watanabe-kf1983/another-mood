@@ -612,13 +612,6 @@ categories:
         title: build_info — ビルド時情報の照会関数
         phase: 16
         done: true
-      P15:
-        title: テンプレート評価のリソース上限 / プロセス隔離 (ホスト / 無人 build 向け)
-        note: >-
-          minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
-          ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
-        phase: 20
-        proposal: 20-design/70-generator/25-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
     title: 公開
