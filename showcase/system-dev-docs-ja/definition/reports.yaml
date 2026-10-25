@@ -1,12 +1,5 @@
-# Report output configuration. See the Another Mood docs on paging.
-#
-# This report ships two editions (form B): each is published side by side
-# under output/{edition}/ and renders the same data, differing only in
-# `file_per` (which ObjectType IDs are split into their own pages).
-#
-# The two documents are nodes of the data tree (the 要求仕様書 / 設計書
-# objects that the dotted views hold), each chapter an object or a view
-# below its document, so pages are cut along document → chapter → row.
+# Two editions of the same data, differing only in `file_per` (which nodes
+# get a page of their own). Pages are cut along document → chapter → row.
 #
 #   web  — browse online: each document and each of its chapters gets a
 #          page, and so does each row with a detail of its own (a use-case
@@ -15,10 +8,6 @@
 #          inside a chapter stay on the chapter page.
 #   book — read as bound documents: each document is one page, with its
 #          chapters inlined.
-#
-# Prose is never split: a chapter renders its copied prose records inline,
-# and the section notes (設計書/論理データモデル.md and the like) are embedded
-# as content by their section templates.
 editions:
   web:
     file_per:
