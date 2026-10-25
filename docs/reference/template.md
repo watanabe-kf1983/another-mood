@@ -251,9 +251,9 @@ Links between pages never need it — [`link`](#link) / [`href`](#href) produce 
 
 ```jinja2
 {% filter dedent %}
-    {% for row in rows %}
-        - {{ row.name }}
-    {% endfor %}
+  {% for row in rows %}
+    - {{ row.name }}
+  {% endfor %}
 {% endfilter %}
 ```
 
