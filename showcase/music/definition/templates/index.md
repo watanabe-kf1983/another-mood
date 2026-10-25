@@ -2,25 +2,19 @@
 
 {{ node(path="/prose/background") | render("prose.md") | under_heading("#") }}
 
-## Front page
-
-The front matter is one record, `catalog`, read straight from the root
-along with two plain values beside it, `updated_at` and `moods` (the
-single-record pattern). The `series` map arrives as a list with each key
-lifted into `id`, like any other map.
-
+{# The front matter is one record, `catalog`, read straight from the root
+   along with two plain values beside it, `updated_at` and `moods` (the
+   single-record pattern). The `series` map arrives as a list with each key
+   lifted into `id`, like any other map. #}
 *Kept by {{ catalog.maintainer }}; last revised {{ updated_at }}. Moods: {{ moods | join(", ") }}.*
 
-### Featured
-
-Each entry comes with its album attached by the `featured_albums` view,
-which names the collection inside the front matter as `from: catalog.featured`.
+## Featured
 
 {% for entry in featured_albums %}
 - {{ node("album_tracklist", entry.album_id) | link }} ({{ entry.album.year }}) - {{ entry.note }}
 {% endfor %}
 
-### Series
+## Series
 
 {% for series in catalog.series %}
 - **{{ series.name }}** ({{ series.id }}) - {{ series.description }}
@@ -29,7 +23,7 @@ which names the collection inside the front matter as `from: catalog.featured`.
 {% endfor %}
 {% endfor %}
 
-### Editor's picks
+## Editor's picks
 
 Signed by {{ catalog.editorial.editor }}.
 
@@ -39,6 +33,8 @@ Signed by {{ catalog.editorial.editor }}.
 
 ## Artists
 
+{# Two-loop pattern: the list links each artist, the second loop renders
+   the detail where `file_per` puts it (inline here, or on its own page). #}
 {% for artist in artist_discography %}
 - {{ artist | link }}{% if artist.country %} - {{ artist.country }}{% endif +%}
 {% endfor %}
@@ -48,10 +44,6 @@ Signed by {{ catalog.editorial.editor }}.
 {% endfor %}
 
 ## Albums by genre
-
-The genre name comes straight from the `genres_with_albums` view, which
-reads the grouped `albums_by_genre` view and joins `genres` onto it (a
-view-to-view reference) - so the template no longer re-joins genres itself.
 
 {% for entry in genres_with_albums %}
 - **{{ entry.genre.name }}**
@@ -86,15 +78,13 @@ view-to-view reference) - so the template no longer re-joins genres itself.
 
 ## Concert recordings
 
-These albums are surfaced by the `live_albums` view (`where: { id: { startswith: live_ } }`).
-
 {% for album in live_albums %}
 - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
 {% endfor %}
 
 ## Live tracks
 
-Tracks whose title contains "Live" (`where: { title: { contains: Live } }`).
+Live takes, wherever they were released.
 
 | Track | Album |
 |-------|-------|
@@ -104,7 +94,7 @@ Tracks whose title contains "Live" (`where: { title: { contains: Live } }`).
 
 ## Band rosters
 
-Flattened from the `artists.members` nested map.
+Who plays what, across every act.
 
 | Artist | Member | Instrument |
 |--------|--------|------------|
@@ -112,17 +102,15 @@ Flattened from the `artists.members` nested map.
 | {{ row.artist.name }} | {{ row.member.name }} | {{ row.member.instrument }} |
 {% endfor %}
 
-## Discography (LEFT-join view)
+## All releases
 
-Every artist appears once, including those with no released albums (`artist_album_pairs_all` uses `flatten: { preserve_empty: true }`).
+Every act on the roster, including those yet to release a record.
 
 {% for row in artist_album_pairs_all %}
 - **{{ row.name }}** ({{ row.id }}){% if row.album %} - {{ row.album.title }} ({{ row.album.year }}){% else %} - _no releases yet_{% endif +%}
 {% endfor %}
 
-## Full track index
-
-Each track joined to its album and the album's artist (`tracks_with_artist`, multi-join list form).
+## Track index
 
 | Track | Album | Artist |
 |-------|-------|--------|
@@ -131,12 +119,6 @@ Each track joined to its album and the album's artist (`tracks_with_artist`, mul
 {% endfor %}
 
 ## Playlists
-
-Each playlist's track list comes from the `playlists_with_tracks` view, a
-two-hop view-to-view chain: `playlist_entries` joins `tracks` onto
-`playlist_tracks` (so the title travels with each link), and
-`playlists_with_tracks` nests those entries under each playlist - so the
-template neither re-filters `playlist_tracks` nor re-looks-up track titles.
 
 {% for pl in playlists_with_tracks %}
 ### {{ pl.name }}
