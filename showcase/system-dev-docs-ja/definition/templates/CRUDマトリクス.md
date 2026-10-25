@@ -21,7 +21,7 @@
 | ユースケース | {% for e in entities %}{{ e | link(e.名前) }} | {% endfor +%}
 |--------------|{% for e in entities %}---|{% endfor +%}
 {% for uc in this %}
-| {{ node("ユースケース記述", uc.id) | link(uc.id) }} {{ uc.名前 }} | {% for e in entities %}{% for a in uc.アクセス if a.エンティティ == e.id %}{{ a.操作 }}{% endfor %} | {% endfor +%}
+| {{ node("要求仕様書", "要求", "機能要求", uc.id) | link(uc.id) }} {{ uc.名前 }} | {% for e in entities %}{% for a in uc.アクセス if a.エンティティ == e.id %}{{ a.操作 }}{% endfor %} | {% endfor +%}
 {% endfor %}
 {% set ns = namespace(never_created="", never_updated="", deleted="") %}
 {% for e in entities %}

@@ -34,9 +34,15 @@
 editions:
   web:
     file_per:
-      - 用語.item[]
-      - ユースケース記述.item
-      - 要求種別.item
+      - 要求仕様書
+      - 要求仕様書.はじめに
+      - 要求仕様書.用語集.item[]
+      - 要求仕様書.要求
+      - 要求仕様書.要求.機能要求.item
+      - 要求仕様書.要求.非機能要求.item
+      - 要求仕様書.検証
+      - 要求仕様書.付録
+      - 要求仕様書.付録.業務モデル.item
       - 設計判断.item[]
       - コンテキスト.item[]
       - エンティティ.item[]
@@ -44,7 +50,6 @@ editions:
       - CRUDマトリクス.item[]
       - 画面.item[]
       - 画面.item
-      - 分解図.item[]
-      - 分解図.item
   book:
-    file_per: []
+    file_per:
+      - 要求仕様書

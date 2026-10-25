@@ -4,6 +4,8 @@
 
 モデルの構造は Database Information (`__db/`) の ER 図と各 Entity Definition ページで参照できます。
 
-{% include "要求仕様書.md" %}
+- {{ 要求仕様書 | link("要求仕様書") }}
+
+{{ 要求仕様書 | render("要求仕様書.md") | under_heading("#") }}
 
 {% include "設計書.md" %}
