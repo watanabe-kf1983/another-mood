@@ -4,4 +4,4 @@ Recorded across two winters in a converted boiler plant outside Berlin. The buil
 
 The record is, in the band's own words, the place where their early goth instincts finally agreed to share a room with their electronics.
 
-It was a deliberate turn away from the guitar-driven [Graphite Summer](node:/album_tracklist/graphite_summer) that came six years before.
+It was a deliberate turn away from the guitar-driven [Graphite Summer](node:/discography/albums/graphite_summer) that came six years before.
