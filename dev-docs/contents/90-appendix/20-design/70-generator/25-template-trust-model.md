@@ -26,7 +26,7 @@ Jinja2 の SSTI 経路（`{{ ''.__class__.__mro__[1].__subclasses__() }}` の直
 
 正しい対処は値モデルを叩くことではなく、**値モデルが構造的に安全なエンジンへ移す**か、**プロセス / OS 隔離**でビルドごと囲うか。上の二択に中間形態（実行時サンドボックス）が無いのはこのため — 言語を縛るが漏れる／隔離もしない、の両世界で中途半端になる。
 
-採ったのは前者で、`Environment` は minijinja（`template_engine.py` の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS 対策（隔離 / リソース上限）はホスト / 無人 build のマイルストーンに送る。
+採ったのは前者で、`Environment` は minijinja（`template_engine.py` の `make_environment`）。RCE は minijinja の値モデル ＋ marshal 契約で閉じ、DoS（隔離 / リソース上限）は build を走らせる側が OS 層で囲う — ツールは非実装（[本編](../../../20-design/70-generator/25-template-trust-model.md)の DoS 節）。
 
 ## エンジン選定 — minijinja（spike 実測）
 
