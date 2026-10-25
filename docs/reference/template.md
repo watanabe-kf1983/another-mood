@@ -367,6 +367,16 @@ An expression line is content, not a control tag, so even one that renders nothi
 
 To indent a block's body — tags and content together — and strip that indentation back out of the output, wrap it in the [`dedent`](#dedent) filter (best where the output tolerates leftover indentation, such as a Mermaid diagram).
 
+Where `dedent` does not fit — a table row deep inside a logic block, say — a single content line can still be indented by opening it with an empty expression whose leading dash swallows the indentation: `{{- "" }}| cell | cell |`. The `-` eats every whitespace character before it, newlines included, so this works on a line that directly follows a control tag (block trimming has already removed that tag's newline); after a content line it would join the two. The same idiom splits a long table row over several template lines, one cell per line, each opening with `{{- "" }}` so the pieces are glued back into one output line:
+
+```jinja2
+{% for track in tracks %}
+  {{- "" }}| {{ track.track_no }}
+  {{- "" }} | {{ track.title }}
+  {{- "" }} |
+{% endfor %}
+```
+
 To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x %}` keeps the leading indentation, and `{% endif +%}` keeps the trailing newline — useful when an inline `{% if %}…{% endif %}` ends a content line and its line break must be preserved.
 
 ## Differences from Jinja2
