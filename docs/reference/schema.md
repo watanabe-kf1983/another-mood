@@ -220,7 +220,7 @@ Constraints:
 
 At build time, every reference value in content data must point to an existing record in the target entity. Dangling references are reported as warnings: the build continues, with them listed at `output/__warnings/` (linked from `output/index.md`). Use [`mood build --strict`](cli.md#--strict) to fail the build on warnings.
 
-The declared references appear in `output/__db/__entity_defs/<entity>.md` as a `references` column.
+The declared references appear in `output/__db/__defs/entities/<entity>.md` as a `references` column.
 
 ## Unsupported keywords
 

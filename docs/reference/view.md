@@ -409,7 +409,7 @@ For `from: members` with three records `[{name: alice, age: 30}, {name: bob}, {n
 
 ## Inspecting a view
 
-Each view is exposed via two auto-generated meta pages: `output/__db/__view_defs/<view>.md` shows the definition and the shape it resolves to, and `output/__db/__data/<view>.md` shows the records. While writing a query, you can verify the result in real time on `mood watch`.
+Each view is exposed via two auto-generated meta pages: `output/__db/__defs/views/<view>.md` shows the definition and the shape it resolves to, and `output/__db/__data/views/<view>.md` shows the records. While writing a query, you can verify the result in real time on `mood watch`.
 
 ## Nested views
 

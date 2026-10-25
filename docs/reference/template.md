@@ -386,7 +386,7 @@ So, when referencing optional attributes, guards like `if metadata is defined` a
 | {{ spec.id }} | {{ spec.metadata.title }} |
 ```
 
-Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__data/` and the shape of each view via `__db/__view_defs/`.
+Note that misspellings are also silently rendered as empty strings — no error is raised. While writing, verify the actual data via `__db/__data/` and the shape of each view via `__db/__defs/views/`.
 
 ### No Python methods on values
 
