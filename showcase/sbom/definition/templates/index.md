@@ -13,7 +13,7 @@ Required by {{ root_component.name }} itself.
 | Component | Version | License |
 |-----------|---------|---------|
 {% for c in component if c.required_by_root %}
-{{- c | render("component.md") -}}
+  {{- c | render("component.md") -}}
   {{- "" }}| {{ c | link }}
   {{- "" }} | {{ c.version }}
   {{- "" }} | {% for lic in c.licenses %}{{ lic.license.id or lic.license.name or lic.expression }}{% if not loop.last %}, {% endif %}{% endfor %}
@@ -27,7 +27,7 @@ Pulled in by other components.
 | Component | Version | License |
 |-----------|---------|---------|
 {% for c in component if not c.required_by_root %}
-{{- c | render("component.md") -}}
+  {{- c | render("component.md") -}}
   {{- "" }}| {{ c | link }}
   {{- "" }} | {{ c.version }}
   {{- "" }} | {% for lic in c.licenses %}{{ lic.license.id or lic.license.name or lic.expression }}{% if not loop.last %}, {% endif %}{% endfor %}
