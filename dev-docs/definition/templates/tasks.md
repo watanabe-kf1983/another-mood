@@ -7,17 +7,17 @@
 
 **実装箇所:**
 
-{% for path in category.impl_paths %}
+  {% for path in category.impl_paths %}
 - {{ code_inline(path) }}
-{% endfor %}
+  {% endfor %}
 
-{% if category.spec %}
+  {% if category.spec %}
 **仕様:** {{ node(path="/prose/" ~ category.spec) | link }}
-{% endif %}
+  {% endif %}
 
 | ID | タスク | Proposal | 備考 | Phase | Done |
 |---|---|---|---|---|---|
-{% for task in category.tasks %}
+  {% for task in category.tasks %}
     {{- "" }}| {{ task.id }}{{ task | anchor }}
     {{- "" }} | {{ task.title }}
     {{- "" }} | {% if task.proposal %}{{ node(path="/prose/" ~ task.proposal) | link("→") }}{% endif %}
@@ -25,6 +25,6 @@
     {{- "" }} | {{ node("roadmap", task.phase) | link(task.phase) }}
     {{- "" }} | {{ "✅" if task.done else "" }}
     {{- "" }} |
-{% endfor %}
+  {% endfor %}
 
 {% endfor %}
