@@ -3,9 +3,7 @@
 {{ node(path="/prose/background") | render("prose.md") | under_heading("#") }}
 
 {# The front matter is one record, `catalog`, read straight from the root
-   along with two plain values beside it, `updated_at` and `moods` (the
-   single-record pattern). The `series` map arrives as a list with each key
-   lifted into `id`, like any other map. #}
+   along with two plain values beside it (the single-record pattern). #}
 *Kept by {{ catalog.maintainer }}; last revised {{ updated_at }}. Moods: {{ moods | join(", ") }}.*
 
 ## Featured
@@ -18,9 +16,9 @@
 
 {% for series in catalog.series %}
 - **{{ series.name }}** ({{ series.id }}) - {{ series.description }}
-{% for entry in series.albums %}
+  {% for entry in series.albums %}
   - {{ node("discography", "albums", entry.album_id) | link }}
-{% endfor %}
+  {% endfor %}
 {% endfor %}
 
 ## Editor's picks
@@ -28,7 +26,7 @@
 Signed by {{ catalog.editorial.editor }}.
 
 {% for pick in catalog.editorial.picks %}
-{% set track = node("tracks", pick.track_id) %}
+  {% set track = node("tracks", pick.track_id) %}
 - {{ node("discography", "albums", track.album_id, "tracks", pick.track_id) | link }} from *{{ node("discography", "albums", track.album_id) | label }}* - {{ pick.comment }}
 {% endfor %}
 

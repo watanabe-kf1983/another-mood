@@ -14,12 +14,12 @@
 
 {% for genre in genres if not genre.parent_id %}
 - {{ genre | link }}
-{% for child in genres if child.parent_id == genre.id %}
+  {% for child in genres if child.parent_id == genre.id %}
   - {{ child | link }}
-{% for grandchild in genres if grandchild.parent_id == child.id %}
+    {% for grandchild in genres if grandchild.parent_id == child.id %}
     - {{ grandchild | link }}
-{% endfor %}
-{% endfor %}
+    {% endfor %}
+  {% endfor %}
 {% endfor %}
 
 {% for genre in genres %}

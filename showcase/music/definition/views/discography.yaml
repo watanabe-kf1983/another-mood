@@ -1,8 +1,7 @@
-# Each album with its tracks attached as a nested list, plus its optional
-# liner-note prose joined in as ``liner`` (a descendant of the album).
-# Exercises the ``join:`` list form mixing a nested attach (``tracks``) with
-# a ``preserve_empty`` singleton flatten. ``sort`` puts the albums in
-# release order, so the list and the album pages rendered after it agree.
+# Each album with its tracks and its optional liner-note prose attached -
+# exercises the ``join:`` list form mixing a nested attach with a
+# ``preserve_empty`` singleton flatten. ``sort`` puts the albums in release
+# order, so the list and the album pages rendered after it agree.
 discography.albums:
   from: albums
   join:
@@ -27,10 +26,8 @@ discography.albums:
   sort:
     by: year
 
-# Each genre with its subgenres and albums attached. The first join is a
-# self-reference: ``genres`` joined to itself, matching each genre's
-# ``id`` against the others' ``parent_id``, so a genre page can list its
-# subgenres without walking the hierarchy in the template.
+# Each genre with its subgenres and albums attached - exercises a
+# self-join (``genres`` matched against its own ``parent_id``).
 discography.genres:
   from: genres
   join:
@@ -49,9 +46,8 @@ discography.labels:
     on: { left: id, right: label_id }
     as: albums
 
-# Albums whose id starts with ``live_`` - exercises ``where: startswith``.
-# The naming convention picks out concert recordings without referring to
-# the ``is_live`` flag.
+# Albums whose id starts with ``live_`` - exercises ``where: startswith``
+# (the naming convention, not the ``is_live`` flag, does the picking).
 discography.live_albums:
   from: albums
   where:
@@ -61,13 +57,10 @@ discography.live_albums:
     - item: title
     - item: year
 
-# Tracks whose title contains ``Live`` - exercises ``where: contains`` -
-# with each track's album and the album's artist attached. The ``join:``
-# list form chains: the first join brings the album in, and the second
-# join uses an attribute introduced by the first join's
-# ``flatten: { as: album }`` (``album.artist_id``) as the lookup key for
-# the second match. The second join's ``as`` is a dotted path, so the
-# artist lands inside ``album`` (``row.album.artist``).
+# Tracks whose title contains ``Live`` - exercises ``where: contains`` and
+# a chained join: the second join's key (``album.artist_id``) is an
+# attribute the first join introduced, and its dotted ``as`` lands the
+# artist inside ``album`` (``row.album.artist``).
 discography.live_tracks:
   from: tracks
   where:

@@ -1,8 +1,5 @@
-# Each playlist-track membership link with its track record attached -
-# joins ``tracks`` onto ``playlist_tracks`` so the track title travels
-# with the link. Feeds ``curated.playlists`` below (a view-to-view
-# reference), sparing the template a per-entry ``node("tracks", ...)``
-# re-lookup just to read the title.
+# Each playlist-track link with its track record attached, so the title
+# travels with the link. Feeds ``curated.playlists`` below.
 playlist_entries:
   from: playlist_tracks
   join:
@@ -15,13 +12,8 @@ playlist_entries:
     - item: position
     - item: track
 
-# Each playlist with its entries attached as a nested list - exercises a
-# two-hop view-to-view chain (``playlist_tracks`` ->
-# ``playlist_entries`` -> here). ``join.to:`` names the
-# ``playlist_entries`` view, which already carries each entry's track
-# record, so the curated template neither re-filters ``playlist_tracks`` by
-# ``playlist_id`` nor re-looks-up ``tracks`` - it just sorts ``entries``
-# by ``position`` and reads ``entry.track.title``.
+# Each playlist with its entries attached - exercises a two-hop
+# view-to-view chain (``playlist_tracks`` -> ``playlist_entries`` -> here).
 curated.playlists:
   from: playlists
   join:

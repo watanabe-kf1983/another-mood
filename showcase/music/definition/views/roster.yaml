@@ -1,6 +1,5 @@
-# Each artist with their albums attached as a nested list. Exercises the
-# ``join:`` clause (nested attach: 1 row per artist, the matched albums
-# live under ``albums`` as a list).
+# Each artist with their albums attached - exercises the plain ``join:``
+# (nested attach: 1 row per artist).
 roster.artists:
   from: artists
   join:
@@ -16,10 +15,9 @@ roster.artists:
     - item: members
     - item: albums
 
-# Same as above but only studio albums - exercises pre-join ``where:``
-# (the right entity is filtered before the merge runs). Artists whose
-# only releases happen to be live records still appear, with an empty
-# ``studio_albums`` list rather than dropping out.
+# Same as above but only studio albums - exercises pre-join ``where:``.
+# Artists whose only releases are live records still appear, with an empty
+# ``studio_albums`` list.
 artist_studio_albums:
   from: artists
   join:
@@ -33,10 +31,8 @@ artist_studio_albums:
     - item: name
     - item: studio_albums
 
-# Each (artist, album) pair as its own row. Exercises inline ``flatten:``
-# - the joined array is unwound in place, yielding 1 row per pair and
-# renaming the slot from plural ``albums`` to singular ``album``.
-# Artists with no album are dropped (inner-join shape).
+# Each (artist, album) pair as its own row - exercises inline ``flatten:``
+# on a join. Artists with no album are dropped (inner-join shape).
 artist_album_pairs:
   from: artists
   join:
@@ -49,12 +45,9 @@ artist_album_pairs:
     - item: name
     - item: album
 
-# Every band member across all artists, grouped by instrument. The
-# ``flatten`` unwinds the intrinsic ``artists.members`` child entity into
-# one row per member (the artist's fields stay on the row, the member's
-# land under ``member``); ``grouped`` then gathers the rows on a dotted
-# key, ``member.instrument``, which comes back as a nested path in the
-# group record.
+# Every band member grouped by instrument - exercises ``flatten`` of an
+# intrinsic child entity (``members``) followed by ``grouped`` on a dotted
+# key (``member.instrument``).
 roster.instruments:
   from: artists
   flatten:

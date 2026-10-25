@@ -7,17 +7,17 @@ Part of {{ node("discography", "genres", parent_id) | link }}.
 {% if subgenres %}
 ## Subgenres
 
-{% for sub in subgenres %}
+  {% for sub in subgenres %}
 - {{ node("discography", "genres", sub.id) | link }}
-{% endfor %}
+  {% endfor %}
 
 {% endif %}
 ## Albums
 
 {% if albums %}
-{% for album in albums | sort(attribute="year") %}
+  {% for album in albums | sort(attribute="year") %}
 - {{ node("discography", "albums", album.id) | link }} ({{ album.year }}) - {{ node("roster", "artists", album.artist_id) | link }}
-{% endfor %}
+  {% endfor %}
 {% else %}
 _No albums filed directly under {{ name }}._
 {% endif %}
