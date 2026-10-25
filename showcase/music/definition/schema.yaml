@@ -179,12 +179,8 @@ properties:
       required: [playlist_id, track_id, position]
 
   # The catalog's own front matter: one record, not a collection (the
-  # single-record pattern), together with two plain values beside it. It
-  # covers every shape that can sit directly under the root besides a
-  # collection: a singleton, the scalars and collections inside it (array
-  # and map forms, one with a child collection), a singleton nested in it
-  # that holds a collection (map form), a top-level scalar and a top-level
-  # scalar array.
+  # single-record pattern), with two plain values beside it. Between them
+  # they cover every shape that can sit under the root besides a collection.
   catalog:
     type: object
     description: Front matter of the catalog as a whole - its title, who keeps it, and the editorial selections shown on the front page.

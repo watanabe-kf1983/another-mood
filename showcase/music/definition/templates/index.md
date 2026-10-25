@@ -3,9 +3,7 @@
 {{ node(path="/prose/background") | render("prose.md") | under_heading("#") }}
 
 {# The front matter is one record, `catalog`, read straight from the root
-   along with two plain values beside it, `updated_at` and `moods` (the
-   single-record pattern). The `series` map arrives as a list with each key
-   lifted into `id`, like any other map. #}
+   along with two plain values beside it (the single-record pattern). #}
 *Kept by {{ catalog.maintainer }}; last revised {{ updated_at }}. Moods: {{ moods | join(", ") }}.*
 
 ## Featured

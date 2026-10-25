@@ -1,5 +1,3 @@
-# Report output configuration. See the Another Mood docs on paging.
-#
 # Each component and the generation steps get a page of their own; the
 # component tables and the license ledger stay on index.md.
 file_per:

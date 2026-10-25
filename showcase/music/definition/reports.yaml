@@ -1,20 +1,11 @@
-# Report output configuration. See the Another Mood docs on paging.
-#
-# This report ships two editions (form B): each is published side by side
-# under output/{edition}/ and renders the same data, differing only in
-# `file_per` (which ObjectType IDs are split into their own pages).
+# Two editions of the same data, differing only in `file_per` (which nodes
+# get a page of their own).
 #
 #   web  — browse online: index.md is the cover and contents, each
 #          section page (roster, discography, curated) and each
 #          artist, album, genre and label gets a page of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
-#
-# The templates use the two-loop pattern (`| link` + `| render`),
-# so the same templates serve both editions without change. Prose is not
-# split in either edition: the About intro and each album's liner notes
-# are inlined where they are embedded (`| render("prose.md")`), so
-# they never become standalone pages.
 editions:
   web:
     file_per:
