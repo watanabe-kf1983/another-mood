@@ -28,9 +28,9 @@ flowchart LR
 ## Depends on
 
 {% if depends_on %}
-{% for edge in depends_on %}
+  {% for edge in depends_on %}
 - {{ node("component", edge.target.name) | link }} {{ edge.target.version }}
-{% endfor %}
+  {% endfor %}
 {% else %}
 _No dependencies._
 {% endif %}
@@ -47,7 +47,7 @@ _No dependencies._
 {% if externalReferences %}
 ## Links
 
-{% for ref in externalReferences %}
+  {% for ref in externalReferences %}
 - [{{ ref.url }}]({{ ref.url | as_url }}) ({{ ref.type }})
-{% endfor %}
+  {% endfor %}
 {% endif %}
