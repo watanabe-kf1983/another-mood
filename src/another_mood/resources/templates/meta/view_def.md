@@ -8,7 +8,7 @@
    breaking the link; the body's own ``{{ }}`` are already escaped
    per-value while the macro renders, so nothing is double-escaped. #}
 {% macro source_link(name) -%}
-[{{ name }}]({{ node("__defs", "views" if (entities | child(name)).view else "entities", name) | href }})
+  [{{ name }}]({{ node("__defs", "views" if (entities | child(name)).view else "entities", name) | href }})
 {%- endmacro %}
 # View Definition: {{ id }}
 
@@ -18,27 +18,27 @@
 
 {% set node_ids = ([from | join(".")] + (join | map(attribute='to') | map('join', '.') | list)) | unique | list %}
 {% filter dedent %}
-    ```mermaid
-    classDiagram
-    {% for entity in entities if entity.id in node_ids %}
-        class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
+  ```mermaid
+  classDiagram
+  {% for entity in entities if entity.id in node_ids %}
+    class {{ mermaid_type_id(entity) | safe }}["{{ entity.item_type.id | safe }}"]
+  {% endfor %}
+  {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids %}
+    {% set parent = entities | child(entity.parent_entity) %}
+    {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
+  {% endfor %}
+  {% for top_id in node_ids %}
+    {% set top_entity = entities | child(top_id) %}
+    {% for entity in entities if entity.id == top_id or entity.id is startingwith(top_id ~ ".") %}
+      {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
+        {% set target = entities | child(attr.x_ref.entity) %}
+        {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
+        {% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
+        {{ mermaid_type_id(top_entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ label | safe }}
+      {% endfor %}
     {% endfor %}
-    {% for entity in entities if entity.id in node_ids and entity.parent_entity and entity.parent_entity in node_ids %}
-        {% set parent = entities | child(entity.parent_entity) %}
-        {{ mermaid_type_id(parent) | safe }} *-- {{ mermaid_type_id(entity) | safe }}
-    {% endfor %}
-    {% for top_id in node_ids %}
-        {% set top_entity = entities | child(top_id) %}
-        {% for entity in entities if entity.id == top_id or entity.id is startingwith(top_id ~ ".") %}
-            {% for attr in entity.item_type.attributes if attr.x_ref and attr.x_ref.entity in node_ids %}
-                {% set target = entities | child(attr.x_ref.entity) %}
-                {% set rel_path = "" if entity.id == top_id else entity.id[(top_id ~ ".") | length:] %}
-                {% set label = (rel_path ~ "." ~ attr.id) if rel_path else attr.id %}
-                {{ mermaid_type_id(top_entity) | safe }} --> {{ mermaid_type_id(target) | safe }} : {{ label | safe }}
-            {% endfor %}
-        {% endfor %}
-    {% endfor %}
-    ```
+  {% endfor %}
+  ```
 {% endfilter %}
 
 ## Definition
@@ -52,9 +52,9 @@
 
 | Of | As | Preserve Empty |
 |----|----|----------------|
-{% for entry in flatten %}
+  {% for entry in flatten %}
 | {{ entry.of | join(".") }} | {{ entry.as | join(".") }} | {% if entry.preserve_empty %}yes{% endif %} |
-{% endfor %}
+  {% endfor %}
 
 {% endif %}
 {% if join %}
@@ -62,7 +62,7 @@
 
 | To | On (left = right) | As | Pre-join where | Flatten |
 |----|-------------------|-----|----------------|---------|
-{% for entry in join %}
+  {% for entry in join %}
     {%- set f = entry.flatten %}
     {%- set inline_flatten = f and "{of: " ~ (f.of | join(".")) ~ ", as: " ~ (f.as | join(".")) ~ ", preserve_empty: " ~ (f.preserve_empty | lower) ~ "}" %}
     {{- "" }}| {{ source_link(entry.to | join(".")) | safe }}
@@ -71,7 +71,7 @@
     {{- "" }} | {% if entry.where %}{{ code_inline(entry.where | to_yaml(true)) }}{% endif %}
     {{- "" }} | {% if f %}{{ code_inline(inline_flatten) }}{% endif %}
     {{- "" }} |
-{% endfor %}
+  {% endfor %}
 
 {% endif %}
 {% if where %}
@@ -91,9 +91,9 @@
 {% if select %}
 | Item | As |
 |------|----|
-{% for entry in select %}
+  {% for entry in select %}
 | {{ entry.item | join(".") }} | {{ entry.as | join(".") }} |
-{% endfor %}
+  {% endfor %}
 {% else %}
 (no select items defined)
 {% endif %}
@@ -103,20 +103,20 @@
 {% for entity in entities if entity.view and (entity.id == id or entity.id is startingwith(id ~ ".")) %}
 ### Type: {{ entity.item_type.id }}
 
-{% if entity.item_type.attributes %}
+  {% if entity.item_type.attributes %}
 | id | type | required | validation | metadata |
 |----|------|----------|------------|----------|
-{% for attr in entity.item_type.attributes %}
-    {% set array_suffix = "[]" if attr.child_item_type and attr.type is endingwith("[]") else "" %}
-    {{- "" }}| {{ code_inline(attr.id) }}
-    {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}
-    {{- "" }} | {% if attr.required %}yes{% endif %}
-    {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
-    {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
-    {{- "" }} |
-{% endfor %}
-{% else %}
+    {% for attr in entity.item_type.attributes %}
+      {% set array_suffix = "[]" if attr.child_item_type and attr.type is endingwith("[]") else "" %}
+      {{- "" }}| {{ code_inline(attr.id) }}
+      {{- "" }} | {{ code_inline((attr.child_item_type or attr.type) ~ array_suffix) }}
+      {{- "" }} | {% if attr.required %}yes{% endif %}
+      {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
+      {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
+      {{- "" }} |
+    {% endfor %}
+  {% else %}
 (no attributes)
-{% endif %}
+  {% endif %}
 
 {% endfor %}

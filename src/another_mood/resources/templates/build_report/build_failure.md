@@ -3,31 +3,31 @@
 {% if diagnostics %}
 ## Problems
 
-{% for d in diagnostics %}
+  {% for d in diagnostics %}
 **{{ d.file }}{% if d.line %}:{{ d.line }}{% endif %}{% if d.column %}:{{ d.column }}{% endif %}**
 
 {{ d.message }}
 
-{% if d.snippet %}
+    {% if d.snippet %}
 {{ code_fenced(d.snippet) }}
 
-{% endif %}
-{% endfor %}
+    {% endif %}
+  {% endfor %}
 {% endif %}
 {% if errors %}
 ## Errors
 
-{% for error in errors %}
+  {% for error in errors %}
 {{ error.message }}
 
-{% if error.traceback %}
+    {% if error.traceback %}
 {{ code_fenced(error.traceback) }}
 
-{% endif %}
-{% endfor %}
+    {% endif %}
+  {% endfor %}
 {% endif %}
 {% if build_info %}
 ## Build Information
 
-{% include "build_info_table.md" %}
+  {% include "build_info_table.md" %}
 {% endif %}

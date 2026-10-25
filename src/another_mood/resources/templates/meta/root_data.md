@@ -17,9 +17,9 @@
 {% if attributes %}
 | attribute | value |
 |-----------|-------|
-{% for attr in attributes %}
+  {% for attr in attributes %}
 | {{ code_inline(attr.id) }} | {{ root | pluck(attr.id) | in_cell }} |
-{% endfor %}
+  {% endfor %}
 {% else %}
 (no attributes)
 {% endif %}

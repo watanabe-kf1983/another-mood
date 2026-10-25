@@ -5,8 +5,8 @@
 
 {% endif %}{{ d.message }}
 
-{% if d.snippet %}
+  {% if d.snippet %}
 {{ code_fenced(d.snippet) }}
 
-{% endif %}
+  {% endif %}
 {% endfor %}

@@ -123,7 +123,7 @@ Two pages that resolve to the same path make the build fail rather than silently
 
 #### Return value
 
-When the subject is **split**, the filter **returns the empty string**: the output file is written as a side effect, so nothing appears at the call site in the parent template. When **inline**, it returns the rendered text, which appears at the call site — inserted as-is, like the other Markdown-emitting filters here, so no `| safe`. Either way the call is an expression, so its line keeps its own newline; inside a loop, trim it with whitespace markers ([Whitespace](#whitespace)).
+When the subject is **split**, the filter **returns the empty string**: the output file is written as a side effect, so nothing appears at the call site in the parent template. When **inline**, it returns the rendered text, which appears at the call site — inserted as-is, like the other Markdown-emitting filters here, so no `| safe`. Either way the call is an expression, so its line keeps its own newline; inside a loop, trim it with whitespace markers ([Whitespace control](#whitespace-control)).
 
 To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `render` call:
 
@@ -251,9 +251,9 @@ Links between pages never need it — [`link`](#link) / [`href`](#href) produce 
 
 ```jinja2
 {% filter dedent %}
-    {% for row in rows %}
-        - {{ row.name }}
-    {% endfor %}
+  {% for row in rows %}
+    - {{ row.name }}
+  {% endfor %}
 {% endfilter %}
 ```
 
@@ -359,21 +359,11 @@ The keys are not listed in this reference: the tool decides them, and they chang
 
 That page holds every fact about the build, including the absolute path of the project directory it was built from. Exclude `__build_info/` when you publish the output if you would rather not ship those details.
 
-## Whitespace
-
-Templates render with Jinja2 block trimming on (`trim_blocks` + `lstrip_blocks`): a control tag alone on its line — `{% for %}`, `{% if %}`, `{% set %}` and their `end…` partners — emits nothing, so neither its indentation nor its trailing newline reaches the output. You can indent such tags to show nesting without affecting the result, but the content lines between them are emitted verbatim — leading whitespace included — so they cannot be indented the same way. The literal blank lines you leave in the template are the ones that survive into the Markdown.
-
-An expression line is content, not a control tag, so even one that renders nothing — a split [`render`](#render) call, say — leaves its newline behind; trim it with Jinja2's whitespace markers (`{{- … -}}`), pointing each `-` at a neighboring control tag rather than at content or a blank line, which it would eat as well.
-
-To indent a block's body — tags and content together — and strip that indentation back out of the output, wrap it in the [`dedent`](#dedent) filter (best where the output tolerates leftover indentation, such as a Mermaid diagram).
-
-To keep whitespace around a specific tag, opt out per-tag with a `+`: `{%+ if x %}` keeps the leading indentation, and `{% endif +%}` keeps the trailing newline — useful when an inline `{% if %}…{% endif %}` ends a content line and its line break must be preserved.
-
 ## Differences from Jinja2
 
 The engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the Jinja2 docs are a close guide rather than an exact one — in corners they don't settle, behavior can differ.
 
-The three rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
+The four rules below are a different kind of difference: they come from this tool — how it configures and packages the engine — not from the Jinja2 language.
 
 ### Handling undefined access
 
@@ -464,3 +454,36 @@ A few Markdown positions need handling that the default escape alone cannot prov
 | Hand-written link URL | the URL isn't percent-encoded | [`as_url`](#as_url) |
 
 For inline code spans and fenced code blocks, `code_inline` / `code_fenced` are an alternative to the `| safe` recipe above. Reach for the helpers when the value comes from data and may contain stray backticks; `| safe` only works if you can trust the value verbatim.
+
+### Whitespace control
+
+A line that holds only a control tag or a comment leaves nothing in the output, neither its indentation nor its line break. Jinja2's defaults would instead leave a line break behind every control tag, so a template with one tag per line would render with blank lines between its content; the engine runs with `trim_blocks` and `lstrip_blocks` on to avoid that. To keep the whitespace around one tag, add a `+`: `{%+ if x %}` keeps the indentation before it, `{% endif +%}` the newline after it.
+
+Only tag and comment lines are removed this way. An expression line keeps its newline even when it renders nothing — a split [`render`](#render) call, say — so remove that yourself with Jinja2's `{{- … -}}` markers.
+
+## Indentation
+
+[Whitespace control](#whitespace-control) lets indentation show nesting, but only on the lines that are not content.
+
+**Control tags and comments** can be indented freely. **Content lines** — headings, list items, prose, table rows — stay at column 0, where Markdown (and your editor's highlighting) reads them:
+
+```jinja2
+{% for genre in genres %}
+- {{ genre | link }}
+  {% for child in genre.children %}
+  - {{ child | link }}
+  {% endfor %}
+{% endfor %}
+```
+
+**Lines that open with `{{-`** can be indented too: the dash eats the whitespace before it, indentation included. A table row can be made into one by prefixing it with `{{- "" }}`, an expression that renders nothing. The same prefix on a following line joins it to the one above, which splits a long row one cell per line:
+
+```jinja2
+{% for track in tracks %}
+  {{- "" }}| {{ track.track_no }}
+  {{- "" }} | {{ track.title }}
+  {{- "" }} |
+{% endfor %}
+```
+
+Inside a [`dedent`](#dedent) block, content lines can be indented too.

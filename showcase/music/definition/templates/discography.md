@@ -7,7 +7,7 @@
 {% endfor %}
 
 {% for album in albums %}
-{{- album | render("album-detail.md") | under_heading("##") -}}
+  {{- album | render("album-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Genres
@@ -23,7 +23,7 @@
 {% endfor %}
 
 {% for genre in genres %}
-{{- genre | render("genre-detail.md") | under_heading("##") -}}
+  {{- genre | render("genre-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Labels
@@ -35,7 +35,7 @@
 {% endfor %}
 
 {% for label in labels %}
-{{- label | render("label-detail.md") | under_heading("##") -}}
+  {{- label | render("label-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Concert recordings

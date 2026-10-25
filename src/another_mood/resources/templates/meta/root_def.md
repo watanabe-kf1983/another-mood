@@ -24,7 +24,7 @@ The top-level singletons and scalars: the values that sit directly under the roo
 {% if attributes %}
 | id | type | required | references | validation | metadata |
 |----|------|----------|------------|------------|----------|
-{% for attr in attributes %}
+  {% for attr in attributes %}
     {% set xr = attr.x_ref %}
     {{- "" }}| {{ code_inline(attr.id) }}
     {{- "" }} | {{ code_inline(attr.type) }}
@@ -33,7 +33,7 @@ The top-level singletons and scalars: the values that sit directly under the roo
     {{- "" }} | {% if attr.validation %}{{ code_inline(attr.validation | to_yaml(true)) }}{% endif %}
     {{- "" }} | {% if attr.metadata %}{{ code_inline(attr.metadata | to_yaml(true)) }}{% endif %}
     {{- "" }} |
-{% endfor %}
+  {% endfor %}
 {% else %}
 (no attributes defined yet)
 {% endif %}

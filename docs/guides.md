@@ -456,7 +456,7 @@ At a minimum, know these:
 
 For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/) — with a caveat: the engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the match is close but not exact. The differences that matter are documented in [Template — Differences from Jinja2](reference/template.md#differences-from-jinja2).
 
-Templates render with whitespace trimming on, so a control tag alone on its line leaves no blank line in the output. See [Template — Whitespace](reference/template.md#whitespace) for how tag indentation and blank lines carry through.
+A control tag alone on its line leaves no blank line in the output ([Template — Whitespace control](reference/template.md#whitespace-control)), and [Template — Indentation](reference/template.md#indentation) shows which lines can be indented to show nesting.
 
 ### Root template
 
@@ -488,7 +488,7 @@ Each loop does two things per record: it **writes that record's subpage** and **
 
 `{{ DATA | render("TEMPLATE_NAME.md") }}` evaluates `definition/templates/TEMPLATE_NAME.md` against the piped `DATA`, and writes the result to its own file when `DATA`'s type is listed in `definition/reports.yaml` (the sample lists every type shown here). A type that isn't listed expands in place instead.
 
-When it writes a separate file, `render` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page. The `{{- … -}}` markers around the call trim its line's leftover newline out of the loop ([Template — Whitespace](reference/template.md#whitespace)).
+When it writes a separate file, `render` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page. The `{{- … -}}` markers around the call trim its line's leftover newline out of the loop ([Template — Whitespace control](reference/template.md#whitespace-control)).
 
 For the full filter specification, see [Template — `render`](reference/template.md#render).
 
