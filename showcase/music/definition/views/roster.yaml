@@ -49,38 +49,20 @@ artist_album_pairs:
     - item: name
     - item: album
 
-# Like ``artist_album_pairs`` but with ``flatten: { preserve_empty: true
-# }`` - the LEFT-join analogue: artists with no album survive (without
-# the ``album`` field), so the full roster including ``vacant_canvas``
-# stays visible. ``select`` projects an optional ``album`` column too:
-# rows for unmatched artists simply omit the ``album`` key (no error,
-# no fabricated null), matching the data model's "nullable = absent
-# key" convention.
-roster.releases:
-  from: artists
-  join:
-    to: albums
-    on: { left: id, right: artist_id }
-    as: albums
-    flatten: { as: album, preserve_empty: true }
-  select:
-    - item: id
-    - item: name
-    - item: album
-
-# All band members across all artists, flattened into one row per
-# member. Each row carries the parent artist's id/name nested under
-# ``artist`` and the member's attributes nested under ``member`` -
-# exercises the ``flatten`` clause on the intrinsic ``artists.members``
-# child entity, and a dotted ``as`` that lands a field inside an object.
-roster.members:
+# Every band member across all artists, grouped by instrument. The
+# ``flatten`` unwinds the intrinsic ``artists.members`` child entity into
+# one row per member (the artist's fields stay on the row, the member's
+# land under ``member``); ``grouped`` then gathers the rows on a dotted
+# key, ``member.instrument``, which comes back as a nested path in the
+# group record.
+roster.instruments:
   from: artists
   flatten:
     of: members
     as: member
+  grouped:
+    by: member.instrument
+    as: players
   select:
-    - item: id
-      as: artist.id
-    - item: name
-      as: artist.name
     - item: member
+    - item: players
