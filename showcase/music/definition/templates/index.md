@@ -28,7 +28,8 @@
 Signed by {{ catalog.editorial.editor }}.
 
 {% for pick in catalog.editorial.picks %}
-- {{ node("tracks", pick.track_id).title }} - {{ pick.comment }}
+{% set track = node("tracks", pick.track_id) %}
+- {{ node("discography", "albums", track.album_id, "tracks", pick.track_id) | link }} from *{{ node("discography", "albums", track.album_id) | label }}* - {{ pick.comment }}
 {% endfor %}
 
 ## Contents
