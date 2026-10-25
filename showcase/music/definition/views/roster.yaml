@@ -1,0 +1,86 @@
+# Each artist with their albums attached as a nested list. Exercises the
+# ``join:`` clause (nested attach: 1 row per artist, the matched albums
+# live under ``albums`` as a list).
+roster.artists:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+  select:
+    - item: id
+    - item: name
+    - item: country
+    - item: formed_year
+    - item: bio
+    - item: members
+    - item: albums
+
+# Same as above but only studio albums - exercises pre-join ``where:``
+# (the right entity is filtered before the merge runs). Artists whose
+# only releases happen to be live records still appear, with an empty
+# ``studio_albums`` list rather than dropping out.
+artist_studio_albums:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    where:
+      is_live: false
+    as: studio_albums
+  select:
+    - item: id
+    - item: name
+    - item: studio_albums
+
+# Each (artist, album) pair as its own row. Exercises inline ``flatten:``
+# - the joined array is unwound in place, yielding 1 row per pair and
+# renaming the slot from plural ``albums`` to singular ``album``.
+# Artists with no album are dropped (inner-join shape).
+artist_album_pairs:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+    flatten: { as: album }
+  select:
+    - item: id
+    - item: name
+    - item: album
+
+# Like ``artist_album_pairs`` but with ``flatten: { preserve_empty: true
+# }`` - the LEFT-join analogue: artists with no album survive (without
+# the ``album`` field), so the full roster including ``vacant_canvas``
+# stays visible. ``select`` projects an optional ``album`` column too:
+# rows for unmatched artists simply omit the ``album`` key (no error,
+# no fabricated null), matching the data model's "nullable = absent
+# key" convention.
+roster.releases:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+    flatten: { as: album, preserve_empty: true }
+  select:
+    - item: id
+    - item: name
+    - item: album
+
+# All band members across all artists, flattened into one row per
+# member. Each row carries the parent artist's id/name nested under
+# ``artist`` and the member's attributes nested under ``member`` -
+# exercises the ``flatten`` clause on the intrinsic ``artists.members``
+# child entity, and a dotted ``as`` that lands a field inside an object.
+roster.members:
+  from: artists
+  flatten:
+    of: members
+    as: member
+  select:
+    - item: id
+      as: artist.id
+    - item: name
+      as: artist.name
+    - item: member

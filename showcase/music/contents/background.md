@@ -4,4 +4,4 @@ A small fictional music catalog, the kind of read-only inventory a label or fan-
 
 ## Everything is invented
 
-Every artist, label, and recording in this dataset is fictional. The liner notes say so too - see [the Tidal Atlas liner notes](node:/album_tracklist/tidal_atlas/liner#liner-notes) on that album's page.
+Every artist, label, and recording in this dataset is fictional. The liner notes say so too - see [the Tidal Atlas liner notes](node:/discography/albums/tidal_atlas/liner#liner-notes) on that album's page.

@@ -4,8 +4,9 @@
 # under output/{edition}/ and renders the same data, differing only in
 # `file_per` (which ObjectType IDs are split into their own pages).
 #
-#   web  — browse online: split discographies and tracklists into
-#          separate pages.
+#   web  — browse online: index.md is the cover and contents, each
+#          section page (roster, discography, curated) and each
+#          artist and album gets a page of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
@@ -17,7 +18,10 @@
 editions:
   web:
     file_per:
-      - artist_discography.item
-      - album_tracklist.item
+      - roster
+      - roster.artists.item
+      - discography
+      - discography.albums.item
+      - curated
   book:
     file_per: []
