@@ -37,7 +37,7 @@ Signed by {{ catalog.editorial.editor }}.
    `curated`): the views named `roster.*` and so on gather under it.
    Two-loop pattern: link here, render below where `file_per` puts it. #}
 - {{ roster | link("Roster") }} - the artists, their line-ups and releases
-- {{ discography | link("Discography") }} - every album, by genre, label and track
+- {{ discography | link("Discography") }} - every album, with its genres and labels
 - {{ curated | link("Playlists") }} - curated running orders
 
 {{ roster | render("roster.md") | under_heading("#") }}

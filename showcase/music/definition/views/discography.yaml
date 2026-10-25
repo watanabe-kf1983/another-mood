@@ -1,41 +1,8 @@
-# Albums grouped by genre - exercises ``grouped:``. The grouping field
-# (``genre_id``) is re-emitted in ``select:`` once as the group key and
-# once renamed as ``id`` so the template can use it as a path slug.
-albums_by_genre:
-  from: albums
-  grouped:
-    by: genre_id
-    as: albums
-  select:
-    - item: genre_id
-      as: id
-    - item: genre_id
-    - item: albums
-
-# Each genre group with its genre record attached - exercises a
-# view-to-view reference (``from:`` names the ``albums_by_genre`` view
-# above, not a data entity). The genre name can't be joined in
-# ``albums_by_genre`` itself because ``join:`` runs before ``grouped:``
-# in the fixed pipeline order; splitting into two views and referencing
-# the first from the second is the escape hatch. Without it the template
-# would have to re-join genres on its own
-# (``node("genres", entry.genre_id).name``).
-discography.by_genre:
-  from: albums_by_genre
-  join:
-    to: genres
-    on: { left: genre_id, right: id }
-    as: genre_matches
-    flatten: { as: genre }
-  select:
-    - item: genre_id
-    - item: genre
-    - item: albums
-
 # Each album with its tracks attached as a nested list, plus its optional
 # liner-note prose joined in as ``liner`` (a descendant of the album).
 # Exercises the ``join:`` list form mixing a nested attach (``tracks``) with
-# a ``preserve_empty`` singleton flatten.
+# a ``preserve_empty`` singleton flatten. ``sort`` puts the albums in
+# release order, so the list and the album pages rendered after it agree.
 discography.albums:
   from: albums
   join:
@@ -57,16 +24,30 @@ discography.albums:
     - item: cover
     - item: tracks
     - item: liner
+  sort:
+    by: year
 
-# The genre and label records copied under ``discography`` so the
-# discography page can list them - a ``from:`` with nothing else is a
-# plain copy. A page renders only what lies under it, and a nested view
-# is how a page gathers datasets that live elsewhere in the tree.
+# Each genre with its subgenres and albums attached. The first join is a
+# self-reference: ``genres`` joined to itself, matching each genre's
+# ``id`` against the others' ``parent_id``, so a genre page can list its
+# subgenres without walking the hierarchy in the template.
 discography.genres:
   from: genres
+  join:
+    - to: genres
+      on: { left: id, right: parent_id }
+      as: subgenres
+    - to: albums
+      on: { left: id, right: genre_id }
+      as: albums
 
+# Each label with the albums released on it attached.
 discography.labels:
   from: labels
+  join:
+    to: albums
+    on: { left: id, right: label_id }
+    as: albums
 
 # Albums whose id starts with ``live_`` - exercises ``where: startswith``.
 # The naming convention picks out concert recordings without referring to

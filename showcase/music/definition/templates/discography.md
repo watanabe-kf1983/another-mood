@@ -1,36 +1,41 @@
 # Discography
 
-## Albums by genre
+## Albums
 
-{% for entry in by_genre %}
-- **{{ entry.genre.name }}**
-{% for album in entry.albums | sort(attribute="year") %}
-  - {{ node("discography", "albums", album.id) | link }} ({{ album.year }})
-{% endfor %}
+{% for album in albums %}
+- {{ album | link }} ({{ album.year }}) - {{ node("roster", "artists", album.artist_id) | link }}
 {% endfor %}
 
 {% for album in albums %}
 {{- album | render("album-detail.md") | under_heading("##") -}}
 {% endfor %}
 
-## Genre hierarchy
+## Genres
 
 {% for genre in genres if not genre.parent_id %}
-- {{ genre.name }}
+- {{ genre | link }}
 {% for child in genres if child.parent_id == genre.id %}
-  - {{ child.name }}
+  - {{ child | link }}
 {% for grandchild in genres if grandchild.parent_id == child.id %}
-    - {{ grandchild.name }}
+    - {{ grandchild | link }}
 {% endfor %}
 {% endfor %}
+{% endfor %}
+
+{% for genre in genres %}
+{{- genre | render("genre-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Labels
 
-| Label | Country | Founded |
-|-------|---------|---------|
+| Label | Country | Founded | Albums |
+|-------|---------|---------|--------|
 {% for label in labels %}
-| {{ label.name }} | {{ label.country }} | {{ label.founded }} |
+| {{ label | link }} | {{ label.country }} | {{ label.founded }} | {{ label.albums | length }} |
+{% endfor %}
+
+{% for label in labels %}
+{{- label | render("label-detail.md") | under_heading("##") -}}
 {% endfor %}
 
 ## Concert recordings
@@ -46,5 +51,5 @@ Live takes, wherever they were released.
 | Track | Album | Artist |
 |-------|-------|--------|
 {% for row in live_tracks %}
-| {{ row.title }} | {{ node("discography", "albums", row.album.id) | link(row.album.title) }} | {{ row.album.artist.name }} |
+| {{ row.title }} | {{ node("discography", "albums", row.album.id) | link(row.album.title) }} | {{ node("roster", "artists", row.album.artist.id) | link(row.album.artist.name) }} |
 {% endfor %}

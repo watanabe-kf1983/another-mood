@@ -8,9 +8,9 @@
 
 | Field | Value |
 |-------|-------|
-| Artist | {{ artist_id }} |
-| Label | {{ label_id }} |
-| Genre | {{ genre_id }} |
+| Artist | {{ node("roster", "artists", artist_id) | link }} |
+| Label | {{ node("discography", "labels", label_id) | link }} |
+| Genre | {{ node("discography", "genres", genre_id) | link }} |
 
 ## Tracklist
 

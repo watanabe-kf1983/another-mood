@@ -6,7 +6,7 @@
 #
 #   web  — browse online: index.md is the cover and contents, each
 #          section page (roster, discography, curated) and each
-#          artist and album gets a page of its own.
+#          artist, album, genre and label gets a page of its own.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 #
@@ -22,6 +22,8 @@ editions:
       - roster.artists.item
       - discography
       - discography.albums.item
+      - discography.genres.item
+      - discography.labels.item
       - curated
   book:
     file_per: []
