@@ -2,149 +2,45 @@
 
 {{ node(path="/prose/background") | render("prose.md") | under_heading("#") }}
 
-## Front page
-
-The front matter is one record, `catalog`, read straight from the root
-along with two plain values beside it, `updated_at` and `moods` (the
-single-record pattern). The `series` map arrives as a list with each key
-lifted into `id`, like any other map.
-
+{# The front matter is one record, `catalog`, read straight from the root
+   along with two plain values beside it, `updated_at` and `moods` (the
+   single-record pattern). The `series` map arrives as a list with each key
+   lifted into `id`, like any other map. #}
 *Kept by {{ catalog.maintainer }}; last revised {{ updated_at }}. Moods: {{ moods | join(", ") }}.*
 
-### Featured
-
-Each entry comes with its album attached by the `featured_albums` view,
-which names the collection inside the front matter as `from: catalog.featured`.
+## Featured
 
 {% for entry in featured_albums %}
-- {{ node("album_tracklist", entry.album_id) | link }} ({{ entry.album.year }}) - {{ entry.note }}
+- {{ node("discography", "albums", entry.album_id) | link }} ({{ entry.album.year }}) - {{ entry.note }}
 {% endfor %}
 
-### Series
+## Series
 
 {% for series in catalog.series %}
 - **{{ series.name }}** ({{ series.id }}) - {{ series.description }}
 {% for entry in series.albums %}
-  - {{ node("album_tracklist", entry.album_id) | link }}
+  - {{ node("discography", "albums", entry.album_id) | link }}
 {% endfor %}
 {% endfor %}
 
-### Editor's picks
+## Editor's picks
 
 Signed by {{ catalog.editorial.editor }}.
 
 {% for pick in catalog.editorial.picks %}
-- {{ node("tracks", pick.track_id).title }} - {{ pick.comment }}
+{% set track = node("tracks", pick.track_id) %}
+- {{ node("discography", "albums", track.album_id, "tracks", pick.track_id) | link }} from *{{ node("discography", "albums", track.album_id) | label }}* - {{ pick.comment }}
 {% endfor %}
 
-## Artists
+## Contents
 
-{% for artist in artist_discography %}
-- {{ artist | link }}{% if artist.country %} - {{ artist.country }}{% endif +%}
-{% endfor %}
+{# Each page is a nested view's holder (`roster`, `discography`,
+   `curated`): the views named `roster.*` and so on gather under it.
+   Two-loop pattern: link here, render below where `file_per` puts it. #}
+- {{ roster | link("Roster") }} - the artists, and who plays what
+- {{ discography | link("Discography") }} - every album, with its genres and labels
+- {{ curated | link("Playlists") }} - curated running orders
 
-{% for artist in artist_discography %}
-{{- artist | render("artist-detail.md") | under_heading("##") -}}
-{% endfor %}
-
-## Albums by genre
-
-The genre name comes straight from the `genres_with_albums` view, which
-reads the grouped `albums_by_genre` view and joins `genres` onto it (a
-view-to-view reference) - so the template no longer re-joins genres itself.
-
-{% for entry in genres_with_albums %}
-- **{{ entry.genre.name }}**
-{% for album in entry.albums | sort(attribute="year") %}
-  - {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
-{% endfor %}
-{% endfor %}
-
-{% for album in album_tracklist %}
-{{- album | render("album-detail.md") | under_heading("##") -}}
-{% endfor %}
-
-## Genre hierarchy
-
-{% for genre in genres if not genre.parent_id %}
-- {{ genre.name }}
-{% for child in genres if child.parent_id == genre.id %}
-  - {{ child.name }}
-{% for grandchild in genres if grandchild.parent_id == child.id %}
-    - {{ grandchild.name }}
-{% endfor %}
-{% endfor %}
-{% endfor %}
-
-## Labels
-
-| Label | Country | Founded |
-|-------|---------|---------|
-{% for label in labels %}
-| {{ label.name }} | {{ label.country }} | {{ label.founded }} |
-{% endfor %}
-
-## Concert recordings
-
-These albums are surfaced by the `live_albums` view (`where: { id: { startswith: live_ } }`).
-
-{% for album in live_albums %}
-- {{ node("album_tracklist", album.id) | link }} ({{ album.year }})
-{% endfor %}
-
-## Live tracks
-
-Tracks whose title contains "Live" (`where: { title: { contains: Live } }`).
-
-| Track | Album |
-|-------|-------|
-{% for t in live_tracks %}
-| {{ t.title }} | {{ t.album_id }} |
-{% endfor %}
-
-## Band rosters
-
-Flattened from the `artists.members` nested map.
-
-| Artist | Member | Instrument |
-|--------|--------|------------|
-{% for row in artist_members %}
-| {{ row.artist.name }} | {{ row.member.name }} | {{ row.member.instrument }} |
-{% endfor %}
-
-## Discography (LEFT-join view)
-
-Every artist appears once, including those with no released albums (`artist_album_pairs_all` uses `flatten: { preserve_empty: true }`).
-
-{% for row in artist_album_pairs_all %}
-- **{{ row.name }}** ({{ row.id }}){% if row.album %} - {{ row.album.title }} ({{ row.album.year }}){% else %} - _no releases yet_{% endif +%}
-{% endfor %}
-
-## Full track index
-
-Each track joined to its album and the album's artist (`tracks_with_artist`, multi-join list form).
-
-| Track | Album | Artist |
-|-------|-------|--------|
-{% for row in tracks_with_artist %}
-| {{ row.title }} | {{ row.album.title }} | {{ row.album.artist.name }} |
-{% endfor %}
-
-## Playlists
-
-Each playlist's track list comes from the `playlists_with_tracks` view, a
-two-hop view-to-view chain: `playlist_entries` joins `tracks` onto
-`playlist_tracks` (so the title travels with each link), and
-`playlists_with_tracks` nests those entries under each playlist - so the
-template neither re-filters `playlist_tracks` nor re-looks-up track titles.
-
-{% for pl in playlists_with_tracks %}
-### {{ pl.name }}
-
-*Curated by {{ code_inline(pl.curator) }}.* {{ pl.description }}
-
-{% for entry in pl.entries | sort(attribute="position") %}
-{{ entry.position }}. {{ entry.track.title }}
-{% endfor %}
-
-{% endfor %}
+{{ roster | render("roster.md") | under_heading("#") }}
+{{ discography | render("discography.md") | under_heading("#") }}
+{{ curated | render("curated.md") | under_heading("#") }}
