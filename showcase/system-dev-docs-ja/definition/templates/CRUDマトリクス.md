@@ -16,17 +16,17 @@
    「、」で繋いだ文字列として namespace に溜める。 #}
 {% set ns = namespace(never_created="", never_updated="", deleted="") %}
 {% for e in entities %}
-{% set flags = namespace(c=false, u=false, d=false) %}
-{% for uc in this %}
-{% for a in uc.アクセス if a.エンティティ == e.id %}
-{% if "C" in a.操作 %}{% set flags.c = true %}{% endif %}
-{% if "U" in a.操作 %}{% set flags.u = true %}{% endif %}
-{% if "D" in a.操作 %}{% set flags.d = true %}{% endif %}
-{% endfor %}
-{% endfor %}
-{% if not flags.c %}{% set ns.never_created = ns.never_created ~ ("、" if ns.never_created) ~ e.名前 %}{% endif %}
-{% if not flags.u %}{% set ns.never_updated = ns.never_updated ~ ("、" if ns.never_updated) ~ e.名前 %}{% endif %}
-{% if flags.d %}{% set ns.deleted = ns.deleted ~ ("、" if ns.deleted) ~ e.名前 %}{% endif %}
+  {% set flags = namespace(c=false, u=false, d=false) %}
+  {% for uc in this %}
+    {% for a in uc.アクセス if a.エンティティ == e.id %}
+      {% if "C" in a.操作 %}{% set flags.c = true %}{% endif %}
+      {% if "U" in a.操作 %}{% set flags.u = true %}{% endif %}
+      {% if "D" in a.操作 %}{% set flags.d = true %}{% endif %}
+    {% endfor %}
+  {% endfor %}
+  {% if not flags.c %}{% set ns.never_created = ns.never_created ~ ("、" if ns.never_created) ~ e.名前 %}{% endif %}
+  {% if not flags.u %}{% set ns.never_updated = ns.never_updated ~ ("、" if ns.never_updated) ~ e.名前 %}{% endif %}
+  {% if flags.d %}{% set ns.deleted = ns.deleted ~ ("、" if ns.deleted) ~ e.名前 %}{% endif %}
 {% endfor %}
 
 {% if ns.never_created %}どのユースケースからも作成されないのは{{ ns.never_created }}である。{% else %}すべてのエンティティは、いずれかのユースケースで作成される。{% endif %}作成の後に更新されないのは{{ ns.never_updated }}で、{% if ns.deleted %}削除されるのは{{ ns.deleted }}である。{% else %}削除されるエンティティは無い。{% endif +%}
