@@ -1,10 +1,10 @@
-{# ``this`` is the whole __root_data result: one item, naming the root entity. #}
+{# ``this`` is the whole __data.root result: one item, naming the root entity. #}
 {% set entities = node(path="/__definition/entities") %}
 {% set root_entity = entities | child((this | first).id) %}
 {% set root = node(path="/") %}
 # Attributes: Data
 
-[← Attributes]({{ node("__root_def") | href }})
+[← Attributes]({{ node("__defs", "root") | href }})
 
 {# Collections are left out, as on the definition page: each has its own
    Data page.  A singleton has no value of its own; its scalars follow it
