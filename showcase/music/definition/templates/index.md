@@ -16,9 +16,9 @@
 
 {% for series in catalog.series %}
 - **{{ series.name }}** ({{ series.id }}) - {{ series.description }}
-{% for entry in series.albums %}
+  {% for entry in series.albums %}
   - {{ node("discography", "albums", entry.album_id) | link }}
-{% endfor %}
+  {% endfor %}
 {% endfor %}
 
 ## Editor's picks
@@ -26,7 +26,7 @@
 Signed by {{ catalog.editorial.editor }}.
 
 {% for pick in catalog.editorial.picks %}
-{% set track = node("tracks", pick.track_id) %}
+  {% set track = node("tracks", pick.track_id) %}
 - {{ node("discography", "albums", track.album_id, "tracks", pick.track_id) | link }} from *{{ node("discography", "albums", track.album_id) | label }}* - {{ pick.comment }}
 {% endfor %}
 

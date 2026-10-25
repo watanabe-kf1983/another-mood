@@ -10,9 +10,9 @@
 {% if members %}
 | Member | Instrument |
 |--------|------------|
-{% for m in members %}
+  {% for m in members %}
 | {{ m.name }} | {{ m.instrument }} |
-{% endfor %}
+  {% endfor %}
 {% else %}
 _No active line-up on record._
 {% endif %}
@@ -20,9 +20,9 @@ _No active line-up on record._
 ## Discography
 
 {% if albums %}
-{% for album in albums | sort(attribute="year") %}
+  {% for album in albums | sort(attribute="year") %}
 - {{ node("discography", "albums", album.id) | link }} ({{ album.year }})
-{% endfor %}
+  {% endfor %}
 {% else %}
 _No releases yet._
 {% endif %}
