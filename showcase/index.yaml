@@ -3,6 +3,8 @@ blueprints:
     description: Minimal sample with members and roles, the easiest entry point.
   - name: music
     description: Worked example modelling a fictional music catalog spread over linked pages, with views that use every clause, prose and cover art alongside the data, and two editions from the same templates.
+  - name: system-dev-docs-en
+    description: The two-document sample in English — a Software Requirements Specification and a Software Design Document derived from one model, for the same bookstore inventory system as the Japanese edition.
   - name: system-dev-docs-ja
     description: Worked example deriving two documents from one model, in Japanese — a requirements specification and a design document for a small bookstore inventory system, each a document of its own with its chapters as pages, and the design document linking into the requirements throughout.
   - name: sbom

@@ -1,0 +1,34 @@
+# Two editions of the same data, differing only in `file_per` (which nodes
+# get a page of their own). Pages are cut along document → chapter → row.
+#
+#   web  — browse online: each document and each of its chapters gets a
+#          page, and so does each row with a detail of its own (a use-case
+#          description, a non-functional requirement kind, a decomposition
+#          diagram, an entity definition, a screen definition). Sections
+#          inside a chapter stay on the chapter page.
+#   book — read as bound documents: each document is one page, with its
+#          chapters inlined.
+editions:
+  web:
+    file_per:
+      - 要求仕様書
+      - 要求仕様書.はじめに
+      - 要求仕様書.用語集.item[]
+      - 要求仕様書.要求
+      - 要求仕様書.要求.機能要求.item
+      - 要求仕様書.要求.非機能要求.item
+      - 要求仕様書.検証
+      - 要求仕様書.付録
+      - 要求仕様書.付録.業務モデル.item
+      - 設計書
+      - 設計書.はじめに
+      - 設計書.コンテキスト.item[]
+      - 設計書.システム構成
+      - 設計書.データ設計
+      - 設計書.データ設計.論理データモデル.item
+      - 設計書.画面設計.item[]
+      - 設計書.画面設計.item
+  book:
+    file_per:
+      - 要求仕様書
+      - 設計書

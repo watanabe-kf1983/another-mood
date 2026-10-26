@@ -1,0 +1,168 @@
+/* 画面レイアウト図の元になる HTML モックのスタイル。
+
+   モックはクラスを持たない素の HTML で、意味はタグが担う — input は入力項目、
+   readonly の input は出力項目、button はアクション、table は明細の一覧。
+   このスタイルシートが決めるのは寸法と配置だけで、図の線や塗りは生成器
+   (scripts/screen-layouts/) が持つ。ブラウザで開けば図と同じものが見える。
+
+   寸法を自分の画面に合わせて変えるときは、ここではなく各 HTML の
+   input の size 属性と table の colgroup を触るほうが早い。 */
+
+:root {
+  --wf-ink: #333;
+  --wf-shade: #eee;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: #111;
+  font-family: "Noto Sans CJK JP", sans-serif;
+}
+
+/* 画面の枠。幅は全画面で揃えて、図の縮尺が画面ごとに変わらないようにする。 */
+main {
+  display: block;
+  box-sizing: border-box;
+  width: 760px;
+  border: 1px solid var(--wf-ink);
+  font-size: 12px;
+}
+
+/* 画面名の帯。 */
+h1 {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--wf-ink);
+  background: var(--wf-shade);
+  font-size: 15px;
+}
+
+/* 画面の中身。 */
+section {
+  padding: 14px 12px;
+}
+
+/* 項目やボタンの横並び。 */
+section > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* 画面内の区切り (明細、検索条件など)。 */
+h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+/* 項目 = 見出しと箱。 */
+label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* 1 行に 1 項目だけ置く画面では、見出しの幅を揃えて箱の左端を通す。 */
+section > div > label:only-child {
+  display: grid;
+  grid-template-columns: 4em auto;
+  justify-items: start;
+}
+
+input,
+select,
+button {
+  appearance: none;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--wf-ink);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+/* 利用者が書き換えられない項目 = 出力項目。図では淡い塗りで示す。 */
+input[readonly] {
+  background: var(--wf-shade);
+}
+
+/* 選ぶ箱であることを示す印。ブラウザ既定の矢印は appearance: none で消えるので、
+   図に描かれるものと同じ形をここでも描く。 */
+select {
+  width: 150px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="5"><path d="M0 0 h8 l-4 5 Z" fill="%23333"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+button {
+  padding: 0 14px;
+  border-radius: 3px;
+  background: var(--wf-shade);
+}
+
+/* 明細や検索結果の一覧。列幅は各 HTML の colgroup で決める。 */
+table {
+  margin-bottom: 12px;
+  border: 1px solid var(--wf-ink);
+  border-collapse: collapse;
+}
+
+th,
+td {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--wf-ink);
+  font-size: 12px;
+  text-align: left;
+}
+
+th {
+  background: var(--wf-shade);
+}
+
+/* 一覧の中で書き換えられるセル (棚卸の実数など)。 */
+td input {
+  width: 100%;
+  height: 18px;
+  padding: 0 4px;
+}
+
+/* メニュー画面の行き先。縦に並べる。 */
+nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+nav button {
+  width: 220px;
+}
+
+/* 画面を閉じるアクションは末尾に寄せる。 */
+footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 凡例。塗りの意味を、それを使っている部品そのもので示す。
+   web edition では 1 画面 1 頁なので、図が単独で読まれても分かるよう全画面に置く。 */
+aside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 11px;
+}
+
+aside input {
+  width: 18px;
+  height: 12px;
+  padding: 0;
+}
