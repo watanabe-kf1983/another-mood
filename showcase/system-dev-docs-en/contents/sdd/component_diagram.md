@@ -1,3 +1,3 @@
-本システムは 1 台のサーバで動く一つの Web アプリケーションで、業務の単位で分けた 5 つのコンポーネントをその中のモジュールとして持つ。コンポーネントは土台の書籍・在庫と、その上に乗る入荷・販売・棚卸の二層をなし、一つのデータベースを共有する ([D08](node:/sdd/introduction/design_decisions/D08))。
+The system is a single web application running on one server, and holds five components, cut along units of business work, as modules within it. The components form two layers, the foundation of Books and Stock and, on top of it, Receiving, Sales and Stocktaking, and they share one database ([D08](node:/sdd/introduction/design_decisions/D08)).
 
-入荷・販売・棚卸はいずれも書籍の検索を書籍に、在庫数の更新を在庫に委ねる ([D07](node:/sdd/introduction/design_decisions/D07))。在庫は変動履歴の表示のために入荷・販売・棚卸の記録を読むが、イベントの記録を読むだけの参照は依存に数えない ([D08](node:/sdd/introduction/design_decisions/D08)) ので、在庫から上へ向かう矢印は無い。
+Receiving, Sales and Stocktaking all delegate book lookup to Books and stock quantity updates to Stock ([D07](node:/sdd/introduction/design_decisions/D07)). Stock reads the records of deliveries, sales and stocktakes to show the movement history, but a reference that only reads event records does not count as a dependency ([D08](node:/sdd/introduction/design_decisions/D08)), so no arrow points upward from Stock.

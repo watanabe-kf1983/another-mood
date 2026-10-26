@@ -1,20 +1,20 @@
-# 配置
+# Deployment
 
-Web アプリケーションとデータベースは店舗内の 1 台のサーバに同居させ、店員は店舗の LAN を通じて PC とタブレットのブラウザから利用する ([R15](node:/srs/requirements/non_functional/external_interface/requirements/R15))。対象は単一店舗で、同時利用は 5 名 ([R17](node:/srs/requirements/non_functional/quality/requirements/R17))、書籍は 1 万件程度 ([R16](node:/srs/requirements/non_functional/quality/requirements/R16)) であり、1 台で十分に賄える。サーバの冗長化は行わず、障害時の復旧はデータベースのバックアップからの復元による。
+The web application and the database share one server inside the store, and clerks use the system from the browsers of PCs and tablets over the store's LAN ([R15](node:/srs/requirements/non_functional/external_interface/requirements/R15)). The subject is a single store with 5 concurrent users ([R17](node:/srs/requirements/non_functional/quality/requirements/R17)) and about 10,000 books ([R16](node:/srs/requirements/non_functional/quality/requirements/R16)), well within what one server can handle. The server is not made redundant; recovery from a failure is by restoring the database from backup.
 
 ```mermaid
 flowchart LR
-  subgraph 店舗["店舗"]
-    端末["店員の端末 (PC / タブレットのブラウザ)"]
-    subgraph サーバ["店舗内サーバ"]
-      アプリ["Web アプリケーション"]
-      DB[("データベース")]
+  subgraph store["Store"]
+    device["Clerk's device (PC / tablet browser)"]
+    subgraph server["In-store server"]
+      app["Web application"]
+      db[("Database")]
     end
   end
-  決済[["決済サービス"]]
-  端末 -- "画面の操作" --> アプリ
-  アプリ --> DB
-  決済 -- "販売通知" --> アプリ
+  payment[["Payment service"]]
+  device -- "Screen operations" --> app
+  app --> db
+  payment -- "Sales notifications" --> app
 ```
 
-決済サービスからの販売通知は、店舗の回線を通じて Web アプリケーションに届く。回線が途絶えている間は通知が届かないが、販売反映 ([UC04](node:/srs/requirements/functional/UC04)) 以外のユースケースは店舗内で完結するので、在庫の参照と入荷登録は続けられる ([R19](node:/srs/requirements/non_functional/design_constraint/requirements/R19))。途絶えている間に生じた販売の通知をどう届け直すかは決済サービスとの取り決めに委ね、本書では扱わない。
+Sales notifications from the payment service reach the web application over the store's connection. While the connection is down no notification arrives, but every use case other than sales posting ([UC04](node:/srs/requirements/functional/UC04)) completes inside the store, so stock inquiries and delivery registration can continue ([R19](node:/srs/requirements/non_functional/design_constraint/requirements/R19)). How the notifications of sales made while the connection was down are delivered later is left to the agreement with the payment service and is not covered by this document.

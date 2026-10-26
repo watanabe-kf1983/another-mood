@@ -1,15 +1,15 @@
-# 目的
+# Purpose
 
-本書は、小規模書店向けの在庫管理システム (以下「本システム」) に対する要求を定義する。読者は、本システムの発注者である書店の店主、本システムを設計・実装する開発者、および受け入れ試験の担当者である。
+This document defines the requirements on an inventory management system for a small bookstore (hereafter "the system"). Its readers are the owner of the bookstore who commissions the system, the developers who design and implement it, and those in charge of acceptance testing.
 
-# 範囲
+# Scope
 
-本システムは、単一店舗の書籍在庫を対象に、入荷・販売・棚卸の各業務を通じて在庫数を維持し、店員がいつでも現在の在庫を参照できるようにする。
+The system covers the book stock of a single store. It maintains the stock quantities through the delivery, sales and stocktake business, and lets clerks look up the current stock at any time.
 
-会計処理、顧客管理、オンライン販売、および仕入先への発注は本システムの範囲外である。業務の単位ごとの範囲は[システム化範囲](node:/srs/introduction/business_context)に示す。
+Accounting, customer management, online sales and ordering from suppliers are outside the scope of the system. The scope per unit of business work is given under [Business processes in scope](node:/srs/introduction/business_context).
 
-# 製品の位置づけ
+# Product perspective
 
-本システムは店舗内の PC とタブレットから利用する Web アプリケーションであり、単独で動作する。店頭での決済は外部の決済サービスに委ね、本システムは決済サービスから確定した販売の内容 (書籍と数量) を受け取って在庫を減らす。
+The system is a web application used from the PCs and tablets in the store, and it runs on its own. Payment at the counter is left to an external payment service; the system receives the content of each completed sale (books and quantities) from the payment service and reduces stock accordingly.
 
-外部インタフェースとデータについて、本書は満たすべき要求 ([外部インタフェース要求](node:/srs/requirements/non_functional/external_interface)など) を定めるにとどめ、インタフェースの定義と論理データモデルは設計書で扱う。
+For external interfaces and data, this document goes no further than the requirements to be met (the [external interface requirements](node:/srs/requirements/non_functional/external_interface) among others). The definition of the interfaces and the logical data model belong to the design document.

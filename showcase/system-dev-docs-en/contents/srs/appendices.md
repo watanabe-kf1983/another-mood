@@ -1,5 +1,5 @@
-# 前提と依存
+# Assumptions and dependencies
 
-- 取り扱う書籍はすべて ISBN を持つ。ISBN の無い商品 (雑貨、同人誌など) は本システムの対象外とする。
-- 決済サービスは、販売が確定するたびに書籍 (ISBN) と数量を本システムに通知できる。
-- 棚卸は閉店後に全数で実施し、営業中の部分棚卸は行わない。
+- Every book carried has an ISBN. Goods without one (sundries, self-published booklets and the like) are outside the scope of the system.
+- The payment service can notify the system of the books (ISBNs) and quantities each time a sale is completed.
+- Stocktakes are full counts carried out after closing; no partial stocktakes take place during opening hours.

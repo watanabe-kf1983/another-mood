@@ -1,5 +1,5 @@
-# 制約
+# Constraints
 
-- 対象は単一店舗とし、複数店舗間の在庫移動は扱わない。
-- 書籍は ISBN で識別する。ISBN の無い商品は在庫の対象としない。
-- 同時に利用する店員は数名程度を想定する。
+- The subject is a single store; stock transfers between stores are not covered.
+- Books are identified by ISBN. Goods without an ISBN are not held as stock.
+- A few clerks at a time are assumed to use the system.

@@ -1,12 +1,12 @@
-# 目的と範囲
+# Purpose and scope
 
-本書は、小規模書店向けの在庫管理システム (以下「本システム」) の基本設計を記述する。要求仕様書に定めた要求を実現するために、システムの境界と構成、論理データモデル、および画面を定める。
+This document describes the basic design of an inventory management system for a small bookstore (hereafter "the system"). To realise the requirements set out in the requirements specification, it defines the boundary and architecture of the system, the logical data model and the screens.
 
-物理テーブル定義やクラス設計などの内部設計は本書の範囲外であり、詳細設計書に委ねる。
+Internal design such as physical table definitions and class design is outside the scope of this document and left to the detailed design document.
 
-# 記法と規約
+# Notation and conventions
 
-- 図は Mermaid 記法で描く。ER 図の各エンティティは論理名で表し、物理名は本書では扱わない。
-- 本書は要求仕様書を前提に読む。ユースケースは本書に再掲せず、要求仕様書の ID ([UC01](node:/srs/requirements/functional/UC01) など) とリンクで参照する。
-- エンティティと画面は本書で ID を与え、文書内の対応はこの ID で示す。
-- 用語は要求仕様書の[用語集](node:/srs/glossary)に従う。
+- Diagrams are drawn in Mermaid notation. Each entity in the ER diagram is shown by its logical name; physical names are not covered by this document.
+- This document presupposes the requirements specification. Use cases are not repeated here but referenced by their ID in the requirements specification ([UC01](node:/srs/requirements/functional/UC01) and so on) with a link.
+- Entities and screens are given IDs in this document, and correspondences within the document are stated by these IDs.
+- Terms follow the [glossary](node:/srs/glossary) of the requirements specification.
