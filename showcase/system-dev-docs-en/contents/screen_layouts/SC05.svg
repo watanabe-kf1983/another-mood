@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 283"
+     width="776" height="283"
+     role="img" aria-label="Screen layout of the Stocktake screen">
+<rect width="776" height="283" fill="#fff"/>
+<g font-family="sans-serif">
+<rect x="8.5" y="8.5" width="760" height="267" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="9.5" y="9.5" width="758" height="34" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="79.5" y="57.5" width="145" height="26" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="234.5" y="57.5" width="109.4" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="22" y="96" width="150" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="172" y="96" width="240" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="412" y="96" width="90" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="502" y="96" width="80" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="582" y="96" width="90" height="25" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="22" y="121" width="150" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="172" y="121" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="412" y="121" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="502" y="121" width="80" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="510.5" y="124.5" width="63" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="582" y="121" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="146" width="150" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="172" y="146" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="412" y="146" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="502" y="146" width="80" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="510.5" y="149.5" width="63" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="582" y="146" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="22" y="171" width="150" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="172" y="171" width="240" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="412" y="171" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="502" y="171" width="80" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="510.5" y="174.5" width="63" height="18" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="582" y="171" width="90" height="25" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="570.1" y="208.5" width="72" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="652.1" y="208.5" width="103.4" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="248.5" width="18" height="12" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="76" y="248.5" width="18" height="12" fill="#eee" stroke="#333" stroke-width="1"/>
+<text x="21" y="25.5" font-size="15" fill="#111" dominant-baseline="central" font-weight="700">Stocktake screen</text>
+<text x="21" y="70" font-size="12" fill="#111" dominant-baseline="central">Started at</text>
+<text x="249" y="70" font-size="12" fill="#111" dominant-baseline="central">Start stocktake</text>
+<text x="30" y="108" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">ISBN</text>
+<text x="180" y="108" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">Title</text>
+<text x="420" y="108" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">Baseline</text>
+<text x="510" y="108" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">Counted</text>
+<text x="590" y="108" font-size="12" fill="#111" dominant-baseline="central" font-weight="700">Difference</text>
+<text x="584.6" y="221" font-size="12" fill="#111" dominant-baseline="central">Confirm</text>
+<text x="666.6" y="221" font-size="12" fill="#111" dominant-baseline="central">Back to menu</text>
+<text x="45" y="254" font-size="11" fill="#111" dominant-baseline="central">Input</text>
+<text x="99.5" y="254" font-size="11" fill="#111" dominant-baseline="central">Output</text>
+</g>
+</svg>

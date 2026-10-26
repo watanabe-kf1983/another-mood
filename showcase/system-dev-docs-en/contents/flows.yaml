@@ -1,0 +1,258 @@
+# The data flows of the business model. They are recorded per level, and a
+# lower-level flow names the higher-level flow that bundles it in parent_id
+# (flows that stay inside a diagram, and the flows of the context diagram,
+# have no parent_id). That is why the same flow name appears at several
+# levels.
+#
+# source / target is exactly one of process_id / data_store_id /
+# external_entity_id. The order is by level, and within a level grouped by
+# parent process.
+flows:
+  # --- Context diagram (between Bookstore operations and the external entities) ---
+  F01:
+    name: Purchase
+    description: The books the customer has chosen, and the payment.
+    source: { external_entity_id: customer }
+    target: { process_id: P0 }
+  F02:
+    name: Receipt
+    source: { process_id: P0 }
+    target: { external_entity_id: customer }
+  F03:
+    name: Order
+    description: The books and quantities ordered.
+    source: { process_id: P0 }
+    target: { external_entity_id: supplier }
+  F04:
+    name: Delivery
+    description: The books delivered, with the delivery note.
+    source: { external_entity_id: supplier }
+    target: { process_id: P0 }
+
+  # --- Diagram 0 (decomposition of Bookstore operations): Purchasing ---
+  F05:
+    name: Order
+    source: { process_id: P1 }
+    target: { external_entity_id: supplier }
+    parent_id: F03
+  F06:
+    name: Delivery
+    source: { external_entity_id: supplier }
+    target: { process_id: P1 }
+    parent_id: F04
+  F07:
+    name: Stock quantity
+    source: { data_store_id: stock_ledger }
+    target: { process_id: P1 }
+  F08:
+    name: Supplier
+    source: { data_store_id: supplier_ledger }
+    target: { process_id: P1 }
+  F09:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P1 }
+  F10:
+    name: Delivery lines
+    source: { process_id: P1 }
+    target: { data_store_id: delivery_records }
+  F11:
+    name: Delivered quantity
+    source: { process_id: P1 }
+    target: { data_store_id: stock_ledger }
+  F12:
+    name: New book
+    source: { process_id: P1 }
+    target: { data_store_id: book_ledger }
+  F13:
+    name: New supplier
+    source: { process_id: P1 }
+    target: { data_store_id: supplier_ledger }
+
+  # --- Diagram 0: Sales ---
+  F14:
+    name: Purchase
+    source: { external_entity_id: customer }
+    target: { process_id: P2 }
+    parent_id: F01
+  F15:
+    name: Receipt
+    source: { process_id: P2 }
+    target: { external_entity_id: customer }
+    parent_id: F02
+  F16:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P2 }
+  F17:
+    name: Sale lines
+    source: { process_id: P2 }
+    target: { data_store_id: sales_records }
+  F18:
+    name: Sold quantity
+    source: { process_id: P2 }
+    target: { data_store_id: stock_ledger }
+  F19:
+    name: Pending sale
+    source: { data_store_id: sales_records }
+    target: { process_id: P2 }
+
+  # --- Diagram 0: Inventory control ---
+  F20:
+    name: Stock quantity
+    source: { data_store_id: stock_ledger }
+    target: { process_id: P3 }
+  F21:
+    name: Counted quantity
+    description: The stock quantity replaced by the counted figure.
+    source: { process_id: P3 }
+    target: { data_store_id: stock_ledger }
+  F22:
+    name: Stocktake difference
+    source: { process_id: P3 }
+    target: { data_store_id: stocktake_records }
+  F23:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P3 }
+
+  # --- Diagram 1 (decomposition of Purchasing) ---
+  F24:
+    name: Stock quantity
+    source: { data_store_id: stock_ledger }
+    target: { process_id: P11 }
+    parent_id: F07
+  F25:
+    name: Supplier
+    source: { data_store_id: supplier_ledger }
+    target: { process_id: P11 }
+    parent_id: F08
+  F26:
+    name: Order
+    source: { process_id: P11 }
+    target: { external_entity_id: supplier }
+    parent_id: F05
+  F27:
+    name: Delivery
+    source: { external_entity_id: supplier }
+    target: { process_id: P12 }
+    parent_id: F06
+  F28:
+    name: Supplier
+    source: { data_store_id: supplier_ledger }
+    target: { process_id: P12 }
+    parent_id: F08
+  F29:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P12 }
+    parent_id: F09
+  F30:
+    name: Delivery lines
+    source: { process_id: P12 }
+    target: { data_store_id: delivery_records }
+    parent_id: F10
+  F31:
+    name: Delivered quantity
+    source: { process_id: P12 }
+    target: { data_store_id: stock_ledger }
+    parent_id: F11
+  F32:
+    name: New book
+    source: { process_id: P13 }
+    target: { data_store_id: book_ledger }
+    parent_id: F12
+  F33:
+    name: New supplier
+    source: { process_id: P14 }
+    target: { data_store_id: supplier_ledger }
+    parent_id: F13
+
+  # --- Diagram 2 (decomposition of Sales) ---
+  F34:
+    name: Purchase
+    source: { external_entity_id: customer }
+    target: { process_id: P21 }
+    parent_id: F14
+  F35:
+    name: Receipt
+    source: { process_id: P21 }
+    target: { external_entity_id: customer }
+    parent_id: F15
+  F36:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P21 }
+    parent_id: F16
+  F37:
+    name: Completed sale
+    description: The books and quantities paid for. Stays inside diagram 2, so it has no higher-level flow.
+    source: { process_id: P21 }
+    target: { process_id: P22 }
+  F38:
+    name: Sale lines
+    source: { process_id: P22 }
+    target: { data_store_id: sales_records }
+    parent_id: F17
+  F39:
+    name: Sold quantity
+    source: { process_id: P22 }
+    target: { data_store_id: stock_ledger }
+    parent_id: F18
+  F40:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P22 }
+    parent_id: F16
+  F41:
+    name: Pending sale
+    source: { data_store_id: sales_records }
+    target: { process_id: P23 }
+    parent_id: F19
+  F42:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P23 }
+    parent_id: F16
+  F43:
+    name: Confirmed sale lines
+    source: { process_id: P23 }
+    target: { data_store_id: sales_records }
+    parent_id: F17
+  F44:
+    name: Sold quantity
+    source: { process_id: P23 }
+    target: { data_store_id: stock_ledger }
+    parent_id: F18
+
+  # --- Diagram 3 (decomposition of Inventory control) ---
+  F45:
+    name: Stock quantity
+    source: { data_store_id: stock_ledger }
+    target: { process_id: P31 }
+    parent_id: F20
+  F46:
+    name: Counted quantity
+    source: { process_id: P31 }
+    target: { data_store_id: stock_ledger }
+    parent_id: F21
+  F47:
+    name: Stocktake difference
+    source: { process_id: P31 }
+    target: { data_store_id: stocktake_records }
+    parent_id: F22
+  F48:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P31 }
+    parent_id: F23
+  F49:
+    name: Stock quantity
+    source: { data_store_id: stock_ledger }
+    target: { process_id: P32 }
+    parent_id: F20
+  F50:
+    name: Book details
+    source: { data_store_id: book_ledger }
+    target: { process_id: P32 }
+    parent_id: F23

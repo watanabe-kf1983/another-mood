@@ -1,0 +1,187 @@
+# The order is the order of listing: functional requirements in use case order
+# (the business chronology), followed by external interface / quality / design
+# constraint. IDs are a running number that does not encode the kind and does
+# not match the listing order (R21, added later, sits with its use case UC07).
+requirements:
+  # --- Functional (per use case) --------------------------------------------
+  R01:
+    title: ISBN format check
+    kind: functional
+    statement: The system shall accept a book registration only when the ISBN entered has 13 digits and a correct check digit.
+    rationale: A book registered under a wrong ISBN cannot be matched against delivery or sales notifications.
+    fit_criterion: Entering a 13-digit value with a wrong check digit, or a 10-digit value, is rejected; a correct 13-digit value is accepted.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC01
+  R02:
+    title: No duplicate ISBN registration
+    kind: functional
+    statement: The system shall not register a second book under an ISBN that is already registered.
+    rationale: Two stock records for the same book split the stock quantity and corrupt inquiries and stocktakes.
+    fit_criterion: Entering a registered ISBN shows the registered book and abandons the registration.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC01
+  R03:
+    title: Supplier registration with name and contact details
+    kind: functional
+    statement: The system shall register a supplier by name and contact details and make it selectable as the source of a delivery.
+    fit_criterion: A registered supplier appears in the list of delivery sources, and selecting it records that supplier on the delivery.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC02
+  R04:
+    title: Stock addition on delivery
+    kind: functional
+    statement: The system shall add the delivered quantity to the stock quantity of each book on the lines when a delivery is confirmed.
+    rationale: If stock does not reflect a delivery immediately, the results of stock inquiries cannot be trusted.
+    fit_criterion: A stock inquiry right after confirming a delivery shows, for each book on the lines, the stock quantity before confirmation plus the delivered quantity.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC03
+  R05:
+    title: Rejection of unregistered books on delivery
+    kind: functional
+    statement: The system shall not add an unregistered ISBN to the lines of a delivery.
+    rationale: Accepting an unregistered book on a delivery creates stock with neither title nor publisher.
+    fit_criterion: Specifying an unregistered ISBN adds no line, and a prompt to register the book first is shown.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC03
+  R06:
+    title: Stock deduction on sales notification
+    kind: functional
+    statement: The system shall deduct the sold quantity from the stock quantity of each notified book when it receives a sales notification from the payment service.
+    rationale: Spares the clerk from reducing stock after every sale, and keeps stock in step with actual sales.
+    fit_criterion: A stock inquiry right after a sales notification shows, for each notified book, the stock quantity before the notification minus the sold quantity.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC04
+  R07:
+    title: Pending sales for unregistered books
+    kind: functional
+    statement: The system shall record a sale as pending and ask a clerk to review the books when the sales notification includes an unregistered ISBN.
+    rationale: Discarding the notification leaves the sale out of stock; rejecting it stalls processing on the payment service's side.
+    fit_criterion: Sending a notification with an unregistered ISBN is acknowledged, and the sale appears as pending in the clerk's review queue.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC04
+  R08:
+    title: Alert on sales exceeding stock
+    kind: functional
+    statement: The system shall, when a sale exceeds the stock quantity of a book, deduct the quantity anyway and flag the book to the clerk as needing attention.
+    rationale: It is a sign that the stock quantity disagrees with the actual quantity, and left alone it would go unnoticed until the next stocktake.
+    fit_criterion: Notifying a sale of quantity 2 for a book with stock quantity 1 leaves the stock quantity at -1 and shows the book to the clerk as needing attention.
+    priority: important
+    verification_method: test
+    use_case_id: UC04
+  R21:
+    title: Stock posting on pending sale review
+    kind: functional
+    statement: The system shall, when a clerk has matched every line of a pending sale to a registered book and confirms the review, deduct the sold quantity from the stock quantity of each matched book and mark the sale as confirmed.
+    rationale: A sale acknowledged as pending has not been posted to stock. As long as unposted sales remain, stock keeps drifting away from the actual quantity.
+    fit_criterion: For a sale pending because of an unregistered ISBN, registering the book and confirming the review reduces the book's stock quantity by the sold quantity and shows the sale as confirmed in the stock movement history.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC07
+  R09:
+    title: Stock reset on stocktake
+    kind: functional
+    statement: The system shall replace the stock quantity of each book with the counted quantity entered when a stocktake is confirmed.
+    fit_criterion: A stock inquiry right after confirming a stocktake shows, for each book, the counted quantity entered in the stocktake.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC05
+  R10:
+    title: Recording of stocktake differences
+    kind: functional
+    statement: The system shall save the difference between the baseline stock quantity and the counted quantity of each book as the stocktake record when a stocktake is confirmed.
+    rationale: Investigating the cause of a difference later (loss, an unposted sale, an input error) needs the value before the reset.
+    fit_criterion: After a stocktake is confirmed, its record shows the baseline stock quantity, the counted quantity and the difference for each book.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC05
+  R11:
+    title: No stock movement during a stocktake
+    kind: functional
+    statement: The system shall not accept changes to stock quantities through delivery registration, sales posting or pending sale review between the start and the confirmation of a stocktake.
+    rationale: If stock moves during a stocktake, a difference between baseline and count cannot be told apart from a business posting.
+    fit_criterion: Confirming a delivery, notifying a sale and confirming a pending sale review during a stocktake are all refused, and accepted once the stocktake is confirmed.
+    priority: important
+    verification_method: test
+    use_case_id: UC05
+  R12:
+    title: Book search by title and ISBN
+    kind: functional
+    statement: The system shall search for books by partial title match or exact ISBN match and list the matching books with their current stock quantities.
+    fit_criterion: Entering part of a title lists every book whose title contains it; entering an ISBN lists only that book.
+    priority: mandatory
+    verification_method: test
+    use_case_id: UC06
+  R13:
+    title: Display of stock movement history
+    kind: functional
+    statement: The system shall show, per book, the stock movements caused by deliveries, sales and stocktakes in chronological order.
+    rationale: Lets a clerk trace when and by which business a stock quantity moved when it does not add up.
+    fit_criterion: The history of a book that went through one delivery, one sale and one stocktake shows the three movements in chronological order, each with its kind of business and quantity.
+    priority: important
+    verification_method: test
+    use_case_id: UC06
+  # --- External interface ---------------------------------------------------
+  R14:
+    title: Acceptance of sales notifications from the payment service
+    kind: external_interface
+    statement: The system shall accept the notification the payment service sends for each sale, consisting of book (ISBN) and quantity pairs, and return an acknowledgement.
+    rationale: Sales enter the system through the payment service's notifications only; there is no manual entry by clerks.
+    fit_criterion: A notification in the format agreed with the payment service receives an acknowledgement; a malformed one receives a response other than an acknowledgement.
+    priority: mandatory
+    verification_method: test
+  R15:
+    title: Use from browsers on in-store devices
+    kind: external_interface
+    statement: The system shall be usable from the browsers of the PCs and tablets in the store without installing additional software.
+    rationale: Clerks move between the tablets on the shop floor and the PC in the back office, and per-device installation would be a burden.
+    fit_criterion: The main scenario of every use case can be completed in the standard browser of the PCs and tablets used in the store.
+    priority: mandatory
+    verification_method: demonstration
+  # --- Quality --------------------------------------------------------------
+  R16:
+    title: Response time of stock inquiries
+    kind: quality
+    statement: The system shall show the results of a stock inquiry within 2 seconds.
+    rationale: So that stock can be answered at the counter without keeping the customer waiting.
+    fit_criterion: With 10,000 books registered, the results of a partial title search appear within 2 seconds.
+    priority: important
+    verification_method: test
+  R17:
+    title: Concurrent use by several clerks
+    kind: quality
+    statement: The system shall let 5 clerks complete every use case while using it at the same time.
+    fit_criterion: Delivery registration and stock inquiry performed at the same time from 5 devices all complete, and the stock quantities remain consistent.
+    priority: important
+    verification_method: test
+  R18:
+    title: Preservation of stock movement records
+    kind: quality
+    statement: The system shall keep the records of deliveries, sales and stocktakes for one year from recording, in a form that users cannot delete or alter.
+    rationale: Investigating stock discrepancies and explaining stocktake results need the past records as they were.
+    fit_criterion: No operation to delete or alter a record is offered to users, and records less than one year old appear in the stock movement history.
+    priority: mandatory
+    verification_method: inspection
+  # --- Design constraint ----------------------------------------------------
+  R19:
+    title: Self-contained web application
+    kind: design_constraint
+    statement: The system shall be implemented as a web application that runs on its own within the store, and shall depend on no external service other than the payment service.
+    rationale: So that stock inquiries and delivery registration can continue when the store's connection fails.
+    fit_criterion: With the route to the payment service cut off, the main scenario of every use case other than sales posting can be completed.
+    priority: mandatory
+    verification_method: demonstration
+  R20:
+    title: ISBN as the identifier of a book
+    kind: design_constraint
+    statement: The system shall identify books by ISBN and shall not expose a book number of its own to users.
+    rationale: Suppliers and the payment service both refer to books by ISBN, so a separate number would need a mapping table.
+    fit_criterion: The only number that refers to a book on screens and in exchanges with the payment service is the ISBN.
+    priority: mandatory
+    verification_method: inspection

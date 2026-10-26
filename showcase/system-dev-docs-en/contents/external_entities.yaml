@@ -1,0 +1,13 @@
+# The external entities of the business model (the parties outside the boundary
+# of the business). Their boundary differs from that of the system's actors
+# (clerk / owner / payment service): the clerk and the owner are inside the
+# business and carry out its processes, and the payment service is a tool of
+# the checkout, not a party the business deals with.
+# IDs are the display names in snake case.
+external_entities:
+  customer:
+    name: Customer
+    description: A person who buys books at the counter.
+  supplier:
+    name: Supplier
+    description: A wholesaler or publisher that takes orders and delivers books.

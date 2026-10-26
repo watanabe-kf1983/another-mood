@@ -1,0 +1,14 @@
+# An intermediate view for looking up the use cases an actor is involved in.
+# A join's `on` cannot reach into a nested list (use_cases.actors[]), so a view
+# flattened to one row per (use case, actor) is put in between first. It is
+# drawn nowhere, so it sits outside the document trees.
+use_case_actors:
+  from: use_cases
+  flatten:
+    of: actors
+    as: actor
+  select:
+    - item: id
+    - item: name
+    - item: summary
+    - item: actor

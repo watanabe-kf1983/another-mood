@@ -1,0 +1,84 @@
+# The order is the reverse direction of dependency (the called side first).
+# Books and Stock are the foundation, and Receiving, Sales and Stocktaking sit
+# on top of them. IDs are a running number (C = component).
+#
+# Components are cut along units of business work, which amounts to a
+# subsystem split. Stock alone is not a business unit but a cross-cutting part
+# carved out as the single path that moves stock quantities (D07).
+# design_decisions records which component takes a decision on; a decision
+# spanning two components is placed on both (D05 is on Stocktaking, which
+# switches the state, and on Stock, which checks it and refuses), and
+# system-wide decisions (D06, D08) are placed on none.
+components:
+  C01:
+    name: Books
+    responsibility: Registers and looks up books. The other components call it to look a book up by ISBN, and the check for unregistered ISBNs is confined here. The identifier of a book is the ISBN; there is no number of the system's own.
+    use_cases:
+      - id: UC01
+    entities:
+      - id: book
+    design_decisions:
+      - id: D03
+  C02:
+    name: Stock
+    responsibility: The single path that moves stock quantities. Receiving, Sales and Stocktaking update stock quantities only through it (addition and subtraction by deliveries and sales, replacement by the counted quantity at a stocktake), and it refuses addition and subtraction while the stocktake status is in progress. It also answers stock inquiries and shows the movement history of a book, reading the records of deliveries, sales and stocktakes and their lines without writing them.
+    dependencies:
+      - id: C01
+    use_cases:
+      - id: UC06
+    entities:
+      - id: book
+      - id: delivery
+      - id: delivery_line
+      - id: sale
+      - id: sale_line
+      - id: stocktake
+      - id: stocktake_line
+    design_decisions:
+      - id: D01
+      - id: D05
+      - id: D07
+  C03:
+    name: Receiving
+    responsibility: Registers suppliers, records deliveries from suppliers with their lines, and adds to stock quantities on confirmation. There is no alteration or deletion after confirmation.
+    dependencies:
+      - id: C01
+      - id: C02
+    use_cases:
+      - id: UC02
+      - id: UC03
+    entities:
+      - id: delivery
+      - id: delivery_line
+      - id: supplier
+    design_decisions:
+      - id: D02
+  C04:
+    name: Sales
+    responsibility: Accepts sales notifications from the payment service, records the sales and deducts from stock quantities. Notifications that include unregistered books are kept as pending and matched to registered books through a clerk's review.
+    dependencies:
+      - id: C01
+      - id: C02
+    use_cases:
+      - id: UC04
+      - id: UC07
+    entities:
+      - id: sale
+      - id: sale_line
+    design_decisions:
+      - id: D02
+      - id: D04
+  C05:
+    name: Stocktaking
+    responsibility: Records a stocktake from start to confirmation, and replaces stock quantities with the counted quantities on confirmation. Starting and confirming switch the status of the stocktake (in progress / confirmed), and Stock checks it to refuse addition and subtraction.
+    dependencies:
+      - id: C01
+      - id: C02
+    use_cases:
+      - id: UC05
+    entities:
+      - id: stocktake
+      - id: stocktake_line
+    design_decisions:
+      - id: D02
+      - id: D05

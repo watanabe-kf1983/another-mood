@@ -1,0 +1,1 @@
+The [clerk](node:/srs/introduction/users_and_external_systems/clerk) and the [owner](node:/srs/introduction/users_and_external_systems/owner) are inside the business and carry out its processes, and the [payment service](node:/srs/introduction/users_and_external_systems/payment_service) is a tool of the checkout, not a party the business deals with.

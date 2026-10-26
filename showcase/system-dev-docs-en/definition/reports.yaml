@@ -1,0 +1,34 @@
+# Two editions of the same data, differing only in `file_per` (which nodes
+# get a page of their own). Pages are cut along document → chapter → row.
+#
+#   web  — browse online: each document and each of its chapters gets a
+#          page, and so does each row with a detail of its own (a use-case
+#          description, a non-functional requirement kind, a decomposition
+#          diagram, an entity definition, a screen definition). Sections
+#          inside a chapter stay on the chapter page.
+#   book — read as bound documents: each document is one page, with its
+#          chapters inlined.
+editions:
+  web:
+    file_per:
+      - srs
+      - srs.introduction
+      - srs.glossary.item[]
+      - srs.requirements
+      - srs.requirements.functional.item
+      - srs.requirements.non_functional.item
+      - srs.verification
+      - srs.appendices
+      - srs.appendices.business_model.item
+      - sdd
+      - sdd.introduction
+      - sdd.system_context.item[]
+      - sdd.architecture
+      - sdd.data_design
+      - sdd.data_design.logical_data_model.item
+      - sdd.user_interface_design.item[]
+      - sdd.user_interface_design.item
+  book:
+    file_per:
+      - srs
+      - sdd
