@@ -1,647 +1,645 @@
-# 各 description の末尾に、英語版で用いる識別子を「英名: xxx」の形で付記する。
-# enum を持つプロパティは、値の並び順どおりに「英名: kind (a / b / c)」と列挙する。
+# References (x-ref) point one way only: downstream (the sources of the SDD)
+# → upstream (the sources of the SRS). The upstream definitions are closed
+# without knowing the downstream ones, so that the requirements data is not
+# dragged along by design changes even when the design side is written by
+# someone else, or by an AI, on its own.
 #
-# 参照 (x-ref) の向きは「下流 (設計書のソース) → 上流 (要求仕様書のソース)」のみ。
-# 上流の定義は下流を知らずに閉じる。設計側だけを別の担当者や AI が書く運用でも、
-# 要求側のデータが設計の変更に引きずられないようにするため。
-#
-# 説明系の属性 (概要 / 記述 / 理由 / 条件 / 操作 / 応答 等) はすべて plain text。
-# テンプレートは値の Markdown 記号をエスケープして出すので、値の中の Markdown は
-# 効かない。段落や箇条書きを要する説明は prose レコード (contents/*.md) に置く。
+# Descriptive attributes (summary / statement / rationale / condition / action /
+# response and so on) are all plain text. The templates escape Markdown
+# characters in values, so Markdown inside a value has no effect. Explanations
+# that need paragraphs or lists go in prose records (contents/*.md).
 type: object
 additionalProperties: false
 properties:
   # ===========================================================================
-  # 横断: 二文書が対象とするシステム (単一レコード)
+  # Cross-cutting: the system the two documents are about (a single record)
   # ===========================================================================
 
-  システム:
+  system:
     type: object
-    description: "二文書が対象とするシステム 1 件。名前と一文の説明だけを持ち、二文書の冒頭とコンテキスト図の境界のラベルがここを参照する。テンプレートに題材の名前を書かないための置き場で、どの層にも属さない。英名: system"
+    description: "The one system the two documents describe. It holds only a name and a one-sentence description; the opening line of each document and the boundary label of the context diagram refer to it. It exists so that the templates never spell out the subject's name, and it belongs to no layer."
     additionalProperties: false
     properties:
-      名前:
+      name:
         type: string
-        description: "システムの名前 (例: 在庫管理システム)。コンテキスト図の境界のラベルに使う。英名: name"
-      説明:
+        description: "Name of the system (e.g. Inventory Management System). Used as the boundary label of the context diagram."
+      description:
         type: string
-        description: "対象と役割を含めた一文の名乗り (例: 小規模書店向けの在庫管理システム)。二文書の冒頭の一文に使う。英名: description"
-    required: [名前, 説明]
+        description: "A one-sentence introduction that names the subject and the role (e.g. an inventory management system for a small bookstore). Used in the opening sentence of each document."
+    required: [name, description]
 
   # ===========================================================================
-  # 業務: 要求仕様書の付録 (業務モデル = 階層 DFD) のソース。上流のさらに上に
-  # あり、他のどの層も知らない (参照はすべて上流 / 下流からこの層へ向く)
+  # Business: the source of the SRS appendix (business model = levelled DFD).
+  # It sits above upstream and knows no other layer (every reference points
+  # from upstream / downstream into this layer).
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # プロセス – データストア – 外部エンティティ – フロー
+  # processes – data_stores – external_entities – flows
   # ---------------------------------------------------------------------------
 
-  プロセス:
+  processes:
     type: object
-    description: "業務モデル (階層 DFD) のプロセスの集合。構造化分析 (DeMarco / Yourdon) のレベル分割に従い、親 を持たないプロセスが業務全体 (コンテキスト図の唯一のプロセス)、子を持たないプロセスが葉 (それ以上分解しない業務の単位)。番号 (1、1.2 など) は持たず、親子関係と記述順から文書化時に付く。マップのキーがプロセス ID。英名: processes"
+    description: "The processes of the business model (a levelled DFD). Following the levelling of structured analysis (DeMarco / Yourdon), the process without a parent_id is the business as a whole (the only process of the context diagram) and processes without children are leaves (units of work that are not decomposed further). Processes carry no numbers (1, 1.2, ...); numbers are assigned at documentation time from the parent-child relation and the order of description. The map key is the process ID."
     additionalProperties:
       type: object
-      description: "1 つのプロセスを表すレコード。英名: process"
+      description: "A record describing one process."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名。葉は動詞で終える (例: 入荷を登録する)、分解されるプロセスは業務の名前 (例: 仕入)。英名: name"
-        説明:
+          description: "Display name used in the documents. Leaves end in a verb phrase (e.g. Record deliveries); decomposed processes carry the name of the business area (e.g. Purchasing)."
+        description:
           type: string
-          description: "そのプロセスが業務として何をするかを 1〜2 文で説明する。英名: description"
-        親:
+          description: "One or two sentences on what the process does as business work."
+        parent_id:
           type: string
-          description: "このプロセスを分解して得た上位プロセスの ID。業務全体を表す唯一のプロセスだけが省略する。英名: parent_id"
+          description: "ID of the higher-level process whose decomposition produced this one. Omitted only by the single process that stands for the business as a whole."
           x-ref:
-            entity: プロセス
-      required: [名前, 説明]
+            entity: processes
+      required: [name, description]
 
-  データストア:
+  data_stores:
     type: object
-    description: "業務モデルのデータストア (業務が読み書きする台帳・記録) の集合。構造化分析の data store に対応し、設計書の論理データモデルのエンティティはこれを実装する。マップのキーがデータストア ID。英名: data_stores"
+    description: "The data stores of the business model (the ledgers and records the business reads and writes). They correspond to the data stores of structured analysis, and the entities of the SDD's logical data model implement them. The map key is the data store ID."
     additionalProperties:
       type: object
-      description: "1 つのデータストアを表すレコード。英名: data_store"
+      description: "A record describing one data store."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 書籍台帳)。英名: name"
-        説明:
+          description: "Display name used in the documents (e.g. Book ledger)."
+        description:
           type: string
-          description: "何を記録する台帳かを 1〜2 文で説明する。英名: description"
-      required: [名前, 説明]
+          description: "One or two sentences on what the ledger records."
+      required: [name, description]
 
-  外部エンティティ:
+  external_entities:
     type: object
-    description: "業務の境界の外側で業務とデータをやり取りする相手 (顧客、仕入先など) の集合。構造化分析の terminator、IPA 外部システム関連図の外部システムに対応する。本システムのアクターとは境界が違う (アクターは本システムの境界の外側、外部エンティティは業務の境界の外側) ので、対応は持たない。マップのキーが外部エンティティ ID。英名: external_entities"
+    description: "The parties outside the boundary of the business that exchange data with it (customers, suppliers and so on). They correspond to the terminators of structured analysis. The actors of this system have a different boundary (actors sit outside the system's boundary, external entities outside the business's boundary), so the two are not mapped onto each other. The map key is the external entity ID."
     additionalProperties:
       type: object
-      description: "1 つの外部エンティティを表すレコード。英名: external_entity"
+      description: "A record describing one external entity."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 顧客)。英名: name"
-        説明:
+          description: "Display name used in the documents (e.g. Customer)."
+        description:
           type: string
-          description: "業務とどうデータをやり取りする相手かを 1〜2 文で説明する。英名: description"
-      required: [名前, 説明]
+          description: "One or two sentences on how the party exchanges data with the business."
+      required: [name, description]
 
-  フロー:
+  flows:
     type: object
-    description: "業務モデルのデータフローの集合。フローは各レベルで記録する (葉レベルだけを記録して上位を集約導出する形にはしない): 上位レベルのフローは「納品」のように束ねた名前を持ち、下位レベルのフローは 親 で自分を束ねる上位フローを指す。親プロセスの入出力と子の図の入出力の一致 (バランシング) はこの対応で検査する。マップのキーがフロー ID。英名: flows"
+    description: "The data flows of the business model. Flows are recorded at every level (the higher levels are not derived by aggregating the leaf level): a higher-level flow carries a bundled name such as Delivery, and a lower-level flow names the higher-level flow that bundles it in parent_id. Balancing (the inputs and outputs of a parent process matching those of its child diagram) is checked through this correspondence. The map key is the flow ID."
     additionalProperties:
       type: object
-      description: "1 つのデータフローを表すレコード。英名: flow"
+      description: "A record describing one data flow."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "流れるデータの名前 (例: 納品、在庫数)。図の線のラベルになる。英名: name"
-        説明:
+          description: "Name of the data that flows (e.g. Delivery, Stock quantity). It becomes the label of the line in the diagram."
+        description:
           type: string
-          description: "流れるデータの内容を補足する。名前で足りれば省略する。英名: description"
-        元:
+          description: "Supplements the name with what the data contains. Omitted when the name is enough."
+        source:
           type: object
-          description: "フローの出所。プロセス / データストア / 外部エンティティ のいずれか 1 つの ID を、そのエンティティ名のキーで持つ。「ちょうど 1 つ」の制約はスキーマで表現できないので、可視化側 (分解図のフロー表) で確かめる。英名: source"
+          description: "Where the flow comes from. Holds exactly one ID of a process / data store / external entity, under the key named after that entity. The 'exactly one' constraint cannot be expressed in the schema, so the visualisation (the flow table of each decomposition diagram) checks it."
           additionalProperties: false
           properties:
-            プロセス:
+            process_id:
               type: string
-              description: "端がプロセスのとき、そのプロセスの ID。英名: process_id"
+              description: "ID of the process, when the end is a process."
               x-ref:
-                entity: プロセス
-            データストア:
+                entity: processes
+            data_store_id:
               type: string
-              description: "端がデータストアのとき、そのデータストアの ID。英名: data_store_id"
+              description: "ID of the data store, when the end is a data store."
               x-ref:
-                entity: データストア
-            外部エンティティ:
+                entity: data_stores
+            external_entity_id:
               type: string
-              description: "端が外部エンティティのとき、その外部エンティティの ID。英名: external_entity_id"
+              description: "ID of the external entity, when the end is an external entity."
               x-ref:
-                entity: 外部エンティティ
-        先:
+                entity: external_entities
+        target:
           type: object
-          description: "フローの行き先。プロセス / データストア / 外部エンティティ のいずれか 1 つの ID を、そのエンティティ名のキーで持つ。「ちょうど 1 つ」の制約はスキーマで表現できないので、可視化側 (分解図のフロー表) で確かめる。英名: target"
+          description: "Where the flow goes. Holds exactly one ID of a process / data store / external entity, under the key named after that entity. The 'exactly one' constraint cannot be expressed in the schema, so the visualisation (the flow table of each decomposition diagram) checks it."
           additionalProperties: false
           properties:
-            プロセス:
+            process_id:
               type: string
-              description: "端がプロセスのとき、そのプロセスの ID。英名: process_id"
+              description: "ID of the process, when the end is a process."
               x-ref:
-                entity: プロセス
-            データストア:
+                entity: processes
+            data_store_id:
               type: string
-              description: "端がデータストアのとき、そのデータストアの ID。英名: data_store_id"
+              description: "ID of the data store, when the end is a data store."
               x-ref:
-                entity: データストア
-            外部エンティティ:
+                entity: data_stores
+            external_entity_id:
               type: string
-              description: "端が外部エンティティのとき、その外部エンティティの ID。英名: external_entity_id"
+              description: "ID of the external entity, when the end is an external entity."
               x-ref:
-                entity: 外部エンティティ
-        親:
+                entity: external_entities
+        parent_id:
           type: string
-          description: "このフローを束ねる上位レベルのフローの ID。分解図の境界を跨ぐフロー (元と先の一方だけが図の中にあるフロー) が、親プロセスの入出力として上位の図に描かれているフローを指す。図の中で閉じるフローと、コンテキスト図のフローは省略する。英名: parent_id"
+          description: "ID of the higher-level flow that bundles this one. A flow that crosses the boundary of a decomposition diagram (only one of its ends lies inside the diagram) names the flow drawn in the parent diagram as an input or output of the parent process. Flows that stay inside a diagram, and the flows of the context diagram, omit it."
           x-ref:
-            entity: フロー
-      required: [名前, 元, 先]
+            entity: flows
+      required: [name, source, target]
 
   # ===========================================================================
-  # 上流: 要求仕様書のソース
+  # Upstream: the sources of the SRS
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # 要求 – ユースケース – アクター – 用語
+  # requirements – use_cases – actors – terms
   # ---------------------------------------------------------------------------
 
-  要求:
+  requirements:
     type: object
-    description: "システムに対する要求レコードの集合。属性は ISO/IEC/IEEE 29148:2018 5.2.8 の要求属性 (識別、優先度、根拠、検証方法) と Volere の atomic requirement (fit criterion) を元に絞り込んだもの。マップのキーが要求 ID。英名: requirements"
+    description: "The requirement records placed on the system. The attributes are a reduced set of the requirement attributes of ISO/IEC/IEEE 29148:2018 5.2.8 (identification, priority, rationale, verification method) and the atomic requirement of Volere (fit criterion). The map key is the requirement ID."
     additionalProperties:
       type: object
-      description: "1 つの要求を表すレコード。英名: requirement"
+      description: "A record describing one requirement."
       additionalProperties: false
       properties:
-        題名:
+        title:
           type: string
-          description: "要求を一覧や参照で一行で指すための見出し (例: 入荷時の在庫加算)。検証の章や設計判断の根拠要求では ID と題名で要求を指す。英名: title"
-        種別:
+          description: "A one-line heading by which lists and references name the requirement (e.g. Stock addition on delivery). The verification chapter and the basis requirements of design decisions name a requirement by ID and title."
+        kind:
           type: string
-          description: "要求の区分。29148 の SRS 例示アウトライン 3 章の節構成 (機能 / インタフェース / 品質・性能・ユーザビリティ / 設計制約) を 4 区分に畳んだもの。要求仕様書の 3 章と 4 章 (検証) はこの区分で節を分ける。英名: kind (functional / external_interface / quality / design_constraint)"
-          enum: [機能, 外部インタフェース, 品質, 設計制約]
-        記述:
+          description: "Category of the requirement. The sections of chapter 3 of the example SRS outline in 29148 (functional / interface / quality, performance and usability / design constraints) folded into four categories. Chapters 3 and 4 (verification) of the SRS split their sections by this category."
+          enum: [functional, external_interface, quality, design_constraint]
+        statement:
           type: string
-          description: "要求文 (例: システムは入荷登録時に在庫数を加算しなければならない)。英名: statement"
-        理由:
+          description: "The requirement sentence (e.g. The system shall add the delivered quantity to the stock quantity when a delivery is confirmed)."
+        rationale:
           type: string
-          description: "この要求が必要な理由 (29148 5.2.8 の rationale、Volere の rationale)。英名: rationale"
-        適合基準:
+          description: "Why the requirement is needed (the rationale of 29148 5.2.8 and of Volere)."
+        fit_criterion:
           type: string
-          description: "要求が満たされたと判定できる測定可能な条件 (Volere の fit criterion)。要求は検証可能でなければならないので必須とし、4 章 (検証) の検証内容の元になる。英名: fit_criterion"
-        優先度:
+          description: "A measurable condition by which the requirement can be judged satisfied (the fit criterion of Volere). Requirements must be verifiable, so it is mandatory, and it is the source of the verification detail in chapter 4 (verification)."
+        priority:
           type: string
-          description: "要求の優先度 (29148 5.2.8 の priority)。英名: priority (mandatory / important / optional)"
-          enum: [必須, 重要, 任意]
-        検証方法:
+          description: "Priority of the requirement (the priority of 29148 5.2.8)."
+          enum: [mandatory, important, optional]
+        verification_method:
           type: string
-          description: "要求の検証方法 (29148 5.2.8 の verification method)。検査 (inspection) / 分析 (analysis) / デモンストレーション (demonstration) / 試験 (test) の標準的な 4 分類。英名: verification_method (inspection / analysis / demonstration / test)"
-          enum: [検査, 分析, デモンストレーション, 試験]
-        ユースケース:
+          description: "How the requirement is verified (the verification method of 29148 5.2.8). The standard four: inspection / analysis / demonstration / test."
+          enum: [inspection, analysis, demonstration, test]
+        use_case_id:
           type: string
-          description: "機能要求が属するユースケースの ID。機能要求は必ず 1 つのユースケースに属し、その記述の直後に掲載される。機能要求以外では省略する。英名: use_case_id"
+          description: "ID of the use case a functional requirement belongs to. Every functional requirement belongs to exactly one use case and is listed right after its description. Omitted for all other kinds."
           x-ref:
-            entity: ユースケース
-      required: [題名, 種別, 記述, 適合基準, 優先度, 検証方法]
+            entity: use_cases
+      required: [title, kind, statement, fit_criterion, priority, verification_method]
 
-  ユースケース:
+  use_cases:
     type: object
-    description: "システムが提供する業務単位の機能の集合。項目は IPA 機能要件の合意形成ガイドの「システム化業務説明」(入出力データ / 基本・例外シナリオ / 事前・事後条件) を元に、ユースケース記述として再構成したもの。要求仕様書の機能要求の単位であり、設計書の CRUD マトリクスの行にもなる。記述順は業務の流れの順に置く (文書はユースケースをこの順に並べ、そう断る)。マップのキーがユースケース ID。英名: use_cases"
+    description: "The functions the system provides, one per unit of business work. The items are a use-case description reorganised from the 'system business description' of the IPA guide to agreeing functional requirements (input and output data / main and exception scenarios / pre- and postconditions). A use case is the unit of the SRS's functional requirements and also a row of the SDD's CRUD matrix. Records are described in the order of the business flow (the documents list use cases in this order and say so). The map key is the use case ID."
     additionalProperties:
       type: object
-      description: "1 つのユースケースを表すレコード。英名: use_case"
+      description: "A record describing one use case."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 入荷登録)。英名: name"
-        概要:
+          description: "Display name used in the documents (e.g. Delivery registration)."
+        summary:
           type: string
-          description: "ユースケースの目的と結果を 1〜2 文で説明する。英名: summary"
-        アクター:
+          description: "One or two sentences on the goal and outcome of the use case."
+        actors:
           type: array
-          description: "このユースケースの主アクター (目標を持ってユースケースを開始する役割) の一覧。同じ目標を複数の役割が持つときは複数になる。シナリオの操作はすべて主アクターのもの。副アクター (システムがユースケースの途中でサービスを借りる相手。決済代行など) は本 showcase には登場せず、要る場合は別の属性として足し、そのやり取りはシナリオの応答の文中に書く。英名: actors"
+          description: "The primary actors of the use case (the roles that start it with a goal in mind). Several when several roles share the goal. Every action in the scenarios belongs to a primary actor. Secondary actors (parties whose services the system borrows during the use case, such as a payment processor) do not appear in this showcase; if needed, add them as a separate attribute and describe the exchange in the response text of the scenario."
           items:
             type: object
-            description: "ユースケースとアクターの対応 1 件。英名: actor"
+            description: "One use case – actor pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "アクターの ID。英名: id"
+                description: "ID of the actor."
                 x-ref:
-                  entity: アクター
-            required: [ID]
-        事前条件:
+                  entity: actors
+            required: [id]
+        precondition:
           type: string
-          description: "ユースケース開始時に成り立っているべき条件。英名: precondition"
-        事後条件:
+          description: "What must hold when the use case starts."
+        postcondition:
           type: string
-          description: "ユースケース正常終了時に成り立つ条件。英名: postcondition"
-        基本シナリオ:
+          description: "What holds when the use case ends normally."
+        main_scenario:
           type: array
-          description: "正常系の手順。主アクターの操作とシステムの応答の対を時系列に並べたもので、番号は文書化時に付く。英名: main_scenario"
+          description: "The steps of the normal course: pairs of a primary actor's action and the system's response in chronological order. Step numbers are assigned at documentation time."
           items:
             type: object
-            description: "1 つのステップ。英名: step"
+            description: "One step."
             additionalProperties: false
             properties:
-              操作:
+              action:
                 type: string
-                description: "主アクターの操作。主語 (主アクター) は書かない (例: 仕入先を選ぶ)。英名: action"
-              応答:
+                description: "The primary actor's action, written without its subject (e.g. Selects a supplier)."
+              response:
                 type: string
-                description: "操作に対するシステムの応答。副アクターとのやり取りもここに書く (例: 決済代行に承認を依頼し、結果を受け取る)。英名: response"
-              例外:
+                description: "The system's response to the action. Exchanges with secondary actors are also written here (e.g. Requests authorisation from the payment processor and receives the result)."
+              exceptions:
                 type: array
-                description: "このステップで起こりうる例外の一覧。ステップの子として持つので、ステップ番号での参照は要らない。英名: exceptions"
+                description: "The exceptions that can occur at this step. Held as children of the step, so no reference by step number is needed."
                 items:
                   type: object
-                  description: "1 つの例外。英名: exception"
+                  description: "One exception."
                   additionalProperties: false
                   properties:
-                    条件:
+                    condition:
                       type: string
-                      description: "例外が起きる条件 (例: ISBN が未登録である)。英名: condition"
-                    応答:
+                      description: "The condition under which the exception occurs (e.g. The ISBN is not registered)."
+                    response:
                       type: string
-                      description: "その条件でのシステムの応答 (例: 登録を拒否し、先に書籍登録を促す)。英名: response"
-                  required: [条件, 応答]
-            required: [操作, 応答]
-        業務プロセス:
+                      description: "The system's response under that condition (e.g. Rejects the registration and prompts for book registration first)."
+                  required: [condition, response]
+            required: [action, response]
+        business_processes:
           type: array
-          description: "このユースケースが支える業務プロセス (業務モデルの葉プロセス) の一覧。要求仕様書 1 章のシステム化範囲はここから導く: 葉プロセスのうち、いずれかのユースケースに支えられるものが本システムの範囲で、どのユースケースにも支えられないものは手作業のまま残る。1 つのユースケースが複数の葉を支えることも、1 つの葉を複数のユースケースが支えることもあるので配列で持つ。英名: business_processes"
+          description: "The business processes (leaf processes of the business model) this use case supports. Chapter 1 of the SRS derives the scope of the system from this: a leaf process supported by at least one use case is within scope, and a leaf supported by none stays manual. One use case may support several leaves and one leaf may be supported by several use cases, hence an array."
           items:
             type: object
-            description: "ユースケースと業務プロセスの対応 1 件。英名: business_process"
+            description: "One use case – business process pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "プロセスの ID。分解されていない (葉の) プロセスを指す。英名: id"
+                description: "ID of the process. Names a process that is not decomposed (a leaf)."
                 x-ref:
-                  entity: プロセス
-            required: [ID]
-      required: [名前, 概要, アクター, 基本シナリオ]
+                  entity: processes
+            required: [id]
+      required: [name, summary, actors, main_scenario]
 
-  アクター:
+  actors:
     type: object
-    description: "システム境界の外側でシステムと相互作用する役割 (人の役割または外部システム) の集合。ユースケース記述のアクターに対応する。プロジェクト管理上のステークホルダ (利害を持つが相互作用しない者を含む) とは別の概念で、本 showcase では扱わない。マップのキーがアクター ID。英名: actors"
+    description: "The roles outside the system boundary that interact with the system (a human role or an external system). They correspond to the actors of use-case descriptions. Stakeholders in the project-management sense (which include parties with an interest but no interaction) are a different concept and are not covered by this showcase. The map key is the actor ID."
     additionalProperties:
       type: object
-      description: "1 つのアクターを表すレコード。英名: actor"
+      description: "A record describing one actor."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 店員、決済サービス)。英名: name"
-        説明:
+          description: "Display name used in the documents (e.g. Clerk, Payment service)."
+        description:
           type: string
-          description: "システムとどう関わる役割かを 1〜2 文で説明する。英名: description"
-        種別:
+          description: "One or two sentences on how the role deals with the system."
+        kind:
           type: string
-          description: "アクターの区分。人 (利用者の役割) と 外部システム (連携先の他システム)。英名: kind (person / external_system)"
-          enum: [人, 外部システム]
-      required: [名前, 種別]
+          description: "Category of the actor: person (a role of the users) or external_system (another system the system works with)."
+          enum: [person, external_system]
+      required: [name, kind]
 
-  用語:
+  terms:
     type: object
-    description: "文書中で用いるドメイン用語の辞書 (29148 の Definitions 節、IPA ガイドの共通ルール (用語集) に対応)。要求仕様書の用語集章はここから生成する。マップのキーが用語 ID。英名: terms"
+    description: "The dictionary of domain terms used in the documents (the Definitions section of 29148). The glossary chapter of the SRS is generated from it. The map key is the term ID."
     additionalProperties:
       type: object
-      description: "1 つの用語を表すレコード。英名: term"
+      description: "A record describing one term."
       additionalProperties: false
       properties:
-        用語:
+        term:
           type: string
-          description: "用語の表記。英名: term"
-        読み:
+          description: "The term as written."
+        definition:
           type: string
-          description: "表記のひらがな読み (例: しょせき)。用語集を五十音順に並べるためのソートキーで、漢字表記からは並べられないため持つ。英名: reading"
-        定義:
-          type: string
-          description: "用語の定義文。英名: definition"
-      required: [用語, 定義]
+          description: "The definition of the term."
+      required: [term, definition]
 
   # ===========================================================================
-  # 下流: 設計書のソース (上流を参照する。逆方向の参照は持たない)
+  # Downstream: the sources of the SDD (refer to upstream; never the reverse)
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # 画面 – エンティティ – データアクセス – 設計判断 – コンポーネント
+  # screens – entities – data_access – design_decisions – components
   # ---------------------------------------------------------------------------
 
-  画面:
+  screens:
     type: object
-    description: "システムが利用者に提示する画面の集合。項目は IPA ガイド画面編の画面一覧 / 画面入出力項目一覧 / 画面アクション明細 / 画面遷移 / 画面レイアウトを元に絞り込んだもの。設計書の画面設計章 (画面一覧 / 画面遷移図 / 画面定義) のソース。記述順は 分類 が メニュー の画面を先頭に、以降は関連ユースケースの順に置く (画面一覧はこの順に並べ、そう断る)。マップのキーが画面 ID。英名: screens"
+    description: "The screens the system presents to its users. The items are a reduced set of the screen list / screen input-output items / screen action details / screen transitions / screen layout of the IPA guide's screen volume. The source of the SDD's user interface design chapter (screens / screen flow / screen definitions). Records are described with the screens of category menu first and the rest in the order of their related use cases (the screen list keeps this order and says so). The map key is the screen ID."
     additionalProperties:
       type: object
-      description: "1 つの画面を表すレコード。英名: screen"
+      description: "A record describing one screen."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 入荷登録画面)。英名: name"
-        分類:
+          description: "Display name used in the documents (e.g. Delivery registration screen)."
+        category:
           type: string
-          description: "画面の分類。IPA 画面一覧の分類項目に対応。メニュー は他の画面へ進むための入口で、画面遷移図の開始点 ([*]) はこの分類の画面に引く。登録 は入力を受けてデータを作る画面、一覧 は検索して複数件を並べる画面、照会 は 1 件の詳細を表示する画面。英名: category (menu / entry / list / detail)"
-          enum: [メニュー, 登録, 一覧, 照会]
-        説明:
+          description: "Category of the screen, after the category column of the IPA screen list. A menu is an entry point that leads to other screens, and the start of the screen flow diagram ([*]) points at screens of this category. An entry screen takes input and creates data, a list screen searches and lists several records, and a detail screen shows one record in full."
+          enum: [menu, entry, list, detail]
+        description:
           type: string
-          description: "画面の役割を 1〜2 文で説明する。英名: description"
-        画面レイアウト:
+          description: "One or two sentences on the role of the screen."
+        layout:
           type: object
-          description: "画面レイアウト図 (IPA 画面編の画面レイアウトに対応)。他の項目と違い図そのものを外から持ち込む項目で、記述は契約ではなく挿絵 — 何が画面にあるかを定めるのは 入出力項目 と アクション で、図とのずれはビルドでは検出できない。任意。英名: layout"
+          description: "The screen layout drawing (the screen layout of the IPA screen volume). Unlike the other items it brings a drawing in from outside, and it is an illustration, not a contract: what the screen holds is defined by io_items and actions, and a mismatch with the drawing is not detected by the build. Optional."
           additionalProperties: false
           properties:
-            図:
+            figure:
               type: string
-              description: "文書に埋め込む図の blob ID (contents からの相対パス、拡張子を含む)。英名: figure"
+              description: "Blob ID of the drawing embedded in the document (a contents-relative path, extension included)."
               x-ref:
                 entity: blob
-            原本:
+            source:
               type: string
-              description: "図を描いた編集可能ファイルの blob ID。読者が自分の画面に描き直すための元で、文書からリンクする。原本を持たない図もあるので任意。英名: source"
+              description: "Blob ID of the editable file the drawing was made from. The starting point for readers who redraw the screen as their own, linked from the document. Optional, since some drawings have no source."
               x-ref:
                 entity: blob
-          required: [図]
-        ユースケース:
+          required: [figure]
+        use_cases:
           type: array
-          description: "この画面が実現するユースケースの一覧 (IPA 画面一覧の関連業務に対応)。英名: use_cases"
+          description: "The use cases the screen realises (the related work column of the IPA screen list)."
           items:
             type: object
-            description: "画面とユースケースの対応 1 件。英名: use_case"
+            description: "One screen – use case pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "ユースケースの ID。英名: id"
+                description: "ID of the use case."
                 x-ref:
-                  entity: ユースケース
-            required: [ID]
-        入出力項目:
+                  entity: use_cases
+            required: [id]
+        io_items:
           type: array
-          description: "画面上の入出力項目の一覧 (IPA 画面入出力項目一覧に対応)。並び順は文書での掲載順。英名: io_items"
+          description: "The input and output items on the screen (the IPA screen input-output item list). The order is the order of listing in the document."
           items:
             type: object
-            description: "1 つの入出力項目。英名: io_item"
+            description: "One input or output item."
             additionalProperties: false
             properties:
-              名前:
+              name:
                 type: string
-                description: "項目名。画面内で一意。英名: name"
-              入出力:
+                description: "Name of the item. Unique within the screen."
+              direction:
                 type: string
-                description: "項目の方向。英名: direction (input / output / both)"
-                enum: [入力, 出力, 入出力]
-              説明:
+                description: "Direction of the item."
+                enum: [input, output, both]
+              description:
                 type: string
-                description: "項目の意味や書式の補足 (IPA 画面入出力項目一覧の項目説明に対応)。参照先を持たない項目はここで意味を示す。英名: description"
-              参照先:
+                description: "Supplementary notes on the meaning or format of the item (the item description of the IPA list). Items without a ref state their meaning here."
+              ref:
                 type: object
-                description: "項目が対応するデータモデル上の属性 (IPA 画面入出力項目一覧の参照先エンティティ・属性に対応)。画面にしか無い項目や複数のエンティティを畳んだ項目は省略する。英名: ref"
+                description: "The attribute of the data model the item corresponds to (the referenced entity and attribute of the IPA list). Omitted for items that exist only on the screen or fold several entities into one."
                 additionalProperties: false
                 properties:
-                  エンティティ:
+                  entity_id:
                     type: string
-                    description: "参照先のエンティティ ID。英名: entity_id"
+                    description: "ID of the referenced entity."
                     x-ref:
-                      entity: エンティティ
-                  属性:
+                      entity: entities
+                  attribute:
                     type: string
-                    description: "参照先エンティティ内の属性名。英名: attribute"
-                required: [エンティティ, 属性]
-            required: [名前, 入出力]
-        アクション:
+                    description: "Name of the attribute within the referenced entity."
+                required: [entity_id, attribute]
+            required: [name, direction]
+        actions:
           type: array
-          description: "画面上で利用者が起こせる操作の一覧 (IPA 画面アクション明細に対応)。遷移先はアクション配下に持ち、画面遷移図はここから導出する。英名: actions"
+          description: "The operations a user can perform on the screen (the IPA screen action details). Transitions are held under the action, and the screen flow diagram is derived from them."
           items:
             type: object
-            description: "1 つのアクション。英名: action"
+            description: "One action."
             additionalProperties: false
             properties:
-              名前:
+              name:
                 type: string
-                description: "アクション名 (例: 登録ボタン押下)。画面内で一意。英名: name"
-              説明:
+                description: "Name of the action (e.g. Press the Register button). Unique within the screen."
+              description:
                 type: string
-                description: "アクションが行う処理の概要。英名: description"
-              遷移:
+                description: "Outline of what the action does."
+              transitions:
                 type: array
-                description: "アクション実行後の画面遷移の一覧。条件分岐 (成功時 / 失敗時) は要素を分けて書く。英名: transitions"
+                description: "The screen transitions after the action. Conditional branches (on success / on failure) are written as separate elements."
                 items:
                   type: object
-                  description: "1 つの遷移。英名: transition"
+                  description: "One transition."
                   additionalProperties: false
                   properties:
-                    条件:
+                    condition:
                       type: string
-                      description: "この遷移が起きる条件。無条件なら省略。英名: condition"
-                    遷移先:
+                      description: "The condition under which the transition happens. Omitted when unconditional."
+                    to:
                       type: string
-                      description: "遷移先の画面 ID。英名: to"
+                      description: "ID of the destination screen."
                       x-ref:
-                        entity: 画面
-                  required: [遷移先]
-            required: [名前]
-      required: [名前, 分類, 説明]
+                        entity: screens
+                  required: [to]
+            required: [name]
+      required: [name, category, description]
 
-  エンティティ:
+  entities:
     type: object
-    description: "データモデル (論理設計) 上のエンティティの集合。項目は IPA ガイドデータモデル編のエンティティ一覧 / エンティティ定義 / CRUD 図を元に絞り込んだもの。設計書のデータ設計章 (ER 図 / エンティティ定義) のソースで、CRUD マトリクスは データアクセス と組み合わせて導出する。物理設計 (テーブル定義) は別レイヤであり、ここでは論理型のみを持つ。記述順は 種別 が リソース のものを先に、イベント をその作成順に置く (エンティティ一覧と CRUD マトリクスの列はこの順に並べ、そう断る)。マップのキーがエンティティ ID。英名: entities"
+    description: "The entities of the data model (logical design). The items are a reduced set of the entity list / entity definition / CRUD diagram of the IPA guide's data model volume. The source of the SDD's data design chapter (ER diagram / entity definitions); the CRUD matrix is derived together with data_access. Physical design (table definitions) is a separate layer, so only logical types are held here. Records are described with those of kind resource first and the events in order of creation (the entity list and the columns of the CRUD matrix keep this order and say so). The map key is the entity ID."
     additionalProperties:
       type: object
-      description: "1 つのエンティティを表すレコード。英名: entity"
+      description: "A record describing one entity."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 書籍)。英名: name"
-        説明:
+          description: "Display name used in the documents (e.g. Book)."
+        description:
           type: string
-          description: "エンティティが表す実体を 1〜2 文で説明する。英名: description"
-        種別:
+          description: "One or two sentences on the real-world thing the entity stands for."
+        kind:
           type: string
-          description: "エンティティの区分。リソース (マスタ的な実体) とイベント (業務の発生を記録する実体)。IPA の CRUD 図はイベント系エンティティを作成順に並べる規則を持ち、その並びの根拠になる。英名: kind (resource / event)"
-          enum: [リソース, イベント]
-        用語:
+          description: "Category of the entity: resource (a master-like thing) or event (a record of something happening in the business). The IPA CRUD diagram has a rule of listing event entities in order of creation, and this is the basis of that order."
+          enum: [resource, event]
+        term_id:
           type: string
-          description: "このエンティティに対応する用語集の項目の ID。対応する用語が無ければ省略する。英名: term_id"
+          description: "ID of the glossary entry that corresponds to this entity. Omitted when there is none."
           x-ref:
-            entity: 用語
-        データストア:
+            entity: terms
+        data_stores:
           type: array
-          description: "このエンティティが実装する業務モデルのデータストア (台帳・記録) の一覧。業務の 1 つの台帳を複数のエンティティで実装する (入荷記録 = 入荷 + 入荷明細) ことも、1 つのエンティティが複数の台帳を兼ねる (書籍 = 書籍台帳 + 在庫台帳) こともあるので配列で持つ。台帳に対応しない設計上のエンティティでは省略する。英名: data_stores"
+          description: "The data stores (ledgers and records) of the business model this entity implements. One ledger may be implemented by several entities (delivery records = delivery + delivery line) and one entity may serve as several ledgers (book = book ledger + stock ledger), hence an array. Omitted for design-only entities that correspond to no ledger."
           items:
             type: object
-            description: "エンティティとデータストアの対応 1 件。英名: data_store"
+            description: "One entity – data store pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "データストアの ID。英名: id"
+                description: "ID of the data store."
                 x-ref:
-                  entity: データストア
-            required: [ID]
-        属性:
+                  entity: data_stores
+            required: [id]
+        attributes:
           type: array
-          description: "エンティティが持つ属性の一覧 (IPA エンティティ定義の属性項目に対応)。並び順は文書での掲載順。英名: attributes"
+          description: "The attributes of the entity (the attribute items of the IPA entity definition). The order is the order of listing in the document."
           items:
             type: object
-            description: "1 つの属性。英名: attribute"
+            description: "One attribute."
             additionalProperties: false
             properties:
-              名前:
+              name:
                 type: string
-                description: "属性名。エンティティ内で一意で、画面入出力項目の参照先やリレーションの参照先から名前で指される。英名: name"
-              型:
+                description: "Name of the attribute. Unique within the entity, and named by screen io_items and by relation refs."
+              type:
                 type: string
-                description: "論理型 (例: string, integer, date)。DDL 型ではない。英名: type"
-              必須:
+                description: "Logical type (e.g. string, integer, date). Not a DDL type."
+              required:
                 type: boolean
-                description: "値が必須かどうか。省略時は false 扱い。英名: required"
-              主キー:
+                description: "Whether a value is mandatory. Treated as false when omitted."
+              primary_key:
                 type: boolean
-                description: "この属性が主キー (識別子) を構成するかどうか。省略時は false 扱い。英名: primary_key"
-              説明:
+                description: "Whether the attribute is part of the primary key (identifier). Treated as false when omitted."
+              description:
                 type: string
-                description: "属性が持つ値の意味と、値が入る・空になる条件を 1 文で説明する。属性名から自明でも、エンティティ定義の表を 1 行ずつ読めるようにするため書く。英名: description"
-              参照:
+                description: "One sentence on what the value means and when it is filled or empty. Written even when obvious from the name, so that each row of the entity definition table reads on its own."
+              ref:
                 type: object
-                description: "他エンティティへのリレーション (外部キー相当)。ER 図のリレーション線はここから導出する。英名: ref"
+                description: "A relation to another entity (the equivalent of a foreign key). The relation lines of the ER diagram are derived from it."
                 additionalProperties: false
                 properties:
-                  エンティティ:
+                  entity_id:
                     type: string
-                    description: "参照先のエンティティ ID。英名: entity_id"
+                    description: "ID of the referenced entity."
                     x-ref:
-                      entity: エンティティ
-                  属性:
+                      entity: entities
+                  attribute:
                     type: string
-                    description: "参照先エンティティ内の属性名。英名: attribute"
-                required: [エンティティ, 属性]
-            required: [名前, 型]
-      required: [名前, 説明, 種別, 属性]
+                    description: "Name of the attribute within the referenced entity."
+                required: [entity_id, attribute]
+            required: [name, type]
+      required: [name, description, kind, attributes]
 
-  データアクセス:
+  data_access:
     type: array
-    description: "ユースケースがエンティティに対して行うデータアクセスの集合。ArchiMate の access relationship (振る舞い要素 → 受動構造要素、属性 accessType) に対応し、IPA の CRUD 図ではセルに当たる。ユースケース × エンティティ の関連レコードで、どちらの部分でもないため独立のエンティティとして持つ。自然な単一キーが無いのでマップではなく配列で持つ (music showcase の playlist_tracks と同じ理由)。CRUD マトリクス (行 = ユースケース、列 = エンティティ) はここから導出する。英名: data_access"
+    description: "The data accesses use cases perform on entities. They correspond to the access relationship of ArchiMate (behaviour element → passive structure element, with an accessType attribute) and to the cells of the IPA CRUD diagram. A use case × entity association, held as an entity of its own because it is part of neither. There is no natural single key, so it is an array rather than a map (for the same reason as playlist_tracks in the music showcase). The CRUD matrix (rows = use cases, columns = entities) is derived from it."
     items:
       type: object
-      description: "ユースケースからエンティティへのデータアクセス 1 件。同じ (ユースケース, エンティティ) の組は 1 件にまとめる。英名: data_access"
+      description: "One data access from a use case to an entity. The same (use case, entity) pair is folded into one record."
       additionalProperties: false
       properties:
-        ユースケース:
+        use_case_id:
           type: string
-          description: "操作を行うユースケースの ID。英名: use_case_id"
+          description: "ID of the use case that performs the access."
           x-ref:
-            entity: ユースケース
-        エンティティ:
+            entity: use_cases
+        entity_id:
           type: string
-          description: "操作対象のエンティティの ID。英名: entity_id"
+          description: "ID of the entity accessed."
           x-ref:
-            entity: エンティティ
-        操作:
+            entity: entities
+        operation:
           type: string
-          description: "アクセスの種別を C (作成) / R (参照) / U (更新) / D (削除) の文字の並びで表す (例: CR)。文字はこの順に並べる。C / U / D の別は論理設計の判断 (追記のみのイベントか、更新される属性を持つか) に従い、物理設計 (論理削除か物理削除か等) の先取りはしない。英名: operation"
+          description: "The kind of access as a sequence of the letters C (create) / R (read) / U (update) / D (delete), e.g. CR, always in this order. Whether an access is C, U or D follows the logical design decisions (append-only event or not, updatable attributes or not) and does not anticipate physical design (logical versus physical deletion and the like)."
           pattern: "^[CRUD]+$"
-      required: [ユースケース, エンティティ, 操作]
+      required: [use_case_id, entity_id, operation]
 
-  設計判断:
+  design_decisions:
     type: object
-    description: "設計書の設計方針節に列挙する設計判断とその理由の集合。ISO/IEC/IEEE 42010 が Architecture Description の内容要素として持つ architecture decision / rationale に対応する。根拠になった要求への参照 (下流 → 上流) を持ち、要求と設計方針の文書横断のトレースの元になる。マップのキーが設計判断 ID。英名: design_decisions"
+    description: "The design decisions and their rationale, listed in the design decisions section of the SDD. They correspond to the architecture decision / rationale that ISO/IEC/IEEE 42010 lists among the content elements of an architecture description. Each holds references to the requirements it is based on (downstream → upstream), the basis of the cross-document trace from requirements to design. The map key is the design decision ID."
     additionalProperties:
       type: object
-      description: "1 つの設計判断を表すレコード。英名: design_decision"
+      description: "A record describing one design decision."
       additionalProperties: false
       properties:
-        題名:
+        title:
           type: string
-          description: "設計判断を一覧で一行で指すための見出し (例: 在庫数は入荷・販売の履歴から導出せず実数で持つ)。英名: title"
-        判断:
+          description: "A one-line heading by which lists name the decision (e.g. Stock quantity is held as a figure, not derived from delivery and sales history)."
+        decision:
           type: string
-          description: "何をどう決めたか (42010 の architecture decision)。英名: decision"
-        理由:
+          description: "What was decided, and how (the architecture decision of 42010)."
+        rationale:
           type: string
-          description: "その判断を選んだ理由と退けた代替案 (42010 の rationale)。英名: rationale"
-        根拠要求:
+          description: "Why this was chosen and which alternatives were rejected (the rationale of 42010)."
+        basis_requirements:
           type: array
-          description: "この判断の根拠になった要求の一覧。要求に由来しない判断 (技術上の慣行など) では省略する。英名: basis_requirements"
+          description: "The requirements the decision is based on. Omitted for decisions that do not stem from a requirement (engineering conventions and the like)."
           items:
             type: object
-            description: "設計判断と要求の対応 1 件。英名: requirement"
+            description: "One design decision – requirement pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "要求の ID。英名: id"
+                description: "ID of the requirement."
                 x-ref:
-                  entity: 要求
-            required: [ID]
-      required: [題名, 判断, 理由]
+                  entity: requirements
+            required: [id]
+      required: [title, decision, rationale]
 
-  コンポーネント:
+  components:
     type: object
-    description: "ソフトウェアを構成するコンポーネント (サブシステム) の集合。設計書のシステム構成章のソースで、コンポーネント図は 依存 から、一覧はその他の参照から導出する。分解の粒度は業務の単位で、内部の構造 (モジュール、クラス) は持たない。参照はすべてこの層の中か上流へ向く。記述順は依存の向きの逆 (呼ばれる側を先) に置く。マップのキーがコンポーネント ID。英名: components"
+    description: "The components (subsystems) the software is made of. The source of the SDD's system architecture chapter: the component diagram is derived from dependencies and the component table from the other references. Components are cut along units of business work and hold no internal structure (modules, classes). Every reference points within this layer or upstream. Records are described in the reverse direction of dependency (the called side first). The map key is the component ID."
     additionalProperties:
       type: object
-      description: "1 つのコンポーネントを表すレコード。英名: component"
+      description: "A record describing one component."
       additionalProperties: false
       properties:
-        名前:
+        name:
           type: string
-          description: "文書に掲載する表示名 (例: 在庫)。英名: name"
-        責務:
+          description: "Display name used in the documents (e.g. Stock)."
+        responsibility:
           type: string
-          description: "そのコンポーネントが引き受ける処理を 1〜3 文で説明する。英名: responsibility"
-        依存:
+          description: "One to three sentences on the processing the component takes on."
+        dependencies:
           type: array
-          description: "処理を呼び出す相手のコンポーネントの一覧。コンポーネント図の矢印になる。他を呼ばない土台のコンポーネントでは省略する。英名: dependencies"
+          description: "The components whose processing this one calls. They become the arrows of the component diagram. Omitted for foundation components that call no other."
           items:
             type: object
-            description: "コンポーネント間の依存 1 件。英名: dependency"
+            description: "One dependency between components."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "呼び出す相手のコンポーネントの ID。英名: id"
+                description: "ID of the component called."
                 x-ref:
-                  entity: コンポーネント
-            required: [ID]
-        ユースケース:
+                  entity: components
+            required: [id]
+        use_cases:
           type: array
-          description: "そのコンポーネントが実現するユースケースの一覧。要求 → 設計のトレースの元になる。横断の部品でユースケースを持たないものは省略する。英名: use_cases"
+          description: "The use cases the component realises. The basis of the trace from requirements to design. Omitted for cross-cutting parts that realise no use case."
           items:
             type: object
-            description: "コンポーネントとユースケースの対応 1 件。英名: use_case"
+            description: "One component – use case pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "ユースケースの ID。英名: id"
+                description: "ID of the use case."
                 x-ref:
-                  entity: ユースケース
-            required: [ID]
-        エンティティ:
+                  entity: use_cases
+            required: [id]
+        entities:
           type: array
-          description: "そのコンポーネントが自分で読み書きするエンティティの一覧。他のコンポーネントを呼んで行う読み書き (ISBN による書籍の検索、在庫数の加減算、棚卸中の判定) は呼ぶ側には挙げないので、CRUD マトリクスの行をコンポーネントごとに束ねた集合より狭い。同じエンティティを複数のコンポーネントが扱うことがある (書籍は書籍コンポーネントが登録し、在庫コンポーネントが在庫数を更新する)。英名: entities"
+          description: "The entities the component reads and writes itself. Reads and writes done by calling another component (book lookup by ISBN, stock quantity updates, the stocktake-in-progress check) are not listed on the calling side, so this is narrower than the rows of the CRUD matrix bundled per component. The same entity may be handled by several components (Books registers a book, Stock updates its stock quantity)."
           items:
             type: object
-            description: "コンポーネントとエンティティの対応 1 件。英名: entity"
+            description: "One component – entity pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "エンティティの ID。英名: id"
+                description: "ID of the entity."
                 x-ref:
-                  entity: エンティティ
-            required: [ID]
-        設計判断:
+                  entity: entities
+            required: [id]
+        design_decisions:
           type: array
-          description: "そのコンポーネントが引き受ける設計判断の一覧。判断の内容は設計方針の節にあり、ここは「どこに閉じ込めたか」だけを持つ。二つのコンポーネントにまたがる判断は両方に置く。システム全体に及ぶ判断 (日時の持ち方など) はどのコンポーネントにも置かず、省略する。英名: design_decisions"
+          description: "The design decisions the component takes on. The content of a decision lives in the design decisions section; this only records where it is confined. A decision spanning two components is placed on both. Decisions that apply to the whole system (how dates and times are held, for instance) are placed on no component and omitted."
           items:
             type: object
-            description: "コンポーネントと設計判断の対応 1 件。英名: design_decision"
+            description: "One component – design decision pairing."
             additionalProperties: false
             properties:
-              ID:
+              id:
                 type: string
-                description: "設計判断の ID。英名: id"
+                description: "ID of the design decision."
                 x-ref:
-                  entity: 設計判断
-            required: [ID]
-      required: [名前, 責務, エンティティ]
+                  entity: design_decisions
+            required: [id]
+      required: [name, responsibility, entities]

@@ -1,0 +1,122 @@
+# The use case × entity association records. Rows are in use case order (the
+# business chronology) and, within a use case, in entity order (resources,
+# then events in order of creation). The rows and columns of the CRUD matrix
+# follow the order of description of use_cases and entities and do not depend
+# on this order, but the reverse lookup in the entity definitions (the use
+# cases that use the entity) comes out in the order here, so keep it in use
+# case order.
+#
+# The cell values are read off the main scenarios and exceptions of the use
+# case descriptions, and whether an access is C, U or D follows the design
+# decisions: stock quantity updates an attribute of book (D01); deliveries,
+# sales and stocktakes are append-only and never updated or deleted (D02);
+# while a stocktake is in progress, confirming a delivery, accepting a sales
+# notification and confirming a pending sale review are refused, so delivery
+# registration, sales posting and pending sale review read the status of the
+# stocktake (D05, R11). Updates to events occur in two places only: the status
+# of the stocktake (D05), and sale / sale line, where a sale acknowledged as
+# pending is matched later (D04). Deletion appears nowhere. Letters are in
+# the order C R U D.
+data_access:
+  # UC01 Book registration: checks for the same ISBN (R) and registers the book
+  # with a stock quantity of 0 (C)
+  - use_case_id: UC01
+    entity_id: book
+    operation: CR
+
+  # UC02 Supplier registration: checks for the same name (R) and registers the
+  # supplier (C)
+  - use_case_id: UC02
+    entity_id: supplier
+    operation: CR
+
+  # UC03 Delivery registration: selects a supplier, looks the book up by ISBN
+  # for its title, and on confirmation records the delivery and its lines and
+  # adds to stock quantities. Refuses to confirm during a stocktake
+  - use_case_id: UC03
+    entity_id: book
+    operation: RU
+  - use_case_id: UC03
+    entity_id: supplier
+    operation: R
+  - use_case_id: UC03
+    entity_id: delivery
+    operation: C
+  - use_case_id: UC03
+    entity_id: delivery_line
+    operation: C
+  - use_case_id: UC03
+    entity_id: stocktake
+    operation: R
+
+  # UC04 Sales posting: records the notification as a sale and its lines, looks
+  # the book up by ISBN and deducts from its stock quantity. Refuses the
+  # notification during a stocktake
+  - use_case_id: UC04
+    entity_id: book
+    operation: RU
+  - use_case_id: UC04
+    entity_id: sale
+    operation: C
+  - use_case_id: UC04
+    entity_id: sale_line
+    operation: C
+  - use_case_id: UC04
+    entity_id: stocktake
+    operation: R
+
+  # UC07 Pending sale review: lists the pending sale and its lines, looks up the
+  # book that corresponds to the notified ISBN to fill the line's ISBN, deducts
+  # from stock quantities and marks the sale as confirmed. Refuses to confirm
+  # during a stocktake. The U on sale / sale line is the exception to the
+  # append-only principle (D02), justified by D04, which matches pending sales
+  # through a clerk's review
+  - use_case_id: UC07
+    entity_id: book
+    operation: RU
+  - use_case_id: UC07
+    entity_id: sale
+    operation: RU
+  - use_case_id: UC07
+    entity_id: sale_line
+    operation: RU
+  - use_case_id: UC07
+    entity_id: stocktake
+    operation: R
+
+  # UC05 Stocktake: starting creates the stocktake and a line for every book
+  # (C); entering counts and confirming update the lines and the status of the
+  # stocktake (U) and replace the stock quantities of books with the counts (U)
+  - use_case_id: UC05
+    entity_id: book
+    operation: RU
+  - use_case_id: UC05
+    entity_id: stocktake
+    operation: CU
+  - use_case_id: UC05
+    entity_id: stocktake_line
+    operation: CU
+
+  # UC06 Stock inquiry: searches books and stock quantities and shows the
+  # delivery, sale and stocktake history of the selected book. Writes nothing
+  - use_case_id: UC06
+    entity_id: book
+    operation: R
+  - use_case_id: UC06
+    entity_id: delivery
+    operation: R
+  - use_case_id: UC06
+    entity_id: delivery_line
+    operation: R
+  - use_case_id: UC06
+    entity_id: sale
+    operation: R
+  - use_case_id: UC06
+    entity_id: sale_line
+    operation: R
+  - use_case_id: UC06
+    entity_id: stocktake
+    operation: R
+  - use_case_id: UC06
+    entity_id: stocktake_line
+    operation: R

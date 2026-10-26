@@ -1,0 +1,73 @@
+# The tree of the SDD. As in srs.yaml, everything drawn inside the document is
+# copied to a leaf of this tree and links are made to the copies. Links to
+# what the SRS draws (use cases, terms, requirements) are made to the copies
+# in the SRS tree.
+#
+# The prose records the SDD reads have fixed names, and a replacement
+# contents/ keeps them: sdd/introduction (chapter 1) and sdd/architecture (the
+# deployment section of chapter 3) are copied by the `prose` views below, and
+# sdd/component_diagram, sdd/logical_data_model, sdd/crud_matrix and
+# sdd/user_interface_design (the notes of their sections) are embedded as
+# content by the sections' templates.
+
+# ---------------------------------------------------------------------------
+# 1. Introduction
+# ---------------------------------------------------------------------------
+
+sdd.introduction.prose:
+  from: prose
+  where:
+    id: sdd/introduction
+
+sdd.introduction.design_decisions:
+  from: design_decisions
+
+# ---------------------------------------------------------------------------
+# 2. System context (the chapter itself is a leaf)
+# ---------------------------------------------------------------------------
+
+sdd.system_context:
+  from: use_cases
+  select:
+    - item: id
+    - item: name
+    - item: actors
+
+# ---------------------------------------------------------------------------
+# 3. System architecture
+# ---------------------------------------------------------------------------
+
+sdd.architecture.components:
+  from: components
+
+sdd.architecture.prose:
+  from: prose
+  where:
+    id: sdd/architecture
+
+# ---------------------------------------------------------------------------
+# 4. Data design
+# ---------------------------------------------------------------------------
+
+sdd.data_design.logical_data_model:
+  from: entities
+
+# The rows of the CRUD matrix. Views have no pivot, so matching the columns
+# (entities) against the cells is left to the template.
+sdd.data_design.crud_matrix:
+  from: use_cases
+  join:
+    to: data_access
+    on: { left: id, right: use_case_id }
+    as: accesses
+  select:
+    - item: id
+    - item: name
+    - item: accesses
+
+# ---------------------------------------------------------------------------
+# 5. User interface design (the chapter itself is a leaf)
+# ---------------------------------------------------------------------------
+
+sdd.user_interface_design:
+  from: screens

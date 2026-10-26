@@ -1,0 +1,1 @@
+[店員](node:/srs/introduction/users_and_external_systems/clerk)と[店主](node:/srs/introduction/users_and_external_systems/owner)は業務の内側にいてプロセスを担い、[決済サービス](node:/srs/introduction/users_and_external_systems/payment_service)は会計の道具であって業務の相手ではない。

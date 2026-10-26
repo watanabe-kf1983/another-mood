@@ -1,12 +1,12 @@
-# {{ システム.名前 }}
+# {{ system.name }}
 
-本プロジェクトは、単一のデータソースから「要求仕様書」と「設計書」の二文書を導出する Another Mood のサンプルプロジェクトです。題材は{{ システム.説明 }}で、設計書の各章は要求仕様書のユースケース・用語・要求を参照し、片方を直せばもう片方も追随します。
+This project is an Another Mood sample that derives two documents, a Software Requirements Specification (SRS) and a Software Design Document (SDD), from a single data source. The subject is {{ system.description }}. Each chapter of the design document refers to the use cases, terms and requirements of the requirements specification, so a correction to one document carries over to the other.
 
-- {{ 要求仕様書 | link("要求仕様書") }} — 業務の範囲、用語集、ユースケースごとの機能要求と非機能要求、その検証方法、業務モデル (階層化したデータフロー図)
-- {{ 設計書 | link("設計書") }} — 設計方針、システム境界、システム構成、論理データモデルと CRUD マトリクス、画面
+- {{ srs | link("Software Requirements Specification") }} — the scope of the business, the glossary, the functional requirements per use case and the non-functional requirements, how each is verified, and the business model (a levelled data flow diagram)
+- {{ sdd | link("Software Design Document") }} — the design decisions, the system boundary, the system architecture, the logical data model with its CRUD matrix, and the screens
 
-二文書の章立ては、ISO/IEC/IEEE 29148 と IPA のガイドを参考にした一つの例です。作るべき文書とその粒度はプロジェクトごとに違うので、スキーマとテンプレートは、自分のプロジェクトの構造に書き換えるための見本として読んでください。
+The chapter structure of the two documents is one example, informed by ISO/IEC/IEEE 29148 and the IPA guides. Which documents to produce, and at what granularity, differs from project to project, so read the schema and the templates as a model to rewrite into the structure of your own project.
 
-{{ 要求仕様書 | render("要求仕様書.md") | under_heading("#") }}
+{{ srs | render("srs.md") | under_heading("#") }}
 
-{{ 設計書 | render("設計書.md") | under_heading("#") }}
+{{ sdd | render("sdd.md") | under_heading("#") }}
