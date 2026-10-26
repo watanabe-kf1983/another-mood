@@ -52,7 +52,7 @@ srs.glossary:
 # ---------------------------------------------------------------------------
 
 # The copies of the requirements are placed under the use case rows so that a
-# requirement's anchor path (/srs/requirements/functional/UC03/requirements/R04)
+# requirement's anchor path (/srs/requirements/functional/<use case ID>/requirements/<requirement ID>)
 # points at the use case's page in the web edition. This is the home of use
 # cases and requirements.
 srs.requirements.functional:

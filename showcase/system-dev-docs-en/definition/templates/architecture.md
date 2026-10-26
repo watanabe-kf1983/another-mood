@@ -6,8 +6,7 @@ Shows the components the software of this system is made of and their dependenci
 
 {# Arrows are dependencies (the direction of calls). The mapping to entities is
    not drawn; the table below carries it. Drawn, an entity handled by several
-   components, such as book, would cross lines and obscure the layers of
-   dependency. #}
+   components would cross lines and obscure the layers of dependency. #}
 {% filter dedent %}
   ```mermaid
   flowchart BT
