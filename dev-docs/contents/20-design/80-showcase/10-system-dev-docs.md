@@ -114,3 +114,30 @@ IPA の工程成果物を日本の基本設計の慣行で束ねる。API 仕様
 **置き場**。要求仕様書 1 章に 業務コンテキスト (レベル 0 = コンテキスト図) と システム化範囲 (葉プロセス × ユースケース の表) を置き、5 章 (付録) にレベル 1 以下 (プロセス階層 / データストア / 外部エンティティ / 分解図 / バランシング検査) を置く。29148 の 1.2 Scope / 1.3 Product perspective の位置に業務の境界と範囲が来る形で、システム化範囲の導出という同梱の主目的を付録の奥に沈めない。
 
 **バランシング検査**は付録末尾の節で、分解図ごとに上位の図の親プロセスの入出力と図の中のフローの対応を確かめ、不一致を表に出す (無ければ一致の一文)。規則は行を跨ぎ階層を辿る述語で view 言語では書けないため view は立てない。ビルドの警告に載せる経路は[ツール側の検討事項](../../90-appendix/20-design/80-showcase/10-system-dev-docs.md#showcase-で表面化したツール側将来の検討事項-未起票)。
+
+## Proposals
+
+### 英語版 showcase/system-dev-docs-en (S10)
+
+system-dev-docs-ja を複製して英訳し、SRS / SDD として出す。判断の基準は規格の条文との突合ではなく、**英語圏の読者が見出しを見て「よく見る SRS / SDD だ」と思えるか**。conformance は主張せず "informed by" に留める方針 (上記「典拠」) はそのまま。
+
+**別プロジェクトとして複製する**。同一モデルから両言語を出す案 (tasks.yaml の note) は採らない。識別子が日本語なので、同じデータから両言語を出すには識別子を二重に持つ拡張が要り、showcase の読みやすさ (改変の見本) を損なう。ja / en の構造同一性の検査は[ツール側の検討事項](../../90-appendix/20-design/80-showcase/10-system-dev-docs.md#showcase-で表面化したツール側将来の検討事項-未起票)に既にあり、ここでは扱わない。日本語版を製品として残すかの判断 (上記「位置づけと規約」) も S10 では動かさず、ja はそのまま残す。
+
+**章の割り当ては動かさない**。「英語版では章の割り当てが変わりうる」(上記) の余地は、設計書にシステム構成章 (3 章) が入ったことで使わずに済むと判断した。英語圏の SDD の雛形 (Introduction / System overview / Architecture / Data design / Interface design) と設計書の章立てが並びまで一致し、Data design は英語圏でも SDD の標準の章なので、29148 3.5 Logical database に合わせて論理データモデルを SRS 側へ移す必要が無い。移すと設計書から要求仕様書へのリンク (二文書 showcase の主題) が片側に偏り、ja と en の章の対応も崩れる。完了時に「英語版では章の割り当てが変わりうる」と「層の内訳と二文書の境界」末尾の一文を、この決定で書き換える。
+
+**語彙**。識別子と enum 値は schema.yaml の description 末尾の英名 (既存の規約) を当てる。文書名は Software Requirements Specification (SRS) と Software Design Document (SDD)。SDD は 1016 の "Description" ではなく、英語圏の雛形で多い "Document" を仮に採る (1016 は章に被せない方針なので名前も借りない)。章題の対応:
+
+| ja | en |
+|---|---|
+| 要求仕様書: はじめに / 用語集 / 要求 (機能要求 / 非機能要求) / 検証 / 付録 (業務モデル) | Introduction / Glossary / Requirements (Functional / Non-functional) / Verification / Appendices (Business model) |
+| 設計書: はじめに (目的と範囲 / 記法と規約 / 設計方針) / コンテキスト / システム構成 (コンポーネント図 / コンポーネント一覧 / 配置) / データ設計 (論理データモデル / CRUD マトリクス) / 画面設計 (画面一覧 / 画面遷移図 / 画面定義) | Introduction (Purpose and scope / Notation and conventions / Design decisions) / System context / System architecture (Component diagram / Components / Deployment) / Data design (Logical data model / CRUD matrix) / User interface design (Screens / Screen flow / Screen definitions) |
+
+節より細かい語の選択は訳しながら決め、迷ったものは PR 本文に残す。
+
+**英訳に先立つ小さな改編** (構造は変えない。英語圏の読者が最初に引っかかる箇所の手当て):
+
+1. 設計書 3 章の冒頭に、アーキテクチャの概観の一文を置く (1 台のサーバで動く一つの Web アプリケーション、業務単位の 5 コンポーネントが二層をなし、データベースを共有する)。今は D08 の理由と配置の冒頭に散っている。置き場は prose `設計書/コンポーネント図` の先頭
+2. D07 と C02 の責務の「加減算」を、棚卸の「置き換え」(C05) を含む語に揃える
+3. 要求仕様書に、外部インタフェースとデータの設計 (29148 なら 3.1 / 3.5 に当たる内容) は設計書で扱う旨の一文を置く。置き場は 1 章 (Product perspective に当たる位置)
+
+**進め方**。一ブランチの上で 複製 → (日本語のまま) 改編 → 英訳 の順に段階ごとにコミットし、PR は一本。構造の diff と訳の diff を分けて確認できるようにするため。改編は ja にも当たるので、ja 側の同じ箇所も直す。英訳の対象は schema の識別子と enum 値、contents (yaml / md / 画面レイアウトの SVG・HTML の文言)、テンプレートの見出しと地の文、ファイル名とディレクトリ名、sbdb.yaml (`title`, `file_per`)、showcase/index.yaml の項目。完了時に上記「位置づけと規約」の showcase 名の規約に en を加え、本節を削除する。
