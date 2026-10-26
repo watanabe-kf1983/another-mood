@@ -1,21 +1,21 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>保留販売確認画面</title>
+<title>Pending sale review screen</title>
 <link rel="stylesheet" href="wireframe.css">
 
-<!-- 確認待ちの販売を識別するのは通知日時だけなので、上の表は 1 列になる。 -->
+<!-- A sale awaiting review is identified by its notification time alone, so the upper table has one column. -->
 <main>
-  <h1>保留販売確認画面</h1>
+  <h1>Pending sale review screen</h1>
   <section>
 
-    <h2>確認待ちの販売</h2>
+    <h2>Sales awaiting review</h2>
 
     <table>
       <colgroup>
         <col style="width: 200px">
       </colgroup>
       <thead>
-        <tr><th>通知日時</th></tr>
+        <tr><th>Notified at</th></tr>
       </thead>
       <tbody>
         <tr><td></td></tr>
@@ -23,7 +23,7 @@
       </tbody>
     </table>
 
-    <h2>明細</h2>
+    <h2>Lines</h2>
 
     <table>
       <colgroup>
@@ -33,7 +33,7 @@
         <col style="width: 240px">
       </colgroup>
       <thead>
-        <tr><th>通知ISBN</th><th>数量</th><th>ISBN</th><th>書名</th></tr>
+        <tr><th>Notified ISBN</th><th>Quantity</th><th>ISBN</th><th>Title</th></tr>
       </thead>
       <tbody>
         <tr><td></td><td></td><td><input></td><td></td></tr>
@@ -42,13 +42,13 @@
     </table>
 
     <footer>
-      <button>確認を確定する</button>
-      <button>メニューへ戻る</button>
+      <button>Confirm review</button>
+      <button>Back to menu</button>
     </footer>
 
     <aside>
-      <input> 入力
-      <input readonly> 出力
+      <input> Input
+      <input readonly> Output
     </aside>
 
   </section>

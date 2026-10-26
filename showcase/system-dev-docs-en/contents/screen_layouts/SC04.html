@@ -1,24 +1,24 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>入荷登録画面</title>
+<title>Delivery registration screen</title>
 <link rel="stylesheet" href="wireframe.css">
 
 <main>
-  <h1>入荷登録画面</h1>
+  <h1>Delivery registration screen</h1>
   <section>
 
     <div>
-      <label>仕入先 <select></select></label>
-      <label>入荷日時 <input readonly size="16"></label>
+      <label>Supplier <select></select></label>
+      <label>Delivered at <input readonly size="16"></label>
     </div>
 
-    <h2>明細</h2>
+    <h2>Lines</h2>
 
     <div>
       <label>ISBN <input size="16"></label>
-      <label>書名 <input readonly size="16"></label>
-      <label>数量 <input size="6"></label>
-      <button>明細を追加する</button>
+      <label>Title <input readonly size="16"></label>
+      <label>Quantity <input size="6"></label>
+      <button>Add line</button>
     </div>
 
     <table>
@@ -28,7 +28,7 @@
         <col style="width: 90px">
       </colgroup>
       <thead>
-        <tr><th>ISBN</th><th>書名</th><th>数量</th></tr>
+        <tr><th>ISBN</th><th>Title</th><th>Quantity</th></tr>
       </thead>
       <tbody>
         <tr><td></td><td></td><td></td></tr>
@@ -37,13 +37,13 @@
     </table>
 
     <footer>
-      <button>確定する</button>
-      <button>メニューへ戻る</button>
+      <button>Confirm</button>
+      <button>Back to menu</button>
     </footer>
 
     <aside>
-      <input> 入力
-      <input readonly> 出力
+      <input> Input
+      <input readonly> Output
     </aside>
 
   </section>

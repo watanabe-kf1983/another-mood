@@ -1,4 +1,4 @@
-"""Draw the screen-layout wireframes of the system-dev-docs-ja showcase.
+"""Draw the screen-layout wireframes of the system-dev-docs showcases.
 
 A screen layout is the one design-document artifact this showcase cannot
 derive from its records: it is a drawing, not a projection of data. So the
@@ -19,14 +19,16 @@ and nothing about how it gets measured.
 
 Usage (from the repository root, with google-chrome on PATH)::
 
-    uv run scripts/screen-layouts/generate_layouts.py          # every mockup
-    uv run scripts/screen-layouts/generate_layouts.py SC04     # just one
+    uv run scripts/screen-layouts/generate_layouts.py                  # every mockup, Japanese edition
+    uv run scripts/screen-layouts/generate_layouts.py SC04             # just one
+    uv run scripts/screen-layouts/generate_layouts.py --project system-dev-docs-en
 
 Standard library only: the measuring step is a browser this repository does
 not otherwise depend on, so it is invoked as a subprocess rather than driven
 through a client library.
 """
 
+import argparse
 import json
 import re
 import shutil
@@ -39,15 +41,16 @@ from typing import cast
 from xml.sax.saxutils import escape
 
 MEASURE_JS = Path(__file__).parent / "measure.js"
+SHOWCASE_DIR = Path(__file__).parent.parent.parent / "showcase"
 # The mockups are showcase content, not part of this scaffold: they are
-# authored beside the drawings they produce and ship with the project.
-LAYOUT_DIR = (
-    Path(__file__).parent.parent.parent
-    / "showcase"
-    / "system-dev-docs-ja"
-    / "contents"
-    / "画面レイアウト"
-)
+# authored beside the drawings they produce and ship with the project. Each
+# edition names its layout folder in its own language and labels the drawing
+# in that language too; the label wraps the mockup's <title>.
+PROJECTS: Mapping[str, tuple[str, str]] = {
+    "system-dev-docs-ja": ("画面レイアウト", "{title} の画面レイアウト"),
+    "system-dev-docs-en": ("screen_layouts", "Screen layout of the {title}"),
+}
+DEFAULT_PROJECT = "system-dev-docs-ja"
 
 # Margin around the screen frame, so the frame's own stroke is not clipped by
 # the viewBox and the drawing does not sit flush against surrounding text.
@@ -81,20 +84,34 @@ _MEASURED = re.compile(
 
 
 def main(argv: Sequence[str]) -> int:
-    mockups = _select_mockups(argv)
+    parser = argparse.ArgumentParser(
+        description="Draw the screen-layout wireframes of a system-dev-docs showcase."
+    )
+    parser.add_argument("--project", choices=sorted(PROJECTS), default=DEFAULT_PROJECT)
+    parser.add_argument(
+        "screens", nargs="*", help="screen IDs to redraw (default: all)"
+    )
+    args = parser.parse_args(argv)
+    folder, label = PROJECTS[args.project]
+    layout_dir = SHOWCASE_DIR / args.project / "contents" / folder
+    mockups = _select_mockups(layout_dir, args.screens)
     if not mockups:
-        print(f"no mockup matched {list(argv)}", file=sys.stderr)
+        print(f"no mockup matched {args.screens}", file=sys.stderr)
         return 1
     for mockup in mockups:
         measured = _measure(mockup)
-        destination = LAYOUT_DIR / f"{mockup.stem}.svg"
-        destination.write_text(build_svg(measured), encoding="utf-8")
+        destination = layout_dir / f"{mockup.stem}.svg"
+        destination.write_text(build_svg(measured, label), encoding="utf-8")
         print(f"{mockup.name} -> {destination.relative_to(Path.cwd())}")
     return 0
 
 
-def build_svg(measured: Mapping[str, object]) -> str:
-    """Render one screen's measurements as an SVG line drawing."""
+def build_svg(measured: Mapping[str, object], label: str) -> str:
+    """Render one screen's measurements as an SVG line drawing.
+
+    `label` is the accessible name of the drawing, with `{title}` standing for
+    the mockup's title.
+    """
     width = _as_float(measured["width"]) + MARGIN * 2
     height = _as_float(measured["height"]) + MARGIN * 2
     parts = _as_parts(measured["parts"])
@@ -110,7 +127,7 @@ def build_svg(measured: Mapping[str, object]) -> str:
         [
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {_n(width)} {_n(height)}"',
             f'     width="{_n(width)}" height="{_n(height)}"',
-            f'     role="img" aria-label="{escape(title)} の画面レイアウト">',
+            f'     role="img" aria-label="{escape(label.format(title=title))}">',
             # An explicit background keeps the drawing legible where the page
             # around it is dark; the strokes are near-black.
             f'<rect width="{_n(width)}" height="{_n(height)}" fill="#fff"/>',
@@ -123,11 +140,11 @@ def build_svg(measured: Mapping[str, object]) -> str:
     )
 
 
-def _select_mockups(argv: Sequence[str]) -> Sequence[Path]:
-    everything = sorted(LAYOUT_DIR.glob("SC*.html"))
-    if not argv:
+def _select_mockups(layout_dir: Path, screens: Sequence[str]) -> Sequence[Path]:
+    everything = sorted(layout_dir.glob("SC*.html"))
+    if not screens:
         return everything
-    wanted = {name.removesuffix(".html") for name in argv}
+    wanted = {name.removesuffix(".html") for name in screens}
     return [p for p in everything if p.stem in wanted]
 
 
