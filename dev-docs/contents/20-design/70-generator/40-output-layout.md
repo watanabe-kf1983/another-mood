@@ -24,7 +24,7 @@ edition は `definition/reports.yaml` に宣言する。`editions:` マップに
   default/   (form B なら web/ print/)          ← ユーザ edition（report 本体）
   __db/                                        ← DB 自己記述（メタ edition のマウント先）
     index.md                                     メタ index（ER 図・entity/view 一覧）
-    __data/  __entity_defs/  __view_defs/        診断（edition 横断・常に __db 内の同位置）
+    __defs/  __data/                             診断: 定義とデータ（edition 横断・常に __db 内の同位置）
   __build_info/  __warnings/                   ← build-report 層（reconcile が置き、表紙末尾にリンクを append）
 ```
 

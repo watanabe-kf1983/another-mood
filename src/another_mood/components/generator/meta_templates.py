@@ -133,7 +133,16 @@ META_TEMPLATES_FILTERS: Mapping[str, Callable[..., InertValue]] = {
 
 
 META_EDITION = Edition(
-    paging=PagingPolicy(("__entity_defs.item", "__view_defs.item", "__data.item")),
+    paging=PagingPolicy(
+        (
+            "__defs.root.item[]",
+            "__defs.entities.item",
+            "__defs.views.item",
+            "__data.root.item[]",
+            "__data.entities.item",
+            "__data.views.item",
+        )
+    ),
     name="__db",
     templates_dir=META_TEMPLATES_DIR,
     extra_filters=META_TEMPLATES_FILTERS,
@@ -145,7 +154,9 @@ META_EDITION = Edition(
 
 ``file_per`` is the fixed internal page split: with no user ``reports.yaml``,
 listing the built-in views' item ids routes each view's result to its own
-``{view}/{id}.md`` page via the ordinary ``page_path`` derivation."""
+``{holder}/{kind}/{id}.md`` page via the ordinary ``page_path`` derivation.
+The root's views list their array id instead, so the one-record result
+lands on a single ``{holder}/root.md`` page."""
 
 
 # ── walk_entity helpers ──────────────────────────────────────────────
@@ -159,10 +170,7 @@ def _ancestor_chain(
     current = entity_id
     while current != dc.ROOT_ENTITY_ID:
         chain_.insert(0, current)
-        parent = cast("str | None", by_id[current].get("parent_entity"))
-        # A view has no parent, but is read from ``views`` like a
-        # top-level entity.
-        current = parent or dc.ROOT_ENTITY_ID
+        current = cast(str, by_id[current]["parent_entity"])
     return [dc.ROOT_ENTITY_ID, *chain_]
 
 

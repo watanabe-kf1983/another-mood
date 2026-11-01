@@ -11,6 +11,7 @@ from another_mood.components import (
     publish,
     reconcile,
     tap,
+    tap_schema,
 )
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.components.shared.component.dir_lock import dir_lock
@@ -70,19 +71,17 @@ def derive_queries_stage(workspace: Workspace) -> Task:
 def compose_stage(workspace: Workspace) -> Task:
     """Compose views from normalized contents + query evaluation."""
     contents_out = workspace.component_output(normalize_contents)
-    views_out = workspace.component_output(derive_queries)
-    inspect_out = workspace.component_output(inspect_schema)
+    catalog_out = workspace.component_output(derive_queries)
     out = workspace.component_output(compose)
     call = compose.bind(
         contents_dir=contents_out.dir,
-        views_dir=views_out.dir,
-        data_catalog_dir=inspect_out.dir,
+        catalog_dir=catalog_out.dir,
         out_dir=out.dir,
     )
     return Stage(
         run_fn=call,
         watch_paths=[],
-        upstreams=[contents_out, views_out, inspect_out],
+        upstreams=[contents_out, catalog_out],
     )
 
 
@@ -101,21 +100,19 @@ def tap_stage(workspace: Workspace) -> Task:
     )
 
 
-def tap_publish_stage(workspace: Workspace) -> Task:
-    """Copy the tap document from tmp to its public destination."""
-    config = workspace.config
-    tap_out = workspace.component_output(tap)
-    publish_out = workspace.component_output(publish)
-    # Publish only where the destination is set (a bare Workspace may set none).
-    targets = [(tap_out.dir / "data", config.tap_dir)]
-    active = [(src, dist) for src, dist in targets if dist is not None]
-    call = publish.bind(
-        upstream=tap_out.dir,
-        out_dir=publish_out.dir,
-        src_dirs=[src for src, _ in active],
-        dist_dirs=[dist for _, dist in active],
+def tap_schema_stage(workspace: Workspace) -> Task:
+    """Describe the tap document with a JSON Schema derived from the catalog."""
+    derive_out = workspace.component_output(derive_queries)
+    out = workspace.component_output(tap_schema)
+    call = tap_schema.bind(
+        catalog_dir=derive_out.dir,
+        out_dir=out.dir,
     )
-    return Stage(run_fn=call, watch_paths=[], upstreams=[tap_out])
+    return Stage(
+        run_fn=call,
+        watch_paths=[],
+        upstreams=[derive_out],
+    )
 
 
 def generator_stage(workspace: Workspace) -> Task:
@@ -235,7 +232,15 @@ TAP_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     derive_queries_stage,
     compose_stage,
     tap_stage,
-    tap_publish_stage,
+)
+
+# The schema needs only the catalog, which derive_queries completes: views
+# are evaluated downstream of it but declared within it.
+TAP_SCHEMA_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
+    inspect_schema_stage,
+    normalize_contents_stage,
+    derive_queries_stage,
+    tap_schema_stage,
 )
 
 
@@ -249,6 +254,13 @@ def pipeline(
 
 
 def tap_pipeline(workspace: Workspace) -> Pipeline:
-    """Create the tap pipeline: stop after compose, publish one JSON document."""
+    """Create the tap pipeline: stop after compose, assemble one JSON document."""
     stages = [factory(workspace) for factory in TAP_STAGE_FACTORIES]
+    return Pipeline(stages, reporting=build_report_stage(workspace))
+
+
+def tap_schema_pipeline(workspace: Workspace) -> Pipeline:
+    """Create the tap schema pipeline: stop after derive_queries, write the
+    tap document's JSON Schema."""
+    stages = [factory(workspace) for factory in TAP_SCHEMA_STAGE_FACTORIES]
     return Pipeline(stages, reporting=build_report_stage(workspace))

@@ -3,14 +3,19 @@
 from scripts.check_release_trailer import declared_kinds, trailer_defects
 
 
+BREAKING = "## Breaking change\n\nThe manifest format moved to generation 2.\n"
+HIGHLIGHT = "## Release highlight\n\nViews can now read nested fields.\n"
+
+
 def defects(body: str) -> tuple[str, ...]:
     return tuple(trailer_defects(body))
 
 
 class TestTrailerFormat:
     def test_accepts_every_kind(self) -> None:
-        for kind in ("breaking", "feature", "fix"):
+        for kind in ("feature", "fix"):
             assert defects(f"Summary.\n\nRelease-Highlight: {kind}") == ()
+        assert defects(f"{BREAKING}\nRelease-Highlight: breaking") == ()
 
     def test_accepts_a_trailing_newline_and_trailing_spaces(self) -> None:
         assert defects("Release-Highlight: fix  \n") == ()
@@ -58,14 +63,46 @@ class TestTrailerFormat:
         assert defects("The `Release-Note:` key was renamed.\n") == ()
 
 
-class TestHighlightSection:
-    SECTION = "## Release highlight\n\nThe manifest format moved to generation 2.\n"
-
+class TestBreakingSection:
     def test_rejects_a_section_with_no_trailer(self) -> None:
-        assert len(defects(self.SECTION)) == 1
+        assert len(defects(BREAKING)) == 1
 
-    def test_accepts_a_section_backed_by_a_trailer(self) -> None:
-        assert defects(f"{self.SECTION}\nRelease-Highlight: breaking") == ()
+    def test_rejects_a_section_backed_only_by_another_kind(self) -> None:
+        assert len(defects(f"{BREAKING}\nRelease-Highlight: feature")) == 1
+
+    def test_rejects_a_break_declared_without_the_section(self) -> None:
+        assert len(defects("Summary.\n\nRelease-Highlight: breaking")) == 1
+
+    def test_accepts_a_break_beside_another_kind(self) -> None:
+        body = f"{BREAKING}\nRelease-Highlight: breaking\nRelease-Highlight: feature"
+        assert defects(body) == ()
+
+    def test_matches_the_heading_case_insensitively(self) -> None:
+        assert len(defects("## Breaking Change\n")) == 1
+
+    def test_ignores_a_heading_at_another_level(self) -> None:
+        assert defects("### Breaking change\n") == ()
+
+
+class TestHighlightSection:
+    def test_rejects_a_section_with_no_trailer(self) -> None:
+        assert len(defects(HIGHLIGHT)) == 1
+
+    def test_accepts_a_section_backed_by_feature_or_fix(self) -> None:
+        for kind in ("feature", "fix"):
+            assert defects(f"{HIGHLIGHT}\nRelease-Highlight: {kind}") == ()
+
+    def test_rejects_a_section_backed_only_by_a_break(self) -> None:
+        """The heading a break used to be described under now points elsewhere."""
+        body = f"{BREAKING}\n{HIGHLIGHT}\nRelease-Highlight: breaking"
+        assert "## Breaking change" in defects(body)[0]
+
+    def test_accepts_both_sections_on_one_change(self) -> None:
+        body = (
+            f"{BREAKING}\n{HIGHLIGHT}\n"
+            "Release-Highlight: breaking\nRelease-Highlight: feature"
+        )
+        assert defects(body) == ()
 
     def test_matches_the_heading_case_insensitively(self) -> None:
         assert len(defects("## Release Highlight\n")) == 1

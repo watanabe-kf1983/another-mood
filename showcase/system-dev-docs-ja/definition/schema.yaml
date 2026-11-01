@@ -22,15 +22,20 @@ properties:
     properties:
       名前:
         type: string
-        description: "システムの名前 (例: 在庫管理システム)。コンテキスト図の境界のラベルに使う。英名: name"
+        description: "システムの名前。コンテキスト図の境界のラベルに使う。英名: name"
       説明:
         type: string
-        description: "対象と役割を含めた一文の名乗り (例: 小規模書店向けの在庫管理システム)。二文書の冒頭の一文に使う。英名: description"
+        description: "対象と役割を含めた一文の名乗り。二文書の冒頭の一文に使う。英名: description"
     required: [名前, 説明]
 
   # ===========================================================================
   # 業務: 要求仕様書の付録 (業務モデル = 階層 DFD) のソース。上流のさらに上に
   # あり、他のどの層も知らない (参照はすべて上流 / 下流からこの層へ向く)
+  #
+  # 業務 DFD であってシステム DFD ではない: レベル 0 の唯一のプロセスは業務全体で、
+  # 本システムではない (本システムを唯一のプロセスに置くと設計書のコンテキスト図の
+  # 重複になる)。業務の境界と本システムの境界は別物なので対応は張らず、本システムの
+  # 境界はユースケースが支える葉プロセスの集合として導出する。
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
@@ -47,7 +52,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名。葉は動詞で終える (例: 入荷を登録する)、分解されるプロセスは業務の名前 (例: 仕入)。英名: name"
+          description: "文書に掲載する表示名。葉は「〜を…する」の動詞句、分解されるプロセスは業務の名前 (名詞)。英名: name"
         説明:
           type: string
           description: "そのプロセスが業務として何をするかを 1〜2 文で説明する。英名: description"
@@ -68,7 +73,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名 (例: 書籍台帳)。英名: name"
+          description: "文書に掲載する表示名。英名: name"
         説明:
           type: string
           description: "何を記録する台帳かを 1〜2 文で説明する。英名: description"
@@ -76,7 +81,7 @@ properties:
 
   外部エンティティ:
     type: object
-    description: "業務の境界の外側で業務とデータをやり取りする相手 (顧客、仕入先など) の集合。構造化分析の terminator、IPA 外部システム関連図の外部システムに対応する。本システムのアクターとは境界が違う (アクターは本システムの境界の外側、外部エンティティは業務の境界の外側) ので、対応は持たない。マップのキーが外部エンティティ ID。英名: external_entities"
+    description: "業務の境界の外側で業務とデータをやり取りする相手の集合。構造化分析の terminator、IPA 外部システム関連図の外部システムに対応する。本システムのアクターとは境界が違う (アクターは本システムの境界の外側、外部エンティティは業務の境界の外側) ので、対応は持たない。マップのキーが外部エンティティ ID。英名: external_entities"
     additionalProperties:
       type: object
       description: "1 つの外部エンティティを表すレコード。英名: external_entity"
@@ -84,7 +89,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名 (例: 顧客)。英名: name"
+          description: "文書に掲載する表示名。英名: name"
         説明:
           type: string
           description: "業務とどうデータをやり取りする相手かを 1〜2 文で説明する。英名: description"
@@ -92,7 +97,7 @@ properties:
 
   フロー:
     type: object
-    description: "業務モデルのデータフローの集合。フローは各レベルで記録する (葉レベルだけを記録して上位を集約導出する形にはしない): 上位レベルのフローは「納品」のように束ねた名前を持ち、下位レベルのフローは 親 で自分を束ねる上位フローを指す。親プロセスの入出力と子の図の入出力の一致 (バランシング) はこの対応で検査する。マップのキーがフロー ID。英名: flows"
+    description: "業務モデルのデータフローの集合。フローは各レベルで記録する (葉レベルだけを記録して上位を集約導出する形にはしない): 上位レベルのフローは下位のフローを束ねた名前を持ち、下位レベルのフローは 親 で自分を束ねる上位フローを指す。親プロセスの入出力と子の図の入出力の一致 (バランシング) はこの対応で検査する。マップのキーがフロー ID。英名: flows"
     additionalProperties:
       type: object
       description: "1 つのデータフローを表すレコード。英名: flow"
@@ -100,7 +105,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "流れるデータの名前 (例: 納品、在庫数)。図の線のラベルになる。英名: name"
+          description: "流れるデータの名前。図の線のラベルになる。英名: name"
         説明:
           type: string
           description: "流れるデータの内容を補足する。名前で足りれば省略する。英名: description"
@@ -169,14 +174,14 @@ properties:
       properties:
         題名:
           type: string
-          description: "要求を一覧や参照で一行で指すための見出し (例: 入荷時の在庫加算)。検証の章や設計判断の根拠要求では ID と題名で要求を指す。英名: title"
+          description: "要求を一覧や参照で一行で指すための見出し。検証の章や設計判断の根拠要求では ID と題名で要求を指す。英名: title"
         種別:
           type: string
           description: "要求の区分。29148 の SRS 例示アウトライン 3 章の節構成 (機能 / インタフェース / 品質・性能・ユーザビリティ / 設計制約) を 4 区分に畳んだもの。要求仕様書の 3 章と 4 章 (検証) はこの区分で節を分ける。英名: kind (functional / external_interface / quality / design_constraint)"
           enum: [機能, 外部インタフェース, 品質, 設計制約]
         記述:
           type: string
-          description: "要求文 (例: システムは入荷登録時に在庫数を加算しなければならない)。英名: statement"
+          description: "要求文 (「システムは〜しなければならない」の形)。英名: statement"
         理由:
           type: string
           description: "この要求が必要な理由 (29148 5.2.8 の rationale、Volere の rationale)。英名: rationale"
@@ -200,7 +205,7 @@ properties:
 
   ユースケース:
     type: object
-    description: "システムが提供する業務単位の機能の集合。項目は IPA 機能要件の合意形成ガイドの「システム化業務説明」(入出力データ / 基本・例外シナリオ / 事前・事後条件) を元に、ユースケース記述として再構成したもの。要求仕様書の機能要求の単位であり、設計書の CRUD マトリクスの行にもなる。マップのキーがユースケース ID。英名: use_cases"
+    description: "システムが提供する業務単位の機能の集合。項目は IPA 機能要件の合意形成ガイドの「システム化業務説明」(入出力データ / 基本・例外シナリオ / 事前・事後条件) を元に、ユースケース記述として再構成したもの。要求仕様書の機能要求の単位であり、設計書の CRUD マトリクスの行にもなる。記述順は業務の流れの順に置く (文書はユースケースをこの順に並べ、そう断る)。マップのキーがユースケース ID。英名: use_cases"
     additionalProperties:
       type: object
       description: "1 つのユースケースを表すレコード。英名: use_case"
@@ -208,13 +213,13 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名 (例: 入荷登録)。英名: name"
+          description: "文書に掲載する表示名。英名: name"
         概要:
           type: string
           description: "ユースケースの目的と結果を 1〜2 文で説明する。英名: summary"
         アクター:
           type: array
-          description: "このユースケースの主アクター (目標を持ってユースケースを開始する役割) の一覧。同じ目標を複数の役割が持つときは複数になる。シナリオの操作はすべて主アクターのもの。副アクター (システムがユースケースの途中でサービスを借りる相手。決済代行など) は本 showcase には登場せず、要る場合は別の属性として足し、そのやり取りはシナリオの応答の文中に書く。英名: actors"
+          description: "このユースケースの主アクター (目標を持ってユースケースを開始する役割) の一覧。同じ目標を複数の役割が持つときは複数になる。シナリオの操作はすべて主アクターのもの。副アクター (システムがユースケースの途中でサービスを借りる相手。外部サービスなど) は本 showcase には登場せず、要る場合は別の属性として足し、そのやり取りはシナリオの応答の文中に書く。英名: actors"
           items:
             type: object
             description: "ユースケースとアクターの対応 1 件。英名: actor"
@@ -242,10 +247,10 @@ properties:
             properties:
               操作:
                 type: string
-                description: "主アクターの操作。主語 (主アクター) は書かない (例: 仕入先を選ぶ)。英名: action"
+                description: "主アクターの操作。主語 (主アクター) は書かない。英名: action"
               応答:
                 type: string
-                description: "操作に対するシステムの応答。副アクターとのやり取りもここに書く (例: 決済代行に承認を依頼し、結果を受け取る)。英名: response"
+                description: "操作に対するシステムの応答。副アクターとのやり取りもここに書く。英名: response"
               例外:
                 type: array
                 description: "このステップで起こりうる例外の一覧。ステップの子として持つので、ステップ番号での参照は要らない。英名: exceptions"
@@ -256,10 +261,10 @@ properties:
                   properties:
                     条件:
                       type: string
-                      description: "例外が起きる条件 (例: ISBN が未登録である)。英名: condition"
+                      description: "例外が起きる条件。英名: condition"
                     応答:
                       type: string
-                      description: "その条件でのシステムの応答 (例: 登録を拒否し、先に書籍登録を促す)。英名: response"
+                      description: "その条件でのシステムの応答。英名: response"
                   required: [条件, 応答]
             required: [操作, 応答]
         業務プロセス:
@@ -288,7 +293,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名 (例: 店員、決済サービス)。英名: name"
+          description: "文書に掲載する表示名。英名: name"
         説明:
           type: string
           description: "システムとどう関わる役割かを 1〜2 文で説明する。英名: description"
@@ -311,7 +316,7 @@ properties:
           description: "用語の表記。英名: term"
         読み:
           type: string
-          description: "表記のひらがな読み (例: しょせき)。用語集を五十音順に並べるためのソートキーで、漢字表記からは並べられないため持つ。英名: reading"
+          description: "表記のひらがな読み。用語集を五十音順に並べるためのソートキーで、漢字表記からは並べられないため持つ。英名: reading"
         定義:
           type: string
           description: "用語の定義文。英名: definition"
@@ -322,12 +327,12 @@ properties:
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # 画面 – エンティティ – データアクセス – 設計判断
+  # 画面 – エンティティ – データアクセス – 設計判断 – コンポーネント
   # ---------------------------------------------------------------------------
 
   画面:
     type: object
-    description: "システムが利用者に提示する画面の集合。項目は IPA ガイド画面編の画面一覧 / 画面入出力項目一覧 / 画面アクション明細 / 画面遷移 / 画面レイアウトを元に絞り込んだもの。設計書の画面設計章 (画面一覧 / 画面遷移図 / 画面定義) のソース。マップのキーが画面 ID。英名: screens"
+    description: "システムが利用者に提示する画面の集合。項目は IPA ガイド画面編の画面一覧 / 画面入出力項目一覧 / 画面アクション明細 / 画面遷移 / 画面レイアウトを元に絞り込んだもの。設計書の画面設計章 (画面一覧 / 画面遷移図 / 画面定義) のソース。記述順は 分類 が メニュー の画面を先頭に、以降は関連ユースケースの順に置く (画面一覧はこの順に並べ、そう断る)。マップのキーが画面 ID。英名: screens"
     additionalProperties:
       type: object
       description: "1 つの画面を表すレコード。英名: screen"
@@ -335,7 +340,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名 (例: 入荷登録画面)。英名: name"
+          description: "文書に掲載する表示名。英名: name"
         分類:
           type: string
           description: "画面の分類。IPA 画面一覧の分類項目に対応。メニュー は他の画面へ進むための入口で、画面遷移図の開始点 ([*]) はこの分類の画面に引く。登録 は入力を受けてデータを作る画面、一覧 は検索して複数件を並べる画面、照会 は 1 件の詳細を表示する画面。英名: category (menu / entry / list / detail)"
@@ -442,7 +447,7 @@ properties:
 
   エンティティ:
     type: object
-    description: "データモデル (論理設計) 上のエンティティの集合。項目は IPA ガイドデータモデル編のエンティティ一覧 / エンティティ定義 / CRUD 図を元に絞り込んだもの。設計書のデータ設計章 (ER 図 / エンティティ定義) のソースで、CRUD マトリクスは データアクセス と組み合わせて導出する。物理設計 (テーブル定義) は別レイヤであり、ここでは論理型のみを持つ。マップのキーがエンティティ ID。英名: entities"
+    description: "データモデル (論理設計) 上のエンティティの集合。項目は IPA ガイドデータモデル編のエンティティ一覧 / エンティティ定義 / CRUD 図を元に絞り込んだもの。設計書のデータ設計章 (ER 図 / エンティティ定義) のソースで、CRUD マトリクスは データアクセス と組み合わせて導出する。物理設計 (テーブル定義) は別レイヤであり、ここでは論理型のみを持つ。記述順は 種別 が リソース のものを先に、イベント をその作成順に置く (エンティティ一覧と CRUD マトリクスの列はこの順に並べ、そう断る)。マップのキーがエンティティ ID。英名: entities"
     additionalProperties:
       type: object
       description: "1 つのエンティティを表すレコード。英名: entity"
@@ -450,7 +455,7 @@ properties:
       properties:
         名前:
           type: string
-          description: "文書に掲載する表示名 (例: 書籍)。英名: name"
+          description: "文書に掲載する表示名。英名: name"
         説明:
           type: string
           description: "エンティティが表す実体を 1〜2 文で説明する。英名: description"
@@ -465,7 +470,7 @@ properties:
             entity: 用語
         データストア:
           type: array
-          description: "このエンティティが実装する業務モデルのデータストア (台帳・記録) の一覧。業務の 1 つの台帳を複数のエンティティで実装する (入荷記録 = 入荷 + 入荷明細) ことも、1 つのエンティティが複数の台帳を兼ねる (書籍 = 書籍台帳 + 在庫台帳) こともあるので配列で持つ。台帳に対応しない設計上のエンティティでは省略する。英名: data_stores"
+          description: "このエンティティが実装する業務モデルのデータストア (台帳・記録) の一覧。業務の 1 つの台帳を複数のエンティティで実装する (ヘッダと明細に分ける) ことも、1 つのエンティティが複数の台帳を兼ねる (マスタが残高の台帳を兼ねる) こともあるので配列で持つ。台帳に対応しない設計上のエンティティでは省略する。英名: data_stores"
           items:
             type: object
             description: "エンティティとデータストアの対応 1 件。英名: data_store"
@@ -551,7 +556,7 @@ properties:
       properties:
         題名:
           type: string
-          description: "設計判断を一覧で一行で指すための見出し (例: 在庫数は入荷・販売の履歴から導出せず実数で持つ)。英名: title"
+          description: "設計判断を一覧で一行で指すための見出し。英名: title"
         判断:
           type: string
           description: "何をどう決めたか (42010 の architecture decision)。英名: decision"
@@ -573,3 +578,75 @@ properties:
                   entity: 要求
             required: [ID]
       required: [題名, 判断, 理由]
+
+  コンポーネント:
+    type: object
+    description: "ソフトウェアを構成するコンポーネント (サブシステム) の集合。設計書のシステム構成章のソースで、コンポーネント図は 依存 から、一覧はその他の参照から導出する。分解の粒度は業務の単位で、内部の構造 (モジュール、クラス) は持たない。参照はすべてこの層の中か上流へ向く。記述順は依存の向きの逆 (呼ばれる側を先) に置く。マップのキーがコンポーネント ID。英名: components"
+    additionalProperties:
+      type: object
+      description: "1 つのコンポーネントを表すレコード。英名: component"
+      additionalProperties: false
+      properties:
+        名前:
+          type: string
+          description: "文書に掲載する表示名。英名: name"
+        責務:
+          type: string
+          description: "そのコンポーネントが引き受ける処理を 1〜3 文で説明する。英名: responsibility"
+        依存:
+          type: array
+          description: "処理を呼び出す相手のコンポーネントの一覧。コンポーネント図の矢印になる。他を呼ばない土台のコンポーネントでは省略する。英名: dependencies"
+          items:
+            type: object
+            description: "コンポーネント間の依存 1 件。英名: dependency"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "呼び出す相手のコンポーネントの ID。英名: id"
+                x-ref:
+                  entity: コンポーネント
+            required: [ID]
+        ユースケース:
+          type: array
+          description: "そのコンポーネントが実現するユースケースの一覧。要求 → 設計のトレースの元になる。横断の部品でユースケースを持たないものは省略する。英名: use_cases"
+          items:
+            type: object
+            description: "コンポーネントとユースケースの対応 1 件。英名: use_case"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "ユースケースの ID。英名: id"
+                x-ref:
+                  entity: ユースケース
+            required: [ID]
+        エンティティ:
+          type: array
+          description: "そのコンポーネントが自分で読み書きするエンティティの一覧。他のコンポーネントを呼んで行う読み書きは呼ぶ側には挙げないので、CRUD マトリクスの行をコンポーネントごとに束ねた集合より狭い。同じエンティティを複数のコンポーネントが扱うことがある (あるコンポーネントが登録し、別のコンポーネントが一部の属性を更新する)。英名: entities"
+          items:
+            type: object
+            description: "コンポーネントとエンティティの対応 1 件。英名: entity"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "エンティティの ID。英名: id"
+                x-ref:
+                  entity: エンティティ
+            required: [ID]
+        設計判断:
+          type: array
+          description: "そのコンポーネントが引き受ける設計判断の一覧。判断の内容は設計方針の節にあり、ここは「どこに閉じ込めたか」だけを持つ。二つのコンポーネントにまたがる判断は両方に置く。システム全体に及ぶ判断 (日時の持ち方など) はどのコンポーネントにも置かず、省略する。英名: design_decisions"
+          items:
+            type: object
+            description: "コンポーネントと設計判断の対応 1 件。英名: design_decision"
+            additionalProperties: false
+            properties:
+              ID:
+                type: string
+                description: "設計判断の ID。英名: id"
+                x-ref:
+                  entity: 設計判断
+            required: [ID]
+      required: [名前, 責務, エンティティ]

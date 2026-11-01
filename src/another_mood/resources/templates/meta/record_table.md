@@ -13,14 +13,14 @@
 {% if rows %}
 | {% for attribute in attributes %}{{ attribute.id }} | {% endfor %}_anchor_path |
 |{% for attribute in attributes %}---|{% endfor %}---|
-{% for row in rows %}
+  {% for row in rows %}
 | {% for attribute in attributes -%}
-    {%- if attribute.child_entity -%}
+      {%- if attribute.child_entity -%}
         *{{ (row | pluck(attribute.id) or []) | length }} items*
-    {%- else -%}
+      {%- else -%}
         {{ row | pluck(attribute.id) | in_cell }}
-    {%- endif %} | {% endfor %}{{ row | anchor_path | in_cell }} |
-{% endfor %}
+      {%- endif %} | {% endfor %}{{ row | anchor_path | in_cell }} |
+  {% endfor %}
 {% else %}
 (no records)
 {% endif %}

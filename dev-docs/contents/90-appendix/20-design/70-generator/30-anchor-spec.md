@@ -17,17 +17,17 @@ id 値が `/` を含む場合の `%2F` 以外の文字は **IRI エスケープ*
 - **生のまま残す**: ASCII の unreserved (`A–Za–z0–9-._~`) と、**非 ASCII の `ucschar`**（RFC 3987 が IRI で許す Unicode 範囲。漢字・かな・非 ASCII 句読点・記号等。例: `書籍`、`モーニング娘。` の `。`、`藤岡弘、` の `、`）
 - **percent-encode する**: ASCII の予約・特殊文字（空白 → `%20`、`# ? : * | \ " < >` 等）と、`ucschar` 外の非 ASCII（制御・surrogate・private-use・noncharacter）
 
-つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパス（および由来する page_path）は **URL であると同時に出力ファイルのパス**でもあるため、IRI 形にすることで「人が読めるパス（`書籍.md`）」「URL として正当」「主要 OS で生成可能なファイル名」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の Goldmark・ブラウザ・静的サーバ）が行う（リンクの着地に要る `<a id>` の描画は別問題で Hugo の raw HTML 許可を要する — [アンカーの発行](../../../20-design/70-generator/30-anchor-spec.md#アンカーの発行)を参照）。
+つまりエスケープは「URI-encode から `ucschar` を除いた IRI 形」。アンカーパスは URL（fragment・リンク先）と `<a id>` に埋め込まれる住所で、IRI 形にすることで「人が読める住所（`/prose/書籍`）」と「URL として正当」を同時に満たす。URI への直列化（`書籍`→`%E6%9B%B8%E7%B1%8D`）は消費側（Hugo の Goldmark・ブラウザ・静的サーバ）が行う（リンクの着地に要る `<a id>` の描画は別問題で Hugo の raw HTML 許可を要する — [アンカーの発行](../../../20-design/70-generator/30-anchor-spec.md#アンカーの発行)を参照）。
 
-エスケープは **encode 片道**で、生の segment/id 値に 1 回だけ適用する（既存の `%XX` を decode・二重 encode しない。`%` 自体は ASCII 特殊文字なので `%25` に encode される）。FS で危険な ASCII（`: * | \` 等）は上記のとおり encode 側に残るため Windows でも安全。
+エスケープは **encode 片道**で、生の segment/id 値に 1 回だけ適用する（既存の `%XX` を decode・二重 encode しない。`%` 自体は ASCII 特殊文字なので `%25` に encode される）。
 
 なお id value（データ側セグメント）は無制約だが、attr name（構造側セグメント）はスキーマの `^[\p{L}_][\p{L}\p{M}\p{N}_]*$` で識別子状に制約済みで、ucschar/unreserved を素通りする。
 
-`ucschar`（RFC 3987）のレンジは `generator/url.py` の `_UCSCHAR_RANGES` が持つ（サロゲート・noncharacter・private-use を除外）。
+`ucschar`（RFC 3987）のレンジは `shared/url.py` の `_UCSCHAR_RANGES` が持つ（サロゲート・noncharacter・private-use を除外）。
 
 ### なぜ IRI 形か
 
-エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。anchor_path（および由来する page_path）はファイル名にもなり、`書籍`→`%E6…` では CJK のsbdb プロジェクトで読めないファイル名になるため。「URL 安全 ≠ ファイル名安全」であり、IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
+エスケープは全非 ASCII を percent-encode せず、生 Unicode を残す **IRI 形**にする。`書籍`→`%E6…` では `node:/prose/…` の住所も `<a id>` も読めなくなるため。IRI ⇄ URI は同一資源の別表現で、生 Unicode のリンク/ファイル名も CommonMark・HTML/URL 標準上正当なので生で残して問題ない。keep-raw 集合はカテゴリ（`\p{L}\p{N}`）でなく `ucschar`（レンジ）— `モーニング娘。`「藤岡弘、」のように **実在 id が非 ASCII 句読点を含む**ため。
 
 ## Prose / Blob の例外の理由
 

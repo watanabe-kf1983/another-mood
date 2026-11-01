@@ -1,0 +1,128 @@
+# The tree of the SRS. Everything drawn inside the document is copied to a
+# leaf of this tree, and links are made to the copies: where a link lands is
+# decided by the position in the data tree, so a link to the original entity
+# (drawn nowhere) does not land. Prose is the same, and a chapter's text is
+# copied under the chapter.
+#
+# The prose records the SRS reads have fixed names, and a replacement
+# contents/ keeps them: srs/introduction and srs/constraints (chapter 1) and
+# srs/appendices (chapter 5) are copied by the `prose` views below, and
+# srs/business_model (the note in the business model section of chapter 5) is
+# embedded as content by the section's template.
+
+# ---------------------------------------------------------------------------
+# 1. Introduction
+# ---------------------------------------------------------------------------
+
+srs.introduction.prose:
+  from: prose
+  where:
+    or:
+      - id: srs/introduction
+      - id: srs/constraints
+
+srs.introduction.business_context:
+  from: processes
+
+srs.introduction.product_functions:
+  from: use_cases
+
+srs.introduction.users_and_external_systems:
+  from: actors
+  join:
+    to: use_case_actors
+    on: { left: id, right: actor.id }
+    as: use_cases
+  select:
+    - item: id
+    - item: name
+    - item: kind
+    - item: description
+    - item: use_cases
+
+# ---------------------------------------------------------------------------
+# 2. Glossary (the chapter itself is a leaf)
+# ---------------------------------------------------------------------------
+
+srs.glossary:
+  from: terms
+
+# ---------------------------------------------------------------------------
+# 3. Requirements
+# ---------------------------------------------------------------------------
+
+# The copies of the requirements are placed under the use case rows so that a
+# requirement's anchor path (/srs/requirements/functional/<use case ID>/requirements/<requirement ID>)
+# points at the use case's page in the web edition. This is the home of use
+# cases and requirements.
+srs.requirements.functional:
+  from: use_cases
+  join:
+    to: requirements
+    on: { left: id, right: use_case_id }
+    as: requirements
+  select:
+    - item: id
+    - item: name
+    - item: summary
+    - item: actors
+    - item: business_processes
+    - item: precondition
+    - item: postcondition
+    - item: main_scenario
+    - item: requirements
+
+# For the same reason as the functional requirements, the copies are placed
+# under the row of their kind (/srs/requirements/non_functional/quality/requirements/R16).
+srs.requirements.non_functional:
+  from: requirements
+  where:
+    not:
+      kind: functional
+  grouped:
+    by: kind
+    as: requirements
+  select:
+    - item: kind
+      as: id
+    - item: requirements
+
+# ---------------------------------------------------------------------------
+# 4. Verification
+# ---------------------------------------------------------------------------
+
+# Copies of the rows of chapter 3, redrawn with the verification method / fit
+# criterion columns. To give the chapter a page of its own it must have a
+# subtree of its own. The home of the requirements stays in chapter 3, and the
+# ID column of chapter 4 links there.
+srs.verification.functional:
+  from: srs.requirements.functional
+
+srs.verification.non_functional:
+  from: srs.requirements.non_functional
+
+# ---------------------------------------------------------------------------
+# 5. Appendices
+# ---------------------------------------------------------------------------
+
+srs.appendices.prose:
+  from: prose
+  where:
+    id: srs/appendices
+
+# The unit drawn is "the decomposition of one process = one diagram", so the
+# rows are diagrams, not processes (id = the parent process's ID, children =
+# its child processes). Rows are in order of first appearance of parent_id,
+# which gives diagram 0, diagram 1, diagram 2, ... because processes.yaml is
+# in depth-first order.
+srs.appendices.business_model:
+  from: processes
+  where:
+    parent_id: { exists: true }
+  grouped:
+    by: parent_id
+    as: children
+  select:
+    - item: parent_id
+      as: id
+    - item: children

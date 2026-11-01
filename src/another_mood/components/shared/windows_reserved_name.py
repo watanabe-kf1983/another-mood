@@ -1,4 +1,5 @@
-"""Reject a user-chosen id that collides with a Windows-reserved name."""
+"""File-name safety for a user-chosen id: escape the characters no filesystem
+accepts, reject a Windows-reserved name."""
 
 from pathlib import Path
 
@@ -24,6 +25,29 @@ _RESERVED_NAMES = frozenset(
     | {f"COM{c}" for c in "123456789\xb9\xb2\xb3"}
     | {f"LPT{c}" for c in "123456789\xb9\xb2\xb3"}
 )
+
+
+# Not `%`: a server percent-decodes a request path before the lookup (and Hugo
+# keeps a `%XX` content file name verbatim), so a `%XX` on disk is unreachable
+# through its own URL.  `~` is URL-unreserved and legal on every filesystem.
+_FS_ESCAPE_CHAR = "~"
+
+
+def fs_escape_segment(segment: str) -> str:
+    """``segment`` as a file-name segment every filesystem accepts: the
+    reserved characters, ``~`` itself and a trailing ``.`` / space become
+    ``~XX``."""
+    escaped = "".join(
+        _fs_escape_char(ch) if ch in _RESERVED_CHARS or ch == _FS_ESCAPE_CHAR else ch
+        for ch in segment
+    )
+    if escaped[-1:] in (".", " "):
+        return escaped[:-1] + _fs_escape_char(escaped[-1])
+    return escaped
+
+
+def _fs_escape_char(ch: str) -> str:
+    return f"{_FS_ESCAPE_CHAR}{ord(ch):02X}"
 
 
 class WindowsReservedNameError(UserError):

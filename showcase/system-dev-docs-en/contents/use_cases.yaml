@@ -1,0 +1,142 @@
+# The order is the chronology of the business (master registration → delivery
+# → sale → stocktake → inquiry). The product functions and functional
+# requirements sections of the SRS and the rows of the SDD's CRUD matrix are
+# drawn in this order.
+#
+# IDs are identifiers, not positions. A use case added later (UC07) is placed
+# where it falls in the business chronology and the existing IDs are not
+# reassigned: IDs are referenced by other records and by the prose, so
+# renumbering them to match the order would move references across both
+# documents.
+#
+# business_processes are the leaf processes of the business model the use case
+# supports. Here each use case supports one leaf (Place orders and Take
+# payment stay manual).
+use_cases:
+  UC01:
+    name: Book registration
+    summary: Register a book newly taken into the range by its ISBN. A registered book becomes subject to stock control.
+    actors:
+      - id: clerk
+    business_processes:
+      - id: P13
+    precondition: The ISBN of the book to register is known.
+    postcondition: The book is registered and under stock control with a stock quantity of 0.
+    main_scenario:
+      - action: Enters the ISBN of the book.
+        response: Checks the format of the ISBN and accepts the title and publisher.
+        exceptions:
+          - condition: The ISBN is malformed.
+            response: Points out the error and asks for the ISBN again.
+          - condition: A book with the same ISBN is already registered.
+            response: Shows the registered book and abandons the registration.
+      - action: Enters the title and publisher and confirms the registration.
+        response: Registers the book and adds it to stock with a stock quantity of 0.
+  UC02:
+    name: Supplier registration
+    summary: Register a supplier as a source of deliveries.
+    actors:
+      - id: clerk
+    business_processes:
+      - id: P14
+    postcondition: The supplier is registered and can be chosen as the source of a delivery.
+    main_scenario:
+      - action: Enters the name and contact details of the supplier and confirms the registration.
+        response: Registers the supplier and adds it to the list of delivery sources.
+        exceptions:
+          - condition: A supplier with the same name is already registered.
+            response: Shows the existing supplier and asks whether to register anyway or abandon.
+  UC03:
+    name: Delivery registration
+    summary: Record the books and quantities delivered by a supplier and add them to stock.
+    actors:
+      - id: clerk
+    business_processes:
+      - id: P12
+    precondition: The supplier of the delivery and the delivered books are registered.
+    postcondition: The delivery is recorded and the delivered quantity has been added to the stock quantity of each book.
+    main_scenario:
+      - action: Selects the supplier.
+        response: Keeps the selected supplier as the source of the delivery and accepts books.
+      - action: Specifies a delivered book by ISBN and enters the quantity.
+        response: Shows the title and adds the book to the delivery lines.
+        exceptions:
+          - condition: The ISBN is not registered.
+            response: Refuses to add the line and prompts for book registration first.
+      - action: Confirms the delivery.
+        response: Records the delivery and adds each line's quantity to the stock quantity of its book.
+  UC04:
+    name: Sales posting
+    summary: Receive the books and quantities of a completed sale from the payment service and deduct them from stock.
+    actors:
+      - id: payment_service
+    business_processes:
+      - id: P22
+    precondition: The books sold are registered.
+    postcondition: The sale is recorded and the sold quantity has been deducted from the stock quantity of each book.
+    main_scenario:
+      - action: Notifies the books (ISBNs) and quantities of a completed sale.
+        response: Records the sale, deducts each quantity from the stock quantity of its book and returns an acknowledgement.
+        exceptions:
+          - condition: A notified ISBN is not registered.
+            response: Records the sale as pending and asks a clerk to review the books.
+          - condition: The stock quantity is less than the quantity sold.
+            response: Deducts the quantity anyway and flags the book to the clerk as needing attention.
+  UC07:
+    name: Pending sale review
+    summary: A clerk matches the books of a sale that is pending because it includes unregistered books to registered books and posts the sale to stock.
+    actors:
+      - id: clerk
+    business_processes:
+      - id: P23
+    precondition: There is a pending sale awaiting review.
+    postcondition: The pending sale is confirmed and the sold quantity has been deducted from the stock quantity of each matched book.
+    main_scenario:
+      - action: Selects a pending sale awaiting review.
+        response: Lists the lines of the sale with the notified ISBNs and quantities, and accepts the books to match them to.
+      - action: Specifies the matching book of each line by ISBN.
+        response: Shows the title and keeps it as the match for the line.
+        exceptions:
+          - condition: The specified ISBN is not registered.
+            response: Refuses the match and prompts for book registration first.
+      - action: Confirms the review.
+        response: Deducts each line's quantity from the stock quantity of its book and marks the sale as confirmed.
+        exceptions:
+          - condition: Some lines have not been matched.
+            response: Refuses to confirm and points out the unmatched lines.
+  UC05:
+    name: Stocktake
+    summary: Record the counted quantities, reset stock to them and keep the differences as the stocktake record.
+    actors:
+      - id: clerk
+    business_processes:
+      - id: P31
+    precondition: The store is closed, and no delivery registration or sales posting takes place.
+    postcondition: The stock quantity of each book has been reset to the counted quantity and the differences remain as the stocktake record.
+    main_scenario:
+      - action: Starts the stocktake.
+        response: Records the current stock quantity of every book as the baseline of the stocktake and accepts counted quantities.
+      - action: Enters the counted quantity of each book.
+        response: Shows the difference from the baseline quantity for each book.
+      - action: Confirms the stocktake.
+        response: Replaces the stock quantity of each book with the counted quantity and saves the differences as the stocktake record.
+        exceptions:
+          - condition: Some books have no counted quantity entered.
+            response: Refuses to confirm and points out the books without a count.
+  UC06:
+    name: Stock inquiry
+    summary: Look up the current stock quantity of a book.
+    actors:
+      - id: clerk
+      - id: owner
+    business_processes:
+      - id: P32
+    postcondition: Stock is unchanged.
+    main_scenario:
+      - action: Searches for books by title or ISBN.
+        response: Lists the matching books with their current stock quantities.
+        exceptions:
+          - condition: No book matches.
+            response: Reports that nothing matched.
+      - action: Selects a book from the list.
+        response: Shows the delivery, sale and stocktake history of the book.

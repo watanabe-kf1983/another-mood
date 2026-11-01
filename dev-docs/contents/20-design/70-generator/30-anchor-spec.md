@@ -32,9 +32,9 @@ view については一意性を保証できず、保証を強制すべきでも
 
 #### Escape 規則
 
-アンカーパスは **IRI**（RFC 3987）として扱う。URL fragment / パスとして使う以上 `/` を区切りに予約するため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**（組み込みの `prose` / `blob` は例外、下記）。それ以外の文字は IRI エスケープで正規化し、生 Unicode を残す。アンカーパス（および由来する page_path）は URL であると同時に出力ファイルのパスでもあり、全非 ASCII を percent-encode すると CJK のsbdb プロジェクトで読めないファイル名になるためで、精密な条件と背景は[付録](../../90-appendix/20-design/70-generator/30-anchor-spec.md#escape-規則の精密な条件)。
+アンカーパスは **IRI**（RFC 3987）として扱う。URL fragment / パスとして使う以上 `/` を区切りに予約するため、**id 値が `/` を含む場合は percent-encoding (`%2F`) で escape する**（組み込みの `prose` / `blob` は例外、下記）。それ以外の文字は IRI エスケープで正規化し、生 Unicode を残す（精密な条件と背景は[付録](../../90-appendix/20-design/70-generator/30-anchor-spec.md#escape-規則の精密な条件)）。
 
-escape 規則は文字単位の安全化までで、**文字単位で潰せない FS 固有問題**（パス長超過・Windows 予約名）はエスケープとは別に、パス書き出し側で対処する。
+アンカーパスは住所であり、出力ファイルのパスではない（[ファイル名](#ファイル名)）。
 
 #### Prose / Blob の例外
 
@@ -68,7 +68,7 @@ escape 規則は文字単位の安全化までで、**文字単位で潰せな�
 
 テンプレートの `node()`（[テンプレートからの参照](#テンプレートからの参照)）から来ても本文の `node:`（[本文からの参照](#本文からの参照)）から来ても共通で、送り側（URL の fragment）と受け側（ページ上の id）が同じ文字列 — データノードは anchor_path、見出しノードは slug — を使うことで両端が構築上一致する。
 
-出力する URL は **対象ページへの相対パス** + URL fragment。fragment は target がページ root に一致する場合も省かない（ハンドリングを単純に保つ）。blob ノードはページ上に描かれるノードではなく出力ツリー上の実ファイル（[blob-spec.md の出力配置](../50-normalizer/27-blob-spec.md#出力配置-アンカーパス--出力アドレス)）なので、fragment を持たずアンカーパスをそのままファイルパスとして相対解決する。URL の形は `docs/reference/template.md` の `href`。
+出力する URL は **対象ページへの相対パス** + URL fragment。path 部は[ファイル名](#ファイル名)を標準の percent-encoding にかけたもの。fragment は target がページ root に一致する場合も省かない（ハンドリングを単純に保つ）。blob ノードはページ上に描かれるノードではなく出力ツリー上の実ファイル（[blob-spec.md の出力配置](../50-normalizer/27-blob-spec.md#出力配置-アンカーパス--出力アドレス)）なので、fragment を持たない。URL の形は `docs/reference/template.md` の `href`。
 
 #### アンカーの発行
 
@@ -152,6 +152,16 @@ Composer が渡す木は純粋なデータで、ノードは自分が木のど�
 ノードの**表示先ページのパス** (レポートルート相対、fragment 抜き) を求める。page_path は **`(node, file_per)` の関数**であってノード単体の内在属性ではないため `_meta` には焼かない — 消費側 (リンク解決フィルタ、`render` フィルタ) が render ごとに `PagingPolicy` を受け取り、必要時に `paging.page_path(node)` を呼ぶ。
 
 paging ポリシーは `PagingPolicy` が担い、構造的な木の遡上だけは data_tree の free function `nearest_ancestor` に分離する (`PagingPolicy` は paging を知らない木に触れず、data_tree は paging を知らないまま保つ)。導出規則と座標系の理由は `edition.py` の `PagingPolicy` docstring が正本。
+
+#### ファイル名
+
+アンカーパスをそのまま使わず、**セグメント単位で percent-decode したもの**にする。ブラウザも静的サーバも GitHub も Hugo も、URL を decode してからファイルを探すため。
+
+decode で現れる文字のうち FS が持てないもの（`windows_reserved_name.py` の予約文字表、`~` 自身、末尾の `.` / 空白）だけは `~XX` に逃がす。`%XX` でないのは、Hugo がファイル名中の `%XX` を URL エンコード済みとみなして温存するため。
+
+blob のミラー先と edition ディレクトリも同じ規則で名前を得る（`edition.py` の `PagingPolicy.page_path`）。
+
+文字単位で潰せない FS 固有問題（パス長超過・Windows デバイス名）はエスケープとは別に、パス書き出し側で対処する。
 
 ### リンク解決
 

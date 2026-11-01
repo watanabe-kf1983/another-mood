@@ -305,16 +305,15 @@ ROOT_ENTITY_ID = "__root"
 
 
 def build_tree(catalog: Sequence[Entity]) -> Node:
-    """The inverse of :func:`flatten_root`, plus each view hung off the
-    root as an ``object[]`` edge named by its id.
-
-    Without the root entity in ``catalog``, the root holds only the views.
-    """
+    """The inverse of :func:`flatten_root`, plus each entity without a
+    parent hung off the root as an ``object[]`` edge named by its id."""
     root = next((e for e in catalog if e.id == ROOT_ENTITY_ID), None)
     root_node = _build_entity_node(root, catalog) if root is not None else Node()
-    views = [e for e in catalog if e.parent_entity is None and e.id != ROOT_ENTITY_ID]
-    view_branches = [_build_view_branch(view, catalog) for view in views]
-    return replace(root_node, children=[*root_node.children, *view_branches])
+    parentless = [
+        e for e in catalog if e.parent_entity is None and e.id != ROOT_ENTITY_ID
+    ]
+    branches = [_build_parentless_branch(e, catalog) for e in parentless]
+    return replace(root_node, children=[*root_node.children, *branches])
 
 
 def attribute_suffix(parent_id: str, child_id: str) -> str:
@@ -365,9 +364,11 @@ def _without(d: Mapping[str, Any], *keys: str) -> dict[str, Any]:
     return {k: v for k, v in d.items() if k not in keys}
 
 
-def _build_view_branch(view: Entity, catalog: Sequence[Entity]) -> Branch:
-    edge = Edge(name=view.id, type="object[]", required=True, metadata=view.metadata)
-    return edge, _build_entity_node(view, catalog)
+def _build_parentless_branch(entity: Entity, catalog: Sequence[Entity]) -> Branch:
+    edge = Edge(
+        name=entity.id, type="object[]", required=True, metadata=entity.metadata
+    )
+    return edge, _build_entity_node(entity, catalog)
 
 
 def _build_entity_node(

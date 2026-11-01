@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 276"
+     width="776" height="276"
+     role="img" aria-label="Screen layout of the Menu screen">
+<rect width="776" height="276" fill="#fff"/>
+<g font-family="sans-serif">
+<rect x="8.5" y="8.5" width="760" height="260" fill="none" stroke="#333" stroke-width="1"/>
+<rect x="9.5" y="9.5" width="758" height="34" fill="#eee" stroke="#333" stroke-width="1"/>
+<rect x="21.5" y="57.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="91.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="125.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="159.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="193.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<rect x="21.5" y="227.5" width="220" height="26" fill="#eee" stroke="#333" stroke-width="1" rx="3"/>
+<text x="21" y="25.5" font-size="15" fill="#111" dominant-baseline="central" font-weight="700">Menu screen</text>
+<text x="86" y="70" font-size="12" fill="#111" dominant-baseline="central">Book registration</text>
+<text x="77.6" y="104" font-size="12" fill="#111" dominant-baseline="central">Supplier registration</text>
+<text x="78" y="138" font-size="12" fill="#111" dominant-baseline="central">Delivery registration</text>
+<text x="77.3" y="172" font-size="12" fill="#111" dominant-baseline="central">Pending sale review</text>
+<text x="104.6" y="206" font-size="12" fill="#111" dominant-baseline="central">Stocktake</text>
+<text x="96.6" y="240" font-size="12" fill="#111" dominant-baseline="central">Stock inquiry</text>
+</g>
+</svg>

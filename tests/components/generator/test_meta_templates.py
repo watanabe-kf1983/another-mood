@@ -2,7 +2,12 @@
 
 import pytest
 
-from another_mood.components.generator.data_tree import ArrayNode, Node, wrap_tree
+from another_mood.components.generator.data_tree import (
+    ArrayNode,
+    MappingNode,
+    Node,
+    wrap_tree,
+)
 from another_mood.components.generator.inert import ensure_inert_mapping
 from another_mood.components.generator.meta_templates import (
     META_EDITION,
@@ -15,19 +20,24 @@ from another_mood.components.generator.meta_templates import (
 
 class TestMetaEdition:
     """The meta render's fixed ``file_per`` splits each built-in meta
-    query's result items onto their own anchor-derived ``{view}/{id}.md``
-    page.  This is the contract that keeps the diagnostics from inlining
-    back into ``index.md`` — ``page_path`` returns ``index.md`` for a
-    non-split node, so asserting the path covers both the split decision
-    and its derivation."""
+    query's result items onto their own anchor-derived
+    ``{holder}/{kind}/{id}.md`` page.  This is
+    the contract that keeps the diagnostics from inlining back into
+    ``index.md`` — ``page_path`` returns ``index.md`` for a non-split node,
+    so asserting the path covers both the split decision and its
+    derivation."""
 
-    @pytest.mark.parametrize("view", ["__entity_defs", "__view_defs", "__data"])
-    def test_meta_query_item_splits_to_its_page(self, view: str) -> None:
-        array = wrap_tree(ensure_inert_mapping({view: [{"id": "sample"}]}))[view]
+    @pytest.mark.parametrize("holder", ["__defs", "__data"])
+    @pytest.mark.parametrize("kind", ["entities", "views"])
+    def test_meta_query_item_splits_to_its_page(self, holder: str, kind: str) -> None:
+        root = wrap_tree(ensure_inert_mapping({holder: {kind: [{"id": "sample"}]}}))
+        parent = root[holder]
+        assert isinstance(parent, MappingNode)
+        array = parent[kind]
         assert isinstance(array, ArrayNode)
         node = array[0]
         assert isinstance(node, Node)
-        assert META_EDITION.paging.page_path(node) == f"{view}/sample.md"
+        assert META_EDITION.paging.page_path(node) == f"{holder}/{kind}/sample.md"
 
 
 class TestAnchorPathFilter:
@@ -68,7 +78,7 @@ class TestWalkEntityFilter:
 
     def test_root_entity_returns_views_list(self) -> None:
         views = {"posts": [{"id": "a"}, {"id": "b"}]}
-        entities = [{"id": "posts"}]
+        entities = [{"id": "posts", "parent_entity": "__root"}]
         assert walk_entity(views, "posts", entities) == [{"id": "a"}, {"id": "b"}]
 
     def test_single_step_child_flattens_array_attribute(self) -> None:
@@ -83,7 +93,7 @@ class TestWalkEntityFilter:
             ]
         }
         entities = [
-            {"id": "entities"},
+            {"id": "entities", "parent_entity": "__root"},
             {"id": "entities.fields", "parent_entity": "entities"},
         ]
         assert walk_entity(views, "entities.fields", entities) == [
@@ -105,7 +115,7 @@ class TestWalkEntityFilter:
             }
         }
         entities = [
-            {"id": "__definition.entities"},
+            {"id": "__definition.entities", "parent_entity": "__root"},
             {
                 "id": "__definition.entities.item_type.attributes",
                 "parent_entity": "__definition.entities",
@@ -129,7 +139,7 @@ class TestWalkEntityFilter:
             ]
         }
         entities = [
-            {"id": "erds"},
+            {"id": "erds", "parent_entity": "__root"},
             {"id": "erds.entities", "parent_entity": "erds"},
             {"id": "erds.entities.fields", "parent_entity": "erds.entities"},
         ]
@@ -142,7 +152,7 @@ class TestWalkEntityFilter:
     def test_missing_root_yields_empty(self) -> None:
         # An entity declared in the catalog but with no records yet:
         # template's `{% if rows %}` guard renders `(no records)`.
-        entities = [{"id": "posts"}]
+        entities = [{"id": "posts", "parent_entity": "__root"}]
         assert walk_entity({}, "posts", entities) == []
 
     def test_missing_intermediate_suffix_skips_row(self) -> None:
@@ -156,7 +166,7 @@ class TestWalkEntityFilter:
             ]
         }
         entities = [
-            {"id": "entities"},
+            {"id": "entities", "parent_entity": "__root"},
             {"id": "entities.fields", "parent_entity": "entities"},
         ]
         assert walk_entity(views, "entities.fields", entities) == [{"id": "id"}]

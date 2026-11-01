@@ -13,8 +13,9 @@ extension.
 import posixpath
 from collections.abc import Callable, Mapping
 from typing import cast
-from urllib.parse import SplitResult, urlsplit
+from urllib.parse import SplitResult, unquote, urlsplit
 
+from another_mood.components.shared.url import url_escape
 from another_mood.components.shared.markdown import (
     first_h1,
     heading_nodes,
@@ -149,7 +150,8 @@ def _resolver(doc_id: str) -> Callable[[str], str]:
     def resolve(dest: str) -> str:
         link = urlsplit(dest)
         if _is_in_tree_relative(link):
-            resolved = posixpath.normpath(posixpath.join(base, link.path))
+            # The destination is a URL: decode it before resolving it as a path.
+            resolved = posixpath.normpath(posixpath.join(base, unquote(link.path)))
             if not resolved.startswith("../"):  # stays inside the contents tree
                 node = _node_target(resolved)
                 return f"{node}#{link.fragment}" if link.fragment else node
@@ -178,6 +180,7 @@ def _node_target(resolved: str) -> str:
     # Prose drops the extension, a blob keeps it, so each id matches the form
     # source_loader assigns (a prose id is extensionless, a blob id the full path).
     if resolved.lower().endswith(_MARKDOWN_SUFFIX):
-        return f"{_NODE_PROSE_PREFIX}{resolved[: -len(_MARKDOWN_SUFFIX)]}"
+        doc_id = resolved[: -len(_MARKDOWN_SUFFIX)]
+        return f"{_NODE_PROSE_PREFIX}{url_escape(doc_id, safe='/')}"
     else:
-        return f"{_NODE_BLOB_PREFIX}{resolved}"
+        return f"{_NODE_BLOB_PREFIX}{url_escape(resolved, safe='/')}"

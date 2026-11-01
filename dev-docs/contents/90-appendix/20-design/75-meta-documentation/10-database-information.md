@@ -14,6 +14,6 @@ programmatic に伝わる。SQL クライアントが (全カラムスカラ前�
 省略できるのと対照的。
 
 Shape は Query Object の `derive` が生成する。定義から deterministic
-に導出される型情報なので、置き場所は `__data` ではなく `__view_defs`:
+に導出される型情報なので、置き場所はデータページではなく View Definition ページ:
 entity def ページが「schema 定義 + 正規化後の型表」を見せるのと同じ、
 「定義 + そこから決まる型」の構図になる。

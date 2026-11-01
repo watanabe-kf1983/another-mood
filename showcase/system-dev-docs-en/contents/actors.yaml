@@ -1,0 +1,13 @@
+actors:
+  clerk:
+    name: Clerk
+    kind: person
+    description: Handles deliveries, sales and stocktakes on the shop floor, and looks up stock.
+  owner:
+    name: Owner
+    kind: person
+    description: The person responsible for the store. Reviews the state of stock and the results of stocktakes.
+  payment_service:
+    name: Payment service
+    kind: external_system
+    description: Takes payment at the counter and notifies the system of each completed sale (books and quantities).

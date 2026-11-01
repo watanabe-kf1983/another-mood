@@ -1,0 +1,652 @@
+# References (x-ref) point one way only: downstream (the sources of the SDD)
+# → upstream (the sources of the SRS). The upstream definitions are closed
+# without knowing the downstream ones, so that the requirements data is not
+# dragged along by design changes even when the design side is written by
+# someone else, or by an AI, on its own.
+#
+# Descriptive attributes (summary / statement / rationale / condition / action /
+# response and so on) are all plain text. The templates escape Markdown
+# characters in values, so Markdown inside a value has no effect. Explanations
+# that need paragraphs or lists go in prose records (contents/*.md).
+type: object
+additionalProperties: false
+properties:
+  # ===========================================================================
+  # Cross-cutting: the system the two documents are about (a single record)
+  # ===========================================================================
+
+  system:
+    type: object
+    description: "The one system the two documents describe. It holds only a name and a one-sentence description; the opening line of each document and the boundary label of the context diagram refer to it. It exists so that the templates never spell out the subject's name, and it belongs to no layer."
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        description: "Name of the system. Used as the boundary label of the context diagram."
+      description:
+        type: string
+        description: "A one-sentence introduction that names the subject and the role. Used in the opening sentence of each document."
+    required: [name, description]
+
+  # ===========================================================================
+  # Business: the source of the SRS appendix (business model = levelled DFD).
+  # It sits above upstream and knows no other layer (every reference points
+  # from upstream / downstream into this layer).
+  #
+  # This is a business DFD, not a system DFD: the single process of level 0 is
+  # the business as a whole, not the system (a DFD with the system as its single
+  # process would duplicate the context diagram of the SDD). The boundary of the
+  # business and the boundary of the system are different things, so they are
+  # not mapped onto each other; the system's boundary is derived as the set of
+  # leaf processes that some use case supports.
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # processes – data_stores – external_entities – flows
+  # ---------------------------------------------------------------------------
+
+  processes:
+    type: object
+    description: "The processes of the business model (a levelled DFD). Following the levelling of structured analysis (DeMarco / Yourdon), the process without a parent_id is the business as a whole (the only process of the context diagram) and processes without children are leaves (units of work that are not decomposed further). Processes carry no numbers (1, 1.2, ...); numbers are assigned at documentation time from the parent-child relation and the order of description. The map key is the process ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one process."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents. Leaves are verb phrases; decomposed processes carry the name of the business area (a noun)."
+        description:
+          type: string
+          description: "One or two sentences on what the process does as business work."
+        parent_id:
+          type: string
+          description: "ID of the higher-level process whose decomposition produced this one. Omitted only by the single process that stands for the business as a whole."
+          x-ref:
+            entity: processes
+      required: [name, description]
+
+  data_stores:
+    type: object
+    description: "The data stores of the business model (the ledgers and records the business reads and writes). They correspond to the data stores of structured analysis, and the entities of the SDD's logical data model implement them. The map key is the data store ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one data store."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        description:
+          type: string
+          description: "One or two sentences on what the ledger records."
+      required: [name, description]
+
+  external_entities:
+    type: object
+    description: "The parties outside the boundary of the business that exchange data with it. They correspond to the terminators of structured analysis. The actors of this system have a different boundary (actors sit outside the system's boundary, external entities outside the business's boundary), so the two are not mapped onto each other. The map key is the external entity ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one external entity."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        description:
+          type: string
+          description: "One or two sentences on how the party exchanges data with the business."
+      required: [name, description]
+
+  flows:
+    type: object
+    description: "The data flows of the business model. Flows are recorded at every level (the higher levels are not derived by aggregating the leaf level): a higher-level flow carries a name that bundles the flows below it, and a lower-level flow names the higher-level flow that bundles it in parent_id. Balancing (the inputs and outputs of a parent process matching those of its child diagram) is checked through this correspondence. The map key is the flow ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one data flow."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Name of the data that flows. It becomes the label of the line in the diagram."
+        description:
+          type: string
+          description: "Supplements the name with what the data contains. Omitted when the name is enough."
+        source:
+          type: object
+          description: "Where the flow comes from. Holds exactly one ID of a process / data store / external entity, under the key named after that entity. The 'exactly one' constraint cannot be expressed in the schema, so the visualisation (the flow table of each decomposition diagram) checks it."
+          additionalProperties: false
+          properties:
+            process_id:
+              type: string
+              description: "ID of the process, when the end is a process."
+              x-ref:
+                entity: processes
+            data_store_id:
+              type: string
+              description: "ID of the data store, when the end is a data store."
+              x-ref:
+                entity: data_stores
+            external_entity_id:
+              type: string
+              description: "ID of the external entity, when the end is an external entity."
+              x-ref:
+                entity: external_entities
+        target:
+          type: object
+          description: "Where the flow goes. Holds exactly one ID of a process / data store / external entity, under the key named after that entity. The 'exactly one' constraint cannot be expressed in the schema, so the visualisation (the flow table of each decomposition diagram) checks it."
+          additionalProperties: false
+          properties:
+            process_id:
+              type: string
+              description: "ID of the process, when the end is a process."
+              x-ref:
+                entity: processes
+            data_store_id:
+              type: string
+              description: "ID of the data store, when the end is a data store."
+              x-ref:
+                entity: data_stores
+            external_entity_id:
+              type: string
+              description: "ID of the external entity, when the end is an external entity."
+              x-ref:
+                entity: external_entities
+        parent_id:
+          type: string
+          description: "ID of the higher-level flow that bundles this one. A flow that crosses the boundary of a decomposition diagram (only one of its ends lies inside the diagram) names the flow drawn in the parent diagram as an input or output of the parent process. Flows that stay inside a diagram, and the flows of the context diagram, omit it."
+          x-ref:
+            entity: flows
+      required: [name, source, target]
+
+  # ===========================================================================
+  # Upstream: the sources of the SRS
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # requirements – use_cases – actors – terms
+  # ---------------------------------------------------------------------------
+
+  requirements:
+    type: object
+    description: "The requirement records placed on the system. The attributes are a reduced set of the requirement attributes of ISO/IEC/IEEE 29148:2018 5.2.8 (identification, priority, rationale, verification method) and the atomic requirement of Volere (fit criterion). The map key is the requirement ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one requirement."
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: "A one-line heading by which lists and references name the requirement. The verification chapter and the basis requirements of design decisions name a requirement by ID and title."
+        kind:
+          type: string
+          description: "Category of the requirement. The sections of chapter 3 of the example SRS outline in 29148 (functional / interface / quality, performance and usability / design constraints) folded into four categories. Chapters 3 and 4 (verification) of the SRS split their sections by this category."
+          enum: [functional, external_interface, quality, design_constraint]
+        statement:
+          type: string
+          description: "The requirement sentence (of the form \"The system shall ...\")."
+        rationale:
+          type: string
+          description: "Why the requirement is needed (the rationale of 29148 5.2.8 and of Volere)."
+        fit_criterion:
+          type: string
+          description: "A measurable condition by which the requirement can be judged satisfied (the fit criterion of Volere). Requirements must be verifiable, so it is mandatory, and it is the source of the verification detail in chapter 4 (verification)."
+        priority:
+          type: string
+          description: "Priority of the requirement (the priority of 29148 5.2.8)."
+          enum: [mandatory, important, optional]
+        verification_method:
+          type: string
+          description: "How the requirement is verified (the verification method of 29148 5.2.8). The standard four: inspection / analysis / demonstration / test."
+          enum: [inspection, analysis, demonstration, test]
+        use_case_id:
+          type: string
+          description: "ID of the use case a functional requirement belongs to. Every functional requirement belongs to exactly one use case and is listed right after its description. Omitted for all other kinds."
+          x-ref:
+            entity: use_cases
+      required: [title, kind, statement, fit_criterion, priority, verification_method]
+
+  use_cases:
+    type: object
+    description: "The functions the system provides, one per unit of business work. The items are a use-case description reorganised from the 'system business description' of the IPA guide to agreeing functional requirements (input and output data / main and exception scenarios / pre- and postconditions). A use case is the unit of the SRS's functional requirements and also a row of the SDD's CRUD matrix. Records are described in the order of the business flow (the documents list use cases in this order and say so). The map key is the use case ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one use case."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        summary:
+          type: string
+          description: "One or two sentences on the goal and outcome of the use case."
+        actors:
+          type: array
+          description: "The primary actors of the use case (the roles that start it with a goal in mind). Several when several roles share the goal. Every action in the scenarios belongs to a primary actor. Secondary actors (parties whose services the system borrows during the use case, such as an external service) do not appear in this showcase; if needed, add them as a separate attribute and describe the exchange in the response text of the scenario."
+          items:
+            type: object
+            description: "One use case – actor pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the actor."
+                x-ref:
+                  entity: actors
+            required: [id]
+        precondition:
+          type: string
+          description: "What must hold when the use case starts."
+        postcondition:
+          type: string
+          description: "What holds when the use case ends normally."
+        main_scenario:
+          type: array
+          description: "The steps of the normal course: pairs of a primary actor's action and the system's response in chronological order. Step numbers are assigned at documentation time."
+          items:
+            type: object
+            description: "One step."
+            additionalProperties: false
+            properties:
+              action:
+                type: string
+                description: "The primary actor's action, written without its subject."
+              response:
+                type: string
+                description: "The system's response to the action. Exchanges with secondary actors are also written here."
+              exceptions:
+                type: array
+                description: "The exceptions that can occur at this step. Held as children of the step, so no reference by step number is needed."
+                items:
+                  type: object
+                  description: "One exception."
+                  additionalProperties: false
+                  properties:
+                    condition:
+                      type: string
+                      description: "The condition under which the exception occurs."
+                    response:
+                      type: string
+                      description: "The system's response under that condition."
+                  required: [condition, response]
+            required: [action, response]
+        business_processes:
+          type: array
+          description: "The business processes (leaf processes of the business model) this use case supports. Chapter 1 of the SRS derives the scope of the system from this: a leaf process supported by at least one use case is within scope, and a leaf supported by none stays manual. One use case may support several leaves and one leaf may be supported by several use cases, hence an array."
+          items:
+            type: object
+            description: "One use case – business process pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the process. Names a process that is not decomposed (a leaf)."
+                x-ref:
+                  entity: processes
+            required: [id]
+      required: [name, summary, actors, main_scenario]
+
+  actors:
+    type: object
+    description: "The roles outside the system boundary that interact with the system (a human role or an external system). They correspond to the actors of use-case descriptions. Stakeholders in the project-management sense (which include parties with an interest but no interaction) are a different concept and are not covered by this showcase. The map key is the actor ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one actor."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        description:
+          type: string
+          description: "One or two sentences on how the role deals with the system."
+        kind:
+          type: string
+          description: "Category of the actor: person (a role of the users) or external_system (another system the system works with)."
+          enum: [person, external_system]
+      required: [name, kind]
+
+  terms:
+    type: object
+    description: "The dictionary of domain terms used in the documents (the Definitions section of 29148). The glossary chapter of the SRS is generated from it. The map key is the term ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one term."
+      additionalProperties: false
+      properties:
+        term:
+          type: string
+          description: "The term as written."
+        definition:
+          type: string
+          description: "The definition of the term."
+      required: [term, definition]
+
+  # ===========================================================================
+  # Downstream: the sources of the SDD (refer to upstream; never the reverse)
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # screens – entities – data_access – design_decisions – components
+  # ---------------------------------------------------------------------------
+
+  screens:
+    type: object
+    description: "The screens the system presents to its users. The items are a reduced set of the screen list / screen input-output items / screen action details / screen transitions / screen layout of the IPA guide's screen volume. The source of the SDD's user interface design chapter (screens / screen flow / screen definitions). Records are described with the screens of category menu first and the rest in the order of their related use cases (the screen list keeps this order and says so). The map key is the screen ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one screen."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        category:
+          type: string
+          description: "Category of the screen, after the category column of the IPA screen list. A menu is an entry point that leads to other screens, and the start of the screen flow diagram ([*]) points at screens of this category. An entry screen takes input and creates data, a list screen searches and lists several records, and a detail screen shows one record in full."
+          enum: [menu, entry, list, detail]
+        description:
+          type: string
+          description: "One or two sentences on the role of the screen."
+        layout:
+          type: object
+          description: "The screen layout drawing (the screen layout of the IPA screen volume). Unlike the other items it brings a drawing in from outside, and it is an illustration, not a contract: what the screen holds is defined by io_items and actions, and a mismatch with the drawing is not detected by the build. Optional."
+          additionalProperties: false
+          properties:
+            figure:
+              type: string
+              description: "Blob ID of the drawing embedded in the document (a contents-relative path, extension included)."
+              x-ref:
+                entity: blob
+            source:
+              type: string
+              description: "Blob ID of the editable file the drawing was made from. The starting point for readers who redraw the screen as their own, linked from the document. Optional, since some drawings have no source."
+              x-ref:
+                entity: blob
+          required: [figure]
+        use_cases:
+          type: array
+          description: "The use cases the screen realises (the related work column of the IPA screen list)."
+          items:
+            type: object
+            description: "One screen – use case pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the use case."
+                x-ref:
+                  entity: use_cases
+            required: [id]
+        io_items:
+          type: array
+          description: "The input and output items on the screen (the IPA screen input-output item list). The order is the order of listing in the document."
+          items:
+            type: object
+            description: "One input or output item."
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+                description: "Name of the item. Unique within the screen."
+              direction:
+                type: string
+                description: "Direction of the item."
+                enum: [input, output, both]
+              description:
+                type: string
+                description: "Supplementary notes on the meaning or format of the item (the item description of the IPA list). Items without a ref state their meaning here."
+              ref:
+                type: object
+                description: "The attribute of the data model the item corresponds to (the referenced entity and attribute of the IPA list). Omitted for items that exist only on the screen or fold several entities into one."
+                additionalProperties: false
+                properties:
+                  entity_id:
+                    type: string
+                    description: "ID of the referenced entity."
+                    x-ref:
+                      entity: entities
+                  attribute:
+                    type: string
+                    description: "Name of the attribute within the referenced entity."
+                required: [entity_id, attribute]
+            required: [name, direction]
+        actions:
+          type: array
+          description: "The operations a user can perform on the screen (the IPA screen action details). Transitions are held under the action, and the screen flow diagram is derived from them."
+          items:
+            type: object
+            description: "One action."
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+                description: "Name of the action (e.g. Press the Register button). Unique within the screen."
+              description:
+                type: string
+                description: "Outline of what the action does."
+              transitions:
+                type: array
+                description: "The screen transitions after the action. Conditional branches (on success / on failure) are written as separate elements."
+                items:
+                  type: object
+                  description: "One transition."
+                  additionalProperties: false
+                  properties:
+                    condition:
+                      type: string
+                      description: "The condition under which the transition happens. Omitted when unconditional."
+                    to:
+                      type: string
+                      description: "ID of the destination screen."
+                      x-ref:
+                        entity: screens
+                  required: [to]
+            required: [name]
+      required: [name, category, description]
+
+  entities:
+    type: object
+    description: "The entities of the data model (logical design). The items are a reduced set of the entity list / entity definition / CRUD diagram of the IPA guide's data model volume. The source of the SDD's data design chapter (ER diagram / entity definitions); the CRUD matrix is derived together with data_access. Physical design (table definitions) is a separate layer, so only logical types are held here. Records are described with those of kind resource first and the events in order of creation (the entity list and the columns of the CRUD matrix keep this order and say so). The map key is the entity ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one entity."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        description:
+          type: string
+          description: "One or two sentences on the real-world thing the entity stands for."
+        kind:
+          type: string
+          description: "Category of the entity: resource (a master-like thing) or event (a record of something happening in the business). The IPA CRUD diagram has a rule of listing event entities in order of creation, and this is the basis of that order."
+          enum: [resource, event]
+        term_id:
+          type: string
+          description: "ID of the glossary entry that corresponds to this entity. Omitted when there is none."
+          x-ref:
+            entity: terms
+        data_stores:
+          type: array
+          description: "The data stores (ledgers and records) of the business model this entity implements. One ledger may be implemented by several entities (a header and its lines) and one entity may serve as several ledgers (a master that also carries a balance), hence an array. Omitted for design-only entities that correspond to no ledger."
+          items:
+            type: object
+            description: "One entity – data store pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the data store."
+                x-ref:
+                  entity: data_stores
+            required: [id]
+        attributes:
+          type: array
+          description: "The attributes of the entity (the attribute items of the IPA entity definition). The order is the order of listing in the document."
+          items:
+            type: object
+            description: "One attribute."
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+                description: "Name of the attribute. Unique within the entity, and named by screen io_items and by relation refs."
+              type:
+                type: string
+                description: "Logical type (e.g. string, integer, date). Not a DDL type."
+              required:
+                type: boolean
+                description: "Whether a value is mandatory. Treated as false when omitted."
+              primary_key:
+                type: boolean
+                description: "Whether the attribute is part of the primary key (identifier). Treated as false when omitted."
+              description:
+                type: string
+                description: "One sentence on what the value means and when it is filled or empty. Written even when obvious from the name, so that each row of the entity definition table reads on its own."
+              ref:
+                type: object
+                description: "A relation to another entity (the equivalent of a foreign key). The relation lines of the ER diagram are derived from it."
+                additionalProperties: false
+                properties:
+                  entity_id:
+                    type: string
+                    description: "ID of the referenced entity."
+                    x-ref:
+                      entity: entities
+                  attribute:
+                    type: string
+                    description: "Name of the attribute within the referenced entity."
+                required: [entity_id, attribute]
+            required: [name, type]
+      required: [name, description, kind, attributes]
+
+  data_access:
+    type: array
+    description: "The data accesses use cases perform on entities. They correspond to the access relationship of ArchiMate (behaviour element → passive structure element, with an accessType attribute) and to the cells of the IPA CRUD diagram. A use case × entity association, held as an entity of its own because it is part of neither. There is no natural single key, so it is an array rather than a map (for the same reason as playlist_tracks in the music showcase). The CRUD matrix (rows = use cases, columns = entities) is derived from it."
+    items:
+      type: object
+      description: "One data access from a use case to an entity. The same (use case, entity) pair is folded into one record."
+      additionalProperties: false
+      properties:
+        use_case_id:
+          type: string
+          description: "ID of the use case that performs the access."
+          x-ref:
+            entity: use_cases
+        entity_id:
+          type: string
+          description: "ID of the entity accessed."
+          x-ref:
+            entity: entities
+        operation:
+          type: string
+          description: "The kind of access as a sequence of the letters C (create) / R (read) / U (update) / D (delete), e.g. CR, always in this order. Whether an access is C, U or D follows the logical design decisions (append-only event or not, updatable attributes or not) and does not anticipate physical design (logical versus physical deletion and the like)."
+          pattern: "^[CRUD]+$"
+      required: [use_case_id, entity_id, operation]
+
+  design_decisions:
+    type: object
+    description: "The design decisions and their rationale, listed in the design decisions section of the SDD. They correspond to the architecture decision / rationale that ISO/IEC/IEEE 42010 lists among the content elements of an architecture description. Each holds references to the requirements it is based on (downstream → upstream), the basis of the cross-document trace from requirements to design. The map key is the design decision ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one design decision."
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: "A one-line heading by which lists name the decision."
+        decision:
+          type: string
+          description: "What was decided, and how (the architecture decision of 42010)."
+        rationale:
+          type: string
+          description: "Why this was chosen and which alternatives were rejected (the rationale of 42010)."
+        basis_requirements:
+          type: array
+          description: "The requirements the decision is based on. Omitted for decisions that do not stem from a requirement (engineering conventions and the like)."
+          items:
+            type: object
+            description: "One design decision – requirement pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the requirement."
+                x-ref:
+                  entity: requirements
+            required: [id]
+      required: [title, decision, rationale]
+
+  components:
+    type: object
+    description: "The components (subsystems) the software is made of. The source of the SDD's system architecture chapter: the component diagram is derived from dependencies and the component table from the other references. Components are cut along units of business work and hold no internal structure (modules, classes). Every reference points within this layer or upstream. Records are described in the reverse direction of dependency (the called side first). The map key is the component ID."
+    additionalProperties:
+      type: object
+      description: "A record describing one component."
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Display name used in the documents."
+        responsibility:
+          type: string
+          description: "One to three sentences on the processing the component takes on."
+        dependencies:
+          type: array
+          description: "The components whose processing this one calls. They become the arrows of the component diagram. Omitted for foundation components that call no other."
+          items:
+            type: object
+            description: "One dependency between components."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the component called."
+                x-ref:
+                  entity: components
+            required: [id]
+        use_cases:
+          type: array
+          description: "The use cases the component realises. The basis of the trace from requirements to design. Omitted for cross-cutting parts that realise no use case."
+          items:
+            type: object
+            description: "One component – use case pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the use case."
+                x-ref:
+                  entity: use_cases
+            required: [id]
+        entities:
+          type: array
+          description: "The entities the component reads and writes itself. Reads and writes done by calling another component are not listed on the calling side, so this is narrower than the rows of the CRUD matrix bundled per component. The same entity may be handled by several components (one registers it, another updates some of its attributes)."
+          items:
+            type: object
+            description: "One component – entity pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the entity."
+                x-ref:
+                  entity: entities
+            required: [id]
+        design_decisions:
+          type: array
+          description: "The design decisions the component takes on. The content of a decision lives in the design decisions section; this only records where it is confined. A decision spanning two components is placed on both. Decisions that apply to the whole system (how dates and times are held, for instance) are placed on no component and omitted."
+          items:
+            type: object
+            description: "One component – design decision pairing."
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                description: "ID of the design decision."
+                x-ref:
+                  entity: design_decisions
+            required: [id]
+      required: [name, responsibility, entities]

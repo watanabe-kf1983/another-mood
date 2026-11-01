@@ -111,7 +111,7 @@ PR 本文はそのまま main の squash コミット本文になる（ブラン
 
     Release-Highlight: fix
 
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明を付けたいとき（主に breaking）は PR 本文に `## Release highlight` セクションを書く（利用者向けの英文。タスク ID は書かない）。
+kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文。タスク ID は書かない）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
 
 破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、設計背景、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 

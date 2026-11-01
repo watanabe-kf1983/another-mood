@@ -1,13 +1,7 @@
 # About this catalog
 
-A small fictional music catalog used as a worked example for Another Mood.
-
-The shape mirrors the kind of read-only inventory a label or fan-run site might keep: a handful of artists, the labels they release through, a hierarchy of genres, the albums themselves, the tracks each album contains, and a few curated playlists that cross-cut everything.
-
-The point of the showcase is not the music. It is to demonstrate how the schema, content, view, and template layers compose into a browsable site - including grouping by a field, joining one entity to another, walking a self-referential hierarchy, and preserving rows whose joins return no match.
+A small fictional music catalog, the kind of read-only inventory a label or fan-run site might keep: a handful of artists, the labels they release through, a hierarchy of genres, the albums themselves, the tracks each album contains, and a few curated playlists that cross-cut everything. It ships with Another Mood as a worked example.
 
 ## Everything is invented
 
-Every artist, label, and recording in this dataset is fictional. Prose documents can point at this section with a plain relative link, heading fragment included (`../background.md#everything-is-invented`) - the build rewrites it to land on this heading wherever the document is rendered.
-
-Heading fragments survive views, too. Each album page embeds its liner notes inline, so a document can point straight at [the Tidal Atlas liner notes](node:/album_tracklist/tidal_atlas/liner#liner-notes) as they appear on that album's page.
+Every artist, label, and recording in this dataset is fictional. The liner notes say so too - see [the Tidal Atlas liner notes](node:/discography/albums/tidal_atlas/liner#liner-notes) on that album's page.

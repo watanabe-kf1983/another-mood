@@ -33,20 +33,6 @@ class TestAnotherMoodRoot:
         assert config.out_dir == project / ".another-mood/output"
 
 
-class TestResolvedForTap:
-    def test_fills_unset_tap_dir_with_the_default(self) -> None:
-        config = ProjectConfig(
-            namespace_root=ROOT, project_dir=ROOT / "docs"
-        ).resolved_for_tap()
-        assert config.tap_dir == ROOT / ".another-mood/docs/tap"
-
-    def test_keeps_an_explicit_tap_dir(self) -> None:
-        config = ProjectConfig(
-            namespace_root=ROOT, project_dir=ROOT / "docs", tap_dir=Path("/custom")
-        ).resolved_for_tap()
-        assert config.tap_dir == Path("/custom")
-
-
 class TestVerifyProjectDirUnderNamespaceRoot:
     """project_dir must lie under namespace_root; external paths are rejected (G8).
 
@@ -92,7 +78,7 @@ class TestVerifyPathsAreAbsolute:
         with pytest.raises(ConfigValidationError, match="project_dir=docs"):
             config.verify()
 
-    @pytest.mark.parametrize("field", ["out_dir", "site_dir", "tap_dir", "tmp_dir"])
+    @pytest.mark.parametrize("field", ["out_dir", "site_dir", "tmp_dir"])
     def test_rejects_a_relative_output_dir(self, field: str, tmp_path: Path) -> None:
         config = ProjectConfig(
             namespace_root=tmp_path, project_dir=tmp_path

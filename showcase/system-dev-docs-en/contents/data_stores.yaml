@@ -1,0 +1,22 @@
+# The data stores of the business model (the ledgers and records the business
+# reads and writes). The entities of the SDD's logical data model implement
+# them. IDs are the display names in snake case.
+data_stores:
+  book_ledger:
+    name: Book ledger
+    description: The list of books the store carries, with ISBN, title and publisher.
+  supplier_ledger:
+    name: Supplier ledger
+    description: The list of suppliers the store deals with, with name and contact details.
+  stock_ledger:
+    name: Stock ledger
+    description: The current stock quantity of each book.
+  delivery_records:
+    name: Delivery records
+    description: The record of books and quantities delivered by suppliers.
+  sales_records:
+    name: Sales records
+    description: The record of completed sales and of pending sales awaiting review.
+  stocktake_records:
+    name: Stocktake records
+    description: The record, per stocktake and per book, of the difference between the book quantity and the counted quantity.

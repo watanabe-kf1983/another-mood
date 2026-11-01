@@ -70,10 +70,10 @@ class TestGenerate:
             data_dir / "data.json",
             {
                 "title": "Hello",
-                "blob": [{"id": "covers/cover.png", "mime_type": "image/png"}],
+                "blob": [{"id": "covers/shot (2).png", "mime_type": "image/png"}],
             },
         )
-        blob_src = data_dir / "contents" / "covers" / "cover.png"
+        blob_src = data_dir / "contents" / "covers" / "shot (2).png"
         blob_src.parent.mkdir(parents=True)
         blob_bytes = b"\x89PNG\r\n\x1a\n\x00 not really a png \xff"
         blob_src.write_bytes(blob_bytes)
@@ -93,18 +93,16 @@ class TestGenerate:
             out_dir=out_dir,
         )
 
-        # The blob lands at its anchor-path address (/blob/<id>) under the
-        # user edition, byte-identical and inode-shared (hardlink transport).
-        mirrored = out_dir / "data" / "default" / "blob" / "covers" / "cover.png"
+        # The blob lands at blob/<id> (the id as a file name, not the escaped
+        # anchor path), byte-identical and inode-shared (hardlink transport).
+        mirrored = out_dir / "data" / "default" / "blob" / "covers" / "shot (2).png"
         assert mirrored.read_bytes() == blob_bytes
         assert mirrored.stat().st_ino == blob_src.stat().st_ino
         # The __db self-description describes the data, not its resources — no
         # blob bytes are mirrored there.
         assert not (out_dir / "data" / "__db" / "blob").exists()
 
-    def test_renders_each_form_b_edition_with_escaped_segment(
-        self, tmp_path: Path
-    ) -> None:
+    def test_renders_each_form_b_edition_at_its_file_name(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
         _write_model(data_dir / "data.json", {"title": "Hello"})
@@ -115,8 +113,8 @@ class TestGenerate:
 
         out_dir = tmp_path / "output"
         reports_file = tmp_path / "reports.yaml"
-        # Two editions; the second carries a space so its output segment and
-        # meta-index href are IRI-escaped (and stay consistent).
+        # Two editions; the second carries a space: the directory keeps it
+        # raw, the cover's href percent-encodes it.
         reports_file.write_text(
             "editions:\n  web:\n    file_per: []\n  print me:\n    file_per: []\n"
         )
@@ -129,9 +127,9 @@ class TestGenerate:
         )
 
         assert (out_dir / "data" / "web" / "index.md").exists()
-        assert (out_dir / "data" / "print%20me" / "index.md").exists()
+        assert (out_dir / "data" / "print me" / "index.md").exists()
         # The root cover lists each edition under ## Reports: raw display
-        # label, escaped href that matches the directory written above (F9).
+        # label, encoded href that reaches the directory written above (F9).
         cover = (out_dir / "data" / "index.md").read_text()
         assert "- [web](web/)" in cover
         assert "- [print me](print%20me/)" in cover

@@ -30,8 +30,8 @@ $defs:
       An empty list (or omitted file_per:) means "no splitting —
       everything inlines into a single index.md". Each entry is matched
       verbatim against the type ID the generator resolved for a
-      node — no prefixes, no patterns; the __db/__entity_defs/ and
-      __db/__view_defs/ diagnostics show the exact values.
+      node — no prefixes, no patterns; the __db/__defs/entities/ and
+      __db/__defs/views/ diagnostics show the exact values.
     type: array
     items:
       $ref: "#/$defs/typeId"

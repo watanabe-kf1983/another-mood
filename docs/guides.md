@@ -70,9 +70,12 @@ What the tool generates (under `.another-mood/my-project/`):
 │   ├── index.md                              # cover: your reports + link to __db/
 │   └── __db/                                 # the database's self-description
 │       ├── index.md                          # auto overview (entities + views)
-│       ├── __data/                           # described later
-│       ├── __entity_defs/                    # described later
-│       └── __view_defs/                      # described later
+│       ├── __defs/                           # definitions (described later)
+│       │   ├── entities/, views/
+│       │   └── root.md                       # top-level values that are not entities
+│       └── __data/                           # data, the same layout (described later)
+│           ├── entities/, views/
+│           └── root.md
 └── site/                                     # HTML
 ```
 
@@ -112,13 +115,13 @@ One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, a
 
 You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the views are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
-In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__entity_defs/<entity>.md`).
+In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__defs/entities/<entity>.md`).
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
-| 1 | Schema | `definition/schema.yaml` | `/__db/__entity_defs/<entity>` |
-| 2 | Content | `contents/**/*.yaml` (structured data; `.json` is read the same way)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/<entity>` |
-| 3 | View | `definition/views/**/*.yaml` | `/__db/__view_defs/<view>` (definition and shape)<br>`/__db/__data/<view>` (records) |
+| 1 | Schema | `definition/schema.yaml` | `/__db/__defs/entities/<entity>`<br>`/__db/__defs/root` (top-level values that are not entities) |
+| 2 | Content | `contents/**/*.yaml` (structured data; `.json` is read the same way)<br>`contents/**/*.md` (prose)<br>any other file (assets) | `/__db/__data/entities/<entity>`<br>`/__db/__data/root` (top-level values that are not entities) |
+| 3 | View | `definition/views/**/*.yaml` | `/__db/__defs/views/<view>` (definition and shape)<br>`/__db/__data/views/<view>` (records) |
 | 4 | Template | `definition/templates/**/*.md` | `/default/` and below |
 
 Schema and content are required; views are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, views, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
@@ -172,12 +175,12 @@ members:
 The root structure is fixed and always satisfies these three rules:
 
 - The outermost type is `type: object`
-- Each entry under `properties:` represents one **entity** (a collection of records of the same shape) — `members` in the example above
+- Each entry under `properties:` declares one top-level key; a collection there is an **entity** (records of the same shape) — `members` in the example above
 - `additionalProperties: false` (written immediately above `properties:`) makes any undeclared top-level key an error
 
-The entity name (`members`) must match the top-level key in the content file.
+The key (`members`) must match the top-level key in the content file.
 
-There are three standard patterns for the body of each entity (the value under `properties`): multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
+There are three standard patterns for the value of each key: multiple records as a map, multiple records as an array, and a single record enumerated by `properties`. Each is covered below.
 
 #### Multiple records — write as a map
 
@@ -215,7 +218,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__entity_defs/<entity>` view (how the tool interpreted the declared type) and `__db/__data/<entity>` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__defs/entities/<entity>` view (how the tool interpreted the declared type) and `__db/__data/entities/<entity>` (whether the data is being loaded as expected).
 
 The reason to write as a map is readability: even as the number of records grows, the YAML data stays easier to read than the array form, because each record's `id` comes first and acts like a heading.
 
@@ -243,7 +246,7 @@ steps:
   - label: Wait 3 minutes
 ```
 
-Unlike the map pattern, no normalization happens; the array you wrote is passed to templates as-is.
+Unlike the map pattern, nothing is normalized at this level — there is no implicit `id`.
 
 #### Single record — enumerate keys via `properties`
 
@@ -266,7 +269,7 @@ site_config:
   base_url: https://example.com
 ```
 
-Like the array form, no normalization happens; the value is passed to templates as written.
+Like the array form, nothing is normalized at this level.
 
 #### When to nest vs split into a separate entity
 
@@ -427,7 +430,7 @@ A query has seven blocks: `from` → `flatten` (optional) → `join` (optional) 
 |---|---|
 | `from` | Specifies the source data by name — an entity, or another view. |
 | `flatten` | Unwinds an array attribute — one input row produces N output rows where N is the array length. |
-| `join` | Attaches matching rows from another entity onto each input row. |
+| `join` | Attaches matching rows from another source onto each input row. |
 | `where` | Filters records by a predicate (e.g. `{ active: true }`). |
 | `grouped` | Combines records that share the same value for the field named by `by`. |
 | `select` | Lists fields to include in the output. Use `as` to rename. |
@@ -453,7 +456,7 @@ At a minimum, know these:
 
 For the full syntax, see the [Jinja2 official docs](https://jinja.palletsprojects.com/) — with a caveat: the engine is [minijinja](https://github.com/mitsuhiko/minijinja), a reimplementation of the Jinja2 language rather than Jinja2 itself, so the match is close but not exact. The differences that matter are documented in [Template — Differences from Jinja2](reference/template.md#differences-from-jinja2).
 
-Templates render with whitespace trimming on, so a control tag alone on its line leaves no blank line in the output. See [Template — Whitespace](reference/template.md#whitespace) for how tag indentation and blank lines carry through.
+A control tag alone on its line leaves no blank line in the output ([Template — Whitespace control](reference/template.md#whitespace-control)), and [Template — Indentation](reference/template.md#indentation) shows which lines can be indented to show nesting.
 
 ### Root template
 
@@ -485,7 +488,7 @@ Each loop does two things per record: it **writes that record's subpage** and **
 
 `{{ DATA | render("TEMPLATE_NAME.md") }}` evaluates `definition/templates/TEMPLATE_NAME.md` against the piped `DATA`, and writes the result to its own file when `DATA`'s type is listed in `definition/reports.yaml` (the sample lists every type shown here). A type that isn't listed expands in place instead.
 
-When it writes a separate file, `render` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page. The `{{- … -}}` markers around the call trim its line's leftover newline out of the loop ([Template — Whitespace](reference/template.md#whitespace)).
+When it writes a separate file, `render` inserts **nothing** into the page it appears on — everything it renders goes into that file. So each pass through the loop writes one subpage elsewhere and adds one bullet link to this page. The `{{- … -}}` markers around the call trim its line's leftover newline out of the loop ([Template — Whitespace control](reference/template.md#whitespace-control)).
 
 For the full filter specification, see [Template — `render`](reference/template.md#render).
 
@@ -546,10 +549,12 @@ Assets can be linked from a template as well: the same [`link`](reference/templa
 
 If `metadata` is absent — or is present but lacks `title` — neither raises an error; both yield the **empty string**.
 
-Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__data/` and the shape of each view in `__db/__view_defs/` ([Workflow](#workflow)).
+Be aware that misspellings silently produce empty strings — no error is raised. While writing, check the actual data in `__db/__data/` and the shape of each view in `__db/__defs/views/` ([Workflow](#workflow)).
 
 ## Further reading
 
 - [Reference](reference/index.md) — syntax, full options, and reserved names for each feature.
-- [showcase/music/](../showcase/music/) — a more complex working sample than the member list, modeling a fictional music catalog (artists, albums, tracks, labels, genres, playlists) that exercises groupings, joins, multi-join chains, intrinsic flatten, self-referencing entities, prose alongside structured data, and blob assets (album cover art).
+- [showcase/music/](../showcase/music/) — a larger sample than the member list: a fictional music catalog spread over linked pages, with views that use every clause, prose and cover art alongside the data, and two editions from the same templates.
+- [showcase/system-dev-docs-en/](../showcase/system-dev-docs-en/) — a sample that derives two documents from one model: a Software Requirements Specification and a Software Design Document for a small bookstore inventory system, each a document of its own with its chapters as pages, and the design document linking into the requirements throughout.
+- [showcase/system-dev-docs-ja/](../showcase/system-dev-docs-ja/) — the same two-document sample in Japanese, with the same model and chapter structure.
 - [showcase/sbom/](../showcase/sbom/) — a sample that takes another program's JSON output as its data: Another Mood's own CycloneDX SBOM, with the component pages, dependency graph and license ledger all derived by views.

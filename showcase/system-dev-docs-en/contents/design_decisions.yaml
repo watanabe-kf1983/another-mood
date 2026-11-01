@@ -1,0 +1,64 @@
+# The order is the order of listing: how data is held (D01–D03), how the
+# business is handled (D04–D05), conventions (D06), and the structure of the
+# software (D07–D08). IDs are a running number. basis_requirements name
+# requirement IDs of the SRS and are absent on a decision that stems from no
+# requirement (D06).
+design_decisions:
+  D01:
+    title: Stock quantity is held as a figure, not derived from history
+    decision: Hold the stock quantity of each book as an attribute of the book, and add to, subtract from or replace that value each time a delivery, sale or stocktake is confirmed.
+    rationale: Totalling the delivery, sale and stocktake history on every stock inquiry gets slower as the history grows. The history is kept (D02), but the figure is the authoritative stock quantity and the history serves the investigation of causes.
+    basis_requirements:
+      - id: R04
+      - id: R06
+      - id: R09
+      - id: R16
+  D02:
+    title: Stock movements are recorded as append-only events
+    decision: Hold deliveries, sales and stocktakes each as an event entity, with no operation to alter or delete them once confirmed. Mistakes are corrected by an event in the opposite direction (such as a reset by a stocktake).
+    rationale: Investigating a stock discrepancy needs an untouched record of what moved stock and when. Allowing updates and deletions for corrections would break the integrity of the record, so corrections are made uniform as events of their own.
+    basis_requirements:
+      - id: R10
+      - id: R13
+      - id: R18
+  D03:
+    title: The primary key of a book is the ISBN, with no surrogate key
+    decision: Make the ISBN the primary key of the book entity and hold no system-specific running book number. Foreign keys from other entities to a book are ISBNs as well.
+    rationale: Deliveries from suppliers and sales notifications from the payment service both refer to books by ISBN, so an ISBN primary key needs neither a mapping table nor a conversion. The possibility of an ISBN being reused or corrected is accepted under the assumption that every book carried has an ISBN.
+    basis_requirements:
+      - id: R02
+      - id: R20
+  D04:
+    title: Sales notifications are acknowledged first, and sales of unregistered books are saved as pending
+    decision: Acknowledge a sales notification from the payment service immediately when it is well-formed, save its content as a sale event first and only then deduct from stock. A notification that includes an unregistered ISBN is saved as a pending sale and matched to registered books by a clerk's review.
+    rationale: Making the notification wait for the stock update would delay the checkout at the counter for the system's convenience. Discarding or rejecting the notification both leave the sale out of stock, so acknowledgement and posting are separated and whatever cannot be posted is kept as pending.
+    basis_requirements:
+      - id: R07
+      - id: R14
+      - id: R21
+  D05:
+    title: During a stocktake the whole system is in the stocktake-in-progress state
+    decision: Hold the period from the start to the confirmation of a stocktake as a system-wide state, "stocktake in progress", and refuse delivery confirmation, acceptance of sales notifications and confirmation of pending sale reviews while it lasts.
+    rationale: Stocktakes are full counts after closing, so one state for the whole system is simpler than a per-book flag, and the refusal is checked in one place. Partial stocktakes during opening hours are excluded by assumption, and no sales notifications arrive after closing, so refusing them does not stall the checkout.
+    basis_requirements:
+      - id: R11
+  D06:
+    title: Dates and times are held in the store's local time, without a time zone
+    decision: Record the dates and times of deliveries, sales and stocktakes in the local time of the store's location, with no time zone information.
+    rationale: The subject is a single store, and only its clerks read the dates and times. A time zone would require conversion between screens and records while offering no benefit.
+  D07:
+    title: Only the Stock component updates stock quantities
+    decision: Place the processing that updates stock quantities (addition and subtraction by deliveries and sales, replacement by the counted quantity at a stocktake) and the check that refuses addition and subtraction while a stocktake is in progress in the Stock component. Receiving, Sales and Stocktaking do not write stock quantities themselves but call Stock on confirmation to update them.
+    rationale: Since the figure is the authoritative stock quantity (D01), a missed or doubled update becomes a stock discrepancy outright. With a single path for updates, the refusal during a stocktake (D05) is guarded in the same place, and Receiving, Sales and Stocktaking need not know of one another.
+    basis_requirements:
+      - id: R04
+      - id: R06
+      - id: R09
+      - id: R11
+  D08:
+    title: Components share one database, and reads of event records do not count as dependencies
+    decision: All components share a single database. Writes to each attribute of an entity are confined to the one component responsible for it (Books writes a book's registration, Stock writes its stock quantity). Processing that only reads the events recorded by other components (deliveries, sales, stocktakes and their lines) reads the database directly and does not count as a dependency (a call) between components. Looking a book up by ISBN calls the Books component, so it does count.
+    rationale: The system is a single web application running on one server, and the components are modules within it. Treating reads of events as calls would create a cycle, since a function that spans the records of several business areas, such as the movement history of a stock inquiry, would have the foundation component Stock calling Receiving, Sales and Stocktaking above it. Consistency only requires that the write paths be confined, so reads of events are allowed through the shared database. Book lookup alone goes through the Books component, to keep the check for unregistered ISBNs in one place.
+    basis_requirements:
+      - id: R13
+      - id: R19

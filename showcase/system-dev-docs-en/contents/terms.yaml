@@ -1,0 +1,22 @@
+terms:
+  book:
+    term: Book
+    definition: A product the system holds as stock. Limited to publications that carry an ISBN; sundries and booklets without an ISBN are out of scope.
+  ISBN:
+    term: ISBN
+    definition: International Standard Book Number. A 13-digit number that uniquely identifies a book, used by the system as the identifier of a book.
+  stock:
+    term: Stock
+    definition: The quantity of a book the store actually holds. Each book has one stock quantity, which deliveries increase, sales decrease, and stocktakes reset to the counted figure.
+  delivery:
+    term: Delivery
+    definition: The business of books arriving at the store from a supplier and being added to stock. One delivery consists of several books and quantities from one supplier.
+  sale:
+    term: Sale
+    definition: The business of selling a book to a customer at the counter and removing it from stock. Payment is taken by an external payment service, and the system receives the books and quantities of each completed sale.
+  stocktake:
+    term: Stocktake
+    definition: The business of physically counting the books on the shop floor and in the stockroom and resetting the stock quantities in the system to the counted figures. Differences are kept as the stocktake record.
+  supplier:
+    term: Supplier
+    definition: A wholesaler or publisher that delivers books to the store. Recorded as the source of a delivery.

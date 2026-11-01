@@ -20,7 +20,7 @@ from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.data_tree import child as node_child
 from another_mood.components.generator.edition import PagingPolicy
 from another_mood.components.generator.omitted import OMITTED
-from another_mood.components.generator.url import url_escape
+from another_mood.components.shared.url import url_escape
 
 
 @dataclass(frozen=True)
@@ -166,6 +166,6 @@ def node_href(paging: PagingPolicy, source: object, a: object) -> str:
     """
     target = cast(Node, a)
     source_dir = posixpath.dirname(paging.page_path(cast(Node, source))) or "."
-    rel = posixpath.relpath(paging.page_path(target), source_dir)
+    rel = url_escape(posixpath.relpath(paging.page_path(target), source_dir), safe="/")
     fragment = target._meta.fragment
     return f"{rel}#{fragment}" if fragment else rel

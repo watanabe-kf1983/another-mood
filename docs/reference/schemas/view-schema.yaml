@@ -8,10 +8,8 @@ description: >-
 type: object
 propertyNames:
   description: >-
-    View name pattern: starts with a Unicode letter or underscore,
-    followed by Unicode letters, combining marks, digits, or
-    underscores.
-  pattern: "^[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*$"
+    Name of the view: the path it is written at in the data tree.
+  pattern: "^[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(\\.[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*)*$"
 additionalProperties:
   title: View definition
   description: >-
@@ -26,8 +24,8 @@ additionalProperties:
     from:
       title: Data source
       description: >-
-        Id of the entity to read from. Must match a catalog entity id
-        verbatim; dots are not a path separator.
+        Path of the entity to read from: a top-level data entity or
+        view by name, or a nested entity by its dotted path.
       type: string
     flatten:
       title: Flatten clause

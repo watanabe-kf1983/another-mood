@@ -1,0 +1,61 @@
+# Each artist with their albums attached - exercises the plain ``join:``
+# (nested attach: 1 row per artist).
+roster.artists:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+  select:
+    - item: id
+    - item: name
+    - item: country
+    - item: formed_year
+    - item: bio
+    - item: members
+    - item: albums
+
+# Same as above but only studio albums - exercises pre-join ``where:``.
+# Artists whose only releases are live records still appear, with an empty
+# ``studio_albums`` list.
+artist_studio_albums:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    where:
+      is_live: false
+    as: studio_albums
+  select:
+    - item: id
+    - item: name
+    - item: studio_albums
+
+# Each (artist, album) pair as its own row - exercises inline ``flatten:``
+# on a join. Artists with no album are dropped (inner-join shape).
+artist_album_pairs:
+  from: artists
+  join:
+    to: albums
+    on: { left: id, right: artist_id }
+    as: albums
+    flatten: { as: album }
+  select:
+    - item: id
+    - item: name
+    - item: album
+
+# Every band member grouped by instrument - exercises ``flatten`` of an
+# intrinsic child entity (``members``) followed by ``grouped`` on a dotted
+# key (``member.instrument``).
+roster.instruments:
+  from: artists
+  flatten:
+    of: members
+    as: member
+  grouped:
+    by: member.instrument
+    as: players
+  select:
+    - item: member
+    - item: players

@@ -1,0 +1,177 @@
+/* Styles for the HTML mockups the screen layout drawings are made from.
+
+   The mockups are plain HTML without classes, and the tags carry the meaning:
+   an input is an input item, a readonly input an output item, a button an
+   action, a table a list of lines. This stylesheet decides sizes and
+   placement only; the lines and fills of the drawing belong to the generator
+   (scripts/screen-layouts/). Opened in a browser, a mockup looks the same as
+   its drawing.
+
+   To fit the sizes to your own screens, the size attribute of each input and
+   the colgroup of each table in the HTML are quicker to adjust than this
+   file. */
+
+:root {
+  --wf-ink: #333;
+  --wf-shade: #eee;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: #111;
+  font-family: sans-serif;
+}
+
+/* The screen frame. The width is the same on every screen so that the scale
+   of the drawings does not vary from screen to screen. */
+main {
+  display: block;
+  box-sizing: border-box;
+  width: 760px;
+  border: 1px solid var(--wf-ink);
+  font-size: 12px;
+}
+
+/* The band with the screen name. */
+h1 {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--wf-ink);
+  background: var(--wf-shade);
+  font-size: 15px;
+}
+
+/* The body of the screen. */
+section {
+  padding: 14px 12px;
+}
+
+/* A row of items or buttons. */
+section > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* A division within the screen (lines, search criteria and the like). */
+h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+/* An item = a caption and a box. */
+label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* On screens with one item per row, give the captions one width so the boxes
+   line up on the left. */
+section > div > label:only-child {
+  display: grid;
+  grid-template-columns: 7.5em auto;
+  justify-items: start;
+}
+
+input,
+select,
+button {
+  appearance: none;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--wf-ink);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+/* An item the user cannot change = an output item. Shown with a light fill in
+   the drawing. */
+input[readonly] {
+  background: var(--wf-shade);
+}
+
+/* The mark of a box the user picks a value in. The browser's own arrow goes
+   with appearance: none, so the same shape the drawing uses is drawn here. */
+select {
+  width: 150px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="5"><path d="M0 0 h8 l-4 5 Z" fill="%23333"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+button {
+  padding: 0 14px;
+  border-radius: 3px;
+  background: var(--wf-shade);
+}
+
+/* A list of lines or search results. Column widths come from each HTML's
+   colgroup. */
+table {
+  margin-bottom: 12px;
+  border: 1px solid var(--wf-ink);
+  border-collapse: collapse;
+}
+
+th,
+td {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--wf-ink);
+  font-size: 12px;
+  text-align: left;
+}
+
+th {
+  background: var(--wf-shade);
+}
+
+/* A cell in a list the user can change (the counted quantity of a stocktake
+   and the like). */
+td input {
+  width: 100%;
+  height: 18px;
+  padding: 0 4px;
+}
+
+/* The destinations on the menu screen, stacked vertically. */
+nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+nav button {
+  width: 220px;
+}
+
+/* Actions that leave the screen go at the end. */
+footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* The legend. Shows what the fills mean with the very parts that use them. In
+   the web edition each screen is a page of its own, so every screen carries
+   it and the drawing reads on its own. */
+aside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 11px;
+}
+
+aside input {
+  width: 18px;
+  height: 12px;
+  padding: 0;
+}

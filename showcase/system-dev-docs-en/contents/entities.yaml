@@ -1,0 +1,240 @@
+# The order is resources (book / supplier) first, then events in order of
+# creation (delivery → sale → stocktake). The entity list and the columns of
+# the CRUD matrix are drawn in this order. IDs are the names in snake case
+# (the identifier shown in the documents is the name).
+#
+# How data is held follows the decisions in the SDD's design decisions
+# section: stock quantity is an attribute of book (D01); deliveries, sales and
+# stocktakes are append-only events (D02); the primary key of book is the ISBN
+# and other entities refer to it by ISBN (D03); sales of unregistered ISBNs are
+# kept as pending (D04); the stocktake in progress is a status of the
+# stocktake (D05); dates and times are local time (D06).
+#
+# Logical types are the three words string / integer / datetime. DDL types
+# (VARCHAR(13) and the like) belong to physical design and are not covered.
+#
+# data_stores are the ledgers and records of the business model the entity
+# implements. Because stock quantity is an attribute of book (D01), book
+# implements both the book ledger and the stock ledger. Each event implements
+# one record with a parent and a line entity.
+entities:
+  book:
+    name: Book
+    description: A product the system holds as stock. One record per publication with an ISBN, holding the current stock quantity as an attribute.
+    kind: resource
+    term_id: book
+    data_stores:
+      - id: book_ledger
+      - id: stock_ledger
+    attributes:
+      - name: isbn
+        type: string
+        required: true
+        primary_key: true
+        description: The 13-digit number that identifies the book. Other entities refer to the book by this value.
+      - name: title
+        type: string
+        required: true
+        description: The title of the book. The target of book searches.
+      - name: publisher
+        type: string
+        required: true
+        description: The name of the book's publisher.
+      - name: stock_quantity
+        type: integer
+        required: true
+        description: The number of copies the store actually holds. Increased by deliveries, decreased by sales and replaced by the counted quantity at a stocktake.
+
+  supplier:
+    name: Supplier
+    description: A wholesaler or publisher that delivers books to the store. Chosen as the source of a delivery.
+    kind: resource
+    term_id: supplier
+    data_stores:
+      - id: supplier_ledger
+    attributes:
+      - name: supplier_id
+        type: string
+        required: true
+        primary_key: true
+        description: The number that identifies the supplier.
+      - name: name
+        type: string
+        required: true
+        description: The name of the wholesaler or publisher.
+      - name: contact
+        type: string
+        description: The telephone number or e-mail address used for orders and enquiries.
+
+  delivery:
+    name: Delivery
+    description: The record of taking in the books delivered by one supplier. Never altered or deleted once confirmed; the books and quantities delivered are held on its lines.
+    kind: event
+    term_id: delivery
+    data_stores:
+      - id: delivery_records
+    attributes:
+      - name: delivery_id
+        type: string
+        required: true
+        primary_key: true
+        description: The number that identifies one delivery.
+      - name: delivered_at
+        type: datetime
+        required: true
+        description: When the delivery was confirmed and added to stock.
+      - name: supplier_id
+        type: string
+        required: true
+        description: The supplier that delivered the books.
+        ref:
+          entity_id: supplier
+          attribute: supplier_id
+
+  delivery_line:
+    name: Delivery line
+    description: One line of a delivery, a book and its quantity. When the delivery is confirmed, this quantity is added to the stock quantity of the book.
+    kind: event
+    data_stores:
+      - id: delivery_records
+    attributes:
+      - name: delivery_id
+        type: string
+        required: true
+        primary_key: true
+        description: The delivery the line belongs to.
+        ref:
+          entity_id: delivery
+          attribute: delivery_id
+      - name: line_no
+        type: integer
+        required: true
+        primary_key: true
+        description: The running number of the line within the delivery.
+      - name: isbn
+        type: string
+        required: true
+        description: The book delivered. Delivery registration does not add an unregistered ISBN to the lines.
+        ref:
+          entity_id: book
+          attribute: isbn
+      - name: quantity
+        type: integer
+        required: true
+        description: The number of copies delivered.
+
+  sale:
+    name: Sale
+    description: The record of one sales notification received from the payment service. The content of the notification is saved first; posting to stock follows.
+    kind: event
+    term_id: sale
+    data_stores:
+      - id: sales_records
+    attributes:
+      - name: sale_id
+        type: string
+        required: true
+        primary_key: true
+        description: The number that identifies one sales notification.
+      - name: notified_at
+        type: datetime
+        required: true
+        description: When the notification was received from the payment service and acknowledged.
+      - name: status
+        type: string
+        required: true
+        description: Either confirmed (posted to stock) or pending (includes an unregistered book and awaits a clerk's review).
+
+  sale_line:
+    name: Sale line
+    description: One line of a sales notification, a book and its quantity. The notified ISBN is kept as received, and the match to a registered book is held separately.
+    kind: event
+    data_stores:
+      - id: sales_records
+    attributes:
+      - name: sale_id
+        type: string
+        required: true
+        primary_key: true
+        description: The sale the line belongs to.
+        ref:
+          entity_id: sale
+          attribute: sale_id
+      - name: line_no
+        type: integer
+        required: true
+        primary_key: true
+        description: The running number of the line within the sales notification.
+      - name: notified_isbn
+        type: string
+        required: true
+        description: The ISBN notified by the payment service. An unregistered ISBN is recorded as received.
+      - name: isbn
+        type: string
+        description: The registered book that corresponds to the notified ISBN. Empty while unregistered, and filled by a clerk's review.
+        ref:
+          entity_id: book
+          attribute: isbn
+      - name: quantity
+        type: integer
+        required: true
+        description: The number of copies sold.
+
+  stocktake:
+    name: Stocktake
+    description: The record of one count of every book that reset stock quantities to the counted figures. From start to confirmation the system is in the stocktake-in-progress state.
+    kind: event
+    term_id: stocktake
+    data_stores:
+      - id: stocktake_records
+    attributes:
+      - name: stocktake_id
+        type: string
+        required: true
+        primary_key: true
+        description: The number that identifies one stocktake.
+      - name: started_at
+        type: datetime
+        required: true
+        description: When the stocktake was started and the stock quantities of that moment were recorded as the baseline.
+      - name: confirmed_at
+        type: datetime
+        description: When the stock quantities were replaced by the counted quantities and the stocktake was confirmed. Empty until then.
+      - name: status
+        type: string
+        required: true
+        description: Either in_progress (counts being entered) or confirmed. While in progress, confirming a delivery, accepting a sales notification and confirming a pending sale review are refused.
+
+  stocktake_line:
+    name: Stocktake line
+    description: The record of one book within one stocktake. Keeps the stock quantity at the start as the baseline, and records the difference from the counted quantity at confirmation.
+    kind: event
+    data_stores:
+      - id: stocktake_records
+    attributes:
+      - name: stocktake_id
+        type: string
+        required: true
+        primary_key: true
+        description: The stocktake the line belongs to.
+        ref:
+          entity_id: stocktake
+          attribute: stocktake_id
+      - name: isbn
+        type: string
+        required: true
+        primary_key: true
+        description: The book counted. A line for every book is created when the stocktake starts.
+        ref:
+          entity_id: book
+          attribute: isbn
+      - name: baseline_quantity
+        type: integer
+        required: true
+        description: The stock quantity the system held when the stocktake started.
+      - name: counted_quantity
+        type: integer
+        description: The number of copies the clerk counted. Empty until entered.
+      - name: difference
+        type: integer
+        description: The counted quantity minus the baseline quantity. Recorded when the stocktake is confirmed.

@@ -7,6 +7,7 @@ from another_mood.components.preprocess.query_deriver import derive_queries
 from another_mood.components.preprocess.schema_inspector import inspect_schema
 from another_mood.components.publish.publish import publish
 from another_mood.components.tap.tap import tap
+from another_mood.components.tap.tap_schema import tap_schema
 
 __all__ = [
     "compose",
@@ -17,4 +18,5 @@ __all__ = [
     "publish",
     "reconcile",
     "tap",
+    "tap_schema",
 ]

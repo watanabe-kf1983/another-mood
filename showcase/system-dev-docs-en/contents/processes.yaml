@@ -1,0 +1,63 @@
+# The processes of the business model (a levelled DFD). P0, which has no
+# parent_id, is the business as a whole (the only process of the context
+# diagram); its children (P1–P3) are level 1 and its grandchildren (P11–P32)
+# are the level-2 leaves.
+#
+# The order is depth-first (each parent followed by its children) and becomes
+# the order of the process hierarchy in the document. Numbers follow from this
+# order too: processes with the same parent are numbered 1, 2, 3 in order of
+# description, and grandchildren continue their parent's number as 1.1, 1.2.
+# Numbers are not held in the data (inserting a process shifts the ones after
+# it naturally). IDs are identifiers, not numbers.
+processes:
+  P0:
+    name: Bookstore operations
+    description: The whole of the store's work, from buying books through selling them at the counter to managing stock. The system supports part of it.
+  P1:
+    name: Purchasing
+    description: Ordering from suppliers and taking in the books delivered. Registering new books and suppliers also happens here.
+    parent_id: P0
+  P11:
+    name: Place orders
+    description: Pick the books that are running low and order them from a supplier.
+    parent_id: P1
+  P12:
+    name: Record deliveries
+    description: Check the delivered books and quantities against the delivery note, record them and add them to stock.
+    parent_id: P1
+  P13:
+    name: Register books
+    description: Register a book newly taken into the range in the ledger by its ISBN.
+    parent_id: P1
+  P14:
+    name: Register suppliers
+    description: Register a supplier the store newly deals with in the ledger.
+    parent_id: P1
+  P2:
+    name: Sales
+    description: Taking payment from customers and recording completed sales.
+    parent_id: P0
+  P21:
+    name: Take payment
+    description: Take payment for the books the customer has chosen and hand over a receipt.
+    parent_id: P2
+  P22:
+    name: Record sales
+    description: Record the books and quantities of each completed sale and deduct them from stock. A sale that includes a book not in the ledger is recorded as pending.
+    parent_id: P2
+  P23:
+    name: Review pending sales
+    description: Match the books of a pending sale to books in the ledger, confirm the sale and deduct it from stock.
+    parent_id: P2
+  P3:
+    name: Inventory control
+    description: Checking the actual quantities of stock, and looking stock up.
+    parent_id: P0
+  P31:
+    name: Take stock
+    description: After closing, count the actual quantity of every book, reset stock to the counted figures and record the differences.
+    parent_id: P3
+  P32:
+    name: Look up stock
+    description: Find the current stock quantity of a book.
+    parent_id: P3

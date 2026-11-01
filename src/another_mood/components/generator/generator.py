@@ -164,7 +164,7 @@ def render_editions_index(
             "editions": [
                 {
                     "name": e.name,
-                    "dir_segment": e.dir_segment,
+                    "dir_url": e.dir_url,
                     "is_system": e.is_system,
                 }
                 for e in editions
@@ -204,13 +204,15 @@ def render_edition(
 
 
 def _copy_blobs(node_map: Mapping[str, Node], blobs_dir: Path, root: Path) -> None:
-    """Mirror each blob's bytes from ``blobs_dir`` to ``root/blob/<id>``."""
+    """Mirror each blob's bytes from ``blobs_dir`` to its page path under
+    ``root``."""
     # Editions are generate's own concept, so the per-edition mirror lives
     # here rather than one stage upstream.
+    paging = PagingPolicy()
     for path, node in node_map.items():
         if path.startswith(_BLOB_NAMESPACE):
             src = blobs_dir / cast(str, cast(MappingNode, node)["id"])
-            dest = root / path.removeprefix("/")
+            dest = root / paging.page_path(node)
             dest.parent.mkdir(parents=True, exist_ok=True)
             link_or_copy(src, dest)
 

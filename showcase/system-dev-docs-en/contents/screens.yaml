@@ -1,0 +1,326 @@
+# The order is the menu first, then the order of the use cases (the business
+# chronology). The screen list is drawn in this order and the states of the
+# screen flow diagram are declared in it too. IDs are a running number after
+# the screen IDs of the IPA screen list (SC = screen). As with use cases, IDs
+# are identifiers, not positions: a screen added later (SC08) is placed with
+# its related use case and the existing IDs are not reassigned.
+#
+# Screens are the entry points through which users carry out use cases, so a
+# use case whose only actor is an external system (sales posting) has no
+# screen. A use case whose main scenario does not fit one screen (stock
+# inquiry: search list → history) is split across screens. Screens and use
+# cases are many-to-many, and one screen may serve several use cases (the book
+# history screen serves stock inquiry and also shows the registered book
+# during book registration).
+#
+# transitions of an action list only those that change the screen. Operations
+# that complete within the screen (searching, adding a line, registering the
+# next record on the same screen) have no transitions. Conditional transitions
+# (branches on exceptions) carry a condition; unconditional ones omit it. The
+# description of an action is the response (and exception responses) of the
+# use case's main scenario, put in the words of the screen.
+#
+# ref of an io item names an attribute of the data model. Items that exist
+# only on the screen (the search text) or fold several entities into one
+# table (the history on the book history screen) have no ref, and their
+# meaning is given in description.
+screens:
+  SC01:
+    name: Menu screen
+    category: menu
+    description: Shown right after start-up; the entry point to the screens of each business area.
+    layout:
+      figure: screen_layouts/SC01.svg
+      source: screen_layouts/SC01.html
+    actions:
+      - name: Choose book registration
+        description: Goes to the book registration screen.
+        transitions:
+          - to: SC02
+      - name: Choose supplier registration
+        description: Goes to the supplier registration screen.
+        transitions:
+          - to: SC03
+      - name: Choose delivery registration
+        description: Goes to the delivery registration screen.
+        transitions:
+          - to: SC04
+      - name: Choose pending sale review
+        description: Goes to the pending sale review screen.
+        transitions:
+          - to: SC08
+      - name: Choose stocktake
+        description: Goes to the stocktake screen.
+        transitions:
+          - to: SC05
+      - name: Choose stock inquiry
+        description: Goes to the stock list screen.
+        transitions:
+          - to: SC06
+
+  SC02:
+    name: Book registration screen
+    category: entry
+    description: Registers a book newly taken into the range by entering its ISBN, title and publisher. After registering, the next book can be entered straight away.
+    layout:
+      figure: screen_layouts/SC02.svg
+      source: screen_layouts/SC02.html
+    use_cases:
+      - id: UC01
+    io_items:
+      - name: ISBN
+        direction: input
+        ref: { entity_id: book, attribute: isbn }
+      - name: Title
+        direction: input
+        ref: { entity_id: book, attribute: title }
+      - name: Publisher
+        direction: input
+        ref: { entity_id: book, attribute: publisher }
+    actions:
+      - name: Enter ISBN
+        description: Checks the format of the ISBN and, if correct, accepts the title and publisher. If malformed, asks for the ISBN again. If a book with the same ISBN is registered, shows that book on the book history screen and abandons the registration.
+        transitions:
+          - condition: a book with the same ISBN is registered
+            to: SC07
+      - name: Register
+        description: Registers the book and adds it to stock with a stock quantity of 0. Clears the fields and accepts the next book.
+      - name: Back to menu
+        description: Returns to the menu screen.
+        transitions:
+          - to: SC01
+
+  SC03:
+    name: Supplier registration screen
+    category: entry
+    description: Registers a supplier by entering its name and contact details. After registering, the next supplier can be entered straight away.
+    layout:
+      figure: screen_layouts/SC03.svg
+      source: screen_layouts/SC03.html
+    use_cases:
+      - id: UC02
+    io_items:
+      - name: Name
+        direction: input
+        ref: { entity_id: supplier, attribute: name }
+      - name: Contact
+        direction: input
+        ref: { entity_id: supplier, attribute: contact }
+    actions:
+      - name: Register
+        description: Registers the supplier and adds it to the list of delivery sources. If a supplier with the same name is registered, shows the existing supplier and asks whether to register anyway or abandon.
+      - name: Back to menu
+        description: Returns to the menu screen.
+        transitions:
+          - to: SC01
+
+  SC04:
+    name: Delivery registration screen
+    category: entry
+    description: Selects a supplier, builds up the delivered books and quantities as lines, and confirms the delivery.
+    layout:
+      figure: screen_layouts/SC04.svg
+      source: screen_layouts/SC04.html
+    use_cases:
+      - id: UC03
+    io_items:
+      - name: Supplier
+        direction: input
+        ref: { entity_id: delivery, attribute: supplier_id }
+        description: Chosen from the registered suppliers.
+      - name: Delivered at
+        direction: output
+        ref: { entity_id: delivery, attribute: delivered_at }
+        description: The system sets the date and time of confirmation.
+      - name: ISBN
+        direction: input
+        ref: { entity_id: delivery_line, attribute: isbn }
+        description: One book per line.
+      - name: Title
+        direction: output
+        ref: { entity_id: book, attribute: title }
+        description: Looked up from the ISBN and shown.
+      - name: Quantity
+        direction: input
+        ref: { entity_id: delivery_line, attribute: quantity }
+    actions:
+      - name: Select supplier
+        description: Keeps the selected supplier as the source of the delivery and accepts lines.
+      - name: Add line
+        description: Shows the title of the book specified by ISBN and adds it to the lines with its quantity. If the ISBN is not registered, refuses to add the line and sends the user to the book registration screen to register the book first.
+        transitions:
+          - condition: the ISBN is not registered
+            to: SC02
+      - name: Confirm
+        description: Records the delivery, adds each line's quantity to the stock quantity of its book and returns to the menu screen.
+        transitions:
+          - to: SC01
+      - name: Back to menu
+        description: Discards the delivery being entered and returns to the menu screen.
+        transitions:
+          - to: SC01
+
+  SC08:
+    name: Pending sale review screen
+    category: entry
+    description: Lists the sales that are pending because they include unregistered books, matches each line to a registered book and confirms the review.
+    layout:
+      figure: screen_layouts/SC08.svg
+      source: screen_layouts/SC08.html
+    use_cases:
+      - id: UC07
+    io_items:
+      - name: Notified at
+        direction: output
+        ref: { entity_id: sale, attribute: notified_at }
+        description: The sales awaiting review are listed in order of notification.
+      - name: Notified ISBN
+        direction: output
+        ref: { entity_id: sale_line, attribute: notified_isbn }
+        description: One per line of the selected sale. The value notified by the payment service, shown as received.
+      - name: Quantity
+        direction: output
+        ref: { entity_id: sale_line, attribute: quantity }
+      - name: ISBN
+        direction: input
+        ref: { entity_id: sale_line, attribute: isbn }
+        description: The registered book that corresponds to the notified ISBN.
+      - name: Title
+        direction: output
+        ref: { entity_id: book, attribute: title }
+        description: Looked up from the specified ISBN and shown.
+    actions:
+      - name: Select pending sale
+        description: Lists the lines of the selected sale with their notified ISBNs and quantities, and accepts the books to match them to.
+      - name: Match book
+        description: Shows the title of the specified ISBN and keeps it as the match for the line. If the ISBN is not registered, refuses the match and sends the user to the book registration screen to register the book first.
+        transitions:
+          - condition: the ISBN is not registered
+            to: SC02
+      - name: Confirm review
+        description: Deducts each line's quantity from the stock quantity of its book, marks the sale as confirmed and removes it from the review queue. If some lines are unmatched, refuses to confirm and points them out.
+      - name: Back to menu
+        description: Returns to the menu screen.
+        transitions:
+          - to: SC01
+
+  SC05:
+    name: Stocktake screen
+    category: entry
+    description: Starts a stocktake to fix the baseline stock quantities, takes the counted quantity of each book to show the differences, and confirms the stocktake.
+    layout:
+      figure: screen_layouts/SC05.svg
+      source: screen_layouts/SC05.html
+    use_cases:
+      - id: UC05
+    io_items:
+      - name: Started at
+        direction: output
+        ref: { entity_id: stocktake, attribute: started_at }
+      - name: ISBN
+        direction: output
+        ref: { entity_id: stocktake_line, attribute: isbn }
+        description: Every book, one per line.
+      - name: Title
+        direction: output
+        ref: { entity_id: book, attribute: title }
+      - name: Baseline
+        direction: output
+        ref: { entity_id: stocktake_line, attribute: baseline_quantity }
+        description: The stock quantity at the start.
+      - name: Counted
+        direction: input
+        ref: { entity_id: stocktake_line, attribute: counted_quantity }
+      - name: Difference
+        direction: output
+        ref: { entity_id: stocktake_line, attribute: difference }
+        description: Recalculated each time a count is entered.
+    actions:
+      - name: Start stocktake
+        description: Records the current stock quantity of every book as its baseline quantity and accepts counts.
+      - name: Enter count
+        description: Takes the counted quantity of a book and shows the difference from its baseline quantity.
+      - name: Confirm
+        description: Replaces the stock quantity of each book with its counted quantity, saves the differences as the stocktake record and returns to the menu screen. If some books have no count, refuses to confirm and points them out.
+        transitions:
+          - condition: every book has a count
+            to: SC01
+      - name: Back to menu
+        description: Returns to the menu screen with the stocktake still in progress. Opening this screen again resumes the entry of counts.
+        transitions:
+          - to: SC01
+
+  SC06:
+    name: Stock list screen
+    category: list
+    description: Searches for books by title or ISBN and lists the matching books with their current stock quantities.
+    layout:
+      figure: screen_layouts/SC06.svg
+      source: screen_layouts/SC06.html
+    use_cases:
+      - id: UC06
+    io_items:
+      - name: Search text
+        direction: input
+        description: Part of a title, or an ISBN.
+      - name: ISBN
+        direction: output
+        ref: { entity_id: book, attribute: isbn }
+      - name: Title
+        direction: output
+        ref: { entity_id: book, attribute: title }
+      - name: Publisher
+        direction: output
+        ref: { entity_id: book, attribute: publisher }
+      - name: Stock quantity
+        direction: output
+        ref: { entity_id: book, attribute: stock_quantity }
+    actions:
+      - name: Search
+        description: Lists the books matching the search text with their current stock quantities. If nothing matches, says so.
+      - name: Select book
+        description: Goes to the book history screen of the book selected from the list.
+        transitions:
+          - to: SC07
+      - name: Back to menu
+        description: Returns to the menu screen.
+        transitions:
+          - to: SC01
+
+  SC07:
+    name: Book history screen
+    category: detail
+    description: Shows one book's current stock quantity and its delivery, sale and stocktake history. Also used to show the registered book when book registration hits a duplicate ISBN.
+    layout:
+      figure: screen_layouts/SC07.svg
+      source: screen_layouts/SC07.html
+    use_cases:
+      - id: UC06
+      - id: UC01
+    io_items:
+      - name: ISBN
+        direction: output
+        ref: { entity_id: book, attribute: isbn }
+      - name: Title
+        direction: output
+        ref: { entity_id: book, attribute: title }
+      - name: Publisher
+        direction: output
+        ref: { entity_id: book, attribute: publisher }
+      - name: Stock quantity
+        direction: output
+        ref: { entity_id: book, attribute: stock_quantity }
+      - name: History date
+        direction: output
+        description: The delivered-at of a delivery, the notified-at of a sale or the confirmed-at of a stocktake. No ref, since the three kinds of event are folded into one table.
+      - name: History kind
+        direction: output
+        description: Delivery, sale or stocktake.
+      - name: History quantity
+        direction: output
+        description: The quantity of a delivery line or sale line, or the difference of a stocktake line.
+    actions:
+      - name: Back to list
+        description: Returns to the stock list screen. The search results are kept.
+        transitions:
+          - to: SC06

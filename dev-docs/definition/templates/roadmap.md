@@ -9,13 +9,13 @@ Phase 15 までは完了している（詳細は git 履歴と {{ node(path="/ta
 
 | ID | タスク | Proposal | 備考 | Done |
 |---|---|---|---|---|
-{% for row in group.tasks %}
+  {% for row in group.tasks %}
     {{- "" }}| {{ node("tasks", row.id, "tasks", row.task.id) | link(row.task.id) }}
     {{- "" }} | {{ row.task.title }}
     {{- "" }} | {% if row.task.proposal %}{{ node(path="/prose/" ~ row.task.proposal) | link("→") }}{% endif %}
     {{- "" }} | {{ row.task.note | replace('\n', ' ') | trim }}
     {{- "" }} | {{ "✅" if row.task.done else "" }}
     {{- "" }} |
-{% endfor %}
+  {% endfor %}
 
 {% endfor %}

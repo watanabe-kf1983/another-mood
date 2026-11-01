@@ -29,7 +29,7 @@ from another_mood.components.generator.template_engine import (
     OutputFormat,
     as_template_helper,
 )
-from another_mood.components.generator.url import url_escape
+from another_mood.components.shared.url import url_escape
 
 # CommonMark renders any escaped ASCII punctuation identically to the
 # unescaped form, so a blanket escape is invisible in the output and

@@ -45,8 +45,8 @@ class ProjectConfig(BaseSettings):
     # Bound by the boundary layer, not configured by the user: no CLI option
     # sets it, and MOOD_NAMESPACE_ROOT never takes effect, since the CLI
     # passes the field explicitly and init arguments outrank environment
-    # sources. Move the output instead — out_dir /
-    # site_dir / tap_dir reach every path this would move, one at a time.
+    # sources. Move the output instead — out_dir / site_dir reach every
+    # path this would move, one at a time.
     namespace_root: Path
 
     project_dir: Path
@@ -55,10 +55,6 @@ class ProjectConfig(BaseSettings):
     # fill or drop these per mode (see resolved_for_build / resolved_for_watch).
     out_dir: Path | None = Field(default=None)
     site_dir: Path | None = Field(default=None)
-
-    # Tap document destination directory. Unset (None) resolves to the
-    # ``.another-mood/<project>`` default (see resolved_for_tap).
-    tap_dir: Path | None = Field(default=None)
 
     # Working dir. Unset (None) resolves to a fresh system-temp dir at the
     # command layer; set MOOD_TMP_DIR to pin it to a fixed path.
@@ -89,17 +85,6 @@ class ProjectConfig(BaseSettings):
                 "site_dir": self.site_dir or rb / "site",
             }
         )
-
-    def resolved_for_tap(self) -> "ProjectConfig":
-        """Fill an unset tap_dir with the ``.another-mood/<project>`` default.
-
-        An explicit tap_dir skips even deriving the default, which would
-        require project_dir under namespace_root.
-        """
-        if self.tap_dir is not None:
-            return self
-        rb = _another_mood_root(self.namespace_root, self.project_dir)
-        return self.model_copy(update={"tap_dir": rb / "tap"})
 
     def resolved_for_watch(self) -> "ProjectConfig":
         """Drop site_dir — watch never publishes HTML — and keep out_dir as given."""

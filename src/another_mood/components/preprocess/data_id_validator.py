@@ -12,20 +12,14 @@ from another_mood.components.shared.user_source.source_loader import UserStr
 from another_mood.components.shared.user_source.diagnostic import Diagnostic
 
 
-def check_duplicate_ids(
-    data_by_entity: Mapping[str, Sequence[Mapping[str, object]]],
-) -> Sequence[Diagnostic]:
+def check_duplicate_ids(root: Mapping[str, object]) -> Sequence[Diagnostic]:
     """Diagnose records that share an ``id`` with a sibling.
 
-    ``data_by_entity`` must already be merged across every source file.
-    Every record of a colliding group is reported, so all its locations
-    are named.
+    ``root`` is the whole data tree and must already be merged across
+    every source file.  Every record of a colliding group is reported,
+    so all its locations are named.
     """
-    return [
-        diagnostic
-        for entity_id, records in data_by_entity.items()
-        for diagnostic in _check_collection(entity_id, records)
-    ]
+    return list(_descend(None, root))
 
 
 def _check_collection(
@@ -54,16 +48,15 @@ def _duplicates(
     return (_duplicate_id(collection, value) for value in ids if counts[str(value)] > 1)
 
 
-def _descend(owner: str, record: Mapping[str, object]) -> Iterator[Diagnostic]:
+def _descend(owner: str | None, record: Mapping[str, object]) -> Iterator[Diagnostic]:
     # A key is always an addressable step, so an object-valued attribute
     # carries its own nested collections further down.
     for key, value in record.items():
+        address = key if owner is None else f"{owner}/{key}"
         if isinstance(value, Mapping):
-            yield from _descend(f"{owner}/{key}", cast(Mapping[str, object], value))
+            yield from _descend(address, cast(Mapping[str, object], value))
         elif isinstance(value, list):
-            yield from _check_collection(
-                f"{owner}/{key}", cast(Sequence[object], value)
-            )
+            yield from _check_collection(address, cast(Sequence[object], value))
 
 
 def _duplicate_id(collection: str, value: object) -> Diagnostic:

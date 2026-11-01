@@ -1,0 +1,7 @@
+# The system the two documents are about. The name is the boundary label of the
+# context diagram; the description appears in the opening sentence of each
+# document. To swap the subject, change this file and the prose, and the
+# templates can stay as they are.
+system:
+  name: Bookstore Inventory System
+  description: an inventory management system for a small bookstore

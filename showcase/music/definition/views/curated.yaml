@@ -1,0 +1,28 @@
+# Each playlist-track link with its track record attached, so the title
+# travels with the link. Feeds ``curated.playlists`` below.
+playlist_entries:
+  from: playlist_tracks
+  join:
+    to: tracks
+    on: { left: track_id, right: id }
+    as: track_matches
+    flatten: { as: track }
+  select:
+    - item: playlist_id
+    - item: position
+    - item: track
+
+# Each playlist with its entries attached - exercises a two-hop
+# view-to-view chain (``playlist_tracks`` -> ``playlist_entries`` -> here).
+curated.playlists:
+  from: playlists
+  join:
+    to: playlist_entries
+    on: { left: id, right: playlist_id }
+    as: entries
+  select:
+    - item: id
+    - item: name
+    - item: curator
+    - item: description
+    - item: entries

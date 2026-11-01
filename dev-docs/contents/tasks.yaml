@@ -290,15 +290,9 @@ categories:
         phase: 17
         done: true
       E17:
-        title: 合成ビュー (compose) — source を束ねる第二の view 文法
-        note: >-
-          複数の entity / view を束ねた単一レコードのビュー。文書 (と章節項) を
-          データ木のノードとして立て、root 以外のページから複数 source を描ける
-          ようにする。views ディレクトリに書き、名前空間・評価順は query と共有。
-          動機は S8 の二文書。トップレベル・シングルトンのカタログ表現が要るので
-          M13 が前提。
-        proposal: 20-design/60-composer/10-query-dsl-spec#合成ビュー-e17
+        title: 文書ノード — ドット区切りの view 名 (書き込みパス)
         phase: 17
+        done: true
 
   F:
     title: メタドキュメンテーション拡張
@@ -429,11 +423,8 @@ categories:
         done: true
       J5:
         title: tap ドキュメントの JSON Schema 提供
-        note: >-
-          E14 / M13 が前提。当初は実需が出るまで保留としていたが、
-          ローンチ前に入れる (入ってしまう) 見込み。
-        proposal: 20-design/40-communication/10-json-data-model#tap-ドキュメントの-json-schema-提供-j5
         phase: 18
+        done: true
       J6:
         title: sbdb プロジェクトの自己記述 (README.md 生成)
         phase: 18
@@ -493,9 +484,8 @@ categories:
         done: true
       M13:
         title: ルート Entity の導入 (トップレベル非 collection の可視化)
-        note: E14 とは独立に着手できる。E17 (合成ビュー) の前提
-        proposal: 20-design/45-schema/10-schema-spec#ルート-entity-の導入-m13
         phase: 17
+        done: true
       M14:
         title: singleton 平坦化の 1 段制限の撤廃
         phase: 17
@@ -622,13 +612,6 @@ categories:
         title: build_info — ビルド時情報の照会関数
         phase: 16
         done: true
-      P15:
-        title: テンプレート評価のリソース上限 / プロセス隔離 (ホスト / 無人 build 向け)
-        note: >-
-          minijinja + marshal 契約が閉じるのは RCE で、メモリ爆弾や無限ループ (DoS) は通る。
-          ローカル CLI では Ctrl-C で受ける accepted risk。トリガーはホスト / 無人 build の導入。
-        phase: 20
-        proposal: 20-design/70-generator/25-template-trust-model#dos-はホスティング時に別レイヤで
 
   Q:
     title: 公開
@@ -744,11 +727,9 @@ categories:
         phase: 16
         done: true
       S9:
-        title: 二文書 showcase への合成ビュー適用 (system-dev-docs-ja の完成)
-        note: >-
-          S8 までの showcase は index.md の合本で暫定。E17 の合成ビューで要求仕様書・
-          設計書を別ページの文書に割り、二文書として完成させる。E17 (と M13) が前提。
+        title: 二文書 showcase への文書ノード適用 (system-dev-docs-ja の完成)
         phase: 17
+        done: true
       S10:
         title: 二文書 showcase の英語版 (showcase/system-dev-docs-en)
         note: >-
@@ -758,6 +739,7 @@ categories:
           出す形にできればそれ自体が分離の実演になるが、別プロジェクトとして
           複製するのが最小。Q3 の前提。
         phase: 17
+        done: true
 
   T:
     title: ビルドインフラ

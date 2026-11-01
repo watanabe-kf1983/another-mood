@@ -305,7 +305,9 @@ class TestBuildTreeRoot:
         ]
         assert tree.child("moods") == dc.Node()
 
-    def test_hangs_the_views_after_the_roots_branches(self) -> None:
+    def test_hangs_a_parentless_entity_after_the_roots_branches(self) -> None:
+        """A catalog fragment's top-level entity, which no attribute of the
+        root names, still becomes a branch of the root."""
         flat = _catalog(
             _ROOT_CATALOG_YAML
             + """
@@ -314,7 +316,6 @@ class TestBuildTreeRoot:
     id: user_names.item
     attributes:
       - { id: name, type: string, required: false }
-  view: true
 """
         )
         edge, _ = dc.build_tree(flat).children[-1]
@@ -324,7 +325,7 @@ class TestBuildTreeRoot:
         flat = _catalog(_ROOT_CATALOG_YAML)
         assert dc.flatten_root(dc.build_tree(flat)) == flat
 
-    def test_without_the_root_entity_hangs_only_the_views(self) -> None:
+    def test_without_the_root_entity_hangs_only_the_parentless(self) -> None:
         flat = _catalog(
             """
             - id: user_names
