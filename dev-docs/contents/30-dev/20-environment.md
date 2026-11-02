@@ -25,6 +25,7 @@
 # ユーザー・ボリューム
 whoami                  # → vscode
 ls -la ~/.claude        # マウント済み、所有者が vscode
+echo $CLAUDE_CONFIG_DIR # → /home/vscode/.claude
 
 # Features
 node --version
@@ -43,6 +44,8 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 ### Claude Code 永続化
 
 `~/.claude` を名前付きボリュームにマウントし、コンテナ再作成時に Claude Code の設定・会話履歴を保持する。ボリュームの所有権は postCreateCommand で非 root ユーザに変更する。
+
+`CLAUDE_CONFIG_DIR` も同じパスに向ける。既定ではログイン状態やプロジェクトごとの信頼設定を持つ `.claude.json` だけが `~/.claude` の外（`~/.claude.json`）に置かれ、ボリュームに載らないため。
 
 ### postCreateCommand
 
