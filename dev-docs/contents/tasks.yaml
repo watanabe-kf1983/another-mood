@@ -101,14 +101,6 @@ categories:
         title: _NodeMeta の由来型分岐を _Anchor strategy へ多態化
         phase: 13
         done: true
-      B15:
-        title: 一意でないアンカーパスの検出 (NodeMap 後勝ちの可視化)
-        note: >-
-          view の flatten 等で正当に生じる重複アンカーパスは NodeMap で後勝ちに畳まれ、
-          ページ主語になるまで (PageCollisionError) 検出されない。構築時に検出して
-          リンク抑止か警告にするか、どこまでやるかの検討から。
-        phase: 20
-        proposal: 20-design/70-generator/30-anchor-spec#未決事項
 
   C:
     title: ページ分割 (paging)
