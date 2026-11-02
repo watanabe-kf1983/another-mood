@@ -34,7 +34,7 @@
 格子が持つのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別に置く:
 
 - **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は `dev-docs/appendix/` か PR 本文に置く
-- **次に何をするか** — 目的は `dev-docs/concept/`、優先度はロードマップとタスクカタログ（`dev-docs/contents/tasks.yaml` から生成）、未実装機能の検討は `dev-docs/design/` の `## Proposals`
+- **次に何をするか** — 目的は `dev-docs/concept/`、優先度はロードマップとタスクカタログ（`dev-docs/contents/tasks.yaml` から生成）、未実装機能の検討は GitHub Issues
 
 言語は `docs/` が英語、`dev-docs/` が日本語。各置き場の読者、書き方（何を書き、何を書かないか）、インデックスの更新手順は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
 
@@ -92,7 +92,7 @@ another_mood/
 
 #### タスクの進め方
 
-非自明な機能追加・変更では、まず `dev-docs/design/` の対応ファイル `## Proposals` セクション（必要なら新規ファイル）に検討メモを書いて方針を合意してから着手する。以降の手順:
+非自明な機能追加・変更では、まず方針を合意してから着手する。以降の手順:
 
 1. 以下をタスクに応じた順序で進める:
     - **showcase/ のテンプレートに入出力例を作成**
@@ -100,7 +100,7 @@ another_mood/
     - **実装**
 2. **showcase/ で動作確認**
 3. **`docs/` を同期** — 利用者が書ける形・得られる形（CLI / スキーマ / クエリ / テンプレート、内蔵リソース等）が変わったら `docs/` の該当箇所を更新する
-4. **`Proposals` の整理** — 対応ファイルの `## Proposals` から該当の検討メモを削除（部分実装の場合は残る検討事項のみに絞る）。維持価値のある設計判断は External / Internal Design 節に移すか、コードの docstring に残す
+4. **設計の記録** — 維持価値のある設計判断を `dev-docs/design/` の対応ファイル（必要なら新規ファイル）の External / Internal Design 節に書くか、コードの docstring に残す
 5. `make ci` を通してコミット → プルリク作成
 
 ### プルリクエスト

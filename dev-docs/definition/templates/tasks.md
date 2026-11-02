@@ -15,12 +15,11 @@
 **仕様:** {{ node(path="/prose/" ~ category.spec) | link }}
   {% endif %}
 
-| ID | タスク | Proposal | 備考 | Phase | Done |
-|---|---|---|---|---|---|
+| ID | タスク | 備考 | Phase | Done |
+|---|---|---|---|---|
   {% for task in category.tasks %}
     {{- "" }}| {{ task.id }}{{ task | anchor }}
     {{- "" }} | {{ task.title }}
-    {{- "" }} | {% if task.proposal %}{{ node(path="/prose/" ~ task.proposal) | link("→") }}{% endif %}
     {{- "" }} | {{ task.note | replace('\n', ' ') | trim }}
     {{- "" }} | {{ node("roadmap", task.phase) | link(task.phase) }}
     {{- "" }} | {{ "✅" if task.done else "" }}
