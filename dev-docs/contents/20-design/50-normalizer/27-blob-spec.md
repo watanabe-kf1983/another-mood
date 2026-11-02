@@ -1,6 +1,6 @@
 # Blob
 
-blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツールが解釈しない不透明なファイル**」（画像・PDF・動画・CSV 等）を、内蔵コレクション **`blob`** のレコードとして扱う型。[prose](25-prose-spec.md) と対をなす — prose は `render` フィルタで埋め込む「ページ素材」、blob は id で参照される「リソース」。レコードの形は `docs/reference/schema.md` の blob 節が約束する。この型を置いた要求は[背景](../../90-appendix/20-design/50-normalizer/27-blob-spec.md#要求)、バイト列を出力まで運ぶ経路は [運搬機構](../40-communication/index.md#運搬機構)。
+blob は `contents_dir` に置かれた YAML・JSON・Markdown 以外の「**ツールが解釈しない不透明なファイル**」（画像・PDF・動画・CSV 等）を、内蔵コレクション **`blob`** のレコードとして扱う型。[prose](25-prose-spec.md) と対をなす — prose は `render` フィルタで埋め込む「ページ素材」、blob は id で参照される「リソース」。レコードの形は `docs/reference/schema.md` の blob 節が約束する。バイト列を出力まで運ぶ経路は [運搬機構](../40-communication/index.md#運搬機構)。
 
 ## External Design
 

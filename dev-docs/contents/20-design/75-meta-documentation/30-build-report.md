@@ -20,4 +20,3 @@ Reconcile は Generator の直後に位置するステージで、「Generator �
 - Generator は「views を Markdown に変換する」純粋な責務に集中できる（エラー時の出力差し替えロジックを持たない）
 - 下流の site / publish ステージは Reconcile の出力の単一視点を持てばよく、エラー時と正常時の分岐を知らなくてよい
 
-「reconcile」の語を採った理由は[背景](../../90-appendix/20-design/75-meta-documentation/30-build-report.md#reconcile-の命名)。

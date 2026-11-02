@@ -4,4 +4,4 @@
 
 ## External Design
 
-- ビュー定義ページは Shape (各出力フィールドの型 + entity ref) を出し、Query Object の `derive` がそれを生成する。複合型を許容する本ツールでは、カラムヘッダとサンプル行だけでは結果形状が伝わらないため（[背景](../../90-appendix/20-design/75-meta-documentation/10-database-information.md#view-の-shape-が必須な理由)）
+- ビュー定義ページは Shape (各出力フィールドの型 + entity ref) を出し、Query Object の `derive` がそれを生成する。複合型を許容する本ツールでは、カラムヘッダとサンプル行だけでは結果形状が伝わらないため

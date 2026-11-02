@@ -25,7 +25,7 @@
 
 | | 導線・約束（まず読む） | 精密な条件（必要なときに開く） | 実際の姿（実装の写し） |
 |---|---|---|---|
-| 利用者から見える挙動 | `docs/reference/` | `dev-docs/appendix/` | fixture テスト |
+| 利用者から見える挙動 | `docs/reference/` | — | fixture テスト |
 | 内部の構造 | `dev-docs/design/`（構造・不変条件） | docstring（呼び出し側の契約）、コメント（申し送り） | コード |
 | 開発の進め方 | 本ファイル | `dev-docs/dev/` | Makefile・CI 等の設定 |
 
@@ -33,7 +33,7 @@
 
 格子が持つのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別に置く:
 
-- **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は `dev-docs/appendix/` か PR 本文に置く
+- **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は PR 本文に置く
 - **次に何をするか** — 目的は `dev-docs/concept/`、タスクは GitHub Issues
 
 言語は `docs/` が英語、`dev-docs/` が日本語。各置き場の読者、書き方（何を書き、何を書かないか）、インデックスの更新手順は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
@@ -43,7 +43,7 @@
 - コード内コメントは **英語**
 - ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使うコンポーネントの近傍（`dev-docs/design/` の対応ファイル、実装済みならコードの docstring）に残す**
 - **コードから dev-docs を参照しない**: docstring・コメントに dev-docs のパスや章名を書かない
-- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。設計はその意図とともに `dev-docs/design/`、設計に至った経緯は `dev-docs/appendix/` か PR 本文へ
+- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。設計はその意図とともに `dev-docs/design/`、設計に至った経緯は PR 本文へ
 
 #### パッケージ構成と依存ルール
 
@@ -105,7 +105,7 @@ another_mood/
 
 ### プルリクエスト
 
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
+PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の背景もトレーラーも黙って失われる。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
 リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
 
@@ -113,7 +113,7 @@ PR 本文はそのまま main の squash コミット本文になる（ブラン
 
 kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
 
-破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、設計背景、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
+破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務とリリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 
 ## Documentation (Reference)
 

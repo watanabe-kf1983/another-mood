@@ -77,6 +77,25 @@ class TestParseMapping:
         assert diag.file == f
         assert diag.source == "ruamel.yaml"
 
+    @pytest.mark.parametrize(
+        ("name", "source", "line"),
+        [("dup.yaml", "a: 1\na: 2\n", 2), ("dup.json", '{"a": 1, "a": 2}\n', 1)],
+    )
+    def test_duplicate_key_rejected_rather_than_last_wins(
+        self, name: str, source: str, line: int, tmp_path: Path
+    ) -> None:
+        # A duplicate key is an error, not "the last one wins". Most JSON
+        # readers silently keep the last value (RFC 8259 leaves it open), but
+        # losing a user's value without a word is worse than stopping. The
+        # error names the line, like any other syntax error.
+        f = tmp_path / name
+        f.write_text(source)
+        with pytest.raises(FileValidationError) as exc_info:
+            parse_mapping(f)
+        diag = exc_info.value.diagnostics[0]
+        assert diag.file == f
+        assert diag.line == line
+
     def test_scalar_strings_become_user_str_with_location(self, tmp_path: Path) -> None:
         f = tmp_path / "tagged.yaml"
         f.write_text(

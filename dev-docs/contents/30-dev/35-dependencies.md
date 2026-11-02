@@ -31,4 +31,3 @@
 
 ## 採らなかった選択肢
 
-依存への一律 cap、定期 bot による lock 更新 PR、PR ごとの fresh 解決 CI、lock 単独 PR の auto-merge、冷却期間（dependency cooldown）を採らなかった理由は[背景](../90-appendix/30-dev/35-dependencies.md#採らなかった選択肢)。
