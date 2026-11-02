@@ -6,7 +6,7 @@
 
 - 各タスクは「1タスク・1 Git ブランチ」で進める
 - タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する。失敗する場合は、環境の問題ならセットアップ節を、コードの問題ならタスク着手前に修正する
-- タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出たら lock 単独 PR を先に merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
+- タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出るとスクリプトが lock 単独 PR の作成（push を含む）まで行うので、その PR を merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
 - コミットメッセージ・プルリクエストは **英語**
 
 ### セットアップ
@@ -34,7 +34,7 @@
 格子が持つのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別に置く:
 
 - **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は `dev-docs/appendix/` か PR 本文に置く
-- **次に何をするか** — 目的は `dev-docs/concept/`、優先度はロードマップとタスクカタログ（`dev-docs/contents/tasks.yaml` から生成）、未実装機能の検討は `dev-docs/design/` の `## Proposals`
+- **次に何をするか** — 目的は `dev-docs/concept/`、タスクは GitHub Issues
 
 言語は `docs/` が英語、`dev-docs/` が日本語。各置き場の読者、書き方（何を書き、何を書かないか）、インデックスの更新手順は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
 
@@ -92,7 +92,7 @@ another_mood/
 
 #### タスクの進め方
 
-非自明な機能追加・変更では、まず `dev-docs/design/` の対応ファイル `## Proposals` セクション（必要なら新規ファイル）に検討メモを書いて方針を合意してから着手する。以降の手順:
+非自明な機能追加・変更では、まず方針を合意してから着手する。以降の手順:
 
 1. 以下をタスクに応じた順序で進める:
     - **showcase/ のテンプレートに入出力例を作成**
@@ -100,18 +100,18 @@ another_mood/
     - **実装**
 2. **showcase/ で動作確認**
 3. **`docs/` を同期** — 利用者が書ける形・得られる形（CLI / スキーマ / クエリ / テンプレート、内蔵リソース等）が変わったら `docs/` の該当箇所を更新する
-4. **`Proposals` の整理** — 対応ファイルの `## Proposals` から該当の検討メモを削除（部分実装の場合は残る検討事項のみに絞る）。維持価値のある設計判断は External / Internal Design 節に移すか、コードの docstring に残す
+4. **設計の記録** — 維持価値のある設計判断を `dev-docs/design/` の対応ファイル（必要なら新規ファイル）の External / Internal Design 節に書くか、コードの docstring に残す
 5. `make ci` を通してコミット → プルリク作成
 
 ### プルリクエスト
 
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タスク ID もここ——タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
+PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
 リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
 
     Release-Highlight: fix
 
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文。タスク ID は書かない）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
+kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
 
 破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、設計背景、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 
@@ -121,7 +121,5 @@ kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、�
 
 - [index.md](.another-mood/dev-docs/output/web/index.md) — 仕様・設計
 - [concept/product.md](.another-mood/dev-docs/output/web/prose/10-concept/10-product.md) — 製品ビジョン
-- [roadmap.md](.another-mood/dev-docs/output/web/roadmap.md) — ロードマップ
-- [tasks.md](.another-mood/dev-docs/output/web/tasks.md) — タスクカタログ
 - [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md) — 命名・自己定義の表記規約
 - [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約）

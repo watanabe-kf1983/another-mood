@@ -4,15 +4,12 @@
 # under output/{edition}/ and renders the same data, differing only in
 # `file_per` (which ObjectType IDs are split into their own pages).
 #
-#   web  — browse online: prose, tasks, and roadmap items are split into
-#          separate pages.
+#   web  — browse online: each prose item is split into its own page.
 #   book — read as one bound document: empty file_per keeps everything
 #          inlined into a single index.md.
 editions:
   web:
     file_per:
       - prose.item
-      - tasks.item[]
-      - roadmap.item[]
   book:
     file_per: []

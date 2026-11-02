@@ -2,7 +2,7 @@
 
 ## What is Another Mood?
 
-Requirements specifications, product catalogs, maintenance manuals, training materials — in documents like these, you keep meeting the same characters — "users", "products", "procedures" — appearing in different shapes again and again. Each time you introduce a new one, you end up revising it in several places, missing one somewhere, and the documents drift out of sync before you notice.
+Software specifications, product catalogs, maintenance manuals, training materials — documents like these keep describing the same things in different places. For instance, in a software specification, a single screen is listed in the screen inventory, named as the destination of other screens' transitions, crossed with tables in a CRUD matrix, and cited by the requirements. Rename it and every one of those mentions has to change with it; miss one, and the specification contradicts itself.
 
 **Another Mood** is a processor of source-based databases — a tool that keeps document sets like these in sync. Edit the data in one place, and every linked output regenerates in a consistent state — no chasing fixes through many files.
 
