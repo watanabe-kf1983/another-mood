@@ -168,9 +168,3 @@ blob のミラー先と edition ディレクトリも同じ規則で名前を得
 リンク解決はアンカーパスからノードを引く `{anchor_path: node}` のフラットなマップ（`data_tree.py` の `build_node_map`）の上に立ち、pre-render 段階で完結する (post-render の文字列置換は採らない)。ヘルパは依存方向で 2 群に分かれる: フォーマット非依存の中立ヘルパ (`node` global、`child` / `label` フィルタ) はノードマップだけに束縛され、フォーマット固有の `link` / `href` / `relink` は `PagingPolicy` に束縛される（`relink` はノードマップも引く。`anchor` は束縛を持たない）。source ページ（主題ノード）は render state の `this` から得る。
 
 実装契約（`@pass_state` の要否、`MissingNode` の捌き方）は `data_tree_filters.py` / `output_formats/md.py` の docstring、[リンクの両端](#リンクの両端)の fragment 規則と stamp 可否をノードの由来型で選ぶ anchor strategy は `data_tree.py` の `_Anchor` 各クラス、`relink` が本文中の本物の `node:` リンクを見つけて splice する機構は `shared/markdown.py` の docstring が正本。
-
-## Proposals
-
-### 未決事項
-
-- **未解決参照のビルドレポート警告**: `link` / `relink` とも未解決参照は `[text]` で可視化するのみで、ビルドレポートには積まない。両フィルタ共通の経路で警告に載せる
