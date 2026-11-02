@@ -84,10 +84,10 @@ class TestParseMapping:
     def test_duplicate_key_rejected_rather_than_last_wins(
         self, name: str, source: str, line: int, tmp_path: Path
     ) -> None:
-        # RFC 8259 leaves duplicate keys to the implementation, and most JSON
-        # readers silently keep the last value. A value dropped without a word
-        # is worse than a stop, so a duplicate is a positioned user error like
-        # any other syntax error — even when the source is JSON.
+        # A duplicate key is an error, not "the last one wins". Most JSON
+        # readers silently keep the last value (RFC 8259 leaves it open), but
+        # losing a user's value without a word is worse than stopping. The
+        # error names the line, like any other syntax error.
         f = tmp_path / name
         f.write_text(source)
         with pytest.raises(FileValidationError) as exc_info:
