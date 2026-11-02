@@ -785,19 +785,6 @@ categories:
         title: 既存フィルタの output_format モデルへの移行
         phase: 11
         done: true
-      U5:
-        title: output_format の拡張 (md 以外の具体仕様 / 入れ子 / ブロック切替 / 追加の位置依存正規化)
-        note: >-
-          いずれも実需が顕在化した時点で別仕様として詰める。md 以外の HTML 系は N2 と重なる。
-        phase: 20
-        proposal: 20-design/70-generator/20-template-spec#proposals
-      U6:
-        title: Prose 型の mime_type 多態 (text/markdown 以外の prose)
-        note: >-
-          レコード直下の mime_type を分岐キーに、text/html 等の prose をページとして扱う。
-          汎用の Typed Value 機構は採らず、組み込みコレクションに限る。
-        phase: 20
-        proposal: 20-design/70-generator/20-template-spec#proposals
 
   V:
     title: プロジェクトマニフェスト (sbdb.yaml)
