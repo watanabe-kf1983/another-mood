@@ -10,12 +10,7 @@
 {% for record in chapters if not record.id is startingwith("90-appendix/") or record.id == "90-appendix/index" %}
 {{ "  " * (record.depth - 2) }}- {{ record | link }}
 {% endfor %}
-- {{ node(path="/tasks") | link("タスクカタログ") }}
-- {{ node(path="/roadmap") | link("ロードマップ") }}
 
 {% for record in chapters %}
   {{- record | render("appendix.md" if record.id == "90-appendix/index" else "prose.md") | under_heading("#" * (record.depth - 1)) }}
 {% endfor %}
-{{- tasks | render("tasks.md") | under_heading("#") }}
-
-{{ roadmap | render("roadmap.md") | under_heading("#") }}
