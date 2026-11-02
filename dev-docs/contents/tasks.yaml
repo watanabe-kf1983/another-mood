@@ -630,6 +630,7 @@ categories:
           classifiers / keywords) は埋めるか検討。1.0.0 の tag より前に main へ
           入れる。Q3 の前提。
         phase: 19
+        done: true
       R5:
         title: showcase / dev-docs の実物マニフェストから minimum_version を削除
         phase: 15
