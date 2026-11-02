@@ -182,16 +182,6 @@ categories:
         title: 警告インフラ
         phase: 10
         done: true
-      D8:
-        title: Unique 制約の仕様確定
-        note: 宣言場所 / 複合キー対応の有無
-        phase: 20
-        proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
-      D9:
-        title: Unique 制約の実装 + チェック
-        note: --strict 連動
-        phase: 20
-        proposal: 20-design/50-normalizer/10-normalizer#unique-制約-d8-d9
       D10:
         title: 入力境界での一律 NFC 正規化
         phase: 13
