@@ -149,7 +149,7 @@ class TestParseMapping:
         )
 
 
-# ── NFC normalization at the input boundary (D10) ──────────────────
+# ── NFC normalization at the input boundary ────────────────────────
 
 
 class TestNfcNormalization:

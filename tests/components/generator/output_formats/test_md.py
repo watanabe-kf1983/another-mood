@@ -303,7 +303,7 @@ class TestMdAnchor:
 
 class TestMdPostProcess:
     """The format's render post-pass stamps a node subject's own anchor at the
-    top of its output (C9), and leaves a non-node render untouched."""
+    top of its output, and leaves a non-node render untouched."""
 
     def test_stamps_node_subject_anchor_on_its_own_line(self) -> None:
         node = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))["/members/alice"]

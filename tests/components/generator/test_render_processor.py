@@ -83,7 +83,7 @@ def _make_filter_env(
 
 class TestRenderSubtreeGuard:
     """A node subject must lie within the host ``this``'s subtree; otherwise
-    the render raises a build error (B12)."""
+    the render raises a build error."""
 
     _TREE = {
         "albums": [{"id": "a1", "title": "A1"}],
@@ -256,7 +256,7 @@ class TestRenderFilterViaEngine:
 
 
 class TestRenderProcessorImplFilePerRouting:
-    """A real node's split-vs-inline decision follows ``file_per`` (C4)."""
+    """A real node's split-vs-inline decision follows ``file_per``."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
 
@@ -310,8 +310,8 @@ class TestRenderProcessorImplNonNodeInlines:
 
 
 class TestRenderProcessorImplPagePath:
-    """A split subject maps to its output path via ``PagingPolicy.page_path``
-    (paging C3), so its directory is the view name."""
+    """A split subject maps to its output path via ``PagingPolicy.page_path``,
+    so its directory is the view name."""
 
     _TREE = {"members": [{"id": "alice", "name": "Alice"}]}
 
@@ -328,7 +328,7 @@ class TestRenderProcessorImplPagePath:
 
 class TestRenderProcessorImplReservedName:
     """A split node whose id yields a filesystem-reserved page segment is
-    rejected before any file is written (C7)."""
+    rejected before any file is written."""
 
     def test_reserved_id_raises(self) -> None:
         engine = _MockEngine()
@@ -386,7 +386,7 @@ class TestRenderProcessorImplViaEngine:
         processor = RenderProcessorImpl(engine=engine, paging=paging)
         processor("profile.md", _at(_wrap(self._TREE), "members", 0))
 
-        # The split page opens with the subject node's own anchor (C9).
+        # The split page opens with the subject node's own anchor.
         assert (tmp_path / "out" / "members" / "alice.md").read_text() == (
             '<a id="/members/alice"></a>\nhi alice'
         )

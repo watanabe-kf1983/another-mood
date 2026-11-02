@@ -34,7 +34,7 @@ class TestAnotherMoodRoot:
 
 
 class TestVerifyProjectDirUnderNamespaceRoot:
-    """project_dir must lie under namespace_root; external paths are rejected (G8).
+    """project_dir must lie under namespace_root; external paths are rejected.
 
     The containment check runs before the existence check, so an external path
     is rejected regardless of whether it exists — pinning the check ordering
