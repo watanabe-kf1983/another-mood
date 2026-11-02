@@ -31,9 +31,3 @@ edition は `definition/reports.yaml` に宣言する。`editions:` マップに
 `__db/` の内側は [DB 自己記述](../75-meta-documentation/10-database-information.md)、`__build_info/` は [奥付](../75-meta-documentation/20-build-information.md)、`__warnings/` と失敗ページは [ビルドレポート](../75-meta-documentation/30-build-report.md)。
 
 マウントはリンク解決に**透過**: リンク URL は page 相対（`node_href`）なので `{edition}/` や `__db/` のマウント接頭辞は効かず、各 edition / マウントは自己完結した相対リンクのサブツリーになる（[anchor-spec.md のリンク解決](30-anchor-spec.md#リンク解決)）。
-
-## Proposals
-
-### Edition 別ルートテンプレート（将来）
-
-edition ごとに異なるルートテンプレート（`index.md` 以外）を**利用者が `reports.yaml` で指定したい**需要（Web 版と印刷版でトップ構成を変える等）。**機構（`Edition` の `root_template` / `templates_dir` フィールドと `generate()` ループでの差し替え）は既にある**ので、残るは reports.yaml への設定露出（`root_template` エントリのパースと `load_editions` での反映）のみ。加算的拡張。

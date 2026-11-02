@@ -164,13 +164,6 @@ categories:
         title: render ループの一般化 (heterogeneous edition kinds を単一ループへ)
         phase: 12
         done: true
-      C13:
-        title: edition 別ルートテンプレートの reports.yaml への露出
-        note: >-
-          Edition.root_template / templates_dir と render ループの差し替え機構は既にある。
-          残るは reports.yaml の `root_template` エントリ (スキーマ + load_editions) のみ。
-        phase: 20
-        proposal: 20-design/70-generator/40-output-layout#edition-別ルートテンプレート将来
 
   D:
     title: ユーザコンテンツバリデーション
@@ -338,10 +331,6 @@ categories:
       - src/another_mood/layout.py
     spec: 20-design/25-entrypoints/10-config-spec
     tasks:
-      G2:
-        title: another-mood.config.json 読み込み
-        phase: 20
-        proposal: 20-design/25-entrypoints/10-config-spec#設定ファイル-g2
       G5:
         title: "mood watch --host: preview server の bind アドレス指定"
         phase: 10
