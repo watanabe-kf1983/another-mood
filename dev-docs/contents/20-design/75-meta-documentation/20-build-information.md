@@ -38,7 +38,7 @@
 
 ### データ層には流さない
 
-build info はシステム定義エンティティとして preprocess から流さず、tap にも provenance を載せない。理由は[背景](../../90-appendix/20-design/75-meta-documentation/20-build-information.md#データ層には流さない)。
+build info はシステム定義エンティティとして preprocess から流さず、tap にも provenance を載せない。views から読めるようにすると views の出力が実行環境で変わり、後から取り上げれば利用者の views が壊れる一方通行になる。tap 出力は差分を取る使い方が主で、毎回動く値が混ざると実質的な差分が埋もれる。
 
 ## Internal Design
 
@@ -46,4 +46,3 @@ build info はシステム定義エンティティとして preprocess から流
 
 キーは `Workspace` が既に型付きで持っている値の平坦化なので、上流で組んで運ぶ形にはしない（同じ事実が二重に載る）。ただし `pipeline/` はカバレッジ計測対象外なので、平坦化そのものは `components/shared/` の汎用ヘルパに置く。property が持つのは「どのキーがどの源から来るか」だけ。
 
-`manifest.*` を型付きフィールドの射影で出す理由と、`processor.workspace.*` を config と分ける理由は[背景](../../90-appendix/20-design/75-meta-documentation/20-build-information.md#キーの出所の取り方)。

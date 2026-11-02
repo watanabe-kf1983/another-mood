@@ -23,4 +23,4 @@ dev モードでは User Input / Upstream の変更を Watch してステージ�
 
 ### Watch ライブラリは watchdog を採用
 
-[watchdog](https://github.com/gorakhargosh/watchdog) を採用。以前の watchfiles は WSL を検出すると WSL2 でも強制 polling に切り替わり、event の取りこぼしで watch が停止したため（[背景](../90-appendix/20-design/30-pipeline.md#watch-ライブラリは-watchdog-を採用)）。
+[watchdog](https://github.com/gorakhargosh/watchdog) を採用。以前の watchfiles は WSL を検出すると WSL2 でも強制 polling に切り替わり、event の取りこぼしで watch が停止したため。

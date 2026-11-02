@@ -26,8 +26,8 @@
 | `views_dir` | データの整形・射影・結合の**定義** |
 | `templates_dir` | 表現・レイアウト |
 
-層の境界: クエリはテンプレートに書かず、views に YAML DSL で定義する。クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。三層の対応と DSL を選んだ理由は[背景](../../90-appendix/20-design/20-sbdb-project/10-sbdb-project.md#ms-access-アナロジー)。
+層の境界: クエリはテンプレートに書かず、views に YAML DSL で定義する。クエリ自体が構造化データとなり、このツール自身で可視化できる（dog fooding）。
 
 ### sbdb プロジェクトと生成物の分離
 
-CLI は `<projectDir>` に生成物を書き込まず、出力 `.another-mood/` を CWD 直下に置く。入力ディレクトリはユーザのコンテンツ領域で、ツールから見れば参照先のため。利用者への約束は `docs/reference/cli.md` の `<project_dir>` 節、理由の全体は[背景](../../90-appendix/20-design/20-sbdb-project/10-sbdb-project.md#cli-が-another-mood-を-cwd-直下に配置する理由)。
+CLI は `<projectDir>` に生成物を書き込まず、出力 `.another-mood/` を CWD 直下に置く。入力ディレクトリはユーザのコンテンツ領域で、ツールから見れば参照先のため。利用者への約束は `docs/reference/cli.md` の `<project_dir>` 節。

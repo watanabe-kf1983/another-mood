@@ -16,13 +16,12 @@
 
 残る攻撃面は **DoS** のみで、これはツールではなく build を走らせる側が OS 層で閉じる（下記 DoS 節）。
 
-この選択に至った二択（素の評価エンジン ＋ 危険注記か、non-evaluating エンジンか）、実行時サンドボックスを中間形態として採らない理由、エンジン選定の spike は[背景](../../90-appendix/20-design/70-generator/25-template-trust-model.md)。
 
 ### 背景: 実行ベクタはテンプレートのみ
 
 sbdb プロジェクトのソースのうち host コードへの経路を持ちうるのはテンプレートだけ（それも閉じた値モデルで封鎖）で、他はそもそも経路を持たない:
 
-- **`contents/` (data)** — data 値は md output format の finalize で escape される（[unsafe HTML の信頼前提との整合](../../90-appendix/20-design/70-generator/25-template-trust-model.md#unsafe-html-の信頼前提との整合)参照）
+- **`contents/` (data)** — data 値は md output format の finalize で escape される
 - **`definition/schema.yaml`** — 宣言的な型定義
 - **`definition/views/`** — 境界付きの宣言 DSL（`from`/`flatten`/`join`/`where`/`grouped`/`select`/`sort`）。`where` 述語は演算子の閉じた enum（`EQ`/`GT`/`STARTSWITH`/`CONTAINS` 等）を `and`/`or`/`not` で結合するだけで、フィールド参照は dotted-key lookup（Python の `getattr` ではない）。`eval`/`exec`/式言語は無い（`shared/record_predicate.py`）
 - **`definition/reports.yaml` / `sbdb.yaml`** — 宣言的な設定

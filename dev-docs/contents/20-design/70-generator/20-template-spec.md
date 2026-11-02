@@ -6,7 +6,7 @@
 
 #### テンプレートの語彙は filter / test / operator に限る
 
-値そのものはメソッドを持たない。minijinja の `pycompat` は Python の文字列 / list / dict メソッドを値に生やすが、これを切っている（`.startswith()` は空描画ではなくメソッド名つきのエラー）。理由は利用者に案内できる境界が引けること（[背景](../../90-appendix/20-design/70-generator/20-template-spec.md#語彙を-filter--test--operator-に閉じる理由)）。
+値そのものはメソッドを持たない。minijinja の `pycompat` は Python の文字列 / list / dict メソッドを値に生やすが、これを切っている（`.startswith()` は空描画ではなくメソッド名つきのエラー）。理由は利用者に案内できる境界が引けること。
 
 #### ユーザ提供 Python ヘルパは受け付けない
 
@@ -20,23 +20,23 @@
 
 #### undefined アクセスの扱い
 
-本プロジェクトは minijinja の `undefined_behavior` に `chainable` を明示指定する（既定のままでは `{{ x.a }}` がエラーになる。[背景](../../90-appendix/20-design/70-generator/20-template-spec.md#なぜ-undefined-アクセスをエラーにしないか)）。
+本プロジェクトは minijinja の `undefined_behavior` に `chainable` を明示指定する（既定のままでは `{{ x.a }}` がエラーになる）。
 
 #### 欠損値は何も描かない
 
 欠損した値をテンプレートが描こうとしたとき、出力は空になる。フィルタや関数を通した場合も同じで、ヘルパーが `"None"` のような表現を発明することはない。この規則があるので [10-json-data-model.md](../40-communication/10-json-data-model.md#配列内オブジェクトのフィールド統一) の「nullable な項目は値ではなくフィールドごと省略する」規約が成り立つ。
 
-**欠損と「壊れた参照」は別に扱う。** 解決を試みて外した参照（missing node）は目立つ `[text]` を出す（[未解決参照の扱い](30-anchor-spec.md#未解決参照の扱い)）。一方 optional フィールドの欠損は上の規約が認めている正常系なので、目立たせず何も描かない。外した案は[背景](../../90-appendix/20-design/70-generator/20-template-spec.md#欠損の描画で外した-2-案)。
+**欠損と「壊れた参照」は別に扱う。** 解決を試みて外した参照（missing node）は目立つ `[text]` を出す（[未解決参照の扱い](30-anchor-spec.md#未解決参照の扱い)）。一方 optional フィールドの欠損は上の規約が認めている正常系なので、目立たせず何も描かない。
 
 ### 出力フォーマット
 
-テンプレートエンジンの出力フォーマット (Markdown / HTML / Mermaid 等) ごとに escape 関数と位置依存ヘルパを切り替える仕組みの仕様（[課題](../../90-appendix/20-design/70-generator/20-template-spec.md#出力フォーマットの課題)）。
+テンプレートエンジンの出力フォーマット (Markdown / HTML / Mermaid 等) ごとに escape 関数と位置依存ヘルパを切り替える仕組みの仕様。
 
 利用者向けの API 仕様 (`md_escape` の振る舞い・位置依存ヘルパの使い方) は `docs/reference/template.md` を参照。本仕様は設計判断と内部構造に絞る。
 
 #### Escape 方針: ASCII punctuation 一律 backslash escape
 
-`md` output_format の地の文 escape (`md_escape`) は CommonMark spec の許容範囲 (任意の ASCII punctuation は `\` で escape 可能) に乗せて、全 ASCII punctuation を一律に backslash escape する。1 ルールで全構文記号を防ぎ、backslash escape は表示を変えないので過剰に escape しても害がない（[背景](../../90-appendix/20-design/70-generator/20-template-spec.md#escape-方針を-ascii-punctuation-一律にした理由)）。
+`md` output_format の地の文 escape (`md_escape`) は CommonMark spec の許容範囲 (任意の ASCII punctuation は `\` で escape 可能) に乗せて、全 ASCII punctuation を一律に backslash escape する。1 ルールで全構文記号を防ぎ、backslash escape は表示を変えないので過剰に escape しても害がない。
 
 ### 内蔵ヘルパ
 
