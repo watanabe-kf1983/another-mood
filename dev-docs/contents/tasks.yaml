@@ -288,10 +288,6 @@ categories:
         title: システムメタを __db/ へ移動 + 二セクションの薄い表紙
         phase: 12
         done: true
-      F10:
-        title: 内部オブジェクト診断の --debug 復活スイッチ
-        phase: 20
-        proposal: 20-design/75-meta-documentation/10-database-information#内部オブジェクト診断の---debug-復活スイッチ
 
   G:
     title: CLI / 設定システム
