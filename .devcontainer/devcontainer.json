@@ -29,6 +29,10 @@
 
   "mounts": ["source=another-mood-claude-${devcontainerId},target=/home/vscode/.claude,type=volume"],
 
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+  },
+
   "postCreateCommand": {
     "claude-home": "sudo chown -R vscode:vscode /home/vscode/.claude",
     "claude-code": "npm install -g @anthropic-ai/claude-code",
