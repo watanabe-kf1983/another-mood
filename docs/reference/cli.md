@@ -42,7 +42,7 @@ Source paths are fixed — they are part of the project structure, not configura
 | Views | `<project_dir>/definition/views` |
 | Templates | `<project_dir>/definition/templates` |
 
-If any of these paths is missing when `build`, `watch`, or `tap` starts, the command fails and exits with code 1. This includes `tap`, which requires the templates directory to exist even though it never renders templates.
+Content and Views read as empty when absent. If any other path is missing when `build`, `watch`, or `tap` starts, the command fails and exits with code 1. This includes `tap`, which requires the templates directory to exist even though it never renders templates.
 
 #### Which files are read
 

@@ -5,10 +5,13 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator, Sequence
 from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 
 from another_mood.components.shared.component.build_report import BuildReport
 from another_mood.pipeline.adapters.watcher import Watcher
+
+_logger = getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -52,8 +55,19 @@ class Stage(Task):
         """Initial run + watch in background. Cleans up on exit."""
         self.run()
 
-        if self.watch_paths:
-            w = Watcher(self.watch_paths, self.run)
+        # Required sources are verified before the pipeline starts, so an
+        # absent path here is an optional dir the build reads as empty.
+        # Watching its creation would need a parent watch plus a late
+        # schedule; restarting is cheap enough for a one-off event.
+        absent = [path for path in self.watch_paths if not path.exists()]
+        present = [path for path in self.watch_paths if path not in absent]
+        for path in absent:
+            _logger.info(
+                "Not watching %s: it does not exist. Restart watch after creating it.",
+                path,
+            )
+        if present:
+            w = Watcher(present, self.run)
             threading.Thread(target=w.run, daemon=True).start()
 
         if self.upstreams:

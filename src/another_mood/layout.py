@@ -1,7 +1,7 @@
 """Source layout — where a project's source files live."""
 
 from collections.abc import Iterator, Sequence
-from dataclasses import dataclass, fields
+from dataclasses import Field, dataclass, field, fields
 from pathlib import Path
 
 from another_mood.components.manifest import MANIFEST_FILENAME
@@ -17,8 +17,11 @@ class SourceLayout:
     definition_dir: Path
     schema_file: Path
     reports_file: Path
-    contents_dir: Path
-    views_dir: Path
+    # Optional dirs read as empty when absent: Git does not track empty
+    # directories, so requiring them would make a project with no contents
+    # or views yet fail on a fresh clone.
+    contents_dir: Path = field(metadata={"optional": True})
+    views_dir: Path = field(metadata={"optional": True})
     templates_dir: Path
 
     @classmethod
@@ -38,8 +41,8 @@ class SourceLayout:
         )
 
     def verify(self) -> None:
-        """Raise SourceLayoutError for paths missing on disk, then for unknown
-        entries under ``definition_dir``."""
+        """Raise SourceLayoutError for required paths missing on disk (or of
+        the wrong kind), then for unknown entries under ``definition_dir``."""
         self._verify_paths_exist()
         self._verify_definition_entries()
 
@@ -50,9 +53,9 @@ class SourceLayout:
 
     def _verify_paths_exist(self) -> None:
         missing = [
-            (name, path)
-            for name, path in self._paths()
-            if not (path.is_file() if name.endswith("_file") else path.is_dir())
+            (f.name, path)
+            for f in fields(self)
+            if not _is_usable(f, path := getattr(self, f.name))
         ]
         if missing:
             lines = [f"  {name}: {path}" for name, path in missing]
@@ -110,3 +113,11 @@ def verify_absent(project_dir: Path) -> None:
     :func:`resolve_layout`, raising ProjectExistsError if *project_dir*
     already holds a project."""
     SourceLayout.for_project(project_dir).verify_absent()
+
+
+def _is_usable(f: Field[Path], path: Path) -> bool:
+    """Whether *path* exists as the kind its field names, or may be absent."""
+    if path.exists():
+        return path.is_file() if f.name.endswith("_file") else path.is_dir()
+    else:
+        return bool(f.metadata.get("optional", False))
