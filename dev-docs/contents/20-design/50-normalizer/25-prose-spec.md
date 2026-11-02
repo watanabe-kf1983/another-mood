@@ -1,6 +1,6 @@
 # Prose
 
-散文（prose）は `contents/` 配下の Markdown で、内蔵コレクション `prose` のレコードになる（一ファイル一レコード）。レコードの形は `docs/reference/schema.md` の prose 節が約束し、本章はその項目ごとに設計判断を置く。Markdown のパーサは [Normalizer](10-normalizer.md#markdown-は-markdown-it-py-で読む)。
+散文（prose）は `contents/` 配下の Markdown で、内蔵コレクション `prose` のレコードになる（一ファイル一レコード）。レコードの形は `docs/reference/schema.md` の prose 節が約束し、本章はその項目ごとに設計判断を置く。
 
 ## External Design
 

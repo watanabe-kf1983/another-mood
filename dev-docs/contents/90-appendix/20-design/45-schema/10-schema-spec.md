@@ -45,7 +45,7 @@ attribute には一つの型を持たせる。カタログが attribute ごと�
 
 ### なぜ `type: string` のプロパティに限るか
 
-`type: string` 限定の理由: dict-pattern の synthetic id は normalizer が string に揃え ([normalizer.md](../../../20-design/50-normalizer/10-normalizer.md)「dict-pattern の synthetic id は常に string」)、target attribute 値も string として比較する。integer / number に開放すると「dict キーは str 化されているのに FROM 側は int」など型ミスマッチが事故化する。FK 値の表現として string を強制することで、normalization contract と整合する。実需が薄いという観察 (showcase/music の FK は全て string) も後押し。integer FK が surface したら、synthetic id の型推論機構と合わせて別タスクで開放する。
+`type: string` 限定の理由: dict-pattern の synthetic id は normalizer が string に揃え ([normalizer.md](../../../20-design/50-normalizer/10-normalizer.md)「map pattern のキーから作る id は常に string」)、target attribute 値も string として比較する。integer / number に開放すると「dict キーは str 化されているのに FROM 側は int」など型ミスマッチが事故化する。FK 値の表現として string を強制することで、normalization contract と整合する。実需が薄いという観察 (showcase/music の FK は全て string) も後押し。integer FK が surface したら、synthetic id の型推論機構と合わせて別タスクで開放する。
 
 ### なぜ `items:` 直下を明示エラーにするか
 
