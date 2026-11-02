@@ -57,6 +57,11 @@ class Workspace:
     # (vs. a user-pinned MOOD_TMP_DIR it must not delete).
     temporary: bool = False
 
+    # Build info reaches templates only, never the data layer. A `__build_info`
+    # entity would let views read machine- and invocation-dependent values — a
+    # one-way door, since taking it back breaks the views that came to read
+    # it — and, emitted in preprocess, it could not reach the build-failure
+    # page that an upstream error produces.
     @cached_property
     def build_info(self) -> BuildInfo:
         return {

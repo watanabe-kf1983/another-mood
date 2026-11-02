@@ -4,6 +4,17 @@
 # dragged along by design changes even when the design side is written by
 # someone else, or by an AI, on its own.
 #
+# Borrowing from the sources carries reuse limits. Items follow the IPA
+# functional-requirements guide (design side) and ISO/IEC/IEEE 29148 + Volere
+# (requirements side), but:
+# - The IPA guide forbids adaptation. Borrow item names and structure as ideas,
+#   write every definition in our own words, and cite the source. Never copy
+#   its definition text.
+# - Volere's template needs a license to bundle or redistribute. Borrow a subset
+#   of attribute names with attribution; do not bring in the template itself.
+# - Do not reproduce 29148's text or outline figures. Adapted chapter titles and
+#   an "informed by" note are as far as it goes; do not claim conformance.
+#
 # Descriptive attributes (summary / statement / rationale / condition / action /
 # response and so on) are all plain text. The templates escape Markdown
 # characters in values, so Markdown inside a value has no effect. Explanations

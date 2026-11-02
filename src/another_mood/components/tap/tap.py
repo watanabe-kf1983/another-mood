@@ -8,6 +8,10 @@ from another_mood.components.shared.json_data_model import load_model, save_mode
 TAP_DOCUMENT_NAME = "data.json"
 
 
+# No provenance (build info, timestamps) goes into the document: tap output is
+# mostly diffed, and a value that moves on every run buries the real changes.
+# The line held is "independent of the machine and of how mood was invoked" —
+# tool-generated catalogs such as `__definition` stay.
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def tap(data_dir: Path, *, out_dir: Path) -> None:
     """Merge a stage's output into one document holding its top-level namespace."""
