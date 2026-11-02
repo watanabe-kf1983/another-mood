@@ -34,7 +34,7 @@
 格子が持つのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別に置く:
 
 - **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は `dev-docs/appendix/` か PR 本文に置く
-- **次に何をするか** — 目的は `dev-docs/concept/`、優先度はロードマップとタスクカタログ（`dev-docs/contents/tasks.yaml` から生成）、未実装機能の検討は GitHub Issues
+- **次に何をするか** — 目的は `dev-docs/concept/`、タスクは GitHub Issues
 
 言語は `docs/` が英語、`dev-docs/` が日本語。各置き場の読者、書き方（何を書き、何を書かないか）、インデックスの更新手順は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
 
@@ -105,13 +105,13 @@ another_mood/
 
 ### プルリクエスト
 
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タスク ID もここ——タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
+PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
 リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
 
     Release-Highlight: fix
 
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文。タスク ID は書かない）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
+kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
 
 破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、設計背景、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 
@@ -121,7 +121,5 @@ kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、�
 
 - [index.md](.another-mood/dev-docs/output/web/index.md) — 仕様・設計
 - [concept/product.md](.another-mood/dev-docs/output/web/prose/10-concept/10-product.md) — 製品ビジョン
-- [roadmap.md](.another-mood/dev-docs/output/web/roadmap.md) — ロードマップ
-- [tasks.md](.another-mood/dev-docs/output/web/tasks.md) — タスクカタログ
 - [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md) — 命名・自己定義の表記規約
 - [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約）
