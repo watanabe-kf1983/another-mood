@@ -1,36 +1,46 @@
 # Normalizer
 
-contents 入力を検証し、辞書形式を配列形式に正規化する（[データモデルの制約](../../10-concept/10-product.md#データモデル-規律を与えた-json-の木)）。Markdown ファイルは内蔵の prose スキーマに従って自動的に正規化する。参照整合性もチェックする。
+`contents/` 配下のソースファイルを読み、一つのデータ木に仕上げるステージ（パイプラインの `normalize_contents`）。`components/preprocess/content_normalizer.py` が次の順に処理する:
 
-受理する入力形式（拡張子ディスパッチ、dotfile の除外）は `docs/reference/cli.md` の Content and Views を正本とする。`.md` の扱いは [prose-spec](25-prose-spec.md)、それ以外の拡張子は [blob-spec](27-blob-spec.md) が設計を持つ。
+1. 各ファイルを拡張子で振り分けて読む。YAML と JSON は構造化データ、Markdown は [prose](25-prose-spec.md)、それ以外は [blob](27-blob-spec.md) になる
+2. 利用者のスキーマに内蔵スキーマ（prose / blob）を合わせたもので、ファイルごとに検証する
+3. map pattern（キーを名札にしてレコードを並べる書き方。`docs/reference/schema.md` の Map pattern 節）を、`[{id: <キー>, ...}]` の配列に直す（`normalize_core.py`）
+4. 全ファイルの結果を一つの木に合流させる
+5. 合流した木で、x-ref（他のレコードへの参照）が解決できるかを検査し（できなければ警告）、レコードの id の重複を検査する（重複はエラー）
+
+どのファイルを読むか（拡張子の振り分け、dotfile の除外）は `docs/reference/cli.md` の Which files are read 節が約束しており、ここでは繰り返さない。
 
 ## External Design
 
-### 手書きは YAML 推奨、JSON はワンショット機械出力の受け口
+### JSON は、他のプログラムが一度きり出力したものの受け口
 
-手書きソースは YAML を推奨し、JSON 入口はフィードバックループを持たない機械的ワンショット出力の受け口と位置づける（[背景](../../90-appendix/20-design/50-normalizer/10-normalizer.md#手書きを-yaml-推奨とし-json-をワンショット機械出力の受け口とする理由)）。
+YAML と JSON はどちらも構造化データとして受け付けるが、想定する書き手が違う。手で書くなら YAML を勧める（`docs/reference/cli.md`）。JSON は、LLM の構造化出力・ビルドツール・cron のジョブのように、別のプログラムが一度出力して終わるデータを取り込む入口と位置づける。
 
-`docs/` の文言はこの用途を謳わず、制約（ルートは mapping）と推奨（YAML）のみを書く。用途は利用者が決めることで、ツールが宣言すると受理範囲の説明とは別の約束に読まれる。謳わないのは説明を受理範囲に絞って読みやすくするためで、この用途を非推奨とする意図ではない。showcase で取り込みの例を見せるのは妨げない。
+手で書く人や、対話しながら書くエージェントは、ビルドを回してエラーを直す往復ができる。こうした書き手には、Git の差分が読みやすい YAML が向く。一度出力して終わるプログラムにはその往復がないので、そのプログラムが出せる形式で受ける必要がある。LLM の構造化出力が JSON 向けに作られているのが典型である。
 
-### dict-pattern の synthetic id は常に string
+### レコードの id は兄弟の間でだけ一意
 
-`additionalProperties` を持つオブジェクトを `[{"id": <key>, ...}]` 配列に正規化する際、string でないキーは `str()` でコエースする。YAML は int/bool キー (`10:`) を natively 許すが、以下の理由で string に揃える:
+同じ配列に並ぶレコード同士が同じ id を持つと、エラーにする。親が違えば、同じ id でも別のレコードであり衝突しない。レコードの住所（[アンカーパス](../70-generator/30-anchor-spec.md)）は親の住所に id をつないで作るので、兄弟の間で一意であれば住所も一意になる。
 
-1. **JSON は string キーしか持たない** — YAML キーは JSON 由来の正規化先には乗らない型を取りうるが、永続化形式 (`save_model` で書き出す JSON) は JSON 互換を保つ
-2. **カタログの宣言が `id: string`** ([schema-spec.md](../45-schema/10-schema-spec.md#データカタログ) データカタログ節) — 宣言とデータ実体の型を一致させる
-3. **x-ref ターゲット集合の型統一** — FK 検査が string-only で完結する (schema-schema は x-ref を type=string のみ許容)
-4. **アンカーパス生成の一貫性** — entity ページのパス・アンカーパス生成器が常に string 入力を仮定できる
+検査は全ファイルを合流させた後に一度だけ行う（`data_id_validator.py`）。一つの配列のレコードを複数のファイルに分けて書けるので、ファイル単位では重複を見つけられない。
 
-この normalization contract は user 向け reference には書かない (JSON 由来の自然な前提であり、明文化が逆にノイズになる)。surface したら `docs/reference/schema.md` の dict-pattern 節に注釈を足す。
+### map pattern のキーから作る id は常に string
+
+map pattern を配列に直すとき、キーはそのまま `id` になる。YAML のキーには数値・真偽値・日付も書ける（`2024:` は整数として読まれる）が、string でないキーは文字列に変換して id にする。理由:
+
+- ステージ間で受け渡す中間ファイルは JSON で、YAML のキーには日付のように JSON で表せない型もある
+- [データカタログ](../45-schema/10-schema-spec.md#データカタログ)（スキーマから起こした entity と attribute の目録。後段のステージはスキーマの代わりにこれを読む）は id を string と宣言している。実データの型を宣言に合わせる
+- x-ref は string 型の attribute にしか付けられない（`docs/reference/schemas/schema-schema.yaml`）。id が string なら、参照の照合は string 同士の比較で済む
+- アンカーパスを組み立てる側が、id を常に string と前提できる
+
+利用者向けの `docs/reference/` にはこの変換を書かない。`2024:` のような整数のキーを書く利用者は「2024 という名札」のつもりで書いており、結果がその期待と一致するので、説明が要らない。
 
 ## Internal Design
 
-### `.json` は YAML 1.2 リーダで読む
+### `.json` も YAML のリーダで読む
 
-`parse_mapping` は `.yaml` と `.json` を同じ ruamel リーダで読む。YAML 1.2 が JSON のスーパーセットで、`.lc` による位置情報もそのまま取れるため。厳密な JSON パーサに替えると `UserStr` / `Location` の位置情報タグ付け機構を二重に作ることになる — `query_deriver._diagnostic_from` は非 `UserStr` の offender を内部バグとして再 raise するので、位置情報を持たない入力経路は作れない。
+利用者が書く YAML / JSON ファイル（スキーマ、contents、views、reports、マニフェスト）は、すべて `shared/user_source/source_loader.py` の `parse_mapping` で読む。`.json` もここを通る。YAML 1.2 は JSON を包含するので、同じリーダで読める。
 
-純 JSON リーダとは外から見える挙動が二つズレるが、どちらも放置する（[背景](../../90-appendix/20-design/50-normalizer/10-normalizer.md#純-json-リーダとのズレを放置する理由)）。
+この読み込み経路は、キーと文字列値に元ファイル上の位置を持たせる（`UserStr`）。エラーや警告はこの位置を使って、利用者が書いた行と列を指す。後段の検査の一部（views の名前の検査など）は、位置を持たない値を内部バグとして扱う。JSON 専用のパーサを足すと、位置を持たせる仕組みをもう一つ作ることになるので、足さない。
 
-### Markdown は markdown-it-py で読む
-
-Markdown AST は markdown-it-py（CommonMark 準拠、AST 走査で見出し抽出・リンク検出）。
+この選択によって、厳密な JSON パーサとは挙動が二点違う。どちらもこのままにする（[付録](../../90-appendix/20-design/50-normalizer/10-normalizer.md#厳密な-json-パーサとの二つの違い)）。
