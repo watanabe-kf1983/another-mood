@@ -60,7 +60,7 @@ class TestPluckFilter:
 
     def test_dotted_path_returns_raw_value(self) -> None:
         # Regression: a nested collection reached via a dotted path
-        # (e.g. `hobby.pets` after E10's singleton flattening) must
+        # (e.g. `hobby.pets` after singleton flattening) must
         # come back as a raw list so the table-view template can
         # `length`-count it. Falsy real values must pass through, not
         # be folded into "missing".

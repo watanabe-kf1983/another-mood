@@ -396,8 +396,9 @@ class TestMetaOriginItemType:
     def test_prose_heading_detected_at_a_flattened_position(self) -> None:
         # A liner heading flattened into a view sits at a non-prose position
         # (`album_tracklist.item.liner.headings.item`), yet its catalog origin
-        # is `prose.item.headings.item`, so detection fires there — the point
-        # of B13.  Observed via the heading-only `#slug` fold it drives.
+        # is `prose.item.headings.item`, so detection fires there: it
+        # follows the origin, not the position.  Observed via the heading-only
+        # `#slug` fold it drives.
         data = {
             "__definition": {
                 "entities": [

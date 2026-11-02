@@ -1,4 +1,4 @@
-"""Tests for data-level FK integrity check (D6)."""
+"""Tests for data-level FK integrity check."""
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path

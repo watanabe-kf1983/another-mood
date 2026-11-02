@@ -43,13 +43,14 @@ class TestGenerate:
         )
 
         # User reports are rendered under the edition dir default/; the root
-        # node's own anchor is stamped at the top of index.md (C9 post_process).
+        # node's own anchor is stamped at the top of index.md by the format's
+        # post-pass.
         assert (out_dir / "data" / "default" / "index.md").read_text() == (
             '<a id="/"></a>\n# Hello\n'
         )
         # The cover owns the site root: a thin two-section page that
         # lists the deliverables and links modestly to the __db/ meta surface,
-        # which is where the self-description is now mounted (F9).
+        # which is where the self-description is mounted.
         cover = (out_dir / "data" / "index.md").read_text()
         # Title is the project name; sections are Reports + Database Information.
         assert "# myproject" in cover
@@ -129,7 +130,7 @@ class TestGenerate:
         assert (out_dir / "data" / "web" / "index.md").exists()
         assert (out_dir / "data" / "print me" / "index.md").exists()
         # The root cover lists each edition under ## Reports: raw display
-        # label, encoded href that reaches the directory written above (F9).
+        # label, encoded href that reaches the directory written above.
         cover = (out_dir / "data" / "index.md").read_text()
         assert "- [web](web/)" in cover
         assert "- [print me](print%20me/)" in cover
