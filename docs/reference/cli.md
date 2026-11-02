@@ -48,7 +48,7 @@ Content and Views read as empty when absent. If any other path is missing when `
 
 Content and Views are the two trees whose files are not named individually: both are walked recursively, and every file found is read, with the extension (matched case-insensitively) picking the interpretation. Under `contents/`, YAML (`.yaml`, `.yml`) and JSON (`.json`) are structured data, Markdown (`.md`) is [prose](schema.md#built-in-schema-prose), and anything else is an opaque [blob](schema.md#built-in-schema-blob). Under `definition/views/`, YAML and JSON are the accepted formats — any other file there fails validation rather than being ignored.
 
-A YAML or JSON source must have a mapping at its root; a sequence or a bare scalar is an error. **YAML is the recommended format for anything written by hand** — it diffs more readably in Git, and errors are reported at the line and column where they occur. JSON is accepted for sources produced by another program.
+A YAML or JSON source must have a mapping at its root; a sequence or a bare scalar is an error. **YAML is the recommended format for anything written by hand** — it diffs more readably in Git. JSON is accepted for sources produced by another program.
 
 **Hidden entries are the one exclusion.** A dotfile, or any file under a dotdirectory (`.DS_Store`, `.vscode/settings.json`, `.gitkeep`), is skipped in both trees whatever its extension, so editor and VCS cruft can sit in a source tree without being read as a source.
 
