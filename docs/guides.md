@@ -70,7 +70,7 @@ What the tool generates (under `.another-mood/my-project/`):
 │   │   ├── members/{alice,bob,carol}.md
 │   │   └── by_role/{engineer,designer}.md
 │   ├── index.md                              # cover: your reports + link to __db/
-│   └── __db/                                 # the database's self-description
+│   └── __db/                                 # the database pages: definitions and data
 │       ├── index.md                          # auto overview (entities + views)
 │       ├── __defs/                           # definitions (described later)
 │       │   ├── entities/, views/
@@ -83,7 +83,7 @@ What the tool generates (under `.another-mood/my-project/`):
 
 Your templates render to `output/default/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.
 
-Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the database's self-description: an overview (`__db/index.md`, the entities and views) plus the `__`-prefixed diagnostic directories.
+Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the **database pages**: an overview (`__db/index.md`, the entities and views) plus the `__`-prefixed directories that show the definitions and the data as the tool read them.
 
 Independent of your templates, they let you check the current state of the schema, data, and views while writing — see the [Workflow](#workflow) chapter for details.
 
@@ -121,7 +121,7 @@ One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, a
 
 You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the views are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
-In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage.
+In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the database page for each stage.
 
 With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__defs/entities/<entity>.md`).
 
@@ -228,7 +228,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__defs/entities/<entity>` view (how the tool interpreted the declared type) and `__db/__data/entities/<entity>` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__defs/entities/<entity>` page (how the tool interpreted the declared type) and `__db/__data/entities/<entity>` (whether the data is being loaded as expected).
 
 The reason to write as a map is readability: even as the number of records grows, the YAML data stays easier to read than the array form, because each record's `id` comes first and acts like a heading.
 

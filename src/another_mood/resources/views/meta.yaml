@@ -1,7 +1,7 @@
-# Built-in meta diagnostic views, rendered by the meta templates into
+# Built-in views behind the database pages, rendered by the meta templates into
 # `__db/`.  Ids starting with `__` are catalog-internal (e.g.
 # __definition.*) and are filtered out so their internals do not clutter
-# the user's diagnostics.
+# the user's database pages.
 
 # Every user content entity, children included — the node set of the ER
 # diagram.  A helper, not paged (absent from META_EDITION's file_per);

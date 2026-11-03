@@ -9,5 +9,5 @@
 ## Database Information
 
 {% for e in editions if e.is_system %}
-Schema, data, and view diagnostics for this database — [browse]({{ e.dir_url | safe }}/).
+Schema, views, and data as the tool read them — [browse]({{ e.dir_url | safe }}/).
 {% endfor %}
