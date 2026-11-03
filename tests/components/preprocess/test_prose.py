@@ -130,7 +130,9 @@ _DOC = "a/b/doc"
 
 
 class TestNormalizeLinksConverted:
-    """Relative ``.md`` links resolving inside contents become prose ``node:``
+    """Keeps: docs/reference/schema.md › Built-in schema: prose
+
+    Relative ``.md`` links resolving inside contents become prose ``node:``
     refs."""
 
     def test_sibling_md_link(self) -> None:
@@ -248,7 +250,10 @@ class TestNormalizeLinksBlob:
 
 
 class TestNormalizeLinksVerbatim:
-    """Links that don't name an in-tree file are left byte-for-byte."""
+    """Keeps: docs/reference/schema.md › Built-in schema: prose
+
+    Links that don't name an in-tree file are left byte-for-byte.
+    """
 
     def test_pure_fragment_is_same_page(self) -> None:
         assert normalize_links("[t](#sec)", _DOC) == "[t](#sec)"
@@ -304,7 +309,10 @@ def _outline(prose_id: str) -> tuple[object, object]:
 
 
 class TestOutlinePosition:
-    """preprocess_prose derives order_key / depth from the id's folder path."""
+    """Keeps: docs/reference/schema.md › Built-in schema: prose
+
+    preprocess_prose derives order_key / depth from the id's folder path.
+    """
 
     def test_root_index(self) -> None:
         # The root index leads everything (empty key) at the top level.
@@ -366,7 +374,9 @@ _EXPECTED_ORDER = [
 
 
 class TestOrderKeySortsToFolderPreorder:
-    """Sorting prose records by order_key yields folder pre-order — the sort
+    """Keeps: docs/reference/schema.md › Built-in schema: prose
+
+    Sorting prose records by order_key yields folder pre-order — the sort
     the book-edition template performs downstream."""
 
     def test_orders_the_real_tree_regardless_of_input_order(self) -> None:
