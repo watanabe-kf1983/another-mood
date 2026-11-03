@@ -9,7 +9,7 @@ A release is fixing the version and pushing a git tag. main stays a trunk, and "
 - Release tags have the form `vN.N.N` (no hyphen). The trigger condition of the release workflow and hatch-vcs's version derivation (the describe filter in pyproject) share this form. Marker tags that are not releases go in the `milestone/` namespace
 - A release's kind is one of three values: breaking / compatible feature / compatible fix. Breaking is the umbrella for two kinds:
     - **A format break** — a supported generation dropping out (old_supported − new_supported ≠ ∅. **Adding** a generation is itself not a break. Generation management belongs to [Manifest](../20-design/10-external/20-manifest.md))
-    - **A tool break** — breaking the tool's user-facing contract, such as the CLI
+    - **A tool break** — breaking a promise in docs/reference, the tool's user-facing contract
 - The mapping from kind to version digit. Only this table holds the digit correspondence; every other description speaks in kind words:
 
   | Kind | 0.x era | 1.0.0 and later |
@@ -37,7 +37,7 @@ A PR you want among the highlights at the top of the release notes writes one li
 
 - The key is `Release-Highlight`, and the kind is one of three values: breaking / feature / fix. Nothing but the kind is written (the heading is served by the PR title). Always at the beginning of a line (the release procedure collects it by a line-anchored grep)
 - Only breaking is mandatory. feature / fix are discretionary
-- The criterion for feature vs fix is "**did the set of promises in docs/reference grow or shrink**". If it did, feature (documenting existing behavior for the first time is feature too: it brings something from outside the contract inside). Restating, clarifying, or restructuring the same promises is fix or below. The judgment is semantic, not machine-checked; it is the author's
+- The criterion for feature vs fix is "**did the set of promises in docs/reference grow**". If it did, feature (documenting existing behavior for the first time is feature too: it brings something from outside the contract inside). Restating, clarifying, or restructuring the same promises is fix or below. The judgment is semantic, not machine-checked; it is the author's
 - One PR may declare several kinds (one per line)
 
 ### Description sections
