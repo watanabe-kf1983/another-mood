@@ -3,7 +3,7 @@
 {% set chapters = ordered | rejectattr("depth", "equalto", 1) | list %}
 {{- root | render("prose.md") }}
 
-## 目次
+## Contents
 
 {% for record in chapters %}
 {{ "  " * (record.depth - 2) }}- {{ record | link }}

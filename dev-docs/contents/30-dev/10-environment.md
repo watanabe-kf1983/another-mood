@@ -1,50 +1,50 @@
-# 開発環境
+# Development Environment
 
-開発に要るもの、その入れ方、環境が自動で行うこと。何が入っているかの一覧はここに持たない。ツールの顔ぶれと各々の用途は `.devcontainer/devcontainer.json` と `.vscode/` のコメントが、MCP サーバは `.mcp.json` が持つ。
+What development needs, how to install it, and what the environment does automatically. The list of what is installed is not kept here: the lineup of tools and the purpose of each are in the comments of `.devcontainer/devcontainer.json` and `.vscode/`, and the MCP servers in `.mcp.json`.
 
-## 対応 Python 版
+## Supported Python versions
 
-対応下限は **3.12**（`pyproject.toml` の `requires-python`）、開発は **3.13**（`.python-version`）で行う。CI はこの両端でマトリクス実行する。
+The supported floor is **3.12** (`requires-python` in `pyproject.toml`), and development is on **3.13** (`.python-version`). CI runs a matrix on both ends.
 
-下限を 3.12 に置く理由は install 手引きの成立性。Ubuntu 24.04 LTS（サポート 2029 まで）の system Python が 3.12 で、下限が 3.13 だと `pipx install` が素直に通らず、interpreter を自前調達する uv を利用者に強いることになる。
+The floor is 3.12 so that the install instructions hold. The system Python of Ubuntu 24.04 LTS (supported until 2029) is 3.12; with a floor of 3.13, `pipx install` would not go through cleanly, and users would be forced onto uv, which procures its own interpreter.
 
-それより下げないのは、PEP 695 構文（`type` 文・新ジェネリクス）を広く使っており 3.12 が構文上の床であるため。
+It is not lowered further because PEP 695 syntax (the `type` statement, the new generics) is used widely, and 3.12 is the syntactic floor.
 
-## セットアップ
+## Setup
 
-DevContainer を推奨する。VS Code に Dev Containers 拡張を入れ、リポジトリを開いて「Reopen in Container」を実行すれば、ツールの導入は postCreateCommand が行う。
+The DevContainer is recommended. Install the Dev Containers extension in VS Code, open the repository, and run "Reopen in Container"; postCreateCommand installs the tools.
 
-DevContainer を使わない場合は `.devcontainer/devcontainer.json` を読み、features と postCreateCommand が入れているものを手で揃える（Python 版は上記）。Claude Code と MCP サーバ群を使わないなら、要るのは Python + [uv](https://docs.astral.sh/uv/)、make、GitHub CLI だけ。
+Without the DevContainer, read `.devcontainer/devcontainer.json` and install by hand what the features and postCreateCommand install (the Python version is above). If you do not use Claude Code and the MCP servers, all you need is Python + [uv](https://docs.astral.sh/uv/), make, and the GitHub CLI.
 
-どちらの場合も、最後に共通手順を実行する:
+In either case, finish with the common steps:
 
 ```bash
-uv sync                      # Python 依存（ruff, pyright, pytest 等）をインストール
-uv run pre-commit install    # pre-commit hook を有効化
-make ci                      # 全チェック実行で環境を確認
+uv sync                      # install the Python dependencies (ruff, pyright, pytest, ...)
+uv run pre-commit install    # enable the pre-commit hook
+make ci                      # run every check to confirm the environment
 ```
 
-## チェックの実行タイミング
+## When the checks run
 
-各列の設定元:
+Where each column is configured:
 
 - IDE — `.vscode/settings.json`
-- Claude Code — `.claude/settings.json`（PostToolUse hook）
+- Claude Code — `.claude/settings.json` (PostToolUse hook)
 - Git commit — `.pre-commit-config.yaml`
-- CI — `ci.yml`（`make ci` を対応 Python 版の両端でマトリクス実行。範囲と理由は上記「対応 Python 版」）
+- CI — `ci.yml` (runs `make ci` as a matrix on both ends of the supported Python versions; the range and the reason are in "Supported Python versions" above)
 
-| チェック | IDE（保存時） | Claude Code（編集後） | Git commit | CI |
+| Check | IDE (on save) | Claude Code (after edit) | Git commit | CI |
 |---|---|---|---|---|
-| フォーマット | ✓ | ✓ | ✓ | ✓（check） |
+| Format | ✓ | ✓ | ✓ | ✓ (check) |
 | Lint | | | | ✓ |
-| 型検査 | | | | ✓ |
-| テスト + カバレッジ | | | | ✓ |
-| シークレット検知 | | | ✓ | ✓ |
-| 段落の長さ（[ドキュメントの書き方](30-documentation.md#段落の長さ)） | | | | ✓ |
-| ビルド（dev-docs / pages / showcase） | | | | ✓ |
+| Type check | | | | ✓ |
+| Tests + coverage | | | | ✓ |
+| Secret detection | | | ✓ | ✓ |
+| Paragraph length ([Writing documentation](30-documentation.md#paragraph-length)) | | | | ✓ |
+| Build (dev-docs / pages / showcase) | | | | ✓ |
 
-## Playwright の作業ファイル
+## Playwright's working files
 
-Playwright MCP サーバの作業ファイルは、`.gitignore` 済みの `.playwright-mcp/` 配下に集約する。ページスナップショットと console ログは MCP サーバが自動でここに出す。
+The working files of the Playwright MCP server are gathered under `.playwright-mcp/`, which is already in `.gitignore`. The MCP server writes page snapshots and console logs there automatically.
 
-スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する（既定では cwd 直下に落ちて散らかる）。
+For screenshots, pass `.playwright-mcp/<name>.png` as the `filename` of `browser_take_screenshot` (by default they land directly under the cwd and make a mess).
