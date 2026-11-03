@@ -10,7 +10,7 @@
 
 ### セットアップ
 
-ツールの動作には [uv](https://docs.astral.sh/uv/) が必要。インストール後 `uv sync` で依存を解決する。
+環境構築は [dev/setup.md](.another-mood/dev-docs/output/web/prose/30-dev/10-setup.md)。
 
 このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/web/index.md](.another-mood/dev-docs/output/web/index.md)。
 
@@ -40,7 +40,8 @@
 ### 実装
 
 - コード内コメントは **英語**
-- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**
+- 散文では `Another Mood`、パス・パッケージ名等の識別子では `another-mood` / `another_mood`、コマンドは `mood`（表記規約は [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md)）
+- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**。版の制約は下限のみ（規約は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
 - docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す
 
 #### パッケージ構成と依存ルール
@@ -82,20 +83,13 @@ another_mood/
 - **約束を守るテストは、守る約束を名乗る**: docstring の一行目に、契約の節（`Keeps: docs/reference/view.md › Missing-key placement`）か外部設計の見出し（`Keeps: design/View › flatten 後の行は、親の属性を残し、要素を as: の下に置く`）を書く
     - 名乗るのは、その約束を破ったとき最初に落ちるテストだけでよく、網羅は求めない。契約や外部設計の節を変えるときは、節名で grep して名乗るテストを直す
 
-#### 動作確認 (`mood watch` + Playwright MCP)
+#### 動作確認
 
-`showcase/` や `dev-docs/` のテンプレート変更を実機で確認するときは `mood watch <project_dir> --port <port>` でローカルプレビューを上げ、必要なら Playwright MCP でレンダリングを観る。
-
-Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwright-mcp/` 配下に集約する:
-
-- ページスナップショット / console ログは Playwright MCP が自動でこのディレクトリに出す
-- スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する (デフォルトは cwd 直下に落ちて散らかる)
+テンプレートの変更を実機で確かめるときは `mood watch <project_dir> --port <port>` でプレビューを上げ、必要なら Playwright MCP で観る（作業ファイルの置き場は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/20-environment.md) の MCP サーバ節）。
 
 ### プルリクエスト
 
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。
-
-merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の背景もトレーラーも黙って失われる。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
+PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
 リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く。kind は `breaking` / `feature` / `fix`:
 
