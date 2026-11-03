@@ -18,7 +18,7 @@ from importlib import resources
 from pathlib import Path
 from typing import cast
 
-import yaml
+from ruamel.yaml import YAML
 
 CATALOG_FILE = "catalog.yaml"
 
@@ -54,12 +54,14 @@ def load_catalog(docs_root: Path) -> Mapping[str, DocEntry]:
     """Read ``<docs_root>/catalog.yaml`` and return ``uri -> DocEntry``.
 
     Trusts the manifest's shape since it is shipped with the package; relies
-    on ``read_text`` / ``yaml.safe_load`` to raise on a missing or
+    on ``read_text`` / ``YAML.load`` to raise on a missing or
     syntactically broken file.
     """
     raw = cast(
         Mapping[str, list[Mapping[str, str]]],
-        yaml.safe_load((docs_root / CATALOG_FILE).read_text(encoding="utf-8")),
+        YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+            (docs_root / CATALOG_FILE).read_text(encoding="utf-8")
+        ),
     )
     entries: dict[str, DocEntry] = {}
     for e in raw["docs"]:

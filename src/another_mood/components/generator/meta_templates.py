@@ -3,14 +3,17 @@
 # pyright: reportPrivateUsage=false
 """Built-in meta templates and their system-only template filters."""
 
-import math
+import io
+import sys
 from collections.abc import Callable, Mapping, Sequence
 from importlib import resources
 from itertools import chain, pairwise
 from pathlib import Path
 from typing import cast
 
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.nodes import MappingNode, ScalarNode, SequenceNode
+from ruamel.yaml.representer import SafeRepresenter
 
 from another_mood.components.generator.data_tree import Node
 from another_mood.components.generator.edition import Edition, PagingPolicy
@@ -91,18 +94,23 @@ def to_yaml(value: object, flow: bool = False) -> str:
     """
     if value is None:
         return ""
-    # Disable PyYAML's soft line-wrap in flow mode — wrapping inserts
-    # newlines that break the surrounding Markdown table row.
-    width = math.inf if flow else 80
-    dumper = _InlineDumper if flow else _Dumper
-    return yaml.dump(
-        value,
-        Dumper=dumper,
-        allow_unicode=True,
-        default_flow_style=flow,
-        sort_keys=False,
-        width=width,
-    ).rstrip()
+    # Fresh YAML() per call: its internal state is not safe to share across
+    # the pipeline's watcher threads (same reason as json_data_model._parse).
+    # pure=True pins the Python emitter, the only one that honours
+    # brace_single_entry_mapping_in_flow_sequence.
+    yaml = YAML(typ="safe", pure=True)
+    yaml.Representer = _InlineRepresenter if flow else _Representer
+    yaml.default_flow_style = flow
+    yaml.sort_base_mapping_type_on_output = False  # type: ignore[assignment]
+    yaml.allow_unicode = True
+    # Disable the soft line-wrap in flow mode — wrapping inserts newlines
+    # that break the surrounding Markdown table row.
+    yaml.width = sys.maxsize if flow else 80
+    # Keep `[1, {b: c}]` rather than the terser `[1, b: c]`.
+    yaml.brace_single_entry_mapping_in_flow_sequence = True
+    out = io.StringIO()
+    yaml.dump(value, out)  # type: ignore[no-untyped-call]
+    return out.getvalue().rstrip()
 
 
 def anchor_path(a: object) -> str | None:
@@ -190,55 +198,49 @@ def _safe_pluck(row: Mapping[str, object], key_path: KeyPath) -> Sequence[InertV
 # ── to_yaml dumpers and representers ─────────────────────────────────
 
 
-class _Dumper(yaml.SafeDumper):
-    """SafeDumper that accepts ``dict`` / ``list`` subclasses.
+class _Representer(SafeRepresenter):
+    """SafeRepresenter that accepts ``dict`` / ``list`` subclasses.
 
     Generator wraps the data tree into :class:`MappingNode` /
     :class:`ArrayNode` (see ``data_tree.py``) so templates can walk
-    parent references.  SafeDumper rejects subclasses by default;
+    parent references.  SafeRepresenter rejects subclasses by default;
     the multi-representer registrations below make any subclass
     render as its native ``dict`` / ``list`` form.
     """
 
 
-class _InlineDumper(yaml.SafeDumper):
-    """SafeDumper for one-source-line output contexts.
+class _InlineRepresenter(_Representer):
+    """Representer for one-source-line output contexts.
 
     Used when the YAML result is interpolated into a single-line
-    context — a Markdown table cell as inline code, etc.  PyYAML's
-    default str representer renders newline-containing scalars as
-    single-quoted folded form that spans multiple source lines,
+    context — a Markdown table cell as inline code, etc.  A
+    newline-containing scalar may otherwise come out in a style that
+    spans multiple source lines (single-quoted folded, block literal),
     which breaks such embedding.  This variant forces double-quoted
-    style so embedded newlines emit as ``\\n`` escapes and the
-    output stays on one line.
-
-    Carries the same ``dict`` / ``list`` subclass support as
-    :class:`_Dumper` (registered explicitly below).
+    style so embedded newlines emit as ``\\n`` escapes and the output
+    stays on one line.
     """
 
 
-def _inline_str_representer(dumper: yaml.SafeDumper, data: str) -> yaml.ScalarNode:
+def _inline_str_representer(representer: SafeRepresenter, data: str) -> ScalarNode:
     style = '"' if "\n" in data else None
-    return dumper.represent_scalar(  # pyright: ignore[reportUnknownMemberType]
+    return representer.represent_scalar(  # type: ignore[no-untyped-call]
         "tag:yaml.org,2002:str", data, style=style
     )
 
 
 def _represent_dict_subclass(
-    dumper: yaml.SafeDumper, data: Mapping[str, object]
-) -> yaml.MappingNode:
-    return dumper.represent_dict(data)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    representer: SafeRepresenter, data: Mapping[str, object]
+) -> MappingNode:
+    return representer.represent_dict(data)  # type: ignore[no-untyped-call]
 
 
 def _represent_list_subclass(
-    dumper: yaml.SafeDumper, data: Sequence[object]
-) -> yaml.SequenceNode:
-    return dumper.represent_list(data)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    representer: SafeRepresenter, data: Sequence[object]
+) -> SequenceNode:
+    return representer.represent_list(data)  # type: ignore[no-untyped-call]
 
 
-_Dumper.add_multi_representer(dict, _represent_dict_subclass)
-_Dumper.add_multi_representer(list, _represent_list_subclass)
-
-_InlineDumper.add_multi_representer(dict, _represent_dict_subclass)
-_InlineDumper.add_multi_representer(list, _represent_list_subclass)
-_InlineDumper.add_representer(str, _inline_str_representer)
+_Representer.add_multi_representer(dict, _represent_dict_subclass)  # type: ignore[no-untyped-call]
+_Representer.add_multi_representer(list, _represent_list_subclass)  # type: ignore[no-untyped-call]
+_InlineRepresenter.add_representer(str, _inline_str_representer)  # type: ignore[no-untyped-call]

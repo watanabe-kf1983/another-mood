@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.preprocess.content_normalizer import build_contents_schema
 from another_mood.components.preprocess.normalize_core import check, iter_normalized
@@ -47,7 +47,7 @@ class TestIterNormalizedAndWrite:
         _normalize(src, out, schema)
 
         # Output name is source name + ".yaml" (appended, not replaced)
-        data = yaml.safe_load((out / "data.yaml.yaml").read_text())
+        data = YAML(typ="safe").load((out / "data.yaml.yaml").read_text())  # type: ignore[no-untyped-call]
         assert data == {"items": [{"name": "a"}]}
         # Markdown converted to YAML at .md.yaml, not copied
         assert (out / "notes.md.yaml").exists()
@@ -63,7 +63,7 @@ class TestIterNormalizedAndWrite:
         out = tmp_path / "normalized"
         _normalize(src, out, schema)
 
-        data = yaml.safe_load((out / "guide.md.yaml").read_text())
+        data = YAML(typ="safe").load((out / "guide.md.yaml").read_text())  # type: ignore[no-untyped-call]
         assert data["prose"][0]["id"] == "guide"
         assert data["prose"][0]["title"] == "Guide"
         assert data["prose"][0]["mime_type"] == "text/markdown"
@@ -78,7 +78,7 @@ class TestIterNormalizedAndWrite:
         out = tmp_path / "normalized"
         _normalize(src, out, schema)
 
-        data = yaml.safe_load((out / "sub" / "doc.md.yaml").read_text())
+        data = YAML(typ="safe").load((out / "sub" / "doc.md.yaml").read_text())  # type: ignore[no-untyped-call]
         assert data["prose"][0]["id"] == "sub/doc"
 
     def test_same_stem_different_extensions_do_not_collide(
@@ -113,11 +113,11 @@ class TestIterNormalizedAndWrite:
         _normalize(src, out, schema)
 
         assert (out / "data.yaml.yaml").exists()
-        assert yaml.safe_load((out / "notes.txt.yaml").read_text()) == {
+        assert YAML(typ="safe").load((out / "notes.txt.yaml").read_text()) == {  # type: ignore[no-untyped-call]
             "blob": [{"id": "notes.txt", "mime_type": "text/plain"}]
         }
         # No extension to guess from → the opaque default.
-        assert yaml.safe_load((out / "README.yaml").read_text()) == {
+        assert YAML(typ="safe").load((out / "README.yaml").read_text()) == {  # type: ignore[no-untyped-call]
             "blob": [{"id": "README", "mime_type": "application/octet-stream"}]
         }
 

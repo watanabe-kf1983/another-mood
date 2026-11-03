@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.preprocess.query_deriver import (
     _derive_all,  # pyright: ignore[reportPrivateUsage]
@@ -69,7 +69,10 @@ def _write_catalog(
     for i, text in enumerate(extra_yaml):
         # The catalog dir is a stage output (JSON); the fixtures stay
         # YAML so the shape of the data remains legible here.
-        save_model(catalog_dir / "data" / f"extra_{i}.json", yaml.safe_load(text))
+        save_model(
+            catalog_dir / "data" / f"extra_{i}.json",
+            YAML(typ="safe").load(text),  # type: ignore[no-untyped-call]
+        )
 
 
 class TestBuildViewSchema:
