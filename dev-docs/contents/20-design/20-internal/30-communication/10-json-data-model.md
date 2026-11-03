@@ -1,47 +1,47 @@
-# JSON データモデル
+# JSON Data Model
 
-## 定義
+## Definition
 
-YAML DSL やテンプレートエンジンが操作する対象は「JSON データモデル」（object / array / string / number / boolean で構成されるツリー構造）である。null は持たず、値が無いことはキーの省略で表す（[Concept](../../../10-concept/10-product.md#データモデル-規律を与えた-json-の木) のデータモデル節と同じ木）。
+What the YAML DSL and the template engine operate on is the "JSON data model": a tree structure made of object / array / string / number / boolean. It has no null; the absence of a value is expressed by omitting the key (the same tree as the data model section of [Concept](../../../10-concept/10-product.md#data-model-a-json-tree-with-discipline)).
 
-JSON というシリアライズ形式とは無関係で、YAML から読み込んだデータに対しても同様に動作する。
+It is unrelated to JSON as a serialization format, and works the same on data loaded from YAML.
 
-inspect_schema から generate まで、全ステージがこのデータモデル上で一貫して動作する。
+From inspect_schema to generate, every stage operates consistently on this data model.
 
-なお、「JSON データモデル」という用語に対応する正式な仕様は存在しない（XML には XML Information Set という W3C 勧告があるが、JSON にはそれに相当するものがない）。CBOR の RFC 8949 が "the JSON data model" という表現を使用しており、本プロジェクトでもこれに倣う。
+Note that there is no formal specification corresponding to the term "JSON data model" (XML has the W3C recommendation XML Information Set, but JSON has no equivalent). CBOR's RFC 8949 uses the phrase "the JSON data model", and this project follows it.
 
-YAML のデータモデルは JSON データモデルのスーパーセット（日付型、整数/浮動小数の区別、アンカー等）だが、このアプリで扱うデータは JSON データモデルの範囲内に収まる。
+YAML's data model is a superset of the JSON data model (date types, the distinction between integers and floats, anchors, and so on), but the data this application handles stays within the JSON data model.
 
-## シリアライズ形式
+## Serialization formats
 
-このプロジェクトが読み書きするファイルは 3 系統あり、系統ごとにシリアライズ形式が決まる。
+The files this project reads and writes fall into three groups, and each group has its serialization format:
 
-| 系統 | 例 | 形式 |
+| Group | Examples | Format |
 |---|---|---|
-| (1) 利用者の入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON |
-| (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML 1.2 |
-| (3) ステージ間中間表現 | workspace（[運搬機構](index.md#運搬機構)）配下の各ステージ出力、`__build_report` | JSON |
+| (1) The user's input | `contents/*.yaml`, `contents/*.json`, `definition/schema.yaml`, `reports.yaml`, `sbdb.yaml` | YAML 1.2 / JSON |
+| (2) Built-in schema resources | `resources/schemas/*.yaml` | YAML 1.2 |
+| (3) Intermediate representation between stages | Each stage's output under the workspace ([transport](index.md#transport)), `__build_report` | JSON |
 
-- YAML は 1.2 とする（(1) (2) に適用）。`yes`/`no` の意図せぬブール化を避け、JSON 入力を追加の parser なしに受けるため
-- 中間表現は JSON とする（(3) に適用）。ビルド時間を ruamel.yaml の read/write が支配していたため。workspace 配下は外部契約ではないので、変更は内部に閉じる。非 JSON 値（日付等）の到達経路はスキーマ言語の側で塞ぐ
+- YAML is 1.2 (applies to (1) and (2)). It avoids the unintended booleanization of `yes`/`no`, and accepts JSON input without an additional parser
+- The intermediate representation is JSON (applies to (3)). Build time was dominated by ruamel.yaml's read/write. The workspace is not an external contract, so the change stays internal. The schema language side is what blocks the routes by which non-JSON values (dates and the like) could arrive
 
-## 配列内オブジェクトのフィールド統一
+## Uniform fields in objects within arrays
 
-Normalizer およびコンポーネントが出力する配列内のオブジェクトは、原則として全て共通するフィールドを持つ。ただし、nullable な項目（スキーマ上 `required` でない項目）は、値が存在しない場合はフィールド自体を省略する（null を補完しない）。
+The objects within arrays that the Normalizer and the components emit all, as a rule, have the common fields. However, a nullable item (one not `required` in the schema) omits the field itself when the value is absent (no null is filled in).
 
-理由: テンプレートは欠損したフィールドを何も描かない（[Template](../../10-external/50-template.md#欠損は何も描かずエラーにもしない)）ので、フィールドが無いことがそのまま「描かない」になる。
+Reason: templates draw nothing for a missing field ([Template](../../10-external/50-template.md#a-missing-value-draws-nothing-and-is-no-error)), so the field's absence is itself "not drawn".
 
-null を補完しても `None.child` のようなネストアクセスのエラーは防げず、`dict.get("key", {})` によるフォールバックも null が入ると効かなくなる。フィールドが存在しない方がテンプレート側で扱いやすい。
+Filling in null would not prevent errors on nested access such as `None.child`, and a fallback through `dict.get("key", {})` stops working once null is in. The absent field is easier to handle on the template side.
 
-## 予約プレフィックス
+## Reserved prefixes
 
-JSON データモデル上のオブジェクトキーに、以下のプレフィックスを予約する。
+The following prefixes are reserved on object keys in the JSON data model:
 
-| プレフィックス | 用途 | 例 |
+| Prefix | Use | Examples |
 |---|---|---|
-| `_`（単一） | Generator がノードへ注入するメタデータ（`generator/data_tree.py`） | `_parent`, `_meta` |
-| `__`（二重） | システム内部フィールド（利用者は直接扱わない） | `__build_report`, `__definition` |
+| `_` (single) | Metadata the Generator injects into nodes (`generator/data_tree.py`) | `_parent`, `_meta` |
+| `__` (double) | System-internal fields (the user does not handle them directly) | `__build_report`, `__definition` |
 
-`__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータが利用者のデータのキーを影にしないために置く。
+`__` is rejected in top-level entity names, view names, and edition names (they share a namespace with the built-in sources and with the tool's own output such as `__db/`). `_` is a reservation by convention, placed so that the Generator's metadata does not shadow keys in the user's data.
 
-内蔵 prose / blob スキーマのキー名 `prose` / `blob` はプレフィックスなしで維持する。
+The built-in prose / blob schemas' key names `prose` / `blob` are kept without a prefix.

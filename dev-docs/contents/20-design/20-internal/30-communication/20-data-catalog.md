@@ -1,39 +1,39 @@
-# データカタログ
+# Data Catalog
 
-## 定義
+## Definition
 
-**データカタログ**（以下カタログ）は、スキーマから起こした entity と attribute の目録。`inspect_schema` が `definition/schema.yaml` を meta-schema で検証したうえで起こし、JSON で永続化する（[ステージ構成](../20-pipeline.md#ステージ構成)の `inspect_schema/`）。
+The **data catalog** (below, the catalog) is the inventory of entities and attributes built from the schema. `inspect_schema` validates `definition/schema.yaml` against the meta-schema, builds the catalog, and persists it as JSON (`inspect_schema/` in the [stage table](../20-pipeline.md#stages)).
 
-一つの目録に三つの出自の entity が載る:
+One inventory carries entities of three origins:
 
-- 利用者のスキーマの entity
-- 内蔵スキーマ（prose / blob）の entity
-- カタログ自身の形を記述する `__definition` の entity。クエリが `from: __definition.entities` でカタログを読むための自己記述
+- The entities of the user's schema
+- The entities of the built-in schemas (prose / blob)
+- The `__definition` entities that describe the shape of the catalog itself. The self-description that lets a query read the catalog with `from: __definition.entities`
 
-後段のステージは、スキーマの構造を知りたいときにスキーマを読み直さず、カタログを読む:
+Downstream stages, when they want to know the structure of the schema, read the catalog instead of rereading the schema:
 
-- `normalize_contents` — x-ref のデータ検査（`data_fk_validator.py`）。ただし contents の検証と map → array の正規化は JSON Schema そのものを使うので、このステージだけはスキーマファイルも読む。スキーマは監視しないので、スキーマの変更は `inspect_schema/` の更新として届く
-- `derive_queries` — `from:` の解決と、ビューから派生する entity の生成。派生 entity を加えたカタログを出力する
-- `compose` — カタログをそのまま下流へ通す
-- `generate` — メタドキュメント（`__db/`）の描画と、レコードの出自（内蔵の prose / blob か）の判別
-- `tap_schema`（`mood tap --schema`）— カタログから tap 文書の JSON Schema を書き出す
+- `normalize_contents` — the data check of x-refs (`data_fk_validator.py`). However, validating contents and normalizing map → array use JSON Schema itself, so this stage alone also reads the schema file. It does not watch the schema, so a schema change arrives as an update of `inspect_schema/`
+- `derive_queries` — resolving `from:`, and generating the entities derived from views. Outputs the catalog with the derived entities added
+- `compose` — passes the catalog through downstream as it is
+- `generate` — drawing the database pages (`__db/`), and telling a record's origin (built-in prose / blob or not)
+- `tap_schema` (`mood tap --schema`) — writes the JSON Schema of the tap document from the catalog
 
-## compose の出力は、カタログが宣言した形に一致する
+## compose's output matches the shape the catalog declares
 
-クエリの各句は、レコード変換（`apply`）とカタログの変換（`derive`）を同じ DSL 断片から対で持つ（`components/shared/query.py`）。`derive_queries` は `derive` でビューの出力の形を派生 entity としてカタログに載せ、`compose` は同じ `Query` の `apply` でレコードを作る。
+Each clause of a query holds a record transformation (`apply`) and a catalog transformation (`derive`) as a pair from the same DSL fragment (`components/shared/query.py`). `derive_queries` uses `derive` to put the shape of a view's output on the catalog as a derived entity, and `compose` uses `apply` of the same `Query` to make the records.
 
-両者は同じ順で同じ句を通り、句ごとの対が整合しているので、compose の出力は derive_queries が宣言した形に一致する。下流（`generate` のメタドキュメント、`tap_schema`）はデータを見ずにカタログを信じてよい。句を足すときは両方を対で足す。
+Both pass the same clauses in the same order, and each clause's pair is consistent, so compose's output matches the shape derive_queries declared. Downstream (`generate`'s database pages, `tap_schema`) may trust the catalog without looking at the data. When adding a clause, add both of the pair.
 
-## 形
+## Shape
 
-形は `components/shared/data_catalog.py` に定義する。表現は二つあり、`Node` / `Edge` の木（entity と、親から見た子の属性。データ木のノードとは別物）が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。
+The shape is defined in `components/shared/data_catalog.py`. There are two representations: the tree of `Node` / `Edge` (an entity, and the child's attribute as seen from the parent; distinct from a node of the data tree) is the primary representation, and the sequence of Entity is its flat serialization. Between stages this sequence is passed as JSON.
 
-木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
+The tree is what `derive_queries` needs: cutting out the subtree that a view's `from:` points at and grafting it back under the root as a derived entity is done on the tree.
 
-entity の id はデータ木上の到達経路（`categories`、`categories.tasks`）で、`from:` はこれで entity を名指す。
+An entity's id is the route to it on the data tree (`categories`, `categories.tasks`), and `from:` names an entity by it.
 
-レコード一件の型（ObjectType）はこれと別の id を持つ（`data_catalog.py` の `_item_type_id`）。ビューの派生 entity が、元の entity と違う id を持ちながら同じ型のレコードを並べるため。
+The type of one record (ObjectType) has a separate id (`_item_type_id` in `data_catalog.py`), so that a view's derived entity can carry records of the same type while having an id different from the original entity's.
 
-派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（flatten、join）は元の型の実例ではなくなるので、引き継がない。
+A derived entity inherits the original record type as `origin_item_type`, and `generate` uses it to tell whether a record derives from the built-in prose / blob. A view that recomposes records (flatten, join) is no longer an instance of the original type, so it does not inherit.
 
-どちらの id もスキーマ上の位置を示す型レベルの識別子で、データ木上の個々のレコードの住所であるアンカーパス（`docs/reference/template.md` の Anchor paths）とは別物。アンカーパスの組み立てに、これらの id は登場しない。
+Both ids are type-level identifiers that denote a position in the schema, distinct from the anchor path, the address of an individual record on the data tree (Anchor paths in `docs/reference/template.md`). Neither id appears in the assembly of anchor paths.

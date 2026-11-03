@@ -1,112 +1,112 @@
-# テンプレート評価の境界
+# Template evaluation boundary
 
-外部設計の [Trust Model](../10-external/70-trust-model.md) が約束する「テンプレートから任意コードは走らない」を、どう閉じているか。
+How the external design's [Trust Model](../10-external/70-trust-model.md) promise, "no arbitrary code runs from templates", is closed.
 
-複数のモジュールと二つのテストが分担して守る約束なので、分担の全体はここに置き、各モジュールは自分の分担だけをコメントに持つ:
+Since the promise is guarded by several modules and two tests sharing the work, the whole division is here, and each module's comment holds only its own share:
 
-- `generator/template_engine.py` — 評価器と、描画の入口の境界ガード
-- `generator/inert.py` — データの inert 値モデル
-- `generator/template_safe.py` — ヘルパの戻り値の受け入れ列挙
-- `generator/data_tree.py` — ノードと、`_` 接頭辞のメタデータ
-- `generator/render_processor.py` — 唯一の副作用フィルタ `render`
-- `tests/components/generator/test_ssti.py` / `test_template_safe.py` — エンジンの露出規則と、型の表面の監査
+- `generator/template_engine.py` — the evaluator, and the boundary guard at the entrance to rendering
+- `generator/inert.py` — the inert value model for data
+- `generator/template_safe.py` — the enumeration of accepted helper return values
+- `generator/data_tree.py` — nodes, and the `_`-prefixed metadata
+- `generator/render_processor.py` — `render`, the only filter with a side effect
+- `tests/components/generator/test_ssti.py` / `test_template_safe.py` — the engine's exposure rules, and the audit of the types' surfaces
 
-本文で使う語:
+Terms used in this chapter:
 
-- **host の capability** — テンプレートの外にある、ファイル・プロセス・ネットワーク等に届く Python の機能
-- **SSTI** — テンプレートに仕込んだ式で host の capability に届こうとする攻撃（server-side template injection）
-- **inert な値** — host の capability への経路を持たない値。テンプレートに見せてよい値
-- **marshal** — Python の値をテンプレートの値モデルへ渡す変換。スカラーは変換（convert）され、オブジェクトは包まれる（wrap）
-- **finalize / `Markup` / 主題** — 外部設計の [Template](../10-external/50-template.md) の語
-- **ノード** — 住所（アンカーパス）を持つ container。`MappingNode` / `ArrayNode` の二種で、型としては `Node`。外部設計の Template が言うノード（リンクの宛先）より狭く、prose の見出しは含まない。壊れた参照の値は `MissingNode`（外部設計の [Template](../10-external/50-template.md)）
+- **host capability** — a Python capability outside the template that reaches files, processes, the network, and the like
+- **SSTI** — an attack that tries to reach a host capability through an expression planted in a template (server-side template injection)
+- **inert value** — a value with no route to a host capability. A value that may be shown to a template
+- **marshal** — the conversion that passes a Python value into the template's value model. Scalars are converted; objects are wrapped
+- **finalize / `Markup` / subject** — terms of the external design's [Template](../10-external/50-template.md)
+- **node** — a container with an address (anchor path). Two kinds, `MappingNode` / `ArrayNode`, of type `Node`. Narrower than the node of the external design's Template (a link target): it does not include prose headings. The value of a broken reference is `MissingNode` (the external design's [Template](../10-external/50-template.md))
 
-## 評価器は一つ
+## There is one evaluator
 
-Jinja の評価器は `TemplateEngine`（`generator/template_engine.py`）だけで、持つのは generator コンポーネント（`generate` と `reconcile` のステージ）に限る。
+The only Jinja evaluator is `TemplateEngine` (`generator/template_engine.py`), and only the generator component (the `generate` and `reconcile` stages) holds one.
 
-`generate` は著者のテンプレートに加え、内蔵テンプレート（表紙、`__db/` のメタドキュメント）を描く。`reconcile` が描くのは内蔵テンプレート（失敗ページ・奥付・警告）だけで、渡す値も `BuildReport` と build info だけ。`site` は Markdown を変換するだけで、著者のテンプレートもデータ木も見ない。
+`generate` draws the author's templates and, in addition, the built-in templates (the cover, the database pages under `__db/`). `reconcile` draws only built-in templates (the failure page, the colophon, the warnings), and passes them only the `BuildReport` and build info. `site` only converts Markdown, and sees neither the author's templates nor the data tree.
 
-外部設計が依存するのは「テンプレートに渡る値がすべて同じ境界を通る」こと。評価器を一つに保つのはその最も単純な保ち方で、増やさない。
+What the external design depends on is that "every value that reaches a template passes the same boundary". Keeping one evaluator is the simplest way to keep that, and the number is not increased.
 
-## 値モデルで閉じ、ブロックリストでは閉じない
+## Closed by the value model, not by a blocklist
 
-Jinja2 の SSTI 経路（`__class__` から `__subclasses__()` へ、`attr('__class__')`、`map(attribute=)` 等）は独立した穴の集まりではなく、「Python オブジェクトをリフレクションで触る」値モデル一つから生えている。
+Jinja2's SSTI routes (`__class__` to `__subclasses__()`, `attr('__class__')`, `map(attribute=)`, and so on) are not a collection of independent holes; they all grow from one value model, "touching Python objects by reflection".
 
-だから Jinja2 の `SandboxedEnvironment` のように危険属性を都度禁じる実行時サンドボックスは採らない。`attr` / `map(attribute=)` のような属性名で辿るフィルタはテンプレートで広く使われ、禁じられない。
+So a runtime sandbox that forbids dangerous attributes one at a time, like Jinja2's `SandboxedEnvironment`, is not adopted. Filters that walk by attribute name, such as `attr` / `map(attribute=)`, are widely used in templates and cannot be forbidden.
 
-採ったのは、値モデルが構造的に安全なエンジン（minijinja。値を Rust 側で持ち、Python のリフレクションの入口である dunder が無い）と、その上に置く [marshal 契約](#marshal-契約-テンプレートに渡る値を型と構造で-inert-に閉じる)。エンジンだけでは足りない。渡した Python オブジェクトの通常のメンバは露出するので、渡す値の側を契約で閉じる。
+What was adopted is an engine whose value model is structurally safe (minijinja, which holds values on the Rust side and has no dunders, the entrance to Python reflection), and on top of it the [marshal contract](#the-marshal-contract-values-that-reach-a-template-are-closed-to-inert-by-type-and-structure). The engine alone is not enough: the ordinary members of a Python object passed in are exposed, so the values passed in are closed by contract.
 
-## DoS は閉じない
+## DoS is not closed
 
-外部設計の [Trust Model](../10-external/70-trust-model.md#dos-は閉じず実行者が-os-層で囲う) が「時間やメモリの上限はツールが持たない」と定める背後の分析:
+The analysis behind the external design's [Trust Model](../10-external/70-trust-model.md#dos-is-not-closed-the-operator-fences-it-at-the-os-layer) ruling that "the tool holds no cap on time or memory":
 
-- **単発の爆弾は minijinja が構造で拒む**。`range(n)` の要素数上限、テンプレートの再帰上限、文字列・シーケンスの `*` 反復上限があり、`"x" * 10**12` 型の一撃は通らない
-- **残るのは累積と増幅**で、命令数ではなくバイト数で膨れる。倍々の連結（`ns.x ~ ns.x` を N 回で 2^N バイト）、フィルタの増幅（`| indent(巨大幅)` は小さな入力をスカラー引数で巨大な出力にする）、データ列のネストループ。各段は合法なサイズで、総量だけが爆発する
-- **minijinja の `fuel` では閉じない**。`fuel` は命令一個を 1 とする CPU の予算で、確保したバイト数を見ないため、上のメモリ増幅は命令数が小さく素通りする。既定で ON にすると、メモリを止めないのに上限があるように見え、誤った安心を配る
-- **時間もツール側では止められない**。評価はネイティブ拡張の中で走り、巨大な確保や長いループの間は Python に制御が戻らない。ツール側のタイムアウトもシグナルも、評価の途中には届かない
-- **OS 層の制限なら閉じる**。`RLIMIT_AS` は確保要求そのものを失敗させるので、スラッシュや無作為な OOM-kill ではなく当該プロセスを決定的に落とす。cgroup やコンテナは時間も CPU も同じ場所で縛る
+- **A single bomb is refused structurally by minijinja.** It has a cap on the element count of `range(n)`, on template recursion, and on `*` repetition of strings and sequences, so a one-shot like `"x" * 10**12` does not pass
+- **What remains is accumulation and amplification**, growing in bytes rather than in instructions. Doubling concatenation (`ns.x ~ ns.x` N times for 2^N bytes), filter amplification (`| indent(huge width)` turns a small input into a huge output with a scalar argument), nested loops over data sequences. Each step is of legal size; only the total explodes
+- **minijinja's `fuel` does not close it.** `fuel` is a CPU budget counting one per instruction and does not see the bytes allocated, so the memory amplification above passes with a small instruction count. Switched on by default, it would look like a cap while stopping no memory, and hand out false reassurance
+- **Time cannot be stopped on the tool's side either.** Evaluation runs inside a native extension, and control does not return to Python during a huge allocation or a long loop. Neither a timeout nor a signal on the tool's side reaches the middle of an evaluation
+- **An OS-layer limit does close it.** `RLIMIT_AS` fails the allocation request itself, so the process in question is brought down deterministically rather than by thrashing or a random OOM kill. cgroups and containers bound time and CPU in the same place
 
-`fuel` を足したくなる場所は `make_environment`（`generator/template_engine.py`）。
+The place to add `fuel`, should it be wanted, is `make_environment` (`generator/template_engine.py`).
 
-## 前提: minijinja が露出するもの
+## Premise: what minijinja exposes
 
-minijinja がテンプレートに露出するのは、渡した値の非 `_`・非 dunder のメンバ（属性・メソッド）と container の要素。実測で確定した規則:
+What minijinja exposes to a template is the non-`_`, non-dunder members (attributes and methods) of the values passed in, and the elements of containers. The rules established by measurement:
 
-- **dunder**（`__class__` 等）は構造封鎖。dot 記法、subscript、`attr` / `map(attribute=)` / `selectattr` / `groupby` の文字列属性名のどれからも届かない
-- **`_` 接頭辞**の属性は undefined、メソッド呼び出しはエラー。dict / list 派生かは無関係で、純粋に `_` の有無。データ木の `_parent` / `_meta` をテンプレートから遮断し、素の Python オブジェクトへ歩き出せないのはこれによる
-- **非 `_` の属性・メソッド**は露出し、呼べる。戻り値もさらに辿れる
-- **globals** は `_` 名でも守られず、メンバを辿って呼べる。だからエンジンが global に登録するのはテンプレートヘルパだけ（filter は別の名前空間にあり、値として拾えない）
-- **loader** はテンプレートがパスを選ぶ唯一の場所（`include` / `extends` / `import` / `render`）だが、`../` も絶対パスも解決せず、テンプレートディレクトリに閉じる
+- **dunders** (`__class__` and the like) are structurally sealed. Unreachable from dot notation, subscript, and the string attribute names of `attr` / `map(attribute=)` / `selectattr` / `groupby` alike
+- **`_`-prefixed** attributes are undefined, and calling them as methods is an error. Whether the object derives from dict / list is irrelevant; it is purely the presence of `_`. This is what cuts the data tree's `_parent` / `_meta` off from templates and prevents walking out to raw Python objects
+- **Non-`_` attributes and methods** are exposed and callable. Their return values can be walked further
+- **globals** are not protected even under `_` names, and can be called by walking their members. So the only things the engine registers as globals are template helpers (filters live in a separate namespace and cannot be picked up as values)
+- **The loader** is the only place a template chooses a path (`include` / `extends` / `import` / `render`), but it resolves neither `../` nor absolute paths, and stays within the template directory
 
-marshal には convert と wrap の非対称がある。スカラー（str / int / float / bool / None とその派生）は minijinja ネイティブの値に変換され、Python のメンバは越境しない。
+Marshaling is asymmetric between convert and wrap. Scalars (str / int / float / bool / None and their subclasses) are converted to minijinja-native values, and their Python members do not cross over.
 
-`pycompat`（Python のメソッドを値に生やす minijinja のオプション。外部設計の [Template](../10-external/50-template.md)）も切っているので、文字列に `format` / `format_map` が無く、`str.format` の反射経由の SSTI も不成立。
+`pycompat` (the minijinja option that grows Python methods onto values; the external design's [Template](../10-external/50-template.md)) is also switched off, so strings have no `format` / `format_map`, and SSTI via `str.format`'s reflection does not work either.
 
-一方オブジェクト（dict / list 派生を含む）は wrap され、Python のメソッドが漏れる。だから危険は「wrap される非スカラー経由で非 `_` の capability に届く」経路に限られる。
+Objects (including dict / list subclasses), on the other hand, are wrapped, and their Python methods leak. So the danger is confined to the route "reaching a non-`_` capability through a wrapped non-scalar".
 
-`Markup` は str の派生なので convert 側で、テンプレートからは素の文字列に見え、`__html__` / `unescape` 等の Python メンバには届かない。
+`Markup` derives from str, so it is on the convert side: a template sees it as a plain string, and cannot reach Python members such as `__html__` / `unescape`.
 
-それでも finalize には `Markup` のまま届く。エンジンの Python binding が finalize に元の Python オブジェクトを渡すためで、escape 免除の役目は保たれる（`test_ssti.py` の `TestMarkupExposure` が pin）。
+It still reaches finalize as `Markup`. The engine's Python binding passes the original Python object to finalize, so the role of escape exemption is preserved (pinned by `TestMarkupExposure` in `test_ssti.py`).
 
-この規則はエンジンの側にあり、将来版で変わりうる。だから `tests/components/generator/test_ssti.py` が古典的な SSTI payload を実 render に撃って pin する。
+These rules live on the engine's side and may change in a future version. So `tests/components/generator/test_ssti.py` fires the classic SSTI payloads at a real render and pins them.
 
-固定するのは両方向で、封鎖側（上の各項）と、設計が前提とする露出側（非 `_` メンバの呼び出し、global の非保護）。露出側が赤になったら侵害ではなくエンジンの厳格化の合図で、契約を緩められる可能性を意味する。
+What is pinned is both directions: the sealed side (the items above) and the exposed side the design assumes (calling non-`_` members, the unprotected globals). The exposed side turning red is not a breach but a sign that the engine has become stricter, meaning the contract might be relaxed.
 
-## marshal 契約: テンプレートに渡る値を型と構造で inert に閉じる
+## The marshal contract: values that reach a template are closed to inert by type and structure
 
-任意の Python オブジェクトの安全性は動的に確認できない。`__getattr__`、インスタンス属性、ABC 登録で内省を欺けるので、`dir()` による監査は後手になる。
+The safety of an arbitrary Python object cannot be confirmed dynamically. `__getattr__`, instance attributes, and ABC registration can deceive introspection, so an audit by `dir()` is always a step behind.
 
-だから契約は実行時の検査ではなく、型と構造でツール側のコードの規律を保つ問題として解く。露出する二系統を各々閉じる:
+So the contract is solved not as a runtime check but as a matter of keeping the discipline of the tool's own code by type and structure. The two exposed families are each closed:
 
-- **データ**: inert 値モデル `InertValue = str | int | float | bool | None | InertMapping | InertArray`（`generator/inert.py`）
-- 前段の出力から読んだ木（型は `object`）を `ensure_inert` が検証して詰め替え（parse, don't validate）、`MappingNode` / `ArrayNode` が inert container を継承して住所を足す
-- inert container は構築後 read-only で、mutator は raise する。データ木は全ページの描画で共有され、非 `_` のメソッドはテンプレートから呼べるため
-- **ヘルパ（filter / global）の戻り値**: エンジンが所有する受け入れの列挙 `TemplateSafe = InertValue | Node | Markup | MissingNode`（`generator/template_safe.py`）
+- **Data**: the inert value model `InertValue = str | int | float | bool | None | InertMapping | InertArray` (`generator/inert.py`)
+- The tree read from the upstream output (typed `object`) is validated and repacked by `ensure_inert` (parse, don't validate), and `MappingNode` / `ArrayNode` inherit the inert containers and add the address
+- Inert containers are read-only after construction, and their mutators raise, because the data tree is shared by the drawing of every page and non-`_` methods are callable from templates
+- **Helper (filter / global) return values**: the enumeration of what is accepted, owned by the engine, `TemplateSafe = InertValue | Node | Markup | MissingNode` (`generator/template_safe.py`)
 
-設計の要点:
+The key points of the design:
 
-- **container は派生を封じ、スカラーは正規化する、の非対称**。container は wrap されて Python のメソッドが漏れるので、派生で capability を足せてはならない。派生してよいのは住所を足す `MappingNode` / `ArrayNode` だけ
-- データのスカラーは convert されてメンバが届かないので、派生を弾く必要が無い。代わりに exact な型に正規化して、静的型 `InertValue` が前提にする exact な型に実体を揃える。`Markup` はデータではなくヘルパの戻り値で、`TemplateSafe` として別に受理する
-- 派生の封じ込めは静的側が担う。`ensure_inert` は既に inert な container を `isinstance` でそのまま通し、派生を実行時に弾く検査は無い。`MappingNode` / `ArrayNode` の `@final` と、inert container を他で継承しない規律で保つ
-- **`TemplateSafe` は基底型でなく列挙**。受け入れ要件は継承で表せない（派生すれば capability を足せる）ので、各具体型を列挙する
-- `TemplateSafe` は受け入れ側が所有し、エンジン境界（`template_engine` と、ヘルパを渡す generator）だけが参照する。生産者は自分の具体的な戻り型（`Node | MissingNode` 等）を宣言するだけで、消費者から生産者への一方向 import になる
-- minijinja の undefined は `None` として届き、ヘルパは `None` を返す（`Undefined` 型は列挙に無い）
-- **副作用のある callable は原則禁止**。`render` フィルタだけが例外で、ページを書き出す。テンプレートが選べるのはサブテンプレートの名前と主題だけで、書き込み先はツールが主題の住所から決め、出力ディレクトリに閉じる。フィルタは値として拾えない（前提）ので、持ち主のオブジェクトへ辿る経路も無い
+- **The asymmetry: containers forbid subclassing, scalars are normalized.** Containers are wrapped and leak Python methods, so subclassing must not be able to add a capability. The only permitted subclasses are `MappingNode` / `ArrayNode`, which add the address
+- Scalars in the data are converted and their members are unreachable, so there is no need to reject subclasses. Instead they are normalized to the exact types, so that the instances match the exact types the static type `InertValue` assumes. `Markup` is not data but a helper return value, accepted separately as `TemplateSafe`
+- Containing subclasses is the static side's job. `ensure_inert` passes an already inert container through by `isinstance`, and there is no runtime check rejecting subclasses. It is kept by `@final` on `MappingNode` / `ArrayNode` and the discipline of inheriting the inert containers nowhere else
+- **`TemplateSafe` is an enumeration, not a base type.** The acceptance requirement cannot be expressed by inheritance (a subclass could add a capability), so each concrete type is enumerated
+- `TemplateSafe` is owned by the accepting side, and referenced only at the engine boundary (`template_engine`, and the generator that passes the helpers in). Producers only declare their own concrete return types (`Node | MissingNode` and the like), giving a one-way import from consumer to producer
+- minijinja's undefined arrives as `None`, and helpers return `None` (there is no `Undefined` type in the enumeration)
+- **Callables with side effects are forbidden as a rule.** The `render` filter is the one exception: it writes out a page. A template chooses only the subtemplate's name and the subject; the tool derives the destination from the subject's address, inside the output directory. Filters cannot be picked up as values (premise), so there is no route to the owning object either
 
-## 強制のレイヤ
+## Enforcement layers
 
-契約が担保する要件は三つ:
+The contract secures three requirements:
 
-- ① テンプレートに渡るデータは inert である
-- ② `TemplateSafe` の型に宣言外の属性（foreign な属性）を植えられない。植えられると、非 `_` の属性として露出し、capability を運びうる
-- ③ `TemplateSafe` の型は、基準の表面（素の dict / list、宣言した field）を超える非 `_` のメソッドも、protocol dunder も持たない。`__getattr__` / `__getitem__` / `__call__` は、テンプレートが名前で辿れなくても、エンジンや Python が protocol として自分で呼ぶので発動する
+- ① The data that reaches a template is inert
+- ② No undeclared (foreign) attribute can be planted on a `TemplateSafe` type. If one could, it would be exposed as a non-`_` attribute and could carry a capability
+- ③ A `TemplateSafe` type has neither non-`_` methods beyond its reference surface (a plain dict / list, the declared fields) nor protocol dunders. `__getattr__` / `__getitem__` / `__call__` fire even though a template cannot walk to them by name, because the engine or Python calls them itself as protocols
 
-層ごとに担う要件を添える:
+Per layer, the requirements it carries:
 
-- **pyright（静的）** — ①と②。inert container の `[InertValue]` による型付けと、ヘルパの戻り型のエンジン境界での照合
-- **render 境界ガード（実行時）** — ①。描画の入口（`template_engine.py` の `_bind`）は主題を `this` に束縛し、主題が map ならその各キーも束縛する。その各 binding を `ensure_template_safe` に通し、「テンプレートに渡るのは `TemplateSafe` だけ」を一点で強制する
-- 境界ガードは `Markup` と `MissingNode` を素通しし、データは `ensure_inert` へ回し、それ以外は raise する。一様性のため、内蔵テンプレート（表紙、メタドキュメント、失敗ページ、奥付、警告）の描画も同じ境界を通る
-- **surface-audit テスト**（`tests/components/generator/test_template_safe.py`） — ②と③。`TemplateSafe` の各型を MRO 全域で監査する。非 `_` の表面が基準の表面（container は素の dict / list、`MissingNode` は宣言した field で各値が inert）に一致すること
-- 同じテストで、foreign な属性を植えられず（`__slots__` / frozen）、想定外の protocol dunder が無いことも見る。`Markup` は convert 側で表面が越境しないので対象外（SSTI 回帰テストが pin）
-- **SSTI 回帰テスト**（`test_ssti.py`） — 上の三層が前提とするエンジン側の露出規則そのものを実 render で pin する（[前提](#前提-minijinja-が露出するもの)）
-- **残余** — `__slots__` の除去などは behavioral なテストが捕まえるが、監査テスト自体の削除は型でもテストでも防げず、code review が担う
+- **pyright (static)** — ① and ②. The typing of inert containers by `[InertValue]`, and the check of helper return types at the engine boundary
+- **The render boundary guard (runtime)** — ①. The entrance to drawing (`_bind` in `template_engine.py`) binds the subject to `this`, and if the subject is a map, binds each of its keys too. Each binding is passed through `ensure_template_safe`, enforcing "only `TemplateSafe` reaches a template" at one point
+- The boundary guard passes `Markup` and `MissingNode` through, sends data to `ensure_inert`, and raises on anything else. For uniformity, the drawing of the built-in templates (the cover, the database pages, the failure page, the colophon, the warnings) passes the same boundary
+- **The surface-audit test** (`tests/components/generator/test_template_safe.py`) — ② and ③. Audits each `TemplateSafe` type across its whole MRO. The non-`_` surface must match the reference surface (for containers, a plain dict / list; for `MissingNode`, the declared fields with each value inert)
+- The same test also checks that no foreign attribute can be planted (`__slots__` / frozen) and that there is no unexpected protocol dunder. `Markup` is on the convert side and its surface does not cross over, so it is out of scope (the SSTI regression test pins it)
+- **The SSTI regression test** (`test_ssti.py`) — pins, on a real render, the engine-side exposure rules that the three layers above assume ([Premise](#premise-what-minijinja-exposes))
+- **Residue** — removing `__slots__` and the like is caught by behavioral tests, but the deletion of the audit test itself is prevented by neither types nor tests, and falls to code review
