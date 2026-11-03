@@ -4,7 +4,7 @@
 
 ### 開発ワークフロー
 
-- タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する。失敗する場合は、環境の問題ならセットアップ節を、コードの問題ならタスク着手前に修正する
+- タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する
 - タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出るとスクリプトが lock 単独 PR の作成（push を含む）まで行うので、その PR を merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
 - コミットメッセージ・プルリクエストは **英語**
 
@@ -41,9 +41,11 @@
 
 - コード内コメントは **英語**
 - ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**
-- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す。設計はその意図とともに `dev-docs/design/`、設計に至った経緯は PR 本文へ
+- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す
 
 #### パッケージ構成と依存ルール
+
+主な登場人物。網羅ではない:
 
 ```
 another_mood/
@@ -55,15 +57,13 @@ another_mood/
 │   ├── preprocess/         #   入力の正規化・スキーマ解釈・クエリ導出
 │   ├── composer/           #   合成: データ + クエリ → ビュー
 │   ├── generator/          #   生成: ビュー + テンプレート → Markdown
-│   ├── publish/            #   出力の書き出し
-│   ├── scaffold/           #   プロジェクト初期化・ブループリント
-│   └── docs_catalog/       #   バンドル済みドキュメントの目録
+│   └── publish/            #   出力の書き出し
 ├── pipeline/               # オーケストレーション: ステージ実行
 │   └── adapters/           #   外部ツール連携（Hugo, watchdog）
 └── resources/              # 静的リソース
 ```
 
-依存方向: `cli` → `command` → `pipeline` → `components/*` → `components/shared`
+依存方向: `cli` → `command` → `pipeline` → `components/*` → `components/shared`。コンポーネントは互いも pipeline も import しない。各層の役割とステージの構成は [design/Architecture](.another-mood/dev-docs/output/web/prose/20-design/20-internal/10-architecture.md)。
 
 #### コードスタイル
 
@@ -77,7 +77,7 @@ another_mood/
 
 #### テスト
 
-- **カバレッジ計測対象**: `components/`。Statements + Branches トータルで 90% 以上
+- **単体テストで覆うのは `components/`**: ビジネスロジックはここに置き、`cli` / `command` / `pipeline` は薄く保つ。カバレッジ（statements + branches）は `make ci` が 90% で守る
 - **フィクスチャ**: ファイルベース、モジュール隣接型。期待値はテストコード内に記述
 - **約束を守るテストは、守る約束を名乗る**: docstring の一行目に、契約の節（`Keeps: docs/reference/view.md › Missing-key placement`）か外部設計の見出し（`Keeps: design/View › flatten 後の行は、親の属性を残し、要素を as: の下に置く`）を書く
     - 名乗るのは、その約束を破ったとき最初に落ちるテストだけでよく、網羅は求めない。契約や外部設計の節を変えるときは、節名で grep して名乗るテストを直す
@@ -91,23 +91,17 @@ Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwr
 - ページスナップショット / console ログは Playwright MCP が自動でこのディレクトリに出す
 - スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する (デフォルトは cwd 直下に落ちて散らかる)
 
-検証目的のスクショは再現可能なので、コミット前に削除して構わない。
-
 ### プルリクエスト
 
 PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。
 
 merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の背景もトレーラーも黙って失われる。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
-リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
+リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く。kind は `breaking` / `feature` / `fix`:
 
-    Release-Highlight: fix
+    Release-Highlight: <kind>
 
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。
-
-見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
-
-破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務とリリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
+`breaking` だけは義務で、`## Breaking change` セクションを伴う。kind の選び方、破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 
 ## Documentation (Reference)
 
