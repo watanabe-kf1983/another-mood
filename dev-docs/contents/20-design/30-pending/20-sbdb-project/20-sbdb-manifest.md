@@ -68,7 +68,7 @@ contents は**独立の契約面を持たない**: YAML レコードを縛る契
 
 ### `tools.another-mood.minimum_version`（minimum version）
 
-フォーマット（source-based DB、識別子 **sbdb**）はツールに依存しないスペックで、Another Mood はそれを処理するツールの一つにすぎない（[style guide](../../../30-dev/40-style-guide.md) の Means の定義）。だからスペックの語彙にツール名を混ぜない。minimum version は本質的に「ツールごと」の関心なので、pyproject.toml が `[project]` と `[tool.<name>]` を分けているのに倣い、`tools:` 名前空間の下に置く。将来別のプロセッサが現れたらそれぞれが自分の行を持ち、他のツールの行は互いに無視する。
+フォーマット（source-based DB、識別子 **sbdb**）はツールに依存しないスペックで、Another Mood はそれを処理するツールの一つにすぎない（[ドキュメントの書き方](../../../30-dev/45-documentation.md) の Means の定義）。だからスペックの語彙にツール名を混ぜない。minimum version は本質的に「ツールごと」の関心なので、pyproject.toml が `[project]` と `[tool.<name>]` を分けているのに倣い、`tools:` 名前空間の下に置く。将来別のプロセッサが現れたらそれぞれが自分の行を持ち、他のツールの行は互いに無視する。
 
 細かな仕様は minimum version の先例に合わせる:
 
