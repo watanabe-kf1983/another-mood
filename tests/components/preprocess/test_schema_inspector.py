@@ -5,7 +5,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.preprocess.schema_inspector import (
     _BUILTIN_CONTENTS_SCHEMA_FILE,  # pyright: ignore[reportPrivateUsage]
@@ -673,7 +673,7 @@ class TestBuildSchemaValidator:
 
     @pytest.mark.parametrize("src", _VALID_SCHEMA_CASES)
     def test_accepted(self, src: str) -> None:
-        data = yaml.safe_load(src)
+        data = YAML(typ="safe").load(src)  # type: ignore[no-untyped-call]
         assert self._validator.validate(data) == []
 
     @pytest.mark.parametrize("src", _REJECTED_SCHEMA_CASES)
@@ -682,13 +682,15 @@ class TestBuildSchemaValidator:
         Keeps: docs/reference/schema.md › Entity references (x-ref)
         Keeps: design/Schema › Literals written in the schema also follow the declared type
         """
-        data = yaml.safe_load(src)
+        data = YAML(typ="safe").load(src)  # type: ignore[no-untyped-call]
         assert len(self._validator.validate(data)) > 0
 
     def test_builtin_content_schema_conforms(self) -> None:
         # The built-in content schema is written in the language SchemaSchema
         # defines and is fed to the same normalizer, so it has to satisfy it.
-        data = yaml.safe_load(_BUILTIN_CONTENTS_SCHEMA_FILE.read_text(encoding="utf-8"))
+        data = YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+            _BUILTIN_CONTENTS_SCHEMA_FILE.read_text(encoding="utf-8")
+        )
         assert self._validator.validate(data) == []
 
 

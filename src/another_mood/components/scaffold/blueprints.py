@@ -7,6 +7,7 @@ list of ``{name, description}`` records; the directory of each blueprint
 lives at ``showcase/<name>/``.
 """
 
+import io
 import shutil
 import textwrap
 from dataclasses import dataclass
@@ -14,7 +15,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Sequence, cast
 
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.shared.tool_version import tool_homepage, tool_version
 
@@ -61,10 +62,12 @@ def load_blueprints(root: Path) -> Sequence[Blueprint]:
     """Read ``<root>/index.yaml`` and return its blueprint entries.
 
     Trusts the file's shape since the manifest is shipped with the
-    package; relies on ``read_text`` / ``yaml.safe_load`` to raise on a
+    package; relies on ``read_text`` / ``YAML.load`` to raise on a
     missing or syntactically broken file.
     """
-    raw = yaml.safe_load((root / INDEX_FILE).read_text(encoding="utf-8"))
+    raw = YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+        (root / INDEX_FILE).read_text(encoding="utf-8")
+    )
     entries = cast(Sequence[dict[str, str]], raw["blueprints"])
     return [Blueprint(name=e["name"], description=e["description"]) for e in entries]
 
@@ -118,15 +121,19 @@ def _collect_template_files(template_root: Path) -> Sequence[Path]:
 def _generate_manifest(project_dir: Path) -> str:
     # A verified floor ("known to work"), not an audited true minimum.
     running = tool_version()
-    return yaml.safe_dump(
+    yaml = YAML(typ="safe")
+    yaml.default_flow_style = False
+    yaml.sort_base_mapping_type_on_output = False  # type: ignore[assignment]
+    out = io.StringIO()
+    yaml.dump(  # type: ignore[no-untyped-call]
         {
             "sbdb_version": SBDB_VERSION,
             "title": _project_title(project_dir),
             "tools": {"another-mood": {"minimum_version": running}},
         },
-        sort_keys=False,
-        allow_unicode=True,
+        out,
     )
+    return out.getvalue()
 
 
 def _generate_readme(project_dir: Path) -> str:

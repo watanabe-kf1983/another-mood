@@ -5,7 +5,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.composer.composer import compose
 from another_mood.components.shared.windows_reserved_name import (
@@ -24,7 +24,7 @@ def _write_model(path: Path, yaml_text: str) -> None:
     Stage outputs are JSON; the fixtures stay YAML so the shape of the
     data remains legible in the test source.
     """
-    _write(path, json.dumps(yaml.safe_load(yaml_text)))
+    _write(path, json.dumps(YAML(typ="safe").load(yaml_text)))  # type: ignore[no-untyped-call]
 
 
 class TestCompose:

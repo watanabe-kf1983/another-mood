@@ -4,7 +4,7 @@ from importlib import metadata
 from pathlib import Path
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.scaffold.blueprints import (
     Blueprint,
@@ -98,7 +98,9 @@ class TestScaffoldManifest:
 
         scaffold_project(template, target)
 
-        assert yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8")) == {
+        assert YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+            (target / "sbdb.yaml").read_text(encoding="utf-8")
+        ) == {
             "sbdb_version": 1,
             "title": "proj",
             "tools": {
@@ -115,7 +117,9 @@ class TestScaffoldManifest:
 
         scaffold_project(template, target)
 
-        manifest = yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8"))
+        manifest = YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+            (target / "sbdb.yaml").read_text(encoding="utf-8")
+        )
         assert manifest["title"] == "proj"
 
 
@@ -131,7 +135,9 @@ class TestApplyBlueprint:
         assert (target / "definition" / "schema.yaml") in result.created
         # The bundled blueprint carries its own manifest, but the applied
         # project gets a fresh one titled after the target directory.
-        manifest = yaml.safe_load((target / "sbdb.yaml").read_text(encoding="utf-8"))
+        manifest = YAML(typ="safe").load(  # type: ignore[no-untyped-call]
+            (target / "sbdb.yaml").read_text(encoding="utf-8")
+        )
         assert manifest["title"] == "proj"
         minimum = manifest["tools"]["another-mood"]["minimum_version"]
         assert minimum == metadata.version("another-mood")

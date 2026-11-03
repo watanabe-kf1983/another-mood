@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.shared.json_data_model import (
     collect_files,
@@ -71,7 +71,7 @@ class TestDeepMerge:
 
 def _write_yaml(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    YAML(typ="safe").dump(data, path)  # type: ignore[no-untyped-call]
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:

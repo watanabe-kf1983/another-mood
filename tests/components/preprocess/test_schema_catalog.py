@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.shared import data_catalog as dc
 from another_mood.components.preprocess.schema_catalog import build_catalog_node
@@ -11,11 +11,11 @@ from another_mood.components.preprocess.schema_catalog import build_catalog_node
 
 
 def _node(src: str) -> dc.Node:
-    return build_catalog_node(yaml.safe_load(src))
+    return build_catalog_node(YAML(typ="safe").load(src))  # type: ignore[no-untyped-call]
 
 
 def _entities(src: str, root_name: str) -> Sequence[dc.Entity]:
-    return dc.flatten_tree(build_catalog_node(yaml.safe_load(src)), root_name)
+    return dc.flatten_tree(build_catalog_node(YAML(typ="safe").load(src)), root_name)  # type: ignore[no-untyped-call]
 
 
 def _root_entities(name: str, src: str) -> Sequence[dc.Entity]:
@@ -27,7 +27,7 @@ def _root_entities(name: str, src: str) -> Sequence[dc.Entity]:
     return dc.flatten_root(build_catalog_node({
         "type": "object",
         "additionalProperties": False,
-        "properties": {name: yaml.safe_load(src)},
+        "properties": {name: YAML(typ="safe").load(src)},  # type: ignore[no-untyped-call]
     }))[1:]
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import cast
 
-import yaml
+from ruamel.yaml import YAML
 
 from another_mood.components.preprocess.data_fk_validator import check_fk_data
 from another_mood.components.shared.user_source.source_loader import parse_mapping
@@ -21,7 +21,7 @@ def _catalog(yaml_text: str, *, root_attributes: str = "[]") -> Sequence[dc.Enti
     entity linking to each of them is added.  ``root_attributes`` lists
     the root's other attributes (a top-level singleton and its values).
     """
-    raw = cast(list[Mapping[str, object]], yaml.safe_load(dedent(yaml_text)))
+    raw = cast(list[Mapping[str, object]], YAML(typ="safe").load(dedent(yaml_text)))  # type: ignore[no-untyped-call]
     entities = [
         dc.Entity.from_dict({"parent_entity": dc.ROOT_ENTITY_ID, **e}) for e in raw
     ]
@@ -36,7 +36,10 @@ def _catalog(yaml_text: str, *, root_attributes: str = "[]") -> Sequence[dc.Enti
         for e in entities
         if e.parent_entity == dc.ROOT_ENTITY_ID
     ]
-    others = cast(list[Mapping[str, object]], yaml.safe_load(dedent(root_attributes)))
+    others = cast(
+        list[Mapping[str, object]],
+        YAML(typ="safe").load(dedent(root_attributes)),  # type: ignore[no-untyped-call]
+    )
     root = dc.Entity.from_dict(
         {
             "id": dc.ROOT_ENTITY_ID,
