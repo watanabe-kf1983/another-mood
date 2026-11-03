@@ -1,5 +1,6 @@
 """Tests for TemplateEngine."""
 
+import io
 from pathlib import Path
 
 import pytest
@@ -45,6 +46,49 @@ class TestRender:
         )
         subject = {"テーブル": [{"名前": "書籍"}, {"名前": "著者"}]}
         assert engine.render("t.md", subject) == "書籍/著者/"
+
+
+class TestTemplateLoading:
+    def _engine(self, tmp_path: Path) -> TemplateEngine:
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        return TemplateEngine(
+            tmp_path, templates_dir=templates_dir, output_format=MD, filters={}
+        )
+
+    def test_reads_templates_as_utf8_whatever_the_locale(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        engine = self._engine(tmp_path)
+        (tmp_path / "templates" / "t.md").write_text(
+            "見出し — {{ title }}\n", encoding="utf-8"
+        )
+
+        # Stand in for a non-UTF-8 locale (Japanese Windows): `io.text_encoding`
+        # is where pathlib resolves an omitted encoding to the locale's.
+        def cp932_locale(encoding: str | None, stacklevel: int = 2) -> str:
+            return encoding or "cp932"
+
+        monkeypatch.setattr(io, "text_encoding", cp932_locale)
+        assert engine.render("t.md", {"title": "x"}) == "見出し — x\n"
+
+    def test_loads_template_in_subdirectory(self, tmp_path: Path) -> None:
+        engine = self._engine(tmp_path)
+        (tmp_path / "templates" / "meta").mkdir()
+        (tmp_path / "templates" / "meta" / "t.md").write_text("sub")
+        assert engine.render("meta/t.md", {}) == "sub"
+
+    @pytest.mark.parametrize("name", ["../outside.md", "sub\\t.md", "absent.md"])
+    def test_unloadable_name_does_not_exist(self, tmp_path: Path, name: str) -> None:
+        engine = self._engine(tmp_path)
+        (tmp_path / "outside.md").write_text("leaked")
+        (tmp_path / "templates" / "sub").mkdir()
+        (tmp_path / "templates" / "sub" / "t.md").write_text("backslashed")
+        # Where `\` is not a separator, the name can only mean this file.
+        (tmp_path / "templates" / "sub\\t.md").write_text("backslashed")
+        with pytest.raises(FileValidationError) as exc_info:
+            engine.render(name, {})
+        assert "does not exist" in exc_info.value.diagnostics[0].message
 
 
 class TestThisBinding:

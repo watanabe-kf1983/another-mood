@@ -7,7 +7,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Concatenate, cast
 
-from minijinja import Environment, TemplateError, load_from_path
+from minijinja import Environment, TemplateError
 
 from another_mood.components.generator.render_processor import RenderProcessorImpl
 from another_mood.components.generator.edition import PagingPolicy
@@ -237,7 +237,7 @@ class TemplateEngine:
 
         def new_environment() -> Environment:
             env = make_environment(output_format)
-            env.loader = load_from_path(templates_dir)
+            env.loader = _template_loader(templates_dir)
             for name, func in filters.items():
                 env.add_filter(name, func)
             for name, func in globals.items():
@@ -292,3 +292,22 @@ class TemplateEngine:
                 ]
             ) from exc
         return self._output_format.post_process(rendered, subject)
+
+
+def _template_loader(templates_dir: Path) -> Callable[[str], str | None]:
+    # Replaces minijinja's `load_from_path`, which reads without an encoding
+    # and so decodes with the locale code page (cp932 on Japanese Windows).
+    # Its name checks are kept: no `\`, no `..` escaping the root.
+    def loader(name: str) -> str | None:
+        if "\\" in name:
+            return None
+        pieces = name.strip("/").split("/")
+        if ".." in pieces:
+            return None
+        path = templates_dir.joinpath(*pieces)
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+        else:
+            return None
+
+    return loader
