@@ -13,11 +13,6 @@
 - 形式が一本。ソースは YAML と Markdown が混在するが、出力は一本の木
 - ビューが入る。join や grouped の結果はソースに無く、tap でしか取れない
 
-テスト:
-
-- 文書がカタログの宣言する形であること: `tests/pipeline/test_tap_pipeline.py` の `test_document_validates_against_its_schema`
-- カタログがコレクションを配列と宣言すること: `tests/components/tap/test_json_schema.py` の `TestShapes.test_collection_wraps_the_record_in_an_array`
-
 ### 文書を作るだけで、照会の口は持たない
 
 tap は一本の JSON 文書を作って終わる。`--jq` のような照会引数も、トップレベルのビューを選ぶ部分指定も持たず、絞り込みは利用者の道具（jq、スクリプト）に委ねる。
@@ -30,16 +25,10 @@ jq 引数が救うのは、シェルを持たずファイル共有も無いク�
 
 副次的に、mood が照会の口を一切持たないことで、mood の持つクエリ概念はビュー定義の DSL（[View](40-view.md)）一つに保たれる。
 
-テスト: 無い。機能が無いことはテストで守れない。
-
 ### 出力は JSON だけ
 
 照会を jq に委ねる以上、そのまま jq に食わせられる形でなければならず、jq は YAML を読まない。外部プログラムが標準ライブラリだけで読めるのも JSON。YAML 出力は実需が現れたら純増で足せる。
 
-テスト: 無い。YAML 出力が無いことはテストで守れない。
-
 ### 文書に、実行ごとに変わる値を入れない
 
 build info やタイムスタンプは tap 文書に入れない。利用者は tap の出力を実行の間で diff して使うことが多く、毎回変わる値があると見たい差分が埋もれる。ソースから導いた値（`__definition` など）は入れてよい。
-
-テスト: `tests/components/tap/test_tap.py` の `TestTap.test_merges_the_data_dir_into_one_document`（文書が入力の合流だけからなることを、完全一致で見る）。

@@ -117,6 +117,7 @@ class TestOperatorEvaluate:
         ids=lambda o: o.value,
     )
     def test_missing_key_fails_every_operator_but_exists(self, op: Operator) -> None:
+        """Keeps: design/View › `where` に `neq` は無く、否定は `not` に集める"""
         # A numeric target serves the ordering operators, a string target
         # the string ones; ``eq`` takes either.
         target: object = (

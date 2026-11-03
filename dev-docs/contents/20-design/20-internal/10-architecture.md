@@ -74,8 +74,6 @@ x-ref はクエリでの結合先を保証するデータの関心であり、�
 
 両者は同じ順で同じ句を通り、句ごとの対が整合しているので、compose の出力は derive_queries が宣言した形に一致する。下流（`generate` のメタドキュメント、`tap_schema`）はデータを見ずにカタログを信じてよい。句を足すときは両方を対で足す。
 
-テスト: 対の整合は `tests/components/shared/test_query.py` の各 `*Derive` クラス、全体の一致は `tests/pipeline/test_tap_pipeline.py` の `test_document_validates_against_its_schema`。
-
 **blob のアンカーパスは出力アドレスでもある。** blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下にそのまま出力パスとして写す。`generate` のリンク解決（href が指す先）と `publish` の配置が一つの住所で一致し、ずれない。
 
 ページパスはノードのアンカーパスから導かれ、`/blob/` の根は内蔵 entity `blob` の住所なので、利用者の entity やビューのページがそこに入ることはない。よってページパスとの衝突検査を持たない（`generator.py` の `_BLOB_NAMESPACE`、`pipeline/adapters/preparation.py` の `_is_blob`）。

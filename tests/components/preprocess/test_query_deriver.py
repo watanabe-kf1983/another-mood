@@ -207,8 +207,11 @@ class TestDeriveQueries:
         assert "names" in [a["id"] for a in root["item_type"]["attributes"]]
 
     def test_definition_order_is_file_order(self, tmp_path: Path) -> None:
-        """``__definition.views`` and the derived entities keep the file's
-        order even when a view must be evaluated after one written below it."""
+        """Keeps: design/View › 句の順序は固定し、収まらない形は別のビューに分けて名前で参照する
+
+        ``__definition.views`` and the derived entities keep the file's
+        order even when a view must be evaluated after one written below it.
+        """
         views = tmp_path / "views"
         _write(
             views / "chain.yaml",
