@@ -90,7 +90,7 @@ The node a link points at is often not in the template's context — a foreign k
 {{ node("categories", product.category_id) | link }}
 ```
 
-A path matching no node is a **missing node**, kept visible rather than a dead link. The `__db/__data/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
+A path matching no node is a **missing node**, kept visible rather than a dead link. The database pages under `__db/__data/` record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
 
 A [prose](schema.md#built-in-schema-prose) record's headings are nodes too. A heading's anchor path is the record's path, `#`, and the heading's slug — `/prose/guides/ordering#placing-an-order` — and a link to it lands directly on the heading.
 

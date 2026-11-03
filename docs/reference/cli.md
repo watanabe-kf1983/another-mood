@@ -118,7 +118,7 @@ mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>] [--va
 
 When a change is detected on an input path (the schema file or the contents / views / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
 
-By default `watch` writes nothing into the project — the preview is served live from a temporary working directory, and the diagnostic views are browsable at `/__db/`. Use `--out-dir` to also publish the Markdown tree to disk.
+By default `watch` writes nothing into the project — the preview is served live from a temporary working directory, and the database pages are browsable at `/__db/`. Use `--out-dir` to also publish the Markdown tree to disk.
 
 ```
 $ mood watch .
@@ -169,7 +169,7 @@ mood tap <project_dir> [--schema]
 
 Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document. Nothing is written into `.another-mood/`: redirect stdout when you want a file.
 
-The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed diagnostic views and `__definition`.
+The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed views behind the database pages, and `__definition`.
 
 Exits with code 0 on success. Schema, contents, and view errors are printed to stderr and fail the command with exit code 1 — stdout stays empty.
 
