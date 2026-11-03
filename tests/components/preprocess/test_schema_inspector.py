@@ -1022,6 +1022,49 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)  # should not raise
 
+    def test_xref_to_nested_collection_rejected(self, tmp_path: Path) -> None:
+        # A nested collection is part of its parent record.  Wanting to
+        # reference it from elsewhere is a sign it should be its own
+        # top-level entity, not a reason to accept nested target paths.
+        schema_file = _write_schema(
+            tmp_path / "schema.yaml",
+            dedent("""\
+                type: object
+                additionalProperties: false
+                properties:
+                  screens:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        buttons:
+                          type: object
+                          additionalProperties:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              label: { type: string }
+                  shortcuts:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        button_id:
+                          type: string
+                          x-ref:
+                            entity: screens.buttons
+            """),
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        with pytest.raises(FileValidationError) as exc_info:
+            inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        assert any("screens.buttons" in d.message for d in exc_info.value.diagnostics)
+
     def test_xref_to_definition_namespace_rejected(self, tmp_path: Path) -> None:
         schema_file = _write_schema(
             tmp_path / "schema.yaml",

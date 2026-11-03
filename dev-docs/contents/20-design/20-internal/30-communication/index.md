@@ -1,6 +1,6 @@
 # Inter-Stage Communication
 
-ステージ間の受け渡し（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み)）の総論。出力ディレクトリをどう下流へ運ぶか（運搬機構）と、失敗をどう下流へ伝えるか（エラー伝播）を扱う。流れるデータの形は [JSON データモデル](10-json-data-model.md)。
+ステージ間の受け渡し（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み)）の総論。出力ディレクトリをどう下流へ運ぶか（運搬機構）と、失敗をどう下流へ伝えるか（エラー伝播）を扱う。流れるデータの形は [JSON データモデル](10-json-data-model.md)、スキーマから起こして全ステージが共有する目録は[データカタログ](20-data-catalog.md)。
 
 ## Internal Design
 

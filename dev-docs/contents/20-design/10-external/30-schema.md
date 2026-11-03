@@ -1,6 +1,86 @@
 # Schema
 
-`docs/reference/schema.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`normalize_contents`、`generate`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。
+`docs/reference/schema.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`inspect_schema`、`normalize_contents`、`generate`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。
+
+本文で使う語:
+
+- **x-ref** — あるプロパティの値が他の entity のレコードを指すという宣言（`docs/reference/schema.md` の Entity references）
+- **singleton** — コレクションではない一件だけのオブジェクト（同 Single-record pattern）
+- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ
+
+## スキーマ言語
+
+### JSON Schema から削るのは、データモデルとして読めなくする構文
+
+`definition/schema.yaml` は JSON Schema draft 2020-12 のサブセット。何を受け付けるかの一覧は `docs/reference/schema.md` にある。
+
+削る基準は一つ。スキーマを検証規則の束ではなく、[データモデル](../../10-concept/10-product.md#データモデル-規律を与えた-json-の木)の宣言として読める形に保つこと。どの構文も entity（同じ形のレコードの集合）と attribute（一つの型を持つ値）に一対一で落ちる。クエリとテンプレートはこの形を前提に書ける。
+
+JSON Schema の表現力を足したくなったときは、この一対一が保てるかで判断する。削った構文と、その代わりに書く形:
+
+| 削った構文 | 代わりに |
+|---|---|
+| 合成・条件（`allOf` / `anyOf` / `oneOf` / `not` / `if`）、`type` の配列形、`null` 型 | 型ごとに attribute を分ける（`contact` → `email` と `address`）。値が無いことはキーを省いて表す |
+| `$ref` / `$defs` | 同じ形のレコードが複数の位置に現れるなら、一つの entity に集めて x-ref で指す。型だけを共有したいなら二度書く。定義へ飛ばずに上から下へ読めることを、重複を省くことより優先する |
+| 素の `type: object`、`items` の無い `type: array` | 形の定まらないデータは string の attribute で持つ |
+| `$comment` | YAML のコメント |
+
+スキーマは一つのファイル・一つのルートで、ルートの `properties` に各 entity への入口が並ぶ。API を流れる切れ端ごとに名前付きの型を並べる OpenAPI の `components.schemas` とは逆の形で、`contents/` に蓄積された一つのデータ総体を一つのオブジェクトとして宣言する。
+
+テスト: `tests/components/preprocess/test_schema_inspector.py` の `TestBuildSchemaValidator.test_rejected`。
+
+### スキーマに書いたリテラルも、宣言した型に合わせる
+
+`default` / `examples` / `enum` / `const` の値は、同じ宣言の `type` に一致しなければエラーにする。`type: string` に `default: 5` は通らない。JSON Schema 自体はこれを検査しない。
+
+理由は二つ。食い違いは常に書き誤りで、黙って通すとメタドキュメントの `default` の表示が型と矛盾したまま出る。
+
+もう一つ、スキーマに書いた値はデータでもある。[データカタログ](../20-internal/30-communication/20-data-catalog.md)に転記されて永続化され、`generate` が読み直す。だから [JSON データモデル](../20-internal/30-communication/10-json-data-model.md)の制約が及ぶ。YAML が `2024-01-01` から作る日付型は JSON で表せず、宣言できるどの `type` にも一致しない。リテラルに型の一致を求めれば、日付型がパイプラインに入る口は塞がる。
+
+`docs/` には書かない。利用者がこれに出会うのはビルドが止まったときで、エラーがその行と列を指す。
+
+テスト: `TestBuildSchemaValidator.test_rejected` の `{literal} on type={declared} rejected` の各ケースと `non-JSON value nested inside an object literal rejected`。
+
+## x-ref
+
+`docs/reference/schema.md` の Entity references の背後で保つもの。
+
+### `type: string` のプロパティにだけ付けられる
+
+参照の照合は文字列同士の比較で行う。参照先の `id` は常に string（[map pattern のキーから作る id は常に string](#map-pattern-のキーから作る-id-は常に-string)）。integer のプロパティに x-ref を許すと、`2024` と `"2024"` が一致せず、型の違いが参照切れの警告として現れて原因が見えにくい。
+
+テスト: `TestBuildSchemaValidator.test_rejected` の `x-ref on type=integer rejected` ほか。
+
+### 参照先は、ルートから別のコレクションを越えずに届く entity に限る
+
+入れ子のコレクション（`screens.buttons`）は親レコードの一部で、親と一体で読み書きされる。他から参照したくなったら、独立した entity に切り出すべき合図。入れ子のパスを参照先に書ける構文拡張ではなく、データモデルの側で直す。
+
+機械的な理由もある。レコードの id は[兄弟の間でだけ一意](#兄弟の間でだけ一意)なので、全 screen の button を集めた集合には同じ id が重複しうる。参照先として意味を持つのは、id がその中で一意なコレクションだけ。singleton はコレクションではないので、`site_config.items` は越えていない。
+
+カタログの自己記述 `__definition.*` も参照先にしない。スキーマのメタデータへの参照はデータの関係ではない。
+
+テスト: `TestInspectSchema.test_xref_to_nested_collection_rejected` と `test_xref_to_definition_namespace_rejected`。
+
+### 意味は「参照先の値の集合を enum にした検査」
+
+値が参照先 attribute の値の集合に含まれるかを見る、enum 検証の動的版。この見方から周辺の扱いが決まり、個別の規則を持たない:
+
+- 値が無ければ検査しない（required でないプロパティの省略）。適用する enum が無い
+- 空文字列は普通の値。参照先に `""` が無ければ参照切れ
+- 自己参照（`genres.parent_id` → `genres`）に特別な規則は要らない。集合に自分も入っているだけ
+- 循環の検出や多重度（1:N、N:M）は x-ref の責務の外
+
+前提は、参照先の集合が一つに決まること。値によって参照先が変わるプロパティ（多重ターゲット）は持たず、x-ref を付けずに自由な文字列として持つ。
+
+テスト: `tests/components/preprocess/test_data_fk_validator.py` の `TestOptionalFK` と `TestSelfReference`。
+
+### 参照切れはビルドを止めない
+
+スキーマ側の不整合（存在しない entity や attribute を参照先に書く）は、データを読む前にビルドを止める。データ側の参照切れは警告にとどめ、ページは描く。
+
+書いている途中のデータは参照先が揃っていないのが普通で、揃うまでビルドが見られないと、書いて確かめる往復が止まる。x-ref は property 単位の opt-in なので、警告は付けた分しか出ない。CI で弾くには `--strict`（`docs/reference/cli.md`）。
+
+テスト: `tests/components/preprocess/test_content_normalizer.py` の `test_normalize_contents_reports_dangling_fk_as_warning`（警告で止まらないこと）と、`TestXRefDiagnostics.test_missing_entity` と `test_missing_attribute`（スキーマ側はエラー）。
 
 ## `contents/` の読み方
 
@@ -39,7 +119,7 @@
 map pattern を配列に直すとき、キーはそのまま `id` になる。YAML のキーには数値・真偽値・日付も書ける（`2024:` は整数として読まれる）が、string でないキーは文字列に変換して id にする。理由:
 
 - ステージ間で受け渡す中間ファイルは JSON で（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md#シリアライズ形式)）、YAML のキーには日付のように JSON で表せない型もある
-- [データカタログ](../30-pending/45-schema/10-schema-spec.md#データカタログ)（スキーマから起こした entity と attribute の目録。後段のステージはスキーマの代わりにこれを読む）は id を string と宣言している。実データの型を宣言に合わせる
+- [データカタログ](../20-internal/30-communication/20-data-catalog.md)は id を string と宣言している。実データの型を宣言に合わせる
 - x-ref は string 型の attribute にしか付けられない（`docs/reference/schemas/schema-schema.yaml`）。id が string なら、参照の照合は string 同士の比較で済む
 - アンカーパスを組み立てる側が、id を常に string と前提できる
 

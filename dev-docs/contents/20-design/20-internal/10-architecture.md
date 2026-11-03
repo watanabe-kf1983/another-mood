@@ -31,8 +31,8 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 コンポーネントと、それを走らせるステージ（括弧内。一覧は [pipeline.md](20-pipeline.md)）:
 
-**SchemaInspector**（`inspect_schema`。[schema-spec.md](../30-pending/45-schema/10-schema-spec.md)）
-スキーマ定義を解析し、[データカタログ](../30-pending/45-schema/10-schema-spec.md#データカタログ)（スキーマから起こした entity と attribute の目録。後段のステージはスキーマの代わりにこれを読む）を抽出する。
+**SchemaInspector**（`inspect_schema`。`components/preprocess/schema_inspector.py`）
+スキーマ定義を meta-schema で検証し、[データカタログ](30-communication/20-data-catalog.md)（スキーマから起こした entity と attribute の目録。後段のステージはスキーマの代わりにこれを読む）を抽出する。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
 
 **Content Normalizer**（`normalize_contents`。`components/preprocess/content_normalizer.py`）
 `contents/` の全ファイルを検証し、正規化して一つのデータ木に合流させ、x-ref と id を検査する。blob はレコードと別にバイト列を出力へ写す（[運搬機構](30-communication/index.md#運搬機構)）。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
