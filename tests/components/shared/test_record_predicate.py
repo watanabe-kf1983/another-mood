@@ -186,9 +186,12 @@ class TestCombinators:
         assert Not(clause=clause).matches({"ok": True}) is expected
 
     def test_not_on_missing_key_keeps_record(self) -> None:
-        """``not (eq: x)`` on a missing key flips ``False`` → ``True``,
+        """Keeps: design/View › `where` に `neq` は無く、否定は `not` に集める
+
+        ``not (eq: x)`` on a missing key flips ``False`` → ``True``,
         confirming the inner ``matches`` returns ``False`` for absent
-        fields and the outer ``Not`` inverts it."""
+        fields and the outer ``Not`` inverts it.
+        """
         assert Not(clause=_fp("id", eq="x")).matches({}) is True
 
 
