@@ -5,7 +5,7 @@
 ### 開発ワークフロー
 
 - タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する
-- タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出るとスクリプトが lock 単独 PR の作成（push を含む）まで行うので、その PR を merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
+- タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出るとスクリプトが lock 単独 PR の作成（push を含む）まで行うので、その PR を merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/20-dependencies.md)）
 - コミットメッセージ・プルリクエストは **英語**
 
 ### セットアップ
@@ -35,13 +35,13 @@
 - **なぜそうなったか** — 意図は対象と同じ場所にある（該当する欄の中の一文）。そこに至った過程（比較、却下案、経緯）は PR 本文、つまり main の git log
 - **次に何をするか** — 目的は `dev-docs/concept/`、やることは GitHub Issues
 
-言語は `docs/` が英語、`dev-docs/` が日本語。書く側の規約（各置き場の読者、何を書き何を書かないか、インデックスの更新）は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
+言語は `docs/` が英語、`dev-docs/` が日本語。書く側の規約（各置き場の読者、何を書き何を書かないか、インデックスの更新）は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md)。
 
 ### 実装
 
 - コード内コメントは **英語**
-- 散文では `Another Mood`、パス・パッケージ名等の識別子では `another-mood` / `another_mood`、コマンドは `mood`（表記規約は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) の「製品名と自己定義」節）
-- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**。版の制約は下限のみ（規約は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
+- 散文では `Another Mood`、パス・パッケージ名等の識別子では `another-mood` / `another_mood`、コマンドは `mood`（表記規約は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md) の「製品名と自己定義」節）
+- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**。版の制約は下限のみ（規約は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/20-dependencies.md)）
 - docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す
 
 #### パッケージ構成と依存ルール
@@ -95,7 +95,7 @@ PR 本文はそのまま main の squash コミット本文になる（ブラン
 
     Release-Highlight: <kind>
 
-`breaking` だけは義務で、`## Breaking change` セクションを伴う。kind の選び方、破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
+`breaking` だけは義務で、`## Breaking change` セクションを伴う。kind の選び方、破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/40-release.md)。
 
 ## Documentation (Reference)
 
@@ -103,4 +103,4 @@ PR 本文はそのまま main の squash コミット本文になる（ブラン
 
 - [index.md](.another-mood/dev-docs/output/web/index.md) — 仕様・設計
 - [concept/product.md](.another-mood/dev-docs/output/web/prose/10-concept/10-product.md) — 製品ビジョン
-- [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約、製品名・自己定義の表記）
+- [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約、製品名・自己定義の表記）
