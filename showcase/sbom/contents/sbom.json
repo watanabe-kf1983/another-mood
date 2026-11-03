@@ -85,59 +85,6 @@
       "version": "3.0.4"
     },
     {
-      "ref": "PyYAML==6.0.3",
-      "description": "YAML parser and emitter for Python",
-      "externalReferences": [
-        {
-          "comment": "from packaging metadata: Download-URL",
-          "type": "distribution",
-          "url": "https://pypi.org/project/PyYAML/"
-        },
-        {
-          "comment": "from packaging metadata Project-URL: Documentation",
-          "type": "documentation",
-          "url": "https://pyyaml.org/wiki/PyYAMLDocumentation"
-        },
-        {
-          "comment": "from packaging metadata Project-URL: Bug Tracker",
-          "type": "issue-tracker",
-          "url": "https://github.com/yaml/pyyaml/issues"
-        },
-        {
-          "comment": "from packaging metadata Project-URL: Mailing lists",
-          "type": "other",
-          "url": "http://lists.sourceforge.net/lists/listinfo/yaml-core"
-        },
-        {
-          "comment": "from packaging metadata Project-URL: Source Code",
-          "type": "other",
-          "url": "https://github.com/yaml/pyyaml"
-        },
-        {
-          "comment": "from packaging metadata Project-URL: CI",
-          "type": "other",
-          "url": "https://github.com/yaml/pyyaml/actions"
-        },
-        {
-          "comment": "from packaging metadata: Home-page",
-          "type": "website",
-          "url": "https://pyyaml.org/"
-        }
-      ],
-      "licenses": [
-        {
-          "license": {
-            "acknowledgement": "declared",
-            "id": "MIT"
-          }
-        }
-      ],
-      "name": "PyYAML",
-      "purl": "pkg:pypi/pyyaml@6.0.3",
-      "type": "library",
-      "version": "6.0.3"
-    },
-    {
       "ref": "Pygments==2.21.0",
       "description": "Pygments is a syntax highlighting package written in Python.",
       "externalReferences": [
@@ -300,7 +247,7 @@
       "version": "26.1.0"
     },
     {
-      "ref": "filelock==4.2.4",
+      "ref": "filelock==4.2.7",
       "description": "A platform independent file lock.",
       "externalReferences": [
         {
@@ -311,17 +258,22 @@
         {
           "comment": "from packaging metadata Project-URL: Tracker",
           "type": "issue-tracker",
-          "url": "https://github.com/tox-dev/py-filelock/issues"
+          "url": "https://github.com/tox-dev/filelock/issues"
         },
         {
           "comment": "from packaging metadata Project-URL: Source",
           "type": "other",
-          "url": "https://github.com/tox-dev/py-filelock"
+          "url": "https://github.com/tox-dev/filelock"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://py-filelock.readthedocs.io/en/latest/changelog.html"
         },
         {
           "comment": "from packaging metadata Project-URL: Homepage",
           "type": "website",
-          "url": "https://github.com/tox-dev/py-filelock"
+          "url": "https://github.com/tox-dev/filelock"
         }
       ],
       "licenses": [
@@ -333,12 +285,12 @@
         }
       ],
       "name": "filelock",
-      "purl": "pkg:pypi/filelock@4.2.4",
+      "purl": "pkg:pypi/filelock@4.2.7",
       "type": "library",
-      "version": "4.2.4"
+      "version": "4.2.7"
     },
     {
-      "ref": "hugo==0.168.0",
+      "ref": "hugo==0.169.0",
       "description": "Binaries for the 'extended + withdeploy' edition of the Hugo static site generator, installable with pip",
       "externalReferences": [
         {
@@ -366,9 +318,9 @@
         }
       ],
       "name": "hugo",
-      "purl": "pkg:pypi/hugo@0.168.0",
+      "purl": "pkg:pypi/hugo@0.169.0",
       "type": "library",
-      "version": "0.168.0"
+      "version": "0.169.0"
     },
     {
       "ref": "jsonschema==4.26.0",
@@ -523,7 +475,7 @@
       "version": "0.1.2"
     },
     {
-      "ref": "minijinja==3.0.3",
+      "ref": "minijinja==3.0.5",
       "description": "An experimental Python binding of the Rust MiniJinja template engine.",
       "externalReferences": [
         {
@@ -551,9 +503,9 @@
         }
       ],
       "name": "minijinja",
-      "purl": "pkg:pypi/minijinja@3.0.3",
+      "purl": "pkg:pypi/minijinja@3.0.5",
       "type": "library",
-      "version": "3.0.3"
+      "version": "3.0.5"
     },
     {
       "ref": "packaging==26.3",
@@ -582,7 +534,7 @@
       "version": "26.3"
     },
     {
-      "ref": "pydantic==2.14.1",
+      "ref": "pydantic==2.14.2",
       "description": "Data validation using Python type hints",
       "externalReferences": [
         {
@@ -620,12 +572,12 @@
         }
       ],
       "name": "pydantic",
-      "purl": "pkg:pypi/pydantic@2.14.1",
+      "purl": "pkg:pypi/pydantic@2.14.2",
       "type": "library",
-      "version": "2.14.1"
+      "version": "2.14.2"
     },
     {
-      "ref": "pydantic-settings==2.16.1",
+      "ref": "pydantic-settings==2.16.2",
       "description": "Settings management using Pydantic",
       "externalReferences": [
         {
@@ -663,12 +615,12 @@
         }
       ],
       "name": "pydantic-settings",
-      "purl": "pkg:pypi/pydantic-settings@2.16.1",
+      "purl": "pkg:pypi/pydantic-settings@2.16.2",
       "type": "library",
-      "version": "2.16.1"
+      "version": "2.16.2"
     },
     {
-      "ref": "pydantic_core==2.50.1",
+      "ref": "pydantic_core==2.50.2",
       "description": "Core functionality for Pydantic validation and serialization",
       "externalReferences": [
         {
@@ -701,9 +653,9 @@
         }
       ],
       "name": "pydantic_core",
-      "purl": "pkg:pypi/pydantic-core@2.50.1",
+      "purl": "pkg:pypi/pydantic-core@2.50.2",
       "type": "library",
-      "version": "2.50.1"
+      "version": "2.50.2"
     },
     {
       "ref": "python-dotenv==1.2.4",
@@ -1128,9 +1080,6 @@
       "ref": "MarkupSafe==3.0.4"
     },
     {
-      "ref": "PyYAML==6.0.3"
-    },
-    {
       "ref": "Pygments==2.21.0"
     },
     {
@@ -1143,10 +1092,10 @@
       "ref": "attrs==26.1.0"
     },
     {
-      "ref": "filelock==4.2.4"
+      "ref": "filelock==4.2.7"
     },
     {
-      "ref": "hugo==0.168.0"
+      "ref": "hugo==0.169.0"
     },
     {
       "dependsOn": [
@@ -1165,7 +1114,6 @@
     },
     {
       "dependsOn": [
-        "PyYAML==6.0.3",
         "mdurl==0.1.2"
       ],
       "ref": "markdown-it-py==4.2.0"
@@ -1174,35 +1122,34 @@
       "ref": "mdurl==0.1.2"
     },
     {
-      "ref": "minijinja==3.0.3"
+      "ref": "minijinja==3.0.5"
     },
     {
       "ref": "packaging==26.3"
     },
     {
       "dependsOn": [
-        "PyYAML==6.0.3",
-        "pydantic==2.14.1",
+        "pydantic==2.14.2",
         "python-dotenv==1.2.4",
         "typing-inspection==0.4.4",
         "typing_extensions==4.16.0"
       ],
-      "ref": "pydantic-settings==2.16.1"
+      "ref": "pydantic-settings==2.16.2"
     },
     {
       "dependsOn": [
         "annotated-types==0.8.0",
-        "pydantic_core==2.50.1",
+        "pydantic_core==2.50.2",
         "typing-inspection==0.4.4",
         "typing_extensions==4.16.0"
       ],
-      "ref": "pydantic==2.14.1"
+      "ref": "pydantic==2.14.2"
     },
     {
       "dependsOn": [
         "typing_extensions==4.16.0"
       ],
-      "ref": "pydantic_core==2.50.1"
+      "ref": "pydantic_core==2.50.2"
     },
     {
       "ref": "python-dotenv==1.2.4"
@@ -1228,14 +1175,13 @@
     {
       "dependsOn": [
         "MarkupSafe==3.0.4",
-        "PyYAML==6.0.3",
-        "filelock==4.2.4",
-        "hugo==0.168.0",
+        "filelock==4.2.7",
+        "hugo==0.169.0",
         "jsonschema==4.26.0",
         "markdown-it-py==4.2.0",
-        "minijinja==3.0.3",
+        "minijinja==3.0.5",
         "packaging==26.3",
-        "pydantic-settings==2.16.1",
+        "pydantic-settings==2.16.2",
         "regex==2026.9.29",
         "ruamel.yaml==0.19.1",
         "typer==0.27.3",
@@ -1270,9 +1216,6 @@
       "ref": "typing_extensions==4.16.0"
     },
     {
-      "dependsOn": [
-        "PyYAML==6.0.3"
-      ],
       "ref": "watchdog==6.0.0"
     }
   ]
