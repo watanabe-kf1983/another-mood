@@ -29,7 +29,7 @@ hardlink は inode を共有するので、どこかのステージが既存フ�
 
 ## blob のアンカーパスは出力アドレスでもある
 
-blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下に出力パスとして写す（住所からファイル名への変換は [Reports](../../10-external/60-reports.md)）。`generate` のリンク解決（href が指す先）と `publish`（[ステージ表](../20-pipeline.md#ステージ構成)）の配置が一つの住所で一致し、ずれない。
+blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下に出力パスとして写す（住所からファイル名への変換は [Reports](../../10-external/60-reports.md)）。リンク解決（href が指す先）と blob の配置はどちらも `generate` が行い、`publish`（[ステージ表](../20-pipeline.md#ステージ構成)）は reconcile/ をそのまま写すだけなので、一つの住所で一致し、ずれない。
 
 ## 出力ディレクトリの更新は原子的
 

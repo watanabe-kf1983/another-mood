@@ -32,6 +32,6 @@ entity の id はデータ木上の到達経路（`categories`、`categories.tas
 
 レコード一件の型（ObjectType）はこれと別の id を持つ（`data_catalog.py` の `_item_type_id`）。ビューの派生 entity が、元の entity と違う id を持ちながら同じ型のレコードを並べるため。
 
-派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（unwind、join）は元の型の実例ではなくなるので、引き継がない。
+派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（flatten、join）は元の型の実例ではなくなるので、引き継がない。
 
 どちらの id もスキーマ上の位置を示す型レベルの識別子で、データ木上の個々のレコードの住所であるアンカーパス（`docs/reference/template.md` の Anchor paths）とは別物。アンカーパスの組み立てに、これらの id は登場しない。

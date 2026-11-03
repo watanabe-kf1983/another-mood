@@ -2,9 +2,11 @@
 
 ## 定義
 
-YAML DSL やテンプレートエンジンが操作する対象は「JSON データモデル」（object / array / string / number / boolean / null で構成されるツリー構造）である。JSON というシリアライズ形式とは無関係で、YAML から読み込んだデータに対しても同様に動作する。
+YAML DSL やテンプレートエンジンが操作する対象は「JSON データモデル」（object / array / string / number / boolean で構成されるツリー構造）である。null は持たず、値が無いことはキーの省略で表す（[Concept](../../../10-concept/10-product.md#データモデル-規律を与えた-json-の木) のデータモデル節と同じ木）。
 
-Normalizer から Document Generator まで、全コンポーネントがこのデータモデル上で一貫して動作する。
+JSON というシリアライズ形式とは無関係で、YAML から読み込んだデータに対しても同様に動作する。
+
+inspect_schema から generate まで、全ステージがこのデータモデル上で一貫して動作する。
 
 なお、「JSON データモデル」という用語に対応する正式な仕様は存在しない（XML には XML Information Set という W3C 勧告があるが、JSON にはそれに相当するものがない）。CBOR の RFC 8949 が "the JSON data model" という表現を使用しており、本プロジェクトでもこれに倣う。
 
@@ -42,4 +44,4 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 
 `__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。
 
-内蔵 prose スキーマのキー名 `prose` はプレフィックスなしで維持する。ユーザ定義との衝突が問題になった場合は、設定によるキー名変更で対応する。
+内蔵 prose / blob スキーマのキー名 `prose` / `blob` はプレフィックスなしで維持する。

@@ -104,7 +104,7 @@ design は二部からなる:
 
 ドキュメントを追加・削除・移動した場合、プルリクを上げる前に以下のインデックスからのリンクを確認・更新する:
 
-- dev-docs の `index.md`（ビルド出力 `.another-mood/dev-docs/output/web/index.md`）— dev-docs 全体インデックス
+- dev-docs の各フォルダの `index.md`（`dev-docs/contents/**/index.md`）— 章の一覧。全体の目次はビルドが作るので手では直さない
 - `docs/index.md` — 利用者向けトップ
 - `docs/catalog.yaml` — `mood docs` が配るドキュメントのカタログ
 - `DEVELOPMENT.md` — 開発者向けポインタ
