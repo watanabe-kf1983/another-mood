@@ -89,6 +89,8 @@ class TestResolveLayout:
 
 
 class TestUnknownDefinitionEntries:
+    """Keeps: design/Manifest › 知らない入力は、黙って読み飛ばさずエラーにする"""
+
     def test_rejects_unknown_file(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)
         (tmp_path / "definition" / "notes.yaml").write_text("")

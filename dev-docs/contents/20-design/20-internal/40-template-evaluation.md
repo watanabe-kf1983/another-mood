@@ -21,9 +21,7 @@
 - **ノード** — 住所（アンカーパス）を持つ container。`MappingNode` / `ArrayNode` の二種で、型としては `Node`。壊れた参照の値は `MissingNode`（外部設計の [Template](../10-external/50-template.md)）
 - **主題** — 一回の描画の対象。テンプレートからは `this` の名で見える
 
-## Internal Design
-
-### 評価器は一つ
+## 評価器は一つ
 
 Jinja の評価器は `TemplateEngine`（`generator/template_engine.py`）だけで、持つのは generator コンポーネント（`generate` と `reconcile` のステージ）に限る。
 
@@ -31,7 +29,7 @@ Jinja の評価器は `TemplateEngine`（`generator/template_engine.py`）だけ
 
 外部設計が依存するのは「テンプレートに渡る値がすべて同じ境界を通る」こと。評価器を一つに保つのはその最も単純な保ち方で、増やさない。
 
-### 値モデルで閉じ、ブロックリストでは閉じない
+## 値モデルで閉じ、ブロックリストでは閉じない
 
 Jinja2 の SSTI 経路（`__class__` から `__subclasses__()` へ、`attr('__class__')`、`map(attribute=)` 等）は独立した穴の集まりではなく、「Python オブジェクトをリフレクションで触る」値モデル一つから生えている。
 
@@ -39,7 +37,7 @@ Jinja2 の SSTI 経路（`__class__` から `__subclasses__()` へ、`attr('__cl
 
 採ったのは、値モデルが構造的に安全なエンジン（minijinja。値を Rust 側で持ち、Python のリフレクションの入口である dunder が無い）と、その上に置く [marshal 契約](#marshal-契約-テンプレートに渡る値を型と構造で-inert-に閉じる)。エンジンだけでは足りない。渡した Python オブジェクトの通常のメンバは露出するので、渡す値の側を契約で閉じる。
 
-### DoS は閉じない
+## DoS は閉じない
 
 外部設計の [Trust Model](../10-external/70-trust-model.md#dos-は閉じず実行者が-os-層で囲う) が「時間やメモリの上限はツールが持たない」と定める背後の分析:
 
@@ -51,7 +49,7 @@ Jinja2 の SSTI 経路（`__class__` から `__subclasses__()` へ、`attr('__cl
 
 `fuel` を足したくなる場所は `make_environment`（`generator/template_engine.py`）。
 
-### 前提: minijinja が露出するもの
+## 前提: minijinja が露出するもの
 
 minijinja がテンプレートに露出するのは、渡した値の非 `_`・非 dunder のメンバ（属性・メソッド）と container の要素。実測で確定した規則:
 
@@ -75,7 +73,7 @@ marshal には convert と wrap の非対称がある。スカラー（str / int
 
 固定するのは両方向で、封鎖側（上の各項）と、設計が前提とする露出側（非 `_` メンバの呼び出し、global の非保護）。露出側が赤になったら侵害ではなくエンジンの厳格化の合図で、契約を緩められる可能性を意味する。
 
-### marshal 契約: テンプレートに渡る値を型と構造で inert に閉じる
+## marshal 契約: テンプレートに渡る値を型と構造で inert に閉じる
 
 任意の Python オブジェクトの安全性は動的に確認できない。`__getattr__`、インスタンス属性、ABC 登録で内省を欺けるので、`dir()` による監査は後手になる。
 
@@ -96,7 +94,7 @@ marshal には convert と wrap の非対称がある。スカラー（str / int
 - minijinja の undefined は `None` として届き、ヘルパは `None` を返す（`Undefined` 型は列挙に無い）
 - **副作用のある callable は原則禁止**。`render` フィルタだけが例外で、ページを書き出す。テンプレートが選べるのはサブテンプレートの名前と主題だけで、書き込み先はツールが主題の住所から決め、出力ディレクトリに閉じる。フィルタは値として拾えない（前提）ので、持ち主のオブジェクトへ辿る経路も無い
 
-### 強制のレイヤ
+## 強制のレイヤ
 
 契約が担保する要件は三つ:
 

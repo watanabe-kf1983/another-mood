@@ -8,13 +8,17 @@
 
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
   導出する。bump コミットという工程はない
+- showcase と dev-docs のマニフェストは `minimum_version` を書かない。機能 PR が showcase の
+  入出力例を伴う規約により、これらは常に未リリースの HEAD の機能に依存し、正直な下限（次版）は
+  dev 版より大きいのでゲートに落ちる。実在する版を書けば偽の宣言、リリースごとに追随すれば
+  bump コミットの再発明になる
 - リリース tag は `vN.N.N` 形（ハイフンを含まない）。リリースワークフローの発火条件と
   hatch-vcs の版導出（pyproject の describe フィルタ）がこの形を共有する。リリースでない
   目印 tag は `milestone/` 名前空間に置く
 - リリースの役割は三値——破壊 / 互換・機能 / 互換・修正。破壊は二種の総称:
     - **フォーマット破壊** — サポート世代の脱落（old_supported − new_supported ≠ ∅。
       世代の**追加**自体は破壊ではない。世代運用は
-      [sbdb-manifest](../20-design/30-pending/20-sbdb-project/20-sbdb-manifest.md) の管轄）
+      [Manifest](../20-design/10-external/20-manifest.md) の管轄）
     - **ツール破壊** — CLI 等、ツールの利用者向け契約の破壊
 - 役割から版番号の桁への写像。桁の対応はこの表だけが持ち、他の記述は役割語で書く:
 

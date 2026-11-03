@@ -38,7 +38,7 @@ decode で現れる文字のうち、ファイルシステムが持てないも�
 
 リンクの URL もこのファイル名から作る（`href` はページのパスを percent-encode する）ので、`~XX` のファイルへは `~XX` の URL で届く。アンカーパスが URL に現れるのは fragment の部分だけ。
 
-blob の出力先（各 edition のルート直下の `blob/` に写す。[内部構造の約束](../20-internal/10-architecture.md#ステージをまたぐ約束)）と edition のディレクトリ名も同じ規則で名前を得る。文字単位で潰せない問題（パス長の超過、Windows のデバイス名）は escape ではなく書き出し側が別に対処する（`shared/windows_reserved_name.py`）。
+blob の出力先（各 edition のルート直下の `blob/` に写す。[内部構造](../20-internal/30-communication/index.md#blob-のアンカーパスは出力アドレスでもある)）と edition のディレクトリ名も同じ規則で名前を得る。文字単位で潰せない問題（パス長の超過、Windows のデバイス名）は escape ではなく書き出し側が別に対処する（`shared/windows_reserved_name.py`）。
 
 ### 各 edition とマウントは、自己完結した相対リンクの部分木
 

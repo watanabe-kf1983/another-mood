@@ -52,6 +52,10 @@ _COVER_TEMPLATES_DIR = Path(
 
 _NO_FILTERS: Mapping[str, Callable[..., TemplateSafe]] = {}
 
+# Page paths derive from anchor paths, and this root is the address of the
+# built-in `blob` entity, so no user entity or view page can land under it:
+# there is no collision check against page paths (see also `_is_blob` in
+# `pipeline/adapters/preparation.py`).
 _BLOB_NAMESPACE = "/blob/"
 
 
