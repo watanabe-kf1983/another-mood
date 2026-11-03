@@ -10,7 +10,7 @@
 
 ### セットアップ
 
-環境構築は [dev/setup.md](.another-mood/dev-docs/output/web/prose/30-dev/10-setup.md)。
+環境構築は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/10-environment.md)。
 
 このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/web/index.md](.another-mood/dev-docs/output/web/index.md)。
 
@@ -85,7 +85,7 @@ another_mood/
 
 #### 動作確認
 
-テンプレートの変更を実機で確かめるときは `mood watch <project_dir> --port <port>` でプレビューを上げ、必要なら Playwright MCP で観る（作業ファイルの置き場は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/20-environment.md) の MCP サーバ節）。
+テンプレートの変更を実機で確かめるときは `mood watch <project_dir> --port <port>` でプレビューを上げ、必要なら Playwright MCP で観る（作業ファイルの置き場は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/10-environment.md) の「Playwright の作業ファイル」節）。
 
 ### プルリクエスト
 
