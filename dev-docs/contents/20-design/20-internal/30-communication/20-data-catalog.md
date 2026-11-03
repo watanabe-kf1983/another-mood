@@ -1,8 +1,6 @@
 # データカタログ
 
-## Internal Design
-
-### 定義
+## 定義
 
 **データカタログ**（以下カタログ）は、スキーマから起こした entity と attribute の目録。`inspect_schema` が `definition/schema.yaml` を meta-schema で検証したうえで起こし、JSON で永続化する（[ステージ構成](../20-pipeline.md#ステージ構成)の `inspect_schema/`）。
 
@@ -20,7 +18,13 @@
 - `generate` — メタドキュメント（`__db/`）の描画と、レコードの出自（内蔵の prose / blob か）の判別
 - `tap_schema`（`mood tap --schema`）— カタログから tap 文書の JSON Schema を書き出す
 
-### 形
+## compose の出力は、カタログが宣言した形に一致する
+
+クエリの各句は、レコード変換（`apply`）とカタログの変換（`derive`）を同じ DSL 断片から対で持つ（`components/shared/query.py`）。`derive_queries` は `derive` でビューの出力の形を派生 entity としてカタログに載せ、`compose` は同じ `Query` の `apply` でレコードを作る。
+
+両者は同じ順で同じ句を通り、句ごとの対が整合しているので、compose の出力は derive_queries が宣言した形に一致する。下流（`generate` のメタドキュメント、`tap_schema`）はデータを見ずにカタログを信じてよい。句を足すときは両方を対で足す。
+
+## 形
 
 形は `components/shared/data_catalog.py` に定義する。表現は二つあり、Node / Edge の木が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
 

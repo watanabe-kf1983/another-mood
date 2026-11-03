@@ -38,7 +38,10 @@ def _with_minimum_version(minimum: str) -> str:
 
 
 def test_missing_manifest_fails(tmp_path: Path) -> None:
-    # Absent is never "assume the current generation".
+    """Keeps: design/Manifest › `sbdb_version` は必須で、省略時の既定を持たない
+
+    Absent is never "assume the current generation".
+    """
     with pytest.raises(MissingManifestError) as exc_info:
         read_manifest(tmp_path)
     message = exc_info.value.user_error_message
@@ -61,6 +64,7 @@ def test_title_is_optional(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("version", [0, 2, 999, -1])
 def test_rejects_unsupported_version(version: int, tmp_path: Path) -> None:
+    """Keeps: design/Manifest › 世代の宣言、下限の宣言、厳格パースの三つで、新旧の食い違いをはっきり失敗させる"""
     _write(tmp_path, f"sbdb_version: {version}\ntitle: Other\n")
     with pytest.raises(UnsupportedSbdbVersionError) as exc_info:
         read_manifest(tmp_path)
@@ -81,9 +85,12 @@ def test_gate_hint_depends_on_direction(tmp_path: Path) -> None:
 
 
 def test_gate_precedes_strict_validation(tmp_path: Path) -> None:
-    # A manifest from a future generation may carry keys we do not know.  The
-    # gate must fire first, so the user hears "unsupported generation" rather
-    # than "unknown key".
+    """Keeps: design/Manifest › 版を宣言する欄の位置と形は凍結する
+
+    A manifest from a future generation may carry keys we do not know.  The
+    gate must fire first, so the user hears "unsupported generation" rather
+    than "unknown key".
+    """
     _write(tmp_path, "sbdb_version: 2\nfuture_key: x\n")
     with pytest.raises(UnsupportedSbdbVersionError):
         read_manifest(tmp_path)
@@ -102,6 +109,7 @@ def test_gate_defers_ill_typed_version_to_validation(
 
 
 def test_tools_namespace_is_accepted(tmp_path: Path) -> None:
+    """Keeps: design/Manifest › minimum version はツールごとの欄で、`tools:` の下に置く"""
     _write(
         tmp_path,
         dedent(
@@ -138,6 +146,7 @@ def test_exactly_running_version_passes(tmp_path: Path) -> None:
 
 
 def test_unsatisfied_minimum_version_fails(tmp_path: Path) -> None:
+    """Keeps: design/Manifest › 世代の宣言、下限の宣言、厳格パースの三つで、新旧の食い違いをはっきり失敗させる"""
     _write(tmp_path, _with_minimum_version('"999.0"'))
     with pytest.raises(MinimumVersionError) as exc_info:
         read_manifest(tmp_path)
@@ -182,8 +191,11 @@ def test_minimum_version_gate_precedes_strict_validation(tmp_path: Path) -> None
     ],
 )
 def test_rejects_non_version_minimum(minimum: str, tmp_path: Path) -> None:
-    # Operators and ranges are not part of the field's shape — they fail as
-    # "not a valid version", no bespoke rejection rule needed.
+    """Keeps: design/Manifest › minimum version は検証済みの下限で、素のバージョンだけを受ける
+
+    Operators and ranges are not part of the field's shape — they fail as
+    "not a valid version", no bespoke rejection rule needed.
+    """
     _write(tmp_path, _with_minimum_version(minimum))
     with pytest.raises(ManifestError) as exc_info:
         read_manifest(tmp_path)
@@ -210,9 +222,12 @@ def test_ill_shaped_minimum_version_defers_to_validation(
 
 
 def test_rejects_unknown_key_in_mood_namespace(tmp_path: Path) -> None:
-    # tools.another-mood is our vocabulary, so unknown keys (e.g. a typo'd
-    # minimum_version) must fail loudly.  Other processors' namespaces stay
-    # opaque — see test_tools_namespace_is_accepted.
+    """Keeps: design/Manifest › 知らない入力は、黙って読み飛ばさずエラーにする
+
+    tools.another-mood is our vocabulary, so unknown keys (e.g. a typo'd
+    minimum_version) must fail loudly.  Other processors' namespaces stay
+    opaque — see test_tools_namespace_is_accepted.
+    """
     _write(
         tmp_path,
         'sbdb_version: 1\ntools:\n  another-mood:\n    minimum_versoin: "0.0.1"\n',
