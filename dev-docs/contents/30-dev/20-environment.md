@@ -94,3 +94,7 @@ VSCode 拡張パネルで拡張テーブルの全拡張がインストールさ�
 | playwright | ヘッドレスブラウザ駆動。Mermaid 等の生成図を実機レンダリングして見た目を検証する用途。`--headless` 固定 |
 
 language-server は pyright-langserver を `--stdio` で起動する。
+
+playwright の作業ファイルは、`.gitignore` 済みの `.playwright-mcp/` 配下に集約する。ページスナップショットと console ログは MCP サーバが自動でここに出す。
+
+スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する（既定では cwd 直下に落ちて散らかる）。

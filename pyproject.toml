@@ -127,6 +127,9 @@ select = [
     "T20",             # flake8-print: forbid print() / pprint()
     "PLW1514",         # require explicit encoding= on open() / read_text / write_text
 ]
+# RET (flake8-return) is left out on purpose: RET505 would strip the `else`
+# after a returning branch, which the control-flow rule in DEVELOPMENT.md
+# keeps as a marker of the conditional region.
 
 # CLI is the boundary that turns business-logic return values into terminal
 # output, so it is the only production module allowed to call print().

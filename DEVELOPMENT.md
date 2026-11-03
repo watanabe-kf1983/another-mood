@@ -4,14 +4,13 @@
 
 ### 開発ワークフロー
 
-- 各タスクは「1タスク・1 Git ブランチ」で進める
-- タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する。失敗する場合は、環境の問題ならセットアップ節を、コードの問題ならタスク着手前に修正する
+- タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する
 - タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出るとスクリプトが lock 単独 PR の作成（push を含む）まで行うので、その PR を merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
 - コミットメッセージ・プルリクエストは **英語**
 
 ### セットアップ
 
-ツールの動作には [uv](https://docs.astral.sh/uv/) が必要。インストール後 `uv sync` で依存を解決する。
+環境構築は [dev/setup.md](.another-mood/dev-docs/output/web/prose/30-dev/10-setup.md)。
 
 このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/web/index.md](.another-mood/dev-docs/output/web/index.md)。
 
@@ -19,9 +18,9 @@
 
 ### ドキュメント
 
-情報は種類ごとに正本を一つ持つ。コードから復元できないもの（約束、意図、不変条件、判断の過程）だけを文書にし、コードから読めるもの（機構、現在の挙動）は書かない。同じ内容を二箇所に書かない。
+何かを知りたいとき、開く場所は情報の種類ごとに一つ。コードから読めるもの（機構、現在の挙動）はコードを読む。文書が持つのは、コードから復元できないもの（約束、意図、不変条件、判断の過程）だけ。
 
-正本は「何についてか」と「どの深さか」の二軸で決まる。各行は左から読み、必要なときだけ右へ進む:
+開く場所は「何についてか」と「どの深さか」の二軸で決まる。各行は左から読み、必要なときだけ右へ進む:
 
 | | 導線・約束（まず読む） | 精密な条件（必要なときに開く） | 実際の姿（実装の写し） |
 |---|---|---|---|
@@ -31,20 +30,23 @@
 
 契約は左上の `docs/reference/` だけで、破壊的変更の判定はその diff で行う。他の欄は安定させる意図があっても約束ではなく、変更はリリースノートの義務を生まない。
 
-格子が持つのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別に置く:
+格子にあるのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別の場所で読む:
 
-- **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は PR 本文に置く
-- **次に何をするか** — 目的は `dev-docs/concept/`、タスクは GitHub Issues
+- **なぜそうなったか** — 意図は対象と同じ場所にある（該当する欄の中の一文）。そこに至った過程（比較、却下案、経緯）は PR 本文、つまり main の git log
+- **次に何をするか** — 目的は `dev-docs/concept/`、やることは GitHub Issues
 
-言語は `docs/` が英語、`dev-docs/` が日本語。各置き場の読者、書き方（何を書き、何を書かないか）、インデックスの更新手順は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
+言語は `docs/` が英語、`dev-docs/` が日本語。書く側の規約（各置き場の読者、何を書き何を書かないか、インデックスの更新）は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
 
 ### 実装
 
 - コード内コメントは **英語**
-- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**
-- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す。設計はその意図とともに `dev-docs/design/`、設計に至った経緯は PR 本文へ
+- 散文では `Another Mood`、パス・パッケージ名等の識別子では `another-mood` / `another_mood`、コマンドは `mood`（表記規約は [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md)）
+- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**。版の制約は下限のみ（規約は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
+- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す
 
 #### パッケージ構成と依存ルール
+
+主な登場人物。網羅ではない:
 
 ```
 another_mood/
@@ -56,15 +58,13 @@ another_mood/
 │   ├── preprocess/         #   入力の正規化・スキーマ解釈・クエリ導出
 │   ├── composer/           #   合成: データ + クエリ → ビュー
 │   ├── generator/          #   生成: ビュー + テンプレート → Markdown
-│   ├── publish/            #   出力の書き出し
-│   ├── scaffold/           #   プロジェクト初期化・ブループリント
-│   └── docs_catalog/       #   バンドル済みドキュメントの目録
+│   └── publish/            #   出力の書き出し
 ├── pipeline/               # オーケストレーション: ステージ実行
 │   └── adapters/           #   外部ツール連携（Hugo, watchdog）
 └── resources/              # 静的リソース
 ```
 
-依存方向: `cli` → `command` → `pipeline` → `components/*` → `components/shared`
+依存方向: `cli` → `command` → `pipeline` → `components/*` → `components/shared`。コンポーネントは互いも pipeline も import しない。各層の役割とステージの構成は [design/Architecture](.another-mood/dev-docs/output/web/prose/20-design/20-internal/10-architecture.md)。
 
 #### コードスタイル
 
@@ -74,55 +74,28 @@ another_mood/
 - **関数の並び順（Newspaper style）**: 公開 API を先頭、ヘルパーを後ろ。ヘルパーはパイプライン順
 - **`@dataclass` は `frozen=True`**: `__init__` ボイラープレート削減目的、immutable がデフォルト
 - **制御フローは論理の形に合わせる**: 両枝が対等な結果を返す *対称な分岐* は `if/else`（両枝が `return` でも `else` を畳まない）。前提失敗・エラー・エッジを先頭で剥がす *非対称な bail-out* のみ guard clause（早期 `return`）
-    - `else` とインデントは条件付き領域の境界情報なので、機能的に冗長でも残す（*explicit is better than implicit*）。`else` を機械的に除去させる pylint `no-else-return` / ruff `RET505` は採らない（RET は `select` 外）
+    - `else` とインデントは条件付き領域の境界情報なので、機能的に冗長でも残す（*explicit is better than implicit*）
 
 #### テスト
 
-- **カバレッジ計測対象**: `components/`。Statements + Branches トータルで 90% 以上
+- **単体テストで覆うのは `components/`**: ビジネスロジックはここに置き、`cli` / `command` / `pipeline` は薄く保つ。カバレッジ（statements + branches）は `make ci` が 90% で守る
 - **フィクスチャ**: ファイルベース、モジュール隣接型。期待値はテストコード内に記述
 - **約束を守るテストは、守る約束を名乗る**: docstring の一行目に、契約の節（`Keeps: docs/reference/view.md › Missing-key placement`）か外部設計の見出し（`Keeps: design/View › flatten 後の行は、親の属性を残し、要素を as: の下に置く`）を書く
     - 名乗るのは、その約束を破ったとき最初に落ちるテストだけでよく、網羅は求めない。契約や外部設計の節を変えるときは、節名で grep して名乗るテストを直す
 
-#### 動作確認 (`mood watch` + Playwright MCP)
+#### 動作確認
 
-`showcase/` や `dev-docs/` のテンプレート変更を実機で確認するときは `mood watch <project_dir> --port <port>` でローカルプレビューを上げ、必要なら Playwright MCP でレンダリングを観る。
-
-Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwright-mcp/` 配下に集約する:
-
-- ページスナップショット / console ログは Playwright MCP が自動でこのディレクトリに出す
-- スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する (デフォルトは cwd 直下に落ちて散らかる)
-
-検証目的のスクショは再現可能なので、コミット前に削除して構わない。
-
-#### タスクの進め方
-
-非自明な機能追加・変更では、まず方針を合意してから着手する。以降の手順:
-
-1. 以下をタスクに応じた順序で進める:
-    - **showcase/ のテンプレートに入出力例を作成**
-    - **単体テストを記述**
-    - **実装**
-2. **showcase/ で動作確認**
-3. **`docs/` を同期** — 利用者が書ける形・得られる形（CLI / スキーマ / クエリ / テンプレート、内蔵リソース等）が変わったら `docs/` の該当箇所を更新する。変えた節を名乗るテストも直す
-4. **設計の記録** — 層やステージの分担・つながりか、それらをまたぐ約束を変えたら `dev-docs/design/` の内部構造を直す。利用者から見える振る舞いのうち意図して保つものを変えたら、`dev-docs/design/` の外部設計を直し、守るテストにその見出しを名乗らせる
-    - 実装上の理由による判断のうち、一つの層やステージの中に閉じたものは、破る変更が起きる箇所のコメントに書く。理由と経緯は PR 本文に書く
-5. `make ci` を通してコミット → プルリク作成
+テンプレートの変更を実機で確かめるときは `mood watch <project_dir> --port <port>` でプレビューを上げ、必要なら Playwright MCP で観る（作業ファイルの置き場は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/20-environment.md) の MCP サーバ節）。
 
 ### プルリクエスト
 
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。
+PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
-merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の背景もトレーラーも黙って失われる。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
+リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く。kind は `breaking` / `feature` / `fix`:
 
-リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
+    Release-Highlight: <kind>
 
-    Release-Highlight: fix
-
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。
-
-見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
-
-破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務とリリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
+`breaking` だけは義務で、`## Breaking change` セクションを伴う。kind の選び方、破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 
 ## Documentation (Reference)
 
