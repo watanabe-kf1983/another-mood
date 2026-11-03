@@ -225,6 +225,24 @@ class TestOptionalFK:
         )
         assert list(check_fk_data(catalog, data)) == []
 
+    def test_empty_string_is_a_value_not_an_absence(self, tmp_path: Path) -> None:
+        catalog = _catalog(self.CATALOG)
+        data = _data(
+            """
+            labels:
+              - id: moonlit
+                name: Moonlit
+            albums:
+              - id: a1
+                label_id: ""
+            """,
+            tmp_path,
+        )
+        diagnostics = check_fk_data(catalog, data)
+        assert [_summary(d) for d in diagnostics] == [
+            (6, "x-ref albums.label_id = '' has no match in labels.id"),
+        ]
+
 
 class TestNestedFromEntity:
     """FK declared on a nested (child) entity attribute."""

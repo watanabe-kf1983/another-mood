@@ -20,7 +20,7 @@
 
 リスト要素に `id` フィールドが無い場合（Array pattern で id を要求していないスキーマ）、その要素はアンカーパスを持たない。到達経路を表現する手段がないため、配下のオブジェクトもアンカーパスを持たない。Array 直下の Array も同様。
 
-class（[schema-spec.md](../45-schema/10-schema-spec.md) の Entity ID および ObjectType ID）は schema 上の位置を示す **型レベルの識別子** で、データツリー上の実体パスであるアンカーパスとは直交する。class はアンカーパスの構築には登場しない。
+class（[データカタログ](../../20-internal/30-communication/20-data-catalog.md#形)の entity の id および ObjectType の id）は schema 上の位置を示す **型レベルの識別子** で、データツリー上の実体パスであるアンカーパスとは直交する。class はアンカーパスの構築には登場しない。
 
 #### 一意性
 
