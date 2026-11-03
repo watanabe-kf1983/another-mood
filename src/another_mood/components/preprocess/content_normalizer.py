@@ -133,7 +133,10 @@ def _is_blob_to_mirror(src_file: Path, data: object) -> bool:
             # blob records come from files only: a record in a YAML source
             # has no bytes behind it (or merely duplicates the file-derived
             # record), and would otherwise surface as a raw
-            # FileNotFoundError in generate.
+            # FileNotFoundError in generate. Keep it this way: a path that
+            # only a file-derived record can carry is never read back from
+            # user data, so no hand-written id gets interpreted as a path
+            # (no traversal, no re-reading of YAML as bytes).
             raise FileValidationError(
                 diagnostics=[_handwritten_blob(record["id"]) for record in records]
             )
