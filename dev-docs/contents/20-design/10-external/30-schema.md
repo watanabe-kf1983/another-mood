@@ -1,162 +1,162 @@
 # Schema
 
-`docs/reference/schema.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`inspect_schema`、`normalize_contents`、`generate`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。
+Behavior kept on purpose, outside the contract of `docs/reference/schema.md`. The stage names in this chapter (`inspect_schema`, `normalize_contents`, `generate`) are those of the [stage table of the internal structure](../20-internal/20-pipeline.md#stages).
 
-本文で使う語:
+Terms used in this chapter:
 
-- **x-ref** — あるプロパティの値が他の entity のレコードを指すという宣言（`docs/reference/schema.md` の Entity references）
-- **singleton** — コレクションではない一件だけのオブジェクト（同 Single-record pattern）
-- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ
+- **x-ref** — the declaration that a property's value points at a record of another entity (Entity references in `docs/reference/schema.md`)
+- **singleton** — a single object that is not a collection (Single-record pattern, same document)
+- **database pages** — the pages under `__db/` that the tool draws automatically from the schema and view definitions
 
-## スキーマ言語
+## Schema language
 
-### JSON Schema から削るのは、データモデルとして読めなくする構文
+### What is removed from JSON Schema is the syntax that stops it from reading as a data model
 
-`definition/schema.yaml` は JSON Schema draft 2020-12 のサブセット。何を受け付けるかの一覧は `docs/reference/schema.md` にある。
+`definition/schema.yaml` is a subset of JSON Schema draft 2020-12. The list of what is accepted is in `docs/reference/schema.md`.
 
-削る基準は一つ。スキーマを検証規則の束ではなく、[データモデル](../../10-concept/10-product.md#データモデル-規律を与えた-json-の木)の宣言として読める形に保つこと。どの構文も entity（同じ形のレコードの集合）と attribute（一つの型を持つ値）に一対一で落ちる。クエリとテンプレートはこの形を前提に書ける。
+There is one criterion for removal: keep the schema readable as the declaration of a [data model](../../10-concept/10-product.md#data-model-a-json-tree-with-discipline), not as a bundle of validation rules. Every construct maps one-to-one onto an entity (a set of records of the same shape) or an attribute (a value with one type). Queries and templates can be written assuming this shape.
 
-JSON Schema の表現力を足したくなったときは、この一対一が保てるかで判断する。削った構文と、その代わりに書く形:
+When tempted to add expressive power from JSON Schema, judge by whether this one-to-one mapping survives. The removed constructs, and what to write instead:
 
-| 削った構文 | 代わりに |
+| Removed construct | Instead |
 |---|---|
-| 合成・条件（`allOf` / `anyOf` / `oneOf` / `not` / `if`）、`type` の配列形、`null` 型 | 型ごとに attribute を分ける（`contact` → `email` と `address`）。値が無いことはキーを省いて表す |
-| `$ref` / `$defs` | 同じ形のレコードが複数の位置に現れるなら、一つの entity に集めて x-ref で指す。型だけを共有したいなら二度書く。定義へ飛ばずに上から下へ読めることを、重複を省くことより優先する |
-| 素の `type: object`、`items` の無い `type: array` | 形の定まらないデータは string の attribute で持つ |
-| `$comment` | YAML のコメント |
+| Composition and conditionals (`allOf` / `anyOf` / `oneOf` / `not` / `if`), the array form of `type`, the `null` type | Split attributes by type (`contact` → `email` and `address`). Express the absence of a value by omitting the key |
+| `$ref` / `$defs` | If records of the same shape appear in several places, gather them into one entity and point at it with an x-ref. If only the type is to be shared, write it twice. Reading top to bottom without jumping to a definition matters more than avoiding duplication |
+| Bare `type: object`, `type: array` without `items` | Data of indeterminate shape is held as a string attribute |
+| `$comment` | YAML comments |
 
-スキーマは一つのファイル・一つのルートで、ルートの `properties` に各 entity への入口が並ぶ。API を流れる切れ端ごとに名前付きの型を並べる OpenAPI の `components.schemas` とは逆の形で、`contents/` に蓄積された一つのデータ総体を一つのオブジェクトとして宣言する。
+The schema is one file with one root, and the root's `properties` lists the entry to each entity. It is the opposite shape to OpenAPI's `components.schemas`, which lists a named type for every fragment flowing through an API: it declares the one body of data accumulated in `contents/` as one object.
 
-### スキーマに書いたリテラルも、宣言した型に合わせる
+### Literals written in the schema also follow the declared type
 
-`default` / `examples` / `enum` / `const` の値は、同じ宣言の `type` に一致しなければエラーにする。`type: string` に `default: 5` は通らない。JSON Schema 自体はこれを検査しない。
+The values of `default` / `examples` / `enum` / `const` must match the `type` of the same declaration, or it is an error. `default: 5` under `type: string` does not pass. JSON Schema itself does not check this.
 
-理由は二つ。食い違いは常に書き誤りで、黙って通すとメタドキュメントの `default` の表示が型と矛盾したまま出る。
+Two reasons. A mismatch is always a writing mistake, and if it passed silently, the `default` shown on the database pages would contradict the type.
 
-もう一つ、スキーマに書いた値はデータでもある。[データカタログ](../20-internal/30-communication/20-data-catalog.md)に転記されて永続化され、`generate` が読み直す。だから [JSON データモデル](../20-internal/30-communication/10-json-data-model.md)の制約が及ぶ。
+Also, a value written in the schema is data too. It is copied into the [data catalog](../20-internal/30-communication/20-data-catalog.md), persisted, and read back by `generate`. So the constraints of the [JSON data model](../20-internal/30-communication/10-json-data-model.md) apply.
 
-YAML が `2024-01-01` から作る日付型は JSON で表せず、宣言できるどの `type` にも一致しない。リテラルに型の一致を求めれば、日付型がパイプラインに入る口は塞がる。
+The date type YAML makes from `2024-01-01` cannot be represented in JSON and matches no declarable `type`. Requiring literals to match their type closes the door through which a date type could enter the pipeline.
 
-`docs/` には書かない。利用者がこれに出会うのはビルドが止まったときで、エラーがその行と列を指す。
+Not written in `docs/`. The user meets this when the build stops, and the error points at the line and column.
 
 ## x-ref
 
-`docs/reference/schema.md` の Entity references の背後で保つもの。
+What is kept behind Entity references in `docs/reference/schema.md`.
 
-### `type: string` のプロパティにだけ付けられる
+### Only a `type: string` property can carry one
 
-参照の照合は文字列同士の比較で行う。参照先の `id` は常に string（[map pattern のキーから作る id は常に string](#map-pattern-のキーから作る-id-は常に-string)）。integer のプロパティに x-ref を許すと、`2024` と `"2024"` が一致せず、型の違いが参照切れの警告として現れて原因が見えにくい。
+References are matched by comparing strings. The target `id` is always a string ([An id made from a map pattern key is always a string](#an-id-made-from-a-map-pattern-key-is-always-a-string)). Allowing an x-ref on an integer property would make `2024` and `"2024"` fail to match, and the type difference would surface as a dangling-reference warning whose cause is hard to see.
 
-### 参照先は、ルートから別のコレクションを越えずに届く entity に限る
+### The target must be an entity reachable from the root without crossing another collection
 
-入れ子のコレクション（`screens.buttons`）は親レコードの一部で、親と一体で読み書きされる。他から参照したくなったら、独立した entity に切り出すべき合図。入れ子のパスを参照先に書ける構文拡張ではなく、データモデルの側で直す。
+A nested collection (`screens.buttons`) is part of the parent record, read and written as one with it. Wanting to reference it from elsewhere is the signal to extract it as an independent entity. Fix it on the data model side, not with a syntax extension that lets a nested path be written as a target.
 
-機械的な理由もある。レコードの id は[兄弟の間でだけ一意](#兄弟の間でだけ一意)なので、全 screen の button を集めた集合には同じ id が重複しうる。参照先として意味を持つのは、id がその中で一意なコレクションだけ。singleton はコレクションではないので、`site_config.items` は越えていない。
+There is a mechanical reason too. A record's id is [unique only among siblings](#unique-only-among-siblings), so the set of every screen's buttons may hold duplicate ids. Only a collection within which ids are unique is meaningful as a target. A singleton is not a collection, so `site_config.items` does not cross one.
 
-カタログの自己記述 `__definition.*` も参照先にしない。スキーマのメタデータへの参照はデータの関係ではない。
+The catalog's self-description `__definition.*` is not a target either. A reference to schema metadata is not a relation in the data.
 
-### 意味は「参照先の値の集合を enum にした検査」
+### Its meaning is an enum check against the set of the target's values
 
-値が参照先 attribute の値の集合に含まれるかを見る、enum 検証の動的版。この見方から周辺の扱いが決まり、個別の規則を持たない:
+It checks whether the value is in the set of the target attribute's values: a dynamic version of enum validation. The surrounding treatment follows from this view, with no rules of its own:
 
-- 値が無ければ検査しない（required でないプロパティの省略）。適用する enum が無い
-- 空文字列は普通の値。参照先に `""` が無ければ参照切れ
-- 自己参照（`genres.parent_id` → `genres`）に特別な規則は要らない。集合に自分も入っているだけ
-- 循環の検出や多重度（1:N、N:M）は x-ref の責務の外
+- No value, no check (a non-required property omitted). There is no enum to apply
+- The empty string is an ordinary value. If the target has no `""`, the reference dangles
+- A self-reference (`genres.parent_id` → `genres`) needs no special rule. The set just includes itself
+- Cycle detection and multiplicity (1:N, N:M) are outside the responsibility of x-ref
 
-前提は、参照先の集合が一つに決まること。値によって参照先が変わるプロパティ（多重ターゲット）は持たず、x-ref を付けずに自由な文字列として持つ。
+The premise is that the target set is uniquely determined. A property whose target depends on the value (multiple targets) is not supported; hold it as a free string without an x-ref.
 
-### 参照切れはビルドを止めない
+### A dangling reference does not stop the build
 
-スキーマ側の不整合（存在しない entity や attribute を参照先に書く）は、データを読む前にビルドを止める。データ側の参照切れは警告にとどめ、ページは描く。
+An inconsistency on the schema side (a target naming a nonexistent entity or attribute) stops the build before the data is read. A dangling reference on the data side is only a warning, and the pages are drawn.
 
-書いている途中のデータは参照先が揃っていないのが普通で、揃うまでビルドが見られないと、書いて確かめる往復が止まる。x-ref は property 単位の opt-in なので、警告は付けた分しか出ない。CI で弾くには `--strict`（`docs/reference/cli.md`）。
+Data in the middle of being written normally has targets not yet in place, and if the build could not be seen until they were, the write-and-check loop would stall. x-ref is opt-in per property, so warnings appear only where it was added. To reject them in CI, use `--strict` (`docs/reference/cli.md`).
 
-## `contents/` の読み方
+## How `contents/` is read
 
-### JSON は、他のプログラムが一度きり出力したものの受け口
+### JSON is the inlet for what another program emitted once
 
-手で書くなら YAML、JSON は他のプログラムの出力向け、という勧め（`docs/reference/cli.md` の Which files are read）の背後にある位置づけ。JSON は、LLM の構造化出力・ビルドツール・cron のジョブのように、別のプログラムが一度出力して終わるデータを取り込む入口である。
+Behind the advice to write YAML by hand and reserve JSON for the output of other programs (Which files are read in `docs/reference/cli.md`). JSON is the entry for data that another program emits once and is done with, such as an LLM's structured output, a build tool, or a cron job.
 
-手で書く人や、対話しながら書くエージェントは、ビルドを回してエラーを直す往復ができる。こうした書き手には、Git の差分が読みやすい YAML が向く。一度出力して終わるプログラムにはその往復がないので、そのプログラムが出せる形式で受ける必要がある。LLM の構造化出力が JSON 向けに作られているのが典型である。
+A person writing by hand, or an agent writing interactively, can run the build and fix errors in a loop. For such writers, YAML with its readable Git diffs suits. A program that emits once has no such loop, so its data must be accepted in the format it can produce. An LLM's structured output being built for JSON is the typical case.
 
-### 重複したキーはエラーにする
+### Duplicate keys are errors
 
-一つのファイルの中で同じキーが二度現れたら、後の値を採らずエラーにする。YAML でも JSON でも、contents に限らず schema や views のファイルでも同じ。理由はデータの側にあるのでここに置く。
+If the same key appears twice in one file, it is an error, and the later value is not taken. The same in YAML and JSON, and not only in contents but in schema and view files too. The reason lies on the data side, so it is placed here.
 
-JSON の仕様（RFC 8259）は重複キーの扱いを実装に任せ、多くの実装は黙って後の値を採る。黙って値が消えるより止まるほうが安全。
+The JSON specification (RFC 8259) leaves duplicate keys to the implementation, and many implementations silently take the later value. Stopping is safer than a value silently vanishing.
 
-`docs/` には書かない。利用者がこれに出会うのはビルドが止まったときで、エラーが他の構文エラーと同じく行と列を指す。
+Not written in `docs/`. The user meets this when the build stops, and the error points at the line and column like any other syntax error.
 
-### 一つのコレクションを複数のファイルに分けて書ける
+### One collection can be written across several files
 
-`contents/` のファイルはそれぞれが木の一部で、全ファイルを一つの木に合流させてから後段へ渡す。合流は深い併合で、オブジェクトは再帰的に、配列は連結で合わせる。同じコレクションのレコードを話題ごとのファイルに分けて書けるようにするためで、ファイルの分け方はデータの形に影響しない。
+Each file in `contents/` is part of the tree, and all files are merged into one tree before being passed downstream. The merge is deep: objects recursively, arrays by concatenation. This lets the records of one collection be written in files per topic, and how the files are divided does not affect the shape of the data.
 
-したがって、レコードの id の重複や x-ref（他のレコードへの参照。`docs/reference/schema.md` の Entity references）の解決は、ファイル単位ではなく合流後の木で検査する。
+Accordingly, duplicate record ids and x-refs (references to other records; Entity references in `docs/reference/schema.md`) are checked on the merged tree, not per file.
 
-## レコードの id
+## Record ids
 
-### 兄弟の間でだけ一意
+### Unique only among siblings
 
-同じ配列に並ぶレコード同士が同じ id を持つと、エラーにする。親が違えば、同じ id でも別のレコードであり衝突しない。レコードの住所（アンカーパス。`docs/reference/template.md` の Anchor paths）は親の住所に id をつないで作るので、兄弟の間で一意であれば住所も一意になる。
+Records in the same array sharing an id is an error. With different parents, the same id means different records and does not collide. A record's address (its anchor path; Anchor paths in `docs/reference/template.md`) is made by appending the id to the parent's address, so uniqueness among siblings makes the address unique too.
 
-### map pattern のキーから作る id は常に string
+### An id made from a map pattern key is always a string
 
-map pattern を配列に直すとき、キーはそのまま `id` になる。YAML のキーには数値・真偽値・日付も書ける（`2024:` は整数として読まれる）が、string でないキーは文字列に変換して id にする。理由:
+When a map pattern is turned into an array, the key becomes the `id` as is. A YAML key can be a number, boolean, or date (`2024:` is read as an integer), but a non-string key is converted to a string for the id. Reasons:
 
-- ステージ間で受け渡す中間ファイルは JSON で（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md#シリアライズ形式)）、YAML のキーには日付のように JSON で表せない型もある
-- [データカタログ](../20-internal/30-communication/20-data-catalog.md)は id を string と宣言している。実データの型を宣言に合わせる
-- x-ref は string 型の attribute にしか付けられない（`docs/reference/schemas/schema-schema.yaml`）。id が string なら、参照の照合は string 同士の比較で済む
-- アンカーパスを組み立てる側が、id を常に string と前提できる
+- The intermediate files passed between stages are JSON ([JSON data model](../20-internal/30-communication/10-json-data-model.md#serialization-formats)), and YAML keys can have types such as dates that JSON cannot represent
+- The [data catalog](../20-internal/30-communication/20-data-catalog.md) declares id as a string. The actual data's type follows the declaration
+- An x-ref can only be placed on a string attribute (`docs/reference/schemas/schema-schema.yaml`). If ids are strings, matching references is a comparison of strings
+- Whoever assembles anchor paths can assume ids are always strings
 
-`docs/reference/` にはこの変換を書かない。`2024:` のような整数のキーを書く利用者は「2024 という名札」のつもりで書いており、結果がその期待と一致するので、説明が要らない。
+`docs/reference/` does not describe this conversion. A user writing an integer key such as `2024:` means "a label that says 2024", and the result matches that expectation, so no explanation is needed.
 
 ## prose
 
-### id に読む順を符号化し、id の安定は捨てる
+### The reading order is encoded in the id, and id stability is given up
 
-prose の id は `contents/` からの相対パス（拡張子なし）そのもので、読む順は id の文字列順で決まる。順序を表す別のチャネル（front-matter、目次ファイル）は持たないので、順序はファイル名で表す。
+A prose id is the relative path from `contents/` (without extension) itself, and the reading order is the string order of ids. There is no separate channel for order (front matter, a table-of-contents file), so order is expressed in file names.
 
-ゼロ埋め・隙間空きの番号 prefix（`10-architecture.md`。フォルダの `index` には振らない）はその一つの運用で、dev-docs がそう使っている。
+Zero-padded, gapped number prefixes (`10-architecture.md`; a folder's `index` gets none) are one such practice, and dev-docs uses it.
 
-次の三つは同時に満たせない:
+The following three cannot all hold at once:
 
-- **読む順がファイルシステム上で見える** — 順序をファイル名に入れる必要があり、id がパスそのものなら順序は id にも入る
-- **id が並べ替えに対して安定する** — 文書間のリンクは id を住所に使うので、安定しなければ並べ替えでリンクが壊れる。一つ目と両立しない
-- **id の一意性をファイルシステムが担保する** — id を別に宣言すれば上の二つは両立するが、これを失い、重複検査を自前で持つことになる
+- **The reading order is visible on the file system** — the order has to be in the file name, and if the id is the path itself, the order is in the id too
+- **The id is stable under reordering** — links between documents use the id as the address, so unless it is stable, reordering breaks links. Incompatible with the first
+- **The file system guarantees id uniqueness** — declaring the id separately reconciles the first two, but loses this, and a duplicate check has to be kept in-house
 
-この判断は二つ目を捨てる。散文の章立ては早く安定し、番号に隙間を空ければ挿入で振り直しは起きない。並べ替えで壊れたリンクは `generate` のリンク解決が報告する。
+This decision gives up the second. A prose chapter structure settles early, and gapped numbers mean insertion needs no renumbering. Links broken by reordering are reported by `generate`'s link resolution.
 
-### 順序の導出はレコード、ソートはテンプレート
+### Order derivation is per record; sorting is the template's
 
-`order_key` と `depth` は id だけから導出できるので、レコードごとに `normalize_contents` が付ける。並べ替えは collection が揃わないとできないので、テンプレート側（`sort(attribute="order_key")`）に置き、並べ替え済みの prose は提供しない。
+`order_key` and `depth` can be derived from the id alone, so `normalize_contents` attaches them per record. Sorting needs the whole collection, so it is placed on the template side (`sort(attribute="order_key")`), and no pre-sorted prose is provided.
 
-フォルダ木を見出しの入れ子として一冊に綴じる使い方（`dev-docs/definition/reports.yaml` の book edition）は、この二つと `under_heading` フィルタ（`docs/reference/template.md`）だけで書ける。
+Binding a folder tree into one book with nested headings (the book edition in `dev-docs/definition/reports.yaml`) can be written with just these two and the `under_heading` filter (`docs/reference/template.md`).
 
-### 見出しの id は GitHub 互換の slug
+### Heading ids are GitHub-compatible slugs
 
-見出しの id は見出しテキストから導出する GitHub 互換の slug にする（`## API の設計` → `api-の設計`）。見出しへのリンクが、このツールの Hugo 出力・GitHub・VS Code のプレビューのどれで見ても同じ場所に着地するため。規則の正本は `github_slug` の docstring。
+A heading's id is the GitHub-compatible slug derived from the heading text (`## API の設計` → `api-の設計`). A link to a heading then lands in the same place whether viewed in this tool's Hugo output, on GitHub, or in VS Code's preview. The source of truth for the rule is the docstring of `github_slug`.
 
-`{#id}` のような明示記法は採らない。テキスト由来なら id と見出しが乖離しないため。id の安定は「変わらないこと」ではなく「壊れた参照はビルドが報告すること」で担保する。
+Explicit notation such as `{#id}` is not adopted. Derived from the text, the id and the heading cannot drift apart. Id stability is secured not by "never changing" but by "the build reports a broken reference".
 
-### 相対リンクは `node:` 化し、同一ページ内の `#fragment` は変換しない
+### Relative links become `node:`; a `#fragment` within the same page is not converted
 
-本文中の、`contents/` 内に解決する相対リンクはすべて `node:` 記法（レコードの住所で宛先を指す書き方。`docs/reference/template.md` の Anchor paths）に書き換える。
+Every relative link in the body that resolves within `contents/` is rewritten to `node:` notation (addressing the target by a record's address; Anchor paths in `docs/reference/template.md`).
 
-edition ごとに分割粒度が変わると（`docs/reference/reports.md`）リンク先のページも変わるので、生の相対パスを残すと別の分割の出力で壊れる。`node:` 化して `generate` の解決に委ねれば、出力構造が変わってもリンクが追従する。`#fragment` も同じ理由で `node:` URI に乗せて運ぶ。
+When the split granularity changes per edition (`docs/reference/reports.md`), the target's page changes too, so a raw relative path left as is breaks in the output of another split. Converted to `node:` and left to `generate`'s resolution, links follow even when the output structure changes. A `#fragment` rides on the `node:` URI for the same reason.
 
-一方、純粋な `#fragment` は変換しない。prose は必ず一つのファイル全体が一ページに描かれるので、同一文書内の参照は常に同じページ内に着地し、壊れない。
+A pure `#fragment`, on the other hand, is not converted. A prose file is always drawn whole onto one page, so a reference within the same document always lands within the same page and does not break.
 
-書き換えはレキシカルで、リンク先が存在するかはここでは見ない。存在の検証は `generate` のリンク解決に委ね、壊れていれば目立たせる（[Template](50-template.md#未解決の参照は-text-で目立たせる)）。
+The rewrite is lexical; whether the target exists is not checked here. Existence is left to `generate`'s link resolution, and a broken one is made conspicuous ([Template](50-template.md#an-unresolved-reference-is-made-conspicuous-as-text)).
 
-リンクを x-ref として検査することもしない。x-ref はクエリでの結合先を保証するデータの関心で、リンクは出力世界の関心。だから見出しへのリンクを x-ref で縛ったり、見出しを entity に起こしたりはしない。
+Links are not checked as x-refs either. An x-ref is a data concern that guarantees a join target in queries; a link is a concern of the output world. So links to headings are not bound by x-refs, and headings are not raised into entities.
 
 ## blob
 
-### id は拡張子込み
+### The id includes the extension
 
-blob の id は `contents/` からの相対パスで、拡張子を含む。落とすと `fig.png` と `fig.jpg` が衝突する。prose の拡張子なし id は `.md` が唯一の拡張子だから成立する省略で、blob には適用しない。
+A blob id is the relative path from `contents/`, extension included. Dropping it would make `fig.png` and `fig.jpg` collide. The extensionless prose id is an omission that works only because `.md` is the sole extension, and it is not applied to blob.
 
-### バイト列はレコードに載せない
+### The bytes are not carried on the record
 
-blob のレコードは id と mime_type だけで、中身のバイト列を持たない。base64 で載せるとレコードが肥大し、メモリと Git の差分を壊す。id から実ファイルの位置が復元できるので、バイト列を出力まで運ぶ側（[運搬機構](../20-internal/30-communication/index.md#運搬機構)）はそこから読む。
+A blob record holds only id and mime_type, not the bytes of the content. Carrying them as base64 would bloat the record and break memory and Git diffs. The location of the real file can be recovered from the id, so the side that carries the bytes to the output ([transport](../20-internal/30-communication/index.md#transport)) reads from there.

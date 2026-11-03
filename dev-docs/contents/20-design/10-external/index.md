@@ -1,5 +1,5 @@
-# 外部設計
+# External Design
 
-利用者から見える振る舞いのうち、`docs/reference/` の契約にはしないが意図して保つものと、その理由。章は `docs/reference/` と同じ単位で立て、中身が入った章だけを置く。各項目は、どこで実装されているかによらず、その振る舞いを扱う章に書く。破ったときに気づけるよう、テストがその見出しを名乗る。
+Of the user-visible behavior, what we keep on purpose without making it a contract in `docs/reference/`, and why. The chapters follow the same units as `docs/reference/`, and only chapters with content are present. Each item is written in the chapter that covers the behavior, wherever it is implemented. So that breaking it is noticed, a test names the heading.
 
-例外は [Trust Model](70-trust-model.md) で、対応する `docs/reference/` のページを持たない。利用者には契約として見せないが、意図して保つ境界を扱う。
+The exception is [Trust Model](70-trust-model.md), which has no corresponding page in `docs/reference/`. It covers a boundary we keep on purpose but do not show the user as a contract.
