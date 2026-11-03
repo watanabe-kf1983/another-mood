@@ -24,7 +24,7 @@ type of marshaling.
 # member a subclass adds is callable from a template, and ``ensure_inert``
 # passes an already-inert container through without checking its exact type.
 # The seal is this discipline plus pyright, not a runtime check (see
-# design/テンプレート評価の境界 › marshal 契約).
+# design/Template evaluation boundary › The marshal contract).
 class InertMapping(dict[str, "InertValue"]):
     """An ``InertValue``-valued mapping — anchor-less base of ``MappingNode``.
 

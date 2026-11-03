@@ -145,7 +145,7 @@ class TestDanglingFK:
 
 
 class TestSelfReference:
-    """Keeps: design/Schema › 意味は「参照先の値の集合を enum にした検査」"""
+    """Keeps: design/Schema › Its meaning is an enum check against the set of the target's values"""
 
     CATALOG = """
         - id: genres
@@ -193,7 +193,7 @@ class TestSelfReference:
 
 
 class TestOptionalFK:
-    """Keeps: design/Schema › 意味は「参照先の値の集合を enum にした検査」"""
+    """Keeps: design/Schema › Its meaning is an enum check against the set of the target's values"""
 
     CATALOG = """
         - id: labels

@@ -475,7 +475,7 @@ _MEMBERS_SCHEMA = """
 
 
 def test_ids_duplicated_across_files_fail_validation(tmp_path: Path) -> None:
-    """Keeps: design/Schema › 一つのコレクションを複数のファイルに分けて書ける
+    """Keeps: design/Schema › One collection can be written across several files
 
     A content file copied beside itself: each validates on its own.
     """
@@ -527,7 +527,7 @@ _SITE_CONFIG_SCHEMA = """
 
 
 def test_top_level_singleton_split_across_files_is_merged(tmp_path: Path) -> None:
-    """Keeps: design/Schema › 一つのコレクションを複数のファイルに分けて書ける
+    """Keeps: design/Schema › One collection can be written across several files
 
     Each file validates on its own; the clash shows only once merged.
     """

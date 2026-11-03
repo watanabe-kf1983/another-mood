@@ -83,7 +83,7 @@ def make_environment(output_format: OutputFormat) -> Environment:
         # No `fuel` either: it budgets instructions, not bytes, so the memory
         # amplification a template can do passes under it while the limit
         # reads as protection.  Resource bounds are the runner's, at the OS
-        # layer (see design/テンプレート評価の境界 › DoS は閉じない).
+        # layer (see design/Template evaluation boundary › DoS is not closed).
     )
 
 

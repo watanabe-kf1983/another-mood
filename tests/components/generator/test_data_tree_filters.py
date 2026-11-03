@@ -158,7 +158,7 @@ class TestResolveNode:
         assert resolve_node(nodes, "members", "alice") is (nodes["/members/alice"])
 
     def test_resolves_verbatim_prose_path(self) -> None:
-        """Keeps: design/Template › id の中の `/` を素通しにするのは、組み込みの prose と blob だけ"""
+        """Keeps: design/Template › Only the built-in prose and blob pass a `/` inside an id through"""
         nodes = _node_map()
         assert (
             resolve_node(nodes, path="/prose/design/architecture")
@@ -240,7 +240,7 @@ class TestNodeLabel:
 
 class TestNodeHref:
     def test_cross_page_relative_path_with_fragment(self) -> None:
-        """Keeps: design/Reports › 各 edition とマウントは、自己完結した相対リンクの部分木"""
+        """Keeps: design/Reports › Each edition and each mount is a self-contained subtree of relative links"""
         nodes = _node_map()
         source = nodes["/by_role/dev"]
         target = nodes["/members/alice"]
@@ -356,7 +356,7 @@ class TestAbsentValues:
     """
 
     def test_absent_path_yields_no_reference(self) -> None:
-        """Keeps: design/Template › 欠損は何も描かず、エラーにもしない"""
+        """Keeps: design/Template › A missing value draws nothing, and is no error"""
         nodes = _node_map()
         # `/members/alice` exists, so an absent prefix that simply dropped out
         # would resolve to it — a wrong link rather than a visible miss.
