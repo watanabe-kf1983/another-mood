@@ -28,6 +28,3 @@
 - diff あり → スクリプトが `deps/lock-refresh-<date>` ブランチで lock 単独 PR を作る。CI 緑を確認して `gh pr merge <branch> --squash --delete-branch` で merge してから着手する。赤なら修正 or 除去条件付き cap で対応する
 - **lock 更新は機能 PR に同乗させない**。リグレッションの原因が機能変更か依存 bump かを分離できる形を保つ
 - タスク途中で特定の版が要るときは `uv lock --upgrade-package <name>` を直接使ってよい
-
-## 採らなかった選択肢
-
