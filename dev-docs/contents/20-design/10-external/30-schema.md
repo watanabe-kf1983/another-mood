@@ -35,7 +35,9 @@ JSON Schema の表現力を足したくなったときは、この一対一が�
 
 理由は二つ。食い違いは常に書き誤りで、黙って通すとメタドキュメントの `default` の表示が型と矛盾したまま出る。
 
-もう一つ、スキーマに書いた値はデータでもある。[データカタログ](../20-internal/30-communication/20-data-catalog.md)に転記されて永続化され、`generate` が読み直す。だから [JSON データモデル](../20-internal/30-communication/10-json-data-model.md)の制約が及ぶ。YAML が `2024-01-01` から作る日付型は JSON で表せず、宣言できるどの `type` にも一致しない。リテラルに型の一致を求めれば、日付型がパイプラインに入る口は塞がる。
+もう一つ、スキーマに書いた値はデータでもある。[データカタログ](../20-internal/30-communication/20-data-catalog.md)に転記されて永続化され、`generate` が読み直す。だから [JSON データモデル](../20-internal/30-communication/10-json-data-model.md)の制約が及ぶ。
+
+YAML が `2024-01-01` から作る日付型は JSON で表せず、宣言できるどの `type` にも一致しない。リテラルに型の一致を求めれば、日付型がパイプラインに入る口は塞がる。
 
 `docs/` には書かない。利用者がこれに出会うのはビルドが止まったときで、エラーがその行と列を指す。
 
@@ -80,7 +82,7 @@ JSON Schema の表現力を足したくなったときは、この一対一が�
 
 書いている途中のデータは参照先が揃っていないのが普通で、揃うまでビルドが見られないと、書いて確かめる往復が止まる。x-ref は property 単位の opt-in なので、警告は付けた分しか出ない。CI で弾くには `--strict`（`docs/reference/cli.md`）。
 
-テスト: `tests/components/preprocess/test_content_normalizer.py` の `test_normalize_contents_reports_dangling_fk_as_warning`（警告で止まらないこと）と、`TestXRefDiagnostics.test_missing_entity` と `test_missing_attribute`（スキーマ側はエラー）。
+テスト: `test_content_normalizer.py` の `test_normalize_contents_reports_dangling_fk_as_warning`（警告で止まらないこと）。スキーマ側がエラーになることは `TestXRefDiagnostics.test_missing_entity` と `test_missing_attribute`。
 
 ## `contents/` の読み方
 
@@ -94,7 +96,11 @@ JSON Schema の表現力を足したくなったときは、この一対一が�
 
 ### 重複したキーはエラーにする
 
-一つのファイルの中で同じキーが二度現れたら、後の値を採らずエラーにする。YAML でも JSON でも、また contents に限らず schema や views のファイルでも同じだが、理由はデータの側にあるのでここに置く。JSON の仕様（RFC 8259）は重複キーの扱いを実装に任せ、多くの実装は黙って後の値を採るが、黙って値が消えるより止まるほうが安全。`docs/` には書かない。利用者がこれに出会うのはビルドが止まったときで、そのエラーが他の構文エラーと同じく行と列を指すので、文書で予告しなくても何が起きたか分かる。
+一つのファイルの中で同じキーが二度現れたら、後の値を採らずエラーにする。YAML でも JSON でも、contents に限らず schema や views のファイルでも同じ。理由はデータの側にあるのでここに置く。
+
+JSON の仕様（RFC 8259）は重複キーの扱いを実装に任せ、多くの実装は黙って後の値を採る。黙って値が消えるより止まるほうが安全。
+
+`docs/` には書かない。利用者がこれに出会うのはビルドが止まったときで、エラーが他の構文エラーと同じく行と列を指す。
 
 テスト: `tests/components/shared/user_source/test_source_loader.py` の `test_duplicate_key_rejected_rather_than_last_wins`。
 
@@ -131,27 +137,41 @@ map pattern を配列に直すとき、キーはそのまま `id` になる。YA
 
 ### id に読む順を符号化し、id の安定は捨てる
 
-prose の id は `contents/` からの相対パス（拡張子なし）そのもので、読む順は id の文字列順で決まる。順序を表す別のチャネル（front-matter、目次ファイル）は持たないので、順序はファイル名で表す。ゼロ埋め・隙間空きの番号 prefix（`10-architecture.md`。フォルダの `index` には振らない）はその一つの運用で、dev-docs がそう使っている。
+prose の id は `contents/` からの相対パス（拡張子なし）そのもので、読む順は id の文字列順で決まる。順序を表す別のチャネル（front-matter、目次ファイル）は持たないので、順序はファイル名で表す。
 
-次の三つは同時に満たせない。「読む順がファイルシステム上で見える」には順序をファイル名に入れる必要があり、id がパスそのものなら順序は id にも入る。すると「id が並べ替えに対して安定する」（文書間のリンクは id を住所に使うので、安定しなければ並べ替えでリンクが壊れる）が成り立たない。id を別に宣言すれば両立するが、今度は「id の一意性をファイルシステムが担保する」を失い、重複検査を自前で持つことになる。この判断は二つ目を捨てる。散文の章立ては早く安定し、番号に隙間を空ければ挿入で振り直しは起きない。並べ替えで壊れたリンクは `generate` のリンク解決が報告する。
+ゼロ埋め・隙間空きの番号 prefix（`10-architecture.md`。フォルダの `index` には振らない）はその一つの運用で、dev-docs がそう使っている。
+
+次の三つは同時に満たせない:
+
+- **読む順がファイルシステム上で見える** — 順序をファイル名に入れる必要があり、id がパスそのものなら順序は id にも入る
+- **id が並べ替えに対して安定する** — 文書間のリンクは id を住所に使うので、安定しなければ並べ替えでリンクが壊れる。一つ目と両立しない
+- **id の一意性をファイルシステムが担保する** — id を別に宣言すれば上の二つは両立するが、これを失い、重複検査を自前で持つことになる
+
+この判断は二つ目を捨てる。散文の章立ては早く安定し、番号に隙間を空ければ挿入で振り直しは起きない。並べ替えで壊れたリンクは `generate` のリンク解決が報告する。
 
 テスト: `tests/components/preprocess/test_prose.py` の `TestOrderKeySortsToFolderPreorder`（読む順が id だけから決まること）。
 
 ### 順序の導出はレコード、ソートはテンプレート
 
-`order_key` と `depth` は id だけから導出できるので、レコードごとに `normalize_contents` が付ける。並べ替えは collection が揃わないとできないので、テンプレート側（`sort(attribute="order_key")`）に置き、並べ替え済みの prose は提供しない。フォルダ木を見出しの入れ子として一冊に綴じる使い方（`dev-docs/definition/reports.yaml` の book edition）は、この二つと `under_heading` フィルタ（`docs/reference/template.md`）だけで書ける。
+`order_key` と `depth` は id だけから導出できるので、レコードごとに `normalize_contents` が付ける。並べ替えは collection が揃わないとできないので、テンプレート側（`sort(attribute="order_key")`）に置き、並べ替え済みの prose は提供しない。
+
+フォルダ木を見出しの入れ子として一冊に綴じる使い方（`dev-docs/definition/reports.yaml` の book edition）は、この二つと `under_heading` フィルタ（`docs/reference/template.md`）だけで書ける。
 
 テスト: `tests/components/preprocess/test_prose.py` の `TestOutlinePosition`。
 
 ### 見出しの id は GitHub 互換の slug
 
-見出しの id は見出しテキストから導出する GitHub 互換の slug にする（`## API の設計` → `api-の設計`）。見出しへのリンクが、このツールの Hugo 出力・GitHub・VS Code のプレビューのどれで見ても同じ場所に着地するためで、規則の正本は `github_slug` の docstring。`{#id}` のような明示記法は採らない。テキスト由来なら id と見出しが乖離しないため。id の安定は「変わらないこと」ではなく「壊れた参照はビルドが報告すること」で担保する。
+見出しの id は見出しテキストから導出する GitHub 互換の slug にする（`## API の設計` → `api-の設計`）。見出しへのリンクが、このツールの Hugo 出力・GitHub・VS Code のプレビューのどれで見ても同じ場所に着地するため。規則の正本は `github_slug` の docstring。
+
+`{#id}` のような明示記法は採らない。テキスト由来なら id と見出しが乖離しないため。id の安定は「変わらないこと」ではなく「壊れた参照はビルドが報告すること」で担保する。
 
 テスト: `tests/components/shared/test_markdown.py` の `TestGithubSlug`。
 
 ### 相対リンクは `node:` 化し、同一ページ内の `#fragment` は変換しない
 
-本文中の、`contents/` 内に解決する相対リンクはすべて `node:` 記法（レコードの住所で宛先を指す書き方。`docs/reference/template.md` の Anchor paths）に書き換える。edition ごとに分割粒度が変わると（`docs/reference/reports.md`）リンク先のページも変わるので、生の相対パスを残すと別の分割の出力で壊れる。`node:` 化して `generate` の解決に委ねれば、出力構造が変わってもリンクが追従する。`#fragment` も同じ理由で `node:` URI に乗せて運ぶ。
+本文中の、`contents/` 内に解決する相対リンクはすべて `node:` 記法（レコードの住所で宛先を指す書き方。`docs/reference/template.md` の Anchor paths）に書き換える。
+
+edition ごとに分割粒度が変わると（`docs/reference/reports.md`）リンク先のページも変わるので、生の相対パスを残すと別の分割の出力で壊れる。`node:` 化して `generate` の解決に委ねれば、出力構造が変わってもリンクが追従する。`#fragment` も同じ理由で `node:` URI に乗せて運ぶ。
 
 一方、純粋な `#fragment` は変換しない。prose は必ず一つのファイル全体が一ページに描かれるので、同一文書内の参照は常に同じページ内に着地し、壊れない。
 

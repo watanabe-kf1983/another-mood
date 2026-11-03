@@ -10,11 +10,19 @@ workspace は、一回の実行でステージの出力ディレクトリが並�
 
 #### ステージ間の受け渡しは hardlink
 
-ステージ間・ステージ内の受け渡しは、ファイルをコピーせず **hardlink** で運ぶ。受け渡しはディレクトリの写しで行うので、コピーで運ぶと一つのファイルが hop の数だけ複製されるため。実バイトのコピーは contents → workspace の境界の 1 回だけになり、以降の hop はすべて同じ inode を共有する。hardlink が張れない場合（別 FS をまたぐ、exFAT の外付けや SMB 共有など非対応の FS）はコピーに自動フォールバックし、[製品の動作環境](../../../10-concept/10-product.md#what) (Linux / macOS / Windows) を崩さない（`transfer.link_or_copy`）。
+ステージ間・ステージ内の受け渡しは、ファイルをコピーせず **hardlink** で運ぶ。受け渡しはディレクトリの写しで行うので、コピーで運ぶと一つのファイルが hop の数だけ複製されるため。実バイトのコピーは contents → workspace の境界の 1 回だけになり、以降の hop はすべて同じ inode を共有する。
+
+hardlink が張れない場合（別 FS をまたぐ、exFAT の外付けや SMB 共有など非対応の FS）はコピーに自動フォールバックし、[製品の動作環境](../../../10-concept/10-product.md#what) (Linux / macOS / Windows) を崩さない（`transfer.link_or_copy`）。
 
 #### ゆえに各ステージは write-once
 
-hardlink は inode を共有するので、どこかのステージが既存ファイルに in-place で書き込むと、同じ inode を持つ全ディレクトリ（公開済み出力を含む）を突き破って書き換わり、しかもそこに watcher の event は飛ばない。そこで **各ステージに write-once を課す**: workspace 内の既存ファイルに書き込んではならず、置換は必ず unlink → 再作成で行う。ステージを構成するコンポーネントもアダプタ（Hugo 準備等）もこの制約の下にあり、実際のパイプラインを二周させて全ステージを検査する（`tests/pipeline/test_write_once_sweep.py`）。この制約が hardlink 運搬を安全にする。利用者のソース（contents）はこの制約の外にあるので、境界では hardlink せず実コピーする。blob はこの境界コピーも、前回出力と size + mtime が一致すればそこからの hardlink で済ませる（`content_normalizer.py` の `_mirror_blob_bytes` / `_reuse_unchanged`）。
+hardlink は inode を共有するので、どこかのステージが既存ファイルに in-place で書き込むと、同じ inode を持つ全ディレクトリ（公開済み出力を含む）を突き破って書き換わり、しかもそこに watcher の event は飛ばない。
+
+そこで **各ステージに write-once を課す**: workspace 内の既存ファイルに書き込んではならず、置換は必ず unlink → 再作成で行う。この制約が hardlink 運搬を安全にする。
+
+ステージを構成するコンポーネントもアダプタ（Hugo 準備等）もこの制約の下にあり、実際のパイプラインを二周させて全ステージを検査する（`tests/pipeline/test_write_once_sweep.py`）。
+
+利用者のソース（contents）はこの制約の外にあるので、境界では hardlink せず実コピーする。blob はこの境界コピーも、前回出力と size + mtime が一致すればそこからの hardlink で済ませる（`content_normalizer.py` の `_mirror_blob_bytes` / `_reuse_unchanged`）。
 
 #### 範囲と成立条件
 

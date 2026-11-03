@@ -4,7 +4,13 @@
 
 ### 定義
 
-**データカタログ**（以下カタログ）は、スキーマから起こした entity と attribute の目録。`inspect_schema` が `definition/schema.yaml` を meta-schema で検証したうえで起こし、JSON で永続化する（[ステージ構成](../20-pipeline.md#ステージ構成)の `inspect_schema/`）。一つの目録に三つの出自の entity が載る: 利用者のスキーマの entity、内蔵スキーマ（prose / blob）の entity、カタログ自身の形を記述する `__definition` の entity（クエリが `from: __definition.entities` でカタログを読むための自己記述）。
+**データカタログ**（以下カタログ）は、スキーマから起こした entity と attribute の目録。`inspect_schema` が `definition/schema.yaml` を meta-schema で検証したうえで起こし、JSON で永続化する（[ステージ構成](../20-pipeline.md#ステージ構成)の `inspect_schema/`）。
+
+一つの目録に三つの出自の entity が載る:
+
+- 利用者のスキーマの entity
+- 内蔵スキーマ（prose / blob）の entity
+- カタログ自身の形を記述する `__definition` の entity。クエリが `from: __definition.entities` でカタログを読むための自己記述
 
 後段のステージは、スキーマの構造を知りたいときにスキーマを読み直さず、カタログを読む:
 
@@ -18,4 +24,10 @@
 
 形は `components/shared/data_catalog.py` に定義する。表現は二つあり、Node / Edge の木が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
 
-entity の id はデータ木上の到達経路（`categories`、`categories.tasks`）で、`from:` はこれで entity を名指す。レコード一件の型（ObjectType）はこれと別の id を持つ（`data_catalog.py` の `_item_type_id`）。別に持つのは、ビューの派生 entity が元の entity と違う id を持ちながら同じ型のレコードを並べるためで、派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（unwind、join）は元の型の実例ではなくなるので、引き継がない。どちらの id もスキーマ上の位置を示す型レベルの識別子で、データ木上の個々のレコードの住所であるアンカーパス（`docs/reference/template.md` の Anchor paths）とは別物。アンカーパスの組み立てに、これらの id は登場しない。
+entity の id はデータ木上の到達経路（`categories`、`categories.tasks`）で、`from:` はこれで entity を名指す。
+
+レコード一件の型（ObjectType）はこれと別の id を持つ（`data_catalog.py` の `_item_type_id`）。ビューの派生 entity が、元の entity と違う id を持ちながら同じ型のレコードを並べるため。
+
+派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（unwind、join）は元の型の実例ではなくなるので、引き継がない。
+
+どちらの id もスキーマ上の位置を示す型レベルの識別子で、データ木上の個々のレコードの住所であるアンカーパス（`docs/reference/template.md` の Anchor paths）とは別物。アンカーパスの組み立てに、これらの id は登場しない。
