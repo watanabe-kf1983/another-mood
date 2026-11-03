@@ -11,7 +11,7 @@ ROOT = Path("/ws")
 
 
 class TestAnotherMoodRoot:
-    """Keeps: design/CLI › 出力はプロジェクトの中ではなく、CWD 直下の `.another-mood/` に置く"""
+    """Keeps: design/CLI › Output goes to `.another-mood/` directly under the CWD, not into the project"""
 
     def test_project_dir_directly_under_the_root(self) -> None:
         config = ProjectConfig(
@@ -36,7 +36,7 @@ class TestAnotherMoodRoot:
 
 
 class TestVerifyProjectDirUnderNamespaceRoot:
-    """Keeps: design/CLI › `<project_dir>` は CWD の下に限り、出力先は縛らない
+    """Keeps: design/CLI › `<project_dir>` must be under the CWD; the output destinations are not restricted
 
     project_dir must lie under namespace_root; external paths are rejected.
 

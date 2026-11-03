@@ -1,167 +1,171 @@
 # Template
 
-`docs/reference/template.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`normalize_contents`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。テンプレートに何を許すかの境界は [Trust Model](70-trust-model.md)、edition と出力パス、奥付のページの置き方は [Reports](60-reports.md)。
+Behavior kept on purpose, outside the contract of `docs/reference/template.md`. The stage name in this chapter (`normalize_contents`) is that of the [stage table of the internal structure](../20-internal/20-pipeline.md#stages). The boundary of what templates are allowed is in [Trust Model](70-trust-model.md); editions, output paths, and the placement of the colophon page are in [Reports](60-reports.md).
 
-本文で使う語:
+Terms used in this chapter:
 
-- **entity / レコード** — スキーマが宣言する、同じ形のレコードの集合と、その一件（[Schema](30-schema.md)）。`file_per` に書く型は契約の Type IDs
-- **ノード** — データ木の一点で、リンクの宛先になる実体。レコード、レコードの配列、ビューの行、singleton（一件だけのオブジェクト）、入れ子のオブジェクト、prose の見出し（`docs/reference/template.md` の Linking）
-- **アンカーパス** — ノードの住所。データ木をルートから辿った経路を `/` 区切りで書いた文字列。ASCII の予約文字は percent-encode 済み（同 Anchor paths）
-- **prose / blob** — `contents/` の Markdown ファイルとその他のファイルを表す組み込みの entity。id はファイルの相対パス（[Schema](30-schema.md#prose)）。全ファイルは一つの木に合流してから後段に渡る（同 Schema）
-- **主題** — テンプレート一回の描画対象。ルートテンプレートでは木のルート、`render` のサブテンプレートでは渡したノード。テンプレートからは `this` の名で見える
-- **`render`** — `{{ ノード | render("sub.md") }}` と書き、主題を変えてサブテンプレートを描くフィルタ（同 `render`）
-- **分割 / インライン** — 主題を別のページに書き出すか、呼び出し位置に展開するか。`file_per` で決まる（同 Split vs inline）
-- **リンク系のヘルパ** — `node()` は住所からノードを引く関数、`child` は親ノードから一段降りるフィルタ。`link` / `href` / `label` は引いたノードをリンク・URL・表示名に描き、`anchor` は着地点 `<a id>` を置く。`relink` は本文中の `node:` リンクを解決する（同 Filters / Functions）
-- **著者 / 利用者** — [役割を表す語](../index.md#役割を表す語)
-- **`node:`** — prose 本文の中で、リンク先にアンカーパスを書く記法（`[text](node:/members/alice)`）。著者が書くほか、`normalize_contents` が本文の相対リンクをこの記法に変換する（[Schema](30-schema.md#相対リンクは-node-化し同一ページ内の-fragment-は変換しない)）
-- **`under_heading`** — 埋め込んだ Markdown の見出しを一段下げるフィルタ。Markdown を出すフィルタの代表例
-- **finalize / `Markup`** — finalize は `{{ }}` の値が出力に書かれる直前に通る escape の関門。`Markup` は escape 済みの印を持つ文字列で、finalize を素通りする。Markdown を出すヘルパは `Markup` を返す
-- **欠損** — 値が無いこと。データモデルではキーの省略で表す（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md)）
-- **壊れた参照** — 解決を試みて外した参照。`node()` や本文の `node:` が指す先が無い場合
-- **build info / 奥付** — build info は、一回の実行についての事実の集合。テンプレートは `build_info(key, default)` で一件ずつ引く（`docs/reference/template.md` の `build_info`）。奥付はその全量を表にしたページ `__build_info/`
-- **tap** — [CLI](10-cli.md#tap) の語
+- **entity / record** — the set of records of the same shape that the schema declares, and one of them ([Schema](30-schema.md)). The types written in `file_per` are the contract's Type IDs
+- **node** — a point in the data tree that can be the target of a link. A record, an array of records, a view row, a singleton (a single object), a nested object, a prose heading (Linking in `docs/reference/template.md`)
+- **anchor path** — a node's address. The route from the root of the data tree, written as a `/`-separated string. ASCII reserved characters are percent-encoded (Anchor paths, same document)
+- **prose / blob** — the built-in entities for the Markdown files and the other files in `contents/`. The id is the file's relative path ([Schema](30-schema.md#prose)). All files are merged into one tree before being passed downstream (same Schema chapter)
+- **subject** — what one template render draws. For the root template, the root of the tree; for a `render` subtemplate, the node passed to it. Visible from the template as `this`
+- **`render`** — the filter written `{{ node | render("sub.md") }}` that draws a subtemplate with a changed subject (`render`, same document)
+- **split / inline** — whether the subject is written out as a separate page or expanded at the call site. Decided by `file_per` (Split vs inline, same document)
+- **link helpers** — `node()` is the function that looks a node up by address; `child` is the filter that steps one level down from a parent node. `link` / `href` / `label` draw the node they are given as a link, a URL, or a display name, and `anchor` places the landing spot `<a id>`. `relink` resolves the `node:` links in a body (Filters / Functions, same document)
+- **author / user** — [Role terms](../index.md#role-terms)
+- **`node:`** — the notation for writing an anchor path as a link target in a prose body (`[text](node:/members/alice)`). Besides the author writing it, `normalize_contents` converts the body's relative links to this notation ([Schema](30-schema.md#relative-links-become-node-a-fragment-within-the-same-page-is-not-converted))
+- **`under_heading`** — the filter that demotes the headings of embedded Markdown by one level. The representative of the filters that emit Markdown
+- **finalize / `Markup`** — finalize is the escape gate that a `{{ }}` value passes just before being written to the output. `Markup` is a string marked as already escaped, which passes through finalize untouched. Helpers that emit Markdown return `Markup`
+- **missing value** — the absence of a value. Expressed in the data model by omitting the key ([JSON data model](../20-internal/30-communication/10-json-data-model.md))
+- **broken reference** — a reference that was resolved and missed: `node()` or a `node:` in a body pointing where nothing is
+- **build info / colophon** — build info is the set of facts about one run. Templates pull them one at a time with `build_info(key, default)` (`build_info` in `docs/reference/template.md`). The colophon is the page `__build_info/` that tabulates all of it
+- **tap** — a term of [CLI](10-cli.md#tap)
 
-## 言語
+## Language
 
-### 語彙は filter / test / operator と登録した関数に閉じ、値にメソッドを持たせない
+### The vocabulary is closed to filters, tests, operators, and registered functions; values have no methods
 
-契約は `.startswith()` のような Python メソッドが使えないことを言う（No Python methods on values）。背後で保つのは、テンプレートから届く語彙の集合を docs に書ききれること。
+The contract says that Python methods such as `.startswith()` are unavailable (No Python methods on values). What is kept behind it is that the set of vocabulary reachable from a template can be written out in full in docs.
 
-語彙とは Jinja2 由来の filter / test / operator と、ツールが登録する関数（`node`、`code_inline` 等）で、どれも docs に列挙できる。
+The vocabulary is the filters, tests, and operators from Jinja2, plus the functions the tool registers (`node`, `code_inline`, and so on), all of which can be enumerated in docs.
 
-minijinja には Python の文字列・list・dict のメソッドを値に生やす `pycompat` があるが、切っている。どの版の Python のどのメソッドが使えるかは特定できず、上流もこれを Jinja2 からの移行用のシムと位置づけている。
+minijinja has `pycompat`, which grows the methods of Python strings, lists, and dicts onto values, but it is switched off. Which methods of which Python version are available cannot be pinned down, and upstream positions it as a shim for migrating from Jinja2.
 
-語彙をこの集合に閉じれば、docs に書ける集合とテンプレートから届く集合が一致し、利用者に案内できる境界が引ける。
+With the vocabulary closed to this set, the set that can be written in docs and the set reachable from a template coincide, and a boundary the user can be guided to can be drawn.
 
-### 著者の Python ヘルパは受け付けない
+### The author's Python helpers are not accepted
 
-`filters.py` の自動読み込みや entry points で、プロジェクト固有の Python ヘルパを登録する仕組みは持たない。
+There is no mechanism for registering project-specific Python helpers, such as auto-loading `filters.py` or entry points.
 
-プロジェクトを書いた人と、それを `mood build` する人は同じとは限らない。任意の Python を許すと、配布されたプロジェクトをビルドした時点で第三者の手元で任意コードが走る。Excel のマクロと同型で、被害は受け取る側に出る。この境界は [Trust Model](70-trust-model.md) が扱う。
+The person who wrote a project and the person who runs `mood build` on it are not necessarily the same. Allowing arbitrary Python means that building a distributed project runs arbitrary code on a third party's machine. It is the same shape as Excel macros, and the damage lands on the receiving side. This boundary is covered by [Trust Model](70-trust-model.md).
 
-整形の需要は、minijinja が実装する Jinja2 由来の組み込みフィルタと、本ツールのヘルパで受ける。足りない場合が現れたら、宣言的な拡張（DSL の追加、データ側での事前整形）で詰め、Python の任意実行は経由しない。
+The demand for formatting is met by the Jinja2-derived built-in filters that minijinja implements and by this tool's helpers. If a gap appears, it is filled by declarative extension (additions to the DSL, pre-shaping on the data side), never by way of arbitrary Python execution.
 
-### 欠損は何も描かず、エラーにもしない
+### A missing value draws nothing, and is no error
 
-欠損したキーを描こうとしたとき出力は空になり、途中が欠けたチェイン（`a.b.c`）も空になる（契約の Handling undefined access）。minijinja の `undefined_behavior` を `chainable` にして得ている。
+Trying to draw a missing key yields empty output, and so does a chain with a gap in the middle (`a.b.c`) (Handling undefined access in the contract). This is obtained by setting minijinja's `undefined_behavior` to `chainable`.
 
-既定の `lenient` は一階層目だけ黙って通し、チェインでエラーにする中途半端な挙動。`strict` はスキーマ上 optional な属性を読むたびにガードを書かせる。
+The default `lenient` is a half-measure that silently passes the first level and errors on chains. `strict` makes you write a guard every time you read an attribute that is optional in the schema.
 
-ヘルパも同じ。欠損した値をフィルタや関数に通しても、`"None"` のような表現を発明せず、何も描かない。
+Helpers behave the same. Passing a missing value through a filter or function invents no representation such as `"None"`; it draws nothing.
 
-`node()` や `child` の住所を組む引数が欠損したときは、参照そのものが成立しないので、壊れた参照にもならず何も描かない。欠損した引数を落として別の住所に解決してしまうより、何も描かないほうが安全。
+When an argument that builds the address for `node()` or `child` is missing, the reference itself does not come into being, so it is not even a broken reference, and nothing is drawn. Drawing nothing is safer than dropping the missing argument and resolving to a different address.
 
-この規則があるので、JSON データモデルの「nullable な項目は値ではなくキーごと省略する」規約が成り立つ。欠損がエラーになるなら、著者はキーを省略できず null を書くことになり、データモデルが null を持たない前提が崩れる。
+This rule is what makes the JSON data model's convention "a nullable item omits the key rather than holding a value" hold. If a missing value were an error, the author could not omit keys and would write null, and the premise that the data model has no null would collapse.
 
-壊れた参照は別に扱う。解決を試みて外した参照は目立つ `[text]` にする（[未解決の参照は `[text]` で目立たせる](#未解決の参照は-text-で目立たせる)）。optional の欠損は規約が認めた正常系なので、目立たせない。
+A broken reference is treated separately. A reference that was resolved and missed becomes a conspicuous `[text]` ([An unresolved reference is made conspicuous as `[text]`](#an-unresolved-reference-is-made-conspicuous-as-text)). A missing optional value is a normal case the convention admits, so it is not made conspicuous.
 
-## 出力の形
+## Shape of the output
 
-### 位置依存ヘルパの名前は位置を指し、構文を組むものは関数、中身を正規化するものはフィルタ
+### Position-aware helpers are named for the position; those that build syntax are functions, those that normalize content are filters
 
-地の文の escape が正しいのは地の文だけで、code span・fenced block・表のセル・link URL には位置ごとの正規化が要る（契約の Position-aware helpers）。ヘルパは二つの形で提供する:
+The running-text escape is correct only in running text; code spans, fenced blocks, table cells, and link URLs each need their own normalization (Position-aware helpers in the contract). Helpers come in two forms:
 
-- **構文を組む関数**（`code_inline` / `code_fenced`）。delimiter の幅は中身に応じて決める必要があり、著者が固定数の backtick を書くと任意の入力で破綻するので、関数が構文ごと組む
-- **中身を正規化するフィルタ**（`in_cell` / `as_url`）。delimiter は著者が書き、内側に入れる値を位置に合わせて正規化する
+- **Functions that build syntax** (`code_inline` / `code_fenced`). The width of the delimiter has to depend on the content, and an author writing a fixed number of backticks breaks on arbitrary input, so the function builds the whole construct
+- **Filters that normalize content** (`in_cell` / `as_url`). The author writes the delimiter, and the value placed inside is normalized for the position
 
-構築が関数、変換がフィルタという住み分けは、Jinja2 の慣例（`range` / `dict` は関数、`upper` / `urlencode` はフィルタ）に合わせたもの。
+Construction as a function and transformation as a filter follows the Jinja2 convention (`range` / `dict` are functions, `upper` / `urlencode` are filters).
 
-名前の `code_*` / `in_*` / `as_*` は位置の概念を指し、Markdown に依存しない。同じ位置は他の出力フォーマットにもある。フォーマットを足すときは同じ名前で別の実装を登録し、テンプレート側は書き換えない。
+The names `code_*` / `in_*` / `as_*` name the notion of a position, independent of Markdown. The same positions exist in other output formats. When a format is added, another implementation is registered under the same names, and templates are not rewritten.
 
-## ページ分割
+## Page splitting
 
-### ノードは、データ上の位置で決まる一つのページにだけ描かれる
+### A node is drawn on exactly one page, determined by its position in the data
 
-どのページかは `render` の分割規則が決め、ページ内のどこかはテンプレートが決める。リンク解決はこの上に立つ。リンクの両端（書く側のページと指す先のページ）を同じ規則でノードの位置から引くから、`link` / `href` / `relink` が一貫して相対化できる。
+Which page is decided by `render`'s splitting rule; where on the page is decided by the template. Link resolution stands on this. Because both ends of a link (the page that writes it and the page it points at) are derived from the node's position by the same rule, `link` / `href` / `relink` can relativize consistently.
 
-だから `render` は、渡された主題が `this` の子孫でなければビルドエラーにする（契約の `render` が引数 `DATA` に課す条件）。`this` の部分木の外のノードをインラインに描くと、そのノードの実際の描画位置と規則上のページが食い違う。そのノードからの `this` 起点のリンクも、そこへ張られる被リンクも壊れる。
+So `render` raises a build error unless the subject it is given is a descendant of `this` (the condition the contract's `render` places on its `DATA` argument). Drawing a node outside the subtree of `this` inline makes the node's actual drawing position disagree with its page under the rule. Links from that node, computed from `this`, and links to it both break.
 
-判定は構造（子孫かどうか）で行い、分割かインラインか、どの edition かには依らない。主題が分割されるなら規則上のページに描かれるので害は無いが、分割かどうかは edition の `file_per` で変わる。同じ呼び出しが「分割する edition では通り、しない edition では弾かれる」のを避け、テンプレート単体で妥当性を決める。
+The judgment is structural (descendant or not), independent of split or inline and of which edition.
 
-他所のノードを描きたいときは、クエリ（join 等）で部分木に取り込んで子孫にするか、`| link` で参照する。
+If the subject is split, it is drawn on its page under the rule and there is no harm, but whether it is split varies with the edition's `file_per`. To avoid the same call "passing in an edition that splits and being rejected in one that does not", a template's validity is decided by the template alone.
 
-### 親からのリンクは `render` が作らず、著者が `| link` で書く
+To draw a node from elsewhere, bring it into the subtree as a descendant through a query (join and the like), or refer to it with `| link`.
 
-分割したページへの親からのリンクを `render` が自動で出すことはしない。リンクは `| link` が、分割なら別ページの URL、インラインなら同ページの `#fragment` に自動で適応する。
+### Links from the parent are not made by `render`; the author writes them with `| link`
 
-`render` に持たせると二重実装になり、リスト記号などリンクの周辺の書き方も著者の手から離れる。`render` の責務は「このノードの内容をどこに置くか」に保つ。
+`render` does not emit a link from the parent to the split page automatically. A link is what `| link` does, adapting by itself to the URL of another page when split and to a `#fragment` on the same page when inline.
 
-### インラインは型単位で決め、呼び出し側で上書きしない
+Giving it to `render` would be a double implementation, and the writing around the link, such as list markers, would leave the author's hands. `render`'s responsibility stays "where to put the content of this node".
 
-インラインにしたい意図は、その型を `file_per` から外して表す。`file_per` にある型を呼び出し側で inline 強制できると、そのノードが自前のページとインラインの本文に二重に出力され、`| link` の指す先と実体の所在がずれる。
+### Inline is decided per type, not overridden at the call site
 
-逆方向も同じで、`file_per` に無い型を呼び出し側で分割に強制する口も持たない。分割の意図は `file_per` に書く。
+The intent to inline is expressed by leaving the type out of `file_per`. If a type in `file_per` could be forced inline at the call site, that node would be output twice, on its own page and in the inline body, and where `| link` points would disagree with where the thing is.
 
-### 見出しはレコード内の住所だけを持ち、`<a id>` を刻まない
+The reverse holds too: there is no way to force a type absent from `file_per` into a split at the call site. The intent to split is written in `file_per`.
 
-prose の見出しはリンクの宛先として扱い、住所は `<レコードのアンカーパス>#<slug>` にする（契約の Anchor paths）。データ木では `headings` リストの要素だが、住所では中間の `headings` セグメントを畳む。見出しは別のレコードではなく、レコードの中の着地点だけを持つ。
+### A heading has only an address within its record, and no `<a id>` is stamped
 
-主題の `<a id>` は描画が自動で刻む（契約の Where a node is rendered）が、見出しには刻まない。見出しの id は Markdown レンダラ（Goldmark、GitHub）が自前で打つので、刻むと id が重複する。住所の `<slug>` はレンダラが打つ id と同じ規則で作る（[Schema](30-schema.md#見出しの-id-は-github-互換の-slug)）ので、リンクはレンダラの id に着地する。
+A prose heading is treated as a link target, with the address `<record's anchor path>#<slug>` (Anchor paths in the contract). In the data tree it is an element of the `headings` list, but the address folds the intermediate `headings` segment away. A heading is not a separate record; it has only a landing spot inside the record.
 
-ツールが住所から組む id（見出し以外のノード）は刻み、見出しのテキストから作る id（見出し）はレンダラに任せる。`| anchor` を手置きしても、見出しには何も出ない。
+The subject's `<a id>` is stamped automatically by the rendering (Where a node is rendered in the contract), but not for headings. Markdown renderers (Goldmark, GitHub) put heading ids of their own, so stamping would duplicate the id. The `<slug>` of the address is made by the same rule as the renderer's id ([Schema](30-schema.md#heading-ids-are-github-compatible-slugs)), so the link lands on the renderer's id.
 
-### ビューの行の住所は一意を保証せず、ページとして描いたときの衝突だけを止める
+Ids the tool assembles from addresses (nodes other than headings) are stamped; ids made from heading text (headings) are left to the renderer. Placing `| anchor` by hand emits nothing for a heading.
 
-entity のレコードは兄弟の間で id が一意で（[Schema](30-schema.md#兄弟の間でだけ一意)）、`normalize_contents` が全ファイルを一つの木に合流した後に検査する。ビューの行には同じ保証を与えない。
+### View row addresses are not guaranteed unique; only a collision when drawn as a page is stopped
 
-保証できないのは、クエリの `flatten` 句が一行を N 行に割るから。親の id を `select` 句で残せば、同じ id の行が必ず並ぶ（`showcase/music` の `artist_album_pairs` は、意図された用法のままこの形になる）。一方 1:1 の射影は正当な住所を持つ。だからビュー定義を見ただけでは、そのビューの行が重複するかどうかを決められない。
+Entity records have ids unique among siblings ([Schema](30-schema.md#unique-only-among-siblings)), checked after `normalize_contents` merges all files into one tree. View rows are given no such guarantee.
 
-だから検出は、住所が実際に使われる時点まで遅らせる。重複した行をページの主題として描くと出力パスが衝突し、ビルドを止める（契約の Output path）。
+It cannot be guaranteed because a query's `flatten` clause splits one row into N. Keep the parent's id with a `select` clause and rows with the same id are bound to line up (`artist_album_pairs` in `showcase/music` takes this form under its intended usage).
 
-同じページ内に描いた重複は検出しない。起きるのは二つ。`<a id>` が二重になり、後の行へのリンクも先の行に着地する。`node()` で引くと最後の行だけが返る。どちらも着地先は同じビューの同じ id の行で、実害は小さい。構築時に検出して警告する案は、この実害に見合わない。
+A 1:1 projection, on the other hand, has valid addresses. So whether a view's rows duplicate cannot be decided by looking at the view definition.
 
-## アンカーパス
+So detection is deferred to the point where the address is actually used. Drawing duplicate rows as the subjects of pages makes the output paths collide, and the build stops (Output path in the contract).
 
-### 非 ASCII は生で残す IRI 形
+Duplicates drawn within the same page are not detected. Two things happen. The `<a id>` is doubled, and links to the later row land on the earlier one. `node()` returns only the last row. In both, the landing point is a row of the same view with the same id, and the actual harm is small. Detecting and warning at construction time is not worth that harm.
 
-アンカーパスは RFC 3987 の IRI として扱う。ASCII の予約文字と空白は percent-encode し、非 ASCII のうち IRI が許す範囲（`ucschar`）は生で残す（契約の Anchor paths）。
+## Anchor paths
 
-全部を percent-encode すると `/prose/書籍` が `/prose/%E6%9B%B8%E7%B1%8D` になり、本文の `node:` の住所も `<a id>` も読めなくなる。生の Unicode を含むリンクとファイル名は CommonMark、HTML、URL 標準のいずれでも正当で、URI への直列化は消費側（Goldmark、ブラウザ、静的サーバ）が行う。
+### Non-ASCII stays raw, in IRI form
 
-生で残す集合を文字カテゴリ（`\p{L}\p{N}`）でなく `ucschar` の範囲にするのは、`モーニング娘。` や `藤岡弘、` のように実在の id が非 ASCII の句読点を含むため。範囲は `shared/url.py` が持つ。
+Anchor paths are treated as IRIs per RFC 3987. ASCII reserved characters and whitespace are percent-encoded, and the non-ASCII range the IRI permits (`ucschar`) stays raw (Anchor paths in the contract).
 
-### id の中の `/` を素通しにするのは、組み込みの prose と blob だけ
+Percent-encoding everything would turn `/prose/書籍` into `/prose/%E6%9B%B8%E7%B1%8D`, and neither the `node:` addresses in bodies nor the `<a id>`s would be readable. Links and file names containing raw Unicode are valid in CommonMark, HTML, and the URL standard alike, and serialization to a URI is done by the consumer (Goldmark, browsers, static servers).
 
-住所は `/` を区切りに予約するので、id が `/` を含めば `%2F` に escape する。例外は組み込みの `prose` / `blob`。id が `contents/` 相対パスとして構造的に階層を持ち、どちらも入れ子を持たない平らな配列 entity なので、`prose/` 以降を一つの id と読めば曖昧にならない。
+The set kept raw is the `ucschar` range rather than character categories (`\p{L}\p{N}`) because real ids such as `モーニング娘。` and `藤岡弘、` contain non-ASCII punctuation. The range is held by `shared/url.py`.
 
-escape すると `prose/design%2Farchitecture` のような読めない住所になる。著者が本文に素の `/` で書く相対リンクから導いた `node:` とも一致しなくなる。
+### Only the built-in prose and blob pass a `/` inside an id through
 
-`/` を含む任意の id への一般化はしない。利用者の entity は構造が変わりうるので、素通しにすると将来曖昧さが混入する。
+Addresses reserve `/` as the separator, so an id containing `/` is escaped to `%2F`. The exceptions are the built-in `prose` / `blob`. Their ids have structural hierarchy as paths relative to `contents/`, and both are flat array entities with no nesting, so reading everything after `prose/` as one id is unambiguous.
 
-## リンク
+Escaping would produce unreadable addresses such as `prose/design%2Farchitecture`. They would also no longer match the `node:` derived from relative links the author writes in bodies with bare `/`.
 
-### 未解決の参照は `[text]` で目立たせる
+This is not generalized to arbitrary ids containing `/`. The user's entities can change structure, so passing them through would let ambiguity creep in later.
 
-`node()` や `node:` の指す先が無いとき、例外は投げず、リンクを外して表示テキストを角括弧で囲んだ `[text]` を出す（契約の `link` / `relink`）。
+## Links
 
-リンクを外して素のテキストにすると、解決できた通常のテキストと見分けがつかず、失敗が出力に埋もれる。`[text]` は対応する定義を持たない shortcut reference として CommonMark が角括弧ごと描くので、壊れた参照が目立ち、著者が気づいて直せる。`link` と `relink` の両方をこの形に揃える。
+### An unresolved reference is made conspicuous as `[text]`
 
-### 本文の `node:` はインラインリンク形だけを解決する
+When `node()` or a `node:` points where nothing is, no exception is thrown; the link is removed and the display text is wrapped in square brackets as `[text]` (`link` / `relink` in the contract).
 
-`[text](node:…)` のインライン形（画像 `![alt](node:…)` を含む）だけを解決する。参照形（`[text][label]` と別行の定義）、autolink（`<node:…>`）、title 付き（`[text](node:… "title")`）は対応しない。後回しではなく非ゴール。
+Removing the link and leaving plain text would be indistinguishable from ordinary text that did resolve, and the failure would be buried in the output. `[text]` is a shortcut reference with no matching definition, which CommonMark renders brackets and all, so the broken reference stands out and the author notices and fixes it. `link` and `relink` are both aligned to this form.
 
-- `normalize_contents` のリンク正規化が生成するのはインライン形だけ。他の形が出るのは手書きの場合だけで、頻度は小さい
-- autolink は表示テキストが URL になる。参照形は未解決時の `[text]` 化がリンク位置と定義行に跨り、綺麗に畳めない。どちらも対応コストに対して需要が薄い
-- 著者には「手書きの `node:` 参照はインライン形で書く」と案内すれば足りる
+### A `node:` in a body is resolved only in inline link form
 
-### `relink` は著者が明示的に書く
+Only the inline form `[text](node:…)` (including images, `![alt](node:…)`) is resolved. The reference form (`[text][label]` with a definition on another line), autolinks (`<node:…>`), and the form with a title (`[text](node:… "title")`) are not supported. This is a non-goal, not deferred work.
 
-本文の `node:` を相対 URL に置き換える `relink` は、著者が `{{ prose.content | relink }}` と書く。システムが暗黙に挟む案は採らない。
+- The link normalization of `normalize_contents` generates only the inline form. The other forms appear only when handwritten, and rarely
+- An autolink's display text is the URL. For the reference form, turning an unresolved one into `[text]` straddles the link position and the definition line and cannot be folded cleanly. Neither has demand worth the cost of support
+- It is enough to tell authors "write handwritten `node:` references in inline form"
 
-値単位で挟める自動フックは finalize しかないが、finalize は `Markup` を素通しし、`under_heading` などの Markdown を出すフィルタは `Markup` を返す。暗黙の relink は `under_heading` と合成した瞬間に発火せず、`node:` が黙って出力に漏れる。
+### `relink` is written explicitly by the author
 
-値に「relink 未了」の印を持たせて伝播させる案も、文字列連結や Markup 化で印が黙って落ちるので信頼できない。
+`relink`, which replaces the `node:` in a body with relative URLs, is written by the author as `{{ prose.content | relink }}`. Having the system insert it implicitly is not adopted.
 
-明示なら、著者が生の `node:` を持つ値の直近に `relink` を置くので確実で、`| relink | under_heading` と合成順序も見えたまま残る。
+The only automatic hook that can be inserted per value is finalize, but finalize passes `Markup` through, and filters that emit Markdown, such as `under_heading`, return `Markup`. An implicit relink would stop firing the moment it was composed with `under_heading`, and `node:` would silently leak into the output.
+
+Marking values as "not yet relinked" and propagating the mark is also unreliable, since the mark silently drops on string concatenation or conversion to Markup.
+
+Explicit, the author places `relink` right next to the value that holds raw `node:`, which is reliable, and the composition order stays visible as `| relink | under_heading`.
 
 ## build_info
 
-### build info はテンプレートだけが読み、データ層には流さない
+### Build info is read only by templates, and does not flow into the data layer
 
-build info をシステム定義の entity として流し、ビューから join できるようにはしない。tap の文書にも載せない（[CLI](10-cli.md#文書に実行ごとに変わる値を入れない)）。
+Build info is not made available as a system-defined entity that views can join. It is not put into the tap document either ([CLI](10-cli.md#the-document-holds-no-value-that-changes-from-run-to-run)).
 
-ビューから読めるようにすると、ビューの出力がマシンと実行ごとに変わるようになる。著者がそれに頼り始めた後で取り上げると、そのビューが壊れる。開くのは簡単で閉じるのは破壊になるので、先に閉じておく。逆向き（奥付から後でデータ層へ）なら余地が残る。
+If views could read it, a view's output would come to vary by machine and by run. Taking it away after authors have come to rely on it would break those views. Opening is easy and closing is a breaking change, so it is closed in advance. The reverse order, widening from the colophon into the data layer later, remains possible.
 
-守る線は「ソースだけで決まる」ではなく「マシンと起動のしかたには依存しない」。tap の出力には `__definition` などツールが生成した目録が既に載っていて、ツールの版には依存している。
+The line defended is not "determined by the sources alone" but "independent of the machine and of how it was started". The tap output already carries inventories the tool generates, such as `__definition`, and depends on the tool's version.
 
-build info が失敗ページ（内蔵テンプレートで描く）にも届く必要があることも、データ層に流せない理由の一つ（[内部構造の約束](../20-internal/30-communication/index.md#build-info-はデータの流れの外を通る)）。
+That build info must also reach the failure page (drawn with a built-in template) is another reason it cannot flow through the data layer ([promise of the internal structure](../20-internal/30-communication/index.md#build-info-travels-outside-the-data-flow)).

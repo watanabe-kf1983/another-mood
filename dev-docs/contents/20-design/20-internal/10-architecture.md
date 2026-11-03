@@ -1,98 +1,98 @@
 # Architecture
 
-## レイヤ構成
+## Layers
 
-- **エントリポイント（`cli`）**: 利用者との入出力。操作そのものは持たない
-- **command**: 一コマンドが一関数。結果を値で返し、端末への表示はエントリポイントに任せる
-- **pipeline**: コンポーネントをステージに組み、build では一回、watch では入力が変わるたびに実行する。外部ツール（Hugo, watchdog）との接点もここ
-- **components**: ビジネスロジック。入力ディレクトリから出力ディレクトリへの関数で、互いも pipeline も知らない
-- **components/shared**: コンポーネント共通の基盤
+- **Entry point (`cli`)**: input and output with the user. Holds no operations itself
+- **command**: one command, one function. Returns the result as a value and leaves display on the terminal to the entry point
+- **pipeline**: arranges the components into stages, and runs them once for build and on every input change for watch. The contact with external tools (Hugo, watchdog) is here too
+- **components**: business logic. Functions from an input directory to an output directory, knowing neither each other nor the pipeline
+- **components/shared**: the foundation shared by the components
 
-## 起動時に受ける三つのもの
+## The three things received at startup
 
-command は一回の実行の前に、性質の違う三つを別々に読む:
+Before one run, command reads three things of different nature, separately:
 
-- **設定**（`config.py` の `ProjectConfig`）— 実行者が起動時に差し出すもの。どう実行しどこへ出すか（出力先、ポート等）と、テンプレートに届ける注入値 `vars`（`docs/reference/cli.md` の Injected values）。CLI 引数は CLI が解釈して渡し、環境変数は設定の側が直接読む
-- **マニフェスト**（`components/manifest`）— プロジェクトが何か。`sbdb.yaml` を読み、世代と minimum version の検査を通す
-- **配置**（`layout.py` の `SourceLayout`）— ソースの各パス。`project_dir` から導き、存在を検証する。世代ごとに配置が変わるなら、分岐はここに置く
+- **Config** (`ProjectConfig` in `config.py`) — what the operator hands over at startup. How to run and where to write (the output destination, the port, and so on), and the injected values `vars` delivered to templates (Injected values in `docs/reference/cli.md`). CLI arguments are interpreted by the CLI and passed in; environment variables are read by the config side directly
+- **Manifest** (`components/manifest`) — what the project is. Reads `sbdb.yaml` and passes the generation and minimum version checks
+- **Layout** (`SourceLayout` in `layout.py`) — the paths of the sources. Derived from `project_dir`, and their existence verified. If the layout changes per generation, the branch goes here
 
-三つは混ぜない。設定にソースの位置を動かす欄は無く、マニフェストにビルドの設定は無い。設定は `vars` を運ぶだけで、中身を読まない。利用者から見える理由は外部設計の [Manifest](../10-external/20-manifest.md#置き場と役割) と [CLI](../10-external/10-cli.md#置き場)。
+The three are not mixed. Config has no field that moves the location of sources, and the manifest has no build settings. Config only carries `vars` and does not read their content. The user-visible reasons are in the external design's [Manifest](../10-external/20-manifest.md#location-and-role) and [CLI](../10-external/10-cli.md#locations).
 
-設定は CLI が最初に組んで command に渡す。command はマニフェスト → 配置の順に読んでから、パイプラインを起こす。配置も契約面で、世代が違えば配置も違いうるので、配置の検査は世代の検査が通ったあとでしか意味を持たない。対応しない世代は「ソースが無い」より先に報告する（`command.py` の `build`）。
+The config is assembled first by the CLI and passed to command. command reads the manifest, then the layout, and then starts the pipeline. The layout is a contract surface too, and may differ by generation, so checking the layout is meaningful only after the generation check has passed. An unsupported generation is reported before "sources missing" (`build` in `command.py`).
 
-## build と watch を同じコンポーネントで賄う仕組み
+## How build and watch are served by the same components
 
-コンポーネントは「このディレクトリを読んで、あのディレクトリに書く」関数で、一回限りか継続かを知らない。**ステージ**は、pipeline がそのコンポーネント一つに、監視する入力パス（利用者の入力ファイルと、直接の上流ステージの出力ディレクトリ）と出力ディレクトリを結び付けた実行単位。
+A component is a function that "reads this directory and writes that directory", unaware of whether it is run once or continuously. A **stage** is the unit of execution in which the pipeline binds one component to the input paths it watches (the user's input files and the output directory of the immediately upstream stage) and its output directory.
 
-build ではステージを依存順に一回ずつ走らせ、watch では各ステージが自分の監視パスの変更を待って再実行する:
+build runs the stages once each in dependency order; in watch, each stage waits for changes on its own watched paths and reruns:
 
 ```
-利用者の入力 ─▶ Stage A ─▶ A/ ─▶ Stage B ─▶ B/ ─▶ ...
-   (A が監視)            (B が監視)
+user input ─▶ Stage A ─▶ A/ ─▶ Stage B ─▶ B/ ─▶ ...
+  (A watches)            (B watches)
 ```
 
-watch では、上流が出力を書き換えれば下流が勝手に動くので、再実行の順序を中央で管理する必要がなく、変更は上流から下流へ伝わる。
+In watch, when an upstream stage rewrites its output, the downstream runs by itself, so there is no need to manage the order of reruns centrally, and changes propagate from upstream to downstream.
 
-これが成り立つには、各ステージの出力ディレクトリが原子的に更新され、途中状態が下流に見えないことが前提になる。この不変条件と、ステージ間を流れるデータの形（[JSON データモデル](30-communication/10-json-data-model.md)、[blob の運搬](30-communication/index.md#ステージ間の受け渡しは-hardlink)）は [Inter-Stage Communication](30-communication/index.md) に書く。
+For this to hold, each stage's output directory must be updated atomically, with no intermediate state visible downstream. This invariant, and the shape of the data flowing between stages ([JSON data model](30-communication/10-json-data-model.md), [transport of blobs](30-communication/index.md#hand-over-between-stages-is-by-hardlink)), are written in [Inter-Stage Communication](30-communication/index.md).
 
-ステージがエラーで中断されることはない。コンポーネント内の処理で起きた例外は、コンポーネント共通の基盤（`Component` が関数を包む `error_propagation`）が出力の一部（`BuildReport`）に変換し、下流へ伝播させる。報告の運び方は [Inter-Stage Communication](30-communication/index.md#エラー伝播-buildreport)。
+A stage is never interrupted by an error. An exception raised inside a component's processing is converted by the shared foundation (`error_propagation`, with which `Component` wraps the function) into part of the output (`BuildReport`) and propagated downstream. How the report travels is in [Inter-Stage Communication](30-communication/index.md#error-propagation-buildreport).
 
-ステージの一覧と入出力は [Pipeline](20-pipeline.md) のステージ表が正本。
+The list of stages and their inputs and outputs has its source of truth in the stage table of [Pipeline](20-pipeline.md).
 
-## コンポーネント構成
+## Components
 
-コンポーネントごとに、走らせるステージとコードの場所、担うことを示す。ステージの一覧は [Pipeline](20-pipeline.md)。
+For each component: the stage it runs, where the code is, and what it is responsible for. The list of stages is in [Pipeline](20-pipeline.md).
 
 ## SchemaInspector
 
 `inspect_schema` — `components/preprocess/schema_inspector.py`
 
-スキーマ定義を meta-schema で検証し、[データカタログ](30-communication/20-data-catalog.md)（スキーマから起こした entity と attribute の目録。後段のステージはスキーマの代わりにこれを読む）を抽出する。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
+Validates the schema definition against the meta-schema and extracts the [data catalog](30-communication/20-data-catalog.md) (the inventory of entities and attributes built from the schema; downstream stages read it instead of the schema). The behavior kept on purpose is in the external design's [Schema](../10-external/30-schema.md).
 
 ## Content Normalizer
 
 `normalize_contents` — `components/preprocess/content_normalizer.py`
 
-`contents/` の全ファイルを検証し、正規化して一つのデータ木に合流させ、x-ref と id を検査する。blob はレコードと別にバイト列を自分の出力へ写し、generate が各 edition の出力へ写し直す（[blob のアンカーパス](30-communication/index.md#blob-のアンカーパスは出力アドレスでもある)）。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
+Validates every file in `contents/`, normalizes them, merges them into one data tree, and checks x-refs and ids. For blobs, it mirrors the bytes, separately from the records, into its own output, and generate copies them again into each edition's output ([a blob's anchor path](30-communication/index.md#a-blobs-anchor-path-is-also-its-output-address)). The behavior kept on purpose is in the external design's [Schema](../10-external/30-schema.md).
 
 ## Query Deriver
 
 `derive_queries` — `components/preprocess/query_deriver.py`
 
-views 入力を検証・正規化し、各ビュー定義をパースして派生 entity（`view: true`）をカタログから生成する。出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生 entity。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
+Validates and normalizes the views input, parses each view definition, and generates the derived entities (`view: true`) from the catalog. The output is the whole catalog: the data catalog with the views added as attributes of the root, plus the view definitions and derived entities. The behavior kept on purpose is in the external design's [View](../10-external/40-view.md).
 
 ## Composer
 
 `compose` — `components/composer/composer.py`
 
-正規化済みデータとカタログをそのまま通し、ビュー定義を参照順に評価する。各ビューの結果は次のビューのソースにも加える。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
+Passes the normalized data and the catalog through as they are, and evaluates the view definitions in reference order. Each view's result is also added to the sources of the next view. The behavior kept on purpose is in the external design's [View](../10-external/40-view.md).
 
 ## Tap
 
 `tap` — `components/tap/tap.py`
 
-compose の出力を一本の JSON 文書に合流させる。**Tap Schema**（`tap_schema`。`components/tap/tap_schema.py`）は derive_queries のカタログから、その文書の JSON Schema を書き出す。意図して保つ振る舞いは外部設計の [CLI](../10-external/10-cli.md)。
+Merges compose's output into one JSON document. **Tap Schema** (`tap_schema`; `components/tap/tap_schema.py`) writes out the JSON Schema of that document from derive_queries' catalog. The behavior kept on purpose is in the external design's [CLI](../10-external/10-cli.md).
 
 ## Document Generator
 
 `generate` — `components/generator/generator.py`
 
-compose の出力を inert な木に詰め替え、各ノードに住所（アンカーパス）と型のメタデータを付け（`generator/data_tree.py`）、edition ごとにテンプレートで Markdown のページに描く。表紙と `__db/` のメタドキュメントもここが描く。
+Repacks compose's output into an inert tree, attaches an address (anchor path) and type metadata to each node (`generator/data_tree.py`), and draws Markdown pages with the templates per edition. The cover and the database pages under `__db/` are drawn here too.
 
-意図して保つ振る舞いは外部設計の [Template](../10-external/50-template.md)、[Reports](../10-external/60-reports.md)、[Trust Model](../10-external/70-trust-model.md)。
+The behavior kept on purpose is in the external design's [Template](../10-external/50-template.md), [Reports](../10-external/60-reports.md), and [Trust Model](../10-external/70-trust-model.md).
 
 ## Reconcile
 
 `reconcile` — `components/generator/generator.py`
 
-Generator の出力と、上流から伝播してきた `BuildReport` を突き合わせ、利用者に見せる最終出力を確定する。
+Matches the Generator's output against the `BuildReport` propagated from upstream, and settles the final output shown to the user.
 
-エラー無しなら Generator の出力に奥付ページ（`__build_info/`）と警告ページ（`__warnings/`）を足し、表紙の末尾にリンク節を添える。エラーありなら出力を捨て、失敗ページを `index.md` に描く。意図して保つ振る舞いは外部設計の [Reports](../10-external/60-reports.md#表紙と診断ページ)。
+With no errors, it adds the colophon page (`__build_info/`) and the warnings page (`__warnings/`) to the Generator's output and appends the link sections to the end of the cover. With errors, it discards the output and draws the failure page as `index.md`. The behavior kept on purpose is in the external design's [Reports](../10-external/60-reports.md#the-cover-and-the-diagnostic-pages).
 
-Generator から分けるのは、Generator にエラー時の差し替えを持たせず、下流の site / publish に正常時と失敗時を区別させないため。
+It is separated from the Generator so that the Generator does not carry the replacement on error, and so that the downstream site / publish need not distinguish the normal case from the failure case.
 
 ## Site Builder
 
 `site`
 
-生成された Markdown を HTML にレンダリングする。
+Renders the generated Markdown into HTML.

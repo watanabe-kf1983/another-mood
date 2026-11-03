@@ -1,114 +1,118 @@
 # Manifest
 
-`docs/reference/manifest.md` の契約の外で、意図して保つ振る舞い。マニフェストが設定・配置とどう分かれ、どの順で読まれるかは[内部構造の Architecture](../20-internal/10-architecture.md#起動時に受ける三つのもの)。
+Behavior kept on purpose, outside the contract of `docs/reference/manifest.md`. How the manifest is separated from config and layout, and in what order they are read, is in [Architecture of the internal structure](../20-internal/10-architecture.md#the-three-things-received-at-startup).
 
-本文で使う語:
+Terms used in this chapter:
 
-- **フォーマット（sbdb）** — 利用者が書くソースの形式。sbdb は source-based database の略。スキーマ・ビュー・prose・テンプレート・マニフェストの書き方と、プロジェクト内の配置を含む。ツールに依存しないスペックで、Another Mood はそれを処理するツールの一つ
-- **世代** — フォーマットの版。`sbdb_version` に書く整数で、Rust の edition や Kubernetes の apiVersion にあたる
-- **minimum version** — このプロジェクトを処理するのに要るツールの版の下限。`tools.another-mood.minimum_version` に書く
-- **厳格パース** — ツールが定める語彙に知らない入力があれば、黙って読み飛ばさずエラーにすること
-- **契約面** — フォーマットを構成する領域の一つ。スキーマ、ビュー、prose、テンプレート、配置、マニフェスト（[`sbdb_version` が語る範囲](#sbdb_version-はフォーマット全体で一つの整数でツールの契約を壊しても上がらない)）
-- **静かな破損** — エラーを出さずに、壊れた出力が出ること
-- **`definition/` / `contents/`** — プロジェクトの二つのディレクトリ。前者にスキーマ・ビュー・テンプレート、後者にデータを置く（`docs/reference/cli.md` の Source layout）
-- **著者 / 実行者 / 利用者** — [役割を表す語](../index.md#役割を表す語)
-- **設定** — 実行者が起動時に CLI 引数と環境変数で差し出す、どう実行しどこへ出すかの指定（[Architecture](../20-internal/10-architecture.md#起動時に受ける三つのもの)）
-- **scaffold / blueprint** — [CLI](10-cli.md) の語
+- **format (sbdb)** — the format of the sources the user writes. sbdb is short for source-based database. It covers how the schema, views, prose, templates, and manifest are written, and where they are placed in the project. It is a tool-independent spec, and Another Mood is one tool that processes it
+- **generation** — a version of the format. The integer written in `sbdb_version`, corresponding to Rust's edition or Kubernetes' apiVersion
+- **minimum version** — the lowest version of the tool needed to process this project. Written in `tools.another-mood.minimum_version`
+- **strict parsing** — when the input holds something unknown to the vocabulary the tool defines, raising an error rather than silently skipping it
+- **contract surface** — one of the areas that make up the format: schema, views, prose, templates, layout, manifest ([what `sbdb_version` speaks for](#sbdb_version-is-one-integer-for-the-whole-format-and-does-not-rise-when-the-tools-contract-breaks))
+- **silent corruption** — broken output produced without an error
+- **`definition/` / `contents/`** — the project's two directories. The former holds the schema, views, and templates; the latter holds the data (Source layout in `docs/reference/cli.md`)
+- **author / operator / user** — [Role terms](../index.md#role-terms)
+- **config** — what the operator hands over at startup through CLI arguments and environment variables: how to run and where to write ([Architecture](../20-internal/10-architecture.md#the-three-things-received-at-startup))
+- **scaffold / blueprint** — terms of [CLI](10-cli.md)
 
-## 版の検査
+## Version checks
 
-### 世代の宣言、下限の宣言、厳格パースの三つで、新旧の食い違いをはっきり失敗させる
+### Three things make an old-new mismatch fail loudly: the generation declaration, the minimum version declaration, and strict parsing
 
-人間が書いたソースと、それとは独立に進化するツールの間には、それぞれに新旧があるので組み合わせが四つある。危ないのは食い違う二つで、どちらも静かな破損になりうる:
+Between sources written by humans and a tool that evolves independently of them, each side has an old and a new, so there are four combinations. The dangerous ones are the two mismatches, and either can be silent corruption:
 
-- 旧ソースを新ツールが読む — ツールが既存の構文の意味を変えたのに、旧ソースをそのまま解釈してしまう
-- 新ソースを旧ツールが読む — 旧ツールが知らない構文を読み飛ばしてしまう
+- A new tool reads old sources — the tool changed the meaning of existing syntax but interprets the old sources as they are
+- An old tool reads new sources — the old tool skips syntax it does not know
 
-二つ目はさらに二つに分かれる。新ソースが使うのが新しく追加された構文なら、旧ツールにとってそれは知らない入力。既存の構文の意味が変わったあとのソースなら、旧ツールは知っている構文を古い意味で読んでしまう。
+The second splits further in two. If the new sources use newly added syntax, that is unknown input to the old tool. If they are sources written after the meaning of existing syntax changed, the old tool reads syntax it knows with the old meaning.
 
-版の検査の目的は、これらを検出してはっきり失敗させること。古いソースを自動で移行することはしない。
+The purpose of the version checks is to detect these and fail loudly. Old sources are not migrated automatically.
 
-三つの道具は保険の重ね掛けではなく、分業になっている:
+The three instruments are not redundant insurance; they divide the work:
 
-- **世代**（`sbdb_version`）は、既存の構文の意味が変わる破壊的変更のときに上がり、構文の追加では上がらない（prose の面だけが例外。下）。ツールは対応する世代の集合を持ち、集合の外なら拒む。新旧どちらの向きでも、意味の変わった構文を違う意味で読む組み合わせを受け持つ
-- **厳格パース**は、追加された構文を旧ツールが読んだとき、知らない入力としてエラーにする。minimum version の宣言が無くても、古くなっていても働く最後の防衛線
-- **minimum version** は、この版以上のツールが要ると宣言し、「ツールを上げてください」という正確なエラーを出す。省略できる欄で、ソースがあとから新しい機能に依存しても、ツールは宣言の更新を求めない
+- **The generation** (`sbdb_version`) rises on a breaking change that alters the meaning of existing syntax, and not when syntax is added (the only exception is the prose surface, below). The tool holds the set of generations it supports, and refuses anything outside it. In either direction, it covers the combinations that read changed syntax with a different meaning
+- **Strict parsing** turns added syntax into an error when an old tool reads it, as unknown input. It is the last line of defense, working even when the minimum version is not declared or has gone stale
+- **The minimum version** declares that a tool of at least this version is needed, and produces the exact error "upgrade the tool". It is an optional field, and the tool does not demand that the declaration be updated when the sources later come to depend on a newer feature
 
-追加された構文は厳格パースが捕まえる（prose の本文だけは例外。[知らない入力の表](#知らない入力は黙って読み飛ばさずエラーにする)）ので、世代は意味が変わるときだけ上げれば足り、改版が頻発しない。minimum version の更新を求めない以上、「追加された機能を使うソースを、古い宣言のまま旧ツールで読む」組み合わせを止められるのは厳格パースだけになる。
+Because strict parsing catches added syntax (except in the body of prose; see [the table of unknown input](#unknown-input-is-an-error-not-silently-skipped)), the generation only has to rise when meanings change, and revisions stay infrequent.
 
-### `sbdb_version` はフォーマット全体で一つの整数で、ツールの契約を壊しても上がらない
+Since updating the minimum version is not demanded, strict parsing is the only thing that stops the combination "sources using an added feature, read by an old tool under an old declaration".
 
-宣言と検査の単位は `sbdb_version` の一つだけで、スキーマ・ビュー・テンプレートなど契約面ごとに版を分けない。利用者が書く欄が一つなら、宣言し忘れる欄も無い。整数なのは、集合の外だったとき大小の比較で向きが分かり、ツールを上げるべきか、プロジェクトを移行すべきかを告げられるから。semver の三桁は、何が互換かをツールが判定する、依存解決器を持つエコシステムの語彙。
+### `sbdb_version` is one integer for the whole format, and does not rise when the tool's contract breaks
 
-フォーマットを構成する契約面は次のとおり。ある変更が破壊的かは、このいずれかを非互換に編集したかで判定する:
+The unit of declaration and checking is the single `sbdb_version`; there is no version per contract surface such as schema, views, or templates. If the user writes one field, there is no field to forget.
 
-| 契約面 | 何を縛るか |
+It is an integer because, when outside the supported set, comparing magnitudes tells the direction: whether to upgrade the tool or migrate the project. The three digits of semver are the vocabulary of an ecosystem with a dependency resolver, where the tool decides what is compatible.
+
+The contract surfaces that make up the format are as follows. Whether a change is breaking is judged by whether it edited any of them incompatibly:
+
+| Contract surface | What it binds |
 |---|---|
-| schema | `definition/schema.yaml` に書けること（ツール側の `resources/schemas/schema-schema.yaml` が縛る） |
-| view | ビュー定義に書けること（同 `view-schema.yaml`） |
-| parser/prose | Markdown ファイルの解釈。見出しや本文中のリンクをどう読むか、組み込みの prose / blob のスキーマ |
-| template | テンプレートから呼べる語彙（フィルタ・タグ・関数） |
-| layout | プロジェクト内の配置（`definition/` / `contents/`） |
-| manifest | `sbdb.yaml` に書けること。凍結した二欄（[版を宣言する欄の位置と形は凍結する](#版を宣言する欄の位置と形は凍結する)）と、ツールごとの `tools.<name>` の中身は除く |
+| schema | What can be written in `definition/schema.yaml` (bound by the tool's `resources/schemas/schema-schema.yaml`) |
+| view | What can be written in a view definition (likewise `view-schema.yaml`) |
+| parser/prose | The interpretation of Markdown files: how headings and links in the body are read, and the schemas of the built-in prose / blob |
+| template | The vocabulary callable from templates (filters, tags, functions) |
+| layout | The placement within the project (`definition/` / `contents/`) |
+| manifest | What can be written in `sbdb.yaml`, excluding the two frozen fields ([The fields that declare versions are frozen in place and shape](#the-fields-that-declare-versions-are-frozen-in-place-and-shape)) and the contents of each tool's `tools.<name>` |
 
-テンプレートの語彙も面に数えるのは、利用者のテンプレートがそれに依存するから。別のプロセッサが現れれば、この語彙も実装することになる。
+The template vocabulary counts as a surface because the user's templates depend on it. If another processor appears, it will come to implement this vocabulary too.
 
-contents は独立の契約面を持たない。contents に書くデータを縛るのは利用者の `schema.yaml` で、ツールの変更が contents の意味を変える事態は、必ず schema 面か parser/prose 面の変更として現れる。
+contents has no contract surface of its own. What binds the data written in contents is the user's `schema.yaml`, and a tool change that alters the meaning of contents always shows up as a change to the schema surface or the parser/prose surface.
 
-語るのはソースとツールのフォーマット互換だけ。CLI のように、ツール自身の利用者向け契約を壊す変更ではこの番号を上げない。フォーマットはツールに依存しないスペックで、一つのツールの都合で版が上がるのは、スペックとツールの分離の破壊になる。
+The number speaks only for format compatibility between sources and tool. A change that breaks the tool's own user-facing contract, such as the CLI, does not raise it. The format is a tool-independent spec; a version rising for one tool's convenience would break the separation of spec from tool.
 
-ツールの契約の破壊と、世代が対応集合から脱落するときの手順は[リリースフロー](../../30-dev/40-release.md)の管轄。どの面がどの世代で非互換に動いたかの履歴は持たない。移行手順は破壊的変更を入れる PR 自身が docs に書くので、履歴から移行手順を自分で組み立てる読者が居ない。
+Breaking the tool's contract, and the procedure when a generation drops out of the supported set, belong to the [release flow](../../30-dev/40-release.md). There is no history of which surface moved incompatibly in which generation. The PR that introduces a breaking change writes the migration steps in docs itself, so no reader has to assemble migration steps from history.
 
-### `sbdb_version` は必須で、省略時の既定を持たない
+### `sbdb_version` is required, with no default when omitted
 
-欄が無ければ検査のしようがない。宣言を忘れた新世代のソースを旧世代として黙って解釈するのは、防ぎたい静かな破損そのもの。Cargo が `edition` の省略を最古の edition とみなすのは、既存の資産を壊せない事情の妥協で、1.0 に達していないこのツールには要らない。
+Without the field there is nothing to check. Silently interpreting new-generation sources whose declaration was forgotten as the old generation is exactly the silent corruption we want to prevent. Cargo treats an omitted `edition` as the oldest edition, but that is a compromise forced by assets it cannot break, and a tool that has not reached 1.0 does not need it.
 
-`sbdb.yaml` が無いディレクトリも同じ理由でエラーにし、欄が無い場合と区別しない。マニフェストが無ければ世代も読めず、既定の世代で読めば同じ静かな破損になる。scaffold が書き込むので、使い始める人に手間はかからない。
+A directory without `sbdb.yaml` is an error for the same reason, indistinguishable from a missing field. Without a manifest the generation cannot be read, and reading with a default generation would be the same silent corruption. scaffold writes it, so there is no burden on someone starting out.
 
-### 版を宣言する欄の位置と形は凍結する
+### The fields that declare versions are frozen in place and shape
 
-`sbdb_version` の欄名と形式、`tools.<name>` の形は、世代が変わっても同じ場所に同じ形で置く。古いツールが未来の世代のファイルを開いたとき「対応できない」と正しく断るには、少なくともこの二欄を、どの世代のツールも読めなければならない。
+The name and format of the `sbdb_version` field, and the shape of `tools.<name>`, stay in the same place in the same form across generations. For an old tool to correctly refuse a file of a future generation with "unsupported", every generation of the tool must be able to read at least these two fields.
 
-未来の世代のファイルは「知らないキー」ではなく「対応しない世代」として断る。そのために読み込みは、凍結した欄だけを先に読んで版の検査を通し、そのあとでファイル全体を厳格に検証する。
+A file of a future generation is refused as an "unsupported generation", not as "unknown keys". For that, loading first reads only the frozen fields and passes the version check, and only then validates the whole file strictly.
 
-凍結するのはこの二欄だけで、他の欄は足しても既存の欄の意味を変えないので、世代は動かさない。author や license のようなメタ情報は、必要になってから足しても世代を動かさずに済むので、今は載せない。
+Only these two fields are frozen; other fields can be added without changing the meaning of existing ones, so the generation does not move. Metadata such as author or license can be added when needed without moving the generation, so it is not included now.
 
-### minimum version はツールごとの欄で、`tools:` の下に置く
+### The minimum version is a per-tool field, placed under `tools:`
 
-フォーマットはツール中立なので、その語彙にツール名を混ぜない。ツールの版の下限はツールごとの関心で、pyproject.toml が `[project]` と `[tool.<name>]` を分けるのに倣い、`tools:` 名前空間の下に置く。
+The format is tool-neutral, so tool names are not mixed into its vocabulary. A tool's version floor is a per-tool concern, and following pyproject.toml's split between `[project]` and `[tool.<name>]`, it lives under the `tools:` namespace.
 
-別のプロセッサが現れたら、それぞれが自分の行を持つ。他のツールの行は中身を見ず、互いに無視する。`tools.another-mood` の下は Another Mood の語彙なので、知らないキーはエラーにする。
+If another processor appears, each has its own line. The lines of other tools are not inspected; they ignore each other. Under `tools.another-mood` is Another Mood's vocabulary, so unknown keys there are errors.
 
-### minimum version は検証済みの下限で、素のバージョンだけを受ける
+### The minimum version is a verified floor, and only a bare version is accepted
 
-宣言するのは「この版で動くことを確認した」版で、本当の最小版はそれより低くてよく、調べることは求めない。下限にすぎないので、scaffold は生成時に実行中の版を機械的に書き込める。
+What is declared is the version "confirmed to work"; the true minimum may be lower, and finding it is not required. As it is only a floor, scaffold can mechanically write the running version at generation time.
 
-範囲や演算子は受けない。ビルドツールがソースのマニフェストを読む系（Go、Rust の `rust-version`、CMake）はどれもそうで、範囲の語彙は依存解決器を持つ系のもの。上限は書く時点では知りようがない。要るなら別の欄を、互換性を壊さずに足せる。
+Ranges and operators are not accepted. Every system where a build tool reads a manifest from the sources (Go, Rust's `rust-version`, CMake) does the same; the vocabulary of ranges belongs to systems with a dependency resolver. An upper bound cannot be known at the time of writing. If one is needed, a separate field can be added without breaking compatibility.
 
-### 知らない入力は、黙って読み飛ばさずエラーにする
+### Unknown input is an error, not silently skipped
 
-ツールが定める語彙（スキーマのキー、ビュー定義の演算子、テンプレートのタグ・フィルタ・関数、マニフェストのキー）に知らない入力があれば、エラーにする。機能を足すときもこの性質を保つ。版を宣言していない、あるいは更新していない利用者にとっての最後の防衛線（[分業](#世代の宣言下限の宣言厳格パースの三つで新旧の食い違いをはっきり失敗させる)）。
+If there is unknown input in the vocabulary the tool defines (schema keys, view definition operators, template tags / filters / functions, manifest keys), it is an error. This property is kept when features are added. It is the last line of defense for a user who has not declared, or has not updated, the version ([division of work](#three-things-make-an-old-new-mismatch-fail-loudly-the-generation-declaration-the-minimum-version-declaration-and-strict-parsing)).
 
-契約面ごとの担い手:
+Who handles it, per contract surface:
 
-| 契約面 | 知らない入力の扱い |
+| Contract surface | Treatment of unknown input |
 |---|---|
-| schema / view | スキーマ定義・ビュー定義を検証する側（ツール側のメタスキーマ）で弾く。contents のキーは利用者の `schema.yaml` が決め、知らないキーを弾くかもその書き方次第なので、ツールの語彙ではない |
-| parser/prose | 対象外。本文は自由な Markdown で、知らない入力と本文を区別できない。追加された埋め込み構文も本文として通るので、この面だけは追加も意味の変更も世代に委ねる |
-| template | 知らないタグ・フィルタ・関数の呼び出しはエラー。一方、未定義の名前を参照しただけなら空になる。これは利用者のデータに由来する名前（データの種類や属性）への書きやすさで、互換性の穴ではない。ツールが足す名前は呼び出す関数やフィルタなので、呼べば知らない名前としてエラーになる |
-| layout | `definition/` 直下には既知のエントリしか置けない。プロジェクト直下は `.git` や `README.md` と同居するので検査しない。`definition/views/` の中はビューの検証が受け持ち、`definition/templates/` は利用者が名付ける開いた名前空間なので、検査の深さは直下で止める |
-| manifest | 読み込み時に弾く |
+| schema / view | Rejected by the side that validates schema and view definitions (the tool's meta-schemas). The keys of contents are decided by the user's `schema.yaml`, and whether unknown keys are rejected depends on how it is written, so they are not the tool's vocabulary |
+| parser/prose | Not covered. The body is free Markdown, and unknown input cannot be told from body text. Added embedded syntax passes as body text too, so on this surface alone both additions and changes of meaning are left to the generation |
+| template | Calling an unknown tag, filter, or function is an error. Merely referring to an undefined name, however, yields empty. That is for ease of writing names that come from the user's data (kinds of data and attributes), not a hole in compatibility. The names the tool adds are functions and filters to be called, so calling one that an older tool does not know raises an unknown-name error |
+| layout | Directly under `definition/` only known entries may exist. The project root shares space with `.git` and `README.md`, so it is not checked. Inside `definition/views/` is covered by view validation, and `definition/templates/` is an open namespace the user names, so the depth of the check stops at the top level |
+| manifest | Rejected at load time |
 
-## 置き場と役割
+## Location and role
 
-### マニフェストは contents の外にあり、contents を書く人は版を知らなくてよい
+### The manifest is outside contents, and whoever writes contents need not know the version
 
-版の宣言は definition を書く人の関心で、contents には契約面が無い（[`sbdb_version` が語る範囲](#sbdb_version-はフォーマット全体で一つの整数でツールの契約を壊しても上がらない)）ので、contents を書く人の目に入らない場所に置く。
+Declaring the version is the concern of whoever writes definition, and contents has no contract surface ([what `sbdb_version` speaks for](#sbdb_version-is-one-integer-for-the-whole-format-and-does-not-rise-when-the-tools-contract-breaks)), so it is placed where whoever writes contents does not see it.
 
-かといって `definition/` の中でもない。マニフェストは `title` のように、contents を含むプロジェクト全体について言うものなので、プロジェクト直下、`definition/` と `contents/` の隣に置く。Cargo.toml や package.json と同じ置き方。
+Yet not inside `definition/` either. The manifest speaks, like `title`, about the project as a whole including contents, so it sits at the project root, next to `definition/` and `contents/`. The same placement as Cargo.toml or package.json.
 
-### マニフェストは「何であるか」を宣言し、「どうビルドするか」は持たない
+### The manifest declares "what this is" and holds no "how to build"
 
-マニフェストはプロジェクトの識別（`title` 欄の表示名）と互換性の宣言で、プロジェクトと一緒に配られる。どう実行し、どこへ出すか（出力先、ポート、テンプレートに渡す値）は実行者がその場で決めるもので、起動時に CLI 引数と環境変数で差し出す（[CLI](10-cli.md)）。
+The manifest is the identity of the project (the display name in the `title` field) and its compatibility declaration, distributed together with the project. How to run and where to write (the output destination, the port, the values passed to templates) are decided by the operator on the spot, and handed over at startup through CLI arguments and environment variables ([CLI](10-cli.md)).
 
-同じプロジェクトを別の人が別の場所でビルドしても、マニフェストを書き換える必要が無い。逆に、設定でフォーマットの世代や配置を動かす手段も持たない（[CLI › ソースの配置は設定で動かせない](10-cli.md#ソースの配置は設定で動かせない)）。
+Someone else building the same project somewhere else need not rewrite the manifest. Conversely, there is no way for config to move the format's generation or layout ([CLI › The layout of the sources cannot be moved by settings](10-cli.md#the-layout-of-the-sources-cannot-be-moved-by-settings)).

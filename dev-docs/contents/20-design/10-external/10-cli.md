@@ -1,87 +1,89 @@
 # CLI
 
-`docs/reference/cli.md` の契約の外で、意図して保つ振る舞い。マニフェストの欄の意味は [Manifest](20-manifest.md)。
+Behavior kept on purpose, outside the contract of `docs/reference/cli.md`. What the manifest's fields mean is in [Manifest](20-manifest.md).
 
-本文で使う語:
+Terms used in this chapter:
 
-- **実行者 / 利用者** — [役割を表す語](../index.md#役割を表す語)
-- **エージェント** — シェルから `mood` を叩く AI コーディングエージェント。利用者の一種で、専用の扱いはしない
-- **`<project_dir>`** — ソースを置くディレクトリ。`sbdb.yaml` があることで成立する（[Manifest](20-manifest.md)）
-- **CWD** — `mood` を実行したディレクトリ。利用者のリポジトリのルートであることが多い
-- **`out_dir` / `site_dir` / `tmp_dir`** — Markdown 出力、HTML 出力、作業ディレクトリの置き場を差し替える設定（`docs/reference/cli.md` の Keys and defaults）
-- **scaffold / blueprint** — `mood init` と `mood blueprint apply` が、同梱のサンプルプロジェクト（blueprint）を写して新しいプロジェクトを作ること
-- **tap** — `mood tap` が出す、データとビューを合流した一本の JSON 文書
+- **operator / user** — [Role terms](../index.md#role-terms)
+- **agent** — an AI coding agent that runs `mood` from a shell. A kind of user, with no special treatment
+- **`<project_dir>`** — the directory holding the sources. It is a project by virtue of containing `sbdb.yaml` ([Manifest](20-manifest.md))
+- **CWD** — the directory `mood` was run in. Often the root of the user's repository
+- **`out_dir` / `site_dir` / `tmp_dir`** — the settings that relocate the Markdown output, the HTML output, and the working directory (Keys and defaults in `docs/reference/cli.md`)
+- **scaffold / blueprint** — `mood init` and `mood blueprint apply` creating a new project by copying a bundled sample project (a blueprint)
+- **tap** — the single JSON document that `mood tap` emits, with the data and the views merged
 
-## 入口
+## Entry points
 
-### 検証だけのコマンドは持たず、build が兼ねる
+### There is no validate-only command; build covers it
 
-`mood validate` のような、ビルドせずに検証だけするコマンドは持たない。ツールはソースを変更せず、同じ入力には同じ出力を返すので、build を繰り返しても害が無い。エラーの有無は終了コードで取れ、出力が要らなければ捨てればよい。
+There is no command like `mood validate` that validates without building. The tool never modifies the sources and returns the same output for the same input, so repeating build does no harm. Whether there were errors is available from the exit code, and the output can be discarded if it is not wanted.
 
-### エージェント専用の経路も文章も持たない
+### No agent-only entry point, and no agent-only text
 
-MCP サーバのような、エージェント専用の入口は提供しない。エージェントはシェルから人間と同じ `mood` を叩き、同梱の文書を読むコマンド `mood docs` で人間と同じ `docs/` を読む。ツールの使い方は人間とエージェントで同一で、別版は要らない。
+There is no entry point reserved for agents, such as an MCP server. An agent runs the same `mood` from a shell as a human does, and reads the same `docs/` through `mood docs`, the command that shows the bundled documentation. The way to use the tool is identical for humans and agents, and no separate edition is needed.
 
-専用の入口を持つと、その経路にしか無い文章（接続時にエージェントへ注入する指示文など）が生まれ、文書の正本が二つになる。かつて MCP サーバを持っていたときに起きたことで、入口ごと落とした。
+A dedicated entry point breeds text that exists only on that route (such as instructions injected into the agent on connection), and the documentation then has two sources of truth. This happened when we had an MCP server, and the entry point was dropped altogether.
 
-プロジェクトに来たエージェントへの導線は、scaffold がプロジェクト直下に生成する `README.md` が担う。何が管理しているディレクトリか、ツールの入手と help と文書がどこから始まるかだけを書き、構造や手順は書かない。それは `mood --help` と `docs/` の仕事。
+An agent arriving at a project is pointed the right way by the `README.md` that scaffold generates at the project root. It says only what is managing the directory, how to get the tool, and where help and the documentation start; it does not describe structure or procedures. That is the job of `mood --help` and `docs/`.
 
-### watch は前景で動かし、デタッチの口を持たない
+### watch runs in the foreground and has no detach option
 
-`mood watch --detach` のような、バックグラウンドで起動・停止する手段は持たない。人間が見えるターミナルで `mood watch <dir>` を前景起動し、エージェントは利用者に「別ターミナルで実行してください」と案内する。
+There is no way to start and stop in the background, such as `mood watch --detach`. A human starts `mood watch <dir>` in the foreground in a terminal they can see, and an agent tells the user to "run it in another terminal".
 
-デタッチで省けるのは、作業の初めに watch を一度起こす手間だけ。watch は人間が作業の間ずっと動かしておくもので、エージェントの会話や作業の区切りごとに起動・停止するものではない。hidden daemon にすると、ビルドエラーをその場で観察する経路が断たれる。subprocess / signal / プラットフォーム分岐の保守負債に見合わない。
+All that detaching saves is starting watch once at the beginning of the work. watch is something a human keeps running for the whole stretch of work, not something started and stopped at every turn of an agent's conversation or task.
 
-## 置き場
+As a hidden daemon, it loses the route for observing build errors on the spot. It is not worth the maintenance debt of subprocess, signal, and platform branches.
 
-### ソースの配置は設定で動かせない
+## Locations
 
-`definition/schema.yaml` 等のパスは `<project_dir>` から導き、個別に位置を上書きする手段を持たない。配置はフォーマットの契約面の一つで（[Manifest](20-manifest.md#sbdb_version-はフォーマット全体で一つの整数でツールの契約を壊しても上がらない)）、`sbdb_version` で世代を名乗りながらファイルの位置を動かせるのは、宣言と矛盾する。
+### The layout of the sources cannot be moved by settings
 
-### 出力はプロジェクトの中ではなく、CWD 直下の `.another-mood/` に置く
+Paths such as `definition/schema.yaml` are derived from `<project_dir>`, and there is no way to override them individually. The layout is one of the format's contract surfaces ([Manifest](20-manifest.md#sbdb_version-is-one-integer-for-the-whole-format-and-does-not-rise-when-the-tools-contract-breaks)); claiming a generation with `sbdb_version` while moving the files around would contradict the declaration.
 
-`<project_dir>` は利用者のコンテンツ領域で、ツールから見れば参照先。生成物を書き込まず、既定では CWD 直下の `.another-mood/` に置く:
+### Output goes to `.another-mood/` directly under the CWD, not into the project
 
-- `.` 接頭辞は、`.next/` や `.pytest_cache/` と同じ、フレームワークの作業領域を示す慣習
-- gitignore がルートの `/.another-mood/` 一行で済む
-- 入力が別のリポジトリ（git submodule 等）でも、そちらを汚さない
-- `contents/` を編集する人の視界に入らない
+`<project_dir>` is the user's content area, and from the tool's point of view a thing to read. Nothing is written into it; by default the output goes to `.another-mood/` directly under the CWD:
 
-### `<project_dir>` は CWD の下に限り、出力先は縛らない
+- The `.` prefix is the convention for a framework's working area, like `.next/` and `.pytest_cache/`
+- The gitignore is one line at the root, `/.another-mood/`
+- If the input is another repository (a git submodule, say), it is not polluted
+- It stays out of sight of whoever edits `contents/`
 
-出力は `.another-mood/<CWD から見た project_dir>/` に分かれ、別の `<project_dir>` を同時に処理しても衝突しない。この相対パスは `<project_dir>` が CWD の下にあって初めて定義できるので、外を指す場合（`../` での脱出や、外を指す絶対パス）は拒む。
+### `<project_dir>` must be under the CWD; the output destinations are not restricted
 
-basename だけで分ける案は採らない。`/a/proj` と `/b/proj` が同じ場所に着地する。
+The output is divided into `.another-mood/<project_dir as seen from the CWD>/`, so processing different `<project_dir>`s at the same time does not collide. This relative path is defined only when `<project_dir>` is under the CWD, so pointing outside (escaping with `../`, or an absolute path outside) is refused.
 
-この既定を差し替える `out_dir` / `site_dir` / `tmp_dir` は「どこに書き出すか」という別の関心で、CWD の外への出力に正当な用途があるので縛らない。差し替えた先は指定どおりに使い、細分しない。
+Dividing by basename alone is not adopted: `/a/proj` and `/b/proj` would land in the same place.
+
+`out_dir` / `site_dir` / `tmp_dir`, which replace this default, are a separate concern ("where to write"), and writing outside the CWD has legitimate uses, so they are not restricted. A replaced destination is used as given, without subdividing.
 
 ## tap
 
-### tap はソースの形を写さず、正規化と合流を済ませた木を出す
+### tap does not mirror the shape of the sources; it emits the tree after normalization and merging
 
-利用者が `contents/` を直接読めば済むようにも見えるが、ソースは著者が書きやすい形で、照会しやすい形ではない。tap の出力はソースと次の点で違い、この差を保つ:
+It might seem enough for the user to read `contents/` directly, but the sources are shaped for the author to write, not for querying. The output of tap differs from the sources in the following ways, and this difference is kept:
 
-- 形が揃う。ソースは map pattern（`{id: {...}}`）で書けるが、出力は正規化後の配列で、`jq 'map(select(...))'` がそのまま効く
-- 合流済み。ソースは複数ファイルに分かれ、ビルド時に一つの木に合流する（[Schema](30-schema.md#一つのコレクションを複数のファイルに分けて書ける)）。直読みでは利用者がこの合流を再実装することになる
-- 形式が一本。ソースは YAML と Markdown が混在するが、出力は一本の木
-- ビューが入る。join や grouped の結果はソースに無く、tap でしか取れない
+- The shape is uniform. Sources may be written in the map pattern (`{id: {...}}`), but the output is the normalized array, so `jq 'map(select(...))'` works as is
+- It is merged. Sources are split across files and merged into one tree at build time ([Schema](30-schema.md#one-collection-can-be-written-across-several-files)). Reading them directly, the user would reimplement this merge
+- It is one format. Sources mix YAML and Markdown; the output is one tree
+- The views are in it. The results of join and grouped are not in the sources, and tap is the only place to get them
 
-### 文書を作るだけで、照会の口は持たない
+### It only produces the document; there is no query interface
 
-tap は一本の JSON 文書を作って終わる。`--jq` のような照会引数も、トップレベルのビューを選ぶ部分指定も持たず、絞り込みは利用者の道具（jq、スクリプト）に委ねる。
+tap produces one JSON document and stops. It has neither a query argument like `--jq` nor a partial selection of top-level views; narrowing down is left to the user's tools (jq, scripts).
 
-jq 引数が救うのは、シェルを持たずファイル共有も無いクライアント（MCP 経由でしか照会できないエージェント）だけ。今の読者は、CLI 経路の外部プログラムと、シェルを持つエージェントで、その読者はまだ仮想である。
+What a jq argument would rescue is only a client with no shell and no file sharing (an agent that can query only through MCP). Today's readers are external programs on the CLI route and agents with a shell; the shell-less client is still hypothetical.
 
-仮想の読者のために、jq エンジンの依存（PyPI の `jq` は C 拡張）とエラー面・結果形式の設計を先に払わない。シェルを持たないクライアントが現れたら、jq 引数を純粋な引数追加として足す。
+We do not pay up front for a hypothetical reader: the dependency on a jq engine (the `jq` on PyPI is a C extension) and the design of its error surface and result format. When a client without a shell appears, a jq argument can be added as a pure addition.
 
-部分指定も同じ理由で持たない。dev-docs 全体でも文書は 600 KB 程度で、jq に流すコストは数えるに値しない。セレクタは jq が既にできることの再実装になる。
+Partial selection is omitted for the same reason. Even the whole of dev-docs is a document of about 600 KB, and the cost of piping it into jq is not worth counting. A selector would reimplement what jq already does.
 
-副次的に、mood が照会の口を一切持たないことで、mood の持つクエリ概念はビュー定義の DSL（[View](40-view.md)）一つに保たれる。
+As a side effect, because mood has no query interface at all, the only notion of a query mood has is the DSL of view definitions ([View](40-view.md)).
 
-### 出力は JSON だけ
+### The output is JSON only
 
-照会を jq に委ねる以上、そのまま jq に食わせられる形でなければならず、jq は YAML を読まない。外部プログラムが標準ライブラリだけで読めるのも JSON。YAML 出力は実需が現れたら純増で足せる。
+Since querying is delegated to jq, the output must be in a form jq can consume as is, and jq does not read YAML. JSON is also what an external program can read with its standard library alone. YAML output can be added as a pure addition when a real need appears.
 
-### 文書に、実行ごとに変わる値を入れない
+### The document holds no value that changes from run to run
 
-build info やタイムスタンプは tap 文書に入れない。利用者は tap の出力を実行の間で diff して使うことが多く、毎回変わる値があると見たい差分が埋もれる。ソースから導いた値（`__definition` など）は入れてよい。
+Build info and timestamps are not put into the tap document. Users often diff tap's output between runs, and a value that changes every time buries the difference they want to see. Values derived from the sources (`__definition` and the like) may be included.

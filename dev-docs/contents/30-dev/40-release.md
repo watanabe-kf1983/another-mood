@@ -1,168 +1,122 @@
-# リリースフロー
+# Release Flow
 
-リリース = version 確定 + git tag push。main は trunk のまま、「main マージ = リリース」
-ではない。リリースに要る判断と記述はすべて PR 時点で置き、リリース時はその消化
-（読む・打つ・貼る）だけ——役割による手順の分岐はない。
+A release is fixing the version and pushing a git tag. main stays a trunk, and "merging to main" is not "releasing". Every judgment and description a release needs is put in place at PR time, and the release itself is only their consumption (read, tag, paste); there is no branching of the procedure by role.
 
-## バージョニング
+## Versioning
 
-- 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
-  導出する。bump コミットという工程はない
-- showcase と dev-docs のマニフェストは `minimum_version` を書かない。同じリポジトリで
-  HEAD と共に育つので未リリースの機能に依存しうる。正直な下限（次版）は dev 版より
-  大きいのでゲートに落ちる。実在する版を書けば偽の宣言、リリースごとに追随すれば
-  bump コミットの再発明になる
-- リリース tag は `vN.N.N` 形（ハイフンを含まない）。リリースワークフローの発火条件と
-  hatch-vcs の版導出（pyproject の describe フィルタ）がこの形を共有する。リリースでない
-  目印 tag は `milestone/` 名前空間に置く
-- リリースの役割は三値——破壊 / 互換・機能 / 互換・修正。破壊は二種の総称:
-    - **フォーマット破壊** — サポート世代の脱落（old_supported − new_supported ≠ ∅。
-      世代の**追加**自体は破壊ではない。世代運用は
-      [Manifest](../20-design/10-external/20-manifest.md) の管轄）
-    - **ツール破壊** — CLI 等、ツールの利用者向け契約の破壊
-- 役割から版番号の桁への写像。桁の対応はこの表だけが持ち、他の記述は役割語で書く:
+- The one source of truth for the version declaration is the git tag. The version in pyproject is derived from the tag by hatch-vcs. There is no bump-commit step
+- The manifests of showcase and dev-docs do not write `minimum_version`. They grow together with HEAD in the same repository, so they may depend on unreleased features. The honest floor (the next version) is greater than the dev version, so it would fail the gate. Writing an existing version would be a false declaration, and following each release would reinvent the bump commit
+- Release tags have the form `vN.N.N` (no hyphen). The trigger condition of the release workflow and hatch-vcs's version derivation (the describe filter in pyproject) share this form. Marker tags that are not releases go in the `milestone/` namespace
+- A release's kind is one of three values: breaking / compatible feature / compatible fix. Breaking is the umbrella for two kinds:
+    - **A format break** — a supported generation dropping out (old_supported − new_supported ≠ ∅. **Adding** a generation is itself not a break. Generation management belongs to [Manifest](../20-design/10-external/20-manifest.md))
+    - **A tool break** — breaking the tool's user-facing contract, such as the CLI
+- The mapping from kind to version digit. Only this table holds the digit correspondence; every other description speaks in kind words:
 
-  | 役割 | 0.x 期 | 1.0.0 以降 |
+  | Kind | 0.x era | 1.0.0 and later |
   |---|---|---|
-  | 破壊 | 0.MINOR+1 | MAJOR+1 |
-  | 互換・機能 | 0.x.PATCH+1 | MINOR+1 |
-  | 互換・修正 | 0.x.PATCH+1 | PATCH+1 |
+  | Breaking | 0.MINOR+1 | MAJOR+1 |
+  | Compatible feature | 0.x.PATCH+1 | MINOR+1 |
+  | Compatible fix | 0.x.PATCH+1 | PATCH+1 |
 
-- リリースの契機は裁量。1.0.0 はローンチで刻む
-- 破壊的 PR をマージすると、以後の main からは互換リリースが打てなくなる。
-  「次のリリースを破壊リリースにする覚悟ができたときにマージする」。
-  旧系列への修正需要が実際に発生したら、過去 tag から遡及ブランチを切って
-  cherry-pick する（`git switch -c release-<系列> <系列の最終 tag>`）
+- When to release is discretionary. 1.0.0 is cut at launch
+- Once a breaking PR is merged, no compatible release can be cut from main thereafter. "Merge when you are ready for the next release to be a breaking one." If demand for a fix to an old series actually arises, cut a backport branch from the old tag and cherry-pick (`git switch -c release-<series> <the series' last tag>`)
 
-## PR 側の規律
+## Discipline on the PR side
 
-PR 本文は main の squash コミット本文になり、ブランチ上のコミットメッセージは残らない。
-このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。
-merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の
-背景もトレーラーも黙って失われる。
+The PR body becomes the squash commit body on main, and the commit messages on the branch do not survive. For this, the repository settings allow squash merges only, and use the PR body as the squash body.
 
-PR タイトルに内部語彙は書かない。タイトルは自動生成の台帳にそのまま載り、ハイライトの
-見出しも務める——どちらも利用者が読む面である。
+Allowing merge commits or rebases would mean the bodies of PRs merged that way never enter history, and the background of design decisions and the trailers would be silently lost.
 
-### Release-Highlight トレーラー
+No internal vocabulary in PR titles. The title goes as is into the auto-generated ledger and also serves as the highlight's heading; both are surfaces users read.
 
-リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭から一行書く:
+### The Release-Highlight trailer
+
+A PR you want among the highlights at the top of the release notes writes one line, starting at the beginning of a line, at the end of the PR body:
 
     Release-Highlight: fix
 
-- key は `Release-Highlight`、kind は breaking / feature / fix の三値。kind 以外は
-  書かない（見出しは PR タイトルが務める）。必ず行頭に置く（リリース手順の収集が
-  行頭 grep のため）
-- breaking のみ義務。feature / fix は裁量
-- feature / fix の規準は「docs/reference の**約束の集合が増減したか**」。増減したら
-  feature（既存挙動の新規文書化も、契約外を契約内に入れる拡張なので feature）。
-  同じ約束の言い直し・明確化・構成整理は fix 以下。この判定は意味判断であり、
-  機械検査せず作者に委ねる
-- 一つの PR が複数の kind を宣言してよい（一行に一つ）
+- The key is `Release-Highlight`, and the kind is one of three values: breaking / feature / fix. Nothing but the kind is written (the heading is served by the PR title). Always at the beginning of a line (the release procedure collects it by a line-anchored grep)
+- Only breaking is mandatory. feature / fix are discretionary
+- The criterion for feature vs fix is "**did the set of promises in docs/reference grow or shrink**". If it did, feature (documenting existing behavior for the first time is feature too: it brings something from outside the contract inside). Restating, clarifying, or restructuring the same promises is fix or below. The judgment is semantic, not machine-checked; it is the author's
+- One PR may declare several kinds (one per line)
 
-### 説明セクション
+### Description sections
 
-PR タイトルを超える説明は、PR 本文にセクションとして書く。見出しは kind の組ごとに
-一つで、リリースノートの節に対応する。PR の記入面と Release の節を一対一にし、
-セクションと kind の食い違いを lint が機械で拾えるようにするための分け方:
+Description beyond the PR title is written in the PR body as sections. There is one heading per group of kinds, corresponding to a section of the release notes. This division makes the PR's writing surface and the Release's sections one-to-one, so that a lint can mechanically catch a mismatch between section and kind:
 
-| 見出し | 伴う kind | 書くか | Release での節 |
+| Heading | Accompanying kind | Written? | Section in the Release |
 |---|---|---|---|
-| `## Breaking change` | breaking | 義務 | Breaking changes |
-| `## Release highlight` | feature / fix | 裁量 | Highlights |
+| `## Breaking change` | breaking | Mandatory | Breaking changes |
+| `## Release highlight` | feature / fix | Discretionary | Highlights |
 
-- 自由形式の利用者向け英文で、内部語彙は書かない。リリース時に
-  Release 冒頭へそのままコピペされる
-- `## Breaking change` には移行の要約と docs の移行手順へのポインタを書く
-- 一つの PR が両方を持ってよい。破壊と引き換えに機能を入れる PR なら、移行を前者、
-  新しくできることを後者に書き、breaking と feature を併記する
+- Free-form English for users, with no internal vocabulary. Copied as is to the top of the Release at release time
+- `## Breaking change` holds a summary of the migration and a pointer to the migration steps in docs
+- One PR may have both. For a PR that brings a feature at the cost of a break, write the migration in the former and what is newly possible in the latter, declaring both breaking and feature
 
-### 破壊的 PR の義務
+### Obligations of a breaking PR
 
-破壊的 PR（フォーマット破壊・ツール破壊とも）は、以下をすべて自身に含める。
-トレーラーと `## Breaking change` セクションだけが PR 本文に書かれ、他はレビュー
-対象のリポジトリ内容:
+A breaking PR (a format break or a tool break alike) includes all of the following in itself. Only the trailer and the `## Breaking change` section are written in the PR body; the rest is repository content under review:
 
-1. **移行手順ほか（フォーマット破壊のみ）** — 利用者向けの移行手順を docs に書く
-   （正本はリリースノートではなく docs。置き場所は最初の破壊的変更時に確定）。
-   および世代番号まわりの追随一式——コードの対応集合・scaffold 生成物・
-   showcase / dev-docs のマニフェスト。更新漏れは、ビルドとテストが世代番号に
-   張り付いているため既存 CI が落とす
-2. **`Release-Highlight: breaking` トレーラーと `## Breaking change` セクション** —
-   上記書式で PR 本文に
+1. **Migration steps and more (format breaks only)** — write the user-facing migration steps in docs (the source of truth is docs, not the release notes; the location is settled at the first breaking change)
+   - Plus the full set of follow-ups around the generation number: the supported set in the code, the scaffold output, the manifests of showcase / dev-docs. A missed update is caught by the existing CI, since the builds and tests are pinned to the generation number
+2. **The `Release-Highlight: breaking` trailer and the `## Breaking change` section** — in the PR body, in the format above
 
-### lint による自動検査
+### Automatic checks by lint
 
-PR を開く・再開する・本文を編集する・push する、のいずれでも `PR lint` ワークフローが
-走り、上の規律のうち機械で決まる部分だけを見る。既存シグナル同士の突き合わせに徹し、「内容が破壊的かどうか」の
-意味判定はしない。
+Whenever a PR is opened, reopened, has its body edited, or is pushed, the `PR lint` workflow runs and looks only at the mechanically decidable part of the discipline above. It sticks to cross-checking existing signals, and makes no semantic judgment of "whether the content is breaking".
 
-出口は二種——書式・整合の決定的な違反は fail、diff とトレーラーの
-噛み合わせは非ブロックの sticky コメントで注意喚起。説明セクションと kind の対応
-（上表）は整合に属し、どちらの向きの食い違いも fail。
+There are two outcomes: a clear-cut violation of format or consistency fails; the fit between the diff and the trailers is flagged by a non-blocking sticky comment. The correspondence between description sections and kinds (the table above) belongs to consistency, and a mismatch in either direction fails.
 
-## リリース手順
+## Release procedure
 
-役割によらず単一。main へのコミットはない。5 分で回る軽さを目標とする。
-手で入れる値は次版番号ただ一つで、前回 tag は導出する（打ち間違いの余地を残さない）。
+One procedure regardless of kind. There is no commit to main. The aim is a lightness that runs in 5 minutes. The only value entered by hand is the next version number; the previous tag is derived (leaving no room for a typo).
 
-### 1. 次版番号を導出
+### 1. Derive the next version number
 
-前回 tag を導出し（tag を打つ前に取る。後だと自分自身を指す）、以降の kind を収集して
-最高位を写像表に通す。
+Derive the previous tag (take it before tagging; afterwards it would point at itself), collect the kinds since, and pass the highest through the mapping table.
 
 ```bash
 PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude '*-*')
 git log "$PREV"..HEAD --format=%B | grep -E '^Release-Highlight: '
 ```
 
-検算として一読し、宣言の抜けを検める（破壊の記録漏れは PR 側の規律が塞ぐ。ここで
-拾うのは feature kind の書き忘れ程度）。
+As a cross-check, read through once and look for missing declarations (a missed record of a break is prevented by the PR-side discipline; what is caught here is at most a forgotten feature kind).
 
 ```bash
 git log "$PREV"..HEAD --oneline
 ```
 
-### 2. tag を打って push
+### 2. Tag and push
 
-導出した番号を `NEW` に置く。tag は lightweight——tag オブジェクトを読むものは無く、
-リリースの記述と日付は GH Release が持つ（署名を入れるなら annotated へ改める）。
+Put the derived number in `NEW`. The tag is lightweight: nothing reads a tag object, and the release description and date are held by the GH Release (switch to annotated if signing is introduced).
 
 ```bash
 NEW=vX.Y.Z
 git tag "$NEW" && git push origin "$NEW"
 ```
 
-ワークフロー完走（build → PyPI publish → GH Release 自動作成）を確認する。
+Confirm the workflow runs to completion (build → PyPI publish → automatic creation of the GH Release).
 
-### 3. ハイライトを GH Release の冒頭に足す
+### 3. Add the highlights to the top of the GH Release
 
-収集が空なら何も無し。材料は次の出力。長文で折り返しが煩わしければ原文は PR ページ
-（タイトル末尾の #番号）にある。
+If the collection is empty, nothing. The material is the following output. If the line wrapping of long bodies is a nuisance, the originals are on the PR pages (the #number at the end of the title).
 
 ```bash
 git log "$PREV".."$NEW" --grep='^Release-Highlight: ' --format='=== %s%n%n%b'
 ```
 
-冒頭に次の二節を、この順で置く。該当する PR の無い節は置かない。各節の中は PR 番号順:
+Place the following two sections at the top, in this order. A section with no matching PR is omitted. Within each section, in PR number order:
 
-- `## Breaking changes` — breaking を宣言した PR。PR タイトルを `### タイトル (#番号)` の
-  見出しにし、`## Breaking change` セクションの本文を続ける
-- `## Highlights` — feature / fix を宣言した PR。`## Release highlight` セクションを
-  持つ PR は同じく `###` 見出しと本文、持たない PR はタイトル行を箇条書き一行にする
-  （本文の無い項に見出しを与えると中身の無い節ができる）
-  - `###` 項目があるときは箇条書きを `### Other highlights` の下に置く（無いと直前の
-    項目の一部に見える）
+- `## Breaking changes` — PRs that declared breaking. Make the PR title a `### Title (#number)` heading, followed by the body of the `## Breaking change` section
+- `## Highlights` — PRs that declared feature / fix. A PR with a `## Release highlight` section gets the same `###` heading and body; a PR without one becomes a one-line list item of its title (giving a heading to an item with no body makes an empty section)
+  - When there are `###` items, put the list under `### Other highlights` (otherwise it looks like part of the preceding item)
 
-本文中の相対リンクは Release ページから解決できないので、tag 固定の絶対 URL
-（`https://github.com/<owner>/<repo>/blob/<NEW>/docs/...`）に直す。
+Relative links in the bodies cannot be resolved from the Release page, so rewrite them to tag-pinned absolute URLs (`https://github.com/<owner>/<repo>/blob/<NEW>/docs/...`).
 
-CLI で足すなら、自動生成部を取り出し、冒頭にハイライトを書き足してから戻す。本文は
-丸ごと置換されるため、読まずに書き戻さない。`gh` はリポジトリ内で実行する（作業
-ディレクトリを移すと `not a git repository` で落ちる）。
+To add them from the CLI, take out the auto-generated part, prepend the highlights, and put it back. The body is replaced wholesale, so never write it back without reading it. Run `gh` inside the repository (moving the working directory fails with `not a git repository`).
 
 ```bash
 gh release view "$NEW" --json body --jq .body > /tmp/notes.md
-# /tmp/notes.md の冒頭にハイライトを書き足す
+# prepend the highlights to /tmp/notes.md
 gh release edit "$NEW" --notes-file /tmp/notes.md
 ```

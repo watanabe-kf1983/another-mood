@@ -1,10 +1,10 @@
 # Pipeline
 
-利用者の定義・コンテンツから最終的なドキュメントを生成するパイプライン。
+The pipeline that generates the final documents from the user's definition and contents.
 
-## ステージ構成
+## Stages
 
-| ステージ | User Input | Upstream | Output |
+| Stage | User Input | Upstream | Output |
 |---|---|---|---|
 | inspect_schema | schema_file | — | inspect_schema/ |
 | normalize_contents | contents_dir | inspect_schema/ | normalize_contents/ |
@@ -13,25 +13,25 @@
 | generate | templates_dir, reports_file | compose/ | generate/ |
 | reconcile | — | generate/ | reconcile/ |
 | site | — | reconcile/ | prepare_site/, hugo_build/ |
-| publish | — | hugo_build/ | out_dir（reconcile/ の内容）, site_dir（hugo_build/ の内容） |
+| publish | — | hugo_build/ | out_dir (the content of reconcile/), site_dir (the content of hugo_build/) |
 | tap | — | compose/ | tap/ |
 | tap_schema | — | derive_queries/ | tap_schema/ |
 
-Output は作業ディレクトリ（`Workspace.root`）直下のコンポーネント名ディレクトリ。site ステージは prepare_site と hugo_build の二つのコンポーネントを走らせるので出力も二つ。
+Output is the directory named after the component, directly under the working directory (`Workspace.root`). The site stage runs two components, prepare_site and hugo_build, so it has two outputs.
 
-publish は reconcile/ も写すが、監視するのは末尾の hugo_build/ だけ。それが完了した時点で前段はすべて落ち着いているため（`pipeline/stages.py` の `publish_stage`）。
+publish copies reconcile/ too, but watches only the final hugo_build/, because by the time that has completed, every earlier stage has settled (`publish_stage` in `pipeline/stages.py`).
 
-normalize_contents は schema_file も読むが監視しない。スキーマの変更は inspect_schema/ の更新として届く（[データカタログ](30-communication/20-data-catalog.md)）。
+normalize_contents reads schema_file too but does not watch it. A schema change arrives as an update of inspect_schema/ ([Data catalog](30-communication/20-data-catalog.md)).
 
-`mood tap` と `mood tap --schema` は途中まで同じステージ列を共有し、末尾だけが違う（`pipeline/stages.py` の `TAP_STAGE_FACTORIES` / `TAP_SCHEMA_STAGE_FACTORIES`）:
+`mood tap` and `mood tap --schema` share the same sequence of stages partway, differing only at the end (`TAP_STAGE_FACTORIES` / `TAP_SCHEMA_STAGE_FACTORIES` in `pipeline/stages.py`):
 
-- `mood tap` — compose まで共有し、tap（compose/ → tap/）で終わる
-- `mood tap --schema` — derive_queries まで共有し、tap_schema（derive_queries/ → tap_schema/）で終わる
+- `mood tap` — shares up to compose, and ends with tap (compose/ → tap/)
+- `mood tap --schema` — shares up to derive_queries, and ends with tap_schema (derive_queries/ → tap_schema/)
 
-どちらも publish は持たず、command 層が文書を読み取って返す。
+Neither has publish; the command layer reads the document and returns it.
 
-watch では User Input / Upstream の変更を監視してステージを自動再実行する（`pipeline/base.py` 参照）。build では依存順に直列実行する。Upstream は前段ステージの Output であり、`BuildReport`（エラー伝播）の収集対象。
+In watch, changes to User Input / Upstream are watched and the stage reruns automatically (see `pipeline/base.py`). In build, the stages run serially in dependency order. Upstream is the Output of the preceding stage, and the place `BuildReport` (error propagation) is collected from.
 
-## Watch ライブラリは watchdog を採用
+## The watch library is watchdog
 
-[watchdog](https://github.com/gorakhargosh/watchdog) を採用。以前の watchfiles は WSL を検出すると WSL2 でも強制 polling に切り替わり、event の取りこぼしで watch が停止したため。
+[watchdog](https://github.com/gorakhargosh/watchdog) is used. The earlier watchfiles switched to forced polling whenever it detected WSL, even on WSL2, and the dropped events brought watch to a halt.

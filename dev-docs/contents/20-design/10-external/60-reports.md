@@ -1,79 +1,81 @@
 # Reports
 
-`docs/reference/reports.md` の契約の外で、意図して保つ振る舞い。出力ツリーのうち `__db/` の中身は [View](40-view.md#メタドキュメント)、`__build_info/` に載る値は [Template](50-template.md#build_info) が扱う。ここで扱うのは、表紙とそれらのページの置き方。
+Behavior kept on purpose, outside the contract of `docs/reference/reports.md`. Of the output tree, the content of `__db/` is covered by [View](40-view.md#database-pages), and the values on `__build_info/` by [Template](50-template.md#build_info). What is covered here is the cover and the placement of those pages.
 
-本文で使う語:
+Terms used in this chapter:
 
-- **report** — 利用者のテンプレートがデータから描く一組の出力。`definition/reports.yaml` が設定する（`docs/reference/reports.md`）
-- **edition** — 同じ report の体裁違いの出力。違いは `file_per`（どの型のノードを別ファイルに分けるか）だけ（同 Editions）
-- **form A / form B** — `reports.yaml` の二つの書き方。form A はトップレベルに `file_per` を書き、`default` という名の一つの edition になる。form B は `editions:` に名前付きで複数書く（同 Editions）
-- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ群（[View](40-view.md#メタドキュメント)）。edition と同じ機構で描く。表紙の節名では Database Information
-- **マウント** — 出力ルート直下で、edition やシステム生成の出力に与えるディレクトリ。`{edition}/` と `__db/` など
-- **ノード / アンカーパス / 主題 / blob / build info / 奥付** — [Template](50-template.md) の語。分割ページの主題がそのページを決める
-- **表紙** — 出力ルートの `index.md`。Reports とメタドキュメントへの入口。末尾に奥付と警告へのリンク節を持つ
-- **診断** — ソースのファイルと行を指す問題の報告。ビルドを続ける警告と、止めるエラーがある
-- **警告ページ** — 警告を列挙するページ `__warnings/`。警告があるときだけ作る。`--strict` は警告でもビルドを失敗にする（`docs/reference/cli.md` の `--strict`）
-- **ビルド失敗ページ** — エラーでビルドが止まったとき、表紙の代わりに置く `index.md`。診断と、ソースを指せないエラーを列挙する
+- **report** — one set of output the user's templates draw from the data. Configured by `definition/reports.yaml` (`docs/reference/reports.md`)
+- **edition** — an output of the same report in a different form. The only difference is `file_per` (which types of node go into separate files) (Editions, same document)
+- **form A / form B** — the two ways of writing `reports.yaml`. Form A writes `file_per` at the top level and becomes one edition named `default`. Form B writes several by name under `editions:` (Editions, same document)
+- **database pages** — the pages under `__db/` that the tool draws automatically from the schema and view definitions ([View](40-view.md#database-pages)). Drawn by the same mechanism as an edition. In the cover's section name, Database Information
+- **mount** — a directory directly under the output root given to an edition or to system-generated output. `{edition}/`, `__db/`, and so on
+- **node / anchor path / subject / blob / build info / colophon** — terms of [Template](50-template.md). The subject of a split page determines that page
+- **cover** — the `index.md` at the output root. The entry to the Reports and the database pages. Ends with link sections to the colophon and the warnings
+- **diagnostics** — reports of problems pointing at a source file and line. There are warnings, which let the build continue, and errors, which stop it
+- **warnings page** — the page `__warnings/` listing the warnings. Created only when there are warnings. `--strict` fails the build on warnings too (`--strict` in `docs/reference/cli.md`)
+- **build failure page** — the `index.md` placed instead of the cover when an error stops the build. Lists the diagnostics and the errors that cannot point at a source
 
 ## edition
 
-### edition は同じ report の体裁違いで、環境ごとに選ぶ profile ではない
+### An edition is the same report in a different form, not a profile chosen per environment
 
-宣言された edition はすべて一回のビルドで生成され、`{outDir}/{edition}/` に横並びに置かれる。想定している使い分けは、web 向けにはページを細かく分け、印刷向けには一ファイルにまとめる、というもの。両方を同時に欲しいのが普通なので、どれか一つを選ぶ口は要らない。
+Every declared edition is generated in one build and placed side by side under `{outDir}/{edition}/`. The intended use is to split pages finely for the web and bind them into one file for print. Wanting both at once is the usual case, so there is no need for a way to pick one.
 
-ビルド時に一つを選ぶ `--edition` のようなオプションは持たない。レンダラやフォーマットの違いを表す軸でもなく、Markdown から HTML への変換は全 edition で同じ。契約が言う「side by side」は成果物が並ぶ意味であって、並行実行の意味ではない。
+There is no option like `--edition` to pick one at build time. Nor is it an axis for differences in renderer or format: the conversion from Markdown to HTML is the same for every edition. The contract's "side by side" means the artifacts sit next to each other, not that they run in parallel.
 
-## 出力パス
+## Output paths
 
-### ファイル名はアンカーパスをセグメント単位で percent-decode し、ファイルシステムが持てない文字だけ `~XX` に逃がす
+### A file name is the anchor path percent-decoded per segment, with only the characters a file system cannot hold escaped as `~XX`
 
-分割したページのパスは主題のアンカーパスから導く（契約の Output path）が、住所の文字列をそのままファイル名にはしない。セグメントごとに percent-decode する。ブラウザも静的サーバも GitHub も Hugo も、URL を decode してからファイルを探すため。
+A split page's path is derived from the subject's anchor path (Output path in the contract), but the address string is not used as the file name as is. It is percent-decoded segment by segment, because browsers, static servers, GitHub, and Hugo all decode the URL before looking for the file.
 
-セグメント単位で decode するので、id の中の `%2F` が区切りに化けない。decode で現れた `/` は次の規則で `~2F` になる。
+Decoding per segment keeps a `%2F` inside an id from turning into a separator. A `/` that appears on decoding becomes `~2F` by the next rule.
 
-decode で現れる文字のうち、ファイルシステムが持てないもの（`/` を含む Windows の予約文字、`~` 自身、末尾の `.` と空白）だけは `~XX` に逃がす。
+Of the characters that appear on decoding, only those a file system cannot hold (the Windows reserved characters including `/`, `~` itself, a trailing `.` or space) are escaped as `~XX`.
 
-`%XX` にしないのは、Hugo がファイル名の `%XX` を URL エンコード済みとみなして温存するため。サーバは URL を decode してからファイルを探すので、`%XX` を名に持つファイルには、どの URL からも届かない。
+Not `%XX`, because Hugo takes `%XX` in a file name as already URL-encoded and preserves it. Servers decode the URL before looking for the file, so a file with `%XX` in its name is reachable from no URL.
 
-リンクの URL もこのファイル名から作る（`href` はページのパスを percent-encode する）ので、`~XX` のファイルへは `~XX` の URL で届く。アンカーパスが URL に現れるのは fragment の部分だけ。
+Link URLs are also made from this file name (`href` percent-encodes the page path), so a `~XX` file is reached by a `~XX` URL. The anchor path appears in a URL only in the fragment.
 
-blob の出力先（各 edition のルート直下の `blob/` に写す。[内部構造](../20-internal/30-communication/index.md#blob-のアンカーパスは出力アドレスでもある)）と edition のディレクトリ名も同じ規則で名前を得る。文字単位で潰せない問題（パス長の超過、Windows のデバイス名）は escape ではなく書き出し側が別に対処する（`shared/windows_reserved_name.py`）。
+The output location of blobs (copied into `blob/` directly under each edition's root; [internal structure](../20-internal/30-communication/index.md#a-blobs-anchor-path-is-also-its-output-address)) and the edition directory names get their names by the same rule. Problems that cannot be squashed per character (exceeding the path length, Windows device names) are handled separately by the writing side, not by escaping (`shared/windows_reserved_name.py`).
 
-### 各 edition とマウントは、自己完結した相対リンクの部分木
+### Each edition and each mount is a self-contained subtree of relative links
 
-出力ルートの構成:
+The layout of the output root:
 
 ```
 {outDir}/
-  index.md          ← 表紙。project 名、Reports、Database Information
-  default/          ← 利用者の edition（form B なら web/ print/ 等）
-  __db/             ← メタドキュメント
-  __build_info/     ← 奥付
-  __warnings/       ← 警告（あるときだけ）
+  index.md          ← cover: project name, Reports, Database Information
+  default/          ← the user's edition (web/, print/, etc. with form B)
+  __db/             ← database pages
+  __build_info/     ← colophon
+  __warnings/       ← warnings (only when there are any)
 ```
 
-リンクの URL はページ相対なので、`{edition}/` や `__db/` のマウント接頭辞はリンクに現れない。各 edition は単独で持ち出して別の場所に置いても壊れず、マウントはリンク解決に透過。
+Link URLs are page-relative, so the mount prefixes `{edition}/` and `__db/` do not appear in links. Each edition can be carried off and placed elsewhere on its own without breaking, and mounts are transparent to link resolution.
 
-表紙は edition ではなく、一回だけ描く薄いページ。`__db/` は edition の機構で描くが、体裁違いの report ではないので、表紙では Reports に並べず別のエントリに置く。
+The cover is not an edition; it is a thin page drawn once. `__db/` is drawn by the edition mechanism, but it is not a report in a different form, so on the cover it is placed in a separate entry rather than listed among the Reports.
 
-## 表紙と診断ページ
+## The cover and the diagnostic pages
 
-### 奥付は独立ページで、表紙にはリンク節だけを置く
+### The colophon is a separate page, and the cover carries only a link section
 
-奥付は build info の全量を列挙する独立ページ `__build_info/` で、表紙からは `## Build Information` のリンク節だけが張られる。警告ページと同じ形。
+The colophon is the separate page `__build_info/` listing all of the build info, and the cover links to it only through a `## Build Information` link section. The same form as the warnings page.
 
-ファイル境界を分けるのは、利用者が公開対象から外せるようにするため。奥付が語るのはビルドした環境の事実（実行者が注入した値、プロジェクトの絶対パス）で、出力を公開する利用者にとって、読者はもう「ビルドした人」ではない。表紙に混ぜ込むと外す手段が無いが、ディレクトリが分かれていれば `__build_info/` 一つを除外すれば済む。
+The file boundary is separated so that the user can leave it out of what they publish.
 
-ビルド結果をコミットする利用者にとっても、毎回動くタイムスタンプで表紙が汚れなくなる。動かないタイムスタンプに意味はないので、奥付に差分が出ること自体は仕様。
+The colophon speaks of the facts of the build environment (values the operator injected, the absolute path of the project), and for a user publishing the output, the reader is no longer "the person who built it". Mixed into the cover there is no way to remove it, but as a separate directory, excluding the one `__build_info/` suffices.
 
-表紙のリンク節に値は載せない。要約を載せると「どのキーが表紙に値するか」をツールが裁くことになる。奥付は選ばず全量を載せるページで、その裁定を持たないのが立場。
+For a user who commits the build result, the cover also stops being dirtied by a timestamp that moves every time. A timestamp that does not move is meaningless, so the colophon producing a diff is itself by design.
 
-### 公開対象から外す機構はツールに持たない
+The cover's link section carries no values. Putting a summary there would make the tool the judge of "which keys deserve the cover". The colophon is the page that lists everything without choosing, and not having that judgment is its position.
 
-何を公開するかはデプロイ手段（rsync、`aws s3 sync`、CI）の仕事。ツールが公開ポリシーのフラグを持ち始めると、同種の要求が積み上がる。ツールが負うのは「外したいものが一箇所にまとまっていること」だけで、`__warnings/` も同じ立場。
+### The tool is not given a mechanism for excluding things from publication
 
-### ビルド失敗ページだけは奥付を埋め込む
+What to publish is the job of the deployment tool (rsync, `aws s3 sync`, CI). Once the tool starts carrying publication-policy flags, requests of the same kind pile up. All the tool takes on is "what you may want to leave out is gathered in one place", and `__warnings/` stands in the same position.
 
-エラーでビルドが止まると、表紙は失敗ページに置き換わり、途中まで描いたページは残さない。`__db/` も警告ページも作らず、警告は失敗ページの診断に並ぶ。失敗ページには奥付をリンクでなく表として埋め込む。
+### Only the build failure page embeds the colophon
 
-失敗ページを読むのは必ずビルドした人で、失敗した出力を公開する利用者は居ない。診断が既に絶対パスを焼いているページでもあるので、奥付を分ける理由が成り立たない。失敗時に読者が見る唯一のページなので、奥付が届く場所もここしかない。
+When an error stops the build, the cover is replaced by the failure page, and pages drawn partway are not kept. Neither `__db/` nor the warnings page is created; the warnings are listed among the failure page's diagnostics. The failure page embeds the colophon as a table rather than linking to it.
+
+Whoever reads the failure page is always the person who built it, and no user publishes a failed output. It is also a page where the diagnostics have already baked in absolute paths, so the reason for separating the colophon does not hold. As the only page the reader sees on failure, it is also the only place the colophon can reach.

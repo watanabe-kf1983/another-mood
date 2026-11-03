@@ -186,7 +186,7 @@ class TestCombinators:
         assert Not(clause=clause).matches({"ok": True}) is expected
 
     def test_not_on_missing_key_keeps_record(self) -> None:
-        """Keeps: design/View › `where` に `neq` は無く、否定は `not` に集める
+        """Keeps: design/View › `where` has no `neq`; negation is gathered into `not`
 
         ``not (eq: x)`` on a missing key flips ``False`` → ``True``,
         confirming the inner ``matches`` returns ``False`` for absent

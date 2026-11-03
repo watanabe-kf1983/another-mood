@@ -84,7 +84,7 @@ class TestParseMapping:
     def test_duplicate_key_rejected_rather_than_last_wins(
         self, name: str, source: str, line: int, tmp_path: Path
     ) -> None:
-        """Keeps: design/Schema › 重複したキーはエラーにする
+        """Keeps: design/Schema › Duplicate keys are errors
 
         The error names the line, like any other syntax error.
         """

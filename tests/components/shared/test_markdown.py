@@ -165,7 +165,7 @@ class TestRewriteInlineLinks:
         )
 
     def test_leaves_non_bare_destinations(self) -> None:
-        """Keeps: design/Template › 本文の `node:` はインラインリンク形だけを解決する"""
+        """Keeps: design/Template › A `node:` in a body is resolved only in inline link form"""
         # Reference-style and titled destinations are not the bare ``](href)``
         # needle, so they are left untouched rather than rewritten or crashed.
         assert rewrite_inline_links(parse("see [x][r]\n\n[r]: a.md\n"), _resolve) == (

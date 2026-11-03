@@ -53,7 +53,7 @@ class TestSurfaceAudit:
 
     @pytest.mark.parametrize("instance", _CASES)
     def test_public_surface_matches_reference(self, instance: object) -> None:
-        """Keeps: design/テンプレート評価の境界 › marshal 契約: テンプレートに渡る値を型と構造で inert に閉じる"""
+        """Keeps: design/Template evaluation boundary › The marshal contract: values that reach a template are closed to inert by type and structure"""
         assert _reachable_public(instance) == _expected_public_surface(instance)
         # A dataclass's members are data fields, not marshaled elsewhere, so
         # each reachable value must itself be inert.

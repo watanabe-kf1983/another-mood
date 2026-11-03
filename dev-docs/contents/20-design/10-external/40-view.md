@@ -1,103 +1,105 @@
 # View
 
-`docs/reference/view.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`derive_queries`、`compose`、`generate`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。
+Behavior kept on purpose, outside the contract of `docs/reference/view.md`. The stage names in this chapter (`derive_queries`, `compose`, `generate`) are those of the [stage table of the internal structure](../20-internal/20-pipeline.md#stages).
 
-本文で使う語:
+Terms used in this chapter:
 
-- **ビュー** — クエリで導いた名前付きのレコードの集合。テンプレートからは entity と同じ名前空間で読める（`docs/reference/template.md` の Template context）
-- **行** — クエリの句から句へ渡るレコード一件
-- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ。`__db/__defs/` が定義（entity とビュー）、`__db/__data/` がその実データ。表紙の節名では Database Information
-- **句のパイプライン** — 一つのクエリの中で、句が固定順に行を受け渡す流れ。ステージの連なりを指す内部構造の [Pipeline](../20-internal/20-pipeline.md) とは別物
-- **`__definition.views`** — ビュー定義の一覧。[データカタログ](../20-internal/30-communication/20-data-catalog.md)の自己記述の一部で、メタドキュメントはここからビューの一覧を描く
+- **view** — a named set of records derived by a query. Templates read it in the same namespace as entities (Template context in `docs/reference/template.md`)
+- **row** — one record passed from clause to clause in a query
+- **database pages** — the pages under `__db/` that the tool draws automatically from the schema and view definitions. `__db/__defs/` holds the definitions (entities and views), `__db/__data/` their actual data. In the cover's section name, Database Information
+- **clause pipeline** — the flow within one query in which clauses pass rows along in a fixed order. Distinct from the [Pipeline](../20-internal/20-pipeline.md) of the internal structure, which is the sequence of stages
+- **`__definition.views`** — the list of view definitions. Part of the self-description of the [data catalog](../20-internal/30-communication/20-data-catalog.md), from which the database pages draw the list of views
 
-## 句のパイプライン
+## Clause pipeline
 
-### 句の順序は固定し、収まらない形は別のビューに分けて名前で参照する
+### Clause order is fixed; a shape that does not fit is split into another view and referenced by name
 
-句は固定順で評価する（`docs/reference/view.md` の Evaluation order）。この順に収まらない形（`where` で絞ってから `flatten` したい、`grouped` の結果を `join` したい、など）は、前段を別のビューに切り出し、`from:` や `join.to:` にその名前を書いてつなぐ。
+Clauses are evaluated in a fixed order (Evaluation order in `docs/reference/view.md`). A shape that does not fit this order (narrowing with `where` before `flatten`, joining the result of `grouped`, and so on) is handled by cutting the earlier step out into another view and connecting to it by writing its name in `from:` or `join.to:`.
 
-`from:` にクエリを入れ子で書くインラインサブクエリは採らない。理由:
+Inline subqueries, nesting a query inside `from:`, are not adopted. Reasons:
 
-- 名前付きビューの結果は一つずつファイルに書き出され（`compose` の出力の `view-results/`）、段ごとに確かめられる。入れ子の内側は、唯一「中間結果が実体化されない」場所になる
-- 共通の前段（flatten と join の組など）を一度だけ書ける
-- 「句 X を順序 Y にも置きたい」という要望への標準の答えが「分割」になり、句と順序オプションの増殖を抑えられる
-- YAML で再帰構造を書く人間工学は SQL の括弧より悪い
+- The result of a named view is written to a file of its own (`view-results/` in `compose`'s output) and can be checked step by step. The inside of a nested query would be the one place where an intermediate result is not materialized
+- A shared earlier step (such as a pair of flatten and join) can be written once
+- The standard answer to "I want clause X at position Y too" becomes "split", which holds back the proliferation of clauses and ordering options
+- The ergonomics of writing recursive structures in YAML are worse than SQL's parentheses
 
-ビルド時に全ビューを一度だけ決定的な順序で評価して結果を実体化するので、RDBMS でビューを重ねたときの実行計画の不透明さはここには無い。ビュー参照は RDBMS の view より、スクリプトの中間変数に近い。
+All views are evaluated once at build time in a deterministic order and their results materialized, so the opacity of execution plans when views are stacked in an RDBMS does not exist here. A view reference is closer to an intermediate variable in a script than to an RDBMS view.
 
-評価順は参照関係から決まり、ファイルの並びに依らない。一方で `__definition.views` の並びは、ファイルのパス順とファイル内の並びのままにし、評価順を利用者に見せない。
+The evaluation order follows the reference relations, not the order of files. The order of `__definition.views`, on the other hand, is kept as the file path order and the order within files, and the evaluation order is not shown to the user.
 
-分割した中間ビューも、他のビューと同じにテンプレートとメタドキュメントに見える。隠す仕組みは持たない。
+A split-out intermediate view is visible to templates and the database pages like any other view. There is no mechanism to hide it.
 
-固定順のうち `sort` を `select` の後ろに置く（`sort.by` は射影後の名前を指す）のは、SQL（`SELECT` → `ORDER BY`）、MongoDB aggregation、PRQL、pandas、LINQ が揃って採る順に合わせたもの。
+Placing `sort` after `select` in the fixed order (`sort.by` names the projected names) follows the order that SQL (`SELECT` → `ORDER BY`), MongoDB aggregation, PRQL, pandas, and LINQ all share.
 
-### 元からある配列は top-level の `flatten:`、join が作った配列は join の中の `flatten:` で開く
+### Arrays the source already has are opened by the top-level `flatten:`; arrays a join made are opened by the `flatten:` inside that join
 
-top-level の `flatten:` が開くのは、ソースのレコードに元からある配列（入れ子のコレクション、スカラの配列）だけ。join が `as:` に付けた配列は top-level の対象にせず、その join の中に `flatten:` を書いて開く。
+The top-level `flatten:` opens only arrays the source records already have (nested collections, arrays of scalars). The array a join attaches at `as:` is not a target of the top level; write `flatten:` inside that join to open it.
 
-元からある配列を開くことは、データの永続形式に対する読み方の表明で、データの形に紐づく。join の配列はクエリが一時的に作った形で、その調整は作った句の中で完結させたほうが、原因と直しが同じ場所に並ぶ。
+Opening an array the source already has is a statement about how the persisted data is read, tied to the shape of the data. A join's array is a shape the query made temporarily, and keeping its adjustment inside the clause that made it puts cause and fix in the same place.
 
-契約が「行の中の配列に届く句は flatten だけ」と定める背後にも同じ姿勢がある。配列に手を入れる動詞を flatten 一つに集め、他の句は一行の属性だけを見る。
+The same stance is behind the contract's rule that "the only clause that reaches an array inside a row is flatten". The verbs that touch arrays are gathered into flatten alone, and the other clauses look only at a row's attributes.
 
-だから、配列の中身で親を絞る、配列の中を並べ替える、といった形のために句は足さない。配列は flatten で行に開いてから `where` や `sort` を当て、必要なら `grouped` や join の既定形（一覧のまま付ける）で束ね直す。
+So no clause is added for shapes such as filtering the parent by the array's content, or sorting within the array. Open the array into rows with flatten, then apply `where` or `sort`, and if needed bundle again with `grouped` or join's default form (attaching the list as is).
 
-### flatten 後の行は、親の属性を残し、要素を `as:` の下に置く
+### A flattened row keeps the parent's attributes and puts the element under `as:`
 
-要素の属性を行の最上位に昇格させて親の情報を捨てる形は採らない。
+The form that promotes the element's attributes to the top of the row and discards the parent's information is not adopted.
 
-- 親の属性が行からそのまま読めるので、親の行へ遡る機構が要らない
-- flatten と join を重ねても、名前空間で衝突を避けられる
-- `as:` の意味が、join の既定形（配列の名前）でも flatten 後（一件の名前）でも「名前空間の接頭辞」で一致する
+- The parent's attributes can be read from the row as they are, so no mechanism to climb back to the parent row is needed
+- Even when flatten and join are stacked, collisions are avoided by namespace
+- The meaning of `as:` is the same "namespace prefix" in join's default form (the name of the array) and after flatten (the name of the one element)
 
-## 句の書き方
+## Writing clauses
 
-### `as:` は、名付ける対象が同じマッピングに書いてある句では省略でき、無い句では必須
+### `as:` can be omitted in clauses where what it names is written in the same mapping, and is required where it is not
 
-`flatten.as` / `join.as` / `select.as` が名付けるのは、同じマッピングの `of:` / `to:` / `item:` が指すものそのもので、その名前を既定にしても意味が外れない。`grouped.as` が名付けるのはグループの行の一覧で、`by:` はその行を束ねる鍵であって一覧の名前ではないので、借りられる名前が無い。
+What `flatten.as` / `join.as` / `select.as` name is exactly what `of:` / `to:` / `item:` in the same mapping point at, so using that name as the default does not stray from the meaning. What `grouped.as` names is the list of the group's rows, and `by:` is the key that bundles those rows, not the name of the list, so there is no name to borrow.
 
-### `where` に `neq` は無く、否定は `not` に集める
+### `where` has no `neq`; negation is gathered into `not`
 
-データモデルでは、値が無いことはキーの省略で表す（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md)）。`neq` を入れると、キーが欠けたレコードをどう扱うかの読み方が三つあり、答えが割れる:
+In the data model, the absence of a value is expressed by omitting the key ([JSON data model](../20-internal/30-communication/10-json-data-model.md)). With `neq`, there are three readings of how a record with the key missing is treated, and the answers diverge:
 
-- 実データの ≠ と読めば真（値が無いので x とは異なる）
-- SQL の三値論理と読めば UNKNOWN で、`where` では落ちる
-- `eq` の否定と読めば真（`eq` が偽なので反転して真）
+- Read as ≠ on actual data, true (there is no value, so it differs from x)
+- Read as SQL's three-valued logic, UNKNOWN, so it drops out of `where`
+- Read as the negation of `eq`, true (`eq` is false, so inverted, true)
 
-どれを採っても、他の読み方を期待した利用者には不自然に見える。
+Whichever is chosen looks unnatural to a user who expected another reading.
 
-代わりに二つの規則で意味を一つに決める。atomic 述語は欠けたキーに対して常に偽（`exists` を除く）、`not` は内側の結果を反転する。「等しくない」は `not: { field: x }` と書き、欠けたキーの行は残る。否定の挙動は `not` 一箇所に集まり、述語ごとに考えなくてよい。
+Instead, two rules fix the meaning. An atomic predicate is always false on a missing key (except `exists`), and `not` inverts the result inside it. "Not equal" is written `not: { field: x }`, and rows with the key missing remain. The behavior of negation is concentrated in one place, `not`, and need not be considered per predicate.
 
-### `sort` の欠けたキーは `missing:` で置き、`direction` とは独立に既定で末尾
+### A missing key in `sort` is placed by `missing:`, independent of `direction`, last by default
 
-語は `null` ではなく `missing`。データモデルに null 値の概念は無く、`where` も存在判定を `exists` で表すので、ここだけ SQL の `NULLS FIRST/LAST` を借りると語彙が不揃いになる。Elasticsearch の `missing: _first/_last` と同じ。
+The word is `missing`, not `null`. The data model has no notion of a null value, and `where` expresses the existence test as `exists`, so borrowing SQL's `NULLS FIRST/LAST` here alone would make the vocabulary uneven. Same as Elasticsearch's `missing: _first/_last`.
 
-位置は `direction` と独立したパラメータで指定する（PostgreSQL や pandas の流儀）。MySQL や MongoDB のように null を最大値や最小値に固定して方向から導く流儀は、「null は値の一種」という前提がデータモデルに合わない。
+The position is given by a parameter independent of `direction` (the PostgreSQL and pandas way). The MySQL and MongoDB way, which pins null as the largest or smallest value and derives the position from the direction, assumes "null is a kind of value", which does not fit the data model.
 
-既定を方向に依らず末尾にするのは、「欠けたキーは末尾」が `asc` でも `desc` でも成り立ち、利用者が「null は値として何位か」を覚えなくてよいため。
+The default is last regardless of direction, because "missing keys go last" holds for `asc` and `desc` alike, and the user need not remember "what rank is null as a value".
 
-### ドットは入れ子を意味し、出力にドット入りのキーは生まれない
+### A dot means nesting, and no key with a dot in it appears in the output
 
-DSL の名前は読みも書きもパスで、ドットは入れ子を表す。読む側の名前（`from`、`flatten.of`、`on`、`where` のキー、`grouped.by`、`select.item`、`sort.by`）は入れ子のオブジェクトを辿る。
+Names in the DSL are paths, for reading and writing alike, and a dot expresses nesting. The reading names (`from`, `flatten.of`, `on`, the keys of `where`, `grouped.by`, `select.item`, `sort.by`) walk nested objects.
 
-書く側の名前（`flatten.as`、`join.as`、`select.as`、`grouped.as`、`grouped.by` の書き戻し先、ビュー名）にドットを書けば、出力はその位置に入れ子になり、途中のオブジェクトが無ければ作る。ビュー名の場合は、そのオブジェクトがルートの属性としてカタログにも立つ（`docs/reference/view.md` の Nested views）。
+If a writing name (`flatten.as`, `join.as`, `select.as`, `grouped.as`, the write-back of `grouped.by`, a view name) has a dot, the output is nested at that position, and intermediate objects are created if absent. For a view name, that object also stands in the catalog as an attribute of the root (Nested views in `docs/reference/view.md`).
 
-書き込みが重なるときの規則は MongoDB の projection と TOML の dotted key と同じ:
+The rule when writes overlap is the same as MongoDB's projection and TOML's dotted keys:
 
-- 兄弟への書き込み（`a.b` と `a.c`）は一つのオブジェクトに合流する
-- 片方が他方の先頭部分になる書き込み（`a` と `a.c`）はエラー。セグメント単位で見るので、`hobby` と `hobbyist` は重ならない
+- Writes to siblings (`a.b` and `a.c`) merge into one object
+- Writes where one is a prefix of the other (`a` and `a.c`) are an error. Seen per segment, so `hobby` and `hobbyist` do not overlap
 
-ビュー名どうし、ビュー名と最上位のデータ entity の衝突もこの規則で見る。
+Collisions between view names, and between a view name and a top-level data entity, are judged by this rule too.
 
-## メタドキュメント
+## Database pages
 
-### ビューの定義ページは、定義と並べて、そこから決まる形を出す
+### A view's definition page shows, next to the definition, the shape that follows from it
 
-`__db/__defs/views/<view>` は、クエリの定義の下に **Shape** を出す（`docs/reference/view.md` の Diagnostics）。Shape は出力の各属性の型と、x-ref（他の entity のレコードを指す参照。[Schema](30-schema.md#x-ref)）の参照先の表。
+`__db/__defs/views/<view>` shows a **Shape** below the query's definition (Diagnostics in `docs/reference/view.md`). The Shape is a table of each output attribute's type and its x-ref target (a reference to a record of another entity; [Schema](30-schema.md#x-ref)).
 
-形を伝える役目を、データページ（`__db/__data/views/<view>`）の列見出しと行だけに任せない。
+Conveying the shape is not left to the column headings and rows of the data page (`__db/__data/views/<view>`) alone.
 
-本ツールのレコードは複合型（object / object[]）を持てるので、値から形を推定させると外れる。`tasks` 列が文字列の配列なのか、入れ子の entity `categories.tasks` のレコードの配列なのかは、空の配列を持つ行や欠損した行からは読めない。SQL クライアントが型の表示を省けるのは、全列がスカラという前提があるから。
+Records in this tool can have composite types (object / object[]), so guessing the shape from values goes wrong.
 
-置き場をデータページでなく定義ページにするのは、entity の定義ページ `__db/__defs/entities/<entity>` と同じ構図にするため。そちらはスキーマの定義と、ツールがそれをどう解釈したかの型表を並べる。どちらも「定義と、そこから決まる型」を一枚で読める。
+Whether a `tasks` column is an array of strings or an array of records of the nested entity `categories.tasks` cannot be read from a row with an empty array or a row where it is missing. SQL clients can omit the type display because every column is assumed to be a scalar.
 
-Shape はデータを見ずにカタログから描く。ビューの形がデータに依らず決まることは[データカタログ](../20-internal/30-communication/20-data-catalog.md#compose-の出力はカタログが宣言した形に一致する)。
+It is placed on the definition page rather than the data page to match the structure of the entity definition page `__db/__defs/entities/<entity>`. That page puts the schema definition next to a table of the types the tool read from it. Both read "the definition, and the types that follow from it" on one page.
+
+The Shape is drawn from the catalog without looking at the data. That a view's shape is determined independently of the data is in [Data catalog](../20-internal/30-communication/20-data-catalog.md#composes-output-matches-the-shape-the-catalog-declares).

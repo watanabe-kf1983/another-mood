@@ -1,31 +1,31 @@
-# 依存関係の運用
+# Dependency Management
 
-依存ライブラリの版をどう宣言し、いつ・どう更新するかの規約。
+The conventions for how dependency versions are declared, and when and how they are updated.
 
-## 制約の原則
+## Principles for constraints
 
-- `pyproject.toml` の依存宣言は下限のみ（`>=`）。上限（cap）は原則書かない
-- cap は「壊すリリースの実在が判明したとき」の応急処置に限る。**cap には除去条件（対応する移行タスク）を必ず併記する**
+- The dependency declarations in `pyproject.toml` are floors only (`>=`). Upper bounds (caps) are not written as a rule
+- A cap is limited to a stopgap "when a release that breaks us is known to exist". **A cap always comes with its removal condition (the corresponding migration task)**
 
-背景: mood は `uv tool install` で隔離 venv に入る配布ツールで、ユーザは uv.lock を受け取らず常に最新を解決する。上限なしのとき、依存の脆弱性修正はリリースの瞬間からユーザへ自動で流れる（自己治癒）。cap はこの自己治癒を堰き止めるので、恒久 cap は置かない。
+Background: mood is a tool distributed to users, installed into an isolated venv by `uv tool install`, and users do not receive uv.lock; they always resolve to the latest. Without caps, a dependency's vulnerability fix flows to users automatically the moment it is released (self-healing). A cap dams this self-healing, so no permanent cap is placed.
 
-## 三つの装置
+## Three instruments
 
-| 装置 | 見るもの | 契機 | 守るもの | 応答 |
+| Instrument | What it looks at | Trigger | What it protects | Response |
 |---|---|---|---|---|
-| Fresh dependency check | pyproject を最新版で解釈した環境 | 週次 | ユーザ（新規インストールが受け取る解決の代理） | cap（除去条件付き）or 修正 |
-| Dependabot security updates（version updates は使わない） | uv.lock + pyproject | CVE 公表時 | 開発環境・CI（lock で動く唯一の場所） | bump PR を即 merge |
-| `make upgrade-deps` | uv.lock の鮮度 | タスク開始時 | 開発環境の陳腐化・lock 差分の小口化 | lock 単独 PR |
+| Fresh dependency check | The environment pyproject resolves to at the latest versions | Weekly | Users (a proxy for the resolution a fresh install receives) | A cap (with removal condition) or a fix |
+| Dependabot security updates (version updates are not used) | uv.lock + pyproject | When a CVE is published | The development environment and CI (the only place that runs on the lock) | Merge the bump PR immediately |
+| `make upgrade-deps` | The freshness of uv.lock | At the start of a task | Staleness of the development environment; keeping lock diffs small | A lock-only PR |
 
-- Fresh dependency check は悪意あるリリースを踏む役（カナリア）を意図的に引き受ける。実行環境は使い捨て VM で、Actions キャッシュへの書き込みも遮断済み（fresh-deps.yml の `enable-cache: false`）——被害面は限定されている
-- Dependabot version updates（定期の bump PR）は使わない。bot は放置問題を解決せず（merge する人間は要る）、自分の commit で scheduled workflow の 60 日自動停止を回避し続けるため、開発休止後も無人で main を変異させる
-- `make upgrade-deps` を省いても正しさは損なわれない（正しさは Fresh dependency check が週次で担保する）。儀式の価値は警報の pull 化（通知が届くのを待たず、開発を始めるたびに自分で測り直す）と差分の小口化にある
+- The Fresh dependency check deliberately takes on the role of stepping on a malicious release (the canary). Its environment is a disposable VM, and writes to the Actions cache are blocked (`enable-cache: false` in fresh-deps.yml), so the damage surface is limited
+- Dependabot version updates (periodic bump PRs) are not used. The bot does not solve the neglect problem (a human still has to merge), and because its own commits keep evading the 60-day automatic suspension of scheduled workflows, it keeps mutating main unattended even after development pauses
+- Skipping `make upgrade-deps` does not harm correctness (correctness is secured weekly by the Fresh dependency check). The value of the ritual is pulling the alarm (measuring again yourself each time you start developing, instead of waiting for a notification) and keeping diffs small
 
-## タスク開始の儀式
+## The ritual at the start of a task
 
-`make upgrade-deps` は uv.lock を制約が許す最新へ振り直す。作業ツリーがクリーンならどのブランチからでも実行でき、解決は `origin/main` を土台に行って元いたブランチへ戻す。
+`make upgrade-deps` re-resolves uv.lock to the latest the constraints allow. It can be run from any branch as long as the working tree is clean; the resolution is done on top of `origin/main`, and it returns to the branch you were on.
 
-- diff なし → そのままタスクに着手する
-- diff あり → スクリプトが `deps/lock-refresh-<date>` ブランチで lock 単独 PR を作る。CI 緑を確認して `gh pr merge <branch> --squash --delete-branch` で merge してから着手する。赤なら修正 or 除去条件付き cap で対応する
-- **lock 更新は機能 PR に同乗させない**。リグレッションの原因が機能変更か依存 bump かを分離できる形を保つ
-- タスク途中で特定の版が要るときは `uv lock --upgrade-package <name>` を直接使ってよい
+- No diff → start the task as is
+- A diff → the script creates a lock-only PR on a `deps/lock-refresh-<date>` branch. Confirm CI is green, merge with `gh pr merge <branch> --squash --delete-branch`, and then start. If red, respond with a fix or a cap with removal condition
+- **A lock update never rides along in a feature PR.** Keep the shape in which the cause of a regression can be separated into the feature change or the dependency bump
+- When a specific version is needed in the middle of a task, `uv lock --upgrade-package <name>` may be used directly

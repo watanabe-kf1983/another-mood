@@ -1,3 +1,5 @@
-# 内部構造
+# Internal Structure
 
-層とステージの構成と、それを保つ約束。構成の記述はここにしかない。[Architecture](10-architecture.md) が層とコンポーネント、[Pipeline](20-pipeline.md) がステージの一覧と入出力、[Inter-Stage Communication](30-communication/index.md) がステージ間の受け渡し、[テンプレート評価の境界](40-template-evaluation.md) が複数のモジュールで分担して守る信頼境界を持つ。
+The arrangement of layers and stages, and the promises that keep it. The description of the arrangement exists only here.
+
+[Architecture](10-architecture.md) holds the layers and components, [Pipeline](20-pipeline.md) the list of stages and their inputs and outputs, [Inter-Stage Communication](30-communication/index.md) the hand-over between stages, and [Template evaluation boundary](40-template-evaluation.md) the trust boundary whose guarding is divided among several modules.

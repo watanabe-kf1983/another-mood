@@ -680,7 +680,7 @@ class TestBuildSchemaValidator:
     def test_rejected(self, src: str) -> None:
         """Keeps: docs/reference/schema.md › Unsupported keywords
         Keeps: docs/reference/schema.md › Entity references (x-ref)
-        Keeps: design/Schema › スキーマに書いたリテラルも、宣言した型に合わせる
+        Keeps: design/Schema › Literals written in the schema also follow the declared type
         """
         data = yaml.safe_load(src)
         assert len(self._validator.validate(data)) > 0
@@ -1068,7 +1068,7 @@ class TestInspectSchema:
         assert any("screens.buttons" in d.message for d in exc_info.value.diagnostics)
 
     def test_xref_to_definition_namespace_rejected(self, tmp_path: Path) -> None:
-        """Keeps: design/Schema › 参照先は、ルートから別のコレクションを越えずに届く entity に限る"""
+        """Keeps: design/Schema › The target must be an entity reachable from the root without crossing another collection"""
         schema_file = _write_schema(
             tmp_path / "schema.yaml",
             dedent("""\

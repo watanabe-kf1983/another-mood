@@ -1,65 +1,75 @@
 # Trust Model
 
-誰が書いたテンプレートを、誰の手元で実行するかの境界。`docs/reference/` に対応するページを持たない唯一の章。`build` / `watch` はプロジェクトのテンプレートを評価するので、この境界が製品の安全性を決める。
+The boundary between who wrote a template and on whose machine it runs. The only chapter with no corresponding page in `docs/reference/`. `build` / `watch` evaluate the project's templates, so this boundary decides the product's safety.
 
-ここに置くのは保つ振る舞いとその理由だけで、どう閉じているか（エンジンの露出規則、marshal 契約、強制のレイヤ）は内部構造の[テンプレート評価の境界](../20-internal/40-template-evaluation.md)。
+Only the behavior we keep and its reasons are here. How it is closed (the engine's exposure rules, the marshal contract, the enforcement layers) is in [Template evaluation boundary](../20-internal/40-template-evaluation.md) of the internal structure.
 
-本文で使う語:
+Terms used in this chapter:
 
-- **著者 / 実行者** — [役割を表す語](../index.md#役割を表す語)。この章の主題は、両者が同じとは限らないこと
-- **RCE** — テンプレートから、ファイル・プロセス・ネットワークなどツールの外に届く Python の機能を呼び、任意のコードを走らせること。内部構造ではテンプレート経由の注入という経路で見て SSTI と呼ぶ
-- **地の文の escape** — `{{ }}` で出した値の Markdown 構文記号を、出力の直前に escape すること（`docs/reference/template.md` の Markdown escaping）
-- **prose** — `contents/` の Markdown ファイル。本文がそのまま出力に出る（[Schema](30-schema.md#prose)）
+- **author / operator** — [Role terms](../index.md#role-terms). The subject of this chapter is that the two are not necessarily the same
+- **RCE** — calling, from a template, Python capabilities that reach outside the tool (files, processes, the network) and running arbitrary code. The internal structure sees it as the route of injection through templates and calls it SSTI
+- **running-text escape** — escaping the Markdown syntax characters of a value emitted by `{{ }}` just before output (Markdown escaping in `docs/reference/template.md`)
+- **prose** — a Markdown file in `contents/`. Its body goes to the output as is ([Schema](30-schema.md#prose))
 
-### 第三者のプロジェクトをビルドしても、テンプレートから任意コードは走らない
+### Building a third party's project runs no arbitrary code from its templates
 
-プロジェクトは配布されうる。誰かが書いたプロジェクトを手元で `mood build` しても、そのテンプレートに仕込まれたコードが実行者の機械で走ることはない。テンプレートにできるのは、渡されたデータをフィルタと関数で整形して文字列にすることだけで、ファイルやプロセスやネットワークには届かない。
+Projects can be distributed. Running `mood build` locally on a project someone else wrote never runs code planted in its templates on the operator's machine. All a template can do is shape the data it is given into a string with filters and functions; it reaches neither files nor processes nor the network.
 
-`make` や `npm install` や Jekyll では、ビルドとはプロジェクトが持つコードを走らせることで、信頼できないプロジェクトはビルドしてはいけない。本ツールはそうではなく、テンプレートをデータと同じ安全なコンテンツとして扱える。
+With `make`, `npm install`, or Jekyll, building means running the code the project carries, and an untrusted project must not be built. This tool is not like that: templates can be treated as content as safe as data.
 
-これは「危ない書き方を一つずつ禁じる」のではなく、「テンプレートから見える値に、そもそも外へ出る道が無い」ことで保つ。禁止の一覧は漏れのたびに破られるが、道が無ければ漏れもない。どう道を塞いでいるかは内部構造の[テンプレート評価の境界](../20-internal/40-template-evaluation.md)。
+This is kept not by "forbidding dangerous constructs one by one" but by "the values visible from a template having no way out in the first place". A list of prohibitions is broken with every omission; with no way out, there is no omission. How the way out is blocked is in [Template evaluation boundary](../20-internal/40-template-evaluation.md) of the internal structure.
 
-#### docs には、保証も危険注記も書かない
+#### docs carries neither a guarantee nor a danger notice
 
-`docs/` が約束するのは使い方で、安全性の保証は掲げない。保証として契約に載せると、エンジンの将来版で前提が変わったときに契約の破壊になる。ここでは意図して保つ振る舞いとして持つ。
+What `docs/` promises is how to use the tool; it makes no safety guarantee. Placed in the contract as a guarantee, a change of premise in a future version of the engine would break the contract. Here it is held as behavior kept on purpose.
 
-逆の「信頼できないプロジェクトをビルドするな」という注記も置かない。RCE が閉じている以上、過剰警告になる。実行の攻撃面で残るのは DoS だけで、これはツールではなく実行者が閉じる（下）。著者が書いた raw HTML を読者が信じるかは出力の信頼の問題で、攻撃面には数えない（[raw HTML](#raw-html-は著者の表現力の問題で実行安全とは別の層)）。
+Nor is the opposite notice, "do not build untrusted projects", placed. With RCE closed, it would be an over-warning. The only attack surface left in execution is DoS, and that is closed by the operator, not the tool (below). Whether a reader trusts the raw HTML an author wrote is a matter of trust in the output, and does not count as attack surface ([raw HTML](#raw-html-is-a-matter-of-the-authors-expressiveness-a-separate-layer-from-execution-safety)).
 
-### コードが走りうる場所はテンプレートだけ
+### The only place code can run is a template
 
-プロジェクトのソースのうち、ビルド中に「評価される」もの、つまり書き手の指示で何かを実行しうるのは `definition/templates/` だけ。他のソースは読まれるだけで、何も実行しない:
+Of a project's sources, the only one "evaluated" during a build, that is, that can execute anything at the writer's direction, is `definition/templates/`. The other sources are only read and execute nothing:
 
-- **`contents/`** — データと prose。値として読まれるだけで、評価されない。出力に出るときはデータ値は地の文の escape を通り、prose は Markdown 本文として通る
-- **`definition/schema.yaml`** — 宣言的な型定義
-- **`definition/views/`** — 宣言的なクエリ DSL。`eval` も式言語も無い
-- **`definition/reports.yaml` / `sbdb.yaml`（プロジェクトのマニフェスト）** — 宣言的な設定
+- **`contents/`** — data and prose. Read as values only, never evaluated. On the way to the output, data values pass the running-text escape and prose passes as Markdown body
+- **`definition/schema.yaml`** — declarative type definitions
+- **`definition/views/`** — the declarative query DSL. No `eval`, no expression language
+- **`definition/reports.yaml` / `sbdb.yaml` (the project's manifest)** — declarative settings
 
-生成した Markdown を HTML にする段（Hugo）も、Markdown を変換するだけ。Hugo が解釈するレイアウトは内蔵のもので、プロジェクトからレイアウトもショートコードも足せない。
+The step that turns the generated Markdown into HTML (Hugo) only converts Markdown. The layouts Hugo interprets are built in, and a project can add neither layouts nor shortcodes.
 
-だから防御はテンプレート評価の一点に集約してよい。評価器が一つしか無いことは[テンプレート評価の境界](../20-internal/40-template-evaluation.md#評価器は一つ)が保つ。
+So the defense may be concentrated at the one point of template evaluation. That there is only one evaluator is kept by [Template evaluation boundary](../20-internal/40-template-evaluation.md#there-is-one-evaluator).
 
-### テンプレートに届く外の値は、実行者が明示的に差し出したものだけ
+### The only outside values that reach a template are those the operator hands over explicitly
 
-テンプレートがプロジェクトの外から読めるのは、`build_info` の値（奥付に載るもの）だけ（[Template](50-template.md#build_info)）。そのうち実行者が入れられるのは `vars.*` で、`--var` と `MOOD_VARS_*` で一つずつ名指しして渡す（`docs/reference/cli.md` の Injected values）。
+What a template can read from outside the project is only the values of `build_info` (what goes on the colophon) ([Template](50-template.md#build_info)). Of those, what the operator can put in is `vars.*`, passed one by one, by name, through `--var` and `MOOD_VARS_*` (Injected values in `docs/reference/cli.md`).
 
-環境変数をそのまま読める `env.*` のような名前空間は作らない。テンプレートが環境の読み取り器になると、CI のクレデンシャルなど、実行者が渡すつもりのない値を出力に焼き込める。上の「テンプレートから見える値に外へ出る道が無い」と対になる、入ってくる側の境界。テンプレートに渡る値の集合を閉じて守る方針（[テンプレート評価の境界](../20-internal/40-template-evaluation.md#値モデルで閉じブロックリストでは閉じない)）に穴を開けない。
+A namespace such as `env.*` for reading environment variables directly is not created. If templates became readers of the environment, values the operator never meant to pass, such as CI credentials, could be baked into the output.
 
-閉じているのはキーの集合。実行者が任意の名前で値を届けられる経路は `vars.*` だけで、処理系と実行の事実（`processor.*`）とマニフェスト（`manifest.*`）のキーはツールとソースが決める。`processor.config.*` の値は `MOOD_OUT_DIR` のような設定の環境変数でも変わるが、それは実際の起動の写しで、キーは config の型で固定。
+This is the inbound counterpart of "the values visible from a template have no way out" above. It opens no hole in the policy of closing the set of values that reach a template ([Template evaluation boundary](../20-internal/40-template-evaluation.md#closed-by-the-value-model-not-by-a-blocklist)).
 
-### DoS は閉じず、実行者が OS 層で囲う
+What is closed is the set of keys. The only route by which the operator can deliver a value under an arbitrary name is `vars.*`; the keys of the processor and the facts of the run (`processor.*`) and of the manifest (`manifest.*`) are decided by the tool and the sources.
 
-テンプレートは、時間やメモリを使い尽くすことならできる。これはツールでは止めず、ビルドの時間やメモリに上限を設けるオプションも持たない。
+The values of `processor.config.*` also change with config environment variables such as `MOOD_OUT_DIR`, but that is a copy of the actual startup, and the keys are fixed by the config's type.
 
-メモリを確実に縛れるのは OS の層（cgroup、コンテナ、`RLIMIT_AS`）だけで、ツールの中に上限を置いてもメモリは止まらず、上限があるように見える分だけ誤った安心を配る。時間も同じ層で縛る。評価はネイティブ拡張の中で走り、ツール側のタイムアウトでは途中で止められない（分析は内部構造の[テンプレート評価の境界](../20-internal/40-template-evaluation.md#dos-は閉じない)）。
+### DoS is not closed; the operator fences it at the OS layer
 
-場合分けの軸は、実行者がそのプロジェクトを信頼しているかどうか。自分で書いた、または選んで信頼したプロジェクトを自分の機械でビルドする場合は、暴走で傷つくのは自分だけで、受け入れる。信頼していないプロジェクト（第三者の配布物）をビルド基盤で走らせる時点で、実行者がプロセスを OS 層で囲う。CI やビルド基盤では、プロセスをそう囲うのが通常の運用でもある。
+A template can exhaust time or memory. The tool does not stop this, and has no option for capping a build's time or memory.
 
-### raw HTML は著者の表現力の問題で、実行安全とは別の層
+The only layer that can reliably bound memory is the OS (cgroups, containers, `RLIMIT_AS`); a cap inside the tool does not stop memory, and only hands out false reassurance for looking like a cap. Time is bounded at the same layer.
 
-生成した Markdown の HTML 化では raw HTML を通す（Hugo の設定 `unsafe = true`）。リンクの着地点 `<a id>`（[Template](50-template.md#見出しはレコード内の住所だけを持ちa-id-を刻まない)）を Markdown に raw HTML として埋め込むために要る。
+Evaluation runs inside a native extension and cannot be interrupted by a timeout on the tool's side (the analysis is in [Template evaluation boundary](../20-internal/40-template-evaluation.md#dos-is-not-closed) of the internal structure).
 
-Hugo の既定 `unsafe = false` は信頼できない Markdown を描く用途向けの防御で、著者が所有するプロジェクトを描く本ツールとは前提が違う。
+The axis of the distinction is whether the operator trusts the project. Building a project you wrote, or chose and trust, on your own machine, the only one hurt by a runaway is you, and that is accepted.
 
-露出は狭い。データ値は地の文の escape を通り、code span と fenced block の中身は Hugo の Markdown 処理系が常に HTML escape する。新たに通るのは著者自身のテンプレート・prose・`| safe` だけで、著者は既にソースとテンプレートの全権を持つので escalation にはならない。
+The moment an untrusted project (a third party's distribution) runs on build infrastructure, the operator fences the process at the OS layer. On CI and build infrastructure, fencing processes that way is the normal practice anyway.
 
-著者 ≠ 実行者でも、残る差は「著者が raw HTML で書いた出力を第三者が信じるか」という出力の信頼で、実行安全とは独立に扱う。RCE の封鎖は「テンプレートがツールの外のコードに届かない」実行安全の問題、raw HTML は「著者が自分の出力に責任を持つ」表現力の問題。
+### Raw HTML is a matter of the author's expressiveness, a separate layer from execution safety
+
+Converting the generated Markdown to HTML lets raw HTML through (Hugo's setting `unsafe = true`). It is needed to embed the link landing spots `<a id>` ([Template](50-template.md#a-heading-has-only-an-address-within-its-record-and-no-a-id-is-stamped)) in Markdown as raw HTML.
+
+Hugo's default `unsafe = false` is a defense for rendering untrusted Markdown, a different premise from this tool, which renders a project the author owns.
+
+The exposure is narrow. Data values pass the running-text escape, and the content of code spans and fenced blocks is always HTML-escaped by Hugo's Markdown processor. What newly passes is only the author's own templates, prose, and `| safe`, and since the author already has full power over the sources and templates, it is no escalation.
+
+Even when author ≠ operator, the remaining difference is "does a third party trust the output the author wrote in raw HTML", a matter of trust in the output, handled independently of execution safety.
+
+Sealing off RCE is the execution-safety problem of "templates not reaching code outside the tool"; raw HTML is the expressiveness problem of "the author answering for their own output".

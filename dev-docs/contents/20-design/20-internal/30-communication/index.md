@@ -1,52 +1,54 @@
 # Inter-Stage Communication
 
-ステージ間の受け渡し（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み)）の総論。出力ディレクトリをどう下流へ運ぶか（運搬機構）、失敗をどう下流へ伝えるか（エラー伝播）、ファイルを介さず引数で渡すもの（build info）を扱う。流れるデータの形は [JSON データモデル](10-json-data-model.md)、スキーマから起こして全ステージが共有する目録は[データカタログ](20-data-catalog.md)。
+The overview of the hand-over between stages ([Architecture](../10-architecture.md#how-build-and-watch-are-served-by-the-same-components)). It covers how output directories are carried downstream (transport), how failures are conveyed downstream (error propagation), and what is passed by argument rather than through files (build info).
 
-## 運搬機構
+The shape of the data that flows is in [JSON data model](10-json-data-model.md); the inventory built from the schema and shared by every stage is in [Data catalog](20-data-catalog.md).
 
-workspace は、一回の実行でステージの出力ディレクトリが並ぶ作業ディレクトリ（利用者設定では `tmp_dir`、コードでは `Workspace.root`）。[ステージ構成](../20-pipeline.md#ステージ構成) の Output がその中身。以下、workspace の中でディレクトリをどう運び、何を保つかを述べる。
+## Transport
 
-### ステージ間の受け渡しは hardlink
+The workspace is the working directory in which the stages' output directories sit side by side for one run (`tmp_dir` in the user's settings, `Workspace.root` in code). The Output column of the [stage table](../20-pipeline.md#stages) is its content. Below is how directories are carried within the workspace, and which invariants are kept.
 
-ステージ間・ステージ内の受け渡しは、ファイルをコピーせず **hardlink** で運ぶ。受け渡しはディレクトリの写しで行うので、コピーで運ぶと一つのファイルが hop の数だけ複製されるため。実バイトのコピーは contents → workspace の境界の 1 回だけになり、以降の hop はすべて同じ inode を共有する。
+### Hand-over between stages is by hardlink
 
-hardlink が張れない場合（別 FS をまたぐ、exFAT の外付けや SMB 共有など非対応の FS）はコピーに自動フォールバックし、[製品の動作環境](../../../10-concept/10-product.md#what) (Linux / macOS / Windows) を崩さない（`transfer.link_or_copy`）。
+Hand-over between and within stages is by **hardlink**, not by copying files. Hand-over is done by mirroring directories, so carrying by copy would duplicate each file as many times as there are hops. The real bytes are copied once, at the contents → workspace boundary, and every later hop shares the same inode.
 
-### ゆえに各ステージは write-once
+Where a hardlink cannot be made (across file systems, or on a file system without support, such as an exFAT external drive or an SMB share), it falls back to copying automatically, so that the [product's supported platforms](../../../10-concept/10-product.md#what) (Linux / macOS / Windows) are not narrowed (`transfer.link_or_copy`).
 
-hardlink は inode を共有するので、どこかのステージが既存ファイルに in-place で書き込むと、同じ inode を持つ全ディレクトリ（公開済み出力を含む）を突き破って書き換わり、しかもそこに watcher の event は飛ばない。
+### Hence every stage is write-once
 
-そこで **各ステージに write-once を課す**: workspace 内の既存ファイルに書き込んではならず、置換は必ず unlink → 再作成で行う。この制約が hardlink 運搬を安全にする。
+A hardlink shares the inode, so if any stage wrote in place into an existing file, every directory holding the same inode (including published output) would be overwritten straight through, and no watcher event would fire for it.
 
-ステージを構成するコンポーネントもアダプタ（Hugo 準備等）もこの制約の下にあり、実際のパイプラインを二周させて全ステージを検査する（`tests/pipeline/test_write_once_sweep.py`）。
+So **every stage is write-once**: it must not write into an existing file in the workspace, and replacement is always unlink → recreate. This constraint is what makes hardlink transport safe.
 
-`contents/` のファイルはこの制約の外にあるので、境界では hardlink せず実コピーする。blob はこの境界コピーも、前回出力と size + mtime が一致すればそこからの hardlink で済ませる（`content_normalizer.py` の `_mirror_blob_bytes` / `_reuse_unchanged`）。
+The components that make up the stages and the adapters (Hugo preparation and so on) are both under this constraint, and the real pipeline is run twice to check every stage (`tests/pipeline/test_write_once_sweep.py`).
 
-### 範囲と成立条件
+The files in `contents/` are outside this constraint, so at the boundary they are really copied, not hardlinked. For blobs, even this boundary copy is replaced by a hardlink from the previous output when size + mtime match (`_mirror_blob_bytes` / `_reuse_unchanged` in `content_normalizer.py`).
 
-- blob 限定でなく **全ファイル** を hardlink 対象にする。blob 判定述語をツリーの根ごとに持つと誤判定が即 inode 共有事故になるため、「全ファイル write-once」の一枚岩へ単純化した。
-- `os.link` が成立するように、各ステージの temp を出力と同一 FS に置く（`dir_lock` の `mkdtemp`）。
+### Scope and preconditions
 
-### blob のアンカーパスは出力アドレスでもある
+- **Every file** is hardlinked, not blobs alone. Holding a blob-detecting predicate per tree root would turn any misjudgment straight into an inode-sharing accident, so it was simplified to the single rule "every file write-once".
+- So that `os.link` succeeds, each stage's temp is placed on the same file system as its output (`mkdtemp` in `dir_lock`).
 
-blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下に出力パスとして写す（住所からファイル名への変換は [Reports](../../10-external/60-reports.md)）。リンク解決（href が指す先）と blob の配置はどちらも `generate` が行い、`publish`（[ステージ表](../20-pipeline.md#ステージ構成)）は reconcile/ をそのまま写すだけなので、一つの住所で一致し、ずれない。
+### A blob's anchor path is also its output address
 
-### 出力ディレクトリの更新は原子的
+A blob node's anchor path `/blob/<id>` is mirrored as an output path directly under each edition's output root (the conversion from address to file name is in [Reports](../../10-external/60-reports.md)). Link resolution (where href points) and blob placement are both done by `generate`, and `publish` ([stage table](../20-pipeline.md#stages)) only copies reconcile/ as it is, so they agree on one address and never drift.
 
-ディレクトリ単位では、各ステージの出力ディレクトリの更新は原子的で、途中状態は下流に見えない（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み) が前提にする不変条件）。実装は `dir_lock` の `exclusive_write`（temp に書いて lock 下で出力へ同期）と `exclusive_read`（lock 下で上流の時点コピーを取る）。
+### Output directories are updated atomically
 
-実装と根拠の詳細は `transfer.py` / `dir_lock.py` の module docstring。
+Per directory, each stage's output directory is updated atomically, and no intermediate state is visible downstream (the invariant [Architecture](../10-architecture.md#how-build-and-watch-are-served-by-the-same-components) assumes). Implemented by `dir_lock`'s `exclusive_write` (write to temp, then sync into the output under the lock) and `exclusive_read` (take a point-in-time copy of the upstream under the lock).
 
-## エラー伝播: BuildReport
+The details of the implementation and its rationale are in the module docstrings of `transfer.py` / `dir_lock.py`.
 
-コンポーネント共通の基盤が例外から作る `BuildReport`（[Architecture](../10-architecture.md#build-と-watch-を同じコンポーネントで賄う仕組み)）は、各ステージの出力ディレクトリの `reports/` に `__build_report.json` として置かれ、成果物の `data/` と並ぶ（キー名は [JSON データモデル](10-json-data-model.md#予約プレフィックス) の予約）。ビルドを止めるエラーも、続ける警告も、同じ報告に `severity` を付けて載る。
+## Error propagation: BuildReport
 
-下流は上流の `reports/` を集めてから本体を走らせ、失敗があれば本体を飛ばして報告だけを自分の `reports/` へ引き継ぐ。
+The `BuildReport` that the components' shared foundation makes from an exception ([Architecture](../10-architecture.md#how-build-and-watch-are-served-by-the-same-components)) is placed as `__build_report.json` in `reports/` in each stage's output directory, next to the artifacts in `data/` (the key name is a reservation of [JSON data model](10-json-data-model.md#reserved-prefixes)). Errors that stop the build and warnings that let it continue ride on the same report, each with a `severity`.
 
-## build info はデータの流れの外を通る
+A downstream stage collects the upstream `reports/` before running its body, and if there was a failure, skips the body and carries only the reports over into its own `reports/`.
 
-一回の実行の事実（処理系・注入値・マニフェスト）は `Workspace` の `build_info` が組む（`pipeline/workspace.py`。入れ子の値をドット区切りのキーに平坦化するのは `components/shared/build_info.py`）。
+## Build info travels outside the data flow
 
-`generate`（テンプレートの `build_info` 関数）と `reconcile`（奥付ページと失敗ページ）には引数で渡し、`compose` の出力には入らない。
+The facts of one run (the processor, the injected values, the manifest) are assembled by `Workspace`'s `build_info` (`pipeline/workspace.py`; flattening nested values into dot-separated keys is `components/shared/build_info.py`).
 
-失敗したステージは成果物を出さず `BuildReport` だけを下流へ渡すので、build info をデータとして上流のステージから流すと、上流で失敗したとき `reconcile` には届かず、失敗ページに奥付を出せない。利用者から見える理由（ビューの出力をマシンに依存させない）は [Template](../../10-external/50-template.md#build-info-はテンプレートだけが読みデータ層には流さない)。
+It is passed by argument to `generate` (the template's `build_info` function) and `reconcile` (the colophon page and the failure page), and does not enter `compose`'s output.
+
+A failed stage emits no artifacts and passes only the `BuildReport` downstream, so if build info flowed as data from an upstream stage, it would not reach `reconcile` when upstream failed, and the colophon could not be shown on the failure page. The user-visible reason (not making a view's output depend on the machine) is in [Template](../../10-external/50-template.md#build-info-is-read-only-by-templates-and-does-not-flow-into-the-data-layer).

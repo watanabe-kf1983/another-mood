@@ -1,3 +1,3 @@
 # Dev
 
-開発環境・依存関係・ドキュメント・リリースの規約と手順。
+The conventions and procedures for the development environment, dependencies, documentation, and releases.

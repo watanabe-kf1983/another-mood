@@ -1,110 +1,110 @@
-# ドキュメントの書き方
+# Writing Documentation
 
-置き場ごとの読者と、何を書き、何を書かないかの規約。置き場をまたぐ表記（段落の長さ、製品名、自己定義）もここに持つ。情報の種類ごとの正本の対応表は `DEVELOPMENT.md` の「ドキュメント」節が持つ。
+The readers of each location, and the conventions for what to write and what not to. Notation that crosses locations (paragraph length, the product name, the self-definition) is here too. The table of the source of truth per kind of information is in the "Documentation" section of `DEVELOPMENT.md`.
 
-## 系統
+## Families
 
-ドキュメントは四系統で管理する。`dev-docs/` の三系統は Another Mood 自身で管理する:
+Documentation is managed in four families. The three families under `dev-docs/` are managed with Another Mood itself:
 
-| 系統 | 内容 | 読者 | 言語 |
-|---|---|---|---|
-| `docs/` | 利用者向け文書。実装済み機能のみ | 利用者（人間と LLM） | 英語 |
-| `dev-docs/concept/` | 製品コンセプト（ビジョン、核となる設計判断）。開発判断の根拠 | 開発者 | 日本語 |
-| `dev-docs/design/` | 設計。第 1 部は外部設計（利用者から見える振る舞いのうち意図して保つもの）、第 2 部は内部構造（層とステージの構成と、それを保つ約束） | 開発者 | 日本語 |
-| `dev-docs/dev/` | 場面で開く開発規約・手順（環境 / 依存 / ドキュメント / リリース）。簡潔・規範的に書く。どの変更でも要る規約と、ここへの導線は `DEVELOPMENT.md` | 開発者 | 日本語 |
+| Family | Content | Readers |
+|---|---|---|
+| `docs/` | User documentation. Implemented features only | Users (humans and LLMs) |
+| `dev-docs/concept/` | The product concept (the vision, the core design decisions). The grounds for development decisions | Developers |
+| `dev-docs/design/` | The design. Part 1 is the external design (of the user-visible behavior, what we keep on purpose); part 2 is the internal structure (the arrangement of layers and stages, and the promises that keep it) | Developers |
+| `dev-docs/dev/` | The development conventions and procedures opened for a particular occasion (environment / dependencies / documentation / release). Written concisely and prescriptively. The conventions every change needs, and the pointers here, are in `DEVELOPMENT.md` | Developers |
 
-## 段落の長さ
+## Paragraph length
 
-一段落は日本語で 200 字、英語で 380 字以内（リンクの URL を除いた見える文字で数える。箇条書きは一項目を一段落とする）。対象は四系統に `README.md` と `DEVELOPMENT.md` を加えた全文書。超えるなら、文の切れ目で段落を割るか、並列する項目を箇条書きにする。長い段落は読み飛ばされる。
+A paragraph is at most 380 characters (counted as visible characters excluding link URLs; each list item counts as a paragraph). This applies to every document: the four families plus `README.md` and `DEVELOPMENT.md`. If a paragraph runs over, split it at a sentence boundary, or turn parallel items into a list. Long paragraphs get skipped.
 
-英語の上限は、日本語の上限を一文の平均の長さの比（英語は約 1.9 倍）で換算した値。`make ci` が検査する。
+The limit was set when these documents were written in Japanese, at 200 characters, and converted by the ratio of average sentence length (English is about 1.9 times). `make ci` checks it.
 
-## 製品名と自己定義
+## The product name and the self-definition
 
-製品をどう呼び、どう名乗るかの表記規約。ドキュメントに限らず、docstring や `--help` のように人が文として読む箇所すべてに効く。
+The notation conventions for how the product is called and how it describes itself. They apply not only to documentation but to every place a person reads as text, such as docstrings and `--help`.
 
-### ツール名の表記
+### How the tool's name is written
 
-| レイヤー | 表記 |
+| Layer | Notation |
 |---|---|
-| 散文（README / docs / dev-docs / docstring / --help / コミットメッセージ等） | `Another Mood` |
-| 技術的識別子（パス・URL・PyPI / GitHub リポジトリ名・プロジェクトルート） | `another-mood` |
-| Python パッケージ・モジュール | `another_mood` |
-| CLI コマンド | `mood` |
+| Prose (README / docs / dev-docs / docstrings / --help / commit messages, etc.) | `Another Mood` |
+| Technical identifiers (paths, URLs, the PyPI / GitHub repository name, the project root) | `another-mood` |
+| Python package and modules | `another_mood` |
+| CLI command | `mood` |
 
-体言をハイフンで繋ぐ綴り（`another-mood`）は英語として不自然なので、散文では title case の `Another Mood` を使う。技術的識別子（URL・パス・パッケージ名）は GitHub / PyPI / 言語制約のため `another-mood` のまま。
+The hyphenated spelling (`another-mood`) is unnatural in English prose, so prose uses the title-case `Another Mood`. Technical identifiers (URLs, paths, package names) stay `another-mood` because of GitHub / PyPI / language constraints.
 
-判断基準は「**ファイル形式ではなく用法**」: コード内の docstring や `--help` 出力も人間が英文として読む箇所は散文扱い。
+The criterion is **usage, not file format**: a docstring in code or `--help` output that a human reads as English text counts as prose.
 
-### 自己定義（tagline / description）の書き方
+### How to write the self-definition (tagline / description)
 
-ツールの自己定義には2階層あり、混ぜずに分けて書く:
+The tool's self-definition has two layers, written separately and never mixed:
 
-- **Means（普遍・固定）**: ソースベース DB のプロセッサ — 実装の本質
-- **Effect（現に提供している価値）**: 現時点で実際に届けているもの
+- **Means (universal, fixed)**: a processor of source-based databases — the essence of the implementation
+- **Effect (the value actually delivered now)**: what it actually delivers at present
 
-書き分けのルール:
+The rules for writing them apart:
 
-- pyproject.toml description / `mood --help` / README 冒頭などの tagline は **Means + 現 Effect** の形で書く
-  - 例: `A processor of source-based databases, keeping related documents in sync.`
-- Effect 側は**未来の拡張を匂わせない**（"and other ..." 等を入れない）。誠実さを優先
-- 一方で Vision を Effect に固定して書くのは避ける（"documentation build tool" は Means の解釈を狭めるので NG）
-- product.md の Vision は Effect レイヤーの抽象化として別管理。tagline と Vision の整合は時間とともにずれてよい
+- The tagline in the pyproject.toml description, `mood --help`, the opening of the README, and the like is written as **Means + current Effect**
+  - Example: `A processor of source-based databases, keeping related documents in sync.`
+- The Effect side **never hints at future extension** (no "and other ..." and the like). Honesty comes first
+- On the other hand, avoid pinning the Vision down as an Effect ("documentation build tool" narrows the reading of the Means, so it is out)
+- The Vision in product.md is managed separately as the abstraction of the Effect layer. The tagline and the Vision may drift apart over time
 
 ## `docs/`
 
-[Diátaxis](https://diataxis.fr/) に従い、`reference/` は reference、`guides.md` は tutorial / how-to / explanation として書く。素 Markdown。
+Follows [Diátaxis](https://diataxis.fr/): `reference/` is written as reference, `guides.md` as tutorial / how-to / explanation. Plain Markdown.
 
-人間の可読性と、読んだ LLM の振る舞いの双方が UX に直結するため、品質に妥協しない。書かれたことは外部仕様の正本（利用者との契約）としても扱われるが、それは帰結であって執筆の目的ではない。
+Both human readability and the behavior of an LLM that has read it bear directly on the UX, so there is no compromise on quality. What is written is also treated as the source of truth of the external specification (the contract with users), but that is a consequence, not the purpose of writing.
 
-`reference/` に書くのは約束の層だけ。利用者の関心の外にある精密な規則は書かず（コードと fixture テストが持つ）、reference を利用者が読める量に保つ。
+Only the promise layer is written in `reference/`. Precise rules outside the user's concern are not written (the code and the fixture tests hold them), keeping the reference to a size a user can read.
 
 ## `dev-docs/design/`
 
-design は、作業に入る前に読むものとして書く。読者が、何を破ってはいけないか、何がどこにあり、どうつながっているかを知り、次に開くコードや正本を決められれば役割を果たす。読む量が増えるほど作業前に読まれなくなるので、置くものを絞る。
+The design is written to be read before starting work. It has done its job if the reader learns what must not be broken, what is where and how it connects, and can decide which code or source of truth to open next. The more there is to read, the less it is read before work, so what goes in is kept narrow.
 
-design は二部からなる:
+The design has two parts:
 
-- **第 1 部: 外部設計** — 利用者から見える振る舞いのうち、契約にはしないが意図して保つものと、その理由。章は `docs/reference/` と同じ単位で立てる。例外は信頼境界（Trust Model）で、契約に対応するページを持たないが利用者から見える境界なので、独立の章にする
-- **第 2 部: 内部構造** — 層とステージの構成と、それを保つ約束。構成の記述はここにしかない
+- **Part 1: External Design** — of the user-visible behavior, what we keep on purpose without making it a contract, and why. The chapters follow the same units as `docs/reference/`. The exception is the trust boundary (Trust Model), which has no page corresponding to a contract but is a boundary visible to the user, so it is a chapter of its own
+- **Part 2: Internal Structure** — the arrangement of layers and stages, and the promises that keep it. The description of the arrangement exists only here
 
-### 外部設計
+### External design
 
-- 別の選び方がありえて、善意で変えられそうなものに限る（例: 重複したキーは後勝ちにせず、エラーにする）
-- どこで実装されているかによらず、その振る舞いを扱う章に書く。破ったときに気づけるよう、守るテストにこの見出しを名乗らせる（`DEVELOPMENT.md` のテストの規約）
-- 契約として `docs/reference/` にあるものは言い直さない
+- Limited to what could have been chosen differently and might be changed in good faith (example: duplicate keys are errors, not last-wins)
+- Written in the chapter that covers the behavior, wherever it is implemented. So that breaking it is noticed, the test that guards it names the heading (the test convention in `DEVELOPMENT.md`)
+- What is in `docs/reference/` as a contract is not restated
 
-振る舞いそのものを変えたときにだけ書き換える。実装を作り直しても書き換えは要らないので、古くなりにくい。
+It is rewritten only when the behavior itself changes. Rebuilding the implementation needs no rewrite, so it ages slowly.
 
-### 内部構造
+### Internal structure
 
-- **導線** — 層とステージのそれぞれが何を担い、ステージの間で何が渡り、何を共有しているか。共有の語彙もここで定義する。中身を言い直さず、コードのパスや正本を指す
-- **構成を保つ約束** — 破られると、ここに書いた構成が実態とずれる不変条件。構成の、それが保つ箇所に添えて書く（例: 「ステージはファイルを介してつながる」に「コンポーネントは互いを import しない」を添える）
-- **層やステージをまたいで守る約束** — 構成を保つものでなくても、複数の層やステージが共に守る不変条件はここに置く（例: 各ステージは自分の出力を書き換えない）
+- **Pointers** — what each layer and stage is responsible for, what passes between stages, and what is shared. The shared vocabulary is defined here too. The content is not restated; point at the code path or the source of truth
+- **Promises that keep the arrangement** — invariants whose breaking would make the arrangement written here diverge from reality. Written next to the part of the arrangement they keep (example: next to "stages are connected through files", "components do not import each other")
+- **Promises kept across layers or stages** — even if not keeping the arrangement, an invariant that several layers or stages keep together goes here (example: no stage rewrites its own output)
 
-どちらの部でも、意図の一文は対象と同じ場所に書き、別の体系（ADR 等）で索引しない。同じ場所にあれば、変更時に意図も目に入り、更新漏れが起きにくい。
+In both parts, the one sentence of intent is written in the same place as its object, and not indexed in a separate system (ADRs and the like). In the same place, the intent is seen when the object changes, and missed updates are rarer.
 
-### 置かないもの
+### What does not go here
 
-| 中身 | 行き先 |
+| Content | Where it goes |
 |---|---|
-| 機構（一つの層やステージの中で、それをどうやっているか） | コード |
-| 実装上の理由による判断のうち、一つの層やステージの中に閉じたもの | 破る変更が起きる箇所のコメント |
-| 契約（利用者が頼ってよい振る舞い） | `docs/reference/` |
-| 製品としての方針 | `dev-docs/concept/` |
-| 開発の進め方の約束 | `dev-docs/dev/` |
-| 経緯（比較調査、却下案） | PR 本文（main の squash コミット本文として残る） |
+| Mechanism (how one layer or stage does it, inside) | The code |
+| A decision for implementation reasons, closed within one layer or stage | A comment at the place where a change that breaks it would be made |
+| A contract (behavior the user may rely on) | `docs/reference/` |
+| Product policy | `dev-docs/concept/` |
+| Promises about how development proceeds | `dev-docs/dev/` |
+| History (comparative surveys, rejected options) | The PR body (which survives as the squash commit body on main) |
 
-### 境界の見分け方
+### Telling the boundaries
 
-- **導線か機構か** — 層とステージの間のことか、一つの層やステージの中のことか。間のことなら導線として内部構造に書き、中のことなら機構としてコードに任せる（例: ステージが前段の出力ディレクトリを読むことは導線。そのディレクトリに JSON をどう書き出すかは機構）
-- **判断をどこに置くか** — 理由が利用者から見える振る舞いにあるなら外部設計。理由が実装にあるなら、層やステージをまたぐものは内部構造、一つの中に閉じるものは破る変更が起きる箇所のコメント。コードではなく開発の進め方についての約束なら `dev-docs/dev/`
+- **Pointer or mechanism** — is it between layers and stages, or inside one layer or stage? Between, it is a pointer and goes in the internal structure; inside, it is a mechanism and is left to the code (example: that a stage reads the preceding stage's output directory is a pointer; how the JSON is written into that directory is a mechanism)
+- **Where a decision goes** — if the reason lies in user-visible behavior, the external design. If the reason lies in the implementation, the internal structure when it crosses layers or stages, and a comment where the change that breaks it would be made when it is closed within one. If it is a promise about how development proceeds rather than about the code, `dev-docs/dev/`
 
-## インデックスの更新
+## Updating the indexes
 
-ドキュメントを追加・削除・移動した場合、プルリクを上げる前に以下のインデックスからのリンクを確認・更新する:
+When a document is added, removed, or moved, check and update the links from the following indexes before opening a pull request:
 
-- dev-docs の各フォルダの `index.md`（`dev-docs/contents/**/index.md`）— 章の一覧。全体の目次はビルドが作るので手では直さない
-- `docs/index.md` — 利用者向けトップ
-- `docs/catalog.yaml` — `mood docs` が配るドキュメントのカタログ
-- `DEVELOPMENT.md` — 開発者向けポインタ
+- The `index.md` of each dev-docs folder (`dev-docs/contents/**/index.md`) — the list of chapters. The overall table of contents is built, so it is not edited by hand
+- `docs/index.md` — the user-facing top
+- `docs/catalog.yaml` — the catalog of the documentation that `mood docs` serves
+- `DEVELOPMENT.md` — the pointers for developers

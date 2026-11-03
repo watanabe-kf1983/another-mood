@@ -1,14 +1,14 @@
 # Design
 
-設計。二部からなり、置くもの・置かないものは[ドキュメントの書き方](../30-dev/30-documentation.md#dev-docsdesign)。
+The design. It has two parts; what goes here and what does not is in [Writing documentation](../30-dev/30-documentation.md#dev-docsdesign).
 
-- [外部設計](10-external/index.md) — 利用者から見える振る舞いのうち、契約にはしないが意図して保つものと、その理由
-- [内部構造](20-internal/index.md) — 層とステージの構成と、それを保つ約束
+- [External Design](10-external/index.md) — of the user-visible behavior, what we keep on purpose without making it a contract, and why
+- [Internal Structure](20-internal/index.md) — the arrangement of layers and stages, and the promises that keep it
 
-## 役割を表す語
+## Role terms
 
-全章で同じ意味に使う。各章の「本文で使う語」では定義せず、ここを指す。
+Used with the same meaning in every chapter. The "Terms used in this chapter" lists do not define them; they point here.
 
-- **著者** — プロジェクト（ソースとテンプレート）を書く人。definition を書く人と contents を書く人に分かれることがある
-- **実行者** — `mood` を起動する人やプロセス。著者と同じとは限らない
-- **利用者** — 著者と実行者をまとめた呼び名。区別が要らないときに使う
+- **author** — the person who writes the project (sources and templates). Sometimes split between whoever writes `definition/` and whoever writes `contents/`
+- **operator** — the person or process that runs `mood`. Not necessarily the author
+- **user** — author and operator together. Used when the distinction does not matter

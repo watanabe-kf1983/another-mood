@@ -89,7 +89,7 @@ class TestResolveLayout:
 
 
 class TestUnknownDefinitionEntries:
-    """Keeps: design/Manifest › 知らない入力は、黙って読み飛ばさずエラーにする"""
+    """Keeps: design/Manifest › Unknown input is an error, not silently skipped"""
 
     def test_rejects_unknown_file(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)
