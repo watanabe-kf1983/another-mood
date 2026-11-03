@@ -1,6 +1,6 @@
 {% set entities = node(path="/__definition/entities") %}
 {% macro mermaid_type_id(e) %}{{ e.item_type.id | replace(".", "_") | safe }}{% endmacro %}
-{# ``source_link(name)`` renders the inline link to a source's meta page:
+{# ``source_link(name)`` renders the inline link to a source's database page:
    into __defs/views when the name is a view, else __defs/entities
    (filtered to view: false, so a view name would 404 there). ``| safe``
    at each call site is required — the macro returns a plain string that

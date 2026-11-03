@@ -57,6 +57,10 @@ class Workspace:
     # (vs. a user-pinned MOOD_TMP_DIR it must not delete).
     temporary: bool = False
 
+    # Build info is for templates only. Do not also offer it as data that
+    # views can query (for example, a `__build_info` entity): a view reading
+    # it would give different output on every machine and every run, and once
+    # users rely on that, removing it breaks their views.
     @cached_property
     def build_info(self) -> BuildInfo:
         return {

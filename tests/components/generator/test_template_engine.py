@@ -114,6 +114,7 @@ class TestRenderBoundaryAcceptsTemplateSafe:
         assert engine.render("t.md", Markup("already")) == "[already]"
 
     def test_non_template_safe_subject_is_still_rejected(self, tmp_path: Path) -> None:
+        """Keeps: design/Template evaluation boundary › Enforcement layers"""
         engine = self._engine(tmp_path, "{{ this }}")
         with pytest.raises(TypeError, match="Non-inert value"):
             engine.render("t.md", object())
@@ -171,6 +172,7 @@ class TestMakeEnvironment:
         assert env.render_str("[{{ missing }}]") == "[]"
 
     def test_renders_a_broken_chain_as_empty_string(self) -> None:
+        """Keeps: design/Template › A missing value draws nothing, and is no error"""
         # Chainable undefined: a missing step part-way through keeps resolving
         # instead of raising, and what falls out renders as nothing.
         fmt = OutputFormat(name="upper", escape=lambda s: s.upper())
@@ -197,6 +199,7 @@ class TestMakeEnvironment:
         assert env.render_str("{{ 'hi' | raw }}") == "hi"
 
     def test_python_methods_are_not_reachable(self) -> None:
+        """Keeps: design/Template › The vocabulary is closed to filters, tests, operators, and registered functions; values have no methods"""
         # pycompat is off, so the Python resemblance stops at the syntax: a
         # value carries no Python methods, and reaching for one is an error
         # naming the method rather than a silent empty render.
@@ -282,6 +285,7 @@ class TestPathRegistry:
         assert registry.claim(Path("p.md"), subject, "a.md") is False
 
     def test_different_subject_raises(self) -> None:
+        """Keeps: design/Template › View row addresses are not guaranteed unique; only a collision when drawn as a page is stopped"""
         registry = PathRegistry()
         registry.claim(Path("p.md"), {"id": "x"}, "a.md")
         # Equal-but-distinct object: identity differs, so it is a collision.

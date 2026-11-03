@@ -1,3 +1,3 @@
 # Dev
 
-開発環境セットアップ・ツール設定・開発規約と手順。
+The conventions and procedures for the development environment, dependencies, documentation, and releases.

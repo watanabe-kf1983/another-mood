@@ -11,6 +11,8 @@ ROOT = Path("/ws")
 
 
 class TestAnotherMoodRoot:
+    """Keeps: design/CLI › Output goes to `.another-mood/` directly under the CWD, not into the project"""
+
     def test_project_dir_directly_under_the_root(self) -> None:
         config = ProjectConfig(
             namespace_root=ROOT, project_dir=ROOT / "docs"
@@ -34,7 +36,9 @@ class TestAnotherMoodRoot:
 
 
 class TestVerifyProjectDirUnderNamespaceRoot:
-    """project_dir must lie under namespace_root; external paths are rejected (G8).
+    """Keeps: design/CLI › `<project_dir>` must be under the CWD; the output destinations are not restricted
+
+    project_dir must lie under namespace_root; external paths are rejected.
 
     The containment check runs before the existence check, so an external path
     is rejected regardless of whether it exists — pinning the check ordering

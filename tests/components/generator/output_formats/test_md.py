@@ -84,6 +84,7 @@ class TestMdOutputFormat:
         assert env.render_str("{{ value | safe }}", value="# heading") == "# heading"
 
     def test_globals_are_the_call_style_helpers(self) -> None:
+        """Keeps: design/Template › Position-aware helpers are named for the position; those that build syntax are functions, those that normalize content are filters"""
         assert set(MD_GLOBALS) == {"code_inline", "code_fenced"}
 
     def test_filters_are_the_binding_free_helpers(self) -> None:
@@ -292,6 +293,7 @@ class TestMdAnchor:
         assert md_anchor(MissingNode("/members/ghost")) == ""
 
     def test_prose_heading_emits_nothing(self) -> None:
+        """Keeps: design/Template › A heading has only an address within its record, and no `<a id>` is stamped"""
         # A heading's id is emitted natively by the renderer (Goldmark/GitHub);
         # stamping it too would duplicate the id, so the landing is left to
         # the renderer (`stamps_anchor` false).
@@ -303,7 +305,7 @@ class TestMdAnchor:
 
 class TestMdPostProcess:
     """The format's render post-pass stamps a node subject's own anchor at the
-    top of its output (C9), and leaves a non-node render untouched."""
+    top of its output, and leaves a non-node render untouched."""
 
     def test_stamps_node_subject_anchor_on_its_own_line(self) -> None:
         node = build_node_map(ensure_inert_mapping(_ANCHOR_DATA))["/members/alice"]
@@ -444,6 +446,7 @@ class TestLinkFilterWiring:
         )
 
     def test_unresolved_link_keeps_bracketed_text(self, tmp_path: Path) -> None:
+        """Keeps: design/Template › An unresolved reference is made conspicuous as `[text]`"""
         engine = self._engine(tmp_path, "{{ node('members', 'ghost') | link }}")
         result = engine.render("t.md", _anchors()["/"])
         # A broken reference is a conspicuous bracketed `[text]`, not a `[..](..)`
@@ -632,6 +635,7 @@ class TestAbsentValues:
     """
 
     def test_every_exported_text_helper_renders_absence_as_nothing(self) -> None:
+        """Keeps: design/Template › A missing value draws nothing, and is no error"""
         helpers = {**MD_GLOBALS, **MD_FILTERS}
         # Nothing reaches the processors, so even `under_heading`'s required
         # `marker` is not needed to call them.

@@ -52,6 +52,10 @@ _COVER_TEMPLATES_DIR = Path(
 
 _NO_FILTERS: Mapping[str, Callable[..., TemplateSafe]] = {}
 
+# Page paths derive from anchor paths, and this root is the address of the
+# built-in `blob` entity, so no user entity or view page can land under it:
+# there is no collision check against page paths (see also `_is_blob` in
+# `pipeline/adapters/preparation.py`).
 _BLOB_NAMESPACE = "/blob/"
 
 
@@ -156,6 +160,9 @@ def render_editions_index(
     editions: Sequence[Edition], project_name: str, out_dir: Path
 ) -> None:
     """Render the root cover listing the editions (no data model, no filters)."""
+    # No ``build_info`` global here: the cover's tail (colophon and warnings
+    # links) is reconcile's to lay out, and a cover able to read the store
+    # would be a second place deciding what the cover says about the build.
     # Project each edition to the fields the cover reads: the render boundary
     # marshals subjects to inert, and a live Edition (callables / paths) is not.
     markdown_engine(out_dir, _COVER_TEMPLATES_DIR).render_to_file(

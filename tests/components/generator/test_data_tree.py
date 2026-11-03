@@ -276,6 +276,7 @@ class TestMetaAnchorPath:
     def test_segment_rendered_into_path(
         self, collection: str, id_value: object, expected: str
     ) -> None:
+        """Keeps: design/Template › Non-ASCII stays raw, in IRI form"""
         node = _n(_wrap({collection: [{"id": id_value}]}), collection, 0)
         assert node._meta.anchor_path == expected
 
@@ -396,8 +397,9 @@ class TestMetaOriginItemType:
     def test_prose_heading_detected_at_a_flattened_position(self) -> None:
         # A liner heading flattened into a view sits at a non-prose position
         # (`album_tracklist.item.liner.headings.item`), yet its catalog origin
-        # is `prose.item.headings.item`, so detection fires there — the point
-        # of B13.  Observed via the heading-only `#slug` fold it drives.
+        # is `prose.item.headings.item`, so detection fires there: it
+        # follows the origin, not the position.  Observed via the heading-only
+        # `#slug` fold it drives.
         data = {
             "__definition": {
                 "entities": [

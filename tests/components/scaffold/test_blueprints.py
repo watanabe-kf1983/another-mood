@@ -58,7 +58,10 @@ class TestScaffoldCopy:
 
 
 class TestScaffoldReadme:
-    """Generation of the README.md that says what manages the directory."""
+    """Keeps: design/CLI › No agent-only entry point, and no agent-only text
+
+    Generation of the README.md that says what manages the directory.
+    """
 
     def test_points_at_another_mood(self, template: Path, tmp_path: Path) -> None:
         target = tmp_path / "proj"
@@ -90,6 +93,7 @@ class TestScaffoldManifest:
     def test_titled_after_target_directory(
         self, template: Path, tmp_path: Path
     ) -> None:
+        """Keeps: design/Manifest › The minimum version is a verified floor, and only a bare version is accepted"""
         target = tmp_path / "proj"
 
         scaffold_project(template, target)

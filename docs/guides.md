@@ -2,7 +2,9 @@
 
 ## What is Another Mood?
 
-Software specifications, product catalogs, maintenance manuals, training materials — documents like these keep describing the same things in different places. For instance, in a software specification, a single screen is listed in the screen inventory, named as the destination of other screens' transitions, crossed with tables in a CRUD matrix, and cited by the requirements. Rename it and every one of those mentions has to change with it; miss one, and the specification contradicts itself.
+Software specifications, product catalogs, maintenance manuals, training materials — documents like these keep describing the same things in different places.
+
+For instance, in a software specification, a single screen is listed in the screen inventory, named as the destination of other screens' transitions, crossed with tables in a CRUD matrix, and cited by the requirements. Rename it and every one of those mentions has to change with it; miss one, and the specification contradicts itself.
 
 **Another Mood** is a processor of source-based databases — a tool that keeps document sets like these in sync. Edit the data in one place, and every linked output regenerates in a consistent state — no chasing fixes through many files.
 
@@ -68,7 +70,7 @@ What the tool generates (under `.another-mood/my-project/`):
 │   │   ├── members/{alice,bob,carol}.md
 │   │   └── by_role/{engineer,designer}.md
 │   ├── index.md                              # cover: your reports + link to __db/
-│   └── __db/                                 # the database's self-description
+│   └── __db/                                 # the database pages: definitions and data
 │       ├── index.md                          # auto overview (entities + views)
 │       ├── __defs/                           # definitions (described later)
 │       │   ├── entities/, views/
@@ -81,7 +83,9 @@ What the tool generates (under `.another-mood/my-project/`):
 
 Your templates render to `output/default/`. Inside it, since there are 3 members, one file is generated per member under `members/`, and with 2 roles, one file per role under `by_role/`. The root `index.md` template loops through the data and emits these subpages as it goes — this is the core mechanism of the tool. The [Templates](#templates) chapter covers it in detail.
 
-Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the database's self-description: an overview (`__db/index.md`, the entities and views) plus the `__`-prefixed diagnostic directories. Independent of your templates, they let you check the current state of the schema, data, and views while writing — see the [Workflow](#workflow) chapter for details.
+Besides `default/`, `output/` also holds pages the tool generates on its own. The root `index.md` is a thin **cover** — it lists your reports (here just `default/`) and links to `__db/`, the **database pages**: an overview (`__db/index.md`, the entities and views) plus the `__`-prefixed directories that show the definitions and the data as the tool read them.
+
+Independent of your templates, they let you check the current state of the schema, data, and views while writing — see the [Workflow](#workflow) chapter for details.
 
 ### Try the live preview
 
@@ -89,7 +93,9 @@ Besides `default/`, `output/` also holds pages the tool generates on its own. Th
 mood watch my-project
 ```
 
-`http://localhost:5077` displays the HTML in your browser. Edit any file and save: the project auto-rebuilds and the browser reloads. Try changing `alice`'s `role` in `contents/members.yaml` from `engineer` to `manager`. In the browser a new `by_role/manager` page appears and `alice` drops off `by_role/engineer`. One line of data edited, multiple pages regenerated in a consistent state — this is what the tool is for.
+`http://localhost:5077` displays the HTML in your browser. Edit any file and save: the project auto-rebuilds and the browser reloads.
+
+Try changing `alice`'s `role` in `contents/members.yaml` from `engineer` to `manager`. In the browser a new `by_role/manager` page appears and `alice` drops off `by_role/engineer`. One line of data edited, multiple pages regenerated in a consistent state — this is what the tool is for.
 
 `watch` serves this preview live and writes nothing into the project — the `output/` files stay as your last `mood build` left them. Run `mood build` when you want the files regenerated.
 
@@ -115,7 +121,9 @@ One file sits outside these four kinds: `sbdb.yaml`, the project **manifest**, a
 
 You don't have to wait until the templates are complete to see anything. At every stage — when only the schema is written, only the content is written, only the views are written — pages showing "what you've written so far" are auto-generated on every build. These are the `__`-prefixed directories you saw in Quick Start.
 
-In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the diagnostic view for each stage. With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__defs/entities/<entity>.md`).
+In the table below, "where to write" paths are relative to the project directory (`<project>/`), and "where to check" names the database page for each stage.
+
+With `mood watch` running you open these as preview pages under the paths shown; `mood build` instead writes them as files under the output directory (`.another-mood/<project>/`, e.g. `output/__db/__defs/entities/<entity>.md`).
 
 | Stage | What you write | Where to write | Where to check |
 |---|---|---|---|
@@ -126,7 +134,9 @@ In the table below, "where to write" paths are relative to the project directory
 
 Schema and content are required; views are optional; templates are required for the final output. The schema is the single file `definition/schema.yaml`; content, views, and templates can each be freely split across multiple files and subdirectories. To change paths, see [CLI](reference/cli.md).
 
-With `mood watch` running, the output of each stage updates in the browser as you edit. By the time you start writing templates, the shapes of the data and views they reference are already settled, so you can focus on the templates. Syntax errors in your sources show up in the browser through the same mechanism, and you watch and fix them as you go — this "write, check, fix" loop is what the workflow looks like in practice.
+With `mood watch` running, the output of each stage updates in the browser as you edit. By the time you start writing templates, the shapes of the data and views they reference are already settled, so you can focus on the templates.
+
+Syntax errors in your sources show up in the browser through the same mechanism, and you watch and fix them as you go — this "write, check, fix" loop is what the workflow looks like in practice.
 
 ### When to use `mood build` vs `mood watch`
 
@@ -218,7 +228,7 @@ members:
   - { id: bob,   name: Bob,   role: engineer }
 ```
 
-The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__defs/entities/<entity>` view (how the tool interpreted the declared type) and `__db/__data/entities/<entity>` (whether the data is being loaded as expected).
+The `id` field can be referenced from both templates and views. As shown in the workflow table, you can verify the result via the `__db/__defs/entities/<entity>` page (how the tool interpreted the declared type) and `__db/__data/entities/<entity>` (whether the data is being loaded as expected).
 
 The reason to write as a map is readability: even as the number of records grows, the YAML data stays easier to read than the array form, because each record's `id` comes first and acts like a heading.
 
@@ -509,7 +519,9 @@ A subtemplate can itself call `render`, so a subpage can generate further subpag
 
 ### Where subpages land
 
-A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended. So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` view's groups (given an `id` by the `as: id` trick from the views chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__data/`, where it appears as `_anchor_path`.
+A subpage mirrors the record's place in the data, under `default/`: its path is the record's address in the data — like `/members/alice` — with `.md` appended.
+
+So the `members` entity's records become `default/members/alice.md` and so on, and the `by_role` view's groups (given an `id` by the `as: id` trick from the views chapter) become `default/by_role/engineer.md`. You can check each record's address in `__db/__data/`, where it appears as `_anchor_path`.
 
 A record only gets a subpage of its own if its type is listed in `definition/reports.yaml` — that listing is what grants it a page (see [Reports](reference/reports.md)); the sample project already lists both `members` records and `by_role` groups.
 
@@ -522,7 +534,9 @@ Look again at the pair of lines inside the sample's loops:
 - {{ member | link }}
 ```
 
-`{{ member | link }}` turns the record into a Markdown link to that record — here landing at the top of the very subpage the `render` call above it has just written. The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
+`{{ member | link }}` turns the record into a Markdown link to that record — here landing at the top of the very subpage the `render` call above it has just written.
+
+The URL is built from the record's address — the same one that just decided where the subpage lands — and the relative path is worked out for you, so you never hand-write `members/{{ member.id }}.md`. For the rest of the linking toolkit, see the [Template reference](reference/template.md).
 
 The pairing is a convenience, not a rule — links and `render` calls can live in separate loops when a page calls for a different arrangement (the [music sample](../showcase/music/) does this).
 

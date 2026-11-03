@@ -678,6 +678,10 @@ class TestBuildSchemaValidator:
 
     @pytest.mark.parametrize("src", _REJECTED_SCHEMA_CASES)
     def test_rejected(self, src: str) -> None:
+        """Keeps: docs/reference/schema.md › Unsupported keywords
+        Keeps: docs/reference/schema.md › Entity references (x-ref)
+        Keeps: design/Schema › Literals written in the schema also follow the declared type
+        """
         data = yaml.safe_load(src)
         assert len(self._validator.validate(data)) > 0
 
@@ -1022,7 +1026,49 @@ class TestInspectSchema:
 
         inspect_schema.fn(schema_file, out_dir=out_dir)  # should not raise
 
+    def test_xref_to_nested_collection_rejected(self, tmp_path: Path) -> None:
+        """Keeps: docs/reference/schema.md › Entity references (x-ref)"""
+        schema_file = _write_schema(
+            tmp_path / "schema.yaml",
+            dedent("""\
+                type: object
+                additionalProperties: false
+                properties:
+                  screens:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        buttons:
+                          type: object
+                          additionalProperties:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              label: { type: string }
+                  shortcuts:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        button_id:
+                          type: string
+                          x-ref:
+                            entity: screens.buttons
+            """),
+        )
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        with pytest.raises(FileValidationError) as exc_info:
+            inspect_schema.fn(schema_file, out_dir=out_dir)
+
+        assert any("screens.buttons" in d.message for d in exc_info.value.diagnostics)
+
     def test_xref_to_definition_namespace_rejected(self, tmp_path: Path) -> None:
+        """Keeps: design/Schema › The target must be an entity reachable from the root without crossing another collection"""
         schema_file = _write_schema(
             tmp_path / "schema.yaml",
             dedent("""\
@@ -1077,6 +1123,7 @@ class TestXRefDiagnostics:
         )
 
     def test_missing_entity(self) -> None:
+        """Keeps: docs/reference/schema.md › Entity references (x-ref)"""
         diagnostics = _xref_diagnostics(
             dc.XRef(entity=_loc("ghosts"), attribute=_loc("id")), self._INDEX
         )
@@ -1084,6 +1131,7 @@ class TestXRefDiagnostics:
         assert "ghosts" in diagnostics[0].message
 
     def test_missing_attribute(self) -> None:
+        """Keeps: docs/reference/schema.md › Entity references (x-ref)"""
         diagnostics = _xref_diagnostics(
             dc.XRef(entity=_loc("artists"), attribute=_loc("nickname")), self._INDEX
         )

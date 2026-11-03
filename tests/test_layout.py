@@ -14,7 +14,7 @@ from another_mood.layout import (
 
 
 def scaffold_sources(project_dir: Path) -> None:
-    """Create the minimal source layout ``resolve_layout`` requires."""
+    """Create the full source layout ``resolve_layout`` reads."""
     definition = project_dir / "definition"
     (definition / "views").mkdir(parents=True)
     (definition / "templates").mkdir(parents=True)
@@ -35,7 +35,7 @@ class TestResolveLayout:
         assert layout.views_dir == tmp_path / "definition" / "views"
         assert layout.templates_dir == tmp_path / "definition" / "templates"
 
-    def test_lists_every_missing_path(self, tmp_path: Path) -> None:
+    def test_lists_every_missing_required_path(self, tmp_path: Path) -> None:
         with pytest.raises(SourceLayoutError) as exc_info:
             resolve_layout(tmp_path / "missing")
         message = exc_info.value.user_error_message
@@ -45,11 +45,25 @@ class TestResolveLayout:
             "definition_dir",
             "schema_file",
             "reports_file",
-            "contents_dir",
-            "views_dir",
             "templates_dir",
         )
         assert all(name in message for name in names)
+        assert "contents_dir" not in message
+        assert "views_dir" not in message
+
+    def test_allows_absent_contents_and_views(self, tmp_path: Path) -> None:
+        """Git keeps no empty directory, so a fresh clone may lack both."""
+        scaffold_sources(tmp_path)
+        (tmp_path / "contents").rmdir()
+        (tmp_path / "definition" / "views").rmdir()
+        resolve_layout(tmp_path)
+
+    def test_rejects_file_where_optional_dir_expected(self, tmp_path: Path) -> None:
+        scaffold_sources(tmp_path)
+        (tmp_path / "contents").rmdir()
+        (tmp_path / "contents").write_text("")
+        with pytest.raises(SourceLayoutError, match="contents_dir"):
+            resolve_layout(tmp_path)
 
     def test_requires_the_manifest(self, tmp_path: Path) -> None:
         """The backstop: in a build ``read_manifest`` gets there first."""
@@ -75,6 +89,8 @@ class TestResolveLayout:
 
 
 class TestUnknownDefinitionEntries:
+    """Keeps: design/Manifest › Unknown input is an error, not silently skipped"""
+
     def test_rejects_unknown_file(self, tmp_path: Path) -> None:
         scaffold_sources(tmp_path)
         (tmp_path / "definition" / "notes.yaml").write_text("")

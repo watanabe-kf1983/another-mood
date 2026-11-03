@@ -138,6 +138,7 @@ class TestNormalizeContents:
         }
 
     def test_json_source_is_a_record_not_a_blob(self, tmp_path: Path) -> None:
+        """Keeps: docs/reference/cli.md › Which files are read"""
         src = tmp_path / "contents"
         src.mkdir()
         (src / "data.json").write_text('{"items": [{"name": "a"}]}')
@@ -200,7 +201,9 @@ _FK_SCHEMA = """
 
 
 def test_normalize_contents_reports_dangling_fk_as_warning(tmp_path: Path) -> None:
-    """End-to-end: inspect_schema's catalog + dangling FK → warning via reporter.
+    """Keeps: docs/reference/schema.md › Entity references (x-ref)
+
+    End-to-end: inspect_schema's catalog + dangling FK → warning via reporter.
 
     Uses ``.fn(...)`` so the test can pass a :class:`DiagnosticReporter`
     explicitly (the Component-framework would otherwise inject one).
@@ -472,7 +475,10 @@ _MEMBERS_SCHEMA = """
 
 
 def test_ids_duplicated_across_files_fail_validation(tmp_path: Path) -> None:
-    """A content file copied beside itself: each validates on its own."""
+    """Keeps: design/Schema › One collection can be written across several files
+
+    A content file copied beside itself: each validates on its own.
+    """
     schema_file = tmp_path / "schema.yaml"
     schema_file.write_text(dedent(_MEMBERS_SCHEMA).lstrip("\n"))
     src = tmp_path / "contents"
@@ -521,7 +527,10 @@ _SITE_CONFIG_SCHEMA = """
 
 
 def test_top_level_singleton_split_across_files_is_merged(tmp_path: Path) -> None:
-    """Each file validates on its own; the clash shows only once merged."""
+    """Keeps: design/Schema › One collection can be written across several files
+
+    Each file validates on its own; the clash shows only once merged.
+    """
     schema_file = tmp_path / "schema.yaml"
     schema_file.write_text(dedent(_SITE_CONFIG_SCHEMA).lstrip("\n"))
     src = tmp_path / "contents"

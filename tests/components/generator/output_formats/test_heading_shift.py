@@ -1,4 +1,4 @@
-"""Tests for the ``under_heading`` heading-shift transform (A6).
+"""Tests for the ``under_heading`` heading-shift transform.
 
 The filter-boundary adaptation (str coercion, Markup wrapping, template use)
 is md.py's concern and is tested in test_md.py.

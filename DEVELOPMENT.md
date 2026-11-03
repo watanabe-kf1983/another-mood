@@ -2,124 +2,103 @@
 
 ## Conventions (Must Read)
 
-### 開発ワークフロー
+### Development workflow
 
-- 各タスクは「1タスク・1 Git ブランチ」で進める
-- タスク開始時に `make ci` を実行し、開発環境・既存コードが正常な状態であることを確認する。失敗する場合は、環境の問題ならセットアップ節を、コードの問題ならタスク着手前に修正する
-- タスク開始時に `make upgrade-deps` で uv.lock の鮮度も確認する。diff が出るとスクリプトが lock 単独 PR の作成（push を含む）まで行うので、その PR を merge してから着手する（規約の全体は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
-- コミットメッセージ・プルリクエストは **英語**
+- At the start of a task, run `make ci` to confirm that the development environment and the existing code are in a healthy state
+- At the start of a task, also check the freshness of uv.lock with `make upgrade-deps`. If there is a diff, the script goes as far as creating a lock-only PR (including the push); merge that PR before starting (the full convention is in [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/20-dependencies.md))
 
-### セットアップ
+### Setup
 
-ツールの動作には [uv](https://docs.astral.sh/uv/) が必要。インストール後 `uv sync` で依存を解決する。
+Environment setup is in [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/10-environment.md).
 
-このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/web/index.md](.another-mood/dev-docs/output/web/index.md)。
+This project manages its own documentation with Another Mood. At the start of a task, build the documentation with `mood build dev-docs` so that the specifications can be consulted. The starting point is [.another-mood/dev-docs/output/web/index.md](.another-mood/dev-docs/output/web/index.md).
 
-利用者向けサンプルプロジェクト群は `showcase/`（`starter` / `music` 等の各テンプレート）にある。`mood build showcase/{name}` でビルドできる。
+The sample projects for users are in `showcase/` (the templates `starter` / `music` and so on). Build one with `mood build showcase/{name}`.
 
-### ドキュメント
+### Documentation
 
-情報は種類ごとに正本を一つ持つ。コードから復元できないもの（約束、意図、不変条件、判断の過程）だけを文書にし、コードから読めるもの（機構、現在の挙動）は書かない。同じ内容を二箇所に書かない。
+When you want to know something, there is one place to open per kind of information. What can be read from the code (mechanisms, current behavior) is read from the code. The documents hold only what cannot be recovered from the code (promises, intent, invariants, the course of decisions).
 
-正本は「何についてか」と「どの深さか」の二軸で決まる。各行は左から読み、必要なときだけ右へ進む:
+Where to open is decided on two axes: what it is about, and how deep. Read each row from the left, and move right only when needed:
 
-| | 導線・約束（まず読む） | 精密な条件（必要なときに開く） | 実際の姿（実装の写し） |
+| | Pointers and promises (read first) | Precise conditions (open when needed) | The actual state (a copy of the implementation) |
 |---|---|---|---|
-| 利用者から見える挙動 | `docs/reference/` | `dev-docs/appendix/` | fixture テスト |
-| 内部の構造 | `dev-docs/design/`（構造・不変条件） | docstring（呼び出し側の契約）、コメント（申し送り） | コード |
-| 開発の進め方 | 本ファイル | `dev-docs/dev/` | Makefile・CI 等の設定 |
+| User-visible behavior | `docs/reference/` | The external design in `dev-docs/design/` (behavior kept on purpose, and why) | Fixture tests |
+| Internal structure | The internal structure in `dev-docs/design/` (the arrangement of layers and stages, and the promises that keep it) | Docstrings (the caller's contract), comments (handover notes) | The code |
+| How development proceeds | This file | `dev-docs/dev/` | The Makefile, CI, and other configuration |
 
-契約は左上の `docs/reference/` だけで、破壊的変更の判定はその diff で行う。他の欄は安定させる意図があっても約束ではなく、変更はリリースノートの義務を生まない。
+The contract is only the top-left `docs/reference/`, and breaking changes are judged by its diff. The other cells may be meant to stay stable, but they are not promises, and changing them creates no release-note obligation.
 
-格子が持つのは「いま何がそうなっているか」。「なぜそうなったか」と「次に何をするか」は欄に収まらないので、別に置く:
+The grid holds "what is the case now". "Why it came to be" and "what to do next" do not fit in a cell, so they are read elsewhere:
 
-- **なぜそうなったか** — 意図は該当する欄の中に、対象と同じ場所で一文添える。そこに至った過程（比較、却下案、経緯）は `dev-docs/appendix/` か PR 本文に置く
-- **次に何をするか** — 目的は `dev-docs/concept/`、タスクは GitHub Issues
+- **Why it came to be** — the intent is in the same place as its object (one sentence in the relevant cell). The course that led there (comparisons, rejected options, history) is in the PR body, that is, the git log of main
+- **What to do next** — the goals are in `dev-docs/concept/`, the tasks in GitHub Issues
 
-言語は `docs/` が英語、`dev-docs/` が日本語。各置き場の読者、書き方（何を書き、何を書かないか）、インデックスの更新手順は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md)。
+The writer's conventions (the readers of each location, what to write and what not to, updating the indexes) are in [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md).
 
-### 実装
+### Implementation
 
-- コード内コメントは **英語**
-- ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使うコンポーネントの近傍（`dev-docs/design/` の対応ファイル、実装済みならコードの docstring）に残す**
-- **コードから dev-docs を参照しない**: docstring・コメントに dev-docs のパスや章名を書かない
-- docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。設計はその意図とともに `dev-docs/design/`、設計に至った経緯は `dev-docs/appendix/` か PR 本文へ
+- In prose, `Another Mood`; in identifiers such as paths and package names, `another-mood` / `another_mood`; the command is `mood` (the notation convention is the "The product name and the self-definition" section of [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md))
+- A library is adopted after comparing the strong candidates at the time. **Leave the reason for the choice in one sentence in a comment or docstring where the library is used, and write how they were compared in the PR body.** Version constraints are floors only (the convention is in [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/20-dependencies.md))
+- Docstrings hold only contracts the API's caller needs beyond the signature (express it in the signature when possible). Comments are handover notes to future maintainers only. If the reason for the note lies in a contract or in the external design, name that section or heading
 
-#### パッケージ構成と依存ルール
+#### Package layout and dependency rules
+
+The main players. Not exhaustive:
 
 ```
 another_mood/
-├── cli.py                  # CLI エントリポイント
-├── command.py              # CLI の背後の操作層（BuildResult 等を返す）
-├── config.py               # 設定
-├── components/             # ビジネスロジック
-│   ├── shared/             #   共通基盤
-│   ├── preprocess/         #   入力の正規化・スキーマ解釈・クエリ導出
-│   ├── composer/           #   合成: データ + クエリ → ビュー
-│   ├── generator/          #   生成: ビュー + テンプレート → Markdown
-│   ├── publish/            #   出力の書き出し
-│   ├── scaffold/           #   プロジェクト初期化・ブループリント
-│   └── docs_catalog/       #   バンドル済みドキュメントの目録
-├── pipeline/               # オーケストレーション: ステージ実行
-│   └── adapters/           #   外部ツール連携（Hugo, watchdog）
-└── resources/              # 静的リソース
+├── cli.py                  # CLI entry point
+├── command.py              # the operation layer behind the CLI (returns BuildResult etc.)
+├── config.py               # configuration
+├── components/             # business logic
+│   ├── shared/             #   shared foundation
+│   ├── preprocess/         #   input normalization, schema interpretation, query derivation
+│   ├── composer/           #   composition: data + queries → views
+│   ├── generator/          #   generation: views + templates → Markdown
+│   └── publish/            #   writing out the output
+├── pipeline/               # orchestration: running the stages
+│   └── adapters/           #   integration with external tools (Hugo, watchdog)
+└── resources/              # static resources
 ```
 
-依存方向: `cli` → `command` → `pipeline` → `components/*` → `components/shared`
+Dependency direction: `cli` → `command` → `pipeline` → `components/*` → `components/shared`. Components import neither each other nor the pipeline. The role of each layer and the arrangement of the stages are in [design/Architecture](.another-mood/dev-docs/output/web/prose/20-design/20-internal/10-architecture.md).
 
-#### コードスタイル
+#### Code style
 
-- **関数型スタイルを優先**: `for` ループより内包表記、`map/filter` 等。引数・戻り値はイミュータブル型（`dict` → `Mapping`、`list` → `Sequence` 等）
-- **`Any` はなるべく使わない**: `object` 等で型安全性を保つ
-- **命名はモジュール名に合わせる**: `source` モジュールなら `is_source_file`, `build_source`
-- **関数の並び順（Newspaper style）**: 公開 API を先頭、ヘルパーを後ろ。ヘルパーはパイプライン順
-- **`@dataclass` は `frozen=True`**: `__init__` ボイラープレート削減目的、immutable がデフォルト
-- **制御フローは論理の形に合わせる**: 両枝が対等な結果を返す *対称な分岐* は `if/else`（両枝が `return` でも `else` を畳まない）。前提失敗・エラー・エッジを先頭で剥がす *非対称な bail-out* のみ guard clause（早期 `return`）。`else` とインデントは条件付き領域の境界情報なので、機能的に冗長でも残す（*explicit is better than implicit*）。`else` を機械的に除去させる pylint `no-else-return` / ruff `RET505` は採らない（RET は `select` 外）
+- **Prefer a functional style**: comprehensions over `for` loops, `map/filter`, and so on. Arguments and return values use immutable types (`dict` → `Mapping`, `list` → `Sequence`, etc.)
+- **Avoid `Any` where possible**: keep type safety with `object` and the like
+- **Name after the module**: in a `source` module, `is_source_file`, `build_source`
+- **Function order (newspaper style)**: public API first, helpers after. Helpers in pipeline order
+- **`@dataclass` is `frozen=True`**: the purpose is to cut `__init__` boilerplate, and immutable is the default
+- **Shape control flow after the logic**: a *symmetric branch*, where both arms return results of equal standing, is `if/else` (do not fold the `else` even when both arms `return`). Only an *asymmetric bail-out*, which peels off a failed precondition, an error, or an edge case at the top, is a guard clause (early `return`)
+    - The `else` and the indentation are boundary information for the conditional region, so they stay even when functionally redundant (*explicit is better than implicit*)
 
-#### テスト
+#### Tests
 
-- **カバレッジ計測対象**: `components/`。Statements + Branches トータルで 90% 以上
-- **フィクスチャ**: ファイルベース、モジュール隣接型。期待値はテストコード内に記述
+- **Unit tests cover `components/`**: business logic goes there, and `cli` / `command` / `pipeline` are kept thin. Coverage (statements + branches) is held at 90% by `make ci`
+- **Fixtures**: file-based, next to the module. Expected values are written in the test code
+- **A test that keeps a promise names the promise it keeps**: on the first line of the docstring, write the contract's section (`Keeps: docs/reference/view.md › Missing-key placement`) or the external design's heading (`Keeps: design/View › A flattened row keeps the parent's attributes and puts the element under as:`)
+    - Only the test that fails first when the promise is broken needs to name it; exhaustiveness is not required. When changing a section of the contract or the external design, grep for the section name and fix the tests that name it
 
-#### 動作確認 (`mood watch` + Playwright MCP)
+#### Checking by hand
 
-`showcase/` や `dev-docs/` のテンプレート変更を実機で確認するときは `mood watch <project_dir> --port <port>` でローカルプレビューを上げ、必要なら Playwright MCP でレンダリングを観る。Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwright-mcp/` 配下に集約する:
+To check a template change on a real run, bring up a preview with `mood watch <project_dir> --port <port>`, and look at it with the Playwright MCP if needed (where the working files go is the "Playwright's working files" section of [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/10-environment.md)).
 
-- ページスナップショット / console ログは Playwright MCP が自動でこのディレクトリに出す
-- スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する (デフォルトは cwd 直下に落ちて散らかる)
+### Pull requests
 
-検証目的のスクショは再現可能なので、コミット前に削除して構わない。
+The PR body becomes the squash commit body on main as it is (the commit messages on the branch do not survive). The summary of the change and the background and course of the design decisions go here. The title appears in the release notes that users read, so put no internal vocabulary in it.
 
-#### タスクの進め方
+A PR you want among the highlights at the top of the release notes writes a trailer on one line, starting at the beginning of a line, at the end of the PR body. The kind is `breaking` / `feature` / `fix`:
 
-非自明な機能追加・変更では、まず方針を合意してから着手する。以降の手順:
+    Release-Highlight: <kind>
 
-1. 以下をタスクに応じた順序で進める:
-    - **showcase/ のテンプレートに入出力例を作成**
-    - **単体テストを記述**
-    - **実装**
-2. **showcase/ で動作確認**
-3. **`docs/` を同期** — 利用者が書ける形・得られる形（CLI / スキーマ / クエリ / テンプレート、内蔵リソース等）が変わったら `docs/` の該当箇所を更新する
-4. **設計の記録** — 維持価値のある設計判断を `dev-docs/design/` の対応ファイル（必要なら新規ファイル）の External / Internal Design 節に書くか、コードの docstring に残す
-5. `make ci` を通してコミット → プルリク作成
-
-### プルリクエスト
-
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
-
-リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
-
-    Release-Highlight: fix
-
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
-
-破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務、設計背景、リリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
+Only `breaking` is mandatory, and it comes with a `## Breaking change` section. How to choose the kind, the obligations of a PR with a breaking change (a supported format generation dropping out, or breaking a user-facing contract such as the CLI), and the release procedure are in [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/40-release.md).
 
 ## Documentation (Reference)
 
-ドキュメントの閲覧先は `.another-mood/dev-docs/output/web/`。
+The documentation is read at `.another-mood/dev-docs/output/web/`.
 
-- [index.md](.another-mood/dev-docs/output/web/index.md) — 仕様・設計
-- [concept/product.md](.another-mood/dev-docs/output/web/prose/10-concept/10-product.md) — 製品ビジョン
-- [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md) — 命名・自己定義の表記規約
-- [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約）
+- [index.md](.another-mood/dev-docs/output/web/index.md) — specifications and design
+- [concept/product.md](.another-mood/dev-docs/output/web/prose/10-concept/10-product.md) — the product vision
+- [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md) — writing documentation (the readers and conventions of each location, the notation of the product name and the self-definition)

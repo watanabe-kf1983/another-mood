@@ -47,7 +47,9 @@ class TestFirstH1:
 
 
 class TestGithubSlug:
-    r"""github_slug: GitHub's de-facto heading-anchor slug (\p{Word} rule).
+    r"""Keeps: docs/reference/schema.md › Built-in schema: prose
+
+    github_slug: GitHub's de-facto heading-anchor slug (\p{Word} rule).
 
     The core cases (ASCII, CJK, punctuation) are where GitHub, Hugo, and VS Code
     coincide; they also match real Hugo output for this project's prose. The
@@ -163,6 +165,7 @@ class TestRewriteInlineLinks:
         )
 
     def test_leaves_non_bare_destinations(self) -> None:
+        """Keeps: design/Template › A `node:` in a body is resolved only in inline link form"""
         # Reference-style and titled destinations are not the bare ``](href)``
         # needle, so they are left untouched rather than rewritten or crashed.
         assert rewrite_inline_links(parse("see [x][r]\n\n[r]: a.md\n"), _resolve) == (

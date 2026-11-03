@@ -1336,6 +1336,7 @@ class TestSort:
         missing: Missing,
         expected: list[dict[str, object]],
     ) -> None:
+        """Keeps: docs/reference/view.md › Missing-key placement"""
         records = [{"x": 2}, {}, {"x": 1}]
         assert (
             list(Sort(by=("x",), direction=direction, missing=missing).apply(records))

@@ -81,14 +81,16 @@ For a [blob](schema.md#built-in-schema-blob) node, the URL points straight at th
 
 ### Anchor paths
 
-The node a link points at is often not in the template's context — a foreign key, a related record. To reach it, you look it up by its **anchor path**: the node's address in the data tree, built from the keys and record `id`s on the way to it (`/members/alice` is the record `alice` of `members`). [`node`](#node) does the lookup, resolving an anchor path — usually from plain segments, not a written-out string — to its node, ready to link:
+The node a link points at is often not in the template's context — a foreign key, a related record. To reach it, you look it up by its **anchor path**: the node's address in the data tree, built from the keys and record `id`s on the way to it (`/members/alice` is the record `alice` of `members`).
+
+[`node`](#node) does the lookup, resolving an anchor path — usually from plain segments, not a written-out string — to its node, ready to link:
 
 ```jinja2
 {# product.category_id is just an id; the category node is elsewhere in the tree #}
 {{ node("categories", product.category_id) | link }}
 ```
 
-A path matching no node is a **missing node**, kept visible rather than a dead link. The `__db/__data/` diagnostics record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
+A path matching no node is a **missing node**, kept visible rather than a dead link. The database pages under `__db/__data/` record each node's anchor path as `_anchor_path` — percent-encoded, so a `/` or space inside a segment value appears there as `%2F` / `%20` (letters, including non-ASCII, stay readable).
 
 A [prose](schema.md#built-in-schema-prose) record's headings are nodes too. A heading's anchor path is the record's path, `#`, and the heading's slug — `/prose/guides/ordering#placing-an-order` — and a link to it lands directly on the heading.
 
@@ -111,7 +113,9 @@ A filter that renders a subtemplate against the piped value, **either as its own
 
 #### Split vs inline
 
-Whether the subtemplate becomes its own page or expands in place is driven by [`file_per`](reports.md): if the subject's [type ID](reports.md#type-ids) is listed there, the subtemplate is **split** into its own file; otherwise it expands **inline** at the call site (like `{% include %}`). The same template therefore works either way — list the type in `file_per` where you want it on its own page, omit it where you want it inlined, so one report can ship both as separate [editions](reports.md#editions).
+Whether the subtemplate becomes its own page or expands in place is driven by [`file_per`](reports.md): if the subject's [type ID](reports.md#type-ids) is listed there, the subtemplate is **split** into its own file; otherwise it expands **inline** at the call site (like `{% include %}`).
+
+The same template therefore works either way — list the type in `file_per` where you want it on its own page, omit it where you want it inlined, so one report can ship both as separate [editions](reports.md#editions).
 
 Only an addressable node can become its own page: a scalar subject always expands inline, whatever `file_per` says.
 
@@ -123,7 +127,9 @@ Two pages that resolve to the same path make the build fail rather than silently
 
 #### Return value
 
-When the subject is **split**, the filter **returns the empty string**: the output file is written as a side effect, so nothing appears at the call site in the parent template. When **inline**, it returns the rendered text, which appears at the call site — inserted as-is, like the other Markdown-emitting filters here, so no `| safe`. Either way the call is an expression, so its line keeps its own newline; inside a loop, trim it with whitespace markers ([Whitespace control](#whitespace-control)).
+When the subject is **split**, the filter **returns the empty string**: the output file is written as a side effect, so nothing appears at the call site in the parent template. When **inline**, it returns the rendered text, which appears at the call site — inserted as-is, like the other Markdown-emitting filters here, so no `| safe`.
+
+Either way the call is an expression, so its line keeps its own newline; inside a loop, trim it with whitespace markers ([Whitespace control](#whitespace-control)).
 
 To link from a parent page to a subpage, emit the link as a separate expression — typically a `{{ node | link }}` next to the `render` call:
 
@@ -261,7 +267,9 @@ It removes only the *common* minimum, so lines nested deeper than their siblings
 
 ### `under_heading`
 
-`value | under_heading("##")` shifts the headings in an embedded Markdown fragment down so they nest under an enclosing heading. The argument is that enclosing level *as you see it at the call site* — a run of `#` — so every heading in the fragment moves down by that many levels: a fragment's own `#` title becomes `###`, nesting as a subsection directly under the `## …` heading above it. Levels never exceed `######` (H6), so a fragment shifted past the bottom collapses onto it.
+`value | under_heading("##")` shifts the headings in an embedded Markdown fragment down so they nest under an enclosing heading.
+
+The argument is that enclosing level *as you see it at the call site* — a run of `#` — so every heading in the fragment moves down by that many levels: a fragment's own `#` title becomes `###`, nesting as a subsection directly under the `## …` heading above it. Levels never exceed `######` (H6), so a fragment shifted past the bottom collapses onto it.
 
 Pipe it on embedded output — a [`render`](#render) call or prose content:
 
@@ -457,7 +465,9 @@ For inline code spans and fenced code blocks, `code_inline` / `code_fenced` are 
 
 ### Whitespace control
 
-A line that holds only a control tag or a comment leaves nothing in the output, neither its indentation nor its line break. Jinja2's defaults would instead leave a line break behind every control tag, so a template with one tag per line would render with blank lines between its content; the engine runs with `trim_blocks` and `lstrip_blocks` on to avoid that. To keep the whitespace around one tag, add a `+`: `{%+ if x %}` keeps the indentation before it, `{% endif +%}` the newline after it.
+A line that holds only a control tag or a comment leaves nothing in the output, neither its indentation nor its line break. Jinja2's defaults would instead leave a line break behind every control tag, so a template with one tag per line would render with blank lines between its content; the engine runs with `trim_blocks` and `lstrip_blocks` on to avoid that.
+
+To keep the whitespace around one tag, add a `+`: `{%+ if x %}` keeps the indentation before it, `{% endif +%}` the newline after it.
 
 Only tag and comment lines are removed this way. An expression line keeps its newline even when it renders nothing — a split [`render`](#render) call, say — so remove that yourself with Jinja2's `{{- … -}}` markers.
 

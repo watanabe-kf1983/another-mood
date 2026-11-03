@@ -42,13 +42,15 @@ Source paths are fixed — they are part of the project structure, not configura
 | Views | `<project_dir>/definition/views` |
 | Templates | `<project_dir>/definition/templates` |
 
-If any of these paths is missing when `build`, `watch`, or `tap` starts, the command fails and exits with code 1. This includes `tap`, which requires the templates directory to exist even though it never renders templates.
+Content and Views read as empty when absent. If any other path is missing when `build`, `watch`, or `tap` starts, the command fails and exits with code 1. This includes `tap`, which requires the templates directory to exist even though it never renders templates.
 
 #### Which files are read
 
-Content and Views are the two trees whose files are not named individually: both are walked recursively, and every file found is read, with the extension (matched case-insensitively) picking the interpretation. Under `contents/`, YAML (`.yaml`, `.yml`) and JSON (`.json`) are structured data, Markdown (`.md`) is [prose](schema.md#built-in-schema-prose), and anything else is an opaque [blob](schema.md#built-in-schema-blob). Under `definition/views/`, YAML and JSON are the accepted formats — any other file there fails validation rather than being ignored.
+Content and Views are the two trees whose files are not named individually: both are walked recursively, and every file found is read, with the extension (matched case-insensitively) picking the interpretation.
 
-A YAML or JSON source must have a mapping at its root; a sequence or a bare scalar is an error. **YAML is the recommended format for anything written by hand** — it diffs more readably in Git, and errors are reported at the line and column where they occur. JSON is accepted for sources produced by another program.
+Under `contents/`, YAML (`.yaml`, `.yml`) and JSON (`.json`) are structured data, Markdown (`.md`) is [prose](schema.md#built-in-schema-prose), and anything else is an opaque [blob](schema.md#built-in-schema-blob). Under `definition/views/`, YAML and JSON are the accepted formats — any other file there fails validation rather than being ignored.
+
+A YAML or JSON source must have a mapping at its root; a sequence or a bare scalar is an error. **YAML is the recommended format for anything written by hand** — it diffs more readably in Git. JSON is accepted for sources produced by another program.
 
 **Hidden entries are the one exclusion.** A dotfile, or any file under a dotdirectory (`.DS_Store`, `.vscode/settings.json`, `.gitkeep`), is skipped in both trees whatever its extension, so editor and VCS cruft can sit in a source tree without being read as a source.
 
@@ -96,6 +98,8 @@ Exits with code 0 if all stages succeed, or 1 if any stage fails.
 
 Fail the build (exit code 1) when any warning is reported. Without `--strict`, warnings (e.g. a dangling [`x-ref`](schema.md#entity-references-x-ref) value) are listed on a dedicated page at `output/__warnings/`, linked from `output/index.md`, but do not affect the exit code. Useful in CI to gate merges on a clean build.
 
+A new release may report warnings that an earlier one did not, so a build that passes with `--strict` can fail after an upgrade. Pin the version where that matters.
+
 ### `--var`
 
 Inject a value of your own for templates to read back through [`build_info`](template.md#build_info). Repeatable, one `NAME=VALUE` each:
@@ -116,7 +120,7 @@ mood watch <project_dir> [--out-dir <dir>] [--host <addr>] [--port <port>] [--va
 
 When a change is detected on an input path (the schema file or the contents / views / templates directories), only the affected stages re-run. The preview server detects file updates and auto-reloads connected browsers. Stop with `Ctrl+C`.
 
-By default `watch` writes nothing into the project — the preview is served live from a temporary working directory, and the diagnostic views are browsable at `/__db/`. Use `--out-dir` to also publish the Markdown tree to disk.
+By default `watch` writes nothing into the project — the preview is served live from a temporary working directory, and the database pages are browsable at `/__db/`. Use `--out-dir` to also publish the Markdown tree to disk.
 
 ```
 $ mood watch .
@@ -167,7 +171,7 @@ mood tap <project_dir> [--schema]
 
 Runs steps 1–2 of [`build`](#build) (schema and contents, then views) and prints everything they produce to stdout as one JSON document. Nothing is written into `.another-mood/`: redirect stdout when you want a file.
 
-The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed diagnostic views and `__definition`.
+The top level of the document is the namespace the root template receives ([Template context](template.md#template-context)) — every entity and view by name, including the built-in `__`-prefixed views behind the database pages, and `__definition`.
 
 Exits with code 0 on success. Schema, contents, and view errors are printed to stderr and fail the command with exit code 1 — stdout stays empty.
 

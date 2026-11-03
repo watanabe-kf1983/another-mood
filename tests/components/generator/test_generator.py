@@ -43,13 +43,14 @@ class TestGenerate:
         )
 
         # User reports are rendered under the edition dir default/; the root
-        # node's own anchor is stamped at the top of index.md (C9 post_process).
+        # node's own anchor is stamped at the top of index.md by the format's
+        # post-pass.
         assert (out_dir / "data" / "default" / "index.md").read_text() == (
             '<a id="/"></a>\n# Hello\n'
         )
         # The cover owns the site root: a thin two-section page that
         # lists the deliverables and links modestly to the __db/ meta surface,
-        # which is where the self-description is now mounted (F9).
+        # which is where the self-description is mounted.
         cover = (out_dir / "data" / "index.md").read_text()
         # Title is the project name; sections are Reports + Database Information.
         assert "# myproject" in cover
@@ -103,6 +104,7 @@ class TestGenerate:
         assert not (out_dir / "data" / "__db" / "blob").exists()
 
     def test_renders_each_form_b_edition_at_its_file_name(self, tmp_path: Path) -> None:
+        """Keeps: design/Reports › An edition is the same report in a different form, not a profile chosen per environment"""
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
         _write_model(data_dir / "data.json", {"title": "Hello"})
@@ -129,7 +131,7 @@ class TestGenerate:
         assert (out_dir / "data" / "web" / "index.md").exists()
         assert (out_dir / "data" / "print me" / "index.md").exists()
         # The root cover lists each edition under ## Reports: raw display
-        # label, encoded href that reaches the directory written above (F9).
+        # label, encoded href that reaches the directory written above.
         cover = (out_dir / "data" / "index.md").read_text()
         assert "- [web](web/)" in cover
         assert "- [print me](print%20me/)" in cover
@@ -273,6 +275,7 @@ class TestReconcile:
     def test_colophon_is_a_page_of_its_own_linked_from_the_cover(
         self, tmp_path: Path
     ) -> None:
+        """Keeps: design/Reports › The colophon is a separate page, and the cover carries only a link section"""
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         (upstream / "data" / "index.md").write_text("# Root\n")
@@ -344,6 +347,7 @@ class TestReconcile:
         assert index.index("## Build Information") < index.index("## Warnings")
 
     def test_renders_error_page_when_upstream_has_errors(self, tmp_path: Path) -> None:
+        """Keeps: design/Reports › Only the build failure page embeds the colophon"""
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         # Stale data left over from a previous successful run.

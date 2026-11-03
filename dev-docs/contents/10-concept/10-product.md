@@ -1,99 +1,105 @@
 # Product Vision
 
-製品ビジョンと背景。
+The product vision and its background.
 
 ## What
 
-任意の関連するオブジェクト群とドキュメントテンプレートから、整合性の取れた構造的ドキュメントを生成する汎用ツール。
+A general-purpose tool that generates consistent, structured documents from any set of related objects and document templates.
 
-Linux / macOS / Windows のいずれでも動作する。Windows 利用者も主要ターゲットに含む。
+It runs on Linux, macOS, and Windows. Windows users are among the primary targets.
 
 ## Why
 
-### 背景と経緯
+### Background and history
 
-元々は「要件定義を省力化するツール」として構想した。要件定義の最終成果物（FP 法で計測できる粒度の機能一覧）と、その根拠になる ERD・DFD・CRUD マトリクス・ユースケース記述は相互に関連しており、手作業では整合性の維持に見落としが出る。整合性チェックは人間も AI エージェントも見落とすので機械的に行うべきだと考え、Claude Code に Markdown を直接編集させる案ではなく、メタデータを YAML で記述してビルドツールで検証・生成する案を採った。
+The tool was first conceived as a way to reduce the labor of requirements definition.
 
-議論の過程で、本質的に必要なのは以下だと気づいた：
+The final deliverable of requirements definition (a list of functions at a granularity that function point analysis can measure) and the artifacts that substantiate it (ERDs, DFDs, CRUD matrices, use case descriptions) are all related to each other, and keeping them consistent by hand lets things slip.
 
-- DFD/ERD等のスキーマ定義は「設定データ」に過ぎない
-- 整合性チェックは FK 制約として汎用的に表現できる
-- 作るべきは**汎用ドキュメントジェネレータ**である
+Consistency checks are missed by humans and AI agents alike, so they should be mechanical; on that judgment, rather than letting Claude Code edit Markdown directly, we chose to describe the metadata in YAML and have a build tool validate and generate from it.
 
-要件定義の成果物群そのものは、ツールの機能ではなく [showcase](../20-design/80-showcase/10-system-dev-docs.md) として提供する。
+In the course of the discussion we realized what is essentially needed:
+
+- Schema definitions such as DFDs and ERDs are nothing more than "configuration data"
+- Consistency checks can be expressed generically as foreign key constraints
+- What should be built is a **general-purpose document generator**
+
+The requirements-definition deliverables themselves are offered as a showcase, not as a feature of the tool. `showcase/system-dev-docs-ja/` and `-en/` are the sample that derives two documents, a requirements specification and a design document, from one source, with each chapter of the design document referring into the requirements specification.
 
 ## Core Design Decision
 
-### データとビューの分離
+### Separating data from views
 
-このツールの核心は「データとビューの分離」である。
+The heart of this tool is the separation of data from views.
 
 ```
-データ（YAML/Markdown）= Single Source of Truth
+Data (YAML/Markdown) = Single Source of Truth
      ↓
-テンプレートA → ドキュメントA
-テンプレートB → ドキュメントB
-テンプレートC → ドキュメントC
+Template A → Document A
+Template B → Document B
+Template C → Document C
 ```
 
-分離しない場合、以下の不整合が発生する：
+Without the separation, inconsistencies like these arise:
 
-- ドキュメントAに「ユーザーは〇〇」
-- ドキュメントBに「ユーザーは△△」
+- Document A says "the user is X"
+- Document B says "the user is Y"
 
-分離することで、データを一箇所で管理し、整合性を保証する。
+With the separation, the data is managed in one place and consistency is guaranteed.
 
-#### トレードオフ
+#### Trade-off
 
-この設計には避けられないトレードオフがある：
+This design has an unavoidable trade-off:
 
-| 得るもの | 失うもの |
+| Gained | Lost |
 |---------|---------|
-| 整合性の保証 | 認知負荷 |
-| 複数ビュー対応 | 学習コスト |
-| 変更の一元管理 | 「普通のMarkdown」の手軽さ |
+| Guaranteed consistency | Cognitive load |
+| Multiple views | Learning cost |
+| One place to change | The ease of "plain Markdown" |
 
-利用者は以下を常に考える必要がある：
+The user has to keep asking:
 
-- 「このデータはどこに書く？」
-- 「テンプレートをどう直す？」
+- "Where does this data go?"
+- "How do I fix the template?"
 
-これはプログラマー的思考を要求し、学習コストが高い。
+This demands a programmer's way of thinking, and the learning cost is high.
 
-#### AI エージェントによる認知負荷の吸収
+#### Absorbing the cognitive load with an AI agent
 
-トレードオフの「認知負荷と学習コスト」を AI エージェントに押し付けることで解決する。
+The trade-off's "cognitive load and learning cost" is resolved by pushing it onto an AI agent.
 
 ```
-従来: 利用者 → 「どこに・どう書くか」を考える → 記述
-AI エージェント活用: 利用者 → 「何を書くか」だけ伝える → AI エージェントが適切に記述
+Before:        user → thinks about "where and how to write" → writes
+With an agent: user → says only "what to write" → the AI agent writes it properly
 ```
 
-利用者は「データの中身」に集中し、「どこに・どう書くか」は AI エージェントが判断・実行する。
+The user concentrates on the content of the data; where and how to write it is decided and done by the AI agent.
 
-- 整合性の保証 → 維持（データとビューの分離）
-- 認知負荷 → AI エージェントが吸収
-- 学習コスト → 最小限（自然言語で指示するだけ）
+- Guaranteed consistency → kept (data separated from views)
+- Cognitive load → absorbed by the AI agent
+- Learning cost → minimal (just instruct in natural language)
 
-AI エージェントが人間と同じ CLI と同梱ドキュメントで操作できるようにしているのは、このためである。
+This is why the tool is made so that an AI agent can operate it through the same CLI and bundled documentation as a human.
 
-### ソースは標準形式のテキスト、ツールは読むだけ
+### Sources are plain text in standard formats, and the tool only reads
 
-スキーマ・データ・ビュー・テンプレートのすべてを、標準形式の素のテキスト（JSON Schema / YAML / Markdown / Jinja2）として利用者が所有し、Git で管理する。独自形式は採らない。
+The schema, data, views, and templates are all plain text in standard formats (JSON Schema / YAML / Markdown / Jinja2), owned by the user and managed in Git. There is no proprietary format.
 
-ツールはこれらを読んで生成するだけで、作成・更新・削除（CUD）の API は提供しない。理由:
+The tool only reads them and generates; it offers no create, update, or delete (CUD) API. Reasons:
 
-- JSON Schema の構造に対する CRUD API（`AppendAdditionalProperty` 等）は設計が膨大になる
-- 標準形式なら利用者も AI エージェントも書き方を既に知っており、ファイルを直接編集できる
-- ツールは読むだけでよいため、書き戻し（ラウンドトリップ保持）が不要
+- A CRUD API over the structure of JSON Schema (`AppendAdditionalProperty` and the like) would be enormous to design
+- With standard formats, users and AI agents already know how to write them and can edit the files directly
+- Since the tool only reads, there is no need to write back (no round-trip preservation)
 
-### データモデル: 規律を与えた JSON の木
+### Data model: a JSON tree with discipline
 
-「データとビューの分離」が成り立つには、一つのデータから多様なビューを機械的に組み立てられなければならない。組み立てる側（クエリ DSL、テンプレート）がデータの形を前提にできるよう、データモデルには規律が要る。規格があるから多様な形を組める（レゴの凸凹）のと同じ構図で、RDB はこの規律を最も厳しくしたものである。
+For the separation of data from views to hold, many different views must be assembled mechanically from one body of data. The assembling side (the query DSL, the templates) must be able to assume the shape of the data, so the data model needs discipline.
 
-一方、ソースは標準形式のテキストとして利用者が直接読み書きする。その場面では関連するデータが一箇所に凝集していてほしく、自然なキーを持たない子にまで全体で一意な id を振るのは負担になる。だから RDB が禁じる入れ子を許す。これは多くの手で書かれる YAML が受け入れる形そのものである。
+It is the same picture as a standard making many shapes possible (the studs of Lego bricks); the relational database is the strictest form of this discipline.
 
-利用者が定義するデータモデルは、入れ子が許される JSON としつつ、クエリ DSL やテンプレートが扱いやすいよう以下の制約を加える。
+On the other hand, the sources are plain text in standard formats that users read and write directly. There, related data should sit together in one place, and giving a globally unique id to every child that has no natural key is a burden. So we allow the nesting that relational databases forbid. This is exactly the shape that YAML written by many hands accepts.
 
-- **型の強制** — どの値も宣言された一つの型を持つ。型の無い位置、複数の型を取る位置、null は無い（欠損はキー省略）
-- **属性定義の強制** — オブジェクトが持つ属性は宣言されたものだけ。任意のキーを持つオブジェクトは無く、キーを並べる `{key: {...}}` の書き方は `[{id: key, ...}]` というレコード集合の記法としてだけ受ける
+The data model the user defines is JSON with nesting allowed, with the following constraints added so that the query DSL and the templates can handle it easily:
+
+- **Types are enforced** — every value has exactly one declared type. There is no untyped position, no position with more than one type, and no null (a missing value is an omitted key)
+- **Attribute definitions are enforced** — an object has only the attributes that are declared. There is no object with arbitrary keys; the `{key: {...}}` way of listing keys is accepted only as a notation for a set of records, `[{id: key, ...}]`

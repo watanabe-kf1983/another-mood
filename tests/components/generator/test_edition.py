@@ -209,6 +209,7 @@ class TestPagePath:
         assert PagingPolicy(("erds.item",)).page_path(erd) == "erds/user-mgmt.md"
 
     def test_page_path_is_a_file_name_not_the_anchor_path(self) -> None:
+        """Keeps: design/Reports › A file name is the anchor path percent-decoded per segment, with only the characters a file system cannot hold escaped as `~XX`"""
         # The anchor path escapes the space and parentheses; the file does not.
         tree = {"erds": [{"id": "user (v2)"}]}
         root = wrap_tree(ensure_inert_mapping(tree))

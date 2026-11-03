@@ -1,16 +1,24 @@
 {
   "name": "another-mood",
+  // No Python in the image: the uv feature fetches the interpreter named in
+  // .python-version, so the development version is declared in one place.
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
+    // npm: installs Claude Code CLI and ast-grep CLI (see postCreateCommand).
     "ghcr.io/devcontainers/features/node:1": {},
+    // go: builds mcp-language-server (see postCreateCommand).
     "ghcr.io/devcontainers/features/go:1": {},
+    // gh: PR creation and other GitHub operations.
     "ghcr.io/devcontainers/features/github-cli:1": {},
+    // uv: Python package manager; also provides the interpreter.
     "ghcr.io/devcontainers-extra/features/uv:1": {}
   },
 
   "customizations": {
     "vscode": {
+      // Same list as .vscode/extensions.json, which carries the purpose of
+      // each extension and serves developers outside the container.
       "extensions": [
         "anthropic.claude-code",
         "ms-python.python",
@@ -27,13 +35,29 @@
     }
   },
 
+  // Keep Claude Code's settings and conversation history across container
+  // rebuilds. Docker creates the volume root-owned; the claude-home step of
+  // postCreateCommand hands it to the remote user.
   "mounts": ["source=another-mood-claude-${devcontainerId},target=/home/vscode/.claude,type=volume"],
 
+  "containerEnv": {
+    // By default .claude.json (login state, per-project trust) lives outside
+    // ~/.claude and would miss the volume; pointing CLAUDE_CONFIG_DIR at the
+    // volume keeps it there too.
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+  },
+
+  // Object form runs the steps in parallel, so none may depend on another.
   "postCreateCommand": {
     "claude-home": "sudo chown -R vscode:vscode /home/vscode/.claude",
     "claude-code": "npm install -g @anthropic-ai/claude-code",
+    // Bridge that lets Claude Code call an LSP server. The server itself
+    // (pyright-langserver) comes with `uv sync`.
     "mcp-language-server": "go install github.com/isaacphi/mcp-language-server@latest",
+    // Used by the ast-grep MCP server.
     "ast-grep": "npm install -g @ast-grep/cli",
+    // Chrome for the Playwright MCP server, plus Noto CJK so that rendered
+    // pages with CJK text can be checked.
     "playwright-deps": "sudo apt-get update && sudo apt-get install -y fonts-noto-cjk && (npx -y playwright install chrome || true) && command -v google-chrome"
   },
 

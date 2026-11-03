@@ -1,15 +1,26 @@
 {
+  // Same list as .devcontainer/devcontainer.json, which auto-installs them in
+  // the container; this file recommends them to everyone else.
   "recommendations": [
+    // AI assistant.
     "anthropic.claude-code",
+    // IntelliSense and venv detection.
     "ms-python.python",
+    // Type checking and completion (pyright-based).
     "ms-python.vscode-pylance",
     "ms-python.debugpy",
+    // Virtual environment management.
     "ms-python.python-env-manager",
     "ms-vscode.makefile-tools",
+    // Formatter and linter; also the save-time formatter (settings.json).
     "charliermarsh.ruff",
+    // Applies .editorconfig to non-Python files (indent, newline, final EOL).
     "editorconfig.editorconfig",
+    // Schema and data files.
     "redhat.vscode-yaml",
+    // Mermaid diagram preview.
     "bierner.markdown-mermaid",
+    // CI workflow editing.
     "github.vscode-github-actions"
   ]
 }

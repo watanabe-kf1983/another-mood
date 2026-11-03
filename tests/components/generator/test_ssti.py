@@ -93,6 +93,7 @@ class TestDunderPathSealed:
         ],
     )
     def test_dunder_access_yields_undefined(self, source: str) -> None:
+        """Keeps: design/Trust Model › Building a third party's project runs no arbitrary code from its templates"""
         capability = _Capability()
         assert (
             _render(
@@ -318,6 +319,7 @@ class TestLoaderConfinement:
     def test_escaping_the_template_directory_fails(
         self, tmp_path: Path, body: str
     ) -> None:
+        """Keeps: design/Template evaluation boundary › Premise: what minijinja exposes"""
         engine = self._engine(tmp_path, body)
         with pytest.raises(FileValidationError) as exc_info:
             engine.render("t.md", {"a": 1})

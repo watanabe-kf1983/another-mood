@@ -69,6 +69,12 @@ class MissingManifestError(UserError):
 
     def __init__(self, project_dir: Path) -> None:
         self.project_dir = project_dir
+        # The message states the fact and suggests no fix. The usual cause is
+        # pointing mood at the wrong directory, and no fix fits that case;
+        # "run mood init" would even mislead, since init refuses a directory
+        # that already holds a project. It names the directory rather than
+        # the missing file, so the reader checks the path first instead of
+        # hunting for a file that is not there.
         super().__init__(
             f"No {MANIFEST_FILENAME} in {project_dir}: not an Another Mood project."
         )

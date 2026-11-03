@@ -1,4 +1,4 @@
-"""Tests for data-level FK integrity check (D6)."""
+"""Tests for data-level FK integrity check."""
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -145,6 +145,8 @@ class TestDanglingFK:
 
 
 class TestSelfReference:
+    """Keeps: design/Schema › Its meaning is an enum check against the set of the target's values"""
+
     CATALOG = """
         - id: genres
           item_type:
@@ -191,6 +193,8 @@ class TestSelfReference:
 
 
 class TestOptionalFK:
+    """Keeps: design/Schema › Its meaning is an enum check against the set of the target's values"""
+
     CATALOG = """
         - id: labels
           item_type:

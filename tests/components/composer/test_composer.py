@@ -207,8 +207,7 @@ class TestCompose:
 
         Demonstrates that the data catalog (under catalog_dir) is
         merged into ``sources`` alongside contents and queries, so a
-        query can walk the catalog itself — the F8 self-description
-        plumbing lands here.
+        query can walk the catalog itself.
         """
         (tmp_path / "contents" / "data").mkdir(parents=True)
 

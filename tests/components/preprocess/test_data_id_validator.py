@@ -132,6 +132,8 @@ class TestCrossFileDuplicates:
 
 
 class TestNestedCollections:
+    """Keeps: design/Schema › Unique only among siblings"""
+
     def test_duplicates_under_one_parent_are_reported(self, tmp_path: Path) -> None:
         data = _data(
             """

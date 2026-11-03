@@ -1,6 +1,6 @@
-.PHONY: ci format-check lint typecheck test secrets build-projects pages format mirror-schemas stats upgrade-deps
+.PHONY: ci format-check lint typecheck test secrets paragraph-length build-projects pages format mirror-schemas stats upgrade-deps
 
-ci: format-check lint typecheck test secrets build-projects
+ci: format-check lint typecheck test secrets paragraph-length build-projects
 
 format-check:
 	uv run ruff format --check .
@@ -16,6 +16,9 @@ test:
 
 secrets:
 	uv run pre-commit run gitleaks --all-files
+
+paragraph-length:
+	uv run python scripts/check_paragraph_length.py
 
 build-projects:
 	uv run mood build dev-docs

@@ -65,9 +65,9 @@ class TestFlatDict:
         assert normalize_data({}, self.SCHEMA) == []
 
     def test_coerces_int_key_to_string_id(self) -> None:
-        """YAML int keys (``10:``) are coerced to string ids.
+        """Keeps: design/Schema › An id made from a map pattern key is always a string
 
-        The catalog declares the synthetic id as string, so the
+        YAML int keys (``10:``) are coerced to string ids.  The catalog declares the synthetic id as string, so the
         normalizer must enforce that contract regardless of the YAML
         scalar type the user wrote.
         """

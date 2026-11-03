@@ -1,5 +1,5 @@
 # Documentation
 
-Another Mood 自身の開発ドキュメント。コンセプト（製品ビジョン・核となる設計判断）、設計、開発規約・手順、付録の四系統で構成する。
+The development documentation of Another Mood itself. It has three families: concept (the product vision and the core design decisions), design, and the development conventions and procedures.
 
-開発規約の正本は dev 系統。`DEVELOPMENT.md` はその要約とポインタ。情報の種類ごとの正本は `DEVELOPMENT.md` の「ドキュメント」節を参照。
+The conventions every change needs, and the pointers to the rest, are in `DEVELOPMENT.md`; the conventions and procedures you open for a particular occasion are the dev family. For the source of truth of each kind of information, see the "Documentation" section of `DEVELOPMENT.md`.
