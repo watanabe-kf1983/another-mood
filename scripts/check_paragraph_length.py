@@ -17,9 +17,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOTS = ("README.md", "DEVELOPMENT.md", "docs", "dev-docs/contents")
-# Chapters still waiting to be sorted into the two-part design (#563). They
-# dissolve chapter by chapter; drop this once the directory is gone.
-EXCLUDED = ("dev-docs/contents/20-design/30-pending",)
 ENGLISH = ("README.md", "docs")
 # English sentences run about 1.9 times the characters of Japanese ones in
 # these documents, so the English limit is the Japanese one scaled by that.
@@ -56,12 +53,11 @@ def main() -> int:
 
 def documents(root: Path) -> Sequence[Path]:
     """Every Markdown file the rule applies to, as paths relative to root."""
-    found = (
+    return tuple(
         path.relative_to(root)
         for start in ROOTS
         for path in _markdown_under(root / start)
     )
-    return tuple(path for path in found if not _is_under(path, EXCLUDED))
 
 
 def limit_for(path: Path) -> int:
