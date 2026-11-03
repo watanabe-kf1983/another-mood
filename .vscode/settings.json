@@ -1,4 +1,6 @@
 {
+  // Format on save so that the pre-commit and CI format checks never fail
+  // on a file the editor has touched.
   "editor.formatOnSave": true,
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"

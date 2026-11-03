@@ -10,7 +10,7 @@
 
 ### セットアップ
 
-環境構築は [dev/setup.md](.another-mood/dev-docs/output/web/prose/30-dev/10-setup.md)。
+環境構築は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/10-environment.md)。
 
 このプロジェクト自身が Another Mood でドキュメントを管理している。タスク開始時には `mood build dev-docs` でドキュメントをビルドし、仕様が参照できる状態にする。起点は [.another-mood/dev-docs/output/web/index.md](.another-mood/dev-docs/output/web/index.md)。
 
@@ -40,7 +40,7 @@
 ### 実装
 
 - コード内コメントは **英語**
-- 散文では `Another Mood`、パス・パッケージ名等の識別子では `another-mood` / `another_mood`、コマンドは `mood`（表記規約は [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md)）
+- 散文では `Another Mood`、パス・パッケージ名等の識別子では `another-mood` / `another_mood`、コマンドは `mood`（表記規約は [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) の「製品名と自己定義」節）
 - ライブラリ導入は、その時点での有力なものを比較検討したうえで決定する。**選定理由はそのライブラリを使う箇所のコメントか docstring に一文で残し、比較の過程は PR 本文に書く**。版の制約は下限のみ（規約は [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/35-dependencies.md)）
 - docstring は API の呼び出し側に補足が必要な契約のみ（可能ならシグネチャで表現する）。コメントは将来の保守者への申し送りのみ。申し送る理由が契約や外部設計にあるなら、その節や見出しを名指す
 
@@ -85,7 +85,7 @@ another_mood/
 
 #### 動作確認
 
-テンプレートの変更を実機で確かめるときは `mood watch <project_dir> --port <port>` でプレビューを上げ、必要なら Playwright MCP で観る（作業ファイルの置き場は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/20-environment.md) の MCP サーバ節）。
+テンプレートの変更を実機で確かめるときは `mood watch <project_dir> --port <port>` でプレビューを上げ、必要なら Playwright MCP で観る（作業ファイルの置き場は [dev/environment.md](.another-mood/dev-docs/output/web/prose/30-dev/10-environment.md) の「Playwright の作業ファイル」節）。
 
 ### プルリクエスト
 
@@ -103,5 +103,4 @@ PR 本文はそのまま main の squash コミット本文になる（ブラン
 
 - [index.md](.another-mood/dev-docs/output/web/index.md) — 仕様・設計
 - [concept/product.md](.another-mood/dev-docs/output/web/prose/10-concept/10-product.md) — 製品ビジョン
-- [dev/style-guide.md](.another-mood/dev-docs/output/web/prose/30-dev/40-style-guide.md) — 命名・自己定義の表記規約
-- [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約）
+- [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/45-documentation.md) — ドキュメントの書き方（置き場ごとの読者と規約、製品名・自己定義の表記）
