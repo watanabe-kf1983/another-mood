@@ -6,12 +6,12 @@ The readers of each location, and the conventions for what to write and what not
 
 Documentation is managed in four families. The three families under `dev-docs/` are managed with Another Mood itself:
 
-| Family | Content | Readers | Language |
-|---|---|---|---|
-| `docs/` | User documentation. Implemented features only | Users (humans and LLMs) | English |
-| `dev-docs/concept/` | The product concept (the vision, the core design decisions). The grounds for development decisions | Developers | English |
-| `dev-docs/design/` | The design. Part 1 is the external design (of the user-visible behavior, what we keep on purpose); part 2 is the internal structure (the arrangement of layers and stages, and the promises that keep it) | Developers | English |
-| `dev-docs/dev/` | The development conventions and procedures opened for a particular occasion (environment / dependencies / documentation / release). Written concisely and prescriptively. The conventions every change needs, and the pointers here, are in `DEVELOPMENT.md` | Developers | English |
+| Family | Content | Readers |
+|---|---|---|
+| `docs/` | User documentation. Implemented features only | Users (humans and LLMs) |
+| `dev-docs/concept/` | The product concept (the vision, the core design decisions). The grounds for development decisions | Developers |
+| `dev-docs/design/` | The design. Part 1 is the external design (of the user-visible behavior, what we keep on purpose); part 2 is the internal structure (the arrangement of layers and stages, and the promises that keep it) | Developers |
+| `dev-docs/dev/` | The development conventions and procedures opened for a particular occasion (environment / dependencies / documentation / release). Written concisely and prescriptively. The conventions every change needs, and the pointers here, are in `DEVELOPMENT.md` | Developers |
 
 ## Paragraph length
 

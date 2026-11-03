@@ -6,7 +6,6 @@
 
 - At the start of a task, run `make ci` to confirm that the development environment and the existing code are in a healthy state
 - At the start of a task, also check the freshness of uv.lock with `make upgrade-deps`. If there is a diff, the script goes as far as creating a lock-only PR (including the push); merge that PR before starting (the full convention is in [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/20-dependencies.md))
-- Commit messages and pull requests are in **English**
 
 ### Setup
 
@@ -35,11 +34,10 @@ The grid holds "what is the case now". "Why it came to be" and "what to do next"
 - **Why it came to be** — the intent is in the same place as its object (one sentence in the relevant cell). The course that led there (comparisons, rejected options, history) is in the PR body, that is, the git log of main
 - **What to do next** — the goals are in `dev-docs/concept/`, the tasks in GitHub Issues
 
-The language is English, in `docs/` and `dev-docs/` alike. The writer's conventions (the readers of each location, what to write and what not to, updating the indexes) are in [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md).
+The writer's conventions (the readers of each location, what to write and what not to, updating the indexes) are in [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md).
 
 ### Implementation
 
-- Comments in code are in **English**
 - In prose, `Another Mood`; in identifiers such as paths and package names, `another-mood` / `another_mood`; the command is `mood` (the notation convention is the "The product name and the self-definition" section of [dev/documentation.md](.another-mood/dev-docs/output/web/prose/30-dev/30-documentation.md))
 - A library is adopted after comparing the strong candidates at the time. **Leave the reason for the choice in one sentence in a comment or docstring where the library is used, and write how they were compared in the PR body.** Version constraints are floors only (the convention is in [dev/dependencies.md](.another-mood/dev-docs/output/web/prose/30-dev/20-dependencies.md))
 - Docstrings hold only contracts the API's caller needs beyond the signature (express it in the signature when possible). Comments are handover notes to future maintainers only. If the reason for the note lies in a contract or in the external design, name that section or heading
