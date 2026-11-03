@@ -80,6 +80,10 @@ def make_environment(output_format: OutputFormat) -> Environment:
         # tests, and nothing else — pycompat would graft Python's own string /
         # list / dict methods onto values.
         pycompat=False,
+        # No `fuel` either: it budgets instructions, not bytes, so the memory
+        # amplification a template can do passes under it while the limit
+        # reads as protection.  Resource bounds are the runner's, at the OS
+        # layer (see design/テンプレート評価の境界 › DoS は閉じない).
     )
 
 

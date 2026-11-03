@@ -104,6 +104,7 @@ class TestGenerate:
         assert not (out_dir / "data" / "__db" / "blob").exists()
 
     def test_renders_each_form_b_edition_at_its_file_name(self, tmp_path: Path) -> None:
+        """Keeps: design/Reports › edition は同じ report の体裁違いで、環境ごとに選ぶ profile ではない"""
         data_dir = tmp_path / "data" / "data"
         data_dir.mkdir(parents=True)
         _write_model(data_dir / "data.json", {"title": "Hello"})
