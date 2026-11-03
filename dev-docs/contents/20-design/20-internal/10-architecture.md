@@ -65,13 +65,15 @@ compose の出力を一本の JSON 文書に合流させる。**Tap Schema**（`
 
 #### Document Generator
 
-`generate` — [generator](../30-pending/70-generator/index.md)
+`generate` — `components/generator/generator.py`
 
-ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
+compose の出力を inert な木に詰め替え、各ノードに住所（アンカーパス）と型のメタデータを付け（`generator/data_tree.py`）、edition ごとにテンプレートで Markdown のページに描く。表紙と `__db/` のメタ edition もここが描く。
+
+意図して保つ振る舞いは外部設計の [Template](../10-external/50-template.md)、[Reports](../10-external/60-reports.md)、[Trust Model](../10-external/70-trust-model.md)。
 
 #### Reconcile
 
-`reconcile`
+`reconcile` — `components/generator/generator.py`
 
 Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありならビルド失敗ページに差し替える。詳細は [build-report.md](../30-pending/75-meta-documentation/30-build-report.md) 参照。
 
@@ -85,7 +87,7 @@ Generator の出力と上流から伝播してきた `BuildReport` を突き合�
 
 地図を保つものではないが、複数のステージが共に守る不変条件。
 
-**参照の検査は二層に分け、混ぜない。** entity 間の参照（x-ref）は `normalize_contents` が合流後の木で検査する（`data_fk_validator.py`）。文書間のリンク（`node:` 記法）は `generate` がリンク解決で検査する（`relink` フィルタ）。
+**参照の検査は二層に分け、混ぜない。** entity 間の参照（x-ref）は `normalize_contents` が合流後の木で検査する（`data_fk_validator.py`）。文書間のリンク（`node:` 記法）は `generate` がリンク解決で検査する（`relink` / `link` などのリンク解決フィルタ。著者がテンプレートで解決を書いたリンクだけが対象）。
 
 `normalize_contents` は prose 本文の相対リンクをレキシカルに `node:` 化するだけで、リンク先の存在は見ない。
 
@@ -97,6 +99,8 @@ x-ref はクエリでの結合先を保証するデータの関心であり、�
 
 両者は同じ順で同じ句を通り、句ごとの対が整合しているので、compose の出力は derive_queries が宣言した形に一致する。下流（`generate` のメタドキュメント、`tap_schema`）はデータを見ずにカタログを信じてよい。句を足すときは両方を対で足す。
 
-**blob のアンカーパスは出力アドレスでもある。** blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下にそのまま出力パスとして写す。`generate` のリンク解決（href が指す先）と `publish` の配置が一つの住所で一致し、ずれない。
+**blob のアンカーパスは出力アドレスでもある。** blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下に出力パスとして写す（住所からファイル名への変換は [Reports](../10-external/60-reports.md)）。`generate` のリンク解決（href が指す先）と `publish`（[ステージ表](20-pipeline.md#ステージ構成)）の配置が一つの住所で一致し、ずれない。
 
 ページパスはノードのアンカーパスから導かれ、`/blob/` の根は内蔵 entity `blob` の住所なので、利用者の entity やビューのページがそこに入ることはない。よってページパスとの衝突検査を持たない（`generator.py` の `_BLOB_NAMESPACE`、`pipeline/adapters/preparation.py` の `_is_blob`）。
+
+**テンプレートを評価するエンジンは一つ。** Jinja の評価器は `TemplateEngine` だけで、持つのは generator コンポーネントに限る。だから信頼境界はその入口一点に置けば足りる。何を閉じ、どう守るかは[テンプレート評価の境界](40-template-evaluation.md)。

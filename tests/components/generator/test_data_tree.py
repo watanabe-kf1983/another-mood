@@ -276,6 +276,7 @@ class TestMetaAnchorPath:
     def test_segment_rendered_into_path(
         self, collection: str, id_value: object, expected: str
     ) -> None:
+        """Keeps: design/Template › 非 ASCII は生で残す IRI 形"""
         node = _n(_wrap({collection: [{"id": id_value}]}), collection, 0)
         assert node._meta.anchor_path == expected
 

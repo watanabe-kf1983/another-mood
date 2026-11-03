@@ -113,6 +113,7 @@ class TestRenderSubtreeGuard:
         assert result == "OK"
 
     def test_non_descendant_subject_raises(self) -> None:
+        """Keeps: design/Template › ノードは、データ上の位置で決まる一つのページにだけ描かれる"""
         tree = _wrap(self._TREE)
         with pytest.raises(FileValidationError) as exc:
             self._render(

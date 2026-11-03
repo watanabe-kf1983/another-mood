@@ -93,6 +93,7 @@ class TestDunderPathSealed:
         ],
     )
     def test_dunder_access_yields_undefined(self, source: str) -> None:
+        """Keeps: design/Trust Model › 第三者のプロジェクトをビルドしても、テンプレートから任意コードは走らない"""
         capability = _Capability()
         assert (
             _render(
@@ -318,6 +319,7 @@ class TestLoaderConfinement:
     def test_escaping_the_template_directory_fails(
         self, tmp_path: Path, body: str
     ) -> None:
+        """Keeps: design/テンプレート評価の境界 › 前提: minijinja が露出するもの"""
         engine = self._engine(tmp_path, body)
         with pytest.raises(FileValidationError) as exc_info:
             engine.render("t.md", {"a": 1})
