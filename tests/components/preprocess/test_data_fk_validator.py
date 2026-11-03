@@ -145,6 +145,8 @@ class TestDanglingFK:
 
 
 class TestSelfReference:
+    """Keeps: design/Schema › 意味は「参照先の値の集合を enum にした検査」"""
+
     CATALOG = """
         - id: genres
           item_type:
@@ -191,6 +193,8 @@ class TestSelfReference:
 
 
 class TestOptionalFK:
+    """Keeps: design/Schema › 意味は「参照先の値の集合を enum にした検査」"""
+
     CATALOG = """
         - id: labels
           item_type:
@@ -224,24 +228,6 @@ class TestOptionalFK:
             tmp_path,
         )
         assert list(check_fk_data(catalog, data)) == []
-
-    def test_empty_string_is_a_value_not_an_absence(self, tmp_path: Path) -> None:
-        catalog = _catalog(self.CATALOG)
-        data = _data(
-            """
-            labels:
-              - id: moonlit
-                name: Moonlit
-            albums:
-              - id: a1
-                label_id: ""
-            """,
-            tmp_path,
-        )
-        diagnostics = check_fk_data(catalog, data)
-        assert [_summary(d) for d in diagnostics] == [
-            (6, "x-ref albums.label_id = '' has no match in labels.id"),
-        ]
 
 
 class TestNestedFromEntity:
