@@ -4,9 +4,9 @@
 
 本文で使う語:
 
-- **ビュー** — クエリで導いた名前付きのレコードの集合。テンプレートからはエンティティと同じ名前空間で読める（`docs/reference/template.md` の Template context）
+- **ビュー** — クエリで導いた名前付きのレコードの集合。テンプレートからは entity と同じ名前空間で読める（`docs/reference/template.md` の Template context）
 - **行** — クエリの句から句へ渡るレコード一件
-- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ。`__db/__defs/` が定義（entity とビュー）、`__db/__data/` がその実データ。[Reports](60-reports.md) ではメタ edition と呼ぶ同じもの
+- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ。`__db/__defs/` が定義（entity とビュー）、`__db/__data/` がその実データ。表紙の節名では Database Information
 - **句のパイプライン** — 一つのクエリの中で、句が固定順に行を受け渡す流れ。ステージの連なりを指す内部構造の [Pipeline](../20-internal/20-pipeline.md) とは別物
 - **`__definition.views`** — ビュー定義の一覧。[データカタログ](../20-internal/30-communication/20-data-catalog.md)の自己記述の一部で、メタドキュメントはここからビューの一覧を描く
 

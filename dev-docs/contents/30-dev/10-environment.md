@@ -40,7 +40,7 @@ make ci                      # 全チェック実行で環境を確認
 | 型検査 | | | | ✓ |
 | テスト + カバレッジ | | | | ✓ |
 | シークレット検知 | | | ✓ | ✓ |
-| 段落の長さ（[documentation.md](45-documentation.md#段落の長さ)） | | | | ✓ |
+| 段落の長さ（[ドキュメントの書き方](45-documentation.md#段落の長さ)） | | | | ✓ |
 | ビルド（dev-docs / pages / showcase） | | | | ✓ |
 
 ## Playwright の作業ファイル

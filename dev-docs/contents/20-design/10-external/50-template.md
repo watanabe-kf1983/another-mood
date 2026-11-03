@@ -12,13 +12,14 @@
 - **`render`** — `{{ ノード | render("sub.md") }}` と書き、主題を変えてサブテンプレートを描くフィルタ（同 `render`）
 - **分割 / インライン** — 主題を別のページに書き出すか、呼び出し位置に展開するか。`file_per` で決まる（同 Split vs inline）
 - **リンク系のヘルパ** — `node()` は住所からノードを引く関数、`child` は親ノードから一段降りるフィルタ。`link` / `href` / `label` は引いたノードをリンク・URL・表示名に描き、`anchor` は着地点 `<a id>` を置く。`relink` は本文中の `node:` リンクを解決する（同 Filters / Functions）
+- **著者 / 利用者** — [役割を表す語](../index.md#役割を表す語)
 - **`node:`** — prose 本文の中で、リンク先にアンカーパスを書く記法（`[text](node:/members/alice)`）。著者が書くほか、`normalize_contents` が本文の相対リンクをこの記法に変換する（[Schema](30-schema.md#相対リンクは-node-化し同一ページ内の-fragment-は変換しない)）
 - **`under_heading`** — 埋め込んだ Markdown の見出しを一段下げるフィルタ。Markdown を出すフィルタの代表例
 - **finalize / `Markup`** — finalize は `{{ }}` の値が出力に書かれる直前に通る escape の関門。`Markup` は escape 済みの印を持つ文字列で、finalize を素通りする。Markdown を出すヘルパは `Markup` を返す
 - **欠損** — 値が無いこと。データモデルではキーの省略で表す（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md)）
 - **壊れた参照** — 解決を試みて外した参照。`node()` や本文の `node:` が指す先が無い場合
 - **build info / 奥付** — build info は、一回の実行についての事実の集合。テンプレートは `build_info(key, default)` で一件ずつ引く（`docs/reference/template.md` の `build_info`）。奥付はその全量を表にしたページ `__build_info/`
-- **tap** — `mood tap` が出す、データとビューを合流した一本の JSON 文書（[CLI](10-cli.md#tap)）
+- **tap** — [CLI](10-cli.md#tap) の語
 
 ## 言語
 
@@ -32,7 +33,7 @@ minijinja には Python の文字列・list・dict のメソッドを値に生�
 
 語彙をこの集合に閉じれば、docs に書ける集合とテンプレートから届く集合が一致し、利用者に案内できる境界が引ける。
 
-### 利用者の Python ヘルパは受け付けない
+### 著者の Python ヘルパは受け付けない
 
 `filters.py` の自動読み込みや entry points で、プロジェクト固有の Python ヘルパを登録する仕組みは持たない。
 
@@ -50,7 +51,7 @@ minijinja には Python の文字列・list・dict のメソッドを値に生�
 
 `node()` や `child` の住所を組む引数が欠損したときは、参照そのものが成立しないので、壊れた参照にもならず何も描かない。欠損した引数を落として別の住所に解決してしまうより、何も描かないほうが安全。
 
-この規則があるので、JSON データモデルの「nullable な項目は値ではなくキーごと省略する」規約が成り立つ。欠損がエラーになるなら、書き手はキーを省略できず null を書くことになり、データモデルが null を持たない前提が崩れる。
+この規則があるので、JSON データモデルの「nullable な項目は値ではなくキーごと省略する」規約が成り立つ。欠損がエラーになるなら、著者はキーを省略できず null を書くことになり、データモデルが null を持たない前提が崩れる。
 
 壊れた参照は別に扱う。解決を試みて外した参照は目立つ `[text]` にする（[未解決の参照は `[text]` で目立たせる](#未解決の参照は-text-で目立たせる)）。optional の欠損は規約が認めた正常系なので、目立たせない。
 
@@ -141,7 +142,7 @@ escape すると `prose/design%2Farchitecture` のような読めない住所に
 
 - `normalize_contents` のリンク正規化が生成するのはインライン形だけ。他の形が出るのは手書きの場合だけで、頻度は小さい
 - autolink は表示テキストが URL になる。参照形は未解決時の `[text]` 化がリンク位置と定義行に跨り、綺麗に畳めない。どちらも対応コストに対して需要が薄い
-- 利用者には「手書きの `node:` 参照はインライン形で書く」と案内すれば足りる
+- 著者には「手書きの `node:` 参照はインライン形で書く」と案内すれば足りる
 
 ### `relink` は著者が明示的に書く
 

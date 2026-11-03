@@ -26,12 +26,14 @@
 
 ## 形
 
-形は `components/shared/data_catalog.py` に定義する。表現は二つあり、Node / Edge の木が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
+形は `components/shared/data_catalog.py` に定義する。表現は二つあり、`Node` / `Edge` の木（entity と、親から見た子の属性。データ木のノードとは別物）が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。
+
+木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
 
 entity の id はデータ木上の到達経路（`categories`、`categories.tasks`）で、`from:` はこれで entity を名指す。
 
 レコード一件の型（ObjectType）はこれと別の id を持つ（`data_catalog.py` の `_item_type_id`）。ビューの派生 entity が、元の entity と違う id を持ちながら同じ型のレコードを並べるため。
 
-派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（unwind、join）は元の型の実例ではなくなるので、引き継がない。
+派生 entity は元のレコード型を `origin_item_type` として引き継ぎ、`generate` はそれでレコードが内蔵の prose / blob 由来かを見分ける。レコードを組み替えたビュー（flatten、join）は元の型の実例ではなくなるので、引き継がない。
 
 どちらの id もスキーマ上の位置を示す型レベルの識別子で、データ木上の個々のレコードの住所であるアンカーパス（`docs/reference/template.md` の Anchor paths）とは別物。アンカーパスの組み立てに、これらの id は登場しない。

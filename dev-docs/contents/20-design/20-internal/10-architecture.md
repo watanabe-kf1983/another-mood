@@ -37,11 +37,11 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 ステージがエラーで中断されることはない。コンポーネント内の処理で起きた例外は、コンポーネント共通の基盤（`Component` が関数を包む `error_propagation`）が出力の一部（`BuildReport`）に変換し、下流へ伝播させる。報告の運び方は [Inter-Stage Communication](30-communication/index.md#エラー伝播-buildreport)。
 
-ステージの一覧と入出力は [pipeline.md](20-pipeline.md) のステージ表が正本。
+ステージの一覧と入出力は [Pipeline](20-pipeline.md) のステージ表が正本。
 
 ## コンポーネント構成
 
-コンポーネントごとに、走らせるステージとコードの場所、担うことを示す。ステージの一覧は [pipeline.md](20-pipeline.md)。
+コンポーネントごとに、走らせるステージとコードの場所、担うことを示す。ステージの一覧は [Pipeline](20-pipeline.md)。
 
 ## SchemaInspector
 
@@ -53,13 +53,13 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 `normalize_contents` — `components/preprocess/content_normalizer.py`
 
-`contents/` の全ファイルを検証し、正規化して一つのデータ木に合流させ、x-ref と id を検査する。blob はレコードと別にバイト列を出力へ写す（[運搬機構](30-communication/index.md#運搬機構)）。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
+`contents/` の全ファイルを検証し、正規化して一つのデータ木に合流させ、x-ref と id を検査する。blob はレコードと別にバイト列を自分の出力へ写し、generate が各 edition の出力へ写し直す（[blob のアンカーパス](30-communication/index.md#blob-のアンカーパスは出力アドレスでもある)）。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
 
 ## Query Deriver
 
 `derive_queries` — `components/preprocess/query_deriver.py`
 
-views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
+views 入力を検証・正規化し、各ビュー定義をパースして派生 entity（`view: true`）をカタログから生成する。出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生 entity。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
 
 ## Composer
 
@@ -77,7 +77,7 @@ compose の出力を一本の JSON 文書に合流させる。**Tap Schema**（`
 
 `generate` — `components/generator/generator.py`
 
-compose の出力を inert な木に詰め替え、各ノードに住所（アンカーパス）と型のメタデータを付け（`generator/data_tree.py`）、edition ごとにテンプレートで Markdown のページに描く。表紙と `__db/` のメタ edition もここが描く。
+compose の出力を inert な木に詰め替え、各ノードに住所（アンカーパス）と型のメタデータを付け（`generator/data_tree.py`）、edition ごとにテンプレートで Markdown のページに描く。表紙と `__db/` のメタドキュメントもここが描く。
 
 意図して保つ振る舞いは外部設計の [Template](../10-external/50-template.md)、[Reports](../10-external/60-reports.md)、[Trust Model](../10-external/70-trust-model.md)。
 

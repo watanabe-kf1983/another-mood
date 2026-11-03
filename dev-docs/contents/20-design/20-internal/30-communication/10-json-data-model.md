@@ -2,9 +2,11 @@
 
 ## 定義
 
-YAML DSL やテンプレートエンジンが操作する対象は「JSON データモデル」（object / array / string / number / boolean / null で構成されるツリー構造）である。JSON というシリアライズ形式とは無関係で、YAML から読み込んだデータに対しても同様に動作する。
+YAML DSL やテンプレートエンジンが操作する対象は「JSON データモデル」（object / array / string / number / boolean で構成されるツリー構造）である。null は持たず、値が無いことはキーの省略で表す（[Concept](../../../10-concept/10-product.md#データモデル-規律を与えた-json-の木) のデータモデル節と同じ木）。
 
-Normalizer から Document Generator まで、全コンポーネントがこのデータモデル上で一貫して動作する。
+JSON というシリアライズ形式とは無関係で、YAML から読み込んだデータに対しても同様に動作する。
+
+inspect_schema から generate まで、全ステージがこのデータモデル上で一貫して動作する。
 
 なお、「JSON データモデル」という用語に対応する正式な仕様は存在しない（XML には XML Information Set という W3C 勧告があるが、JSON にはそれに相当するものがない）。CBOR の RFC 8949 が "the JSON data model" という表現を使用しており、本プロジェクトでもこれに倣う。
 
@@ -16,12 +18,12 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 | 系統 | 例 | 形式 |
 |---|---|---|
-| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON |
+| (1) 利用者の入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON |
 | (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML 1.2 |
-| (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | JSON |
+| (3) ステージ間中間表現 | workspace（[運搬機構](index.md#運搬機構)）配下の各ステージ出力、`__build_report` | JSON |
 
 - YAML は 1.2 とする（(1) (2) に適用）。`yes`/`no` の意図せぬブール化を避け、JSON 入力を追加の parser なしに受けるため
-- 中間表現は JSON とする（(3) に適用）。ビルド時間を ruamel.yaml の read/write が支配していたため。tmp 配下は外部契約ではないので、変更は内部に閉じる。非 JSON 値（日付等）の到達経路はスキーマ言語の側で塞ぐ
+- 中間表現は JSON とする（(3) に適用）。ビルド時間を ruamel.yaml の read/write が支配していたため。workspace 配下は外部契約ではないので、変更は内部に閉じる。非 JSON 値（日付等）の到達経路はスキーマ言語の側で塞ぐ
 
 ## 配列内オブジェクトのフィールド統一
 
@@ -38,8 +40,8 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 | プレフィックス | 用途 | 例 |
 |---|---|---|
 | `_`（単一） | Generator がノードへ注入するメタデータ（`generator/data_tree.py`） | `_parent`, `_meta` |
-| `__`（二重） | システム内部フィールド（ユーザは直接扱わない） | `__build_report`, `__definition` |
+| `__`（二重） | システム内部フィールド（利用者は直接扱わない） | `__build_report`, `__definition` |
 
-`__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。
+`__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータが利用者のデータのキーを影にしないために置く。
 
-内蔵 prose スキーマのキー名 `prose` はプレフィックスなしで維持する。ユーザ定義との衝突が問題になった場合は、設定によるキー名変更で対応する。
+内蔵 prose / blob スキーマのキー名 `prose` / `blob` はプレフィックスなしで維持する。
