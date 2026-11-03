@@ -9,7 +9,7 @@
 - **`<project_dir>`** — ソースを置くディレクトリ。`sbdb.yaml` があることで成立する（[Manifest](20-manifest.md)）
 - **CWD** — `mood` を実行したディレクトリ。利用者のリポジトリのルートであることが多い
 - **`out_dir` / `site_dir` / `tmp_dir`** — Markdown 出力、HTML 出力、作業ディレクトリの置き場を差し替える設定（`docs/reference/cli.md` の Keys and defaults）
-- **scaffold** — `mood init` と `mood blueprint apply` が、同梱のサンプルプロジェクトを写して新しいプロジェクトを作ること
+- **scaffold / blueprint** — `mood init` と `mood blueprint apply` が、同梱のサンプルプロジェクト（blueprint）を写して新しいプロジェクトを作ること
 - **tap** — `mood tap` が出す、データとビューを合流した一本の JSON 文書
 
 ## 入口

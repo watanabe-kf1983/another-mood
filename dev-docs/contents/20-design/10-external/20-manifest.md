@@ -4,7 +4,7 @@
 
 本文で使う語:
 
-- **フォーマット（sbdb）** — 利用者が書くソースの形式。sbdb は source-based database の略。スキーマ・ビュー・prose・テンプレートの書き方と、プロジェクト内の配置を含む。ツールに依存しないスペックで、Another Mood はそれを処理するツールの一つ
+- **フォーマット（sbdb）** — 利用者が書くソースの形式。sbdb は source-based database の略。スキーマ・ビュー・prose・テンプレート・マニフェストの書き方と、プロジェクト内の配置を含む。ツールに依存しないスペックで、Another Mood はそれを処理するツールの一つ
 - **世代** — フォーマットの版。`sbdb_version` に書く整数で、Rust の edition や Kubernetes の apiVersion にあたる
 - **minimum version** — このプロジェクトを処理するのに要るツールの版の下限。`tools.another-mood.minimum_version` に書く
 - **厳格パース** — ツールが定める語彙に知らない入力があれば、黙って読み飛ばさずエラーにすること
@@ -13,7 +13,7 @@
 - **`definition/` / `contents/`** — プロジェクトの二つのディレクトリ。前者にスキーマ・ビュー・テンプレート、後者にデータを置く（`docs/reference/cli.md` の Source layout）
 - **著者 / 実行者 / 利用者** — [役割を表す語](../index.md#役割を表す語)
 - **設定** — 実行者が起動時に CLI 引数と環境変数で差し出す、どう実行しどこへ出すかの指定（[Architecture](../20-internal/10-architecture.md#起動時に受ける三つのもの)）
-- **scaffold / blueprint** — `mood init` と `mood blueprint apply` が、同梱のサンプルプロジェクト（blueprint）を写して新しいプロジェクトを作ること
+- **scaffold / blueprint** — [CLI](10-cli.md) の語
 
 ## 版の検査
 

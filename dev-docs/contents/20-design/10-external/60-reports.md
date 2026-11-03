@@ -1,6 +1,6 @@
 # Reports
 
-`docs/reference/reports.md` の契約の外で、意図して保つ振る舞い。出力ツリーのうち `__db/` の中身は [View](40-view.md#メタドキュメント) と [Schema](30-schema.md)、`__build_info/` に載る値は [Template](50-template.md#build_info) が扱う。ここで扱うのは、表紙とそれらのページの置き方。
+`docs/reference/reports.md` の契約の外で、意図して保つ振る舞い。出力ツリーのうち `__db/` の中身は [View](40-view.md#メタドキュメント)、`__build_info/` に載る値は [Template](50-template.md#build_info) が扱う。ここで扱うのは、表紙とそれらのページの置き方。
 
 本文で使う語:
 
@@ -9,9 +9,8 @@
 - **form A / form B** — `reports.yaml` の二つの書き方。form A はトップレベルに `file_per` を書き、`default` という名の一つの edition になる。form B は `editions:` に名前付きで複数書く（同 Editions）
 - **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ群（[View](40-view.md#メタドキュメント)）。edition と同じ機構で描く。表紙の節名では Database Information
 - **マウント** — 出力ルート直下で、edition やシステム生成の出力に与えるディレクトリ。`{edition}/` と `__db/` など
-- **ノード / アンカーパス / 主題 / blob** — [Template](50-template.md) の語。アンカーパスはノードの住所で、`/` 区切り。ASCII の予約文字は percent-encode 済みで、非 ASCII は生で残す。主題は一回の描画の対象で、分割ページの主題がそのページを決める。blob はファイルを表す組み込みの entity
+- **ノード / アンカーパス / 主題 / blob / build info / 奥付** — [Template](50-template.md) の語。分割ページの主題がそのページを決める
 - **表紙** — 出力ルートの `index.md`。Reports とメタドキュメントへの入口。末尾に奥付と警告へのリンク節を持つ
-- **奥付** — ビルドの記録（処理系・注入値・マニフェスト）を全量表にしたページ `__build_info/`。載る値は [Template](50-template.md#build_info)
 - **診断** — ソースのファイルと行を指す問題の報告。ビルドを続ける警告と、止めるエラーがある
 - **警告ページ** — 警告を列挙するページ `__warnings/`。警告があるときだけ作る。`--strict` は警告でもビルドを失敗にする（`docs/reference/cli.md` の `--strict`）
 - **ビルド失敗ページ** — エラーでビルドが止まったとき、表紙の代わりに置く `index.md`。診断と、ソースを指せないエラーを列挙する

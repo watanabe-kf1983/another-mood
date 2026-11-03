@@ -17,9 +17,8 @@
 - **SSTI** — テンプレートに仕込んだ式で host の capability に届こうとする攻撃（server-side template injection）
 - **inert な値** — host の capability への経路を持たない値。テンプレートに見せてよい値
 - **marshal** — Python の値をテンプレートの値モデルへ渡す変換。スカラーは変換（convert）され、オブジェクトは包まれる（wrap）
-- **finalize** — エンジンが `{{ }}` の値を出力に書く直前に呼ぶ、ツール側の Python のフック。escape はここで行う。`Markup` は escape 済みの印を持つ文字列で、finalize を素通りする
+- **finalize / `Markup` / 主題** — 外部設計の [Template](../10-external/50-template.md) の語
 - **ノード** — 住所（アンカーパス）を持つ container。`MappingNode` / `ArrayNode` の二種で、型としては `Node`。外部設計の Template が言うノード（リンクの宛先）より狭く、prose の見出しは含まない。壊れた参照の値は `MissingNode`（外部設計の [Template](../10-external/50-template.md)）
-- **主題** — 一回の描画の対象。テンプレートからは `this` の名で見える
 
 ## 評価器は一つ
 

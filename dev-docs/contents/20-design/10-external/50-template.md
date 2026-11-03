@@ -19,7 +19,7 @@
 - **欠損** — 値が無いこと。データモデルではキーの省略で表す（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md)）
 - **壊れた参照** — 解決を試みて外した参照。`node()` や本文の `node:` が指す先が無い場合
 - **build info / 奥付** — build info は、一回の実行についての事実の集合。テンプレートは `build_info(key, default)` で一件ずつ引く（`docs/reference/template.md` の `build_info`）。奥付はその全量を表にしたページ `__build_info/`
-- **tap** — `mood tap` が出す、データとビューを合流した一本の JSON 文書（[CLI](10-cli.md#tap)）
+- **tap** — [CLI](10-cli.md#tap) の語
 
 ## 言語
 

@@ -59,7 +59,7 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 `derive_queries` — `components/preprocess/query_deriver.py`
 
-views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
+views 入力を検証・正規化し、各ビュー定義をパースして派生 entity（`view: true`）をカタログから生成する。出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生 entity。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
 
 ## Composer
 
