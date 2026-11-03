@@ -1,3 +1,3 @@
 # Concept
 
-製品コンセプト。何を作るか、なぜか、核となる設計判断。
+The product concept: what we build, why, and the core design decisions.
