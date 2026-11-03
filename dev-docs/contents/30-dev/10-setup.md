@@ -4,7 +4,9 @@
 
 対応下限は **3.12**（`pyproject.toml` の `requires-python`）、開発は **3.13**（`.python-version`）で行う。CI はこの両端でマトリクス実行する。
 
-下限を 3.12 に置く理由は install 手引きの成立性。Ubuntu 24.04 LTS（サポート 2029 まで）の system Python が 3.12 で、下限が 3.13 だと `pipx install` が素直に通らず、interpreter を自前調達する uv を利用者に強いることになる。それより下げないのは、PEP 695 構文（`type` 文・新ジェネリクス）を広く使っており 3.12 が構文上の床であるため。
+下限を 3.12 に置く理由は install 手引きの成立性。Ubuntu 24.04 LTS（サポート 2029 まで）の system Python が 3.12 で、下限が 3.13 だと `pipx install` が素直に通らず、interpreter を自前調達する uv を利用者に強いることになる。
+
+それより下げないのは、PEP 695 構文（`type` 文・新ジェネリクス）を広く使っており 3.12 が構文上の床であるため。
 
 ## DevContainer（推奨）
 

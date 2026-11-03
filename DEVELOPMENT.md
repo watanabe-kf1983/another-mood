@@ -73,17 +73,21 @@ another_mood/
 - **命名はモジュール名に合わせる**: `source` モジュールなら `is_source_file`, `build_source`
 - **関数の並び順（Newspaper style）**: 公開 API を先頭、ヘルパーを後ろ。ヘルパーはパイプライン順
 - **`@dataclass` は `frozen=True`**: `__init__` ボイラープレート削減目的、immutable がデフォルト
-- **制御フローは論理の形に合わせる**: 両枝が対等な結果を返す *対称な分岐* は `if/else`（両枝が `return` でも `else` を畳まない）。前提失敗・エラー・エッジを先頭で剥がす *非対称な bail-out* のみ guard clause（早期 `return`）。`else` とインデントは条件付き領域の境界情報なので、機能的に冗長でも残す（*explicit is better than implicit*）。`else` を機械的に除去させる pylint `no-else-return` / ruff `RET505` は採らない（RET は `select` 外）
+- **制御フローは論理の形に合わせる**: 両枝が対等な結果を返す *対称な分岐* は `if/else`（両枝が `return` でも `else` を畳まない）。前提失敗・エラー・エッジを先頭で剥がす *非対称な bail-out* のみ guard clause（早期 `return`）
+    - `else` とインデントは条件付き領域の境界情報なので、機能的に冗長でも残す（*explicit is better than implicit*）。`else` を機械的に除去させる pylint `no-else-return` / ruff `RET505` は採らない（RET は `select` 外）
 
 #### テスト
 
 - **カバレッジ計測対象**: `components/`。Statements + Branches トータルで 90% 以上
 - **フィクスチャ**: ファイルベース、モジュール隣接型。期待値はテストコード内に記述
-- **約束を守るテストは、守る約束を名乗る**: docstring の一行目に、契約の節（`Keeps: docs/reference/view.md › Missing-key placement`）か外部設計の見出し（`Keeps: design/View › flatten 後の行は、親の属性を残し、要素を as: の下に置く`）を書く。名乗るのは、その約束を破ったとき最初に落ちるテストだけでよく、網羅は求めない。契約や外部設計の節を変えるときは、節名で grep して名乗るテストを直す
+- **約束を守るテストは、守る約束を名乗る**: docstring の一行目に、契約の節（`Keeps: docs/reference/view.md › Missing-key placement`）か外部設計の見出し（`Keeps: design/View › flatten 後の行は、親の属性を残し、要素を as: の下に置く`）を書く
+    - 名乗るのは、その約束を破ったとき最初に落ちるテストだけでよく、網羅は求めない。契約や外部設計の節を変えるときは、節名で grep して名乗るテストを直す
 
 #### 動作確認 (`mood watch` + Playwright MCP)
 
-`showcase/` や `dev-docs/` のテンプレート変更を実機で確認するときは `mood watch <project_dir> --port <port>` でローカルプレビューを上げ、必要なら Playwright MCP でレンダリングを観る。Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwright-mcp/` 配下に集約する:
+`showcase/` や `dev-docs/` のテンプレート変更を実機で確認するときは `mood watch <project_dir> --port <port>` でローカルプレビューを上げ、必要なら Playwright MCP でレンダリングを観る。
+
+Playwright MCP の作業ファイルはすべて `.gitignore` 済みの `.playwright-mcp/` 配下に集約する:
 
 - ページスナップショット / console ログは Playwright MCP が自動でこのディレクトリに出す
 - スクリーンショットは `browser_take_screenshot` の `filename` に `.playwright-mcp/<name>.png` を指定する (デフォルトは cwd 直下に落ちて散らかる)
@@ -100,18 +104,23 @@ another_mood/
     - **実装**
 2. **showcase/ で動作確認**
 3. **`docs/` を同期** — 利用者が書ける形・得られる形（CLI / スキーマ / クエリ / テンプレート、内蔵リソース等）が変わったら `docs/` の該当箇所を更新する。変えた節を名乗るテストも直す
-4. **設計の記録** — 層やステージの分担・つながりか、それらをまたぐ約束を変えたら `dev-docs/design/` の内部構造を直す。利用者から見える振る舞いのうち意図して保つものを変えたら、`dev-docs/design/` の外部設計を直し、守るテストにその見出しを名乗らせる。実装上の理由による判断のうち、一つの層やステージの中に閉じたものは、破る変更が起きる箇所のコメントに書く。理由と経緯は PR 本文に書く
+4. **設計の記録** — 層やステージの分担・つながりか、それらをまたぐ約束を変えたら `dev-docs/design/` の内部構造を直す。利用者から見える振る舞いのうち意図して保つものを変えたら、`dev-docs/design/` の外部設計を直し、守るテストにその見出しを名乗らせる
+    - 実装上の理由による判断のうち、一つの層やステージの中に閉じたものは、破る変更が起きる箇所のコメントに書く。理由と経緯は PR 本文に書く
 5. `make ci` を通してコミット → プルリク作成
 
 ### プルリクエスト
 
-PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の背景もトレーラーも黙って失われる。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
+PR 本文はそのまま main の squash コミット本文になる（ブランチ上のコミットメッセージは残らない）。このためリポジトリ設定で、マージ方式を squash のみにし、squash の本文に PR 本文を使っている。
+
+merge commit や rebase を許すと、その方式でマージした PR の本文は履歴に残らず、設計判断の背景もトレーラーも黙って失われる。変更の要約と、設計判断の背景・経緯はここに書く。タイトルは利用者が読むリリースノートに載るので、内部語彙を置かない。
 
 リリースノート冒頭のハイライトに載せたい PR は、PR 本文の末尾に行頭からトレーラーを一行書く:
 
     Release-Highlight: fix
 
-kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
+kind は `breaking` / `feature` / `fix` の三値。`breaking` のみ義務、他は裁量。
+
+見出しは PR タイトルが務め、それを超える説明は PR 本文のセクションに書く（利用者向けの英文）——breaking には `## Breaking change`（義務。移行の要約と docs へのポインタ）、feature / fix には `## Release highlight`（裁量）。
 
 破壊的変更（サポート世代の脱落・CLI 等の利用者向け契約の破壊）を含む PR の義務とリリース手順は [dev/release.md](.another-mood/dev-docs/output/web/prose/30-dev/50-release.md)。
 

@@ -46,7 +46,9 @@ Content and Views read as empty when absent. If any other path is missing when `
 
 #### Which files are read
 
-Content and Views are the two trees whose files are not named individually: both are walked recursively, and every file found is read, with the extension (matched case-insensitively) picking the interpretation. Under `contents/`, YAML (`.yaml`, `.yml`) and JSON (`.json`) are structured data, Markdown (`.md`) is [prose](schema.md#built-in-schema-prose), and anything else is an opaque [blob](schema.md#built-in-schema-blob). Under `definition/views/`, YAML and JSON are the accepted formats — any other file there fails validation rather than being ignored.
+Content and Views are the two trees whose files are not named individually: both are walked recursively, and every file found is read, with the extension (matched case-insensitively) picking the interpretation.
+
+Under `contents/`, YAML (`.yaml`, `.yml`) and JSON (`.json`) are structured data, Markdown (`.md`) is [prose](schema.md#built-in-schema-prose), and anything else is an opaque [blob](schema.md#built-in-schema-blob). Under `definition/views/`, YAML and JSON are the accepted formats — any other file there fails validation rather than being ignored.
 
 A YAML or JSON source must have a mapping at its root; a sequence or a bare scalar is an error. **YAML is the recommended format for anything written by hand** — it diffs more readably in Git. JSON is accepted for sources produced by another program.
 
