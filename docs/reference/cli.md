@@ -98,6 +98,8 @@ Exits with code 0 if all stages succeed, or 1 if any stage fails.
 
 Fail the build (exit code 1) when any warning is reported. Without `--strict`, warnings (e.g. a dangling [`x-ref`](schema.md#entity-references-x-ref) value) are listed on a dedicated page at `output/__warnings/`, linked from `output/index.md`, but do not affect the exit code. Useful in CI to gate merges on a clean build.
 
+A new release may report warnings that an earlier one did not, so a build that passes with `--strict` can fail after an upgrade. Pin the version where that matters.
+
 ### `--var`
 
 Inject a value of your own for templates to read back through [`build_info`](template.md#build_info). Repeatable, one `NAME=VALUE` each:
