@@ -2,7 +2,9 @@
 
 A processor of source-based databases, keeping related documents in sync.
 
-Software specifications, product catalogs, maintenance manuals, training materials — documents like these keep describing the same things in different places. For instance, in a software specification, a single screen is listed in the screen inventory, named as the destination of other screens' transitions, crossed with tables in a CRUD matrix, and cited by the requirements. Rename it and every one of those mentions has to change with it; miss one, and the specification contradicts itself.
+Software specifications, product catalogs, maintenance manuals, training materials — documents like these keep describing the same things in different places.
+
+For instance, in a software specification, a single screen is listed in the screen inventory, named as the destination of other screens' transitions, crossed with tables in a CRUD matrix, and cited by the requirements. Rename it and every one of those mentions has to change with it; miss one, and the specification contradicts itself.
 
 Another Mood keeps such documents consistent. You write the data once as **sources** — YAML records and Markdown prose — alongside templates that say how pages are built from them. Edit a source, rebuild, and every page derived from it regenerates together.
 

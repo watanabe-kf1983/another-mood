@@ -31,28 +31,48 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 
 ### コンポーネント構成
 
-コンポーネントと、それを走らせるステージ（括弧内。一覧は [pipeline.md](20-pipeline.md)）:
+コンポーネントごとに、走らせるステージとコードの場所、担うことを示す。ステージの一覧は [pipeline.md](20-pipeline.md)。
 
-**SchemaInspector**（`inspect_schema`。`components/preprocess/schema_inspector.py`）
+#### SchemaInspector
+
+`inspect_schema` — `components/preprocess/schema_inspector.py`
+
 スキーマ定義を meta-schema で検証し、[データカタログ](30-communication/20-data-catalog.md)（スキーマから起こした entity と attribute の目録。後段のステージはスキーマの代わりにこれを読む）を抽出する。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
 
-**Content Normalizer**（`normalize_contents`。`components/preprocess/content_normalizer.py`）
+#### Content Normalizer
+
+`normalize_contents` — `components/preprocess/content_normalizer.py`
+
 `contents/` の全ファイルを検証し、正規化して一つのデータ木に合流させ、x-ref と id を検査する。blob はレコードと別にバイト列を出力へ写す（[運搬機構](30-communication/index.md#運搬機構)）。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
 
-**Query Deriver**（`derive_queries`）
-views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。
-出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。
+#### Query Deriver
 
-**Composer**（`compose`）
+`derive_queries`
+
+views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。
+
+#### Composer
+
+`compose`
+
 正規化済みデータを自動的にビューとしてパススルーし、さらにビュー定義があれば contents に対して適用して結果を出力する。カタログは Query Deriver の出力を passthrough として伝搬させる。
 
-**Document Generator**（`generate`。[generator](../30-pending/70-generator/index.md)）
+#### Document Generator
+
+`generate` — [generator](../30-pending/70-generator/index.md)
+
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
 
-**Reconcile**（`reconcile`）
+#### Reconcile
+
+`reconcile`
+
 Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありならビルド失敗ページに差し替える。詳細は [build-report.md](../30-pending/75-meta-documentation/30-build-report.md) 参照。
 
-**Site Builder**（`site`）
+#### Site Builder
+
+`site`
+
 生成された Markdown を HTML にレンダリングする。
 
 ### ステージをまたぐ約束

@@ -11,7 +11,9 @@
 | Python パッケージ・モジュール | `another_mood` |
 | CLI コマンド | `mood` |
 
-体言をハイフンで繋ぐ綴り（`another-mood`）は英語として不自然なので、散文では title case の `Another Mood` を使う。技術的識別子（URL・パス・パッケージ名）は GitHub / PyPI / 言語制約のため `another-mood` のまま。判断基準は「**ファイル形式ではなく用法**」: コード内の docstring や `--help` 出力も人間が英文として読む箇所は散文扱い。
+体言をハイフンで繋ぐ綴り（`another-mood`）は英語として不自然なので、散文では title case の `Another Mood` を使う。技術的識別子（URL・パス・パッケージ名）は GitHub / PyPI / 言語制約のため `another-mood` のまま。
+
+判断基準は「**ファイル形式ではなく用法**」: コード内の docstring や `--help` 出力も人間が英文として読む箇所は散文扱い。
 
 ## 自己定義（tagline / description）の書き方
 
