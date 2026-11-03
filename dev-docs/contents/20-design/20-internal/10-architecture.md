@@ -75,7 +75,11 @@ compose の出力を inert な木に詰め替え、各ノードに住所（ア�
 
 `reconcile` — `components/generator/generator.py`
 
-Generator の出力と上流から伝播してきた `BuildReport` を突き合わせ、ユーザに見せる最終出力を確定する。エラー無しなら pass-through、エラーありならビルド失敗ページに差し替える。詳細は [build-report.md](../30-pending/75-meta-documentation/30-build-report.md) 参照。
+Generator の出力と、上流から伝播してきた `BuildReport` を突き合わせ、利用者に見せる最終出力を確定する。
+
+エラー無しなら Generator の出力に奥付ページ（`__build_info/`）と警告ページ（`__warnings/`）を足し、表紙の末尾にリンク節を添える。エラーありなら出力を捨て、失敗ページを `index.md` に描く。意図して保つ振る舞いは外部設計の [Reports](../10-external/60-reports.md#表紙と診断ページ)。
+
+Generator から分けるのは、Generator にエラー時の差し替えを持たせず、下流の site / publish に正常時と失敗時を区別させないため。
 
 #### Site Builder
 
@@ -102,5 +106,11 @@ x-ref はクエリでの結合先を保証するデータの関心であり、�
 **blob のアンカーパスは出力アドレスでもある。** blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下に出力パスとして写す（住所からファイル名への変換は [Reports](../10-external/60-reports.md)）。`generate` のリンク解決（href が指す先）と `publish`（[ステージ表](20-pipeline.md#ステージ構成)）の配置が一つの住所で一致し、ずれない。
 
 ページパスはノードのアンカーパスから導かれ、`/blob/` の根は内蔵 entity `blob` の住所なので、利用者の entity やビューのページがそこに入ることはない。よってページパスとの衝突検査を持たない（`generator.py` の `_BLOB_NAMESPACE`、`pipeline/adapters/preparation.py` の `_is_blob`）。
+
+**build info はデータの流れの外を通る。** 一回の実行の事実（処理系・注入値・マニフェスト）は `Workspace` の `build_info` が組む（`pipeline/workspace.py`。入れ子の値をドット区切りのキーに平坦化するのは `components/shared/build_info.py`）。
+
+`generate`（テンプレートの `build_info` 関数）と `reconcile`（奥付ページと失敗ページ）には引数で渡し、`compose` の出力には入らない。
+
+失敗したステージは成果物を出さず `BuildReport` だけを下流へ渡すので、build info をデータとして preprocess から流すと、上流で失敗したとき `reconcile` には届かず、失敗ページに奥付を出せない。利用者から見える理由（ビューの出力をマシンに依存させない）は [Template](../10-external/50-template.md#build-info-はテンプレートだけが読みデータ層には流さない)。
 
 **テンプレートを評価するエンジンは一つ。** Jinja の評価器は `TemplateEngine` だけで、持つのは generator コンポーネントに限る。だから信頼境界はその入口一点に置けば足りる。何を閉じ、どう守るかは[テンプレート評価の境界](40-template-evaluation.md)。

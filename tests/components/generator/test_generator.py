@@ -275,6 +275,7 @@ class TestReconcile:
     def test_colophon_is_a_page_of_its_own_linked_from_the_cover(
         self, tmp_path: Path
     ) -> None:
+        """Keeps: design/Reports › 奥付は独立ページで、表紙にはリンク節だけを置く"""
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         (upstream / "data" / "index.md").write_text("# Root\n")
@@ -346,6 +347,7 @@ class TestReconcile:
         assert index.index("## Build Information") < index.index("## Warnings")
 
     def test_renders_error_page_when_upstream_has_errors(self, tmp_path: Path) -> None:
+        """Keeps: design/Reports › ビルド失敗ページだけは奥付を埋め込む"""
         upstream = tmp_path / "generate"
         (upstream / "data").mkdir(parents=True)
         # Stale data left over from a previous successful run.

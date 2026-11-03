@@ -1,6 +1,6 @@
 # Template
 
-`docs/reference/template.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`normalize_contents`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。テンプレートに何を許すかの境界は [Trust Model](70-trust-model.md)、edition と出力パスは [Reports](60-reports.md)。
+`docs/reference/template.md` の契約の外で、意図して保つ振る舞い。本文に出るステージ名（`normalize_contents`）は[内部構造のステージ表](../20-internal/20-pipeline.md#ステージ構成)のもの。テンプレートに何を許すかの境界は [Trust Model](70-trust-model.md)、edition と出力パス、奥付のページの置き方は [Reports](60-reports.md)。
 
 本文で使う語:
 
@@ -17,6 +17,8 @@
 - **finalize / `Markup`** — finalize は `{{ }}` の値が出力に書かれる直前に通る escape の関門。`Markup` は escape 済みの印を持つ文字列で、finalize を素通りする。Markdown を出すヘルパは `Markup` を返す
 - **欠損** — 値が無いこと。データモデルではキーの省略で表す（[JSON データモデル](../20-internal/30-communication/10-json-data-model.md)）
 - **壊れた参照** — 解決を試みて外した参照。`node()` や本文の `node:` が指す先が無い場合
+- **build info / 奥付** — build info は、一回の実行についての事実の集合。テンプレートは `build_info(key, default)` で一件ずつ引く（`docs/reference/template.md` の `build_info`）。奥付はその全量を表にしたページ `__build_info/`
+- **tap** — `mood tap` が出す、データとビューを合流した一本の JSON 文書（[CLI](10-cli.md#tap)）
 
 ## 言語
 
@@ -150,3 +152,15 @@ escape すると `prose/design%2Farchitecture` のような読めない住所に
 値に「relink 未了」の印を持たせて伝播させる案も、文字列連結や Markup 化で印が黙って落ちるので信頼できない。
 
 明示なら、著者が生の `node:` を持つ値の直近に `relink` を置くので確実で、`| relink | under_heading` と合成順序も見えたまま残る。
+
+## build_info
+
+### build info はテンプレートだけが読み、データ層には流さない
+
+build info をシステム定義の entity として流し、ビューから join できるようにはしない。tap の文書にも載せない（[CLI](10-cli.md#文書に実行ごとに変わる値を入れない)）。
+
+ビューから読めるようにすると、ビューの出力がマシンと実行ごとに変わるようになる。著者がそれに頼り始めた後で取り上げると、そのビューが壊れる。開くのは簡単で閉じるのは破壊になるので、先に閉じておく。逆向き（奥付から後でデータ層へ）なら余地が残る。
+
+守る線は「ソースだけで決まる」ではなく「マシンと起動のしかたには依存しない」。tap の出力には `__definition` などツールが生成した目録が既に載っていて、ツールの版には依存している。
+
+build info が失敗ページ（内蔵テンプレートで描く）にも届く必要があることも、データ層に流せない理由の一つ（[内部構造の約束](../20-internal/10-architecture.md#ステージをまたぐ約束)）。
