@@ -87,14 +87,11 @@ class TestScope:
     def test_a_path_merely_starting_with_docs_is_not_english(self) -> None:
         assert limit_for(Path("docs-notes/a.md")) == LIMITS["ja"]
 
-    def test_walks_the_roots_and_skips_the_pending_chapters(
-        self, tmp_path: Path
-    ) -> None:
+    def test_walks_the_roots_only(self, tmp_path: Path) -> None:
         for relative in (
             "README.md",
             "docs/reference/cli.md",
             "dev-docs/contents/20-design/10-external/a.md",
-            "dev-docs/contents/20-design/30-pending/b.md",
             "src/other.md",
         ):
             (tmp_path / relative).parent.mkdir(parents=True, exist_ok=True)

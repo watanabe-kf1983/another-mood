@@ -8,9 +8,9 @@
 
 - 版宣言の正本は git tag ただ一つ。pyproject の version は hatch-vcs が tag から
   導出する。bump コミットという工程はない
-- showcase と dev-docs のマニフェストは `minimum_version` を書かない。機能 PR が showcase の
-  入出力例を伴う規約により、これらは常に未リリースの HEAD の機能に依存し、正直な下限（次版）は
-  dev 版より大きいのでゲートに落ちる。実在する版を書けば偽の宣言、リリースごとに追随すれば
+- showcase と dev-docs のマニフェストは `minimum_version` を書かない。同じリポジトリで
+  HEAD と共に育つので未リリースの機能に依存しうる。正直な下限（次版）は dev 版より
+  大きいのでゲートに落ちる。実在する版を書けば偽の宣言、リリースごとに追随すれば
   bump コミットの再発明になる
 - リリース tag は `vN.N.N` 形（ハイフンを含まない）。リリースワークフローの発火条件と
   hatch-vcs の版導出（pyproject の describe フィルタ）がこの形を共有する。リリースでない
