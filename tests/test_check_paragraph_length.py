@@ -3,9 +3,7 @@
 from pathlib import Path
 
 from scripts.check_paragraph_length import (
-    LIMITS,
     documents,
-    limit_for,
     overlong_paragraphs,
     paragraphs,
     visible_length,
@@ -76,17 +74,6 @@ class TestOverlong:
 
 
 class TestScope:
-    def test_english_documents_get_the_english_limit(self) -> None:
-        assert limit_for(Path("docs/reference/cli.md")) == LIMITS["en"]
-        assert limit_for(Path("README.md")) == LIMITS["en"]
-
-    def test_everything_else_gets_the_japanese_limit(self) -> None:
-        assert limit_for(Path("DEVELOPMENT.md")) == LIMITS["ja"]
-        assert limit_for(Path("dev-docs/contents/index.md")) == LIMITS["ja"]
-
-    def test_a_path_merely_starting_with_docs_is_not_english(self) -> None:
-        assert limit_for(Path("docs-notes/a.md")) == LIMITS["ja"]
-
     def test_walks_the_roots_only(self, tmp_path: Path) -> None:
         for relative in (
             "README.md",

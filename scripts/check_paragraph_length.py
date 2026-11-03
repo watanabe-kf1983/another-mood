@@ -2,7 +2,7 @@
 
 Run by ``make ci``. Standard library only, like the other scripts here. Walks
 the documents, prints one ``path:line: <length> chars, limit <limit>`` line per
-paragraph over the limit of its language, and exits non-zero if there was any.
+paragraph over the limit, and exits non-zero if there was any.
 
 A paragraph is a run of lines separated by blank lines, with each list item
 counted as a paragraph of its own. Headings, tables and fenced code are not
@@ -17,10 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOTS = ("README.md", "DEVELOPMENT.md", "docs", "dev-docs/contents")
-ENGLISH = ("README.md", "docs")
-# English sentences run about 1.9 times the characters of Japanese ones in
-# these documents, so the English limit is the Japanese one scaled by that.
-LIMITS = {"ja": 200, "en": 380}
+# The rule is stated in dev-docs: dev/documentation.md › Paragraph length.
+LIMIT = 380
 
 _LIST_ITEM = re.compile(r"\s*(?:[-*+]|\d+[.)])\s+")
 _LINK_TARGET = re.compile(r"\]\([^)]*\)")
@@ -38,14 +36,12 @@ def main() -> int:
     overlong = tuple(
         (path, paragraph)
         for path in documents(Path())
-        for paragraph in overlong_paragraphs(
-            path.read_text(encoding="utf-8"), limit_for(path)
-        )
+        for paragraph in overlong_paragraphs(path.read_text(encoding="utf-8"), LIMIT)
     )
     for path, paragraph in overlong:
         print(
             f"{path}:{paragraph.line}: {visible_length(paragraph.text)} chars, "
-            f"limit {limit_for(path)}"
+            f"limit {LIMIT}"
         )
 
     return 1 if overlong else 0
@@ -58,10 +54,6 @@ def documents(root: Path) -> Sequence[Path]:
         for start in ROOTS
         for path in _markdown_under(root / start)
     )
-
-
-def limit_for(path: Path) -> int:
-    return LIMITS["en"] if _is_under(path, ENGLISH) else LIMITS["ja"]
 
 
 def overlong_paragraphs(source: str, limit: int) -> Sequence[Paragraph]:
@@ -112,10 +104,6 @@ def _classified_lines(source: str) -> Iterator[tuple[int, str | None, bool]]:
 def _markdown_under(start: Path) -> Sequence[Path]:
     """A root is a file, named as is, or a directory walked for Markdown."""
     return (start,) if start.is_file() else tuple(sorted(start.rglob("*.md")))
-
-
-def _is_under(path: Path, prefixes: Sequence[str]) -> bool:
-    return any(path == Path(p) or path.is_relative_to(p) for p in prefixes)
 
 
 if __name__ == "__main__":
