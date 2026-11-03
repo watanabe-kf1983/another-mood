@@ -1,5 +1,6 @@
 """CLI entry point."""
 
+import io
 import signal
 import socket
 import sys
@@ -412,5 +413,15 @@ def _local_ip() -> str | None:
 
 
 def main() -> None:
+    # A pipe or file is otherwise encoded in the locale code page (cp932 on
+    # Japanese Windows), which cannot hold the em dashes the bundled docs are
+    # full of. A Windows console already takes Unicode, so this changes only
+    # piped output, to what UTF-8 mode (the default from Python 3.15, PEP 686)
+    # gives anyway.
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            # Passing errors keeps stderr's backslashreplace: encoding= alone
+            # resets errors to strict.
+            stream.reconfigure(encoding="utf-8", errors=stream.errors)
     basicConfig(stream=sys.stderr, format="%(message)s", level=INFO)
     app()

@@ -1,5 +1,8 @@
 """Tests for cli — the terminal-facing surface."""
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -95,3 +98,39 @@ def test_a_malformed_var_stops_the_run_before_the_project_is_looked_at(
     result = runner.invoke(app, ["build", "proj", "--var", assignment])
     assert result.exit_code == 1
     assert "--var must be written as NAME=VALUE" in result.output
+
+
+class TestPipedOutputIsUtf8:
+    """Piped output is UTF-8 even when the locale code page could not hold it.
+
+    The CLI runs as a real process here: the encoding is fixed in `main()`,
+    which `CliRunner` bypasses. cp932 stands in for Japanese-locale Windows.
+    """
+
+    def test_a_doc_page_comes_through_stdout_intact(self) -> None:
+        uri = "docs://guides.md"
+        page = command.read_doc(uri)
+        assert "—" in page  # the em dash cp932 cannot encode
+
+        result = _run_mood_with_cp932_pipes("docs", "read", uri)
+
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == page + "\n"
+
+    def test_an_error_message_comes_through_stderr_intact(self) -> None:
+        result = _run_mood_with_cp932_pipes("docs", "read", "docs://—")
+
+        assert result.returncode == 1
+        assert "unknown doc URI: 'docs://—'" in result.stderr
+
+
+def _run_mood_with_cp932_pipes(*args: str) -> subprocess.CompletedProcess[str]:
+    env = {**os.environ, "PYTHONIOENCODING": "cp932"}
+    env.pop("PYTHONUTF8", None)
+    return subprocess.run(
+        [sys.executable, "-c", "from another_mood.cli import main; main()", *args],
+        capture_output=True,
+        encoding="utf-8",
+        env=env,
+        check=False,
+    )
