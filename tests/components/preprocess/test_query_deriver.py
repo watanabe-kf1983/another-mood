@@ -206,6 +206,31 @@ class TestDeriveQueries:
         (root,) = [e for e in catalog if e["id"] == dc.ROOT_ENTITY_ID]
         assert "names" in [a["id"] for a in root["item_type"]["attributes"]]
 
+    def test_definition_order_is_file_order(self, tmp_path: Path) -> None:
+        """``__definition.views`` and the derived entities keep the file's
+        order even when a view must be evaluated after one written below it."""
+        views = tmp_path / "views"
+        _write(
+            views / "chain.yaml",
+            "reader:\n  from: source\n"
+            "source:\n  from: items\n  select:\n    - item: name\n",
+        )
+        _write_catalog(tmp_path / "data-catalog", _CATALOG_YAML)
+
+        out = tmp_path / "derived"
+        derive_queries(
+            views_dir=views,
+            data_catalog_dir=tmp_path / "data-catalog",
+            out_dir=out,
+        )
+
+        data = json.loads((out / "data" / "views" / "chain.yaml.json").read_text())
+        assert [v["id"] for v in data["__definition"]["views"]] == ["reader", "source"]
+        assert [e["id"] for e in data["__definition"]["entities"]] == [
+            "reader",
+            "source",
+        ]
+
     def test_dotted_views_fold_into_a_made_up_object(self, tmp_path: Path) -> None:
         views = tmp_path / "views"
         _write(views / "doc.yaml", "doc.glossary:\n  from: items\n")

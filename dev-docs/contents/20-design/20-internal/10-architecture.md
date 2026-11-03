@@ -39,12 +39,15 @@ watch では、上流が出力を書き換えれば下流が勝手に動くの�
 **Content Normalizer**（`normalize_contents`。`components/preprocess/content_normalizer.py`）
 `contents/` の全ファイルを検証し、正規化して一つのデータ木に合流させ、x-ref と id を検査する。blob はレコードと別にバイト列を出力へ写す（[運搬機構](30-communication/index.md#運搬機構)）。意図して保つ振る舞いは外部設計の [Schema](../10-external/30-schema.md)。
 
-**Query Deriver**（`derive_queries`）
+**Query Deriver**（`derive_queries`。`components/preprocess/query_deriver.py`）
 views 入力を検証・正規化し、各ビュー定義をパースして派生エンティティ（`view: true`）をカタログから生成する。
-出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。
+出力はカタログ全体: ビューをルートの属性に加えたデータカタログと、ビュー定義・派生エンティティ。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
 
-**Composer**（`compose`）
-正規化済みデータを自動的にビューとしてパススルーし、さらにビュー定義があれば contents に対して適用して結果を出力する。カタログは Query Deriver の出力を passthrough として伝搬させる。
+**Composer**（`compose`。`components/composer/composer.py`）
+正規化済みデータとカタログをそのまま通し、ビュー定義を参照順に評価する。各ビューの結果は次のビューのソースにも加える。意図して保つ振る舞いは外部設計の [View](../10-external/40-view.md)。
+
+**Tap**（`tap`。`components/tap/tap.py`）
+compose の出力を一本の JSON 文書に合流させる。**Tap Schema**（`tap_schema`。`components/tap/tap_schema.py`）は derive_queries のカタログから、その文書の JSON Schema を書き出す。意図して保つ振る舞いは外部設計の [CLI](../10-external/10-cli.md)。
 
 **Document Generator**（`generate`。[generator](../30-pending/70-generator/index.md)）
 ビューデータをテンプレートに流し込み、ページ分割設定に従って Markdown ファイルを生成する。
@@ -64,6 +67,14 @@ Generator の出力と上流から伝播してきた `BuildReport` を突き合�
 `normalize_contents` は prose 本文の相対リンクをレキシカルに `node:` 化するだけで、リンク先の存在は見ない。
 
 x-ref はクエリでの結合先を保証するデータの関心であり、リンクは出力世界の関心。だから見出しへのリンクを x-ref で縛ったり、見出しを entity に起こしたりはしない。
+
+**ビューの形は、データを見ずに決まる。** クエリの各句は、レコード変換（`apply`）と[データカタログ](30-communication/20-data-catalog.md)の変換（`derive`）を同じ DSL 断片から対で持つ（`components/shared/query.py`）。
+
+`derive_queries` は `derive` で、ビューの出力の形を派生 entity としてカタログに載せる。`compose` は同じ `Query` の `apply` でレコードを作る。
+
+両者は同じ順で同じ句を通り、句ごとの対が整合しているので、compose の出力は derive_queries が宣言した形に一致する。下流（`generate` のメタドキュメント、`tap_schema`）はデータを見ずにカタログを信じてよい。句を足すときは両方を対で足す。
+
+テスト: 対の整合は `tests/components/shared/test_query.py` の各 `*Derive` クラス、全体の一致は `tests/pipeline/test_tap_pipeline.py` の `test_document_validates_against_its_schema`。
 
 **blob のアンカーパスは出力アドレスでもある。** blob ノードのアンカーパス `/blob/<id>` を、各 edition の出力ルート直下にそのまま出力パスとして写す。`generate` のリンク解決（href が指す先）と `publish` の配置が一つの住所で一致し、ずれない。
 

@@ -8,10 +8,7 @@ from another_mood.components.shared.json_data_model import load_model, save_mode
 TAP_DOCUMENT_NAME = "data.json"
 
 
-# Do not add build info or timestamps to the tap document. People mostly
-# use tap output by diffing it between runs, and a value that changes on
-# every run would hide the changes that matter. Values the tool derives
-# from the sources (such as `__definition`) are fine.
+# No per-run values (build info, timestamps) in the document.
 @Component(out_dir="out_dir", upstream_dirs=["data_dir"])
 def tap(data_dir: Path, *, out_dir: Path) -> None:
     """Merge a stage's output into one document holding its top-level namespace."""

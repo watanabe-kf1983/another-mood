@@ -111,6 +111,19 @@ class TestOperatorEvaluate:
     def test_exists(self, value: object, target: object, expected: bool) -> None:
         assert Operator.EXISTS.evaluate(value, target) is expected
 
+    @pytest.mark.parametrize(
+        "op",
+        [op for op in Operator if op is not Operator.EXISTS],
+        ids=lambda o: o.value,
+    )
+    def test_missing_key_fails_every_operator_but_exists(self, op: Operator) -> None:
+        # A numeric target serves the ordering operators, a string target
+        # the string ones; ``eq`` takes either.
+        target: object = (
+            10 if op in (Operator.GT, Operator.GTE, Operator.LT, Operator.LTE) else "x"
+        )
+        assert op.evaluate(MISSING, target) is False
+
 
 class TestOperatorTargetTypeAssertion:
     """``_to_numeric`` / ``_to_string`` raise on schema mismatch.
