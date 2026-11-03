@@ -18,7 +18,7 @@ YAML のデータモデルは JSON データモデルのスーパーセット（
 
 | 系統 | 例 | 形式 |
 |---|---|---|
-| (1) ユーザ入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON |
+| (1) 利用者の入力 | `contents/*.yaml`、`contents/*.json`、`definition/schema.yaml`、`reports.yaml`、`sbdb.yaml` | YAML 1.2 / JSON |
 | (2) 内蔵スキーマリソース | `resources/schemas/*.yaml` | YAML 1.2 |
 | (3) ステージ間中間表現 | tmp 配下の各ステージ出力、`__build_report` | JSON |
 
@@ -40,8 +40,8 @@ JSON データモデル上のオブジェクトキーに、以下のプレフィ
 | プレフィックス | 用途 | 例 |
 |---|---|---|
 | `_`（単一） | Generator がノードへ注入するメタデータ（`generator/data_tree.py`） | `_parent`, `_meta` |
-| `__`（二重） | システム内部フィールド（ユーザは直接扱わない） | `__build_report`, `__definition` |
+| `__`（二重） | システム内部フィールド（利用者は直接扱わない） | `__build_report`, `__definition` |
 
-`__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータがユーザデータのキーを影にしないために置く。
+`__` はトップレベルの entity 名・view 名・edition 名で拒否する（内蔵ソース、およびツール自身の出力 `__db/` 等と同じ名前空間を共有するため）。`_` は規約上の予約で、Generator のメタデータが利用者のデータのキーを影にしないために置く。
 
 内蔵 prose / blob スキーマのキー名 `prose` / `blob` はプレフィックスなしで維持する。

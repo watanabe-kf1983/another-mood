@@ -7,10 +7,10 @@
 - **report** — 利用者のテンプレートがデータから描く一組の出力。`definition/reports.yaml` が設定する（`docs/reference/reports.md`）
 - **edition** — 同じ report の体裁違いの出力。違いは `file_per`（どの型のノードを別ファイルに分けるか）だけ（同 Editions）
 - **form A / form B** — `reports.yaml` の二つの書き方。form A はトップレベルに `file_per` を書き、`default` という名の一つの edition になる。form B は `editions:` に名前付きで複数書く（同 Editions）
-- **メタ edition** — スキーマとビューの定義からツールが自動で描く `__db/` のページ群。edition と同じ機構で描く。[View](40-view.md) ではメタドキュメント、表紙の節名では Database Information と呼ぶ同じもの
+- **メタドキュメント** — スキーマとビューの定義からツールが自動で描く `__db/` のページ群（[View](40-view.md#メタドキュメント)）。edition と同じ機構で描く。表紙の節名では Database Information
 - **マウント** — 出力ルート直下で、edition やシステム生成の出力に与えるディレクトリ。`{edition}/` と `__db/` など
 - **ノード / アンカーパス / 主題 / blob** — [Template](50-template.md) の語。アンカーパスはノードの住所で、`/` 区切り。ASCII の予約文字は percent-encode 済みで、非 ASCII は生で残す。主題は一回の描画の対象で、分割ページの主題がそのページを決める。blob はファイルを表す組み込みの entity
-- **表紙** — 出力ルートの `index.md`。Reports とメタ edition への入口。末尾に奥付と警告へのリンク節を持つ
+- **表紙** — 出力ルートの `index.md`。Reports とメタドキュメントへの入口。末尾に奥付と警告へのリンク節を持つ
 - **奥付** — ビルドの記録（処理系・注入値・マニフェスト）を全量表にしたページ `__build_info/`。載る値は [Template](50-template.md#build_info)
 - **診断** — ソースのファイルと行を指す問題の報告。ビルドを続ける警告と、止めるエラーがある
 - **警告ページ** — 警告を列挙するページ `__warnings/`。警告があるときだけ作る。`--strict` は警告でもビルドを失敗にする（`docs/reference/cli.md` の `--strict`）
@@ -48,7 +48,7 @@ blob の出力先（各 edition のルート直下の `blob/` に写す。[内�
 {outDir}/
   index.md          ← 表紙。project 名、Reports、Database Information
   default/          ← 利用者の edition（form B なら web/ print/ 等）
-  __db/             ← DB 自己記述（メタ edition のマウント先）
+  __db/             ← メタドキュメント
   __build_info/     ← 奥付
   __warnings/       ← 警告（あるときだけ）
 ```

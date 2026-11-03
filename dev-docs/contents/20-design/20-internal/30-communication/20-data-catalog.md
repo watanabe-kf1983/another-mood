@@ -26,7 +26,9 @@
 
 ## 形
 
-形は `components/shared/data_catalog.py` に定義する。表現は二つあり、Node / Edge の木が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
+形は `components/shared/data_catalog.py` に定義する。表現は二つあり、`Node` / `Edge` の木（entity と、親から見た子の属性。データ木のノードとは別物）が正の表現で、Entity の列はその平坦な直列化。ステージ間はこの列を JSON で受け渡す。
+
+木は `derive_queries` が要る: ビューの `from:` が指す部分木を切り出し、派生 entity としてルートの下に接ぎ直す操作は木の上で行う。
 
 entity の id はデータ木上の到達経路（`categories`、`categories.tasks`）で、`from:` はこれで entity を名指す。
 

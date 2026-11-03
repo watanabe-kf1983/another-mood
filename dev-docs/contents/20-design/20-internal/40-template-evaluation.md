@@ -18,14 +18,14 @@
 - **inert な値** — host の capability への経路を持たない値。テンプレートに見せてよい値
 - **marshal** — Python の値をテンプレートの値モデルへ渡す変換。スカラーは変換（convert）され、オブジェクトは包まれる（wrap）
 - **finalize** — エンジンが `{{ }}` の値を出力に書く直前に呼ぶ、ツール側の Python のフック。escape はここで行う。`Markup` は escape 済みの印を持つ文字列で、finalize を素通りする
-- **ノード** — 住所（アンカーパス）を持つ container。`MappingNode` / `ArrayNode` の二種で、型としては `Node`。壊れた参照の値は `MissingNode`（外部設計の [Template](../10-external/50-template.md)）
+- **ノード** — 住所（アンカーパス）を持つ container。`MappingNode` / `ArrayNode` の二種で、型としては `Node`。外部設計の Template が言うノード（リンクの宛先）より狭く、prose の見出しは含まない。壊れた参照の値は `MissingNode`（外部設計の [Template](../10-external/50-template.md)）
 - **主題** — 一回の描画の対象。テンプレートからは `this` の名で見える
 
 ## 評価器は一つ
 
 Jinja の評価器は `TemplateEngine`（`generator/template_engine.py`）だけで、持つのは generator コンポーネント（`generate` と `reconcile` のステージ）に限る。
 
-`generate` は利用者のテンプレートに加え、内蔵テンプレート（表紙、`__db/` のメタ edition）を描く。`reconcile` が描くのは内蔵テンプレート（失敗ページ・奥付・警告）だけで、渡す値も `BuildReport` と build info だけ。`site` は Markdown を変換するだけで、利用者のテンプレートもデータ木も見ない。
+`generate` は著者のテンプレートに加え、内蔵テンプレート（表紙、`__db/` のメタドキュメント）を描く。`reconcile` が描くのは内蔵テンプレート（失敗ページ・奥付・警告）だけで、渡す値も `BuildReport` と build info だけ。`site` は Markdown を変換するだけで、著者のテンプレートもデータ木も見ない。
 
 外部設計が依存するのは「テンプレートに渡る値がすべて同じ境界を通る」こと。評価器を一つに保つのはその最も単純な保ち方で、増やさない。
 
@@ -106,7 +106,7 @@ marshal には convert と wrap の非対称がある。スカラー（str / int
 
 - **pyright（静的）** — ①と②。inert container の `[InertValue]` による型付けと、ヘルパの戻り型のエンジン境界での照合
 - **render 境界ガード（実行時）** — ①。描画の入口（`template_engine.py` の `_bind`）は主題を `this` に束縛し、主題が map ならその各キーも束縛する。その各 binding を `ensure_template_safe` に通し、「テンプレートに渡るのは `TemplateSafe` だけ」を一点で強制する
-- 境界ガードは `Markup` と `MissingNode` を素通しし、データは `ensure_inert` へ回し、それ以外は raise する。一様性のため、内蔵テンプレート（表紙、メタ edition、失敗ページ、奥付、警告）の描画も同じ境界を通る
+- 境界ガードは `Markup` と `MissingNode` を素通しし、データは `ensure_inert` へ回し、それ以外は raise する。一様性のため、内蔵テンプレート（表紙、メタドキュメント、失敗ページ、奥付、警告）の描画も同じ境界を通る
 - **surface-audit テスト**（`tests/components/generator/test_template_safe.py`） — ②と③。`TemplateSafe` の各型を MRO 全域で監査する。非 `_` の表面が基準の表面（container は素の dict / list、`MissingNode` は宣言した field で各値が inert）に一致すること
 - 同じテストで、foreign な属性を植えられず（`__slots__` / frozen）、想定外の protocol dunder が無いことも見る。`Markup` は convert 側で表面が越境しないので対象外（SSTI 回帰テストが pin）
 - **SSTI 回帰テスト**（`test_ssti.py`） — 上の三層が前提とするエンジン側の露出規則そのものを実 render で pin する（[前提](#前提-minijinja-が露出するもの)）

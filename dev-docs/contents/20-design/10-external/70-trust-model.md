@@ -6,8 +6,7 @@
 
 本文で使う語:
 
-- **著者** — プロジェクト（ソースとテンプレート）を書く人
-- **実行者** — そのプロジェクトを `mood build` / `watch` する人。著者と同じとは限らない
+- **著者 / 実行者** — [役割を表す語](../index.md#役割を表す語)。この章の主題は、両者が同じとは限らないこと
 - **RCE** — テンプレートから、ファイル・プロセス・ネットワークなどツールの外に届く Python の機能を呼び、任意のコードを走らせること
 - **地の文の escape** — `{{ }}` で出した値の Markdown 構文記号を、出力の直前に escape すること（`docs/reference/template.md` の Markdown escaping）
 - **prose** — `contents/` の Markdown ファイル。本文がそのまま出力に出る（[Schema](30-schema.md#prose)）

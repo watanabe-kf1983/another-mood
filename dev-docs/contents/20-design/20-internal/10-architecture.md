@@ -77,7 +77,7 @@ compose の出力を一本の JSON 文書に合流させる。**Tap Schema**（`
 
 `generate` — `components/generator/generator.py`
 
-compose の出力を inert な木に詰め替え、各ノードに住所（アンカーパス）と型のメタデータを付け（`generator/data_tree.py`）、edition ごとにテンプレートで Markdown のページに描く。表紙と `__db/` のメタ edition もここが描く。
+compose の出力を inert な木に詰め替え、各ノードに住所（アンカーパス）と型のメタデータを付け（`generator/data_tree.py`）、edition ごとにテンプレートで Markdown のページに描く。表紙と `__db/` のメタドキュメントもここが描く。
 
 意図して保つ振る舞いは外部設計の [Template](../10-external/50-template.md)、[Reports](../10-external/60-reports.md)、[Trust Model](../10-external/70-trust-model.md)。
 
