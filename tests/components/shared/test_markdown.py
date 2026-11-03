@@ -47,7 +47,9 @@ class TestFirstH1:
 
 
 class TestGithubSlug:
-    r"""github_slug: GitHub's de-facto heading-anchor slug (\p{Word} rule).
+    r"""Keeps: docs/reference/schema.md › Built-in schema: prose
+
+    github_slug: GitHub's de-facto heading-anchor slug (\p{Word} rule).
 
     The core cases (ASCII, CJK, punctuation) are where GitHub, Hugo, and VS Code
     coincide; they also match real Hugo output for this project's prose. The
