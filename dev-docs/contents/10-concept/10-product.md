@@ -20,7 +20,7 @@ Linux / macOS / Windows のいずれでも動作する。Windows 利用者も主
 - 整合性チェックは FK 制約として汎用的に表現できる
 - 作るべきは**汎用ドキュメントジェネレータ**である
 
-要件定義の成果物群そのものは、ツールの機能ではなく [showcase](../20-design/80-showcase/10-system-dev-docs.md) として提供する。
+要件定義の成果物群そのものは、ツールの機能ではなく [showcase](../20-design/30-pending/80-showcase/10-system-dev-docs.md) として提供する。
 
 ## Core Design Decision
 

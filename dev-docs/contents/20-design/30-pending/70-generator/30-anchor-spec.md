@@ -42,7 +42,7 @@ view については一意性を保証できず、保証を強制すべきでも
 
 この例外は **組み込みコレクション（`prose` / `blob`）に固有** のものとして明示的に定義する。`/` を含む任意の id への一般化はしない — 利用者 entity は構造が変わりうるため、その id を素通しにすると将来曖昧性が混入する。
 
-**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[prose-spec.md の headings](../50-normalizer/25-prose-spec.md#headings--リンクの着地点)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
+**見出しは `#slug` に畳む**（prose のみ） — prose 本文中の見出しは node（リンクの宛先）として扱う。データツリー上は prose レコード配下の `headings` リスト要素（[外部設計の見出し id](../../10-external/30-schema.md#見出しの-id-は-github-互換の-slug)）で「ネストしたリスト要素 = node」規則に乗るが、anchor_path では中間の `headings` セグメントを畳み、**`<prose レコードの anchor_path>#<github-slug>`** とする（`/prose/X/headings/slug` でなく `/prose/X#slug`、例 `/prose/design/normalizer/architecture#エラー処理`）。見出しは別レコードではなく、prose レコード内の住所（着地点）だけを持つ。
 
 ### ページ分割
 
@@ -68,7 +68,7 @@ view については一意性を保証できず、保証を強制すべきでも
 
 テンプレートの `node()`（[テンプレートからの参照](#テンプレートからの参照)）から来ても本文の `node:`（[本文からの参照](#本文からの参照)）から来ても共通で、送り側（URL の fragment）と受け側（ページ上の id）が同じ文字列 — データノードは anchor_path、見出しノードは slug — を使うことで両端が構築上一致する。
 
-出力する URL は **対象ページへの相対パス** + URL fragment。path 部は[ファイル名](#ファイル名)を標準の percent-encoding にかけたもの。fragment は target がページ root に一致する場合も省かない（ハンドリングを単純に保つ）。blob ノードはページ上に描かれるノードではなく出力ツリー上の実ファイル（[blob-spec.md の出力配置](../50-normalizer/27-blob-spec.md#出力配置-アンカーパス--出力アドレス)）なので、fragment を持たない。URL の形は `docs/reference/template.md` の `href`。
+出力する URL は **対象ページへの相対パス** + URL fragment。path 部は[ファイル名](#ファイル名)を標準の percent-encoding にかけたもの。fragment は target がページ root に一致する場合も省かない（ハンドリングを単純に保つ）。blob ノードはページ上に描かれるノードではなく出力ツリー上の実ファイル（[内部構造のステージをまたぐ約束](../../20-internal/10-architecture.md#ステージをまたぐ約束)）なので、fragment を持たない。URL の形は `docs/reference/template.md` の `href`。
 
 #### アンカーの発行
 
@@ -105,7 +105,7 @@ prose body 等の Markdown 本文では、リンク先に `node:` スキーム +
 1. **author 向け sugar** — author がノードを明示的に参照したいときの書き方。テンプレートの `node(path="/…") | link`（[テンプレートからの参照](#テンプレートからの参照)）の本文版で、解決後は同じ `[display](URL)` になる
 2. **canonical intermediate form** — Normalizer がソース相対リンクから変換した先の中間表現
 
-ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([prose-spec.md の content](../50-normalizer/25-prose-spec.md#content--ソースそのまま相対リンクだけ-node-化) 参照):
+ソース Markdown では普通の相対パスで書け、Normalizer が `node:` 記法に変換する ([外部設計の prose](../../10-external/30-schema.md#相対リンクは-node-化し同一ページ内の-fragment-は変換しない) 参照):
 
 ```markdown
 {# ソース: {contents_dir}/design/normalizer/normalizer.md #}
