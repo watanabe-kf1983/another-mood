@@ -295,11 +295,10 @@ WATCH_PUBLISH_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     watch_publish_stage,
 )
 
-# The schema needs only the catalog, which derive_queries completes: views
-# are evaluated downstream of it but declared within it.
+# The schema needs only the catalog, which derive_queries completes: contents
+# are not read, and views are evaluated downstream of it but declared within it.
 TAP_SCHEMA_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     inspect_schema_stage,
-    normalize_contents_stage,
     derive_queries_stage,
     tap_schema_stage,
 )
@@ -331,13 +330,11 @@ def watch_pipeline(
 def tap_pipeline(workspace: Workspace) -> Pipeline:
     """Create the tap pipeline: stop after compose, assemble one JSON document."""
     stages = [factory(workspace) for factory in TAP_STAGE_FACTORIES]
-    # publish never runs here, so errors go unreported (#604).
-    return Pipeline(stages, reporting=build_report_stage(workspace, publish))
+    return Pipeline(stages, reporting=build_report_stage(workspace, tap))
 
 
 def tap_schema_pipeline(workspace: Workspace) -> Pipeline:
     """Create the tap schema pipeline: stop after derive_queries, write the
     tap document's JSON Schema."""
     stages = [factory(workspace) for factory in TAP_SCHEMA_STAGE_FACTORIES]
-    # publish never runs here, so errors go unreported (#604).
-    return Pipeline(stages, reporting=build_report_stage(workspace, publish))
+    return Pipeline(stages, reporting=build_report_stage(workspace, tap_schema))

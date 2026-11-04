@@ -1,6 +1,7 @@
 """The tap pipeline's documented contract: rendering stages never run,
-so the data layer stays extractable while templates are broken; and the
-document always validates against the schema handed back with it."""
+so the data layer stays extractable while templates are broken; data-layer
+errors come back as errors with no document; and the document always
+validates against the schema handed back with it."""
 
 import json
 from pathlib import Path
@@ -39,6 +40,24 @@ def test_broken_templates_do_not_fail_the_tap_pipeline(tmp_path: Path) -> None:
     report = tap_pipeline(workspace).run()
 
     assert not report.has_errors()
+
+
+@pytest.mark.parametrize("schema", [False, True], ids=["document", "schema"])
+def test_a_schema_error_fails_the_tap_without_a_document(
+    tmp_path: Path, schema: bool
+) -> None:
+    """Keeps: docs/reference/cli.md › tap"""
+    project = tmp_path / "project"
+    command.init(project)
+    (project / "definition" / "schema.yaml").write_text(
+        "this: [is: broken\n", encoding="utf-8"
+    )
+    config = ProjectConfig(namespace_root=tmp_path, project_dir=project)
+
+    result = command.tap(config, schema=schema)
+
+    assert result.has_errors()
+    assert result.document is None
 
 
 @pytest.mark.parametrize(
