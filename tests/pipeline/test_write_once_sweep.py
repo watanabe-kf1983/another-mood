@@ -21,7 +21,7 @@ from another_mood.config import ProjectConfig
 from another_mood.layout import resolve_layout
 from another_mood.pipeline.base import Task
 from another_mood.pipeline.stages import (
-    STAGE_FACTORIES,
+    BUILD_STAGE_FACTORIES,
     TAP_SCHEMA_STAGE_FACTORIES,
     TAP_STAGE_FACTORIES,
     WATCH_PUBLISH_STAGE_FACTORIES,
@@ -40,7 +40,7 @@ _EXEMPT_SUFFIXES = (".version.json", ".lock")
 
 @pytest.mark.parametrize(
     "factories",
-    [STAGE_FACTORIES, WATCH_PUBLISH_STAGE_FACTORIES],
+    [BUILD_STAGE_FACTORIES, WATCH_PUBLISH_STAGE_FACTORIES],
     ids=["build", "watch-with-out-dir"],
 )
 def test_no_stage_writes_into_an_existing_inode(
@@ -203,7 +203,7 @@ def _run_all_stages(
     observers: "_Observers",
     *,
     run_label: str,
-    factories: Sequence[Callable[[Workspace], Task]] = STAGE_FACTORIES,
+    factories: Sequence[Callable[[Workspace], Task]] = BUILD_STAGE_FACTORIES,
 ) -> None:
     for factory in factories:
         factory(workspace).run()

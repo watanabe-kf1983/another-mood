@@ -47,7 +47,7 @@ from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
 from another_mood.pipeline.stages import (
-    pipeline,
+    build_pipeline,
     tap_pipeline,
     tap_schema_pipeline,
     watch_pipeline,
@@ -226,7 +226,7 @@ def build(
     layout = resolve_layout(config.project_dir)
     workspace = _session_workspace(config, layout, manifest, "build")
     result = _to_result(
-        pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
+        build_pipeline(workspace, on_report=_lift(on_report, out_dir)).run(), out_dir
     )
     _discard_workspace(workspace, keep_for_post_mortem=result.has_internal_error())
     return result
