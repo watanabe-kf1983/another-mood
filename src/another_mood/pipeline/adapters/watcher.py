@@ -1,9 +1,11 @@
 """Watcher — observe paths and invoke callback on changes.
 
 Thin wrapper over watchdog. Events within a burst are coalesced into a
-single callback fire after `debounce` milliseconds of silence.
+single callback fire after `debounce` milliseconds of silence. Only content
+changes fire: reading the watched tree never does, on any OS.
 """
 
+import sys
 import threading
 from collections.abc import Callable, Sequence
 from logging import getLogger
@@ -35,6 +37,8 @@ class Watcher:
     def run(self) -> None:
         """Block and watch. Calls on_change for each debounced change set."""
         event_received = threading.Event()
+        if sys.platform == "win32":
+            _request_content_changes_only()
 
         class _Handler(FileSystemEventHandler):
             # Only mutation events. Ignoring open/access/close prevents our own
@@ -55,8 +59,16 @@ class Watcher:
                 if self._restrict_to is None or event.src_path in self._restrict_to:
                     event_received.set()
 
+            def _handle_modified(self, event: FileSystemEvent) -> None:
+                # A directory's own "modified" is dropped: Windows reports one
+                # when the directory is merely listed (its last-write flag
+                # fires), and a real change inside it also reports the entry
+                # that changed, on every OS.
+                if not event.is_directory:
+                    self._handle(event)
+
             on_created = _handle
-            on_modified = _handle
+            on_modified = _handle_modified
             on_deleted = _handle
             on_moved = _handle
 
@@ -82,3 +94,25 @@ class Watcher:
                 self._on_change()
             except Exception:
                 _logger.exception("Watcher on_change handler raised")
+
+
+def _request_content_changes_only() -> None:
+    """Narrow the notifications watchdog requests from Windows to content changes."""
+    from watchdog.observers import winapi
+
+    # watchdog requests every notify flag and reports each hit as "modified".
+    # Its LAST_ACCESS fires on every hardlink taken from a file, which is how
+    # exclusive_read copies an upstream, so each stage retriggered itself.
+    # watchdog reads this module constant at each ReadDirectoryChangesW call
+    # and offers no setting, hence the replacement in place.
+    if not hasattr(winapi, "WATCHDOG_FILE_NOTIFY_FLAGS"):
+        raise RuntimeError(
+            "watchdog.observers.winapi.WATCHDOG_FILE_NOTIFY_FLAGS is gone; "
+            "without it, reads of a watched tree would trigger rebuilds."
+        )
+    winapi.WATCHDOG_FILE_NOTIFY_FLAGS = (
+        winapi.FILE_NOTIFY_CHANGE_FILE_NAME
+        | winapi.FILE_NOTIFY_CHANGE_DIR_NAME
+        | winapi.FILE_NOTIFY_CHANGE_SIZE
+        | winapi.FILE_NOTIFY_CHANGE_LAST_WRITE
+    )
