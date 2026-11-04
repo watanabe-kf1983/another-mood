@@ -46,7 +46,12 @@ from another_mood.layout import SourceLayout, resolve_layout, verify_absent
 from another_mood.pipeline.site import (
     HugoServerStartupError as WatchStartupError,
 )
-from another_mood.pipeline.stages import pipeline, tap_pipeline, tap_schema_pipeline
+from another_mood.pipeline.stages import (
+    pipeline,
+    tap_pipeline,
+    tap_schema_pipeline,
+    watch_pipeline,
+)
 from another_mood.pipeline.workspace import (
     ProcessorCommand,
     Workspace,
@@ -248,7 +253,7 @@ def watch(
     manifest = read_manifest(config.project_dir)
     layout = resolve_layout(config.project_dir)
     workspace = _session_workspace(config, layout, manifest, "watch")
-    with pipeline(
+    with watch_pipeline(
         workspace, on_report=_lift(on_report, out_dir)
     ).start_watching() as shutdown:
         yield WatchSession(

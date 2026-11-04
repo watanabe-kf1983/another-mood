@@ -1,6 +1,7 @@
 """Pipeline definition — stage factories and pipeline composition."""
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from another_mood.components import (
     compose,
@@ -14,10 +15,17 @@ from another_mood.components import (
     tap_schema,
 )
 from another_mood.components.shared.component.build_report import BuildReport
+from another_mood.components.shared.component.component import ComponentCall
 from another_mood.components.shared.component.dir_lock import dir_lock
 from another_mood.pipeline.adapters.preparation import prepare_site
-from another_mood.pipeline.base import Pipeline, ReportingStage, Stage, Task
-from another_mood.pipeline.site import SiteStage, hugo_build
+from another_mood.pipeline.base import (
+    ComponentOutput,
+    Pipeline,
+    ReportingStage,
+    Stage,
+    Task,
+)
+from another_mood.pipeline.site import SiteServeStage, SiteStage, hugo_build
 from another_mood.pipeline.workspace import Workspace
 
 
@@ -153,58 +161,92 @@ def reconcile_stage(workspace: Workspace) -> Task:
 
 
 def site_stage(workspace: Workspace) -> Task:
-    """Prepare Hugo content and render to a browsable site."""
-    config = workspace.config
+    """Prepare Hugo content and render it to a static site."""
     return SiteStage(
         upstream=workspace.component_output(reconcile),
         prep_dir=workspace.component_output(prepare_site).dir,
         hugo_build_dir=workspace.component_output(hugo_build).dir,
+    )
+
+
+def site_serve_stage(workspace: Workspace) -> Task:
+    """Prepare Hugo content and serve it live."""
+    config = workspace.config
+    return SiteServeStage(
+        upstream=workspace.component_output(reconcile),
+        prep_dir=workspace.component_output(prepare_site).dir,
         host=config.host,
         port=config.port,
     )
 
 
 def publish_stage(workspace: Workspace) -> Task:
-    """Copy reconciled Markdown and Hugo HTML from tmp to their public dirs.
-
-    Watches only the terminal upstream (hugo_build): by the time it
-    completes, all prior stages have settled, so we publish both outputs
-    together in one cascade fire.
-    """
+    """Copy reconciled Markdown and Hugo HTML from tmp to their public dirs."""
     config = workspace.config
     reconcile_out = workspace.component_output(reconcile)
     hugo_out = workspace.component_output(hugo_build)
+    return _publish_stage(
+        workspace,
+        # The terminal upstream: its reports carry every earlier stage's.
+        upstream=hugo_out,
+        targets=[
+            (reconcile_out.dir / "data", config.out_dir),
+            (hugo_out.dir / "data", config.site_dir),
+        ],
+    )
+
+
+def watch_publish_stage(workspace: Workspace) -> Task:
+    """Copy reconciled Markdown from tmp to out_dir."""
+    # Watches reconcile, not prepare_site: prepare_site rewrites its data/ and
+    # static/ in place under their own locks, which exclusive_read's
+    # prepare_site.lock does not exclude, so files would vanish mid-copy.
+    reconcile_out = workspace.component_output(reconcile)
+    return _publish_stage(
+        workspace,
+        upstream=reconcile_out,
+        targets=[(reconcile_out.dir / "data", workspace.config.out_dir)],
+    )
+
+
+def _publish_stage(
+    workspace: Workspace,
+    *,
+    upstream: ComponentOutput,
+    targets: Sequence[tuple[Path, Path | None]],
+) -> Task:
     publish_out = workspace.component_output(publish)
-    # Publish a tree only where its destination is set (watch may set neither).
-    targets = [
-        (reconcile_out.dir / "data", config.out_dir),
-        (hugo_out.dir / "data", config.site_dir),
-    ]
+    # Publish a tree only where its destination is set.
     active = [(src, dist) for src, dist in targets if dist is not None]
     call = publish.bind(
-        upstream=hugo_out.dir,
+        upstream=upstream.dir,
         out_dir=publish_out.dir,
         src_dirs=[src for src, _ in active],
         dist_dirs=[dist for _, dist in active],
     )
-    return Stage(run_fn=call, watch_paths=[], upstreams=[hugo_out])
+    return Stage(run_fn=call, watch_paths=[], upstreams=[upstream])
 
 
 def build_report_stage(
     workspace: Workspace,
+    source: ComponentCall,
     on_report: Callable[[BuildReport], None] | None = None,
 ) -> ReportingStage:
-    """Report build result to user. Exposes BuildReport for CLI."""
-    publish_out = workspace.component_output(publish)
+    """Report build result to user. Exposes BuildReport for CLI.
+
+    ``source`` is the pipeline's terminal component: errors propagate to its
+    reports, so that is where they are collected from.
+    """
+    source_out = workspace.component_output(source)
 
     def report() -> BuildReport:
-        with dir_lock(publish_out.dir):
-            return BuildReport.collect(publish_out.dir / "reports")
+        with dir_lock(source_out.dir):
+            return BuildReport.collect(source_out.dir / "reports")
 
     return ReportingStage(
         report_fn=report,
         on_report=on_report,
-        upstreams=[publish_out],
+        upstreams=[source_out],
     )
 
 
@@ -234,6 +276,25 @@ TAP_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
     tap_stage,
 )
 
+# Declared as its own sequence for the same reason as the tap lists. Also
+# driven by the write-once sweep test.
+WATCH_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
+    inspect_schema_stage,
+    normalize_contents_stage,
+    derive_queries_stage,
+    compose_stage,
+    generator_stage,
+    reconcile_stage,
+    site_serve_stage,
+)
+
+# watch with --out-dir publishes the Markdown tree as well
+# (docs/reference/cli.md › --out-dir).
+WATCH_PUBLISH_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
+    *WATCH_STAGE_FACTORIES,
+    watch_publish_stage,
+)
+
 # The schema needs only the catalog, which derive_queries completes: views
 # are evaluated downstream of it but declared within it.
 TAP_SCHEMA_STAGE_FACTORIES: Sequence[Callable[[Workspace], Task]] = (
@@ -250,17 +311,33 @@ def pipeline(
 ) -> Pipeline:
     """Create the full pipeline."""
     stages = [factory(workspace) for factory in STAGE_FACTORIES]
-    return Pipeline(stages, reporting=build_report_stage(workspace, on_report))
+    return Pipeline(stages, reporting=build_report_stage(workspace, publish, on_report))
+
+
+def watch_pipeline(
+    workspace: Workspace,
+    on_report: Callable[[BuildReport], None] | None = None,
+) -> Pipeline:
+    """Create the watch pipeline: serve the site live instead of building it,
+    and publish the Markdown tree only when out_dir is set."""
+    if workspace.config.out_dir is None:
+        factories, source = WATCH_STAGE_FACTORIES, reconcile
+    else:
+        factories, source = WATCH_PUBLISH_STAGE_FACTORIES, publish
+    stages = [factory(workspace) for factory in factories]
+    return Pipeline(stages, reporting=build_report_stage(workspace, source, on_report))
 
 
 def tap_pipeline(workspace: Workspace) -> Pipeline:
     """Create the tap pipeline: stop after compose, assemble one JSON document."""
     stages = [factory(workspace) for factory in TAP_STAGE_FACTORIES]
-    return Pipeline(stages, reporting=build_report_stage(workspace))
+    # publish never runs here, so errors go unreported (#604).
+    return Pipeline(stages, reporting=build_report_stage(workspace, publish))
 
 
 def tap_schema_pipeline(workspace: Workspace) -> Pipeline:
     """Create the tap schema pipeline: stop after derive_queries, write the
     tap document's JSON Schema."""
     stages = [factory(workspace) for factory in TAP_SCHEMA_STAGE_FACTORIES]
-    return Pipeline(stages, reporting=build_report_stage(workspace))
+    # publish never runs here, so errors go unreported (#604).
+    return Pipeline(stages, reporting=build_report_stage(workspace, publish))

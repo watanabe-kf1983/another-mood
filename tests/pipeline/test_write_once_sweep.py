@@ -13,6 +13,8 @@ import os
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
+import pytest
+
 from another_mood import command
 from another_mood.components.manifest import Manifest
 from another_mood.config import ProjectConfig
@@ -22,6 +24,8 @@ from another_mood.pipeline.stages import (
     STAGE_FACTORIES,
     TAP_SCHEMA_STAGE_FACTORIES,
     TAP_STAGE_FACTORIES,
+    WATCH_PUBLISH_STAGE_FACTORIES,
+    WATCH_STAGE_FACTORIES,
 )
 from another_mood.pipeline.workspace import Workspace, make_processor_info
 
@@ -34,23 +38,23 @@ _BLOB_V2 = b"\x89PNG-fake-bytes-v2-different"
 _EXEMPT_SUFFIXES = (".version.json", ".lock")
 
 
-def test_no_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "factories",
+    [STAGE_FACTORIES, WATCH_PUBLISH_STAGE_FACTORIES],
+    ids=["build", "watch-with-out-dir"],
+)
+def test_no_stage_writes_into_an_existing_inode(
+    tmp_path: Path, factories: Sequence[Callable[[Workspace], Task]]
+) -> None:
     project = _scaffold_project(tmp_path)
     workspace, published = _make_workspace(tmp_path, project)
     observers = _Observers(
         watch_roots=(workspace.root, published), obs_root=tmp_path / "observers"
     )
 
-    _run_all_stages(workspace, observers, run_label="run1")
-
-    members = project / "contents" / "members.yaml"
-    members.write_text(
-        members.read_text(encoding="utf-8").replace("Alice", "Alicia"),
-        encoding="utf-8",
-    )
-    (project / "contents" / "cover.png").write_bytes(_BLOB_V2)
-
-    _run_all_stages(workspace, observers, run_label="run2")
+    _run_all_stages(workspace, observers, run_label="run1", factories=factories)
+    _edit_member_and_blob(project)
+    _run_all_stages(workspace, observers, run_label="run2", factories=factories)
 
     # Guard against a vacuous sweep: the change must reach the published
     # output, otherwise run2 diverged nowhere and detected nothing.
@@ -58,6 +62,30 @@ def test_no_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
     assert published_blob.read_bytes() == _BLOB_V2
     published_member = published / "output" / "default" / "members" / "alice.md"
     assert "Alicia" in published_member.read_text(encoding="utf-8")
+
+
+def test_no_watch_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
+    project = _scaffold_project(tmp_path)
+    workspace, published = _make_workspace(tmp_path, project)
+    observers = _Observers(
+        watch_roots=(workspace.root, published), obs_root=tmp_path / "observers"
+    )
+
+    _run_all_stages(
+        workspace, observers, run_label="run1", factories=WATCH_STAGE_FACTORIES
+    )
+    _edit_member_and_blob(project)
+    _run_all_stages(
+        workspace, observers, run_label="run2", factories=WATCH_STAGE_FACTORIES
+    )
+
+    # Guard against a vacuous sweep: nothing is published, so the change must
+    # reach what the Hugo server reads.
+    prepared = workspace.root / "prepare_site"
+    blob = prepared / "static" / "default" / "blob" / "cover.png"
+    assert blob.read_bytes() == _BLOB_V2
+    member = prepared / "data" / "default" / "members" / "alice.md"
+    assert "Alicia" in member.read_text(encoding="utf-8")
 
 
 def test_no_tap_stage_writes_into_an_existing_inode(tmp_path: Path) -> None:
@@ -141,6 +169,15 @@ def _scaffold_project(tmp_path: Path) -> Path:
     # path for it, so the sweep covers that path too.
     (project / "contents" / "logo.png").write_bytes(b"logo-bytes-unchanged")
     return project
+
+
+def _edit_member_and_blob(project: Path) -> None:
+    members = project / "contents" / "members.yaml"
+    members.write_text(
+        members.read_text(encoding="utf-8").replace("Alice", "Alicia"),
+        encoding="utf-8",
+    )
+    (project / "contents" / "cover.png").write_bytes(_BLOB_V2)
 
 
 def _make_workspace(tmp_path: Path, project: Path) -> tuple[Workspace, Path]:
