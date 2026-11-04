@@ -309,6 +309,7 @@ def watch(
         print(exc.user_error_message, file=sys.stderr)
         raise typer.Exit(1) from exc
     except command.WatchStartupError as exc:
+        print(exc, file=sys.stderr)
         raise typer.Exit(1) from exc
     except KeyboardInterrupt:
         pass

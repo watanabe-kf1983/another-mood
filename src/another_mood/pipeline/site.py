@@ -24,13 +24,18 @@ _STARTUP_PROBE_TIMEOUT = 0.5
 class HugoServerStartupError(RuntimeError):
     """Hugo dev server died before reaching ready state (e.g. address in use)."""
 
-    def __init__(self, host: str, port: int, returncode: int) -> None:
+    def __init__(self, host: str, port: int, returncode: int, output: str) -> None:
         super().__init__(
-            f"Hugo server failed to start on {host}:{port} (exit code {returncode})."
+            _with_output(
+                f"Hugo server failed to start on {host}:{port} "
+                f"(exit code {returncode}).",
+                output,
+            )
         )
         self.host = host
         self.port = port
         self.returncode = returncode
+        self.output = output
 
 
 @Component(
@@ -112,7 +117,8 @@ class _HugoServeTask(Task):
 
     @contextmanager
     def start_watching(self, shutdown: threading.Event) -> Generator[None]:
-        process = hugo.serve(self.content_dir, self.host, self.port, self.static_dir)
+        server = hugo.serve(self.content_dir, self.host, self.port, self.static_dir)
+        process = server.process
 
         # Surface fast-fail startup errors (e.g. port already in use) before
         # signalling readiness; Hugo binds the port synchronously at startup.
@@ -121,10 +127,12 @@ class _HugoServeTask(Task):
         except subprocess.TimeoutExpired:
             pass  # Still running — startup succeeded.
         else:
-            raise HugoServerStartupError(self.host, self.port, process.returncode)
+            raise HugoServerStartupError(
+                self.host, self.port, process.returncode, server.stderr_tail()
+            )
 
         monitor = threading.Thread(
-            target=_wait_for_exit, args=(process, shutdown), daemon=True
+            target=_wait_for_exit, args=(server, shutdown), daemon=True
         )
         monitor.start()
 
@@ -138,7 +146,7 @@ class _HugoServeTask(Task):
 _NORMAL_EXIT_CODES = {0, -signal.SIGTERM, -signal.SIGINT}
 
 
-def _wait_for_exit(process: subprocess.Popen[bytes], shutdown: threading.Event) -> None:
+def _wait_for_exit(server: hugo.Server, shutdown: threading.Event) -> None:
     """Wait for the process to exit and signal shutdown on unexpected termination.
 
     Normal exit codes:
@@ -146,9 +154,24 @@ def _wait_for_exit(process: subprocess.Popen[bytes], shutdown: threading.Event) 
     - -SIGTERM (-15): our own terminate() call during shutdown
     - -SIGINT (-2): SIGINT before Hugo's handler runs
     """
+    process = server.process
     process.wait()
     if process.returncode in _NORMAL_EXIT_CODES:
         pass  # Normal shutdown (Ctrl+C or our terminate() call).
     else:
-        _logger.error("Hugo server exited (exit code %d).", process.returncode)
+        _logger.error(
+            "%s",
+            _with_output(
+                f"Hugo server exited (exit code {process.returncode}).",
+                server.stderr_tail(),
+            ),
+        )
         shutdown.set()
+
+
+def _with_output(message: str, output: str) -> str:
+    """Append Hugo's held-back stderr to ``message``, when there is any."""
+    if output:
+        return f"{message}\n{output}"
+    else:
+        return message
