@@ -14,7 +14,8 @@ transfer.py).
 error_propagation=False: reconcile renders a __build_failure page on
 upstream error, which Hugo must still serve. The sync runs unconditionally,
 while error_propagation is invoked manually to forward upstream reports to
-out_dir/reports where build_report_stage collects them.
+out_dir/reports, where hugo_build picks them up in build. Watch collects
+them from reconcile instead (see watch_pipeline).
 """
 
 from pathlib import Path

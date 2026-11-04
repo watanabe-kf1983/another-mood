@@ -53,30 +53,54 @@ def SiteStage(
     upstream: ComponentOutput,
     prep_dir: Path,
     hugo_build_dir: Path,
-    host: str,
-    port: int,
 ) -> MultiStageTask:
-    """Compose the site pipeline: prep Stage + Hugo serve Task + Hugo build Stage."""
-    prep_out = ComponentOutput(prep_dir)
-    prep_call = prepare_site.bind(data_dir=upstream.dir, out_dir=prep_dir)
+    """Compose the build-mode site: prep Stage + Hugo build Stage."""
     hugo_build_call = hugo_build.bind(prep_dir=prep_dir, out_dir=hugo_build_dir)
-    content_dir = prep_dir / "data"
-    static_dir = prep_dir / "static"
-
     return MultiStageTask(
         [
-            Stage(run_fn=prep_call, watch_paths=[], upstreams=[upstream]),
-            Stage(run_fn=hugo_build_call, watch_paths=[], upstreams=[prep_out]),
-            _HugoServeTask(
-                content_dir=content_dir, static_dir=static_dir, host=host, port=port
+            _prep_stage(upstream, prep_dir),
+            Stage(
+                run_fn=hugo_build_call,
+                watch_paths=[],
+                upstreams=[ComponentOutput(prep_dir)],
             ),
         ]
     )
 
 
+def SiteServeStage(
+    *,
+    upstream: ComponentOutput,
+    prep_dir: Path,
+    host: str,
+    port: int,
+) -> MultiStageTask:
+    """Compose the watch-mode site: prep Stage + Hugo serve Task.
+
+    Hugo's server renders the prepared content itself, so no hugo build runs.
+    """
+    return MultiStageTask(
+        [
+            _prep_stage(upstream, prep_dir),
+            _HugoServeTask(
+                content_dir=prep_dir / "data",
+                static_dir=prep_dir / "static",
+                host=host,
+                port=port,
+            ),
+        ]
+    )
+
+
+def _prep_stage(upstream: ComponentOutput, prep_dir: Path) -> Stage:
+    prep_call = prepare_site.bind(data_dir=upstream.dir, out_dir=prep_dir)
+    return Stage(run_fn=prep_call, watch_paths=[], upstreams=[upstream])
+
+
 @dataclass(frozen=True)
 class _HugoServeTask(Task):
-    """Hugo dev server. No-op in build mode (`hugo build` handles HTML output)."""
+    """Hugo dev server. Its one-shot run is a no-op: the server lives only
+    while watching."""
 
     content_dir: Path
     static_dir: Path
