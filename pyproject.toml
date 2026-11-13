@@ -8,9 +8,16 @@ license-files = ["LICENSE"]
 requires-python = ">=3.12"
 authors = [{ name = "Kiyofumi Watanabe" }]
 keywords = [
-    "documentation",
     "docs-as-code",
+    "documentation",
+    "documentation-generator",
+    "generator",
+    "jinja",
+    "jinja2",
+    "jsonschema",
+    "markdown",
     "single-source-of-truth",
+    "yaml",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
