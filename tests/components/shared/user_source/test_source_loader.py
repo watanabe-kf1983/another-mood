@@ -15,6 +15,7 @@ from another_mood.components.shared.user_source.source_loader import (
     load_prose,
     load_source,
     parse_mapping,
+    read_source_text,
 )
 from another_mood.components.shared.user_source.position_resolver import (
     Position,
@@ -227,6 +228,31 @@ class TestNfcNormalization:
         record = _blob_record(load_blob(f, tmp_path))
         assert record["id"] == "café.png"
         assert unicodedata.is_normalized("NFC", cast(str, record["id"]))
+
+
+# ── Encoding at the input boundary ─────────────────────────────────
+
+
+class TestSourceEncoding:
+    """A user source is UTF-8 (a BOM allowed); anything else is a user
+    error naming the file, never a guess at the encoding."""
+
+    @pytest.mark.parametrize("encoding", ["cp932", "utf-16"])
+    def test_non_utf8_file_is_a_user_error_naming_the_file(
+        self, tmp_path: Path, encoding: str
+    ) -> None:
+        f = tmp_path / "members.yaml"
+        f.write_text("name: 日本語\n", encoding=encoding)
+        with pytest.raises(FileValidationError) as exc_info:
+            read_source_text(f)
+        (diagnostic,) = exc_info.value.diagnostics
+        assert diagnostic.file == f
+        assert "UTF-8" in diagnostic.message
+
+    def test_bom_is_dropped(self, tmp_path: Path) -> None:
+        f = tmp_path / "doc.md"
+        f.write_text("# 見出し\n", encoding="utf-8-sig")
+        assert read_source_text(f) == "# 見出し\n"
 
 
 # ── Blob ───────────────────────────────────────────────────────────

@@ -11,6 +11,8 @@ preprocess pipeline:
   schema validation.  Markdown files are wrapped raw (path-derived
   ``id`` + ``content``); interpreting the content (e.g. title from the
   H1) is left to ``preprocess.prose``.
+* ``read_source_text`` — the one way any user source file, templates
+  included, is read as text.
 * ``UserStr`` / ``Location`` — value type for user-input strings tagged
   with their source location.
 """
@@ -87,6 +89,38 @@ def load_source(src: Path, src_dir: Path) -> Mapping[str, object] | None:
     return load_blob(src, src_dir)
 
 
+def read_source_text(src: Path) -> str:
+    """Read a user source file as text — UTF-8 only, a BOM allowed and
+    dropped — folded to NFC.
+
+    Raises FileValidationError naming the file when it is not UTF-8.
+    """
+    # Other encodings are rejected rather than guessed: a wrong guess
+    # garbles text silently.  That covers UTF-16 too, so the rule stays
+    # one sentence.
+    #
+    # Decode is a reversible bijection; NFC is a separate, non-invertible
+    # fold, so it can't ride on the decoder's options. Normalizing here
+    # keeps ids that differ only in canonical form from silently colliding
+    # on a form-insensitive filesystem (macOS). NFKC is unusable — its
+    # compatibility decomposition (``①`` → ``1``) would distort ids.
+    try:
+        text = src.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise FileValidationError(
+            diagnostics=[
+                Diagnostic(
+                    file=src,
+                    line=None,
+                    column=None,
+                    message="Not a UTF-8 file. Save it as UTF-8.",
+                    source="encoding",
+                )
+            ]
+        ) from exc
+    return unicodedata.normalize("NFC", text)
+
+
 def _is_hidden(src: Path, src_dir: Path) -> bool:
     return any(part.startswith(".") for part in src.relative_to(src_dir).parts)
 
@@ -95,18 +129,6 @@ def _is_mapping_file(src: Path) -> bool:
     # JSON rides the YAML reader: YAML 1.2 is a superset of JSON, so one
     # parser serves both and neither loses its ``Location`` tags.
     return FileType.YAML.match(src) or FileType.JSON.match(src)
-
-
-def _read_text_nfc(src: Path) -> str:
-    """Decode ``src`` as UTF-8 and fold to NFC at this input boundary.
-
-    Decode is a reversible bijection; NFC is a separate, non-invertible
-    fold, so it can't ride on the decoder's options. Normalizing here
-    keeps ids that differ only in canonical form from silently colliding
-    on a form-insensitive filesystem (macOS). NFKC is unusable — its
-    compatibility decomposition (``①`` → ``1``) would distort ids.
-    """
-    return unicodedata.normalize("NFC", src.read_text(encoding="utf-8"))
 
 
 # ── Mapping (YAML / JSON) ──────────────────────────────────────────
@@ -128,7 +150,7 @@ def parse_mapping(src: Path) -> Mapping[str, object]:
         # because ruamel's YAML() shares mutable internal state across
         # invocations (see components/shared/json_data_model.py).
         loaded = YAML().load(  # type: ignore[no-untyped-call]
-            _read_text_nfc(src)
+            read_source_text(src)
         )
     except YAMLError as exc:
         mark = getattr(exc, "problem_mark", None)
@@ -228,7 +250,7 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
 
     The ``id`` comes from the traversed filename, which never passes
     through the decoder, so it is NFC-folded separately here (see
-    ``_read_text_nfc`` for why).
+    ``read_source_text`` for why).
     """
     rel = src.relative_to(src_dir)
     return {
@@ -236,7 +258,7 @@ def load_prose(src: Path, src_dir: Path, *, mime_type: str) -> Mapping[str, obje
             {
                 "id": unicodedata.normalize("NFC", rel.with_suffix("").as_posix()),
                 "mime_type": mime_type,
-                "content": _read_text_nfc(src),
+                "content": read_source_text(src),
             }
         ]
     }

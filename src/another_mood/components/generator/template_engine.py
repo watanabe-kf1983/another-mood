@@ -20,6 +20,9 @@ from another_mood.components.shared.user_source.diagnostic import (
     Diagnostic,
     FileValidationError,
 )
+from another_mood.components.shared.user_source.source_loader import (
+    read_source_text,
+)
 
 
 def _identity_post_process(rendered: str, subject: object) -> str:
@@ -298,6 +301,8 @@ def _template_loader(templates_dir: Path) -> Callable[[str], str | None]:
     # Replaces minijinja's `load_from_path`, which reads without an encoding
     # and so decodes with the locale code page (cp932 on Japanese Windows).
     # Its name checks are kept: no `\`, no `..` escaping the root.
+    # A template is a user source like any other, so it is read the same
+    # way; minijinja lets the reader's FileValidationError through unwrapped.
     def loader(name: str) -> str | None:
         if "\\" in name:
             return None
@@ -306,7 +311,7 @@ def _template_loader(templates_dir: Path) -> Callable[[str], str | None]:
             return None
         path = templates_dir.joinpath(*pieces)
         if path.is_file():
-            return path.read_text(encoding="utf-8")
+            return read_source_text(path)
         else:
             return None
 
