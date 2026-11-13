@@ -72,6 +72,18 @@ class TestTemplateLoading:
         monkeypatch.setattr(io, "text_encoding", cp932_locale)
         assert engine.render("t.md", {"title": "x"}) == "見出し — x\n"
 
+    def test_non_utf8_template_is_a_user_error_naming_the_file(
+        self, tmp_path: Path
+    ) -> None:
+        engine = self._engine(tmp_path)
+        template = tmp_path / "templates" / "t.md"
+        template.write_text("見出し {{ title }}\n", encoding="cp932")
+        with pytest.raises(FileValidationError) as exc_info:
+            engine.render("t.md", {"title": "x"})
+        (diagnostic,) = exc_info.value.diagnostics
+        assert diagnostic.file == template
+        assert "UTF-8" in diagnostic.message
+
     def test_loads_template_in_subdirectory(self, tmp_path: Path) -> None:
         engine = self._engine(tmp_path)
         (tmp_path / "templates" / "meta").mkdir()
