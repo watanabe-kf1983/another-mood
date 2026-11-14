@@ -273,7 +273,7 @@ The name is yours to choose, and values are carried as strings, whatever they lo
 - **`MOOD_VARS_<NAME>`** — the prefix is stripped and the rest lowercased. The underscores that remain are part of the name rather than separators, so `MOOD_VARS_CI_RUN_URL` arrives as `vars.ci_run_url`. This channel reaches one level only: a name with a dot in it has no spelling here.
 - **`--var NAME=VALUE`** on `build` and `watch`, repeatable — the name is taken as written, dots and capitals included, so `--var ci.run_id=7` arrives as `vars.ci.run_id`. Only the first `=` splits, leaving any others to the value; `--var channel=` injects an empty string, and a `--var` without a name or without `=` is an error that stops the run.
 
-Where both channels name the same key, `--var` wins over the environment.
+Where both channels name the same key, `--var` wins over the environment. Either wins over a value `reports.yaml` sets for an edition under the same name ([Per-edition values](reports.md#per-edition-values)).
 
 Everything injected this way is listed on the build's colophon page at `output/__build_info/` — including values that only one template reads, or none.
 

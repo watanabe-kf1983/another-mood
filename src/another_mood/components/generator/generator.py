@@ -203,7 +203,10 @@ def render_edition(
             **node_filters,
             **make_link_filters(edition.paging, node_map),
         },
-        globals={**node_globals, **make_build_info_globals(build_info)},
+        globals={
+            **node_globals,
+            **make_build_info_globals(edition.with_vars(build_info)),
+        },
         paging=edition.paging,
     ).render_to_file(edition.root_template, data, Path("index.md"))
     if edition.mirror_blobs:

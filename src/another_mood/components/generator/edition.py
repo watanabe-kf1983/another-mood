@@ -28,6 +28,7 @@ from urllib.parse import unquote
 
 from another_mood.components.generator.data_tree import Node, is_blob, nearest_ancestor
 from another_mood.components.generator.inert import InertValue
+from another_mood.components.shared.build_info import BuildInfo, flatten_build_info
 from another_mood.components.shared.url import url_escape
 from another_mood.components.shared.windows_reserved_name import fs_escape_segment
 from another_mood.components.shared.json_data_model import load_schema
@@ -43,8 +44,9 @@ _REPORTS_SCHEMA_FILE = Path(
 # Output subdirectory name for form A's single implicit edition.
 _FORM_A_EDITION_NAME = "default"
 
-# Immutable empty default — a frozen dataclass field rejects a mutable ``{}``.
+# Immutable empty defaults — a frozen dataclass field rejects a mutable ``{}``.
 _NO_EXTRA_FILTERS: Mapping[str, Callable[..., InertValue]] = MappingProxyType({})
+_NO_VARS: Mapping[str, str | float | bool] = MappingProxyType({})
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,7 @@ class Edition:
     root_template: str = "index.md"
     extra_filters: Mapping[str, Callable[..., InertValue]] = _NO_EXTRA_FILTERS
     mirror_blobs: bool = True
+    vars: Mapping[str, str | float | bool] = _NO_VARS
 
     @classmethod
     def from_dict(
@@ -127,7 +130,13 @@ class Edition:
             paging=PagingPolicy(tuple(str(p) for p in file_per_raw)),
             templates_dir=templates_dir,
             name=name,
+            vars=cast(Mapping[str, str | float | bool], data.get("vars") or {}),
         )
+
+    def with_vars(self, build_info: BuildInfo) -> BuildInfo:
+        """``build_info`` as this edition's templates read it: its ``vars``
+        added under ``vars.<name>``, yielding to a key already there."""
+        return {**flatten_build_info("vars", self.vars), **build_info}
 
     @property
     def dir_segment(self) -> str:

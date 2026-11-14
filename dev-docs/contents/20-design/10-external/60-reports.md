@@ -5,8 +5,8 @@ Behavior kept on purpose, outside the contract of `docs/reference/reports.md`. O
 Terms used in this chapter:
 
 - **report** — one set of output the user's templates draw from the data. Configured by `definition/reports.yaml` (`docs/reference/reports.md`)
-- **edition** — an output of the same report in a different form. The only difference is `file_per` (which types of node go into separate files) (Editions, same document)
-- **form A / form B** — the two ways of writing `reports.yaml`. Form A writes `file_per` at the top level and becomes one edition named `default`. Form B writes several by name under `editions:` (Editions, same document)
+- **edition** — an output of the same report in a different form. The differences are `file_per` (which types of node go into separate files) and `vars` (values the templates read back) (Editions, same document)
+- **form A / form B** — the two ways of writing `reports.yaml`. Form A writes an edition's settings at the top level and becomes one edition named `default`. Form B writes several by name under `editions:` (Editions, same document)
 - **database pages** — the pages under `__db/` that the tool draws automatically from the schema and view definitions ([View](40-view.md#database-pages)). Drawn by the same mechanism as an edition. In the cover's section name, Database Information
 - **mount** — a directory directly under the output root given to an edition or to system-generated output. `{edition}/`, `__db/`, and so on
 - **node / anchor path / subject / blob / build info / colophon** — terms of [Template](50-template.md). The subject of a split page determines that page
