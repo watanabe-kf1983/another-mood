@@ -2,10 +2,10 @@ title: ReportsSchema
 description: >-
   Validates the user's definition/reports.yaml. The file
   configures report output. Two mutually exclusive forms: form A declares
-  a single edition's split policy at the top level (file_per); form B
+  a single edition's settings at the top level (file_per, vars); form B
   declares an editions map — one named edition per entry, each with its
-  own file_per. Mixing the two (a top-level file_per alongside editions)
-  is rejected.
+  own settings. Mixing the two (a top-level file_per or vars alongside
+  editions) is rejected.
 
 oneOf:
   - $ref: "#/$defs/formA"
@@ -36,6 +36,18 @@ $defs:
     items:
       $ref: "#/$defs/typeId"
 
+  varsMap:
+    title: vars map
+    description: >-
+      Values templates read back as build_info("vars.NAME") while
+      rendering this edition. A value injected under the same name
+      (--var, MOOD_VARS_*) wins.
+    type: object
+    propertyNames:
+      minLength: 1
+    additionalProperties:
+      type: [string, number, boolean]
+
   formA:
     title: Single-edition report (form A)
     description: >-
@@ -45,6 +57,8 @@ $defs:
     properties:
       file_per:
         $ref: "#/$defs/filePerList"
+      vars:
+        $ref: "#/$defs/varsMap"
     additionalProperties: false
 
   formB:
@@ -52,8 +66,9 @@ $defs:
     description: >-
       An editions map: each entry is one edition — a body variant of the
       same report, published side by side under {outDir}/{edition}/. Every
-      edition renders the same data; for now they differ only in file_per
-      (split granularity).
+      edition renders the same data through the same templates; they
+      differ in file_per (split granularity) and in vars (values the
+      templates read back).
     type: object
     required: [editions]
     properties:
@@ -75,5 +90,7 @@ $defs:
           properties:
             file_per:
               $ref: "#/$defs/filePerList"
+            vars:
+              $ref: "#/$defs/varsMap"
           additionalProperties: false
     additionalProperties: false

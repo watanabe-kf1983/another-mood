@@ -50,6 +50,7 @@ _INVALID_REPORTS_CASES = [
     pytest.param(
         "editions:\n  web:\n    unknown_key: 1\n", id="unknown key in edition entry"
     ),
+    pytest.param("vars:\n  links:\n    web: 'on'\n", id="vars value not a scalar"),
 ]
 
 
@@ -117,6 +118,41 @@ def test_load_form_b_editions(tmp_path: Path) -> None:
         ),
         Edition(paging=PagingPolicy(), name="pdf", templates_dir=templates_dir),
     )
+
+
+def test_load_vars(tmp_path: Path) -> None:
+    templates_dir = tmp_path / "templates"
+    path = _write(tmp_path, "vars:\n  links: 'off'\n  columns: 2\n  draft: true\n")
+    assert load_editions(path, templates_dir) == (
+        Edition(
+            paging=PagingPolicy(),
+            name="default",
+            templates_dir=templates_dir,
+            vars={"links": "off", "columns": 2, "draft": True},
+        ),
+    )
+
+
+# ── with_vars ──────────────────────────────────────────────────────
+
+
+def test_with_vars_adds_the_editions_vars_under_the_vars_prefix() -> None:
+    """Keeps: docs/reference/reports.md › Per-edition values"""
+    edition = Edition(
+        paging=PagingPolicy(), templates_dir=Path("t"), vars={"links": "off"}
+    )
+    assert edition.with_vars({"processor.name": "another-mood"}) == {
+        "processor.name": "another-mood",
+        "vars.links": "off",
+    }
+
+
+def test_with_vars_yields_to_an_injected_value() -> None:
+    """Keeps: docs/reference/cli.md › Injected values (`vars`)"""
+    edition = Edition(
+        paging=PagingPolicy(), templates_dir=Path("t"), vars={"links": "off"}
+    )
+    assert edition.with_vars({"vars.links": "on"}) == {"vars.links": "on"}
 
 
 # ── dir_segment ────────────────────────────────────────────────────

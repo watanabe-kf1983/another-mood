@@ -36,11 +36,25 @@ editions:
     file_per:
       - erds.item
       - erds.item.entities.item
+    vars:
+      links: "on"
   print:             # read as one document: everything inlined
     file_per: []
+    vars:
+      links: "off"
 ```
 
-Every edition renders the same data through the same templates; for now they differ only in `file_per` (split granularity).
+Every edition renders the same data through the same templates. They differ in `file_per` (split granularity) and in `vars`.
+
+### Per-edition values
+
+`vars:` gives an edition values of its own, which a template reads back through [`build_info`](template.md#build_info) under `vars.<name>`:
+
+```jinja2
+{% if build_info("vars.links", "on") == "on" %}{{ erd | link }}{% else %}{{ erd | label }}{% endif %}
+```
+
+A value [injected](cli.md#injected-values-vars) under the same name wins in every edition.
 
 ## Output paths
 
