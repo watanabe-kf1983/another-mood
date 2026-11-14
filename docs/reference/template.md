@@ -206,6 +206,7 @@ For a [missing node](#node), the display text in brackets — `[text]` with no U
 ```
 members/alice.md#/members/alice      (from the root page)
 ../members/alice.md#/members/alice   (from a by_role/… page)
+#/members/alice                      (from the page alice is on)
 blob/covers/cover.png                (a blob — its output file)
 ```
 
