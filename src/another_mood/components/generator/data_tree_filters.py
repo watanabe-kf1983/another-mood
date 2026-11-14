@@ -159,13 +159,21 @@ def node_label(a: object) -> str:
 
 def node_href(paging: PagingPolicy, source: object, a: object) -> str:
     """Page-relative URL — path to the target's page plus the target's
-    ``_meta.fragment`` — from the ``source`` node's page.
+    ``_meta.fragment`` — from the ``source`` node's page.  A target on the
+    ``source``'s own page is the bare ``#fragment``.
 
     ``a`` must be a resolved node: a :class:`MissingNode` has no page, so
     the rendering filters intercept that case and never call this for one.
     """
     target = cast(Node, a)
-    source_dir = posixpath.dirname(paging.page_path(cast(Node, source))) or "."
-    rel = url_escape(posixpath.relpath(paging.page_path(target), source_dir), safe="/")
+    source_page = paging.page_path(cast(Node, source))
+    target_page = paging.page_path(target)
     fragment = target._meta.fragment
-    return f"{rel}#{fragment}" if fragment else rel
+    if fragment and target_page == source_page:
+        # No file name: a converter that takes the output on (pandoc, say)
+        # reads a link carrying one as pointing outside the document.
+        return f"#{fragment}"
+    else:
+        source_dir = posixpath.dirname(source_page) or "."
+        rel = url_escape(posixpath.relpath(target_page, source_dir), safe="/")
+        return f"{rel}#{fragment}" if fragment else rel

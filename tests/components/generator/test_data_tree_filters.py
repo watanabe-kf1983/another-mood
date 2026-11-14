@@ -256,10 +256,13 @@ class TestNodeHref:
             "members/alice.md#/members/alice"
         )
 
-    def test_same_page_self_link_keeps_filename(self) -> None:
+    def test_same_page_is_the_bare_fragment(self) -> None:
+        """Keeps: docs/reference/template.md › `href`"""
+        # Nothing splits, so alice is drawn inline on the root's index.md.
         nodes = _node_map()
-        node = nodes["/members/alice"]
-        assert node_href(_paging(), node, node) == "alice.md#/members/alice"
+        source = nodes["/"]
+        target = nodes["/members/alice"]
+        assert node_href(PagingPolicy(), source, target) == "#/members/alice"
 
     def test_fragment_always_appended_even_for_page_root(self) -> None:
         nodes = _node_map()
